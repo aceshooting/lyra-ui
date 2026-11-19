@@ -3400,6 +3400,9 @@ describe("maxHeight", () => {
 
 describe("styling", () => {
   it("changes both rendered chapter buttons under real pointer hover", async () => {
+    const fake = fakeBook();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
     const el = await fixture<LyraEbookViewer>(html`
       <lr-ebook-viewer
         style="--lr-color-brand-quiet: rgb(1, 2, 3)"
@@ -3410,17 +3413,27 @@ describe("styling", () => {
         '[part="previous-button"]',
         '[part="next-button"]',
       ]) {
-        const button = el.shadowRoot!.querySelector(selector) as HTMLElement;
+        const button = el.shadowRoot!.querySelector(selector) as HTMLButtonElement;
+        expect(button.disabled).to.equal(true);
+        button.style.transition = 'none';
+        const resting = getComputedStyle(button).backgroundColor;
         await hoverUntilMatched(button, `${selector} never registered :hover`);
-        // background-color eases over --lr-transition-fast, so "differs from resting" alone would
-        // match a mid-interpolation frame -- poll for the exact settled hover value instead.
-        await waitUntil(
-          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
-          `${selector} never reached its rendered hover state`,
-        );
+        expect(getComputedStyle(button).backgroundColor).to.equal(resting);
+      }
+
+      el.src = 'https://example.test/styled.epub';
+      for (const selector of ['[part="previous-button"]', '[part="next-button"]']) {
+        const button = el.shadowRoot!.querySelector(selector) as HTMLButtonElement;
+        await waitUntil(() => !button.disabled);
+        el.style.removeProperty('--lr-viewer-pager-button-hover-bg');
+        await hoverUntilMatched(button, `${selector} never registered :hover`);
+        expect(getComputedStyle(button).backgroundColor).to.equal('rgb(1, 2, 3)');
+        el.style.setProperty('--lr-viewer-pager-button-hover-bg', 'rgb(4, 5, 6)');
+        expect(getComputedStyle(button).backgroundColor).to.equal('rgb(4, 5, 6)');
       }
     } finally {
       await resetMouse();
+      restore();
     }
   });
 });

@@ -205,8 +205,12 @@ export class OwnedIntersectionObserver extends OwnedObserver<IntersectionObserve
   }
 }
 
-/** Reads one boolean `isIntersecting` for `target`, ignoring malformed entries. */
+/**
+ * Reads the newest boolean `isIntersecting` for `target`, ignoring malformed entries. One delivery
+ * can queue several entries for a target in time order, and only the last one is current.
+ */
 export function readIntersecting(entries: unknown, target: Element): boolean | undefined {
+  let intersecting: boolean | undefined;
   try {
     if (!Array.isArray(entries)) return undefined;
     for (const candidate of entries) {
@@ -214,7 +218,8 @@ export function readIntersecting(entries: unknown, target: Element): boolean | u
       try {
         const entry = candidate as Pick<IntersectionObserverEntry, 'target' | 'isIntersecting'>;
         if (entry.target !== target) continue;
-        if (typeof entry.isIntersecting === 'boolean') return entry.isIntersecting;
+        const value = entry.isIntersecting;
+        if (typeof value === 'boolean') intersecting = value;
       } catch {
         // Keep looking for a usable entry for this host.
       }
@@ -222,7 +227,7 @@ export function readIntersecting(entries: unknown, target: Element): boolean | u
   } catch {
     // A hostile entries container is no more useful than an absent callback.
   }
-  return undefined;
+  return intersecting;
 }
 
 /** Reads a finite, non-negative inline size from a resize entry, or `undefined`. */

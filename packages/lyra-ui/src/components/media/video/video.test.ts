@@ -136,7 +136,7 @@ function installVisibilityObserver() {
   };
 }
 
-expectLocaleFallback('ar-EG', ['avPlayerPosition', 'play', 'playbackPosition', 'videoEnterFullscreen', 'videoMute', 'videoPlayerLabel', 'videoVolume']);
+expectLocaleFallback('ar-EG', ['avPlayerPosition', 'play', 'playbackPosition', 'videoEnterFullscreen', 'videoMute', 'videoPlayerLabel', 'videoTimeReadout', 'videoVolume']);
 
 describe('lr-video platform refusal recovery', () => {
   for (const poster of [false, true]) {
@@ -2590,6 +2590,29 @@ describe('lr-video coverage gap-filling', () => {
     } finally {
       window.fetch = originalFetch;
     }
+  });
+
+  it('renders the time readout in the translated order with each time in its own span', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video lang="en" .strings=${{ videoTimeReadout: '{duration} sur {current}' }}></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 61 },
+      currentTime: { configurable: true, value: 5, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    media.dispatchEvent(new Event('timeupdate'));
+    await el.updateComplete;
+    const times = [...el.shadowRoot!.querySelectorAll('[data-time]')].map((node) => node.textContent);
+    expect(times).to.deep.equal(['1:01', '0:05']);
+    const separators = [...el.shadowRoot!.querySelectorAll('[data-time] + [aria-hidden="true"]')].map((node) => node.textContent);
+    expect(separators).to.deep.equal(['sur']);
+  });
+
+  it('renders no separator when the translated time readout has none', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video lang="en" .strings=${{ videoTimeReadout: '{current} {duration}' }}></lr-video>`);
+    const times = [...el.shadowRoot!.querySelectorAll('[data-time]')].map((node) => node.textContent);
+    expect(times).to.deep.equal(['0:00', '0:00']);
+    expect(el.shadowRoot!.querySelectorAll('[data-time] + [aria-hidden="true"]').length).to.equal(0);
   });
 
   it('formats hour-scale durations with an hours segment', async () => {

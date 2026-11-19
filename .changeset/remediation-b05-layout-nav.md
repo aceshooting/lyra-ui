@@ -18,3 +18,4 @@ Rail resizing, navigation indicators, and segment scrolling use layout coordinat
 Navigation components expose additional chrome and interaction color tokens. Current rail rows show hover feedback and rail tooltips use the shared overlay surface.
 Rail backdrops respect reduced motion and stop intercepting input when closed.
 Breadcrumbs, navigation links, and tab panels keep emergency wrapping scoped to their labels.
+Menu type-ahead matches labels without regard to accents or case.

@@ -92,6 +92,7 @@ function pathData(stroke: SignatureStroke): string {
  *
  * A pointer release, cancellation or loss of capture commits the drawn portion once. Host
  * `aria-describedby` references precede the focused surface’s error, hint, instructions and status.
+ * An empty host aria-label clears the name. Whitespace alone uses the visible label or localized signature name.
  *
  * @customElement lr-signature-pad
  * @event change - Native event fired when the user finishes a stroke or clears the pad.
@@ -103,6 +104,7 @@ function pathData(stroke: SignatureStroke): string {
  * @slot hint - Rich hint content, after the `hint` text.
  * @slot error - Rich error content, after the `errorText` text.
  * @csspart form-control - Wrapper around the label, pad, error and hint.
+ * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
@@ -113,6 +115,13 @@ function pathData(stroke: SignatureStroke): string {
  * @csspart clear-button - The clear button.
  * @csspart error - The error text.
  * @csspart hint - The hint text.
+ * @cssprop [--lr-signature-pad-fill] - Drawing surface background, defaulting to the field appearance.
+ * @cssprop [--lr-signature-pad-border-color] - Resting surface border, defaulting to the field appearance.
+ * @cssprop [--lr-signature-pad-radius=var(--lr-form-control-radius)] - Drawing surface corner radius.
+ * @cssprop [--lr-signature-pad-hover-border-color=var(--lr-color-text-quiet)] - Surface border on hover.
+ * @cssprop [--lr-signature-pad-invalid-border-color] - Invalid surface border, overriding the shared invalid border.
+ * @cssprop [--lr-signature-pad-clear-hover-bg] - Clear button background on hover.
+ * @cssprop [--lr-signature-pad-clear-active-bg] - Clear button background while pressed.
  * @cssprop [--lr-signature-pad-ink=var(--lr-color-text)] - On-screen stroke colour.
  * @cssprop [--lr-signature-pad-stroke-width=var(--lr-border-width-medium)] - On-screen stroke width.
  * @cssprop [--lr-signature-pad-aspect-ratio=3 / 1] - Width-to-height ratio of the surface.

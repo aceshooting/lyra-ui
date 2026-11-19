@@ -270,7 +270,7 @@ const strings: LyraLocaleStrings = {
   chunkInspectorOpenOrdinal: 'Resultado {index} de {total}',
   ragAnswerEmpty: 'Nenhuma resposta ainda',
   retrievalTraceEmpty: 'Sem fases de recuperação',
-  retrievalTraceLabel: 'Rastreamento da recuperação',
+  retrievalTraceLabel: 'Rastreio da recuperação',
   sourcePickerMatches: {
     one: '{count} fonte correspondente',
     many: '{count} fontes correspondentes',

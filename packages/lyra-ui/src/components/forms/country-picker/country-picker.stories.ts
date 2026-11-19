@@ -10,7 +10,14 @@ export const Default: Story = {
   render: () => html`<lr-country-picker label="Country" value="LU"></lr-country-picker>`,
 };
 export const Searchable: Story = {
+  parameters: { docs: { description: { story: 'If the filter fails to load, a localized notice and Retry button appear below the compact picker.' } } },
   render: () => html`<lr-country-picker searchable clearable label="Country" hint="Search by name or code"></lr-country-picker>`,
+};
+export const InvalidBorder: Story = {
+  render: () => html`<form style="--lr-form-control-invalid-border-color: var(--lr-color-brand)">
+    <lr-country-picker required searchable label="Country"></lr-country-picker>
+    <button type="submit">Check validity</button>
+  </form>`,
 };
 export const Configured: Story = {
   render: () => html`<lr-country-picker searchable label="Delivery country" value="LU" .countries=${[

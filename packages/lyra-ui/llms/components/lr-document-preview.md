@@ -97,7 +97,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   geometry is captured when `highlights` is assigned: an invalid or accessor-backed `region` anchor
   is ignored, and mutating an accepted anchor later does not move its painted region. Reassign
   `highlights` to update it; the original public anchor identity remains available for
-  reference-based `scrollToAnchor()`.
+  reference-based `scrollToAnchor()`. Regions use on-image controls while their minimum hit areas
+  fit without overlapping. If the hit areas overlap, a separate action list provides the controls.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported

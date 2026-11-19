@@ -235,8 +235,9 @@ it('restarts an adopted text preview in the new fetch realm and ignores the old 
 });
 
 it('uses an adopted document preview owner realm for reduced-motion scrolling', async () => {
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
   const element = await fixture<LyraDocumentPreview>(html`
-    <lr-document-preview mime-type="image/png" src="data:image/png;base64,AA=="></lr-document-preview>
+    <lr-document-preview mime-type="image/png" .src=${png}></lr-document-preview>
   `);
   const specialId = 'region" ] owner';
   element.highlights = [

@@ -1552,6 +1552,7 @@ it('keeps default and partially configured sticky offsets as valid lengths', asy
   const aside = byPart(page, 'aside');
   const subheader = byPart(page, 'subheader');
 
+  expect(page.autoStickyOffsets).to.equal(false);
   expect(getComputedStyle(menu).insetBlockStart).to.equal('0px');
   expect(getComputedStyle(menu).maxBlockSize).to.not.equal('none');
   expect(getComputedStyle(aside).insetBlockStart).to.equal('0px');
@@ -1561,6 +1562,189 @@ it('keeps default and partially configured sticky offsets as valid lengths', asy
   page.style.setProperty('--lr-page-header-height', '48px');
   expect(getComputedStyle(menu).insetBlockStart).to.equal('48px');
   expect(getComputedStyle(subheader).insetBlockStart).to.equal('48px');
+});
+
+describe('measured sticky offsets', () => {
+  const inset = (part: HTMLElement): number => parseFloat(getComputedStyle(part).insetBlockStart);
+  const blockSize = (part: HTMLElement): number => part.getBoundingClientRect().height;
+  const close = (actual: number, expected: number): boolean => Math.abs(actual - expected) < 1;
+
+  it('stacks wrapping sticky regions while scrolled and tracks size, slot and sticky changes', async () => {
+    const scrollport = await fixture<HTMLElement>(html`<div style="overflow: auto; block-size: 320px; inline-size: 340px">
+      <lr-page auto-sticky-offsets mobile-breakpoint="0px">
+        <div slot="banner" style="font: 16px/24px sans-serif; border-block: 2px solid">
+          Scheduled maintenance starts in ten minutes. Please save your work and close any open forms before the maintenance window begins.
+        </div>
+        <div slot="header" style="block-size: 30px">Header</div>
+        <div slot="subheader" style="block-size: 22px">Subheader</div>
+        <div slot="menu">Menu</div>
+        <div slot="aside">Aside</div>
+        <div style="block-size: 1100px">Article</div>
+      </lr-page>
+    </div>`);
+    const page = scrollport.querySelector('lr-page')!;
+    await page.updateComplete;
+    const banner = byPart(page, 'banner');
+    const header = byPart(page, 'header');
+    const subheader = byPart(page, 'subheader');
+    const menu = byPart(page, 'menu');
+    const aside = byPart(page, 'aside');
+    const stack = (): number => blockSize(banner) + blockSize(header) + blockSize(subheader);
+    await waitUntil(() => close(inset(menu), stack()), 'the menu did not clear the measured stack');
+    expect(page.autoStickyOffsets).to.equal(true);
+    expect(blockSize(banner)).to.be.greaterThan(28);
+
+    scrollport.scrollTop = 280;
+    expect(banner.getBoundingClientRect().top).to.be.closeTo(scrollport.getBoundingClientRect().top, 1);
+    expect(header.getBoundingClientRect().top).to.be.closeTo(banner.getBoundingClientRect().bottom, 1);
+    expect(subheader.getBoundingClientRect().top).to.be.closeTo(header.getBoundingClientRect().bottom, 1);
+    expect(menu.getBoundingClientRect().top).to.be.closeTo(subheader.getBoundingClientRect().bottom, 1);
+    expect(aside.getBoundingClientRect().top).to.be.closeTo(subheader.getBoundingClientRect().bottom, 1);
+    expect(parseFloat(getComputedStyle(menu).maxBlockSize)).to.be.closeTo(window.innerHeight - stack(), 1);
+    expect(parseFloat(getComputedStyle(aside).maxBlockSize)).to.be.closeTo(window.innerHeight - stack(), 1);
+
+    const bannerContent = page.querySelector<HTMLElement>('[slot="banner"]')!;
+    bannerContent.style.minBlockSize = '120px';
+    await waitUntil(() => inset(header) >= 120 && close(inset(menu), stack()), 'the new banner size did not propagate');
+
+    page.setAttribute('disable-sticky', 'subheader');
+    expect(inset(menu)).to.be.closeTo(blockSize(banner) + blockSize(header), 1);
+    page.removeAttribute('disable-sticky');
+    page.querySelector('[slot="subheader"]')!.remove();
+    await waitUntil(() => close(inset(menu), stack()) && blockSize(subheader) === 0, 'the removed subheader still offsets the menu');
+
+    page.setAttribute('disable-sticky', 'banner header');
+    await waitUntil(() => inset(menu) === 0, 'the disabled predecessors still offset the menu');
+    expect(inset(aside)).to.equal(0);
+    page.removeAttribute('disable-sticky');
+    await waitUntil(() => close(inset(menu), stack()), 'reenabling sticky predecessors did not restore the stack');
+
+    bannerContent.hidden = true;
+    await waitUntil(() => inset(header) === 0 && blockSize(banner) === 0, 'the hidden banner still offsets the header');
+  });
+
+  it('uses both token spellings as minima and remeasures after opting in or reconnecting', async () => {
+    const parent = await fixture<HTMLElement>(html`<div>
+      <lr-page auto-sticky-offsets mobile-breakpoint="0px" style="--banner-height: 36px; --header-height: 44px; --lr-page-header-height: 52px">
+        <div slot="banner" style="block-size: 18px">Notice</div>
+        <div slot="header">Header</div>
+        <div slot="menu">Menu</div>
+      </lr-page>
+    </div>`);
+    const page = parent.querySelector('lr-page')!;
+    await page.updateComplete;
+    const banner = byPart(page, 'banner');
+    const header = byPart(page, 'header');
+    const menu = byPart(page, 'menu');
+    expect(blockSize(banner)).to.equal(36);
+    expect(blockSize(header)).to.equal(52);
+
+    const notice = page.querySelector<HTMLElement>('[slot="banner"]')!;
+    notice.style.blockSize = '86px';
+    await waitUntil(() => inset(menu) === 138, 'the measured size did not exceed the CSS minimum');
+
+    page.autoStickyOffsets = false;
+    await page.updateComplete;
+    expect(page.hasAttribute('auto-sticky-offsets')).to.equal(false);
+    expect(inset(menu)).to.equal(88);
+
+    page.autoStickyOffsets = true;
+    await page.updateComplete;
+    await waitUntil(() => inset(menu) === 138, 'opting back in did not restore measurement');
+
+    page.remove();
+    notice.style.blockSize = '104px';
+    page.autoStickyOffsets = false;
+    await page.updateComplete;
+    page.autoStickyOffsets = true;
+    await page.updateComplete;
+    parent.append(page);
+    expect(inset(menu)).to.equal(88);
+    await waitUntil(() => inset(menu) === 156, 'the reconnected page did not remeasure');
+  });
+
+  it('falls back to declared offsets when a border-box measurement is unavailable', async () => {
+    const OriginalObserver = window.ResizeObserver;
+    let deliver: ((entries: ResizeObserverEntry[]) => void) | undefined;
+    window.ResizeObserver = class extends OriginalObserver {
+      constructor(callback: ResizeObserverCallback) {
+        super(callback);
+        this.deliver = (entries) => callback(entries, this);
+      }
+      private readonly deliver: (entries: ResizeObserverEntry[]) => void;
+      override observe(target: Element, options?: ResizeObserverOptions): void {
+        if (options?.box === 'border-box') deliver = this.deliver;
+        else super.observe(target, options);
+      }
+    };
+    try {
+      const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+      const unrendered = document.createElement('lr-page');
+      wrapper.append(unrendered);
+      unrendered.remove();
+
+      const page = await fixture<LyraPage>(html`<lr-page auto-sticky-offsets style="--banner-height: 26px">
+        <div slot="banner" style="block-size: 80px">Notice</div>
+      </lr-page>`);
+      const banner = byPart(page, 'banner');
+      const header = byPart(page, 'header');
+      expect(deliver !== undefined).to.equal(true);
+      const entry = {
+        target: banner,
+        contentBoxSize: [],
+        devicePixelContentBoxSize: [],
+        contentRect: banner.getBoundingClientRect(),
+      };
+
+      deliver!([{ ...entry, borderBoxSize: [] }]);
+      expect(inset(header)).to.equal(26);
+      deliver!([{ ...entry, borderBoxSize: [{ blockSize: Number.NaN, inlineSize: 400 }] }]);
+      expect(inset(header)).to.equal(26);
+    } finally {
+      window.ResizeObserver = OriginalObserver;
+    }
+  });
+
+  it('omits an initially hidden sticky region even when it has a declared minimum', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <style>lr-page.hide-banner::part(banner) { display: none; }</style>
+      <lr-page class="hide-banner" auto-sticky-offsets style="--banner-height: 30px">
+        <div slot="banner" style="block-size: 54px">Notice</div>
+      </lr-page>
+    </div>`);
+    const page = wrapper.querySelector('lr-page')!;
+    await page.updateComplete;
+    const header = byPart(page, 'header');
+    await waitUntil(() => inset(header) === 0, 'the hidden banner contributed its declared minimum');
+
+    page.classList.remove('hide-banner');
+    await waitUntil(() => inset(header) === 54, 'revealing the banner did not restore its measured offset');
+  });
+
+  it('tracks the mobile toggle and observes adopted regions in their new document', async () => {
+    const parent = await fixture<HTMLElement>(html`<div>
+      <lr-page auto-sticky-offsets style="inline-size: 400px">
+        <div slot="menu">Menu</div>
+      </lr-page>
+      <iframe title="Second document"></iframe>
+    </div>`);
+    const page = parent.querySelector('lr-page')!;
+    const frame = parent.querySelector('iframe')!;
+    await page.updateComplete;
+    const header = byPart(page, 'header');
+    const menu = byPart(page, 'menu');
+    await waitUntil(() => inset(menu) > 0 && close(inset(menu), blockSize(header)), 'the mobile toggle did not offset the menu');
+    page.mobileBreakpoint = '0px';
+    await page.updateComplete;
+    await waitUntil(() => inset(menu) === 0, 'the desktop header retained the mobile toggle size');
+
+    frame.contentDocument!.body.append(page);
+    const banner = page.ownerDocument.createElement('div');
+    banner.slot = 'banner';
+    banner.style.blockSize = '62px';
+    page.append(banner);
+    await waitUntil(() => parseFloat(frame.contentWindow!.getComputedStyle(menu).insetBlockStart) === 62, 'the adopted page did not observe its new banner');
+  });
 });
 
 it('uses token-driven drawer motion and renders the reduced-motion branch with no transition', async () => {

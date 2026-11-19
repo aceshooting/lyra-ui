@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Lumabas sa fullscreen',
   videoPlaylistLabel: 'Playlist ng video',
   videoPlaylistUntitled: 'Bidyo {position}',
+  videoTimeReadout: '{current} sa {duration}',
   pause: 'I-pause',
   qrCodeMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "qrcode" upang makagawa ng QR code.',
   qrCodeGenerationFailed: 'Hindi ma-encode ang value na ito bilang QR code.',

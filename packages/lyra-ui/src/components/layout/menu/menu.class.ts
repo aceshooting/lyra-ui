@@ -14,6 +14,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { foldSearchText } from '../../../internal/search-haystack.js';
 import { TypeAheadBuffer, type TypeAheadMemo } from '../../../internal/type-ahead-buffer.js';
 import { isRovingTargetAvailable, isRepeatedActivationKey, shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { PopupController } from '../../../internal/popup-controller.js';
@@ -310,7 +311,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     activate: (item) => this.onOwnedItemSelect(item),
     uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
-  private readonly typeBuffer = new TypeAheadBuffer(this);
+  private readonly typeBuffer = new TypeAheadBuffer(this, foldSearchText);
   private readonly typeAheadLabels: TypeAheadMemo = new WeakMap();
 
   /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */

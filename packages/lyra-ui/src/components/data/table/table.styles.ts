@@ -315,8 +315,6 @@ export const styles = css`
   [part~='sort-icon'] svg {
     display: block;
   }
-  /* Rotate the wrapping part element, not the svg -- internal/icons.ts's documented contract. This
-     previously rotated the inner <svg> directly. */
   [part~='sort-icon'][data-dir='asc'] {
     transform: rotate(-90deg);
   }

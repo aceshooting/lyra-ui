@@ -4,7 +4,7 @@ import type { LyraGraphNode } from '../graph/graph-model.js';
 import type { LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
-let paginationRegistration: Promise<unknown> | undefined;
+import { findSourceRow } from '../../../internal/source-row.js';
 
 export type NeighborListSource = GraphSource;
 export type NeighborSourceDirection = LyraGraphSourceQuery['direction'];
@@ -74,6 +74,7 @@ import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_neighborExpand, LYRA_DEFA
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+let paginationRegistration: Promise<unknown> | undefined;
 let virtualListRegistration: Promise<unknown> | undefined;
 
 export interface LyraNeighborRow {
@@ -107,7 +108,7 @@ export interface LyraNeighborListEventMap {
  * @event lr-entity-select - A row's node button was activated. `detail: { entityId }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
  * `detail: { nodeId }`.
- * @cssprop --lr-neighbor-list-node-hover-fill - Background of the hovered control.
+ * @cssprop [--lr-neighbor-list-node-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The stable root wrapper across empty, populated and virtualized states. It owns
  *   `role="group"` and the fallback name unless a non-empty host `aria-label` owns the component;
  *   a nested list owns the row semantics in non-virtualized mode.
@@ -306,7 +307,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     this.sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
     this.sourceSyncing = false; this.syncSource(); await this.sourcePromise; await this.updateComplete;
     if (!current()) return false;
-    const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(node => node.dataset['sourceKey'] === key);
+    const target = findSourceRow<HTMLButtonElement>(this.renderRoot, key);
     if (!target || !current()) return false;
     revealWithinScrollParent(target); if (!current()) return false;
     target.focus({ preventScroll: true }); return current() && this.renderRoot.querySelector('[data-source-key]:focus') === target;
@@ -376,10 +377,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       const message = this.inputLimitMessage();
       if (message) this.announcements.announcePolite(message);
     }
-    // Locale (and a `strings` override) affect both the collator used to sort and the group
-    // header text/count formatting, but neither reaches this component through a tracked
-    // `@property`, so the signature captures the resolved locale directly rather than relying on
-    // `changed`.
+    // Inherited locale changes can invalidate the sort without a changed property.
     const signature = `${this.effectiveLocale} ${this.groupByRelation}`;
     if (
       !this.hasComputedRows ||
@@ -449,13 +447,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return groups;
   }
 
-  /** The arrow encodes the graph edge's actual direction (outgoing vs incoming) -- real semantic
-   *  data about which entity points to which -- so its meaning must stay fixed regardless of
-   *  reading direction; it is never derived from `isRtl()`. Only the row's overall layout (icon
-   *  position, text order) mirrors under RTL, and it already does so for free via this row's
-   *  inline-axis flex flow (`neighbor-list.styles.ts`'s `[part='row']` rule) -- no code here needs
-   *  to reason about direction at all. See docs/agents/i18n-rtl-theming.md: "directional glyphs
-   *  mirror via the wrapping part, not the icon." */
+  /** The arrow represents the edge's graph direction independently of reading direction. */
   private directionGlyph(direction: LyraNeighborRow['direction']): string {
     if (direction === 'both') return '↔';
     return direction === 'out' ? '→' : '←';

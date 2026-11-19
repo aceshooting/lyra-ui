@@ -4,7 +4,7 @@ import type { LyraFlowMinimap } from './flow-minimap.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('keeps the map hover treatment while pointing at its separate viewport layer', async () => {
+it('keeps the map hover and pressed fills while pointing at its separate viewport layer', async () => {
   const minimap = await fixture<LyraFlowMinimap>(html`<lr-flow-minimap style="--lr-color-brand-quiet:rgb(1,2,3)"></lr-flow-minimap>`);
   const work = minimap as unknown as { canvasEl: { readonly: boolean }; snapshot: FlowStructureSnapshot };
   work.canvasEl = { readonly: false };
@@ -20,6 +20,15 @@ it('keeps the map hover treatment while pointing at its separate viewport layer'
   try {
     await sendMouse({ type: 'move', position: [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)] });
     await waitUntil(() => getComputedStyle(map).backgroundColor === 'rgb(1, 2, 3)', 'map hover through the viewport layer');
+    minimap.style.setProperty('--lr-flow-minimap-hover-bg', 'rgb(9, 18, 27)');
+    minimap.style.setProperty('--lr-flow-minimap-active-bg', 'rgb(27, 18, 9)');
+    await waitUntil(() => getComputedStyle(map).backgroundColor === 'rgb(9, 18, 27)');
+    try {
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(map).backgroundColor === 'rgb(27, 18, 9)');
+    } finally {
+      await sendMouse({ type: 'up' });
+    }
     work.snapshot = { ...work.snapshot, nodes: [] }; await minimap.updateComplete;
     const emptyBox = map.getAttribute('viewBox');
     work.snapshot = { ...work.snapshot, viewport: { ...work.snapshot.viewport, x: -10 } }; await minimap.updateComplete;

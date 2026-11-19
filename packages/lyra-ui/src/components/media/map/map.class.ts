@@ -2710,6 +2710,7 @@ export interface LyraMapEventMap {
  *
  * The base exposes map loading with aria-busy. The host mirrors it until an author sets aria-busy.
  * Removing the host attribute resumes the mirror.
+ * @attr {'true' | 'false'} aria-busy - Author-controlled busy indicator on the map host.
  *
  * Marker inspection is limited to 2,000 entries (markersTruncated reports an omitted suffix),
  * and dataLayers to 100 entries. Automatic diffs support 10,000 features; updateSourceData()

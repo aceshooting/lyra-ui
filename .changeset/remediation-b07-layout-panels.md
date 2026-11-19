@@ -27,4 +27,3 @@
 - Keep the keyboard-active command selected when the pointer hovers another result. Click to select the hovered command.
 - Consume multi-split resize keys at a limit so the surrounding page stays in place.
 - Enable filter Reset whenever a value differs from its default, including when the chip row is empty.
-- Give the dock toggle a stable accessible name. Use `dockPanelToggle` for its name and `aria-expanded` for its state. The existing action strings supply its tooltip.

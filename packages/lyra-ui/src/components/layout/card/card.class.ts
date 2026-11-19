@@ -183,10 +183,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  value. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  // Host-attribute forwarding onto whichever native control actually carries the card's role,
-  // identical in shape to `<lr-button>`/`<lr-icon-button>`: a `role`-less host cannot express a
-  // toggle or current-item state itself, and an idref-free ARIA attribute does not cross the
-  // shadow boundary, so a selectable card tile had no way to announce its selection at all.
+  // The native activation control owns the card's interactive ARIA state.
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;

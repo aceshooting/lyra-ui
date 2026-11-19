@@ -125,6 +125,8 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Diameter of the marker circle
  *   (both inline-size and block-size, so the default dot stays circular). Inherits from theme
  *   ancestors.
+ * @cssprop --lr-timeline-ordered-marker-size - Minimum width and height for ordered markers. Falls back to
+ *   `--lr-timeline-marker-size`, then `var(--lr-size-1-5rem)`.
  * @cssprop [--lr-timeline-marker-number-color=var(--lr-color-text)] - Step-number colour inside an
  *   `ordered` timeline's marker ring.
  * @cssprop [--lr-timeline-rail-width=var(--lr-border-width-medium)] - Thickness of the
@@ -137,6 +139,11 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  *   Its private default changes per `variant` (see the class doc's variant table); a consumer can
  *   override it on an ancestor for a themed group or directly on one item, with the direct value
  *   winning via the normal cascade.
+ * @cssprop [--lr-timeline-marker-neutral-color=var(--lr-color-text-quiet)] - Neutral marker color when no shared marker color is set.
+ * @cssprop [--lr-timeline-marker-brand-color=var(--lr-color-brand)] - Brand marker color when no shared marker color is set.
+ * @cssprop [--lr-timeline-marker-success-color=var(--lr-color-success)] - Success marker color when no shared marker color is set.
+ * @cssprop [--lr-timeline-marker-warning-color=var(--lr-color-warning)] - Warning marker color when no shared marker color is set.
+ * @cssprop [--lr-timeline-marker-danger-color=var(--lr-color-danger)] - Danger marker color when no shared marker color is set.
  * @cssprop [--lr-timeline-active-ring-color=var(--lr-timeline-marker-color)] - Static outline color
  *   for the current/in-progress marker. The outline remains visible when reduced motion disables
  *   the optional pulse animation.

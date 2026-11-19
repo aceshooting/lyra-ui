@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Toll lent',
   signaturePadPenUp: 'Toll fent',
   signaturePadDrawingLimit: 'A rajzolási korlát betelt.',
+  catalogPickerSearchLoadFailed: 'Nem sikerült betölteni a keresőmezőt.',
   localePickerInputLimit: 'Csak az első 512 nyelvi és területi beállítás érhető el.',
   emojiPickerInputLimit: 'A bemeneti korlát elérése miatt egyes emojiadatok kimaradtak.',
 };

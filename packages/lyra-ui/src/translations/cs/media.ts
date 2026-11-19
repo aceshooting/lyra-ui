@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Ukončit režim celé obrazovky',
   videoPlaylistLabel: 'Seznam videí',
   videoPlaylistUntitled: 'Video {position}',
+  videoTimeReadout: '{current} z {duration}',
   pause: 'Pozastavit',
   qrCodeMissingLibrary: 'Tato komponenta vyžaduje k vykreslení QR kódů nainstalovaný volitelný balíček „qrcode“.',
   qrCodeGenerationFailed: 'Tuto hodnotu nelze zakódovat jako QR kód.',

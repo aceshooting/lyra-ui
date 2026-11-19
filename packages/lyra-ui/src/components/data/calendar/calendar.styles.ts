@@ -37,20 +37,12 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
-  /* Every day-cell rule is (0,2,0) -- [data-outside], [data-today], [data-selected], :hover,
-     :active, :focus-visible -- so source order alone decides, and the two STATIC month-context
-     decorations must come first. Declared last, [data-outside]'s background swallowed the
-     selected fill and both pointer states on every adjacent-month cell (each of them clickable),
-     and [data-today]'s outline swallowed the focus ring, leaving today pixel-identical focused
-     and at rest. Weakest to strongest: month context, selection, pointer, focus. */
+  /* Paint priority runs from month context through selection, pointer feedback and focus. */
   [part='day'][data-outside='true'] { color: var(--lr-calendar-day-outside-color, var(--lr-color-text-quiet)); background: var(--lr-calendar-day-outside-bg, var(--lr-color-surface)); }
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-calendar-day-today-outline-color, var(--lr-color-brand)); outline-offset: calc(var(--lr-border-width-medium) * -1); }
   [part='day'][data-selected='true'] {
     background: var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet));
   }
-  /* Following [data-selected] and [data-outside] lets hovering or pressing a day layer its own
-     feedback over whichever static fill it carries instead of being masked by it. Mirrors
-     env-list.styles.ts's [aria-pressed='true']-before-:active fix for the same masking shape. */
   [part='day']:hover {
     background: var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet));
   }
@@ -63,9 +55,6 @@ export const styles = css`
   [part='day'][data-selected='true']:active {
     background: var(--lr-calendar-day-active-bg, ${activeFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});
   }
-  /* Last of the equal-specificity day rules, so the ring wins on a focused today cell -- the one
-     day carrying an outline of its own. The negative outline-offset keeps the ring inside the
-     border box, where it replaces that today outline rather than doubling it. */
   [part='day']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -78,13 +67,9 @@ export const styles = css`
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   [part='event-limit'] { display: block; margin-block-start: var(--lr-space-2xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-xs); }
-  /* An event chip's fill is per-event data (CalendarEvent.color) written inline as
-     background-color by calendar.class.ts, and an inline declaration beats every stylesheet rule
-     -- so pointer feedback is a background-IMAGE overlay. It composites over whatever fill the
-     chip carries, including the pure white or pure black that the filter: brightness() it
-     replaces left unchanged, and paints under the label instead of recolouring it. */
   [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--_lr-calendar-agenda-event-background, var(--lr-color-brand-quiet))); }
   [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))); }
+  /* Tint the event color underneath the label, including when the color is inline. */
   [part='event']:hover {
     --_lr-calendar-hover-tint: var(--lr-calendar-event-hover-tint, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
     background-image: linear-gradient(var(--_lr-calendar-hover-tint), var(--_lr-calendar-hover-tint));

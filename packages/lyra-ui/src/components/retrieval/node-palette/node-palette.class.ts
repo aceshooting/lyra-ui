@@ -207,7 +207,7 @@ export interface LyraNodePaletteEventMap {
  *   search field gains focus; preserves `relatedTarget` and crosses the shadow boundary.
  * @event blur - A realm-correct native `FocusEvent`, relayed exactly once when the internal
  *   search field loses focus; preserves `relatedTarget` and crosses the shadow boundary.
- * @cssprop --lr-node-palette-item-hover-fill - Background of the hovered control.
+ * @cssprop [--lr-node-palette-item-hover-fill=var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))] - Background of the hovered control.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
  * @csspart search-clear - The button that clears the search field, rendered only while it has a
@@ -275,13 +275,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'items',
   ]);
-  /** Item identity is a load-bearing public contract, not an incidental detail: `willUpdate()`
-   *  matches a surviving item across a reorder/filter by `===` to keep roving focus on it (see
-   *  `occurrenceAt`/`indexOfOccurrence` below), `confirmPendingReorder()` locates the pending
-   *  request's own item/neighbor the same way, and `icon` may carry an opaque `TemplateResult` --
-   *  a deep structural clone (the default for an owned collection) would silently corrupt its
-   *  internal `strings`/`.raw` template identity. Matches `<lr-command-palette>`'s identical
-   *  `commands` exception for the same reasons. */
+  /** Focus and reorder match items by identity. Icons can hold opaque Lit templates. */
   protected static override readonly identityCollectionProperties =
     Object.freeze(['items']);
   protected static override readonly identityEventDetailProperties =
@@ -573,9 +567,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      // Reads the roving list as last rendered rather than recomputing it -- see the cache note
-      // above `filteredCache`. `lastRenderedRovingList` is refreshed in updated() on every cycle,
-      // so it is always current by the time a user can press a key.
       if (this.lastRenderedRovingList.length === 0) return;
       this.activeIndex = 0;
       this.focusItem(0);
@@ -595,9 +586,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   ): void {
     if (e.defaultPrevented) return;
     const list = this.lastRenderedRovingList;
-    // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching <lr-tree>'s own contract.
-    // ArrowUp/ArrowDown are not direction-sensitive, so this branch is deliberately not RTL-swapped:
-    // "down" always means later in the group.
     if (
       this.reorderable &&
       (e.ctrlKey || e.metaKey) &&

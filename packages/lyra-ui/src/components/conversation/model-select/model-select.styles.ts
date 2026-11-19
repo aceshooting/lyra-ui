@@ -27,20 +27,7 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     min-inline-size: 0;
-    /* The 24rem ceiling is the shipped default, kept rather than dropped to match lr-select's
-       uncapped host: a model id row lives in a settings card or a composer toolbar, where an
-       uncapped control stretches to the full container. The value is now a public name instead of a
-       literal, so a full-width row is one declaration (set it to none) rather than a ::part
-       override -- which is exactly what model-settings-panel.styles.ts had to write. Read as a
-       var() fallback and never declared on :host, so an ancestor theme wrapper's value still
-       reaches it. */
     max-inline-size: var(--lr-model-select-max-inline-size, var(--lr-size-24rem));
-    /* The ladder lives in internal/sizes.styles.ts, composed ahead of this sheet; only the
-       indirection is here. The public --lr-model-select-* surface is unchanged, its values coming
-       from the one --lr-form-control-* scale every other control sizes against, so a model select
-       matches the lr-select / lr-input / lr-button beside it at every tier, and the shared sheet's
-       per-tier :host([size='...']) rules (both spellings) are the only place a tier is
-       restated. */
     --_lr-model-select-trigger-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
     --_lr-model-select-trigger-min-height: var(--lr-form-control-height);
@@ -48,18 +35,11 @@ export const styles = css`
     --_lr-model-select-expand-size: var(--lr-size-1-75rem);
     --_lr-model-select-gap-default: var(--lr-space-xs);
     --_lr-model-select-radius-default: var(--lr-form-control-radius);
-    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
-       undeclared -- only this private copy of it is declared -- so a value set on :root or any
-       ancestor still reaches this trigger, while the halo itself is painted in one place for every
-       field-shaped control in the library. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host(:disabled) {
     cursor: not-allowed;
   }
-  /* The decorative expand icon is a glyph box, not a control metric, so the shared ladder has no
-     equivalent and its three sizes stay here -- both spellings of each tier, tracking the shared
-     sheet exactly. */
   :host([size="2xs"]),
   :host([size="xs"]) {
     --_lr-model-select-expand-size: var(--lr-size-1rem);
@@ -71,9 +51,6 @@ export const styles = css`
 
   ${formControlChrome}
 
-  /* Accepts required and renders a visible label like every other field in the library, so it
-     marks it the same way -- the [hidden] rule above keeps the marker from orphaning a stray
-     glyph when no label is set. */
   ${formControlRequiredMarker}
 
   [part='trigger'],
@@ -83,11 +60,7 @@ export const styles = css`
     gap: var(--lr-model-select-gap, var(--_lr-model-select-gap-default));
     inline-size: 100%;
     min-inline-size: 0;
-    /* --lr-model-select-trigger-height is deliberately undeclared on :host: it is read only through
-       these two var() fallbacks, so any declared value (even auto) would dead-arm them and turn
-       --lr-model-select-trigger-min-height into dead code -- the same trap lr-select documents. The
-       per-tier floor falls out of the fallback; an override pins an exact height, flooring and
-       capping the row at once. */
+    /* Leave the height hook unset so the minimum can supply the default. */
     min-block-size: var(
       --lr-model-select-trigger-height,
       var(
@@ -101,9 +74,6 @@ export const styles = css`
       --lr-model-select-trigger-padding,
       var(--_lr-model-select-trigger-padding)
     );
-    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
-       ancestor or :root value still wins -- the same shape as lr-select's own trigger, which had
-       the identical hardcoded pair before its own fix. */
     border: var(--lr-border-width-thin) solid
       var(--lr-model-select-trigger-border-color, var(--lr-color-border));
     border-radius: var(
@@ -129,22 +99,13 @@ export const styles = css`
   [part="combobox"]:focus-within {
     ${focusRing}
   }
-  /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
-     lr-select): the outline above is the accessibility answer to keyboard focus and stays
-     unchanged, while a halo a consumer deliberately configured should read on a pointer focus
-     too. Unset it resolves to none, so this rule paints nothing by default. */
+  /* An opted-in focus halo is also visible after a pointer click. */
   [part="trigger"]:focus,
   [part="combobox"]:focus-within {
     ${formControlFocusHalo}
   }
-  /* :where() zeroes the wrapped selectors, holding this at (0,1,0) so the pressed rule below --
-     same specificity, later in source order -- wins while the trigger is held. It buys nothing
-     against a consumer's own ::part(trigger):hover: encapsulation context sorts before
-     specificity, so an outer normal declaration wins whatever this rule weighs. */
   :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-model-select-trigger-hover-bg, var(--lr-color-brand-quiet));
-    /* Falls back to this control's own resting edge, so an unset hook leaves a hovered trigger
-       painted exactly as it always was -- hover has never moved this border. */
     border-color: var(
       --lr-model-select-trigger-hover-border-color,
       var(--lr-model-select-trigger-border-color, var(--lr-color-border))

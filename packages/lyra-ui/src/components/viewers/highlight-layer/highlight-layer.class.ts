@@ -14,6 +14,7 @@ import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessi
 import { shouldIgnoreActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
+import { highlightHitAreasOverlap } from '../region-highlight-layer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -221,23 +222,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       view.getComputedStyle(this).getPropertyValue('--lr-icon-button-size').trim(),
       { host: this },
     ) ?? 0;
-    const boxes = this.items
-      .flatMap((item, index) => item.rects.map((rect) => {
-        const boxWidth = Math.max((rect.width / 100) * width, min);
-        const boxHeight = Math.max((rect.height / 100) * height, min);
-        const left = ((rect.x + rect.width / 2) / 100) * width - boxWidth / 2;
-        const top = ((rect.y + rect.height / 2) / 100) * height - boxHeight / 2;
-        return { index, left, top, right: left + boxWidth, bottom: top + boxHeight };
-      }))
-      .sort((first, second) => first.left - second.left);
-    for (let first = 0; first < boxes.length; first++) {
-      const a = boxes[first]!;
-      for (let second = first + 1; second < boxes.length && boxes[second]!.left < a.right; second++) {
-        const b = boxes[second]!;
-        if (b.index !== a.index && b.top < a.bottom && a.top < b.bottom) return true;
-      }
-    }
-    return false;
+    return highlightHitAreasOverlap(this.items.map((item) => item.rects), { width, height }, min);
   }
 
   override adoptedCallback(): void {

@@ -1,5 +1,6 @@
+import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { AutocorrectState, installNativeInputModeAliases, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeSelectionAccessors, installNativeInputModeAliases, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -202,6 +203,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  static {
+    installNativeSelectionAccessors(this.prototype, host => host.textareaEl, { methods: false });
+  }
+
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraTextarea>[] {
     return [
@@ -295,8 +300,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
-  /** Accessible name overriding the label/placeholder-derived default. Any non-`null` value takes
-   *  precedence by presence—including `''`—matching `<lr-date-input>`'s `accessibleLabel`. */
+  /** Native textarea name. An empty override is preserved. Whitespace alone falls back to the label, placeholder, or localized name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. */
@@ -376,7 +380,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   });
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
-  private resizeObserver?: ResizeObserver;
+  private resizeObserver?: OwnedResizeObserver;
   private lastObservedWidth?: number;
   private readonly resizeRaf = new OwnedFrame(this);
   private readonly countAnnounceTimer = new OwnedTimeout(this);
@@ -395,30 +399,11 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     return this.textareaEl ?? null;
   }
 
-  get selectionStart(): number | null {
-    return this.textareaEl?.selectionStart ?? null;
-  }
+  declare selectionStart: number | null;
 
-  set selectionStart(value: number | null) {
-    if (this.textareaEl) this.textareaEl.selectionStart = value ?? 0;
-  }
+  declare selectionEnd: number | null;
 
-  get selectionEnd(): number | null {
-    return this.textareaEl?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.textareaEl) this.textareaEl.selectionEnd = value ?? 0;
-  }
-
-  get selectionDirection(): TextareaSelectionDirection | null {
-    return this.textareaEl
-      ?.selectionDirection as TextareaSelectionDirection | null;
-  }
-
-  set selectionDirection(value: TextareaSelectionDirection | null) {
-    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
-  }
+  declare selectionDirection: TextareaSelectionDirection | null;
 
   override click(): void {
     if (!isLiveDisabled(this)) this.textareaEl?.click();
@@ -493,11 +478,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       document: this.ownerDocument,
       source: this,
     });
-    // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab panel detaching and
-    // reattaching its content) leaves resizeObserver undefined from disconnectedCallback's own
-    // teardown below -- Lit's connectedCallback doesn't schedule a re-render on its own, so
-    // without this, auto-grow would only come back once some unrelated reactive property
-    // happened to change, and a pure container-width resize landing before that would be missed.
     if (this.resize === 'auto' && this.hasUpdated) {
       this.armResizeObserver();
       this.fitToContent();
@@ -656,17 +636,9 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (!this.isConnected) return;
     const textarea = this.textareaEl;
     if (this.resizeObserver || !textarea) return;
-    const view = this.ownerDocument.defaultView;
-    const ResizeObserverCtor = view?.ResizeObserver;
-    if (!view || !ResizeObserverCtor) return;
     this.lastObservedWidth = textarea.getBoundingClientRect().width;
-    const observer = new ResizeObserverCtor((entries) => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== view || this.resizeObserver !== observer) return;
-      const width = entries[0]?.contentRect.width;
-      // fitToContent() itself writes a *block*-size (height) change to the observed element,
-      // which would otherwise re-trigger this same observer every tick -- only re-fit when the
-      // *inline* size (width) actually changed, mirroring lr-chat-composer's identical
-      // armTextareaResizeObserver() guard.
+    const observer = new OwnedResizeObserver(this, entries => {
+      const width = readInlineSize(entries[0]);
       if (
         width === undefined ||
         (this.lastObservedWidth !== undefined &&
@@ -700,12 +672,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     const borderBlock =
       parseFloat(computed.borderBlockStartWidth) +
       parseFloat(computed.borderBlockEndWidth);
-    const parsedMax = parseFloat(computed.maxBlockSize);
-    const maxBlockSize = Number.isFinite(parsedMax)
-      ? parsedMax
-      : Number.POSITIVE_INFINITY;
-    const contentBlockSize = ta.scrollHeight + borderBlock;
-    ta.style.blockSize = `${Math.min(contentBlockSize, maxBlockSize)}px`;
+    // CSS resolves max-block-size against the current allocation, including percentage caps.
+    ta.style.blockSize = `${ta.scrollHeight + borderBlock}px`;
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for

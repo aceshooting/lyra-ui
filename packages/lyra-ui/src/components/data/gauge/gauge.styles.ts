@@ -12,24 +12,10 @@ export const styles = css`
     block-size: var(--lr-size-1-5em);
     aspect-ratio: auto;
   }
-  /* Size tiers, from the explicit-only ladder in
-     internal/contextual-vocabulary.styles.ts. Every box above is expressed in em, and the SVG
-     scales its own viewBox, so pinning the host font size is the whole tier: the frame, the stroke
-     geometry and both captions resize together from one declaration.
-     Only a host that carries a size attribute reads it. With none, no font-size is declared at all
-     and the gauge keeps inheriting the ambient text size exactly as it did before the ladder
-     reached this component. An unrecognised tier leaves the ladder slot unset, which makes this
-     declaration invalid at computed-value time; font-size inherits, so the gauge falls back to
-     that same pre-ladder rendering instead of snapping to a tier nobody asked for. */
+  /* An explicit size tier sets the host font size for the em-based frame and captions. */
   :host(:where([size])) {
     font-size: var(--lr-form-control-font-size);
   }
-  /* Palette slot for the effective variant -- variant itself, or the matching thresholds entry.
-     A separate custom property from --lr-gauge-fill, which stays the highest-priority public
-     override and is left completely alone by these rules. Each variant also gets its own scoped
-     --lr-gauge-<variant>-fill, read as the innermost fallback before the shared token, so a
-     consumer can retint one variant's fill without the uniform --lr-gauge-fill override, which
-     would retint every variant at once. */
   :host([data-effective-variant='neutral']) {
     --_lr-gauge-variant-fill: var(--lr-gauge-neutral-fill, var(--lr-color-neutral));
   }
@@ -61,15 +47,6 @@ export const styles = css`
     stroke-linecap: round;
     transition: stroke-dashoffset var(--lr-transition-base);
   }
-  /* Both captions are em-based, like every box in this file: the radial/ring frame is
-     --lr-size-8em and the linear frame is --lr-size-12em by --lr-size-1-5em, so one host
-     font-size (ambient, or a size tier's --lr-form-control-font-size) settles the frame and the
-     caption together. A rem value here would stay pinned to the document root regardless of a
-     smaller tier or a caller's own font-size on the host, so the frame could shrink while the
-     caption did not -- the linear shape's previous defect, whose caption was --lr-size-0-5rem.
-     --lr-font-size-2xs has no em-suffixed sibling token, so the label multiplies the existing
-     --lr-size-1em token instead of introducing a new value-named token -- that catalog's growth
-     is frozen. */
   [part='value'] {
     font-size: var(--lr-size-1em);
     font-weight: var(--lr-font-weight-bold);
@@ -84,10 +61,7 @@ export const styles = css`
     font-family: var(--lr-font);
     text-transform: uppercase;
   }
-  /* Each caption is its own bidi paragraph whose direction comes from its first strong character,
-     like a first-strong isolate: a number-first valueText (2.4 MiB/s, -3) otherwise inherits an
-     RTL host's base direction and paints unit-first. text-anchor keeps following the inherited
-     direction, so caption placement is unchanged. */
+  /* Use first-strong direction within captions so units stay in order under RTL. */
   [part='value'],
   [part='label'] {
     unicode-bidi: plaintext;

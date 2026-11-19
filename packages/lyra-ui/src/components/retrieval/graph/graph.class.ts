@@ -19,7 +19,7 @@ import type { LyraGraphSource, LyraGraphRecord, LyraGraphSourceQuery, LyraGraphS
 import { GraphSourceController } from './graph-source-controller.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
-let paginationRegistration: Promise<unknown> | undefined;
+import { findSourceRow } from '../../../internal/source-row.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
@@ -124,6 +124,7 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFA
 export type GraphSource = LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
 type GraphSourceValue = LyraGraphRecord<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
 type GraphSourceRecord = LyraSourceRecord<GraphSourceValue>;
+let paginationRegistration: Promise<unknown> | undefined;
 const EMPTY_SOURCE_QUERY: LyraGraphSourceQuery = Object.freeze({ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: Object.freeze([]) });
 function graphSourceField(value: unknown, key: PropertyKey): unknown {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid graph record');
@@ -420,7 +421,7 @@ export interface LyraGraphEventMap {
  * logical totals come from the provider; neighborhood/summary coverage is disclosed separately.
  * fit() frames the current scene, not the full source. Dragging changes local layout only.
  * Removing graphSource restores the current legacy arrays without modifying their getters.
- * @cssprop --lr-graph-spatial-control-hover-fill - Background of the hovered control.
+ * @cssprop [--lr-graph-spatial-control-hover-fill=color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Background of the hovered control.
  * @csspart source-navigator - Global node/edge query, record list and pagination.
  * @csspart source-kind - Record kind selector.
  * @csspart source-search - Search input for global records.
@@ -704,8 +705,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (!await this.ensureSourceScene(key, current) || !current()) return undefined;
     }
     if (this.sourceList) {
-      const mounted = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].some(row => row.dataset['sourceKey'] === key);
-      if (!mounted && !await this.revealSourceRecord(key, false)) return undefined;
+      if (!findSourceRow(this.renderRoot, key) && !await this.revealSourceRecord(key, false)) return undefined;
     } else if (!await this.focusSceneNode(key.slice(5), undefined, current)) return undefined;
     const finalCurrent = this.sourceAuthority();
     const accepted = () => finalCurrent() && this.graphSource === source && this.sourceEpoch === epoch && this.sourceComposition.profile === profile;
@@ -859,7 +859,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.sourceRovingKey = key; this.sourceRestoreFocus = null; this.sourceState++;
     await this.updateComplete;
     if (!current()) return false;
-    const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
+    const target = findSourceRow<HTMLButtonElement>(this.renderRoot, key);
     if (!target) return false;
     revealWithinScrollParent(target, { block: 'nearest' });
     if (!current()) return false;
@@ -1346,10 +1346,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private lastKeyActivateTime = 0;
   /** The last activated item and when: the second press of an expand gesture never deselects it. */
   private lastActivation?: { id: string; time: number };
-  /** The last `focusNodeId` value `focusNode()` was auto-invoked for by `updated()`'s declarative
-   *  centering branch -- guards against re-centering on every update while `focusNodeId` stays set
-   *  (see the `focusNodeId` property doc for why it only ever centers once per value). Reset to `null`
-   *  whenever `focusNodeId` itself is cleared, so the same id can center again later. */
+  /** Declarative focus applies once per value, until that value is cleared. */
   private lastAppliedFocusNodeId: string | null = null;
   private focusHaloEl?: SVGCircleElement;
   private communityHullEls: SVGPathElement[] = [];
@@ -1372,12 +1369,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private hostResizeObserverDocument?: Document;
   private stopCanvasDpr?: () => void;
   private readonly canvasDrawFrame = new OwnedFrame(this);
-  /** Gates `scheduleCanvasDraw()` -- an off-screen (scrolled away, hidden tab panel) canvas-mode
-   *  instance would otherwise still pay the full redraw cost throughout its simulation settle and
-   *  any drag, same problem `<lr-chart>`'s identical `visible`/`IntersectionObserver` pair
-   *  addresses. Not `@state()`: unlike `loading`, this never drives `render()`'s template, only
-   *  gates the imperative canvas-raster path, so making it reactive would just schedule a wasted
-   *  Lit update on every visibility crossing. */
+  /** Visibility gates canvas painting without scheduling a template update. */
   private visible = true;
   private intersectionObserver?: IntersectionObserver;
   /** Set when `scheduleCanvasDraw()` was asked to draw while off-screen -- consulted by the
@@ -1804,9 +1796,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simulation?.stop();
     this.finishCanvasNodeDrag(undefined, true, false);
     this.takeCanvasPointerDown();
-    // An in-flight focusNode()/fit() tween would otherwise keep scheduling frames and writing
-    // zoom transforms against the detached tree -- cancel it (which also settles the caller's
-    // pending Promise with `false` instead of leaving it hanging forever).
+    // Retiring the tween also settles pending focusNode() and fit() calls.
     this.cancelCameraTween();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
@@ -1938,21 +1928,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return visible;
   }
 
-  /** Cleared twice, from two different points in `willUpdate()` -- neither alone is enough:
-   *  (1) for updates other than cursor movement, because `isInteractiveLink()` (what this filters on) reads
-   *  live computed style (`--lr-graph-edge-color`, `--lr-color-border`) and `link.color`/`link.width`,
-   *  none of which are reactive properties `changed` would ever report, so a style-only update
-   *  (a CSS custom-property edit plus `requestUpdate()`, `nodes`/`edges` untouched) must still see
-   *  a fresh result; (2) again right after `rebuildSimulation()` reassigns `simLinks`, because
-   *  `willUpdate()`'s own `previousIndex` computation (right after clear (1), before
-   *  `rebuildSimulation()` runs) can itself call `navigableLinks()` and repopulate the cache from
-   *  the OLD `simLinks` -- without this second clear a structural change would render against
-   *  stale link membership. Caching within one render pass is still enough to fix the actual
-   *  cost: without any caching, `navigableLinks()`'s `simLinks.filter()` re-runs on every call, and
-   *  `graphItemCount()`/`normalizedGraphItem()` call it once per rendered item (roving-tabindex
-   *  math in both the SVG and canvas-mode offscreen cursor-item templates) -- an O(links) refilter
-   *  inside an O(nodes + links) render loop is an O((nodes + links) * links) render, confirmed by
-   *  local profiling to take 60+ seconds alone for a 5,000-node/10,000-link canvas-mode graph. */
+  /** Invalidate for paint changes and rebuilt links. Cursor repair can read the cache before a rebuild. */
   private navigableLinksCache?: SimLink[];
 
   private navigableLinks(): SimLink[] {
@@ -2556,9 +2532,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.pickDirty = true;
   }
 
-  /** Arms the host observer when either consumer needs it, and disconnects it when neither does --
-   *  the single place that decides, so `fitTo="container"` keeps its measurement across a renderer
-   *  switch that used to unconditionally tear the observer down. */
   private syncHostResizeObserver(): void {
     if (this.view !== '2d' || (this.renderer !== 'canvas' && this.fitTo !== 'container')) {
       this.hostResizeObserver?.disconnect();
@@ -2566,9 +2539,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.hostResizeObserverDocument = undefined;
       return;
     }
-    // Keep an already-correct instance: this runs from routine updates and from every canvas
-    // surface setup, and rebuilding would drop the measurement the live observer has already
-    // delivered while re-paying its initial callback (an extra markCanvasDirty() in canvas mode).
+    // Keep the existing measurement when a renderer switch still needs the observer.
     if (
       this.hostResizeObserver &&
       this.hostResizeObserverDocument === this.ownerDocument
@@ -3871,27 +3842,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  zoom `.on('start')`/`.on('end')` handlers, added by this same change). */
   private isPanning = false;
 
-  /**
-   * Imperatively wires up d3-zoom (pan/zoom on the `<svg>`) and d3-drag
-   * (per-node drag) against the just-rendered DOM. The zoom bind itself is a
-   * one-time guard (`zoomedEl`) — but the bound `zoomBehavior`'s
-   * `scaleExtent` is re-read from `minZoom`/`maxZoom` on every call so a
-   * post-mount change to either still takes effect. The node-drag bind +
-   * node/link/label element caching for `onTick()` only run when
-   * `changed` indicates a fresh structural render just happened, not on
-   * every call — otherwise this would re-scan the DOM via
-   * `querySelectorAll` on every Lit update, which used to include every
-   * single simulation tick. `<circle>`s already bound are skipped
-   * (`boundNodeEls`) — a WeakSet reset on every `rebuildSimulation()` so DOM
-   * nodes Lit reuses across a rebuild get rebound against their new datum
-   * instead of a stale one. The zoom handler writes the resulting transform
-   * straight to the cached `gEl` (bound once alongside `zoomedEl`, since the
-   * outer `<g>` is a static part of the template and never recreated by Lit)
-   * instead of assigning a Lit reactive property — panning/zooming fires
-   * continuously while dragging, and reassigning a `@state()` there would
-   * force a full re-render (recomputing every node/link template) on every
-   * single event, the same class of cost `onTick()` already avoids for ticks.
-   */
+  /** Bind drag and refresh tick targets after structural renders. Let zoom write directly to the SVG. */
   private applyInteractions(changed: PropertyValues): void {
     if (!this.d3) return;
     if (this.renderer !== 'svg') return;

@@ -277,6 +277,37 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
       await cancel(page, id); await unchanged(page, id, before, initial, saveEditor); await dispose(page, id);
     }
   });
+  for (const phase of ['picker', 'draft']) {
+    await check(`an API edit invalidates image insertion during the ${phase}`, async () => {
+      const id = `insert-ui-api-edit-${phase}`;
+      await createPlain(page, id, createEditor);
+      try {
+        const bytes = await source(page);
+        let chooser;
+        if (phase === 'picker') {
+          chooser = await openFileChooser(page, part(page, id, 'file'), () => part(page, id, 'trigger').click());
+        } else {
+          await draft(page, id, bytes);
+        }
+        const edit = await host(page, id).evaluate(element => {
+          const found = element.find('alpha');
+          return found.ok ? element.replaceMatch(found.value.matches[0].id, 'delta') : found;
+        });
+        assert.equal(edit.ok, true);
+        if (chooser) {
+          await chooser.setFiles({ name: 'stale.png', mimeType: 'image/png', buffer: bytes });
+          await paints(page);
+          assert.equal(await part(page, id, 'width').count(), 0);
+        } else {
+          assert.equal(await part(page, id, 'apply').evaluate(element => element.disabled), true);
+        }
+        assert.deepEqual((await snapshot(page, id)).revision, edit.value);
+        assert.equal(await page.locator(`#${id} .docx-pages img`).count(), 0);
+      } finally {
+        await dispose(page, id);
+      }
+    });
+  }
   await check('real caret A to B to A cannot revive the original local image draft', async () => {
     const id = 'insert-ui-aba'; await createPlain(page, id, createEditor); await caret(page, id, 'alpha');
     const before = await saveEditor(page, id), initial = await snapshot(page, id); await draft(page, id, await source(page));

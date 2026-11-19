@@ -527,7 +527,7 @@ describe('tree-item declarative child model', () => {
       return { matches: false, media: query } as MediaQueryList;
     }) as typeof frameWindow.matchMedia;
     frameWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
-      if (element === el) frameStyleReads += 1;
+      if (element === el?.shadowRoot!.querySelector('[part="children"]')) frameStyleReads += 1;
       return originalFrameGetComputedStyle.call(frameWindow, element, pseudo);
     }) as typeof frameWindow.getComputedStyle;
 
@@ -1031,6 +1031,36 @@ it('gives the expand/collapse toggle pressed feedback distinct from hover', asyn
     if (pressed) await sendMouse({ type: 'up' });
     await resetMouse();
   }
+});
+
+it('uses inherited hover and pressed border colors for the unchecked checkbox', async () => {
+  const wrapper = await fixture(html`
+    <div role="tree" style="--lr-tree-checkbox-hover-border-color: rgb(9, 18, 27); --lr-tree-checkbox-active-border-color: rgb(27, 18, 9)">
+      <lr-tree-item label="Branch"></lr-tree-item>
+    </div>
+  `);
+  const item = wrapper.querySelector('lr-tree-item')!;
+  configureOwnedItem(item, { selection: 'multiple' });
+  await item.updateComplete;
+  const checkbox = item.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
+  const control = item.shadowRoot!.querySelector<HTMLElement>('[part~="checkbox__control"]')!;
+  try {
+    await hoverUntilMatched(checkbox, 'the checkbox never entered :hover');
+    await waitUntil(() => getComputedStyle(control).borderTopColor === 'rgb(9, 18, 27)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(control).borderTopColor === 'rgb(27, 18, 9)');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('uses the quiet neutral fill for badges without a tone', async () => {
+  const item = await fixture<LyraTreeItem>(html`
+    <lr-tree-item data-lr-theme-scope style="--lr-color-border: rgb(9, 18, 27); --lr-color-neutral-fill-quiet: rgb(27, 18, 9)"
+      .item=${{ id: 'branch', label: 'Branch', badges: [{ text: 'New' }] }}></lr-tree-item>
+  `);
+  const badge = item.shadowRoot!.querySelector('[part="badge"]')!;
+  expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(27, 18, 9)');
 });
 
 it("falls the toggle's unset hover fill back to the neutral fill token, not the border token", async function () {

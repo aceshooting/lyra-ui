@@ -1,4 +1,4 @@
-import { AllocationObserverController } from '../../../internal/owned-observer.js';
+import { AllocationObserverController, OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
@@ -25,7 +25,7 @@ import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js'
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import {
   activateOverlay,
   composedContains,
@@ -41,6 +41,7 @@ import { LYRA_DEFAULT_navigation } from '../../../internal/default-strings/share
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const RELATIVE_BREAKPOINT_RE = new RegExp(`^(?:${CSS_NUMBER_SOURCE})(r?em|v[wh])$`, 'i');
+const STICKY_OFFSET_REGIONS = ['banner', 'header', 'subheader'] as const;
 
 /** The Page presentation derived from its allocated inline size. */
 export type PageView = 'mobile' | 'desktop';
@@ -151,11 +152,11 @@ export interface LyraPageEventMap {
  * @csspart skip-to-content - The focus-revealed skip link.
  * @csspart subheader - Wrapper for the `subheader` slot.
  * @cssprop [--lr-page-aside-width=auto] - Desktop aside column width.
- * @cssprop [--lr-page-banner-height=0px] - Minimum banner height and sticky offset.
- * @cssprop [--lr-page-header-height=0px] - Minimum header height and sticky offset.
+ * @cssprop [--lr-page-banner-height=0px] - Minimum banner height and default sticky offset.
+ * @cssprop [--lr-page-header-height=0px] - Minimum header height and default sticky offset.
  * @cssprop [--lr-page-main-width=1fr] - Desktop main column width.
  * @cssprop [--lr-page-menu-width=auto] - Desktop menu column width.
- * @cssprop [--lr-page-subheader-height=0px] - Minimum subheader height and sticky offset.
+ * @cssprop [--lr-page-subheader-height=0px] - Minimum subheader height and default sticky offset.
  * Interaction-state properties below are resolved as inline fallbacks, so setting one on the Page
  * or any ancestor themes only its named target without replacing shared design tokens.
  * @cssprop [--lr-page-skip-to-content-hover-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -210,9 +211,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  /** `disable-sticky` is read only by `:host([disable-sticky~="..."])` rules in page.styles.ts,
-   *  so it is deliberately not a reactive property. Declared here so authoring the documented
-   *  attribute does not draw an "unknown attribute" dev warning. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['disable-sticky'];
 
   private readonly navOpenGuard = new VetoWriteGuard();
@@ -239,6 +237,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   /** Allocation breakpoint in pixels, host `em`, root `rem`, or owner-window `vw` and `vh`.
    * Invalid lengths fall back to `768px`. */
   @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
+
+  /** Uses the rendered block sizes of sticky banner, header and subheader regions for offsets.
+   * Height tokens set the minima and supply offsets until measurement is available. */
+  @property({ type: Boolean, attribute: 'auto-sticky-offsets', reflect: true })
+  autoStickyOffsets = false;
 
   /** Logical edge occupied by desktop navigation and the mobile drawer. */
   @property({ attribute: 'navigation-placement', reflect: true })
@@ -271,6 +274,16 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   private readonly allocation = new AllocationObserverController(this, {
     extra: () => this.allocationMetric ?? null,
     onInlineSize: (size, target) => this.onAllocation(size, target),
+  });
+  private readonly stickyOffsets = new OwnedResizeObserver(this, (entries) => {
+    const style = this.pageElement.style;
+    for (const entry of entries) {
+      const size = finiteNumber(entry.borderBoxSize?.[0]?.blockSize ?? -1, -1);
+      if (size >= 0) {
+        const region = entry.target.getAttribute('part');
+        style.setProperty(`--_lr-page-${region}-measured-size`, `${size}px`);
+      }
+    }
   });
   private allocationMeasured = false;
   private allocationInlineSize?: number;
@@ -306,15 +319,14 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   @query('[part~="main"]') private mainElement?: HTMLElement;
   @query('[part~="drawer"]') private drawerElement?: HTMLElement;
+  @query('[part~="page"]') private pageElement!: HTMLElement;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // A URL fragment cannot resolve to an id inside a shadow root. Make the host the real,
-    // per-instance native fragment target while the click handler below moves focus to the
-    // semantic main landmark inside. Preserve an author-supplied host id/tabindex.
     this.allocationMeasured = false;
     this.measureAllocation();
     this.observeAllocation();
+    if (this.hasUpdated && this.autoStickyOffsets) this.observeStickyOffsets();
     if (this.hasUpdated && this.view === 'mobile' && this.navOpen) {
       if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
       else this.syncOverlay();
@@ -330,6 +342,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   override disconnectedCallback(): void {
     this.modalSurface.disconnect();
+    this.clearStickyOffsets();
     this.allocationMetric?.remove();
     this.allocationMetric = undefined;
     this.allocationMetricInlineSize = undefined;
@@ -342,6 +355,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     cancelDeferredFocusReturn(this);
     this.releaseCustomToggleA11y();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.clearStickyOffsets();
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -373,6 +391,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('mobileBreakpoint')) this.observeAllocation();
+    if (changed.has('autoStickyOffsets')) {
+      if (this.autoStickyOffsets && this.isConnected) this.observeStickyOffsets();
+      else this.clearStickyOffsets();
+    }
     if (this.view === 'mobile' && this.navOpen) this.modalSurface.show();
     // Idrefs do not cross the shadow boundary: reflect them as element references on the dialog owner.
     const describedBy = this.view === 'mobile' && this.navOpen ? this.getAttribute('aria-describedby') : null;
@@ -391,6 +413,21 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     } else {
       this.syncCustomToggle();
       this.syncOverlay(changed);
+    }
+  }
+
+  private observeStickyOffsets(): void {
+    for (const region of STICKY_OFFSET_REGIONS) {
+      this.stickyOffsets.observe(this.pageElement.querySelector(`[part="${region}"]`)!, { box: 'border-box' });
+    }
+  }
+
+  private clearStickyOffsets(): void {
+    this.stickyOffsets.clear();
+    const style = this.pageElement?.style;
+    if (!style) return;
+    for (const region of STICKY_OFFSET_REGIONS) {
+      style.removeProperty(`--_lr-page-${region}-measured-size`);
     }
   }
 

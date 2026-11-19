@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pinna ’l isfel',
   signaturePadPenUp: 'Pinna ’l fuq',
   signaturePadDrawingLimit: 'Intlaħaq il-limitu tat-tpinġija.',
+  catalogPickerSearchLoadFailed: 'Ma setax jitgħabba l-qasam tat-tiftix.',
   localePickerInputLimit: 'Huma disponibbli biss l-ewwel 512 entrata tal-lokal.',
   emojiPickerInputLimit: 'Parti mid-data tal-emoji tħalliet barra għax intlaħaq limitu tal-input.',
 };

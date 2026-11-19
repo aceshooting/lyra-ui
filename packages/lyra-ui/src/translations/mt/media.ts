@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Oħroġ mill-iskrin sħiħ',
   videoPlaylistLabel: 'Lista tal-vidjows',
   videoPlaylistUntitled: 'Vidjo {position}',
+  videoTimeReadout: '{current} minn {duration}',
   pause: 'Waqqaf temporanjament',
   qrCodeMissingLibrary: 'Dan il-komponent jeħtieġ il-pakkett fakultattiv "qrcode" installat biex juri kodiċijiet QR.',
   qrCodeGenerationFailed: 'Dan il-valur ma setax jiġi kkodifikat bħala kodiċi QR.',

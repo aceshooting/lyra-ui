@@ -14,9 +14,24 @@ describe('parseIsoDate', () => {
     expect(d.getUTCMonth()).to.equal(2);
     expect(d.getUTCDate()).to.equal(5);
   });
+
+  it('parses extended years used by the grid edges', () => {
+    expect(parseIsoDate('-000001-12-31').getUTCFullYear()).to.equal(-1);
+    expect(parseIsoDate('+010000-01-01').getUTCFullYear()).to.equal(10_000);
+    expect(Number.isNaN(parseIsoDate('invalid').getTime())).to.equal(true);
+  });
 });
 
 describe('buildCalendarGrid', () => {
+  it('admits only canonical Gregorian date identities', () => {
+    for (const date of ['2026-3-05', '2026-03-5', '2026-03-05-extra', '1900-02-29']) {
+      expect(buildCalendarGrid([{ date, value: 1 }]).cells).to.have.length(0);
+    }
+    for (const date of ['2000-02-29', '0000-01-02']) {
+      expect(buildCalendarGrid([{ date, value: 1 }]).cells[0]?.date).to.equal(date);
+    }
+  });
+
   it('places a single day at week 0, with weekday matching its day-of-week', () => {
     // 2026-03-05 is a Thursday.
     const { cells, weekCount } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }]);

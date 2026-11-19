@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraCountryPicker } from './country-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';
@@ -35,6 +36,23 @@ describe('<lr-country-picker>', () => {
   });
 
   for (const searchable of [false, true]) {
+    it(`themes invalid styling without overriding the ${searchable ? 'filter' : 'trigger'} open edge`, async () => {
+      const el = await fixture<LyraCountryPicker>(html`<lr-country-picker required .searchable=${searchable}
+        style="--lr-form-control-invalid-border-color: rgb(12, 34, 56);
+          --lr-select-open-border-color: rgb(65, 43, 21);
+          --lr-combobox-open-border-color: rgb(65, 43, 21)"></lr-country-picker>`);
+      const child = el.shadowRoot!.querySelector<LyraSelect | LyraCombobox>('lr-select, lr-combobox')!;
+      const trigger = child.shadowRoot!.querySelector<HTMLElement>(searchable ? '[part="combobox"]' : '[part="trigger"]')!;
+      expect(el.reportValidity()).to.equal(false);
+      await el.updateComplete;
+      el.blur();
+      await waitUntil(() => getComputedStyle(trigger).borderTopColor === 'rgb(12, 34, 56)');
+      await focusByKeyboard(el);
+      await waitUntil(() => getComputedStyle(trigger).borderTopColor !== 'rgb(12, 34, 56)');
+      await child.show();
+      await waitUntil(() => getComputedStyle(trigger).borderTopColor === 'rgb(65, 43, 21)');
+    });
+
     it(`exposes popup requests, settled transitions, activation and clear in ${searchable ? 'search' : 'compact'} mode`, async () => {
       const el = await fixture<LyraCountryPicker>(html`<lr-country-picker clearable .searchable=${searchable}
         .countries=${['LU', 'FR']}></lr-country-picker>`);
@@ -79,6 +97,8 @@ describe('<lr-country-picker>', () => {
       const display = child.shadowRoot!.querySelector<HTMLElement>(searchable ? '[part="combobox-input"]' : '[part="display-input"]')!;
       const trigger = child.shadowRoot!.querySelector<HTMLElement>(searchable ? '[part="combobox"]' : '[part="trigger"]')!;
       expect(getComputedStyle(display).fontStyle, 'forwarded display part').to.equal('italic');
+      const optionLabel = child.shadowRoot!.querySelector<HTMLElement>('[part="option-label"]')!;
+      expect(getComputedStyle(optionLabel).unicodeBidi).to.equal('isolate');
       expect(getComputedStyle(trigger).borderTopLeftRadius, 'forwarded trigger part').to.equal('7px');
       expect(visibleFlags().map(flag => flag.textContent)).to.deep.equal(['🇱🇺', '🇫🇷']);
       expect(visibleFlags().every(flag => flag.getClientRects().length > 0)).to.equal(true);
@@ -124,7 +144,10 @@ describe('<lr-country-picker>', () => {
     const child = el.shadowRoot!.querySelector<LyraCombobox<false>>('lr-combobox')!;
     await child.updateComplete;
     const events: string[] = [];
+    const details: { value: string; previousValue: string }[] = [];
     for (const name of ['input', 'lr-input', 'change', 'lr-change']) el.addEventListener(name, () => events.push(name));
+    el.addEventListener('lr-input', event => details.push(event.detail));
+    el.addEventListener('lr-change', event => details.push(event.detail));
     const input = el.input!;
     input.value = 'king';
     input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
@@ -135,6 +158,14 @@ describe('<lr-country-picker>', () => {
     const row = child.shadowRoot!.querySelector<HTMLElement>('[part~="option"]')!;
     row.click();
     expect(el.value).to.equal('GB');
+    expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    expect(details).to.deep.equal([
+      { value: 'GB', previousValue: 'FR' }, { value: 'GB', previousValue: 'FR' },
+    ]);
+    await child.show();
+    const repeated = oneEvent(el, 'lr-activate');
+    child.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-value="GB"]')!.click();
+    expect((await repeated).detail.value).to.equal('GB');
     expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
   });
 

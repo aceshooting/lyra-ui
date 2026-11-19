@@ -95,7 +95,7 @@ height for that content and the dropzone's minimum size.
 - `withoutPaste: boolean = false` (reflected, attribute `without-paste`) — ignores files pasted
   into the dropzone, which are otherwise accepted.
 - `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
-  button (unless a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone
+  button unless the host has a nonblank `aria-label`. It never replaces the dropzone
   instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
   Omitted, `''` and whitespace-only values render identically: no visible label, and the button is
   named by the localized instruction. `hint: string = ''`
@@ -194,9 +194,9 @@ the region is cleared (and unrendered) as soon as a subsequent selection rejects
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
-control: the semantic button's accessible name comes from a non-empty host `aria-label` (or
-`accessibleLabel`), then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
-content still announces correctly. Slotted content is a sibling of
+control. The semantic button and native file input use the first available name from the host's
+nonblank `aria-label`, the form label (`label` or the `label` slot), or the localized dropzone
+instruction. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -31,6 +31,9 @@ Changing own `disabled` from true to false in the same task that disables an anc
 the native editing control effectively disabled. The enabled first-legend exception and explicit
 own-disabled state retain their native meaning; validity and form submission follow the effective
 disabled state.
+
+A whitespace-only host name falls back to the visible label or the localized verification-code
+name. An empty host name preserves an existing visible-label association.
 
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
 focus, selection and the value. It remains the native integration point for SMS autofill
@@ -185,14 +188,14 @@ every sibling field.
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
 `--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
-`--lr-otp-input-invalid-border-color`, with the shared focus and danger colors retained as
+`--lr-otp-input-invalid-border-color`, with the shared focus color and resting segment border as
 fallbacks.
 
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
-after interaction, and `--lr-otp-input-invalid-border-color` defaults to the
-resting segment border, so no danger edge paints unless you set it or style `:state(user-invalid)`.
+after interaction. `--lr-otp-input-invalid-border-color` takes precedence over
+`--lr-form-control-invalid-border-color`. With both unset, the segment keeps its resting border.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the

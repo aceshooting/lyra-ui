@@ -17,6 +17,30 @@ function changes(picker: LyraColorPicker): string[] {
 }
 
 describe('color picker disabled draft and action boundaries', () => {
+  it('mounts the editor only while open or inline and applies closed-state value changes on reopening', async () => {
+    const picker = await fixture<LyraColorPicker>(html`<lr-color-picker opacity value="#ff0000"
+      swatches="#ff0000;#0000ff"></lr-color-picker>`);
+    const panel = part(picker, 'panel');
+    const editorParts = () => panel.querySelectorAll('[part~="grid"], [part~="input"], [part~="swatch"]');
+    expect(editorParts().length).to.equal(0);
+    picker.show();
+    await picker.updateComplete;
+    expect(editorParts().length).to.equal(4);
+    picker.hide();
+    await picker.updateComplete;
+    expect(editorParts().length).to.equal(0);
+    picker.value = '#0000ff';
+    await picker.updateComplete;
+    expect(editorParts().length).to.equal(0);
+    picker.show();
+    await picker.updateComplete;
+    expect(part<HTMLInputElement>(picker, 'input').value).to.equal('#0000ffff');
+    picker.hide();
+    picker.inline = true;
+    await picker.updateComplete;
+    expect(editorParts().length).to.equal(4);
+  });
+
   for (const draft of ['', '#00ff00']) {
     it(`preserves the enabled ${draft === '' ? 'empty' : 'nonempty'} native draft through unrelated updates`, async () => {
       const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#ff0000"></lr-color-picker>`);

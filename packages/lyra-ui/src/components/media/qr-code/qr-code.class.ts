@@ -10,6 +10,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { isObjectLike } from '../../../internal/object-guards.js';
+import { VisibilityGate } from '../../../internal/owned-observer.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
@@ -62,28 +63,6 @@ type QrCodeState =
   | { kind: 'loading' }
   | { kind: 'ready'; modules: QrModules; image?: HTMLImageElement }
   | { kind: 'error'; key: 'qrCodeMissingLibrary' | 'qrCodeGenerationFailed' };
-
-/** Reads only a complete entry for this host. Browser callbacks are ordinarily well-formed, but
- * a partial polyfill callback must not make visibility state or canvas painting throw. */
-function readIntersectionState(entries: unknown, target: Element): boolean | undefined {
-  try {
-    if (!Array.isArray(entries)) return undefined;
-    for (const candidate of entries) {
-      if (!isObjectLike(candidate)) continue;
-      try {
-        const entry = candidate as Pick<IntersectionObserverEntry, 'target' | 'isIntersecting'>;
-        if (entry.target !== target) continue;
-        const isIntersecting = entry.isIntersecting;
-        if (typeof isIntersecting === 'boolean') return isIntersecting;
-      } catch {
-        // Ignore a malformed entry and continue looking for a usable entry for this host.
-      }
-    }
-  } catch {
-    // A hostile entries container is no more useful than an absent observer callback.
-  }
-  return undefined;
-}
 
 /**
  * Clones the bounded bit matrix consumed by paint. No peer-owned object or getter survives this
@@ -300,13 +279,12 @@ export class LyraQrCode extends LyraElement {
   private pendingLoadingAnnouncement = false;
   private readonly accessibilityInternals?: ElementInternals;
 
-  // Gates draw() while scrolled off-screen, so a page rendering many QR codes avoids module paint
-  // work for ones outside the viewport. An available observer starts unknown and nonpaintable;
-  // unsupported or broken capability lookups retain eager rendering below.
-  private visible = true;
-  private visibilityKnown = true;
-  private intersectionObserver?: IntersectionObserver;
-  private intersectionGeneration = 0;
+  // Skips module painting while scrolled off-screen; an unsupported observer degrades to visible.
+  private readonly visibility = new VisibilityGate(this, {
+    onVisible: (visible, wasPaintable) => {
+      if (visible && !wasPaintable) this.draw();
+    },
+  });
 
   /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
    *  needing the real `qrcode` package to load in the test browser (mirrors `LyraPdfViewer`'s
@@ -343,7 +321,6 @@ export class LyraQrCode extends LyraElement {
     if (this.value && this.loadState.kind === 'empty') this.transitionTo({ kind: 'loading' });
     else this.setAttribute('aria-busy', this.loadState.kind === 'loading' ? 'true' : 'false');
     super.connectedCallback();
-    this.bindVisibilityObserver();
     // If an in-flight peer result settled while detached, generate() correctly discarded it at
     // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
     // not inherently re-run updated(), so explicitly restart that discarded work. A still-pending
@@ -359,9 +336,6 @@ export class LyraQrCode extends LyraElement {
   override disconnectedCallback(): void {
     this.generation++;
     this.clearEmbeddedImage();
-    this.clearVisibilityObserver();
-    this.visible = false;
-    this.visibilityKnown = false;
     this.pendingLoadingAnnouncement = false;
     super.disconnectedCallback();
   }
@@ -370,84 +344,7 @@ export class LyraQrCode extends LyraElement {
     super.adoptedCallback();
     this.generation++;
     this.clearEmbeddedImage();
-    this.clearVisibilityObserver();
-    this.visible = false;
-    this.visibilityKnown = false;
     this.announcements.adopted();
-  }
-
-  /** Binds visibility to the current owner realm. A valid observer entry is required before
-   * painting, but a missing or failing platform capability preserves immediate rendering. */
-  private bindVisibilityObserver(): void {
-    this.clearVisibilityObserver();
-    const owner = this.ownerDocument.defaultView;
-    if (!owner) {
-      this.restoreImmediateVisibility();
-      return;
-    }
-
-    let IntersectionObserverCtor: typeof IntersectionObserver | undefined;
-    try {
-      IntersectionObserverCtor = owner.IntersectionObserver;
-    } catch {
-      this.restoreImmediateVisibility();
-      return;
-    }
-    if (typeof IntersectionObserverCtor !== 'function') {
-      this.restoreImmediateVisibility();
-      return;
-    }
-
-    this.visible = false;
-    this.visibilityKnown = false;
-    const generation = ++this.intersectionGeneration;
-    let observer: IntersectionObserver | undefined;
-    try {
-      observer = new IntersectionObserverCtor((entries) => {
-        if (
-          generation !== this.intersectionGeneration ||
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== owner ||
-          this.intersectionObserver !== observer
-        ) {
-          return;
-        }
-        const isIntersecting = readIntersectionState(entries, this);
-        if (isIntersecting === undefined) return;
-        const wasPaintable = this.visibilityKnown && this.visible;
-        this.visibilityKnown = true;
-        this.visible = isIntersecting;
-        if (this.visible && !wasPaintable) this.draw();
-      });
-      this.intersectionObserver = observer;
-      observer.observe(this);
-    } catch {
-      try {
-        observer?.disconnect();
-      } catch {
-        // A broken observer cannot remain current after its generation has been retired.
-      }
-      if (generation !== this.intersectionGeneration) return;
-      this.intersectionObserver = undefined;
-      this.intersectionGeneration++;
-      this.restoreImmediateVisibility();
-    }
-  }
-
-  private clearVisibilityObserver(): void {
-    this.intersectionGeneration++;
-    try {
-      this.intersectionObserver?.disconnect();
-    } catch {
-      // The lifecycle token makes a callback stale even if platform cleanup throws.
-    }
-    this.intersectionObserver = undefined;
-  }
-
-  private restoreImmediateVisibility(): void {
-    this.visible = true;
-    this.visibilityKnown = true;
-    if (this.isConnected) this.draw();
   }
 
   private transitionTo(next: QrCodeState): void {
@@ -642,11 +539,8 @@ export class LyraQrCode extends LyraElement {
 
   private draw(): void {
     if (this.loadState.kind !== 'ready') return;
-    // Off-screen: skip the per-module fillRect/roundRect loop entirely. Every caller (updated(),
-    // refreshTheme()) funnels through here, so gating centrally covers all of them --
-    // becoming visible again re-triggers a draw() from the IntersectionObserver callback in
-    // connectedCallback(), which catches up on whatever was skipped while off-screen.
-    if (!this.visibilityKnown || !this.visible) return;
+    // Off-screen draws are skipped; becoming visible redraws through the gate's onVisible.
+    if (!this.isConnected || !this.visibility.known || !this.visibility.visible) return;
     const canvas = this.canvas;
     if (!canvas) return;
     const { modules } = this.loadState;

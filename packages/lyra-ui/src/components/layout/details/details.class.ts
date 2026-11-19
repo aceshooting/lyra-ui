@@ -230,20 +230,11 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   @property() summary = '';
 
-  // `[part='summary']:empty` never matches because the part always contains a literal `<slot>`
-  // child -- same fix `lr-avatar`/`lr-empty`/`lr-stat` already established. Track real
-  // slot assignment in JS so the `summary` fallback text doesn't render alongside rich slotted
-  // content (it previously always rendered whenever the plain-string `summary` prop was unset,
-  // even with a `slot="summary"` child present).
   @state() private hasSummarySlot = false;
-
-  /** Same `:empty`-can't-match reasoning as `hasSummarySlot` above -- the `header-actions` wrapper
-   *  always contains a literal `<slot>` child, so its own emptiness has to be tracked in JS instead
-   *  to keep an unused wrapper from claiming layout space. */
   @state() private hasHeaderActionsSlot = false;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasSummarySlot = Array.from(this.children).some(
         (el) => el.getAttribute('slot') === 'summary'
@@ -278,9 +269,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   }
 
   override disconnectedCallback(): void {
-    // A pending after-event must not announce a transition the detached element is no longer
-    // part of.
-    this.disclosureMotion.cancel();
+    this.disclosureMotion.cancelIfDetached();
     this.disarmFragmentNavigation();
     this.contentGateGeneration += 1;
     super.disconnectedCallback();
@@ -566,12 +555,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     source: LyraDetailsToggleSource
   ): Promise<void> {
     const settled = await this.disclosureMotion.settle(() => {
-      // `lr-toggle` is deliberately emitted here rather than synchronously from show()/hide(): a
-      // consumer that binds `.open` from its own template writes this property from inside its own
-      // render, and a synchronous listener that then mutates that consumer's state schedules an
-      // update mid-update. Emitting once the disclosure has actually rendered keeps the historical
-      // timing (it used to ride the native <details> toggle event) while preserving the documented
-      // lr-show -> lr-toggle -> lr-after-show ordering.
+      // Template bindings can set open during a consumer's render.
       this.emit('lr-toggle', { expanded: this._open, source });
     });
     if (settled) this.emit(event, null);

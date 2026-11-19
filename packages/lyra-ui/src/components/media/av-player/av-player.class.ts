@@ -30,7 +30,7 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime } from '../../../internal/media-time.js';
+import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
@@ -1557,17 +1557,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     }
   };
 
-  /** `[part="rate-select"]`'s `<option>` values -- `rates`, plus the current `playbackRate` spliced
-   *  in (numerically sorted) when it isn't already one of them. A native `<select>` shows its first
-   *  option whenever no `<option>` carries `selected` at all, so a `playbackRate` set outside the
-   *  offered `rates` list (a caller-driven value, or a rate offered by an earlier `rates` array that
-   *  has since been narrowed) would otherwise display a rate that doesn't match `playbackRate`. */
-  private rateOptions(): readonly number[] {
-    return this.rates.includes(this.playbackRate)
-      ? this.rates
-      : [...this.rates, this.playbackRate].sort((a, b) => a - b);
-  }
-
   private safeCueStart(cue: LyraAvCue): number {
     const max = this.duration > 0 ? this.duration : Infinity;
     return finiteRange(cue.start, 0, 0, max);
@@ -1691,7 +1680,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             aria-label=${this.localize('avPlayerPlaybackRate')}
             @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
           >
-            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
+            ${withCurrentRate(this.rates, this.playbackRate).map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
                 >${this.localize('avPlayerRateOption', undefined, { rate: rateFormat.format(rate) })}</option
               >`)}
           </select>

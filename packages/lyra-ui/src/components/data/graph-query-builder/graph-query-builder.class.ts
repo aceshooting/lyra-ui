@@ -1,3 +1,4 @@
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
@@ -444,46 +445,34 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   };
 
   /** Clone-owned, bounded pickable relationship types offered by the "add" picker. */
-  private _relationshipTypeOptions: readonly GraphQueryTypeOption[] = EMPTY_OPTIONS;
+  private readonly relationshipTypeOptionsSnapshot = new SnapshotProperty(EMPTY_OPTIONS, normalizeTypeOptions);
   @property({ attribute: false })
   get relationshipTypeOptions(): readonly GraphQueryTypeOption[] {
-    return this._relationshipTypeOptions;
+    return this.relationshipTypeOptionsSnapshot.read();
   }
   set relationshipTypeOptions(value: readonly GraphQueryTypeOption[]) {
-    if (value === this.relationshipOptionsSource || value === this._relationshipTypeOptions) return;
-    this.relationshipOptionsSource = value;
-    const previous = this._relationshipTypeOptions;
-    this._relationshipTypeOptions = normalizeTypeOptions(value);
-    this.requestUpdate('relationshipTypeOptions', previous);
+    this.relationshipTypeOptionsSnapshot.assign(this, 'relationshipTypeOptions', value);
   }
   /** Clone-owned, bounded pickable node types offered by the node-type "add" picker. */
-  private _nodeTypeOptions: readonly GraphQueryTypeOption[] = EMPTY_OPTIONS;
+  private readonly nodeTypeOptionsSnapshot = new SnapshotProperty(EMPTY_OPTIONS, normalizeTypeOptions);
   @property({ attribute: false })
   get nodeTypeOptions(): readonly GraphQueryTypeOption[] {
-    return this._nodeTypeOptions;
+    return this.nodeTypeOptionsSnapshot.read();
   }
   set nodeTypeOptions(value: readonly GraphQueryTypeOption[]) {
-    if (value === this.nodeOptionsSource || value === this._nodeTypeOptions) return;
-    this.nodeOptionsSource = value;
-    const previous = this._nodeTypeOptions;
-    this._nodeTypeOptions = normalizeTypeOptions(value);
-    this.requestUpdate('nodeTypeOptions', previous);
+    this.nodeTypeOptionsSnapshot.assign(this, 'nodeTypeOptions', value);
   }
   /** Clone-owned, bounded host-persisted saved queries. Controlled -- this component never mutates
    *  this array itself; accepted `lr-query-save`/`lr-query-delete` notifications tell the host when
    *  to act. Applying an accepted deletion from the focused row restores focus to the nearest
    *  survivor or save input. */
-  private _savedQueries: readonly GraphQuerySavedItem[] = EMPTY_SAVED;
+  private readonly savedQueriesSnapshot = new SnapshotProperty(EMPTY_SAVED, normalizeSavedQueries);
   @property({ attribute: false })
   get savedQueries(): readonly GraphQuerySavedItem[] {
-    return this._savedQueries;
+    return this.savedQueriesSnapshot.read();
   }
   set savedQueries(value: readonly GraphQuerySavedItem[]) {
-    if (value === this.savedQueriesSource || value === this._savedQueries) return;
-    this.savedQueriesSource = value;
-    const previous = this._savedQueries;
-    this._savedQueries = normalizeSavedQueries(value);
-    this.requestUpdate('savedQueries', previous);
+    this.savedQueriesSnapshot.assign(this, 'savedQueries', value);
   }
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
@@ -515,11 +504,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   declare customError: string | null;
   private _fieldsetDisabled = false;
   private _name = '';
-  private _value: GraphQuery = EMPTY_VALUE;
-  private valueSource?: unknown;
-  private relationshipOptionsSource?: unknown;
-  private nodeOptionsSource?: unknown;
-  private savedQueriesSource?: unknown;
+  private readonly valueSnapshot = new SnapshotProperty(EMPTY_VALUE, normalizeGraphQuery);
   private defaultValue: GraphQuery = normalizeGraphQuery(EMPTY_VALUE);
   private defaultValueCaptured = false;
   private _disabled = false;
@@ -578,6 +563,10 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     setFormOwner(this, owner);
   }
 
+  private get _value(): GraphQuery {
+    return this.valueSnapshot.read();
+  }
+
   /** The complete controlled query model, detached and deeply frozen with at most 500 relationship
    *  and node type entries. Reassign a new model after changes. Its normalized value at the first
    *  update is the form reset default; later property writes and user edits change only the live
@@ -586,13 +575,15 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     return this._value;
   }
   set value(next: GraphQuery) {
-    if (next === this.valueSource || next === this._value) return;
-    this.valueSource = next;
-    const old = this._value;
-    this._value = normalizeGraphQuery(next);
-    this.syncFormState();
-    this.requestUpdate('value', old);
+    this.valueSnapshot.assign(this.valueUpdateHost, 'value', next);
   }
+
+  private readonly valueUpdateHost = {
+    requestUpdate: (name?: PropertyKey, previous?: unknown) => {
+      this.syncFormState();
+      this.requestUpdate(name, previous);
+    },
+  };
 
   get name(): string {
     return this._name;

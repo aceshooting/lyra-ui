@@ -57,6 +57,22 @@ it('does not resort the canonical collection on each filter query', async () => 
   recordScaleMeasurement('lr-table', '10000 rows two filter queries', { sortValues: sorts });
 });
 
+it('uses the new sort direction when a sort accessor updates it', async () => {
+  const el = await fixture<LyraTable<Row>>(html`<lr-table caption="Records"></lr-table>`);
+  el.rows = [{ id: 1, name: 'First' }, { id: 2, name: 'Second' }];
+  el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: row => row.name, sortValue: row => {
+    el.sortDir = 'desc';
+    return row.id;
+  } }];
+  await el.updateComplete;
+  el.sortKey = 'name';
+  void el.viewRows;
+  expect(el.viewRows.map(row => row.id)).to.deep.equal([2, 1]);
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('tbody td')].map(cell => cell.textContent?.trim()))
+    .to.deep.equal(['Second', 'First']);
+});
+
 it('previews a column resize without reevaluating cells for 10000 rows', async () => {
   const el = await table();
   let cells = 0;

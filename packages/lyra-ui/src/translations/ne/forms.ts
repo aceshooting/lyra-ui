@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'कलम तल',
   signaturePadPenUp: 'कलम माथि',
   signaturePadDrawingLimit: 'कोर्ने सीमा पुगेको छ।',
+  catalogPickerSearchLoadFailed: 'खोज बाकस लोड गर्न सकिएन।',
   localePickerInputLimit: 'भाषा र क्षेत्रका पहिला 512 प्रविष्टिहरू मात्र उपलब्ध छन्।',
   emojiPickerInputLimit: 'इनपुट सीमा पुगेकाले केही इमोजी डेटा छुटाइएको छ।',
 };

@@ -1,5 +1,6 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './input.js';
 import './number-input.js';
 import './time-input.js';
@@ -16,14 +17,14 @@ import type { LyraTokenInput } from '../token-input/token-input.class.js';
 type Updating = HTMLElement & { updateComplete: Promise<unknown> };
 
 const fields = [
-  ['lr-input', '[part="input"]', 'Text'],
-  ['lr-textarea', '[part="textarea"]', 'Text'],
-  ['lr-code-editor', '[part="textarea"]', 'Code editor'],
-  ['lr-otp-input', '[part="control"]', 'Verification code'],
-  ['lr-phone-input', '[part="input"]', 'Phone'],
-  ['lr-signature-pad', '[part="surface"]', 'Signature'],
-  ['lr-time-input', '[role="group"]', 'Time'],
-  ['lr-token-input', '[part="input"]', 'Tokens'],
+  ['lr-input', '[part="input"]', 'Text', 'inputLabel'],
+  ['lr-textarea', '[part="textarea"]', 'Text', 'textareaLabel'],
+  ['lr-code-editor', '[part="textarea"]', 'Code editor', 'codeEditorLabel'],
+  ['lr-otp-input', '[part="control"]', 'Verification code', 'otpInputLabel'],
+  ['lr-phone-input', '[part="input"]', 'Phone', 'phoneInputLabel'],
+  ['lr-signature-pad', '[part="surface"]', 'Signature', 'signaturePadLabel'],
+  ['lr-time-input', '[role="group"]', 'Time', 'timeInputLabel'],
+  ['lr-token-input', '[part="input"]', 'Tokens', 'tokenInputLabel'],
 ] as const;
 
 function part(el: HTMLElement, selector: string): HTMLElement {
@@ -84,6 +85,22 @@ describe('text control accessible names', () => {
     await editor.updateComplete;
     expect(field.getAttribute('aria-label')).to.equal('Source');
   });
+
+  for (const [tag, selector, english, key] of fields) {
+    it(`restores the localized name of ${tag} after removing an explicit override`, async () => {
+      const element = unsafeStatic(tag);
+      const el = await fixture<Updating>(staticHtml`<${element}></${element}>`);
+      const control = part(el, selector);
+      expect(control.getAttribute('aria-label')).to.equal(english);
+      Object.assign(el, { strings: { [key]: 'Localized name' } });
+      el.setAttribute('aria-label', 'Customer field');
+      await el.updateComplete;
+      expect(control.getAttribute('aria-label')).to.equal('Customer field');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(control.getAttribute('aria-label')).to.equal('Localized name');
+    });
+  }
 
   it('uses localized handle names only for whitespace and absent labels', async () => {
     const el = await fixture<Updating>(
@@ -174,30 +191,142 @@ describe('shared field rendering', () => {
     }
   });
 
-  it('emits one change pair when a segment edit clears the committed time', async () => {
-    const el = await fixture<LyraTimeInput>(
-      html`<lr-time-input hour-format="24" value="10:15"></lr-time-input>`,
+  for (const [format, value, required, names] of [
+    ['24', '10:15', false, ['minute', 'hour']],
+    ['12', '22:15:30', true, ['hour', 'minute', 'second', 'dayPeriod']],
+  ] as const) {
+    it(`commits a cleared ${format}-hour time only after all visible segments are empty`, async () => {
+      const el = await fixture<LyraTimeInput>(html`
+        <lr-time-input hour-format=${format} value=${value} ?required=${required}></lr-time-input>
+      `);
+      const events: string[] = [];
+      for (const type of ['input', 'lr-input', 'change', 'lr-change', 'lr-clear']) {
+        el.addEventListener(type, () => events.push(type));
+      }
+      const erase = (name: string) => part(el, `[data-segment="${name}"]`).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }),
+      );
+      for (const name of names.slice(0, -1)) {
+        await focusByKeyboard(part(el, `[data-segment="${name}"]`));
+        erase(name);
+        el.blur();
+        expect(el.value).to.equal('');
+        expect(el.validity.badInput).to.equal(true);
+        expect(events.splice(0)).to.deep.equal(['input', 'lr-input']);
+      }
+      const last = names[names.length - 1]!;
+      erase(last);
+      expect(el.validity.badInput).to.equal(false);
+      expect(el.validity.valueMissing).to.equal(required);
+      expect(events.splice(0)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+      erase(last);
+      expect(events).to.deep.equal(['input', 'lr-input']);
+      el.hourFormat = '12';
+      await el.updateComplete;
+      expect(part(el, '[data-segment="dayPeriod"]').hasAttribute('aria-valuenow')).to.equal(false);
+    });
+  }
+
+  it('starts a new time commit after recompletion, reset, restoration and programmatic writes', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
+    const changes: string[] = [];
+    el.addEventListener('lr-change', event => changes.push(event.detail.value));
+    const key = (name: string, value: string) => part(el, `[data-segment="${name}"]`).dispatchEvent(
+      new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }),
     );
-    const events: string[] = [];
-    for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
-      el.addEventListener(type, () => events.push(`${type}:${el.value}`));
+    for (const replace of [() => { el.value = ''; }, () => el.formResetCallback(), () => el.formStateRestoreCallback('')]) {
+      el.value = '12:30';
+      key('minute', 'Delete');
+      replace();
+      key('hour', 'Delete');
+      expect(changes).to.deep.equal([]);
     }
-    const minute = part(el, '[data-segment="minute"]');
-    for (const key of ['Backspace', 'Delete']) {
-      minute.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-    }
-    expect(el.value).to.equal('');
-    expect(events.filter(event => event.includes('change'))).to.deep.equal(['change:', 'lr-change:']);
-    expect(events.slice(0, 4)).to.deep.equal(['input:', 'lr-input:', 'change:', 'lr-change:']);
+    el.value = '12:30';
+    key('minute', 'Delete');
+    key('minute', '5');
+    key('hour', 'Delete');
+    key('minute', 'Delete');
+    expect(changes).to.deep.equal(['12:05', '']);
   });
 
-  it('bounds the default token DOM while preserving the whole value', async () => {
+  it('bounds the opted-in token DOM while preserving the whole value', async () => {
     const tokens = Array.from({ length: 600 }, (_, index) => `token ${index}`);
-    const el = await fixture<LyraTokenInput>(html`<lr-token-input .value=${tokens}></lr-token-input>`);
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="200" .value=${tokens}></lr-token-input>`);
     expect(el.value).to.have.length(600);
     expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).to.equal(200);
     expect(part(el, '[part="token-overflow"]').textContent).to.contain('400');
   });
+});
+
+describe('live fieldset disablement', () => {
+  it('stops relaying telephone focus if the fieldset is disabled during capture', async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`<fieldset><lr-phone-input></lr-phone-input></fieldset>`);
+    const phone = fieldset.querySelector('lr-phone-input')!;
+    await phone.updateComplete;
+    const events: string[] = [];
+    fieldset.addEventListener('focus', event => events.push(event.type));
+    phone.input!.addEventListener('focus', () => { fieldset.disabled = true; }, { capture: true, once: true });
+    await focusByKeyboard(phone.input!);
+    expect(fieldset.disabled).to.equal(true);
+    expect(events).to.deep.equal([]);
+  });
+
+  it('stops a pending textarea key event as soon as the parent fieldset is disabled', async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`<fieldset><lr-textarea></lr-textarea></fieldset>`);
+    const el = fieldset.querySelector('lr-textarea')!;
+    await el.updateComplete;
+    const events: string[] = [];
+    fieldset.addEventListener('keydown', event => events.push(event.key));
+    fieldset.disabled = true;
+    el.input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+    expect(events).to.deep.equal([]);
+  });
+
+  it('discards the draft and preserves committed tokens when readonly blocks editing', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input .value=${['saved']}></lr-token-input>`);
+    const draft = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+    draft.value = 'pending';
+    draft.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(draft.value).to.equal('pending');
+    const requests: string[] = [];
+    for (const type of ['lr-token-add-request', 'lr-token-remove-request', 'change']) {
+      el.addEventListener(type, () => requests.push(type));
+    }
+    el.readonly = true;
+    draft.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove"]')!.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['saved']);
+    expect(draft.value).to.equal('');
+    expect(requests).to.deep.equal([]);
+  });
+});
+
+describe('native selection forwarding', () => {
+  for (const tag of ['lr-input', 'lr-textarea', 'lr-phone-input', 'lr-token-input'] as const) {
+    it(`exposes nullable selection on ${tag} before connecting and forwards edits after render`, async () => {
+      const host = document.createElement(tag);
+      host.selectionStart = 2;
+      host.selectionEnd = 3;
+      host.selectionDirection = 'backward';
+      expect([host.selectionStart, host.selectionEnd, host.selectionDirection]).to.deep.equal([null, null, null]);
+
+      const holder = await fixture<HTMLElement>(html`<div></div>`);
+      holder.append(host);
+      await host.updateComplete;
+      const field = host.shadowRoot!.querySelector<HTMLInputElement | HTMLTextAreaElement>('input:not([type="hidden"]), textarea')!;
+      field.value = '12345';
+      host.setSelectionRange(1, 4, 'backward');
+      expect([host.selectionStart, host.selectionEnd, host.selectionDirection]).to.deep.equal([1, 4, 'backward']);
+      host.selectionStart = 2;
+      host.selectionEnd = 3;
+      host.selectionDirection = 'forward';
+      expect([field.selectionStart, field.selectionEnd, field.selectionDirection]).to.deep.equal([2, 3, 'forward']);
+      host.select();
+      expect([field.selectionStart, field.selectionEnd]).to.deep.equal([0, 5]);
+    });
+  }
 });
 
 describe('text control native and theme options', () => {
@@ -240,3 +369,66 @@ describe('text control native and theme options', () => {
     });
   }
 });
+
+describe('field theme overrides', () => {
+  for (const [tag, selector] of [
+    ['lr-token-input', '[part="input-wrapper"]'], ['lr-phone-input', '[part="input-wrapper"]'],
+    ['lr-code-editor', '[part="editor"]'], ['lr-otp-input', '[part~="segment"]'],
+    ['lr-signature-pad', '[part="surface"]'],
+  ] as const) {
+    it(`applies the shared invalid border to ${tag} after interaction`, async () => {
+      const element = unsafeStatic(tag);
+      const el = await fixture<Updating & {reportValidity(): boolean}>(staticHtml`
+        <${element} required style="--lr-form-control-invalid-border-color: rgb(75, 20, 65)"></${element}>
+      `);
+      expect(el.reportValidity()).to.equal(false);
+      await el.updateComplete;
+      await waitUntil(() => getComputedStyle(part(el, selector)).borderTopColor === 'rgb(75, 20, 65)');
+    });
+  }
+
+  it('paints both the code editor and its scrollable gutter with the editor fill', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <lr-code-editor style="--lr-code-editor-fill: rgb(25, 41, 58)"></lr-code-editor>
+    `);
+    for (const name of ['editor', 'gutter']) {
+      expect(getComputedStyle(part(el, `[part="${name}"]`)).backgroundColor).to.equal('rgb(25, 41, 58)');
+    }
+  });
+
+  it('uses the shared field geometry for the code textarea and gutter', async () => {
+    const el = await fixture<HTMLElement>(html`
+      <lr-code-editor size="s" style="--lr-form-control-padding-inline: 19px; --lr-form-control-font-size: 17px"></lr-code-editor>
+    `);
+    for (const selector of ['[part="gutter"]', 'textarea']) {
+      const style = getComputedStyle(part(el, selector));
+      expect(style.paddingTop).to.equal('19px');
+      expect(style.fontSize).to.equal('17px');
+    }
+  });
+});
+
+for (const tag of ['lr-textarea', 'lr-code-editor']) {
+  it(`keeps ${tag} editable if resize observation cannot attach`, async () => {
+    const Observer = window.ResizeObserver;
+    window.ResizeObserver = class extends Observer {
+      override observe(target: Element, options?: ResizeObserverOptions): void {
+        if (target.matches('textarea, .editor-measure')) throw new Error('Observation unavailable');
+        super.observe(target, options);
+      }
+    };
+    try {
+      const element = unsafeStatic(tag);
+      const el = await fixture<Updating & { value: string }>(
+        staticHtml`<${element} resize="auto"></${element}>`,
+      );
+      el.value = 'first\nsecond';
+      await el.updateComplete;
+      const textarea = el.shadowRoot!.querySelector('textarea')!;
+      expect(textarea.value).to.equal(el.value);
+      expect(textarea.clientHeight).to.be.at.least(textarea.scrollHeight - 1);
+    } finally {
+      window.ResizeObserver = Observer;
+    }
+  });
+}

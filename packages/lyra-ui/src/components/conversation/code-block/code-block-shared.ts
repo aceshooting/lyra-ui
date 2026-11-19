@@ -34,7 +34,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   boundedSelectionRects,
   boundedSelectionText,
-} from '../../../internal/text-quote.js';
+} from '../../../internal/text-selection.js';
 import {
   normalizeShikiLanguage,
   SHIKI_THEMES,

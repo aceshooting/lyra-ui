@@ -564,6 +564,7 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @cssprop --lr-ebook-viewer-search-match-bg - Search-match fill.
  * @cssprop [--lr-ebook-viewer-max-height=none] - Maximum block size of the mount area epub.js
  *   renders into, before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-viewer-pager-button-hover-bg=var(--lr-color-brand-quiet)] - Hover fill and press tint base for the pager buttons.
  * @status stable
  * @since 4.0.0
  */

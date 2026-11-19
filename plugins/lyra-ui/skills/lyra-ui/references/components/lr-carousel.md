@@ -28,7 +28,9 @@ temporarily makes off-page slides inert and aria-hidden, then restores their ret
 when they become visible, are removed, or the carousel disconnects.
 
 **Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
-or vertical), Home, and End. Keys originating in a native input, textarea, contenteditable surface,
+or vertical), Home, and End. The viewport's accessible name uses the `carouselViewport` string
+("Slides" in English). Host `aria-label` names the outer carousel region. Keys originating in a
+native input, textarea, contenteditable surface,
 or supported custom control remain owned by that editor, including when the editor is the assigned
 slide itself; they do not change the active slide or move focus away from it.
 

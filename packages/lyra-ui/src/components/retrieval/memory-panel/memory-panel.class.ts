@@ -7,8 +7,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
+  ownDataDescriptorValue,
   projectFrozenRows,
-  MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -86,16 +86,6 @@ const EMPTY_CANONICAL_MEMORIES: readonly CanonicalMemoryItem[] = Object.freeze(
   []
 );
 
-
-function valueOfDescriptor(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>
-): unknown {
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    ? undefined
-    : descriptor.value;
-}
-
 function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -114,8 +104,8 @@ function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
     )
       return undefined;
 
-    const id = valueOfDescriptor(idDescriptor);
-    const text = valueOfDescriptor(textDescriptor);
+    const id = ownDataDescriptorValue(idDescriptor);
+    const text = ownDataDescriptorValue(textDescriptor);
     if (
       typeof id !== 'string' ||
       id.trim().length === 0 ||
@@ -124,8 +114,8 @@ function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
     )
       return undefined;
 
-    const confidence = valueOfDescriptor(confidenceDescriptor);
-    const provenance = valueOfDescriptor(provenanceDescriptor);
+    const confidence = ownDataDescriptorValue(confidenceDescriptor);
+    const provenance = ownDataDescriptorValue(provenanceDescriptor);
     return Object.freeze({
       source: value as LyraMemoryItem,
       id,

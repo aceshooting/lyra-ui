@@ -51,9 +51,6 @@ export const styles = css`
     align-items: flex-end;
     justify-content: center;
   }
-  /* A cell emits lr-item-activate on click and on Enter/Space, so it carries a pointer cursor and
-     a real pressed treatment, hover paired with focus-visible per the library's
-     every-:focus-visible-part-needs-:hover rule. */
   [part='cell'] {
     cursor: pointer;
   }
@@ -65,18 +62,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  /* Pressed reads as a heavier ring, not a tint: a cell's background IS data (its category
-     colour), so darkening it misreports the category, and a filter would multiply every channel
-     across the whole subtree -- the mistake the switch's own styles record from before 8.0.0. */
+  /* The pressed ring leaves the data color readable. */
   [part='cell']:where(:not([aria-disabled='true'])):active {
     outline: var(--lr-focus-ring-width) solid var(--lr-color-text);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  /* A cell whose activated item declares disabled is non-actionable: it keeps its own category
-     colour (still the datum it always was, per the no-tint rule above) but loses the pointer
-     cursor and every hover/press/focus affordance that promises activation -- gated above rather
-     than overridden here, since CSS :hover still matches an aria-disabled cell exactly like it
-     would a natively disabled button. */
   [part='cell'][aria-disabled='true'] {
     cursor: default;
     opacity: var(--lr-sequence-strip-disabled-opacity, var(--lr-opacity-disabled));

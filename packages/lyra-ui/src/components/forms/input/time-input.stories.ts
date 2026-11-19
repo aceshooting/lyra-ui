@@ -62,6 +62,19 @@ export const ControlledSegmentShrink: Story = {
   `,
 };
 
+export const KeyboardClear: Story = {
+  render: () => html`
+    <lr-time-input label="Appointment" value="09:30" hour-format="24"
+      hint="Delete both segments to clear the appointment."
+      @lr-change=${(event: CustomEvent<{ value: string }>) => {
+        const output = (event.currentTarget as HTMLElement).nextElementSibling!;
+        output.textContent = event.detail.value || 'No appointment';
+      }}
+    ></lr-time-input>
+    <output>09:30</output>
+  `,
+};
+
 /** A step below 60 seconds adds the seconds segment and picker column. */
 export const Seconds: Story = {
   render: () => html`

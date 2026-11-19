@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: '已落笔',
   signaturePadPenUp: '已抬笔',
   signaturePadDrawingLimit: '已达到绘制上限。',
+  catalogPickerSearchLoadFailed: '无法加载搜索框。',
   localePickerInputLimit: '仅提供前 512 个语言和地区条目。',
   emojiPickerInputLimit: '由于达到输入限制，部分表情数据已被省略。',
 };

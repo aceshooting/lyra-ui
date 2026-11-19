@@ -297,7 +297,7 @@ export const ThemedActiveRegion: Story = {
     docs: {
       description: {
         story:
-          '`--lr-document-preview-active-border` recolors only the region highlight matching `active-highlight-id` over an image-format preview; the resting highlights keep `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
+          '`--lr-document-preview-active-border` recolors the region matching `active-highlight-id`. Select a region on the image, or narrow the preview until overlapping hit areas move to a separate action list.',
       },
     },
   },

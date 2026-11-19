@@ -1,19 +1,12 @@
 import { css } from 'lit';
+import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
     display: contents;
     --_lr-document-viewer-max-height: 70vh;
-    --_lr-document-viewer-download-link-hover-bg: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-    --_lr-document-viewer-download-link-active-bg: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-document-viewer-download-link-hover-bg: ${hoverFill('var(--lr-color-brand)')};
+    --_lr-document-viewer-download-link-active-bg: ${activeFill('var(--lr-color-brand)')};
   }
 
   [part="body"] {

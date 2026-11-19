@@ -15,6 +15,15 @@ export const styles = css`
   }
 
   [part~="page"] {
+    --_lr-page-banner-measured-size: initial;
+    --_lr-page-header-measured-size: initial;
+    --_lr-page-subheader-measured-size: initial;
+    --_lr-page-banner-offset: var(--_lr-page-banner-measured-size, var(--lr-page-banner-height, var(--_lr-page-banner-height)));
+    --_lr-page-header-offset: var(--_lr-page-header-measured-size, var(--lr-page-header-height, var(--_lr-page-header-height)));
+    --_lr-page-subheader-offset: var(--_lr-page-subheader-measured-size, var(--lr-page-subheader-height, var(--_lr-page-subheader-height)));
+    --_lr-page-above-subheader: calc(var(--_lr-page-banner-offset) + var(--_lr-page-header-offset));
+    --_lr-page-above-body: calc(var(--_lr-page-above-subheader) + var(--_lr-page-subheader-offset));
+    --_lr-page-sticky-viewport: 100dvh;
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
@@ -22,6 +31,19 @@ export const styles = css`
     overflow-x: clip;
     overflow-y: clip;
     background: var(--lr-color-surface);
+  }
+
+  :host([auto-sticky-offsets]) [part~="page"] {
+    --_lr-page-sticky-viewport: 100dvb;
+  }
+  :host([auto-sticky-offsets][disable-sticky~="banner"]) [part~="page"] {
+    --_lr-page-banner-offset: 0px;
+  }
+  :host([auto-sticky-offsets][disable-sticky~="header"]) [part~="page"] {
+    --_lr-page-header-offset: 0px;
+  }
+  :host([auto-sticky-offsets][disable-sticky~="subheader"]) [part~="page"] {
+    --_lr-page-subheader-offset: 0px;
   }
 
   [part~="skip-to-content"] {
@@ -118,19 +140,13 @@ export const styles = css`
   :host(:not([disable-sticky~="header"])) [part~="header"] {
     position: sticky;
     background: var(--lr-page-header-bg, var(--lr-color-surface));
-    inset-block-start: var(
-      --lr-page-banner-height,
-      var(--_lr-page-banner-height)
-    );
+    inset-block-start: var(--_lr-page-banner-offset);
     z-index: var(--lr-layer-content);
   }
   :host(:not([disable-sticky~="subheader"])) [part~="subheader"] {
     position: sticky;
     background: var(--lr-page-subheader-bg, var(--lr-color-surface));
-    inset-block-start: calc(
-      var(--lr-page-banner-height, var(--_lr-page-banner-height)) +
-        var(--lr-page-header-height, var(--_lr-page-header-height))
-    );
+    inset-block-start: var(--_lr-page-above-subheader);
     z-index: var(--lr-layer-content);
   }
 
@@ -261,17 +277,9 @@ export const styles = css`
   :host(:not([disable-sticky~="menu"])) [part~="menu"],
   :host(:not([disable-sticky~="aside"])) [part~="aside"] {
     position: sticky;
-    inset-block-start: calc(
-      var(--lr-page-banner-height, var(--_lr-page-banner-height)) +
-        var(--lr-page-header-height, var(--_lr-page-header-height)) +
-        var(--lr-page-subheader-height, var(--_lr-page-subheader-height))
-    );
+    inset-block-start: var(--_lr-page-above-body);
     align-self: start;
-    max-block-size: calc(
-      100dvh - var(--lr-page-banner-height, var(--_lr-page-banner-height)) -
-        var(--lr-page-header-height, var(--_lr-page-header-height)) -
-        var(--lr-page-subheader-height, var(--_lr-page-subheader-height))
-    );
+    max-block-size: calc(var(--_lr-page-sticky-viewport) - var(--_lr-page-above-body));
     overflow-y: auto;
     overflow-x: clip;
   }

@@ -17,6 +17,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { findSourceRow } from '../../../internal/source-row.js';
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -252,7 +253,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-community-activate - Bubbles straight through from the composed `lr-graph`, unmodified.
  *   `detail: { communityId }`.
  * @event lr-relation-activate - Bubbles straight through from the composed `lr-path-strip`, unmodified.
- * @cssprop --lr-knowledge-graph-explorer-source-action-hover-fill - Background of the hovered control.
+ * @cssprop [--lr-knowledge-graph-explorer-source-action-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart toolbar - The row wrapping the search input and the type-filter legend.
@@ -496,25 +497,25 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private async activateSourceEntity(id: string): Promise<void> {
     if (!isNonBlankIdentity(id) || id.length + 5 > 65_536 || this.sourceFilter.empty) return;
     const graph = this.sourceChild; if (!graph) return;
-    const mounted = graph.view === 'list' && [...graph.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].some(row => row.dataset['sourceKey'] === `node:${id}`);
-    if (graph.view === 'list' && !mounted) {
+    const key = `node:${id}`;
+    if (graph.view === 'list' && !findSourceRow(graph.renderRoot, key)) {
       this.query = ''; this.hiddenTypes = [];
     }
     this.invalidateActivation(); const current = this.sourceCurrent();
     await this.updateComplete;
     if (!current() || this.sourceChild !== graph) return;
-    const result = await resolveGraphSourceComposition(graph, [`node:${id}`]);
+    const result = await resolveGraphSourceComposition(graph, [key]);
     if (!current() || !result?.current()) return;
-    const record = result.records.find(row => row.key === `node:${id}`);
+    const record = result.records.find(row => row.key === key);
     if (!record || record.value.kind !== 'node') return;
     this.sourceEntity = record.value.value;
     this.sourceInspect = [graph, this.graphSource, this.sourceEpoch, id];
     this.setInternalSelectedNodeId(id);
     if (!current() || this.selectedNodeId !== id) return;
-    const focused = await focusGraphSourceComposition(graph, `node:${id}`);
+    const focused = await focusGraphSourceComposition(graph, key);
     await graph.updateComplete;
     if (!current() || !focused?.() || this.selectedNodeId !== id) return;
-    const target = graph.view === 'list' ? [...graph.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === `node:${id}`) : undefined;
+    const target = graph.view === 'list' ? findSourceRow(graph.renderRoot, key) : undefined;
     const position = graph.view !== 'list' ? graph.getNodeScreenPosition(id) : undefined;
     const bounds = target?.getBoundingClientRect() ?? graph.getBoundingClientRect();
     if (!current() || !focused() || (graph.view === 'list' ? !target : !position)) return;
@@ -755,9 +756,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     }
     if (this.hoveredNodeId && !this.isVisibleNode(this.hoveredNodeId))
       this.hoveredNodeId = null;
-    // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
-    // dangling selection/popover pointed at nothing. `entityFor()` intentionally still resolves
-    // hidden nodes for neighbor/path data, so visibility must be checked separately here.
+    // Hidden nodes remain available to neighbor and path data, so selection checks visibility.
     if (
       (changed.has('nodes') || changed.has('hiddenTypes') || changed.has('graphSource')) &&
       this.selectedNodeId &&
@@ -767,15 +766,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.setInternalSelectedNodeId(null);
       if (this.popoverEl) this.popoverEl.open = false;
     }
-    // `changed.has('query')` is already `true` on the very first `willUpdate()` whenever a
-    // preset `query` attribute reached the element before its first render -- there is no
-    // user action behind that transition, so it must not announce (mirrors `<lr-chat-message>`/
-    // `<lr-branch-picker>`'s identical "don't announce on mount" gate). Those two run their own
-    // announcement from `updated()`, where `this.hasUpdated` is already `true` on the very first
-    // pass, so they carry a dedicated `isMounting` field instead; this block runs from
-    // `willUpdate()`, which always executes *before* `hasUpdated` flips, so `hasUpdated` itself is
-    // already the "provably false pre-mount" comparison and needs no separate field here --
-    // `connectedCallback()`/`canActivateNode()` above already gate on it the same way.
+    // A preset query needs no announcement on mount.
     if (
       this.hasUpdated &&
       (this.query ?? '').trim() &&
@@ -1158,9 +1149,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   ): void => {
     event.stopPropagation();
     this.hiddenTypes = event.detail.hiddenTypes;
-    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin()/
-    // onSearchInput(): only a component-initiated change announces itself, so a host that assigns
-    // the property back in response cannot start a feedback loop.
     this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes });
   };
 
@@ -1181,12 +1169,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.sourceSearchIntent = { query: value, version: this.sourceSearchVersion, epoch: this.sourceEpoch };
       return;
     }
-    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
-    // component-initiated change announces itself, so a host that assigns the property back in
-    // response cannot start a feedback loop. `matchingNodes()` already reads `this.query`,
-    // which was just reassigned above, so it reports the count for the new query, not the old one;
-    // it returns `undefined` (not a truncated result) whenever the trimmed query is empty, hence
-    // the `?? 0` rather than a truncation-driven `matchCountExact: false`.
     this.emit('lr-search-change', {
       query: value,
       matchCount: this.matchingNodes()?.length ?? 0,

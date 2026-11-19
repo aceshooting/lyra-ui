@@ -50,8 +50,8 @@ value, without suppressing the visible `name` heading.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
-  marked active in the built-in `<lr-document-preview>` fallback. Registry renderers do not receive
-  it; call `scrollToAnchor(id)` to activate a highlight there.
+  marked active in the built-in `<lr-document-preview>` fallback. Call `scrollToAnchor(id)`
+  to jump to the corresponding highlight in a registry renderer.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.

@@ -1,3 +1,4 @@
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -29,6 +30,10 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowNodeProgressLabel, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+function normalizeHandles(value: unknown): readonly FlowHandle[] {
+  return snapshotFlowHandles(value) ?? Object.freeze([]);
+}
 
 /**
  * `<lr-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
@@ -166,34 +171,24 @@ export class LyraFlowNode extends LyraElement {
       this._size = size;
     });
   }
-  private _inputs: readonly FlowHandle[] = DEFAULT_FLOW_INPUTS;
-  private inputsSource?: readonly FlowHandle[];
+  private readonly inputsSnapshot = new SnapshotProperty<readonly FlowHandle[]>(DEFAULT_FLOW_INPUTS, normalizeHandles);
   /** Frozen snapshot of at most the first 10,000 input handles. Assign a new array to update. */
   @property({ attribute: false })
   get inputs(): readonly FlowHandle[] {
-    return this._inputs;
+    return this.inputsSnapshot.read();
   }
   set inputs(value: readonly FlowHandle[]) {
-    if (value === this.inputsSource || value === this._inputs) return;
-    const previous = this._inputs;
-    this.inputsSource = value;
-    this._inputs = snapshotFlowHandles(value) ?? Object.freeze([]);
-    this.requestUpdate('inputs', previous);
+    this.inputsSnapshot.assign(this, 'inputs', value);
   }
 
-  private _outputs: readonly FlowHandle[] = DEFAULT_FLOW_OUTPUTS;
-  private outputsSource?: readonly FlowHandle[];
+  private readonly outputsSnapshot = new SnapshotProperty<readonly FlowHandle[]>(DEFAULT_FLOW_OUTPUTS, normalizeHandles);
   /** Frozen snapshot of at most the first 10,000 output handles. Assign a new array to update. */
   @property({ attribute: false })
   get outputs(): readonly FlowHandle[] {
-    return this._outputs;
+    return this.outputsSnapshot.read();
   }
   set outputs(value: readonly FlowHandle[]) {
-    if (value === this.outputsSource || value === this._outputs) return;
-    const previous = this._outputs;
-    this.outputsSource = value;
-    this._outputs = snapshotFlowHandles(value) ?? Object.freeze([]);
-    this.requestUpdate('outputs', previous);
+    this.outputsSnapshot.assign(this, 'outputs', value);
   }
   private _orientation: LyraOrientation = 'horizontal';
   /** Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when

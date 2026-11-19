@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Iskiriinii guutuu keessaa ba\'i',
   videoPlaylistLabel: 'Tarree taphannaa viidiyoo',
   videoPlaylistUntitled: 'Viidiyoo {position}',
+  videoTimeReadout: '{current} / {duration}',
   pause: 'Dhaabi',
   qrCodeMissingLibrary: 'Kutaan kun koodii QR agarsiisuuf paakeejii filannoo "qrcode" fe\'amee qabaachuu barbaada.',
   qrCodeGenerationFailed: 'Gatii kana koodii QRtti jijjiiruun hin danda\'amne.',

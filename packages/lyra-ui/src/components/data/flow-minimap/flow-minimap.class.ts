@@ -1,6 +1,7 @@
+import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
-import { armClickSuppression, capturePointer, consumeSuppressedClick } from '../../../internal/pointer-capture.js';
+import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from '../../../internal/pointer-capture.js';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -168,6 +169,7 @@ export class LyraFlowMinimap extends LyraElement {
   };
   /** Window that owns the active viewport drag's global pointer listeners. */
   private dragEventWindow?: Window;
+  private releaseViewportPointer?: () => void;
   private geometryObserver?: ResizeObserver;
   private invalidateDragGeometry = (): void => {
     if (this.dragState) this.dragState.geometryDirty = true;
@@ -477,11 +479,17 @@ export class LyraFlowMinimap extends LyraElement {
     if (!ctm || !svgEl || !action.current()) return;
     const inverse = ctm.inverse();
     if (!action.current()) return;
-    capturePointer(e.target as SVGElement, e.pointerId);
-    if (!action.current()) return;
-    e.stopPropagation();
+    this.dragState = undefined;
     this.detachViewportDragListeners();
     this.clearClickSuppression();
+    const target = e.target as SVGElement;
+    const pointerId = e.pointerId;
+    capturePointer(target, pointerId);
+    if (!action.current()) {
+      releasePointer(target, pointerId);
+      return;
+    }
+    e.stopPropagation();
     this.dragState = {
       canvas: action.canvas,
       generation: this.companionGeneration,
@@ -496,16 +504,18 @@ export class LyraFlowMinimap extends LyraElement {
     };
     this.dragEventWindow = dragEventWindow;
     dragEventWindow.addEventListener('resize', this.invalidateDragGeometry);
-    dragEventWindow.addEventListener('pointermove', this.onViewportPointerMove);
-    dragEventWindow.addEventListener('pointerup', this.onViewportPointerUp);
-    // A touch scroll takeover can fire `pointercancel` (never `pointerup`), and losing capture
-    // (e.g. element removed) fires `lostpointercapture` -- both need the same teardown as
-    // pointerup or the drag listeners outlive the gesture.
-    dragEventWindow.addEventListener('pointercancel', this.onViewportPointerUp);
-    dragEventWindow.addEventListener('lostpointercapture', this.onViewportPointerUp);
+    const stopListening = listenUntilPointerEnd(dragEventWindow, this.onViewportPointerUp, {
+      lostCapture: true,
+      extra: { pointermove: this.onViewportPointerMove },
+    });
+    this.releaseViewportPointer = () => {
+      stopListening();
+      releasePointer(target, pointerId);
+    };
   };
 
-  private onViewportPointerMove = (e: PointerEvent): void => {
+  private onViewportPointerMove = (event: Event): void => {
+    const e = event as PointerEvent;
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId) return;
     const action = this.captureInteraction();
@@ -557,11 +567,10 @@ export class LyraFlowMinimap extends LyraElement {
     const dragEventWindow = this.dragEventWindow;
     if (!dragEventWindow) return;
     dragEventWindow.removeEventListener('resize', this.invalidateDragGeometry);
-    dragEventWindow.removeEventListener('pointermove', this.onViewportPointerMove);
-    dragEventWindow.removeEventListener('pointerup', this.onViewportPointerUp);
-    dragEventWindow.removeEventListener('pointercancel', this.onViewportPointerUp);
-    dragEventWindow.removeEventListener('lostpointercapture', this.onViewportPointerUp);
     this.dragEventWindow = undefined;
+    const release = this.releaseViewportPointer;
+    this.releaseViewportPointer = undefined;
+    release?.();
   }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {

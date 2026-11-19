@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'قلم پایین است',
   signaturePadPenUp: 'قلم بلند است',
   signaturePadDrawingLimit: 'به حد رسم رسیده‌اید.',
+  catalogPickerSearchLoadFailed: 'خانهٔ جستجو بارگیری نشد.',
   localePickerInputLimit: 'تنها ۵۱۲ ورودی نخست تنظیمات زبان و منطقه در دسترس هستند.',
   emojiPickerInputLimit: 'برخی داده‌های شکلک به‌دلیل رسیدن به حد ورودی حذف شدند.',
 };

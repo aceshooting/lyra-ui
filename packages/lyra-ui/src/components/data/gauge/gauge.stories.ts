@@ -14,7 +14,13 @@ export const Radial: Story = {
 };
 
 export const Linear: Story = {
-  render: () => html`<lr-gauge shape="linear" value="40" max="100" label="Disk"></lr-gauge>`,
+  render: () => html`
+    <div style="display: grid; gap: 1rem">
+      <lr-gauge shape="linear" value="40" max="100" label="Disk"></lr-gauge>
+      <lr-gauge shape="linear" style="inline-size: 110px" value="40" max="100" label="Disk"></lr-gauge>
+      <lr-gauge shape="linear" style="inline-size: 320px" value="40" max="100" label="Disk"></lr-gauge>
+    </div>
+  `,
 };
 
 export const Ring: Story = {

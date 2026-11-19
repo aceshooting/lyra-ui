@@ -116,7 +116,7 @@ nested disclosure.
 
 **Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
 Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
-locale-aware type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
+locale-aware, accent-insensitive type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
 composition keys, are never handled. Pressing a disabled or loading row with the mouse does not
 focus it. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
 inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership

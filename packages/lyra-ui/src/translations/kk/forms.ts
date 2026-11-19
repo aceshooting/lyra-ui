@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Қалам төмен',
   signaturePadPenUp: 'Қалам жоғары',
   signaturePadDrawingLimit: 'Сызу шегіне жетті.',
+  catalogPickerSearchLoadFailed: 'Іздеу өрісін жүктеу мүмкін болмады.',
   localePickerInputLimit: 'Тіл мен аймақ баптауларының алғашқы 512 жазбасы ғана қолжетімді.',
   emojiPickerInputLimit: 'Енгізу шегіне жеткендіктен, эмодзи деректерінің бір бөлігі алынып тасталды.',
 };

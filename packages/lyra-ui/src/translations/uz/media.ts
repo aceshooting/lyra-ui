@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Toʻliq ekrandan chiqish',
   videoPlaylistLabel: 'Video pleylisti',
   videoPlaylistUntitled: '{position}-video',
+  videoTimeReadout: '{current} / {duration}',
   pause: 'Toʻxtatib turish',
   qrCodeMissingLibrary: 'QR kodlarni chiqarish uchun ushbu komponentga ixtiyoriy "qrcode" paketini oʻrnatish kerak.',
   qrCodeGenerationFailed: 'Bu qiymatni QR kodga aylantirib boʻlmadi.',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Išeiti iš viso ekrano režimo',
   videoPlaylistLabel: 'Vaizdo įrašų grojaraštis',
   videoPlaylistUntitled: 'Vaizdo įrašas {position}',
+  videoTimeReadout: '{current} iš {duration}',
   pause: 'Pristabdyti',
   qrCodeMissingLibrary: 'Kad galėtų atvaizduoti QR kodus, šiam komponentui reikia įdiegti pasirenkamą paketą „qrcode“.',
   qrCodeGenerationFailed: 'Šios reikšmės nepavyko užkoduoti kaip QR kodo.',

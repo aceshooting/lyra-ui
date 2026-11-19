@@ -10,7 +10,7 @@ export interface LyraMapCameraOptions {
   readonly center?: readonly [number, number];
   /** Zoom level, clamped into the map's zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default). */
   readonly zoom?: number;
-  /** Bearing in degrees, clockwise from north. */
+  /** Bearing in degrees, clockwise from north. Very large values are reduced modulo 360. */
   readonly bearing?: number;
   /** Pitch in degrees, clamped into `[0, 85]`. */
   readonly pitch?: number;
@@ -50,7 +50,11 @@ export function normalizeCameraOptions(options: unknown, zoomLimits: readonly [n
     target.center = [finiteRange(center[0], 0, -180, 180), finiteRange(center[1], 0, -90, 90)];
   }
   if (isFiniteNumber(source['zoom'])) target.zoom = finiteRange(source['zoom'], zoomLimits[0], zoomLimits[0], zoomLimits[1]);
-  if (isFiniteNumber(source['bearing'])) target.bearing = source['bearing'];
+  const bearing = source['bearing'];
+  if (isFiniteNumber(bearing)) {
+    // Leave room for the engine to offset the bearing by a full turn without losing precision.
+    target.bearing = Math.abs(bearing) > Number.MAX_SAFE_INTEGER - 360 ? bearing % 360 : bearing;
+  }
   if (isFiniteNumber(source['pitch'])) target.pitch = finiteRange(source['pitch'], 0, 0, 85);
   if (
     target.center === undefined &&

@@ -37,7 +37,11 @@ export const ThemedToolbarAndSelection: Story = {
   render: () => html`<lr-pdf-viewer
     src=${SAMPLE_PDF_URL}
     name="sample.pdf"
-    style="--lr-pdf-viewer-toolbar-bg: var(--lr-color-success-quiet); --lr-pdf-viewer-text-selection-bg: var(--lr-color-success-quiet);"
+    style="
+      --lr-pdf-viewer-toolbar-bg: var(--lr-color-success-quiet);
+      --lr-viewer-pager-button-hover-bg: var(--lr-color-warning-quiet);
+      --lr-pdf-viewer-text-selection-bg: var(--lr-color-success-quiet);
+    "
   ></lr-pdf-viewer>`,
 };
 

@@ -615,6 +615,15 @@ describe("data-grid processing helpers", () => {
     ).to.equal("＝SUM(A1:A2)");
     expect(serialize(-5)).to.equal("-5");
   });
+
+  it('applies one formula policy across delimiters without splitting numeric cells', () => {
+    const values = [{ v: -5 }, { v: Number.NEGATIVE_INFINITY }];
+    const columns: DataGridColumn<(typeof values)[number]>[] = [{ field: 'v', label: 'Value' }];
+    expect(rowsAsDelimited(values, columns, { delimiter: ';' })).to.equal("Value\r\n-5\r\n'-Infinity");
+    expect(rowsAsDelimited(values, columns, { delimiter: '-' })).to.equal('Value\r\n"-5"\r\n"\'-Infinity"');
+    expect(rowsAsDelimited(values, columns, { delimiter: ';', escapeFormulas: false })).to.equal('Value\r\n-5\r\n-Infinity');
+    expect(rowsAsDelimited(values, columns, { delimiter: '' })).to.equal(rowsAsDelimited(values, columns));
+  });
 });
 
 it("treats date-only range bounds and date-only cells as calendar days in the local time zone", () => {

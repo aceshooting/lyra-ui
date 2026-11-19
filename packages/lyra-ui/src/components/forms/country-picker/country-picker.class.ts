@@ -8,8 +8,8 @@ import { styles } from './country-picker.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_countryPickerLabel } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerSearchLoadFailed, LYRA_DEFAULT_countryPickerLabel } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,6 +49,10 @@ function normalizeCountry(value: unknown): string {
  * @csspart select-clear-button - The optional clear action.
  * @csspart flag - Decorative country flag emoji.
  * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
+ * @csspart search-error - Localized notice when the optional filter cannot be loaded.
+ * @csspart search-retry - Button that retries loading the filter.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Invalid resting border color.
+ * @event lr-load-error - The optional filter could not be loaded. The compact picker remains available.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
  * @event lr-show - Cancelable request to open the country list.
@@ -73,9 +77,11 @@ export class LyraCountryPicker extends LyraCatalogPickerBase {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
+    catalogPickerSearchLoadFailed: LYRA_DEFAULT_catalogPickerSearchLoadFailed,
     countryPickerLabel: LYRA_DEFAULT_countryPickerLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
+    retry: LYRA_DEFAULT_retry,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END

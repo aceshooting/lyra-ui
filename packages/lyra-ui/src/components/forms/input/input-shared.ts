@@ -1,6 +1,6 @@
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { AutocorrectState, installNativeInputModeAliases, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeSelectionAccessors, installNativeInputModeAliases, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -244,6 +244,10 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  static {
+    installNativeSelectionAccessors(this.prototype, host => host.inputEl, { methods: false });
+  }
+
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
   // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
@@ -331,8 +335,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** SSR slot-presence hint for hint/help-text content that cannot be inspected before hydration. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
-  /** Accessible name overriding the label/placeholder-derived default. Takes precedence over both
-   *  `label` and `placeholder` when set, matching `<lr-textarea>`'s `accessibleLabel`. */
+  /** Native input name. An empty override is preserved. Whitespace alone falls back to the label, placeholder, or localized name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
   /** Forwarded to the internal native control. */
@@ -669,30 +672,12 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    *  the internal input hasn't rendered yet and whenever the current `type` doesn't support
    *  selection at all (matching the native `<input>`'s own contract — only `text`/`search` among
    *  this component's types do; `password` also supports it natively but isn't exercised here). */
-  get selectionStart(): number | null {
-    return this.inputEl?.selectionStart ?? null;
-  }
+  declare selectionStart: number | null;
 
-  set selectionStart(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionStart = value ?? 0;
-  }
-
-  get selectionEnd(): number | null {
-    return this.inputEl?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
-  }
+  declare selectionEnd: number | null;
 
   /** The native `selectionDirection`; `null` before render. */
-  get selectionDirection(): LyraSelectionDirection | null {
-    return (this.inputEl?.selectionDirection as LyraSelectionDirection | null | undefined) ?? null;
-  }
-
-  set selectionDirection(value: LyraSelectionDirection | null) {
-    if (this.inputEl) this.inputEl.selectionDirection = value ?? 'none';
-  }
+  declare selectionDirection: LyraSelectionDirection | null;
 
   /** Passthrough to the native `<input>`'s own `setSelectionRange()`. No-op if the element hasn't
    *  rendered yet, or throws the same native `InvalidStateError` the native `<input>` itself would
@@ -719,11 +704,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   ): void {
     const input = this.inputEl;
     if (!input) return;
-    if (start === undefined || end === undefined) {
-      input.setRangeText(replacement);
-    } else {
-      input.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(input, replacement, start, end, selectMode);
     this.value = this.valueFromNativeText(input.value);
   }
 

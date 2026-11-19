@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 20 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,10 +117,8 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
 `previous-button`, `next-button`, `zoom-out-button`,
 `zoom-in-button` (the four toolbar controls, each with its own part name because a descendant
-combinator after `::part()` never matches; these are borderless text toolbar buttons tinted by
-`--lr-pdf-viewer-toolbar-button-hover-bg`, unlike the bordered chevron pager buttons of
-`lr-pptx-viewer` and `lr-ebook-viewer`, so a `::part(previous-button)` rule written for one does not
-transfer unchanged), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+combinator after `::part()` never matches; all four controls are borderless text buttons),
+`page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
@@ -158,7 +156,8 @@ height, not a cap. `--lr-pdf-viewer-toolbar-bg` (default
 `--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. `--lr-pdf-viewer-text-selection-bg` (default
+visible against the toolbar behind it. `--lr-viewer-pager-button-hover-bg` overrides this fill
+and the base for the pressed fill on previous and next. `--lr-pdf-viewer-text-selection-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a native text selection over a `text-span`,
 independent of the shared `--lr-color-brand-quiet` token. `--lr-pdf-viewer-search-match-bg` (default
 `var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default

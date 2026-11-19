@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Писалката е спусната',
   signaturePadPenUp: 'Писалката е вдигната',
   signaturePadDrawingLimit: 'Достигнато е ограничението за рисуване.',
+  catalogPickerSearchLoadFailed: 'Полето за търсене не можа да бъде заредено.',
   localePickerInputLimit: 'Налични са само първите 512 езикови записа.',
   emojiPickerInputLimit: 'Част от данните за емоджи са пропуснати, защото е достигнато ограничение за входните данни.',
 };

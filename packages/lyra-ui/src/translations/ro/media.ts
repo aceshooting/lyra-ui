@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Ieșire din ecran complet',
   videoPlaylistLabel: 'Listă de redare video',
   videoPlaylistUntitled: 'Video {position}',
+  videoTimeReadout: '{current} din {duration}',
   pause: 'Pauză',
   qrCodeMissingLibrary: 'Această componentă necesită pachetul opțional „qrcode” instalat pentru a genera coduri QR.',
   qrCodeGenerationFailed: 'Această valoare nu a putut fi codificată ca cod QR.',

@@ -20,3 +20,5 @@
 - Keep longer page numbers visible in the compact pagination field and preserve link semantics for unavailable destinations.
 - Delay CSV download URL cleanup in the grid’s owner window. Recognize dates and set filters from other windows.
 - Load the grid’s optional column-menu controls when the menu is enabled.
+- Apply consistent CSV formula protection across delimiters while retaining finite numeric values. An empty delimiter uses the format’s default separator.
+- Honor sort-direction changes made by a table sort accessor on the next read.

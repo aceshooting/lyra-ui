@@ -1,3 +1,4 @@
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -88,19 +89,19 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  private _entries: readonly EnvEntry[] = [];
-  private entriesSource?: unknown;
+  private readonly entriesSnapshot = new SnapshotProperty<readonly EnvEntry[]>([], value => this.snapshotEntries(value));
   private omittedEntryCount = 0;
 
   /** Clone-owned readonly name/value entries to render, in order, bounded to the first 10,000
    * source entries. Malformed records, blank names, and later duplicate names are skipped; the
    * first valid occurrence owns render, reveal, copy, and event identity. Reassign to update. */
   @property({ attribute: false })
-  get entries(): readonly EnvEntry[] { return this._entries; }
+  get entries(): readonly EnvEntry[] { return this.entriesSnapshot.read(); }
   set entries(value: readonly EnvEntry[]) {
-    if (value === this.entriesSource || value === this._entries) return;
-    this.entriesSource = value;
-    const previous = this._entries;
+    this.entriesSnapshot.assign(this, 'entries', value);
+  }
+
+  private snapshotEntries(value: unknown): readonly EnvEntry[] {
     const next: EnvEntry[] = [];
     const seen = new Set<string>();
     this.omittedEntryCount = Array.isArray(value) ? Math.max(0, value.length - MAX_ENV_ENTRIES) : 0;
@@ -121,8 +122,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
         }
       }
     }
-    this._entries = Object.freeze(next);
-    this.requestUpdate('entries', previous);
+    return Object.freeze(next);
   }
 
   /** Omits every secret entry's reveal/hide toggle, so secrets stay masked. Turning it on also

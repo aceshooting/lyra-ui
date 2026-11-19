@@ -276,11 +276,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ type: Number, reflect: true }) page = 1;
   /** Number of items represented by one page. Non-positive values produce no pages. */
   @property({ type: Number, attribute: 'page-size' }) pageSize = 10;
-  /** Total number of items across every page. Non-positive values render the empty state, with one
-   *  exact exception: `-1` enters indeterminate mode instead (see the class doc) -- every other
-   *  negative value, including one arrived at by a miscalculation, still renders the ordinary empty
-   *  state. Named `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical
-   *  rename left unset — silently rendering the empty state. */
+  /** Total item count. `-1` enables indeterminate mode. Other non-positive values render the empty state. */
   @property({ type: Number }) total = 0;
   /** Whether at least one more page exists past the current one. Consulted only in indeterminate
    *  mode (`total="-1"`, see the class doc) -- previous availability is always derivable from
@@ -292,9 +288,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Disables navigation and exposes `aria-busy="true"` while a page is loading. */
   @property({ type: Boolean, reflect: true }) loading = false;
-  /** Renders the localized "showing X–Y of Z" summary row. Opt-in and `false` by default,
-   *  matching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the
-   *  summary, so a mechanical rename silently added a row to every migrated pager. */
+  /** Shows the localized range summary. Defaults to `false`. */
   @property({ type: Boolean, attribute: 'with-summary', reflect: true })
   withSummary = false;
   /** Control footprint, on the library-wide six-step ladder. Web Awesome's and Shoelace's

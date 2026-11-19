@@ -38,6 +38,13 @@ for (const linked of [false, true]) {
     const target = linked ? stat.shadowRoot!.querySelector<HTMLElement>('[part="base"]')! : value;
     await focusByKeyboard(target);
     expect(stat.shadowRoot!.activeElement === target).to.equal(true);
+    const description = (node: Element) => stat.shadowRoot!.getElementById(node.getAttribute('aria-describedby') ?? '')?.textContent;
+    expect(description(target)).to.equal('42.03 ms');
+    expect(description(rowValues[0]!)).to.equal('12.04 ms');
+    expect(description(rowValues[1]!)).to.equal(undefined);
+    stat.exactValue = '';
+    await stat.updateComplete;
+    expect(description(target)).to.equal(undefined);
   });
 }
 

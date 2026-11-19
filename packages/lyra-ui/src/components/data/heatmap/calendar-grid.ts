@@ -1,4 +1,4 @@
-import { utcDate } from '../../../internal/calendar-date.js';
+import { parseIsoDate as parseIsoDateParts, utcDate } from '../../../internal/calendar-date.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { minMax } from './heatmap-scale.js';
@@ -19,8 +19,7 @@ export interface CalendarCell {
   /**
    * Day-of-week position within the row, relative to `firstDayOfWeek`: 0 for
    * the anchor weekday itself, up to 6 for the day immediately before it.
-   * With the default `firstDayOfWeek` of 0, this is the familiar 0 (Sunday)
-   * .. 6 (Saturday) numbering, unchanged from before `firstDayOfWeek` existed.
+   * With the default `firstDayOfWeek` of 0, the rows run from Sunday to Saturday.
    */
   weekday: number;
 }
@@ -33,19 +32,9 @@ export const MAX_CALENDAR_WEEKS = 530;
 /** Parses a `yyyy-mm-dd` string as UTC midnight, avoiding local-timezone day-boundary drift. */
 export function parseIsoDate(iso: string): Date {
   // A leading gap before year 0000 has a signed ISO year.
-  if (iso.startsWith('-')) return new Date(`${iso}T00:00:00Z`);
-  const [y = NaN, m = NaN, d = NaN] = iso.split('-').map(Number);
-  return utcDate(y, m - 1, d);
-}
-
-/** Whether `iso` (already run through parseIsoDate) actually round-trips —
- *  Date.UTC silently rolls e.g. day 30 of a 28-day February into March. */
-function isCalendarValid(iso: string, parsed: Date): boolean {
-  // NaN defaults for missing parts mirror parseIsoDate: an absent element read
-  // as `undefined` compares/subtracts identically to NaN here (both make the
-  // corresponding `===`/`m - 1` check fail), so valid dates are unaffected.
-  const [y = NaN, m = NaN, d = NaN] = iso.split('-').map(Number);
-  return parsed.getUTCFullYear() === y && parsed.getUTCMonth() === m - 1 && parsed.getUTCDate() === d;
+  if (iso.startsWith('-') || iso.startsWith('+')) return new Date(`${iso}T00:00:00Z`);
+  const parts = parseIsoDateParts(iso);
+  return parts ? utcDate(parts.y, parts.m - 1, parts.d) : new Date(NaN);
 }
 
 /**
@@ -53,27 +42,11 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * be sorted or contiguous; the grid spans from the earliest to the latest
  * date present, anchored at the `firstDayOfWeek`-weekday on/before the
  * earliest date (`firstDayOfWeek` is 0–6, Sunday-first by default — same
- * numbering as `CalendarCell.weekday`). With the default `firstDayOfWeek` of
- * 0, this is the Sunday on/before the earliest date, exactly as before this
- * parameter existed.
+ * numbering as `CalendarCell.weekday`).
  *
- * An entry whose `date` doesn't parse to a valid calendar date (e.g. `''` or
- * `'2026-03'`) is dropped rather than included: `parseIsoDate` on a malformed
- * string yields an `Invalid Date` (`getTime()` is `NaN`), and letting that
- * single `NaN` reach the min/max below would poison `firstWeekStart` (and
- * therefore every cell's `week`) for the whole grid instead of just the bad
- * entry. Likewise, an entry whose `date` is numerically well-formed but
- * calendar-invalid (e.g. `'2026-02-30'`, which `Date.UTC` silently rolls
- * over into March) is dropped rather than silently renormalized — see
- * `isCalendarValid()`.
+ * Only real Gregorian days in strict YYYY-MM-DD form are admitted.
  *
- * `monthLabelText`, when it returns a string for a given `(jsMonth, year)`, overrides that
- * month's locale-derived label — mirrors calendar `data.weekdayLabelText`'s override-with-
- * fallback shape, letting month labels track the same locale signal (e.g. an app's own i18n
- * store) as every other localizable string on the component. Absent that override, `locale`
- * (typically the host's `effectiveLocale`) drives the default label the same way it drives
- * every other locale-derived string on the same canvas (weekday labels, formatted values) —
- * so a calendar's month and weekday labels never disagree on language.
+ * `monthLabelText(jsMonth, year)` overrides the month label when it returns a string.
  */
 export function buildCalendarGrid(
   days: readonly CalendarDay[],
@@ -104,14 +77,10 @@ export function buildCalendarGrid(
     const day = own(days, String(index));
     const date = own(day, 'date');
     const value = own(day, 'value');
-    if (typeof date !== 'string' || typeof value !== 'number') continue;
-    const dateObj = parseIsoDate(date);
-    if (!Number.isNaN(dateObj.getTime()) && isCalendarValid(date, dateObj) && !parsedByDate.has(date)) {
-      parsedByDate.set(date, { date, value, dateObj });
-    }
+    if (typeof date !== 'string' || typeof value !== 'number' || parsedByDate.has(date)) continue;
+    const parts = parseIsoDateParts(date);
+    if (parts) parsedByDate.set(date, { date, value, dateObj: utcDate(parts.y, parts.m - 1, parts.d) });
   }
-  // Calendar identity is the ISO date. A deterministic first-valid policy is applied before every
-  // scale, count, paint, focus, event and annotation path consumes the grid.
   const parsed = [...parsedByDate.values()];
 
   if (parsed.length === 0) {
@@ -126,16 +95,10 @@ export function buildCalendarGrid(
 
   const timeBounds = minMax(parsed.map((d) => d.dateObj.getTime()))!;
   const min = new Date(timeBounds[0]);
-  // Days back from `min` to the nearest `firstDayOfWeek`-weekday on/before
-  // it — with the default firstDayOfWeek of 0, this reduces to
-  // `min.getUTCDay()` exactly, i.e. today's original Sunday anchor.
   const daysBackToAnchor = (min.getUTCDay() - firstDayOfWeek + 7) % 7;
   const firstWeekStart = utcDate(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - daysBackToAnchor);
 
   const projectedCells: CalendarCell[] = parsed.map((d) => {
-    // Relative to the anchor weekday (see `CalendarCell.weekday`'s doc
-    // comment) — with the default firstDayOfWeek of 0 this is just
-    // `d.dateObj.getUTCDay()`, unchanged from before.
     const weekday = (d.dateObj.getUTCDay() - firstDayOfWeek + 7) % 7;
     const daysSinceStart = Math.round((d.dateObj.getTime() - firstWeekStart.getTime()) / MS_PER_DAY);
     const week = Math.floor(daysSinceStart / 7);

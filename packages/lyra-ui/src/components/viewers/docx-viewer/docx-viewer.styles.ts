@@ -1,5 +1,7 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
+import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
 
 export const styles = css`
   :host {
@@ -93,12 +95,9 @@ export const styles = css`
 
   [part="highlight-action"] {
     ${iconHitTarget}
+    ${nativeControlSurface}
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
@@ -108,11 +107,7 @@ export const styles = css`
   }
 
   [part="highlight-action"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
 
   [part="highlight-action"]:focus-visible {
@@ -120,114 +115,10 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* Painted text-quote highlights, two paths kept in sync by tone: the CSS Custom Highlight API
-     path styles the native ::highlight() pseudo -- no element exists, so the mark[...] selectors
-     below never match there -- while the <mark>-wrap fallback styles real elements
-     text-highlights.ts creates here. */
-  ::highlight(lr-highlight-accent) {
-    background-color: var(
-      --lr-docx-viewer-highlight-accent-bg,
-      var(--lr-color-brand-quiet)
-    );
-  }
-  ::highlight(lr-highlight-success) {
-    background-color: var(
-      --lr-docx-viewer-highlight-success-bg,
-      var(--lr-color-success-quiet)
-    );
-  }
-  ::highlight(lr-highlight-warning) {
-    background-color: var(
-      --lr-docx-viewer-highlight-warning-bg,
-      var(--lr-color-warning-quiet)
-    );
-  }
-  ::highlight(lr-highlight-danger) {
-    background-color: var(
-      --lr-docx-viewer-highlight-danger-bg,
-      var(--lr-color-danger-quiet)
-    );
-  }
-  /* --lr-color-surface-raised, not --lr-color-surface: [part='content'] paints no background, so
-     it shows [part='base']'s --lr-color-surface, and falling back to that token would leave a
-     neutral highlight with zero contrast against the text it marks. Matches highlight-layer's
-     neutral fallback. */
-  ::highlight(lr-highlight-neutral) {
-    background-color: var(
-      --lr-docx-viewer-highlight-neutral-bg,
-      var(--lr-color-surface-raised)
-    );
-  }
-  ::highlight(lr-highlight-active) {
-    background-color: var(
-      --lr-docx-viewer-highlight-active-bg,
-      var(--lr-color-brand-quiet)
-    );
-    text-decoration: underline;
-  }
-  /* Each tone resolves into one private carrier so the hover/active rules below have a single base
-     to mix from: a directly declared tone background is invisible to the generic
-     mark[data-lr-highlight-tone]:hover rule. Same shape as lr-highlight-layer's
-     --_lr-highlight-layer-background. */
-  [part="content"] mark[data-lr-highlight-tone] {
-    --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-accent-bg,
-      var(--lr-color-brand-quiet)
-    );
-    background: var(--_lr-docx-viewer-highlight-background);
-    color: inherit;
-    border-radius: calc(var(--lr-radius) * 0.5);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
-  }
-  /* A mark wraps document TEXT and brightness() applies to the whole subtree, so it recoloured the
-     quoted words with their highlight; as a channel multiply it also did nothing to a pure white or
-     pure black highlight and moved every other one whichever way its colour sat. Mixing the tone's
-     background toward --lr-color-mix-partner (the text colour) leaves the text alone and always
-     moves. */
-  [part="content"] mark[data-lr-highlight-tone]:hover {
-    background: color-mix(
-      in oklab,
-      var(--_lr-docx-viewer-highlight-background),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-tone]:active {
-    background: color-mix(
-      in oklab,
-      var(--_lr-docx-viewer-highlight-background),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-tone="success"] {
-    --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-success-bg,
-      var(--lr-color-success-quiet)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-tone="warning"] {
-    --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-warning-bg,
-      var(--lr-color-warning-quiet)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-tone="danger"] {
-    --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-danger-bg,
-      var(--lr-color-danger-quiet)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-tone="neutral"] {
-    --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-neutral-bg,
-      var(--lr-color-surface-raised)
-    );
-  }
-  [part="content"] mark[data-lr-highlight-name="lr-highlight-active"] {
-    outline: var(--lr-border-width-thin) solid
-      var(--lr-docx-viewer-highlight-active-outline, var(--lr-color-brand));
-    outline-offset: var(--lr-focus-ring-offset);
-  }
+  ${highlightToneStyles('docx-viewer', {
+    interactive: true,
+    activeOutlineToken: '--lr-docx-viewer-highlight-active-outline',
+  })}
 
   [part="content"] mark[part~="search-match"] {
     background: var(

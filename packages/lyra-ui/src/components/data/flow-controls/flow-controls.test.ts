@@ -561,6 +561,28 @@ describe('frame', () => {
 });
 
 describe('toolbar button hover specificity', () => {
+  it('uses inherited hover and pressed fills for built-in and slotted buttons', async () => {
+    const canvas = await fixture<LyraFlowCanvas>(html`
+      <lr-flow-canvas style="--lr-flow-controls-hover-bg: rgb(9, 18, 27); --lr-flow-controls-active-bg: rgb(27, 18, 9)">
+        <lr-flow-controls slot="bottom-start"><button>Custom action</button></lr-flow-controls>
+      </lr-flow-canvas>
+    `);
+    const controls = canvas.querySelector<LyraFlowControls>('lr-flow-controls')!;
+    await controls.updateComplete;
+    const fit = controls.shadowRoot!.querySelector<HTMLButtonElement>('[part="fit"]')!;
+    await waitUntil(() => !fit.disabled);
+    for (const button of [fit, controls.querySelector('button')!]) {
+      try {
+        await hoverUntilMatched(button, 'the toolbar button never entered :hover');
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(9, 18, 27)');
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(27, 18, 9)');
+      } finally {
+        await resetMouse();
+      }
+    }
+  });
+
   it('lets a consumer ::part(zoom-in):hover rule win in the rendered cascade', async function () {
     if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
     const style = document.createElement('style');

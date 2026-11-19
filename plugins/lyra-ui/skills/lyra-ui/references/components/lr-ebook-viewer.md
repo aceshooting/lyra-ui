@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,6 +89,9 @@ and `--lr-ebook-viewer-search-match-bg`. A host with a definite height gives the
 remaining height; an auto-height host keeps the `10rem` minimum. The chapter iframes epub.js creates
 carry a `title` taken from `name` (or the localized region name). Changing `src` clears `location`
 unless the same update assigns a new one; a reconnect keeps it.
+
+`--lr-viewer-pager-button-hover-bg` (default `var(--lr-color-brand-quiet)`) sets the chapter
+buttons' hover fill and the base for their pressed fill.
 
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain

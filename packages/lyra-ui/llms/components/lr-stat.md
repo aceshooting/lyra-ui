@@ -73,9 +73,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
-  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
-  `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
-  just hover. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`). An unlinked
+  value with exact text is a tab stop and exposes that text as its accessible description.
+  `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -167,8 +167,9 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 
 **Known gotchas:**
 
-- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
-  their own `tabindex` to avoid nesting focus targets inside the anchor.
+- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips and share
+  the card's tab stop. The link exposes the headline exact value as its accessible description.
+  Each breakdown value exposes its own exact text when supplied.
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
   more specific name than the visible label/value/unit.

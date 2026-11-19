@@ -119,6 +119,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Caneta em baixo',
   signaturePadPenUp: 'Caneta em cima',
   signaturePadDrawingLimit: 'O limite de desenho foi atingido.',
+  catalogPickerSearchLoadFailed: 'Não foi possível carregar o campo de busca.',
   localePickerInputLimit: 'Apenas estão disponíveis as primeiras 512 entradas de idioma e região.',
   emojiPickerInputLimit: 'Alguns dados de emoji foram omitidos por ter sido atingido um limite de entrada.',
 };

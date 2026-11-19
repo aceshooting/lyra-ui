@@ -1,24 +1,14 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
 export const styles = css`
   :host {
     display: block;
-    /* No shared Web Awesome/Lyra monospace token to resolve through (the gap
-       lr-json-viewer's --lr-json-viewer-font documents too), contained here so
-       a host page can retheme it. */
     --_lr-document-preview-font: var(--lr-font-mono);
     --_lr-document-preview-spin-duration: var(--lr-duration-ambient) var(--lr-easing-linear);
-    --_lr-document-preview-download-link-hover-bg: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-    --_lr-document-preview-download-link-active-bg: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-document-preview-download-link-hover-bg: ${hoverFill('var(--lr-color-brand)')};
+    --_lr-document-preview-download-link-active-bg: ${activeFill('var(--lr-color-brand)')};
   }
 
   [part="header"] {
@@ -147,9 +137,6 @@ export const styles = css`
       transparent
     );
   }
-  /* Pressed: the hovered tint pushed toward the text colour, deepening the hue and -- the partner
-     being opaque -- raising the tint's alpha, so a mousedown on the transparent target button
-     reads firmer than merely pointing at the region. */
   [part="region-highlight-target"]:active + [part="region-highlight"] {
     background: color-mix(
       in oklab,
@@ -174,21 +161,15 @@ export const styles = css`
   }
   [part="region-highlight-action"] {
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    ${nativeControlSurface}
     border-radius: var(--lr-radius-xs);
-    color: var(--lr-color-text);
-    background: var(--lr-color-surface);
     cursor: pointer;
   }
   [part="region-highlight-action"]:hover {
     background: var(--lr-color-surface-raised);
   }
   [part="region-highlight-action"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part="region-highlight-action"]:focus-visible {
     outline: var(--lr-focus-ring);

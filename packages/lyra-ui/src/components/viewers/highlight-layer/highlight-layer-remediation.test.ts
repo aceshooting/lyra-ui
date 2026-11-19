@@ -14,13 +14,29 @@ function targets(el: LyraHighlightLayer): HTMLElement[] {
 }
 
 describe('lr-highlight-layer remediation', () => {
-  it('treats re-assigning the current items snapshot as no change', async () => {
+  it('keeps the snapshot and flash on identity reassignment and clears the flash on replacement or disconnect', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    const snapshot = el.items;
+    const hasFlash = () => el.shadowRoot!.querySelector('[data-flash]') !== null;
     el.flash('a');
     await el.updateComplete;
-    el.items = el.items;
+
+    for (const source of [ITEMS, snapshot]) {
+      el.items = source;
+      await el.updateComplete;
+      expect(el.items === snapshot).to.equal(true);
+      expect(hasFlash()).to.equal(true);
+    }
+
+    el.items = [...ITEMS];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]') !== null).to.equal(true);
+    expect(hasFlash()).to.equal(false);
+    el.flash('a');
+    await el.updateComplete;
+    expect(hasFlash()).to.equal(true);
+    el.remove();
+    await el.updateComplete;
+    expect(hasFlash()).to.equal(false);
   });
 
   const modified: Array<[string, KeyboardEventInit]> = [

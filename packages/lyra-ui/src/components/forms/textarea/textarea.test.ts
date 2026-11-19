@@ -842,6 +842,21 @@ describe('resize="auto"', () => {
     expect(getComputedStyle(ta).overflowY).to.equal("auto");
   });
 
+  it('resolves a percentage cap against the available height and follows parent resizing', async () => {
+    const el = await fixture<LyraTextarea>(html`
+      <lr-textarea resize="auto" rows="1" style="block-size: 400px; --lr-textarea-max-block-size: 50%"
+        .value=${'line\n'.repeat(40)}></lr-textarea>
+    `);
+    const field = el.input!;
+    for (const height of [400, 260]) {
+      el.style.blockSize = `${height}px`;
+      const container = field.parentElement!.getBoundingClientRect();
+      expect(container.height).to.be.closeTo(height, 1);
+      expect(field.getBoundingClientRect().height).to.be.closeTo(container.height / 2, 1);
+      expect(field.scrollHeight).to.be.greaterThan(field.clientHeight);
+    }
+  });
+
   it("re-fits wrapped content when the component allocation narrows", async () => {
     const el = (await fixture(html`
       <lr-textarea
@@ -2482,28 +2497,32 @@ it('defers auto sizing after removal while native editing and value updates rema
 
 it('ignores a retired auto-size observer after same-document reconnect', async () => {
   const original = window.ResizeObserver;
-  const records: Array<{ callback: ResizeObserverCallback; observer: ResizeObserver }> = [];
+  const records: Array<{ callback: ResizeObserverCallback; observer: ResizeObserver; target: Element }> = [];
   window.ResizeObserver = class extends original {
-    constructor(callback: ResizeObserverCallback) {
+    constructor(private readonly callback: ResizeObserverCallback) {
       super(callback);
-      records.push({ callback, observer: this });
+    }
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      records.push({ callback: this.callback, observer: this, target });
+      super.observe(target, options);
     }
   };
   let el: LyraTextarea | undefined;
   try {
     el = await fixture<LyraTextarea>(html`<lr-textarea resize="auto" value="content"></lr-textarea>`);
     const state = el as unknown as {
-      resizeObserver?: ResizeObserver;
+      resizeObserver?: { active: boolean };
       lastObservedWidth?: number;
       resizeRaf: { pending: boolean; cancel(): void };
     };
-    await waitUntil(() => state.resizeObserver !== undefined);
-    const retired = records.find(record => record.observer === state.resizeObserver)!;
+    await waitUntil(() => state.resizeObserver?.active === true);
+    const field = el.shadowRoot!.querySelector('textarea')!;
+    const retired = records.find(record => record.target === field)!;
     const parent = el.parentNode!;
     el.remove();
     parent.appendChild(el);
     await el.updateComplete;
-    const current = records.find(record => record.observer === state.resizeObserver)!;
+    const current = records.find(record => record.target === field && record.observer !== retired.observer)!;
     expect(current.observer === retired.observer).to.equal(false);
     state.resizeRaf.cancel();
     const width = state.lastObservedWidth!;

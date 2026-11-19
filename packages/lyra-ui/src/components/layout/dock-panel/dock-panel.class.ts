@@ -17,7 +17,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_dockPanelToggle } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -174,7 +174,6 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
     dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
     dockPanelResize: LYRA_DEFAULT_dockPanelResize,
-    dockPanelToggle: LYRA_DEFAULT_dockPanelToggle,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -811,8 +810,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       type="button"
       aria-expanded=${this.collapsed ? 'false' : 'true'}
       aria-controls=${this.contentId}
-      aria-label=${this.localize('dockPanelToggle')}
-      title=${this.collapsed
+      aria-label=${this.collapsed
         ? this.localize('dockPanelExpand')
         : this.localize('dockPanelCollapse')}
       @click=${this.toggleCollapsed}

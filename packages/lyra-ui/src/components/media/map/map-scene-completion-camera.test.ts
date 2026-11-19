@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { captureMapSceneCompletionCamera } from './map-scene-completion-camera.js';
+import { captureMapSceneCompletionCamera } from './fixtures/map-scene-completion-camera.js';
 import { completionUiFixture } from '../../../../test/map-scene-completion-fixtures.js';
 import { sceneViewport } from '../../../../test/map-scene-render-fixtures.js';
 import { createMapCameraFollowScene } from '../../../internal/map-camera-follow-scene.js';

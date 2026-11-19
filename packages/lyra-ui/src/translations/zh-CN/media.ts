@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: '退出全屏',
   videoPlaylistLabel: '视频播放列表',
   videoPlaylistUntitled: '视频 {position}',
+  videoTimeReadout: '{current}/{duration}',
   pause: '暂停',
   qrCodeMissingLibrary: '此组件需要安装可选的 "qrcode" 包才能生成二维码。',
   qrCodeGenerationFailed: '无法将此值编码为二维码。',

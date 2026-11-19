@@ -31,7 +31,8 @@ and activation. With `without-interaction`, the base is `aria-hidden` pure paint
 accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
-re-click of the same source citation).
+re-click of the same source citation). Reassigning the original array or the snapshot returned
+by `items` keeps the current cue. Assigning a fresh array or disconnecting clears it.
 
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
 `detail: { highlightId }`.

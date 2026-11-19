@@ -24,3 +24,10 @@ Graph query builders accept a saved-queries heading level and describe errors be
 Environment lists show a localized notice when entries beyond the ceiling are not rendered, and expose hover and pressed fill tokens for their buttons.
 Flow minimaps expose hover and pressed fill tokens for the map.
 Timeline items and flow nodes recognise slotted content through shared slot tracking, including content forwarded through another component's slot.
+Flow controls expose hover and pressed fills for built-in and slotted buttons.
+Unchecked tree checkboxes expose hover and pressed border colors.
+Tree item badges supplied without a tone use a quiet neutral fill.
+Timeline items expose ordered marker sizing and marker colors for each variant.
+Flow canvas and minimap drags release pointer capture when canceled, and edge connection gestures track their initiating pointer.
+Bulk tree expansion reads each branch's motion style once and honors its own duration.
+Condition builders load optional value editors when a row needs them.

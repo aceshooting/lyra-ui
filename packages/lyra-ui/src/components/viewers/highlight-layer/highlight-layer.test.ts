@@ -828,6 +828,8 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="rect-target"]').length).to.equal(0);
     const actions = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight-action"]')];
     expect(actions.length).to.equal(2);
+    el.style.fontFamily = 'Georgia, serif';
+    expect(getComputedStyle(actions[0]!).fontFamily).to.equal(getComputedStyle(el).fontFamily);
     const first = actions[0]!.getBoundingClientRect();
     const second = actions[1]!.getBoundingClientRect();
     expect(first.bottom).to.be.at.most(second.top);

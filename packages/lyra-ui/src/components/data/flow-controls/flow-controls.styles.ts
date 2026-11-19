@@ -20,24 +20,12 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    /* Overlay step: the cluster floats over a flow canvas as a toolbar, so the plain escape below
-       strips the whole surface treatment when it is embedded in real chrome. */
     box-shadow: var(--lr-shadow-m);
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
     flex-wrap: nowrap;
   }
-  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" and lr-callout's
-     [inline]: inside a host toolbar or panel already drawing its own border/background, this
-     floating-surface chrome doubles the frame. The box-shadow goes with the rest of the box
-     decoration, as lr-flow-run-status's plain does -- a lift shadow with no surface under it is a
-     stray smudge. Only decoration goes; the flex layout, the gap, every button's
-     --lr-icon-button-size hit-area floor and their hover/focus affordances stay.
-
-     MUST stay after :host([orientation='vertical']) [part='base'] -- both are :host([x])
-     [part='base'], so source order alone decides. Nothing collides today (flex-direction vs. box
-     decoration), but last keeps plain the stronger no-chrome statement if either rule grows. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
@@ -45,34 +33,23 @@ export const styles = css`
     background: transparent;
     box-shadow: none;
   }
-  /* Enumerated by part rather than a bare "[part='base'] button" tag
-     selector, so each control resolves the shared minimum tappable size
-     (--lr-icon-button-size) off its own [part='...']. The floating toolbar
-     already has the room; the rendered box is unchanged. */
   [part='zoom-in'],
   [part='zoom-out'],
   [part='fit'],
   [part='lock'],
   ::slotted(button) {
     --_lr-icon-button-color-default: var(--lr-color-text);
+    --_lr-flow-controls-hover-bg: var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
+    --_lr-flow-controls-active-bg: var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')});
     ${iconAction}
     ${iconHitTarget}
     transition: background-color var(--lr-transition-fast);
   }
-  /* Keep the internal state selector low-specificity so sibling shadow-tree rules remain easy to
-     order. Consumer ::part() rules win at the shadow boundary through cascade encapsulation, not
-     through a specificity contest with this selector. */
-  /* --lr-color-neutral-fill-quiet, not --lr-color-border: a toolbar button's own hover/press fill
-     is a neutral tint on top of the surface it sits on, not a border color borrowed as a fill --
-     the same class of fix as this release's lr-avatar/lr-skeleton/lr-empty sweep. */
   :where([part='base'] button):hover:where(:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
+    background: var(--_lr-flow-controls-hover-bg);
   }
-  /* The active selector keeps the same low-specificity internal shape. The hover fill carried
-     further toward --lr-color-mix-partner (the text colour), which moves whichever way the
-     surface needs instead of always lightening. */
   :where([part='base'] button):active:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
+    background: var(--_lr-flow-controls-active-bg);
   }
   [part='base'] button:disabled {
     ${disabledControl}
@@ -83,32 +60,19 @@ export const styles = css`
   [part='lock'][aria-pressed='true'] {
     color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
   }
-  /* The default slot's contract: a consumer's button joins the cluster and is styled by the same
-     group. No rule above can do that -- each is either a [part='...'] selector (a light-DOM button
-     carries no part attribute) or a descendant selector in a shadow stylesheet, and per CSS
-     Scoping neither ever matches slotted content. ::slotted() is the only selector that crosses
-     the boundary; it takes a COMPOUND argument, so each state goes inside the parentheses, and it
-     matches the slotted element only, never its descendants -- the button's box, not the
-     consumer's icon markup. */
   ::slotted(button) {
     max-inline-size: 100%;
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  /* The display above is author-origin, so it outranks the UA stylesheet's own
-     '[hidden] { display: none }' and a consumer hiding one of its own action buttons would still
-     get a painted, clickable control. Restating the UA rule keeps its find-in-page carve-out, so
-     every ::slotted([hidden]) override in the library reads identically -- a hidden button is not
-     find-in-page content, but excluding the value costs nothing and never makes this rule stricter
-     than the platform's. */
   ::slotted([hidden]:not([hidden='until-found' i])) {
     display: none;
   }
   ::slotted(button:hover:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
+    background: var(--_lr-flow-controls-hover-bg);
   }
   ::slotted(button:active:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
+    background: var(--_lr-flow-controls-active-bg);
   }
   ::slotted(button:disabled) {
     ${disabledControl}

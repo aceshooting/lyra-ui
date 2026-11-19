@@ -5,29 +5,15 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
-    /* Per-status accent -- one custom property swapped by the :host([status]) rules below rather
-       than repeating background/border per part per status. Mirrors lr-tool-call-chip's identical
-       --lr-tool-call-chip-accent/-bg/-border trio, so a chip's tone vocabulary reads the same
-       library-wide. Defaults to the 'pending' tone so an unset or unknown status reads neutral,
-       not unstyled. */
     --_lr-attachment-chip-accent: var(--lr-color-text-quiet);
     --_lr-attachment-chip-bg: var(--lr-color-surface);
     --_lr-attachment-chip-border: var(--lr-color-border-subtle);
-    /* Compact-mode thumbnail size -- a dedicated token rather than --lr-icon-button-size (the one
-       token in this library with no --lr-theme-* fallback chain), so a consumer can retheme just
-       the compact thumbnail independent of every other icon-button-sized control. */
     --_lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
     --_lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
     --_lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
     --_lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
-    /* Both padding privates restate today's previously-hardcoded values verbatim, so an unset
-       consumer renders byte-identical -- the compact one alongside the other compact-mode
-       privates above, the resting one for parity with it (below). */
     --_lr-attachment-chip-compact-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --_lr-attachment-chip-padding: var(--lr-space-xs) var(--lr-space-s);
-    /* Reduced, symmetric (equal block/inline) padding for the lone-thumbnail case below --
-       the compact text row's inline component (--lr-space-xs) is sized for a label/size line
-       that thumbnail-only removes, so it collapses to just the compact row's own block padding. */
     --_lr-attachment-chip-compact-thumbnail-only-padding: var(--lr-size-0-125rem);
   }
 

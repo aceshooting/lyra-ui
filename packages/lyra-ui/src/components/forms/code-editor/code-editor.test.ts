@@ -1701,7 +1701,7 @@ describe('lr-code-editor size', () => {
     expect(sized.getAttribute('size')).to.equal('s');
   });
 
-  it('leaves the committed padding/font-size untouched at the default tier and tightens them at "xs"', async () => {
+  it('uses the shared field padding and font size at the default tier and tightens them at "xs"', async () => {
     const mEl = await fixture<LyraCodeEditor>(
       html`<lr-code-editor value="one"></lr-code-editor>`,
     );
@@ -1710,7 +1710,6 @@ describe('lr-code-editor size', () => {
     );
     const m = getComputedStyle(textareaOf(mEl));
     const xs = getComputedStyle(textareaOf(xsEl));
-    // The untouched medium tier uses the shared padding and 0.875rem font size.
     expect(m.paddingTop).to.equal('8px');
     expect(m.fontSize).to.equal('14px');
     expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));

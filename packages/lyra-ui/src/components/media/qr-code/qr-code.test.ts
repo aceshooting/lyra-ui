@@ -5,6 +5,10 @@ import { LyraQrCode, type LyraQrCodeErrorCorrection } from './qr-code.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
+function visibilityGate(el: LyraQrCode): { current: boolean; visible: boolean; known: boolean } {
+  return (el as unknown as { visibility: { current: boolean; visible: boolean; known: boolean } }).visibility;
+}
+
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
@@ -726,7 +730,7 @@ describe('lr-qr-code', () => {
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
-      (el as unknown as { visible: boolean }).visible = false;
+      visibilityGate(el).current = false;
       el.size = 150;
       await el.updateComplete;
       expect(parseInt(canvas.style.width, 10)).to.equal(90);
@@ -1180,13 +1184,13 @@ describe('lr-qr-code', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
-    (el as unknown as { visible: boolean }).visible = false;
+    visibilityGate(el).current = false;
     el.size = 150;
     await el.updateComplete;
     // The canvas geometry-changing redraw was skipped entirely while off-screen.
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
-    (el as unknown as { visible: boolean }).visible = true;
+    visibilityGate(el).current = true;
     (el as unknown as { draw(): void }).draw();
     await el.updateComplete;
     expect(parseInt(canvas.style.width, 10)).to.equal(150);
@@ -1227,7 +1231,11 @@ describe('lr-qr-code', () => {
       );
       el.value = 'deferred paint';
       await waitForPart(el, 'canvas');
-      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      const gate = visibilityGate(el);
+      const state = {
+        get visible() { return gate.visible; },
+        get visibilityKnown() { return gate.known; },
+      };
       expect(observedTarget === el).to.be.true;
       expect(loads).to.equal(1);
       expect(state.visible).to.be.false;
@@ -1318,7 +1326,11 @@ describe('lr-qr-code', () => {
         installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
         el.value = 'eager fallback';
         await waitForPart(el, 'canvas');
-        const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+        const gate = visibilityGate(el);
+      const state = {
+        get visible() { return gate.visible; },
+        get visibilityKnown() { return gate.known; },
+      };
         expect(state.visible).to.be.true;
         expect(state.visibilityKnown).to.be.true;
         expect(el.canvas.width).to.equal(80);
@@ -1397,7 +1409,11 @@ describe('lr-qr-code', () => {
       el.value = 'owner generation';
       await waitForPart(el, 'canvas');
       const canvas = el.canvas;
-      const state = el as unknown as { visible: boolean; visibilityKnown: boolean };
+      const gate = visibilityGate(el);
+      const state = {
+        get visible() { return gate.visible; },
+        get visibilityKnown() { return gate.known; },
+      };
       expect(mainRecords).to.have.length(1);
       const firstMain = mainRecords[0]!;
       expect(firstMain.target === el).to.be.true;

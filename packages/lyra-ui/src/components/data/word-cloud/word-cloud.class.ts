@@ -13,7 +13,6 @@ import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -426,9 +425,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const model = this.preparedSnapshot;
     if (!model) return '';
     return this.localize('wordCloudPreparedSummary', undefined, {
-      retainedCount: this.formatCount(model.words.length), validCount: this.formatCount(model.counts.validCount),
-      invalidCount: this.formatCount(model.counts.invalidCount), retainedWeight: this.formatCount(model.retainedWeight),
-      totalWeight: this.formatCount(model.totalWeight),
+      retainedCount: this.formatLocaleNumber(model.words.length), validCount: this.formatLocaleNumber(model.counts.validCount),
+      invalidCount: this.formatLocaleNumber(model.counts.invalidCount), retainedWeight: this.formatLocaleNumber(model.retainedWeight),
+      totalWeight: this.formatLocaleNumber(model.totalWeight),
     });
   }
 
@@ -828,7 +827,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private announce(word: PlacedWord): void {
     const text = this.localize('wordCloudWordAnnouncement', undefined, {
       text: word.text,
-      weight: getNumberFormat(this.effectiveLocale).format(word.weight),
+      weight: this.formatLocaleNumber(word.weight),
     });
     this.liveText = text;
     this.announcements.announcePolite(text);
@@ -964,9 +963,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   private collectionSummary(shown: number, total: number, itemLabel: string): string {
     return this.localize('paginationSummary', undefined, {
-      start: this.formatCount(shown === 0 ? 0 : 1),
-      end: this.formatCount(shown),
-      total: this.formatCount(total),
+      start: this.formatLocaleNumber(shown === 0 ? 0 : 1),
+      end: this.formatLocaleNumber(shown),
+      total: this.formatLocaleNumber(total),
       itemLabel,
     });
   }
@@ -1050,7 +1049,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const focused = this.focusedIndex !== null && !this.ringHidden ? order[this.focusedIndex] : undefined;
     const ring = focused ? this.focusRingRect(focused) : undefined;
     const generatedLabel = this.localize('wordCloud', undefined, {
-      count: this.formatCount(layout.placed.length),
+      count: this.formatLocaleNumber(layout.placed.length),
       word: this.localize(layout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
     });
     const accessibleLabel = hostAriaLabel(this) ?? generatedLabel;
@@ -1106,12 +1105,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
         ${this.renderLegend(legend, this.legendInputCount > 0)}
       </div>
     `;
-  }
-  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
-   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
-   *  sentence. Route every user-facing number through the effective locale instead. */
-  private formatCount(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
   }
 }
 

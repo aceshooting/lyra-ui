@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Olovka dolje',
   signaturePadPenUp: 'Olovka gore',
   signaturePadDrawingLimit: 'Dosegnuto je ograničenje crtanja.',
+  catalogPickerSearchLoadFailed: 'Učitavanje polja za pretraživanje nije uspjelo.',
   localePickerInputLimit: 'Dostupno je samo prvih 512 stavki jezičnih i regionalnih postavki.',
   emojiPickerInputLimit: 'Neki podaci emojija izostavljeni su jer je dosegnuto ograničenje ulaza.',
 };

@@ -558,7 +558,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   placement: Placement = 'bottom-start';
 
   private _open = false;
-  /** Whether the popup panel is open. The panel remains visible in `inline` mode. */
+  /** Whether the popup is open. Its editor is mounted while open or inline. */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
     return this._open;
@@ -647,10 +647,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   constructor() {
     super();
     new GlassScrollLayer(this, '[part~="panel"]', () => !this.inline && this.open);
-    // FormAssociated registers its focusout interaction marker in its own constructor, before
-    // this listener. Requesting here therefore projects the newly-synced user-invalid state in
-    // the next render; the internal blur listener runs too early because blur precedes focusout.
-    this.addEventListener('focusout', () => this.requestUpdate());
+    // Removing the focused editor can dispatch focusout while Lit is committing the close.
+    this.addEventListener('focusout', () => queueMicrotask(() => this.requestUpdate()));
   }
 
   override connectedCallback(): void {
@@ -1318,9 +1316,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const next = event.relatedTarget;
     if (isNodeValue(next) && this.renderRoot.contains(next)) return;
     relayNativeEvent(this, event);
-    // FormAssociated marks the control interacted on the composed focusout boundary. Its custom
-    // validity state is not itself a Lit property, so schedule the ARIA projection explicitly.
-    this.requestUpdate();
   };
 
   private readonly controlFocusListener = {
@@ -1518,7 +1513,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       aria-labelledby=${labelledBy || nothing}
       aria-describedby=${describedBy || nothing}
       ?hidden=${!this.inline && !this.open}
-    >${this.renderPanelBody(invalid)}</div>`;
+    >${this.inline || this.open ? this.renderPanelBody(invalid) : nothing}</div>`;
   }
 
   private renderPanelBody(invalid: boolean): TemplateResult {
@@ -1586,12 +1581,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const hasLabel = this.withLabel || this.slotPresence.has('label') || Boolean(this.label);
     const hasHint = this.withHint || this.slotPresence.has('hint') || Boolean(this.hint);
     const hasError = this.slotPresence.has('error') || Boolean(this.errorText);
-    // Presence-based (`hostAriaLabel`), not truthiness-based: `accessibleLabel` defaults to `''`,
-    // so reading the property alone cannot tell an absent `aria-label` from an explicitly empty
-    // one, and the localized fallback quietly reinstated a name the author had suppressed.
-    // The labelledby companion below stays truthiness-based on purpose, exactly as lr-otp-input's
-    // does: it asks whether the host supplies a *real* name, and an empty one supplies none --
-    // suppressing the host name must not orphan a rendered visible label from the control it names.
     const name = hostAriaLabel(this) ?? (!hasLabel ? this.localize('colorPicker') : '');
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
     const userInvalid = hasCustomState(this.internals, 'user-invalid');

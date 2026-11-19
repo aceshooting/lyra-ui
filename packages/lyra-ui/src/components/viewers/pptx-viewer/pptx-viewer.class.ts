@@ -9,7 +9,7 @@ import {
   type LyraSearchChangeDetail,
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
-import { isAbortError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, LyraUserFacingError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
@@ -26,7 +26,7 @@ import { styles } from './pptx-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceHttpError, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../document-viewer/anchors.js';
 import { textQuoteContextScore } from '../document-viewer/anchors.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
@@ -46,7 +46,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-sear
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_chart, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerMissingLibrary, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -127,6 +127,7 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @csspart container - The renderer-owned output container.
  * @cssprop [--lr-pptx-viewer-max-height=none] - Maximum block size of the scrollable renderer
  *   output container before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop [--lr-viewer-pager-button-hover-bg=var(--lr-color-brand-quiet)] - Hover fill and press tint base for the pager buttons.
  * @status stable
  * @since 4.0.0
  */
@@ -138,10 +139,19 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    chart: LYRA_DEFAULT_chart,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
     pptxViewerFidelityNotice: LYRA_DEFAULT_pptxViewerFidelityNotice,
     pptxViewerLabel: LYRA_DEFAULT_pptxViewerLabel,
     pptxViewerMissingLibrary: LYRA_DEFAULT_pptxViewerMissingLibrary,
@@ -149,6 +159,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     pptxViewerPreviousSlide: LYRA_DEFAULT_pptxViewerPreviousSlide,
     pptxViewerRenderError: LYRA_DEFAULT_pptxViewerRenderError,
     pptxViewerSlideOf: LYRA_DEFAULT_pptxViewerSlideOf,
+    previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -265,6 +278,22 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private viewer?: PptxViewerAdapter;
   private viewerUnsubscribe?: () => void;
   private generation = 0;
+  private loadSrc = '';
+  private readonly source = new ViewerSourceController(this, {
+    load: (response, token) => this.openPresentation(response, token),
+    onError: (error, token) => {
+      if (this.isLoadStale(token)) return;
+      if (error instanceof ViewerSourceUrlNotAllowedError || error instanceof ViewerSourceHttpError) {
+        const key = error instanceof ViewerSourceUrlNotAllowedError
+          ? 'documentPreviewUrlNotAllowed' : 'documentPreviewFailedToLoad';
+        const message = () => this.localize(key);
+        this.reportLoadError(new LyraUserFacingError(message()), message, token);
+      } else {
+        this.reportLoadError(error, viewerFailureMessage(error, this.localize.bind(this)), token);
+      }
+    },
+    retainAcrossMove: () => this.phase !== 'loading',
+  });
   private readonly announcements = new ViewerAnnouncementController(this);
   private pptxSearchQuery = '';
   private lastSearchLocale = '';
@@ -452,8 +481,6 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   override disconnectedCallback(): void {
-    // Fetch, body admission and library acquisition stop with transport; renderer opens survive moves.
-    if (this.phase === 'loading') this.generation++;
     this.announcements.disconnect();
     this.scrollRegion?.dispose();
     this.scrollRegion = undefined;
@@ -588,6 +615,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   private teardown(): void {
     const shouldEmitSearchReset = this.hasPptxSearchState();
+    this.source.cancel();
     this.generation++;
     const unsubscribe = this.viewerUnsubscribe;
     const viewer = this.viewer;
@@ -726,11 +754,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   private async mount(): Promise<void> {
     const src = this.src;
+    this.loadSrc = src;
     this.teardown();
     this.pageViewerState.advance();
-    const signal = this.beginAbortableLoad();
-    const generation = this.generation;
-    const current = () => this.isConnected && generation === this.generation && src === this.src;
     this.slideCount = 0;
     this.currentSlideIndex = 0;
     this.page = 1;
@@ -739,72 +765,45 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.publishPageViewerSnapshot('idle', 0);
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      this.errorMessage = () => this.localize('documentPreviewUrlNotAllowed');
-      const error = new LyraUserFacingError(this.errorMessage());
-      this.phase = 'error';
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
-      return;
-    }
     this.phase = 'loading';
-    this.publishPageViewerSnapshot('loading', 0);
-    if (!current()) return;
-    let module: PptxRendererModule | null;
-    let response: Response;
-    try {
-      [module, response] = await Promise.all([
-        this.loadRenderer(),
-        fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined),
-      ]);
-    } catch (error) {
-      if (signal?.aborted || !current()) return;
-      this.phase = 'error';
-      this.errorMessage = viewerFailureMessage(error, this.localize.bind(this));
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
+    if (resolveOwnerFetchTarget(this, src)) this.publishPageViewerSnapshot('loading', 0);
+    if (this.isConnected && this.src === src) await this.source.begin(src);
+  }
+
+  private isLoadStale(token: ViewerSourceToken): boolean {
+    return this.source.isStale(token) || this.loadSrc !== this.src;
+  }
+
+  private reportLoadError(error: unknown, message: () => string, token: ViewerSourceToken): void {
+    this.phase = 'error';
+    this.errorMessage = message;
+    this.publishPageViewerSnapshot('error', 0);
+    if (!this.isLoadStale(token)) this.emit('lr-render-error', { error });
+  }
+
+  private async openPresentation(response: Response, token: ViewerSourceToken): Promise<void> {
+    if (this.isLoadStale(token)) return;
+    const module = await this.loadRenderer();
+    if (this.isLoadStale(token)) return;
+    if (!module) {
+      const message = () => this.localize('pptxViewerMissingLibrary');
+      this.reportLoadError(new LyraUserFacingError(message()), message, token);
       return;
     }
-    if (signal?.aborted || !current()) {
-      discardBody(response);
-      return;
-    }
-    if (!module || !response.ok) {
-      discardBody(response);
-      this.errorMessage = module
-        ? () => this.localize('documentPreviewFailedToLoad')
-        : () => this.localize('pptxViewerMissingLibrary');
-      const error = new LyraUserFacingError(this.errorMessage());
-      this.phase = 'error';
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
-      return;
-    }
-    let buffer: ArrayBuffer;
-    try {
-      buffer = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !current()) return;
-      await assertPptxArchiveWithinLimits(buffer, { signal });
-    } catch (error) {
-      if (signal?.aborted || !current()) return;
-      this.phase = 'error';
-      this.errorMessage = viewerFailureMessage(error, this.localize.bind(this));
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
-      return;
-    }
-    if (signal?.aborted || !current()) return;
+    const buffer = await this.source.readArrayBuffer(response);
+    if (this.isLoadStale(token)) return;
+    await assertPptxArchiveWithinLimits(buffer, { signal: token.signal });
+    if (this.isLoadStale(token)) return;
     this.phase = 'mounted';
     await this.updateComplete;
-    if (!current() || !this.containerEl) return;
+    if (this.isLoadStale(token) || !this.containerEl) return;
     try {
       const openedViewer = await module.PptxViewer.open(buffer, this.containerEl, {
         externalMedia: 'block',
         zipLimits: module.RECOMMENDED_ZIP_LIMITS,
         listOptions: { windowed: true },
       });
-      if (!current()) { openedViewer.destroy(); return; }
+      if (this.isLoadStale(token)) { openedViewer.destroy(); return; }
       const viewer = adaptPptxViewer(openedViewer);
       if (!viewer) {
         openedViewer.destroy();
@@ -818,13 +817,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         this.page = viewer.currentSlideIndex + 1;
       }
       this.publishPageViewerSnapshot('ready', viewer.slideCount);
-      if (current()) this.emit('lr-load', { slideCount: viewer.slideCount });
+      if (!this.isLoadStale(token)) this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {
-      if (!current()) return;
-      this.phase = 'error';
-      this.errorMessage = this.renderErrorMessage;
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
+      if (!this.isLoadStale(token)) this.reportLoadError(error, this.renderErrorMessage, token);
     }
   }
 

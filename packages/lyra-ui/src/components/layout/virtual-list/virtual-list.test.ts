@@ -271,7 +271,7 @@ it("keeps a 100,000-row indexed source sparse across ordinary state updates", as
 
   const firstReadCount = itemReads;
   const internals = el as unknown as {
-    offsets: number[];
+    offsetIndex: { length: number };
     rowIdentities: string[];
   };
   expect(
@@ -282,13 +282,13 @@ it("keeps a 100,000-row indexed source sparse across ordinary state updates", as
   );
   expect(itemReads).to.be.lessThan(40);
   expect(keyReads).to.be.lessThan(80);
-  expect(internals.offsets).to.have.lengthOf(1);
+  expect(internals.offsetIndex.length).to.equal(0);
   expect(internals.rowIdentities).to.have.lengthOf(0);
 
   el.loading = true;
   await el.updateComplete;
   expect(itemReads - firstReadCount).to.be.lessThan(40);
-  expect(internals.offsets).to.have.lengthOf(1);
+  expect(internals.offsetIndex.length).to.equal(0);
   expect(internals.rowIdentities).to.have.lengthOf(0);
 });
 

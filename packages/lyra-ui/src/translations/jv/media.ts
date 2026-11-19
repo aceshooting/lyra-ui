@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Metu saka layar wutuh',
   videoPlaylistLabel: 'Dhaptar puter video',
   videoPlaylistUntitled: 'Video {position}',
+  videoTimeReadout: '{current} saka {duration}',
   pause: 'Ngaso',
   qrCodeMissingLibrary: 'Komponen iki mbutuhake paket opsional "qrcode" kanggo nggawe kode QR.',
   qrCodeGenerationFailed: 'Nilai iki ora bisa dienkode dadi kode QR.',

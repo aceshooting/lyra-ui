@@ -27,3 +27,9 @@ Join currency names and symbols with the locale's list pattern.
 Forward date-input `strings` to its popup calendar navigation labels.
 Name emoji options from their glyph and groups from the localized fallback when a caller label is whitespace.
 Add a `pressed` property to icon buttons for toggle actions.
+Keep catalog pickers usable when the search field fails to load, and offer a localized retry.
+Type the popup lifecycle, activation and clear events on all four catalog pickers.
+Theme the catalog pickers' resting invalid borders without overriding focus or open styling.
+Format secondary catalog identifiers and symbols with the locale's list pattern.
+Mount the color picker editor only while the popup is open or inline.
+Reuse unchanged rubric score choices when editing another field.

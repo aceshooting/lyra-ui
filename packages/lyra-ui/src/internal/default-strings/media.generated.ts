@@ -167,6 +167,7 @@ export const LYRA_DEFAULT_videoPictureInPicture: LyraMessage = 'Enter picture in
 export const LYRA_DEFAULT_videoPlayerLabel: LyraMessage = 'Video player';
 export const LYRA_DEFAULT_videoPlaylistLabel: LyraMessage = 'Video playlist';
 export const LYRA_DEFAULT_videoPlaylistUntitled: LyraMessage = 'Video {position}';
+export const LYRA_DEFAULT_videoTimeReadout: LyraMessage = '{current} / {duration}';
 export const LYRA_DEFAULT_videoUnmute: LyraMessage = 'Unmute';
 export const LYRA_DEFAULT_videoVolume: LyraMessage = 'Volume';
 export const LYRA_DEFAULT_viewerHighlightLabel: LyraMessage = 'Highlight';

@@ -140,7 +140,7 @@ export function normalizeFlowVariant(value: unknown): LyraVariant | undefined {
 }
 
 export function snapshotFlowHandles(
-  value: readonly FlowHandle[] | undefined,
+  value: unknown,
 ): readonly FlowHandle[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const result: FlowHandle[] = [];
@@ -164,7 +164,7 @@ export function snapshotFlowHandles(
   return Object.freeze(result);
 }
 
-export function snapshotFlowNodes(value: readonly FlowNode[], onTruncate?: () => void): readonly FlowNode[] {
+export function snapshotFlowNodes(value: unknown, onTruncate?: () => void): readonly FlowNode[] {
   if (!Array.isArray(value)) return Object.freeze([]);
   if (value.length > MAX_FLOW_COLLECTION_ENTRIES) onTruncate?.();
   const budget: FlowDataBudget = { remaining: MAX_FLOW_COLLECTION_NODES, truncated: false, seen: new WeakMap(), onTruncate };
@@ -199,7 +199,7 @@ export function snapshotFlowNodes(value: readonly FlowNode[], onTruncate?: () =>
   return Object.freeze(nodes);
 }
 
-export function snapshotFlowEdges(value: readonly FlowEdge[], onTruncate?: () => void): readonly FlowEdge[] {
+export function snapshotFlowEdges(value: unknown, onTruncate?: () => void): readonly FlowEdge[] {
   if (!Array.isArray(value)) return Object.freeze([]);
   if (value.length > MAX_FLOW_COLLECTION_ENTRIES) onTruncate?.();
   const edges: FlowEdge[] = [];

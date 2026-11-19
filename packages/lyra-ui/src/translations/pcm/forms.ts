@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pen don go down',
   signaturePadPenUp: 'Pen don go up',
   signaturePadDrawingLimit: 'You don reach di limit for drawing.',
+  catalogPickerSearchLoadFailed: 'Di search box no gree load.',
   localePickerInputLimit: 'Na only di first 512 language and region entries dey available.',
   emojiPickerInputLimit: 'Some emoji data no enter because di input don reach im limit.',
 };

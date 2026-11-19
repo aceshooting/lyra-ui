@@ -17,6 +17,7 @@ import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
+import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
 import { countLines } from '../../../internal/text-lines.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -51,17 +52,10 @@ export type LyraCodeEditorResize = LyraTextResize;
 export type LyraCodeEditorWrap = LyraTextWrap;
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `lr-task-list`'s `expanded`
- *  converter). `toAttribute` reflects the `true` state as a present attribute rather than omitting
- *  it, matching this property's own `reflect: true`. */
-
 /** `<lr-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
  *
  * Keyboard contract (no keyboard trap, WCAG 2.1.2): Tab inserts one indent unit of spaces at the
- * caret. Shift+Tab is never captured, so it always performs native reverse focus traversal.
+ * caret or indents the selected lines in one native undo step. Shift+Tab is never captured, so it always performs native reverse focus traversal.
  * Pressing Escape releases the next Tab for native forward traversal instead of indenting; typing
  * any other key, or focus leaving the editor, re-arms Tab indentation.
  * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
@@ -98,6 +92,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
  * `reportValidity()` would otherwise perform.
  * @csspart form-control - Outer wrapper.
+ * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
@@ -109,13 +104,13 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @csspart hint - Supporting text.
  * @csspart error - Validation message.
  * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea. Comes from the active `size` tier by default; assign it directly to override that tier's value.
- * @cssprop [--lr-code-editor-padding=var(--lr-space-s)] - Padding of the gutter (block side only) and the textarea (all sides), from the active `size` tier.
- * @cssprop [--lr-code-editor-font-size=var(--lr-font-size-m)] - Font size of the gutter's line numbers and the textarea, from the active `size` tier.
+ * @cssprop [--lr-code-editor-padding=var(--lr-form-control-padding-inline)] - Padding of the gutter (block side only) and the textarea (all sides), from the active `size` tier.
+ * @cssprop [--lr-code-editor-font-size=var(--lr-form-control-font-size)] - Font size of the gutter's line numbers and the textarea, from the active `size` tier.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
  * @cssprop [--lr-code-editor-border=var(--lr-color-border)] - Resting editor-frame border color,
  * independent of the hover and invalid colors below.
- * @cssprop [--lr-code-editor-fill=var(--lr-color-surface)] - Resting editor-frame background.
+ * @cssprop [--lr-code-editor-fill=var(--lr-color-surface)] - Background of the editor frame and line-number gutter.
  * @cssprop [--lr-code-editor-hover-border=var(--lr-color-brand)] - Editor-frame border while the
  * enabled surface is hovered.
  * @cssprop [--lr-code-editor-invalid-border=var(--lr-color-danger)] - Editor-frame border while
@@ -289,6 +284,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   declare inputmode: string;
   declare enterkeyhint: string;
+  /** An empty aria-label attribute clears the name. Whitespace alone uses the visible label or localized editor name. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
   private readonly slotPresence = new SlotPresenceController(this);
@@ -300,7 +296,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private gutterWindowStart = 0;
   @state() private caretOffset = 0;
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-  private textGeometryObserver?: ResizeObserver;
+  private textGeometryObserver?: OwnedResizeObserver;
+  private textareaStyle?: CSSStyleDeclaration;
   private logicalLineCount?: { value: string; count: number };
   private wrappedLineStarts?: { value: string; offsets: number[] };
 
@@ -313,6 +310,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
 
   override disconnectedCallback(): void {
+    this.textareaStyle = undefined;
     this.textGeometryObserver?.disconnect();
     this.textGeometryObserver = undefined;
     this.releaseExternalDescription();
@@ -320,6 +318,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
 
   override adoptedCallback(): void {
+    this.textareaStyle = undefined;
     super.adoptedCallback();
     this.releaseExternalDescription();
     this.textGeometryObserver?.disconnect();
@@ -517,10 +516,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     });
     relayNativeEvent(this, event);
   };
-  // Disabling a focused native control forces the browser to blur it --
-  // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
-  // the field touched. `tabBypassArmed`/`emit('blur')` still run unconditionally: they're tab-key
-  // bookkeeping and the public blur event contract, not validation state.
+  // A native blur caused by disabling the field does not count as a user interaction.
   private onBlur = (event: FocusEvent): void => {
     if (!isLiveDisabled(this)) this.touched = true;
     this.tabBypassArmed = false;
@@ -553,32 +549,28 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const { value, selectionStart: start, selectionEnd: end, selectionDirection } = target;
     const limit = this.maxlength;
     const room = limit === undefined ? Number.POSITIVE_INFINITY : Math.max(0, limit - value.length);
-    let inserted = indent;
-    if (start === end) {
-      inserted = indent.slice(0, room);
-      if (inserted === '') return;
-      target.setRangeText(inserted, start, end, 'end');
-    } else {
-      const first = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
-      const starts = [first];
-      for (let index = first + 1; index < end; index++) {
-        if (value.charCodeAt(index - 1) === 10) starts.push(index);
-      }
-      if (indent.length * starts.length > room) return;
-      const indented = starts
-        .map((lineStart, at) => value.slice(lineStart, starts[at + 1] ?? end))
-        .map((line) => indent + line)
-        .join('');
-      target.setRangeText(indented, first, end, 'preserve');
-      target.setSelectionRange(
-        start === first ? start : start + indent.length,
-        end + indent.length * starts.length,
-        selectionDirection,
-      );
+    let from = start;
+    let replacement = indent.slice(0, room);
+    let selectionAfter: [number, number] | undefined;
+    if (start !== end) {
+      from = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
+      const selected = value.slice(from, end);
+      const lines = selected.endsWith('\n') ? selected.slice(0, -1) : selected;
+      replacement = indent + lines.replaceAll('\n', '\n' + indent) + selected.slice(lines.length);
+      const growth = replacement.length - selected.length;
+      if (growth > room) return;
+      selectionAfter = [start === from ? start : start + indent.length, end + growth];
     }
-    this.value = target.value;
-    dispatchNativeInputEvent(this, { data: inserted, inputType: 'insertText' });
-    this.emit('lr-input', { value: this.value });
+    if (!replacement) return;
+    target.setSelectionRange(from, end, selectionDirection);
+    // Native editing commands participate in the textarea's undo history.
+    if (shadowFocusTarget(this) !== target || !target.ownerDocument.execCommand?.('insertText', false, replacement)) {
+      target.setRangeText(replacement, from, end, 'end');
+      this.value = target.value;
+      dispatchNativeInputEvent(this, { data: replacement, inputType: 'insertText' });
+      this.emit('lr-input', { value: this.value });
+    }
+    if (selectionAfter) target.setSelectionRange(...selectionAfter, selectionDirection);
   }
   private onCaretChange = (): void => {
     this.syncCaretOffset();
@@ -779,18 +771,14 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
     if (this.textGeometryObserver) return;
     const measure = this.renderRoot.querySelector<HTMLElement>('.editor-measure');
-    const ownerDocument = this.ownerDocument;
-    const Observer = ownerDocument.defaultView?.ResizeObserver;
-    if (!measure || !Observer) return;
+    if (!measure) return;
     let observedInlineSize: number | undefined;
-    const observer = new Observer((entries) => {
-      if (!this.isConnected || this.ownerDocument !== ownerDocument || this.textGeometryObserver !== observer) return;
+    const observer = new OwnedResizeObserver(this, entries => {
       if (!this.withoutLineNumbers) {
         this.onEditorScroll();
         this.syncGutterGeometry();
       }
-      // A width change re-wraps the text, so an auto-fitting editor refits to the new line count.
-      const inlineSize = entries[entries.length - 1]?.contentRect.width;
+      const inlineSize = readInlineSize(entries.at(-1));
       if (inlineSize !== undefined && inlineSize !== observedInlineSize) {
         const settled = observedInlineSize !== undefined;
         observedInlineSize = inlineSize;
@@ -804,14 +792,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onEditorScroll = (): void => {
     this.syncGutterInlinePosition();
     if (this.withoutLineNumbers || !this.editor || !this.textarea) return;
-    const computed = this.ownerDocument.defaultView?.getComputedStyle(
-      this.textarea,
-    );
-    const lineHeight = computed
-      ? Number.parseFloat(computed.lineHeight)
-      : Number.NaN;
-    if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-    let firstVisible = Math.floor(this.editor.scrollTop / lineHeight);
+    let firstVisible: number;
     if (this.wrapsText) {
       const offsets = this.lineStarts();
       const measureOffset = this.lineOffsetMeasurer();
@@ -823,6 +804,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         else high = middle - 1;
       }
       firstVisible = low;
+    } else {
+      this.textareaStyle ??= this.ownerDocument.defaultView?.getComputedStyle(this.textarea);
+      const lineHeight = Number.parseFloat(this.textareaStyle?.lineHeight ?? '');
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+      firstVisible = Math.floor(this.editor.scrollTop / lineHeight);
     }
     const next = Math.max(0, firstVisible - 20);
     if (next !== this.gutterWindowStart) this.gutterWindowStart = next;

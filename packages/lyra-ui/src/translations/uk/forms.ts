@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Перо опущено',
   signaturePadPenUp: 'Перо піднято',
   signaturePadDrawingLimit: 'Досягнуто обмеження на малювання.',
+  catalogPickerSearchLoadFailed: 'Не вдалося завантажити поле пошуку.',
   localePickerInputLimit: 'Доступні лише перші 512 записів мовних і регіональних налаштувань.',
   emojiPickerInputLimit: 'Частину даних емодзі пропущено через досягнення обмеження на вхідні дані.',
 };

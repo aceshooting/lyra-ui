@@ -36,17 +36,22 @@ it('preserves the default 10000-row admission and localized disclosure when unse
 it('announces a newly truncated row assignment using the localized cap notice', async () => {
   const el = await fixture<LyraTable<number>>(html`<lr-table caption="Rows"></lr-table>`);
   el.columns = [{ key: 'value', label: 'Value', cell: row => row }];
-  el.strings = { tableRowLimit: 'Retained {count}' };
+  el.strings = { tableRowLimit: { one: 'Retained one row', other: 'Retained {count} rows' } };
   await el.updateComplete;
   const messages: string[] = [];
   const seam = el as unknown as { announcements: { announcePolite(text: string): void } };
   const original = seam.announcements.announcePolite;
   seam.announcements.announcePolite = text => { messages.push(text); };
   try {
-    el.maxRows = 2;
+    el.maxRows = 1;
     el.rows = [1, 2, 3];
     await el.updateComplete;
-    expect(messages).to.deep.equal(['Retained 2']);
+    const summary = () => el.shadowRoot!.querySelector('[part="row-limit"]')?.textContent;
+    expect(summary()).to.equal('Retained one row');
+    el.maxRows = 2;
+    await el.updateComplete;
+    expect(summary()).to.equal('Retained 2 rows');
+    expect(messages).to.deep.equal(['Retained one row', 'Retained 2 rows']);
   } finally { seam.announcements.announcePolite = original; }
 });
 

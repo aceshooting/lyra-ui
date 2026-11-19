@@ -167,8 +167,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   without emitting the user-only row events.
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
   when selection is empty) as TSV by default and returns the copied row count. Its options include
-  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
-  explicit delimiter overrides the one normally selected by `format`. Clipboard settlement is
+  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`.
+  A non-empty delimiter overrides the one selected by `format`. Clipboard settlement is
   asynchronous: `lr-copy` fires only after the owning context's write fulfills (including a
   successful legacy textarea fallback), while rejection emits `lr-error` plus `lr-copy-error` and
   announces the localized `copyFailed` string. Copy intent alone is never reported as success.
@@ -177,8 +177,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
   `filename` aliases were **removed in 9.0.0** — rename them to `columnIds` and `fileName` (the
   spellings `wa-data-grid` uses); an unrenamed call silently falls back to every visible column and
-  `data.csv`. Formula escaping is on by default for string cells beginning with `=`, `+`,
-  `-`, or `@`; numeric values remain numeric.
+  `data.csv`. An empty delimiter uses the default separator. Formula escaping applies to text
+  cells by default. Finite numbers retain numeric text and are quoted if they include the separator.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
   filter but before the named column's own filter. Server mode returns an empty map.

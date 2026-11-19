@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'ออกจากโหมดเต็มหน้าจอ',
   videoPlaylistLabel: 'เพลย์ลิสต์วิดีโอ',
   videoPlaylistUntitled: 'วิดีโอ {position}',
+  videoTimeReadout: '{current} จาก {duration}',
   pause: 'หยุดชั่วคราว',
   qrCodeMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจเสริม "qrcode" เพื่อแสดงคิวอาร์โค้ด',
   qrCodeGenerationFailed: 'เข้ารหัสค่านี้เป็นคิวอาร์โค้ดไม่ได้',

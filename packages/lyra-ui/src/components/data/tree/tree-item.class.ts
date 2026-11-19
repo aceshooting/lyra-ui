@@ -19,10 +19,10 @@ import {
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
 import {
@@ -195,6 +195,8 @@ export interface LyraTreeItemEventMap {
  * @cssprop --lr-tree-row-height - Minimum block size of the row. Taller content can grow the row.
  * @cssprop --lr-tree-toggle-size - Size of the disclosure button, leaf placeholder and selection checkbox, subject to pointer hit-area minimums.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row in every state; unset pointer states use on-quiet text.
+ * @cssprop [--lr-tree-checkbox-hover-border-color=var(--lr-color-brand)] - Hover border of an unchecked checkbox.
+ * @cssprop --lr-tree-checkbox-active-border-color - Pressed border of an unchecked checkbox.
  * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border, and
  *   the border under the pointer.
  * @cssprop [--lr-tree-checkbox-checked-bg=var(--lr-color-brand)] - Checked control background.
@@ -757,7 +759,6 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
         return;
       }
       const animationNode = this.renderRoot.querySelector<HTMLElement>('[part="children"]');
-      const duration = this.motionDuration(expanded, owner, reducedMotion);
       const finish = (): void => {
         this.cancelLifecycleTimer();
         if (
@@ -786,8 +787,13 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
         this.emit('lr-after-expand', { item: this });
       };
 
-      const computedAnimation = animationNode && duration > 0 ? owner.getComputedStyle(animationNode).animationName : 'none';
-      if (!animationNode || duration === 0 || computedAnimation === 'none') {
+      if (!animationNode || (reducedMotion ?? prefersReducedMotion(this))) {
+        finish();
+        return;
+      }
+      const motionStyle = owner.getComputedStyle(animationNode);
+      const duration = this.motionDuration(expanded, motionStyle);
+      if (duration === 0 || motionStyle.animationName === 'none') {
         finish();
         return;
       }
@@ -815,11 +821,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     timer.owner.clearTimeout(timer.handle);
   }
 
-  private motionDuration(expanded: boolean, owner: Window, reduced = prefersReducedMotion(this)): number {
-    if (reduced) return 0;
+  private motionDuration(expanded: boolean, style: CSSStyleDeclaration): number {
     const property = expanded ? '--show-duration' : '--hide-duration';
-    const ownStyle = owner.getComputedStyle(this);
-    const raw = ownStyle.getPropertyValue(property).trim() || ownStyle.getPropertyValue('--lr-duration-base').trim();
+    const raw = style.getPropertyValue(property).trim() || style.getPropertyValue('--lr-duration-base').trim();
     return finiteDuration(parseCssTimeToken(raw)?.ms ?? 0, 0);
   }
 
@@ -1050,7 +1054,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
           badges: html`${(item.badges ?? []).map(
             (b) => html`<span
                 part="badge"
-                data-tone=${b.tone ?? 'neutral'}
+                data-tone=${b.tone ?? nothing}
                 role=${normalizeLabel(b.label) ? 'img' : nothing}
                 aria-label=${normalizeLabel(b.label) ?? nothing}
               >${b.text}</span

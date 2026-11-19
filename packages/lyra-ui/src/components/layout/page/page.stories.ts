@@ -168,6 +168,32 @@ export const LogicalEndNavigationRtl: Story = {
   `,
 };
 
+export const MeasuredStickyOffsets: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Scroll the page to see the header stay below the wrapping notice. The offsets follow each sticky row as its content resizes.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="block-size: 20rem; inline-size: min(100%, 24rem); overflow: auto">
+      <lr-page auto-sticky-offsets>
+        <p slot="banner" style="margin: 0; padding: var(--lr-space-m)">
+          Scheduled maintenance starts at 5 p.m. Save your work and close any open forms before
+          the maintenance window begins.
+        </p>
+        <strong slot="header">Workspace</strong>
+        <div slot="subheader">Project settings</div>
+        <div style="min-block-size: 36rem">
+          <h2>Notifications</h2>
+          <p>Choose which changes you want to hear about.</p>
+        </div>
+      </lr-page>
+    </div>
+  `,
+};
+
 export const CustomToggleAndSkipLink: Story = {
   parameters: {
     docs: {

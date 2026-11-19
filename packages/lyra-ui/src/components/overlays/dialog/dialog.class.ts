@@ -1,4 +1,5 @@
-import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { OwnedMutationObserver, OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { ModalOpenRequest } from '../../../internal/modal-open-request.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
@@ -307,7 +308,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
   set open(next: boolean) {
     const normalized = Boolean(next);
-    if (this.coalesceOpenRequest(normalized)) return;
+    if (this.openRequest.coalesce(normalized)) return;
     if (normalized === this._open) return;
     // Before the first render this is the initial markup/property state, not a transition:
     // `<lr-dialog open>` and confirm.ts's `dialog.open = true` before mounting both land here.
@@ -400,20 +401,15 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this, () => this.renderRoot.querySelector<HTMLElement>('[role="dialog"]'),
   );
   private headingReferences?: AccessibleTextReferences;
-  private headingObserver?: MutationObserver;
-  private headingObserverDocument?: Document;
+  private readonly headingObserver = new OwnedMutationObserver(this, () => this.headingChanged());
   private headingObserverOpen?: boolean;
-  private headingObserverGeneration = 0;
   private readonly bodyOverflowObserver = new OwnedResizeObserver(this, () => this.syncBodyTabIndex());
   private bodyOverflowObservedBody?: HTMLElement;
   /** Invalidates any in-flight `lr-after-show`/`lr-after-hide` wait, so a lifecycle interrupted by
    *  the opposite transition (or by a disconnect) never announces a completion that never
    *  happened. */
   private transitionToken = 0;
-  /** Target currently in its cancelable lifecycle preflight. Writes from a listener are captured
-   * here so same-target requests coalesce and an opposite request supersedes the outer commit. */
-  private openRequestTarget?: boolean;
-  private openRequestDuringPreflight?: boolean;
+  private readonly openRequest = new ModalOpenRequest();
   private transitionAnimations: Animation[] = [];
   private initialFocusDecision?: boolean;
   private readonly headingId = nextId('dialog-heading');
@@ -598,36 +594,18 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
   }
 
-  private armHeadingObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (
-      this.headingObserver &&
-      this.headingObserverDocument === ownerDocument &&
-      this.headingObserverOpen === this.open
-    ) return;
+  private headingChanged(): void {
+    this.detectLightDomChrome();
+    this.syncBodyTabIndex();
     this.resetHeadingObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.headingObserverGeneration;
-    const changed = () => {
-      if (
-        this.headingObserver !== observer ||
-        this.headingObserverDocument !== ownerDocument ||
-        this.headingObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.detectLightDomChrome();
-      this.syncBodyTabIndex();
-      this.resetHeadingObserver();
-      this.armHeadingObserver();
-    };
-    const observer = new MutationObserverCtor(changed);
-    this.headingObserver = observer;
-    this.headingObserverDocument = ownerDocument;
+    this.armHeadingObserver();
+  }
+
+  private armHeadingObserver(): void {
+    if (!this.isConnected) return;
+    if (this.headingObserver.active && this.headingObserverOpen === this.open) return;
+    this.resetHeadingObserver();
+    const observer = this.headingObserver;
     this.headingObserverOpen = this.open;
     observer.observe(this, { childList: true });
     if (this.open) {
@@ -646,7 +624,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         subtree: true,
       });
       if (heading.hasAttribute('aria-labelledby')) {
-        this.headingReferences = { releases: [], changed };
+        this.headingReferences = { releases: [], changed: () => this.headingChanged() };
         observeAccessibleTextReferences(observer, heading,
           composedAccessibilityTextResult(heading, { ancestorBoundary: this, requireRendered: false }),
           this.headingReferences);
@@ -657,10 +635,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private resetHeadingObserver(): void {
     if (this.headingReferences) releaseAccessibleTextReferences(this.headingReferences);
     this.headingReferences = undefined;
-    this.headingObserverGeneration += 1;
-    this.headingObserver?.disconnect();
-    this.headingObserver = undefined;
-    this.headingObserverDocument = undefined;
+    this.headingObserver.clear();
     this.headingObserverOpen = undefined;
   }
 
@@ -757,12 +732,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * animation has finished.
    */
   show(): Promise<void> {
-    if (this.coalesceOpenRequest(true)) return Promise.resolve();
+    if (this.openRequest.coalesce(true)) return Promise.resolve();
     if (this._open) return Promise.resolve();
-    this.beginOpenRequest(true);
+    this.openRequest.begin(true);
     const prevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
-    const superseded = this.openRequestWasSuperseded(true);
-    this.finishOpenRequest();
+    const superseded = this.openRequest.superseded(true);
+    this.openRequest.finish();
     if (prevented || superseded) {
       this.syncOpenAttribute();
       return Promise.resolve();
@@ -796,24 +771,24 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   private closeFrom(reason: DialogCloseReason, source: Element): Promise<void> {
-    if (this.coalesceOpenRequest(false)) return Promise.resolve();
+    if (this.openRequest.coalesce(false)) return Promise.resolve();
     if (!this._open) return Promise.resolve();
-    this.beginOpenRequest(false);
+    this.openRequest.begin(false);
     if (
       this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented ||
-      this.openRequestWasSuperseded(false)
+      this.openRequest.superseded(false)
     ) {
-      this.finishOpenRequest();
+      this.openRequest.finish();
       this.syncOpenAttribute();
       return Promise.resolve();
     }
     const close = this.emit('lr-close-request', { reason }, { cancelable: true });
-    if (close.defaultPrevented || this.openRequestWasSuperseded(false)) {
-      this.finishOpenRequest();
+    if (close.defaultPrevented || this.openRequest.superseded(false)) {
+      this.openRequest.finish();
       this.syncOpenAttribute();
       return Promise.resolve();
     }
-    this.finishOpenRequest();
+    this.openRequest.finish();
     this.cancelTransitionAnimations();
     if (this.isConnected) this.setAttribute('data-closing', '');
     this.applyOpenState(false);
@@ -821,27 +796,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.hideSettled = settled;
     this.emit('lr-close', { reason });
     return settled;
-  }
-
-  private coalesceOpenRequest(next: boolean): boolean {
-    if (this.openRequestTarget === undefined) return false;
-    this.openRequestDuringPreflight = next;
-    return true;
-  }
-
-  private beginOpenRequest(next: boolean): void {
-    this.openRequestTarget = next;
-    this.openRequestDuringPreflight = undefined;
-  }
-
-  private openRequestWasSuperseded(next: boolean): boolean {
-    return this.openRequestDuringPreflight !== undefined &&
-      this.openRequestDuringPreflight !== next;
-  }
-
-  private finishOpenRequest(): void {
-    this.openRequestTarget = undefined;
-    this.openRequestDuringPreflight = undefined;
   }
 
   private applyOpenState(next: boolean): void {

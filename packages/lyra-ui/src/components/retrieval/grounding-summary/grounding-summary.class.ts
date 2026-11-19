@@ -6,11 +6,12 @@ import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
+  ownDataDescriptorValue,
+  hasUnsafeOwnDescriptor,
   readOwnDataValue,
   projectFrozenRows,
   projectStringList as projectDescriptorStringList,
   MISSING_OWN_DATA_DESCRIPTOR,
-  UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import {
   finiteCount,
@@ -102,24 +103,6 @@ const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
 );
 const EMPTY_WARNINGS: readonly string[] = Object.freeze([]);
 
-
-function valueOfDescriptor(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>
-): unknown {
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    ? undefined
-    : descriptor.value;
-}
-
-function hasUnsafeDescriptor(
-  descriptors: readonly ReturnType<typeof getOwnDataDescriptor>[]
-): boolean {
-  return descriptors.some(
-    (descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-  );
-}
-
 function nestedEventDetailValue(
   event: CustomEvent<unknown>,
   property: PropertyKey
@@ -139,9 +122,9 @@ function projectRange(value: unknown): CanonicalRange | undefined {
       return undefined;
     const startDescriptor = getOwnDataDescriptor(value, 'start');
     const endDescriptor = getOwnDataDescriptor(value, 'end');
-    if (hasUnsafeDescriptor([startDescriptor, endDescriptor])) return undefined;
-    const start = valueOfDescriptor(startDescriptor);
-    const end = valueOfDescriptor(endDescriptor);
+    if (hasUnsafeOwnDescriptor([startDescriptor, endDescriptor])) return undefined;
+    const start = ownDataDescriptorValue(startDescriptor);
+    const end = ownDataDescriptorValue(endDescriptor);
     if (typeof start !== 'number' || typeof end !== 'number') return undefined;
     return Object.freeze({ start, end });
   } catch {
@@ -168,7 +151,7 @@ function projectCitation(value: unknown): CanonicalCitation | undefined {
     const labelDescriptor = getOwnDataDescriptor(value, 'label');
     const quoteDescriptor = getOwnDataDescriptor(value, 'quote');
     if (
-      hasUnsafeDescriptor([
+      hasUnsafeOwnDescriptor([
         idDescriptor,
         chunkIdDescriptor,
         sourceIdDescriptor,
@@ -179,13 +162,13 @@ function projectCitation(value: unknown): CanonicalCitation | undefined {
     )
       return undefined;
 
-    const id = valueOfDescriptor(idDescriptor);
+    const id = ownDataDescriptorValue(idDescriptor);
     if (typeof id !== 'string' || id.trim().length === 0) return undefined;
-    const chunkId = valueOfDescriptor(chunkIdDescriptor);
-    const sourceId = valueOfDescriptor(sourceIdDescriptor);
-    const spanValue = valueOfDescriptor(spanDescriptor);
-    const label = valueOfDescriptor(labelDescriptor);
-    const quote = valueOfDescriptor(quoteDescriptor);
+    const chunkId = ownDataDescriptorValue(chunkIdDescriptor);
+    const sourceId = ownDataDescriptorValue(sourceIdDescriptor);
+    const spanValue = ownDataDescriptorValue(spanDescriptor);
+    const label = ownDataDescriptorValue(labelDescriptor);
+    const quote = ownDataDescriptorValue(quoteDescriptor);
     const span = projectRange(spanValue);
     const input = Object.freeze({
       id,
@@ -227,7 +210,7 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
     const warningsDescriptor = getOwnDataDescriptor(value, 'warnings');
     const claimsDescriptor = getOwnDataDescriptor(value, 'claims');
     if (
-      hasUnsafeDescriptor([
+      hasUnsafeOwnDescriptor([
         supportedClaimsDescriptor,
         unsupportedClaimsDescriptor,
         coverageDescriptor,
@@ -238,12 +221,12 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
     )
       return undefined;
 
-    const supportedClaims = valueOfDescriptor(supportedClaimsDescriptor);
-    const unsupportedClaims = valueOfDescriptor(unsupportedClaimsDescriptor);
-    const coverage = valueOfDescriptor(coverageDescriptor);
-    const confidence = valueOfDescriptor(confidenceDescriptor);
-    const warningsValue = valueOfDescriptor(warningsDescriptor);
-    const claimsValue = valueOfDescriptor(claimsDescriptor);
+    const supportedClaims = ownDataDescriptorValue(supportedClaimsDescriptor);
+    const unsupportedClaims = ownDataDescriptorValue(unsupportedClaimsDescriptor);
+    const coverage = ownDataDescriptorValue(coverageDescriptor);
+    const confidence = ownDataDescriptorValue(confidenceDescriptor);
+    const warningsValue = ownDataDescriptorValue(warningsDescriptor);
+    const claimsValue = ownDataDescriptorValue(claimsDescriptor);
     const warnings =
       warningsDescriptor === MISSING_OWN_DATA_DESCRIPTOR || warningsValue === undefined
         ? EMPTY_WARNINGS
@@ -426,7 +409,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
    *  heading text without exposing it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level' })
   headingLevel: LyraHeadingLevel = '3';
-
 
   private readonly canonicalAssessmentBySource = new WeakMap<
     object,

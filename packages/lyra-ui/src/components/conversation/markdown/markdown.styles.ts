@@ -1,5 +1,6 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -252,50 +253,7 @@ export const styles = css`
   [part='math'][data-display='inline'] {
     display: inline-block;
   }
-  /* Painted text-quote highlights. The CSS Custom Highlight API path styles the native
-     ::highlight() pseudo, where no element exists for the [part='content'] mark[...] selectors
-     below to match; the <mark>-wrap fallback styles the real elements text-highlights.ts creates
-     in this same shadow tree. Both are kept in sync by tone. */
-  ::highlight(lr-highlight-accent) {
-    background-color: var(--lr-markdown-highlight-accent-bg, var(--lr-color-brand-quiet));
-  }
-  ::highlight(lr-highlight-success) {
-    background-color: var(--lr-markdown-highlight-success-bg, var(--lr-color-success-quiet));
-  }
-  ::highlight(lr-highlight-warning) {
-    background-color: var(--lr-markdown-highlight-warning-bg, var(--lr-color-warning-quiet));
-  }
-  ::highlight(lr-highlight-danger) {
-    background-color: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
-  }
-  ::highlight(lr-highlight-neutral) {
-    background-color: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface-raised));
-  }
-  ::highlight(lr-highlight-active) {
-    background-color: var(--lr-markdown-highlight-active-bg, var(--lr-color-brand-quiet));
-    text-decoration: underline;
-  }
-  [part='content'] mark[data-lr-highlight-tone] {
-    background: var(--lr-markdown-highlight-accent-bg, var(--lr-color-brand-quiet));
-    color: inherit;
-    border-radius: calc(var(--lr-radius) * 0.5);
-  }
-  [part='content'] mark[data-lr-highlight-tone='success'] {
-    background: var(--lr-markdown-highlight-success-bg, var(--lr-color-success-quiet));
-  }
-  [part='content'] mark[data-lr-highlight-tone='warning'] {
-    background: var(--lr-markdown-highlight-warning-bg, var(--lr-color-warning-quiet));
-  }
-  [part='content'] mark[data-lr-highlight-tone='danger'] {
-    background: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
-  }
-  [part='content'] mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface-raised));
-  }
-  [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
-    outline: var(--lr-border-width-thin) solid var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
-    outline-offset: var(--lr-focus-ring-offset);
-  }
+  ${highlightToneStyles('markdown')}
 
   [part~='code-block-frame']:where([data-lr-code-chrome]) {
     margin-block: 0 var(--lr-space-s);
@@ -356,19 +314,6 @@ export const styles = css`
     outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   @media (forced-colors: active) {
-    ::highlight(lr-highlight-accent), ::highlight(lr-highlight-success), ::highlight(lr-highlight-warning),
-    ::highlight(lr-highlight-danger), ::highlight(lr-highlight-neutral) {
-      text-decoration: underline;
-    }
-    [part='content'] mark[data-lr-highlight-tone] {
-      text-decoration: underline;
-    }
-    [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
-      text-decoration: double underline;
-    }
-    ::highlight(lr-highlight-active) {
-      text-decoration: double underline;
-    }
     [part~='code-block-copy']:where([data-lr-code-chrome]) {
       border: var(--lr-border-width-thin) solid ButtonText;
     }

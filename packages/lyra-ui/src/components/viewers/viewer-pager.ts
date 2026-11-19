@@ -32,15 +32,15 @@ export const viewerPagerStyles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part="previous-button"]:hover,
-  [part="next-button"]:hover {
-    background: var(--lr-color-brand-quiet);
+  [part="previous-button"]:hover:not(:disabled),
+  [part="next-button"]:hover:not(:disabled) {
+    background: var(--lr-viewer-pager-button-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part="previous-button"]:active,
-  [part="next-button"]:active {
+  [part="previous-button"]:active:not(:disabled),
+  [part="next-button"]:active:not(:disabled) {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-viewer-pager-button-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

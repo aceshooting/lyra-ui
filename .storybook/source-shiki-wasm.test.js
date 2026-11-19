@@ -66,6 +66,7 @@ window.highlight = async engine => {
   logger.warn = logger.warnOnce = message => warnings.push(message);
   const config = {
     configFile: false, root, plugins, customLogger: logger,
+    build: { rolldownOptions: { onwarn: configured.build.rolldownOptions.onwarn } },
     server: { host: '127.0.0.1', port: 0, fs: { allow: [repository, root] } },
     preview: { host: '127.0.0.1', port: 0 },
   };

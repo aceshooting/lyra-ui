@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Izađi iz prikaza preko cijelog zaslona',
   videoPlaylistLabel: 'Popis videozapisa',
   videoPlaylistUntitled: 'Videozapis {position}',
+  videoTimeReadout: '{current} od {duration}',
   pause: 'Pauziraj',
   qrCodeMissingLibrary: 'Za prikaz QR kodova ova komponenta zahtijeva instaliran izborni paket „qrcode”.',
   qrCodeGenerationFailed: 'Ovu vrijednost nije moguće kodirati kao QR kod.',

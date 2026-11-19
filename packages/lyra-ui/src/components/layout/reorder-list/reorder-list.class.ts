@@ -263,13 +263,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (movedItem) this.finishMove(movedItem, reconciliation.direction, reconciliation.toIndex);
   }
 
-  // Multiple owned items rewriting `.value` in the same tick (a framework re-render re-keying
-  // every row) each independently reach this notification through their own `willUpdate()`. One
-  // full `onSlotChange()`/`syncBoundaryState()` pass already reconciles every item's boundary
-  // state at once, so N notifications inside one microtask checkpoint collapse into exactly one
-  // pass here -- mirroring the coalesced select/combobox option-metadata pattern. A structural
-  // slot change (a row added/removed/moved) still runs `onSlotChange()` immediately through its
-  // own `slotchange` listener, with already-reconciled moves skipped.
+  // A batch of identity edits needs only one boundary reconciliation.
   private identityChangeReconciliationPending = false;
 
   /** @internal Reconciles only a directly owned item's live identity edit. */
@@ -356,13 +350,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     )
       return;
     this.pendingFocusTarget = null;
-    // Only steal focus back when doing so cannot override a deliberate consumer choice: either
-    // the captured pre-restore focus was already somewhere inside this list (the ordinary case --
-    // the move button just clicked/keyed, or any other row control), or there was nothing
-    // meaningful to preserve at all (null, the document body, or a node reconciliation has since
-    // disconnected). A captured focus that is a still-connected element OUTSIDE this list means
-    // the consumer moved focus there on purpose during the wait -- most likely a `controlled`
-    // host's own async `finalizePendingMove()`/reconciliation gap -- and must not be overridden.
+    // A controlled host may deliberately focus another region during reconciliation.
     const captured = focusTarget.preScheduleFocus;
     const capturedIsElsewhere =
       captured != null &&
@@ -584,13 +572,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const itemIndex = path.indexOf(item);
     const originatedInNestedControl = path.slice(0, itemIndex).some((target) => {
       if (!isElementNode(target)) return false;
-      // Anything the item RENDERED ITSELF is the row's own chrome, never consumer content:
-      // consumer content arrives through a slot, so its root node is the document, never the
-      // item's shadow root (or a shadow root nested inside it). `isRowOwnChrome` climbs shadow
-      // boundaries via `.host` links to recognize a composed <lr-icon-button>'s own native
-      // <button> as the row's chrome too -- a single `getRootNode() === item.shadowRoot` check
-      // only recognizes the icon button's HOST element, one boundary short of the real focus
-      // target, and falls through to the "custom element"/`name === 'button'` arms below.
+      // A row's move button can itself own a shadow root.
       if (isRowOwnChrome(target, item)) return false;
       const name = target.localName;
       return (

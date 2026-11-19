@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'الخروج من ملء الشاشة',
   videoPlaylistLabel: 'قائمة تشغيل الفيديو',
   videoPlaylistUntitled: 'الفيديو {position}',
+  videoTimeReadout: '{current} من {duration}',
   pause: 'إيقاف مؤقت',
   qrCodeMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "qrcode" لإنشاء رموز QR.',
   qrCodeGenerationFailed: 'تعذّر ترميز هذه القيمة كرمز QR.',

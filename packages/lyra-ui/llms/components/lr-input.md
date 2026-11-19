@@ -83,6 +83,7 @@ shared hit target (42px including the row border at the default theme); `l` and 
   `data-invalid`, the attribute every Lyra field publishes next to
   `:state(user-invalid)`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
+  preserves an empty override. Whitespace alone falls back to the visible label, placeholder, or localized input name.
 - `autocomplete: string = ''`
 - `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`

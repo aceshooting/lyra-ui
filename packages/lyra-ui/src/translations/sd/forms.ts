@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'قلم هيٺ',
   signaturePadPenUp: 'قلم مٿي',
   signaturePadDrawingLimit: 'ڊرائنگ جي حد پوري ٿي وئي آهي.',
+  catalogPickerSearchLoadFailed: 'ڳولا جو خانو لوڊ نه ٿي سگهيو.',
   localePickerInputLimit: 'ٻولي ۽ علائقي جون صرف پهرين 512 داخلائون موجود آهن.',
   emojiPickerInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ايموجي جي ڪجهه ڊيٽا ڇڏي وئي آهي.',
 };

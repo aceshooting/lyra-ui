@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const entries = [
   { name: 'API_KEY', value: 'abc', secret: true },
@@ -8,6 +9,23 @@ const entries = [
 ];
 
 describe('lr-env-list row actions', () => {
+  it('uses the configured hover and pressed backgrounds on row actions', async () => {
+    const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}
+      style="--lr-env-list-button-hover-bg: rgb(9, 18, 27); --lr-env-list-button-active-bg: rgb(27, 18, 9)"></lr-env-list>`);
+    for (const part of ['reveal-button', 'copy-button']) {
+      const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!;
+      try {
+        await hoverUntilMatched(button, `${part} never entered :hover`);
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(9, 18, 27)');
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(27, 18, 9)');
+        await sendMouse({ type: 'move', position: [0, 0] });
+      } finally {
+        await resetMouse();
+      }
+    }
+  });
+
   it('isolates names and values from the surrounding direction', async () => {
     const el = await fixture<LyraEnvList>(html`<lr-env-list dir="rtl" .entries=${entries}></lr-env-list>`);
     const names = [...el.shadowRoot!.querySelectorAll('[part="name"] bdi')];

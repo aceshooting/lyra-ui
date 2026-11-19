@@ -1,4 +1,7 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import {
+  disclosureChevron,
+  iconHitTarget,
+} from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -38,22 +41,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  [part='toggle'] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    transition: transform var(--lr-transition-fast);
-  }
-  [aria-expanded='true'] > [part='toggle'] {
-    transform: rotate(90deg);
-  }
-  :host(:dir(rtl)) [aria-expanded='false'] > [part='toggle'] {
-    transform: scaleX(-1);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [part='toggle'] {
-      transition: none;
-    }
-  }
+  ${disclosureChevron({
+    glyph: "[part='toggle']",
+    expanded: "[aria-expanded='true'] > [part='toggle']",
+    collapsedRtl: ":host(:dir(rtl)) [aria-expanded='false'] > [part='toggle']",
+  })}
   .stack {
     display: flex;
     flex-direction: column;

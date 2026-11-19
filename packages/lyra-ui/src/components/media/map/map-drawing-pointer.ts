@@ -1,3 +1,4 @@
+import { tryReleasePointerCapture, trySetPointerCapture } from '../../../internal/pointer-capture.js';
 import type { LyraMapDrawingPoint } from './map-drawing.js';
 
 export interface MapDrawingPointerContext {
@@ -20,7 +21,6 @@ interface Drag {
   readonly lease: { release(): boolean };
   readonly distance: number;
   readonly start: readonly [number, number];
-  capture: boolean;
   moved: boolean;
 }
 /** Visual CSS pixels a press may travel and still count as a tap rather than a drag. */
@@ -93,13 +93,15 @@ export class MapDrawingPointer {
       if (!this.current(epoch) || nearest < 0) return false;
       lease = this.context.acquirePan();
       if (!this.current(epoch) || !lease.accepted) { const rejected = lease; lease = undefined; rejected.release(); return false; }
-      const drag: Drag = { pointer: event.pointerId, index: nearest, lease, capture: false, distance,
+      const drag: Drag = { pointer: event.pointerId, index: nearest, lease, distance,
         start: [event.clientX, event.clientY], moved: false };
       this.drag = drag;
+      lease = undefined;
       const capturedEpoch = ++this.epoch;
-      drag.capture = true;
-      this.context.canvas.setPointerCapture(event.pointerId);
-      if (!this.current(capturedEpoch) || this.drag !== drag) { this.retire(drag); return false; }
+      if (!trySetPointerCapture(this.context.canvas, drag.pointer) || !this.current(capturedEpoch) || this.drag !== drag) {
+        this.retire(drag);
+        return false;
+      }
       event.preventDefault(); this.suppressed = true;
       return true;
     } catch {
@@ -114,7 +116,7 @@ export class MapDrawingPointer {
     this.drag = undefined; this.epoch++;
     this.retiring = true;
     try {
-      if (drag.capture) { try { this.context.canvas.releasePointerCapture(drag.pointer); } catch { /* Capture may already be lost. */ } }
+      tryReleasePointerCapture(this.context.canvas, drag.pointer);
       try { drag.lease.release(); } catch { /* Continue owner teardown. */ }
     } finally { this.retiring = false; }
   }

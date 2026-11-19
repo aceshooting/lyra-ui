@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pena turun',
   signaturePadPenUp: 'Pena naik',
   signaturePadDrawingLimit: 'Batas gambar tercapai.',
+  catalogPickerSearchLoadFailed: 'Kolom pencarian gagal dimuat.',
   localePickerInputLimit: 'Hanya 512 entri bahasa dan wilayah pertama yang tersedia.',
   emojiPickerInputLimit: 'Sebagian data emoji dihilangkan karena batas masukan tercapai.',
 };

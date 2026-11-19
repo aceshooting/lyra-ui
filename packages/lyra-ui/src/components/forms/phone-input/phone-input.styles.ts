@@ -116,7 +116,7 @@ export const styles = css`
   :host([data-invalid]) [part='input-wrapper'] {
     border-color: var(
       --lr-phone-input-invalid-border-color,
-      var(--lr-phone-input-border-color, var(--_lr-phone-input-border-color-default))
+      var(--lr-form-control-invalid-border-color, var(--lr-phone-input-border-color, var(--_lr-phone-input-border-color-default)))
     );
   }
 

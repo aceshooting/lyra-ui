@@ -7,10 +7,6 @@ import { compactContainerQuery } from '../../../internal/container-breakpoints.s
 export const styles = css`
   :host {
     --_lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
-    /* Background for every floating/toolbar icon button (close-button, previous-button,
-       next-button). They float over arbitrary image content, not the app's normal surface, so they
-       take the solid high-contrast neutral fill token rather than --lr-color-surface -- contrast
-       independent of the page theme and of whatever is in the photo. */
     --_lr-lightbox-control-bg: var(--lr-color-neutral);
     --_lr-lightbox-control-color: var(--lr-color-on-neutral);
     ${modalHostStyles}
@@ -102,9 +98,6 @@ export const styles = css`
   [part="close-button"] {
     margin-inline-start: var(--lr-space-xs);
   }
-  /* :where() zeroes the wrapped selectors, leaving only :hover -- (0,1,0), the same weight as the
-     pressed rule below, which therefore takes the control on source order while the pointer is
-     down. */
   :where([part="source-retry"]):hover,
   :where([part="close-button"]):hover,
   :where([part="previous-button"]):hover:where(:not(:disabled)),
@@ -112,9 +105,6 @@ export const styles = css`
     background: var(--_lr-lightbox-control-hover-bg);
     color: var(--_lr-lightbox-control-hover-color);
   }
-  /* Pressed carries the hover fill further toward --lr-color-mix-partner: these controls float
-     over arbitrary photography, so the press must be legible on its own rather than relying on the
-     image for contrast. */
   :where([part="source-retry"]):active,
   :where([part="close-button"]):active,
   :where([part="previous-button"]):active:where(:not(:disabled)),
@@ -161,8 +151,6 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: 0;
   }
-  /* Plain ::part() styling one level in, unrelated to exportparts -- stretches the embedded
-     frame to fill the stage, overriding pan-zoom's own min-block-size default. */
   lr-pan-zoom[part="frame"] {
     display: block;
     inline-size: 100%;
@@ -220,9 +208,6 @@ export const styles = css`
     text-align: center;
     overflow-wrap: anywhere;
   }
-  /* Container-query lengths cannot reference custom properties, so the documented 320px
-     narrow-allocation baseline is expressed in root-relative units and still follows the page's
-     type scale -- mirrors pagination.styles.ts's container query. */
   @container ${compactContainerQuery} {
     [part="counter"] {
       max-inline-size: 45%;

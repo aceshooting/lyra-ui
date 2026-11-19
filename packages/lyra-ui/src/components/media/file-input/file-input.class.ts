@@ -1,6 +1,7 @@
 import type { LyraMessageKey } from '../../../internal/localization-types.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState } from '../../../internal/form-control-template.js';
 import { FormControlController } from '../../../internal/form-control-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
@@ -1147,8 +1148,8 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   override render(): TemplateResult {
     const instruction = this.dropzoneInstruction;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').trim().length > 0;
-    const accessibleLabel = this.hostAccessibleLabel || null;
-    const labelledBy = accessibleLabel == null && hasLabel ? 'file-input-label' : undefined;
+    const accessibleLabel = normalizeLabel(this.hostAccessibleLabel);
+    const labelledBy = accessibleLabel === undefined && hasLabel ? 'file-input-label' : undefined;
     const fallbackAriaLabel = accessibleLabel ?? (hasLabel ? undefined : instruction);
     const renderedError = this.errorText || this.customError || (this.touched ? this.validationMessage : '');
     const { hasError, hasHint, describedBy } = formControlSupportingState({

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'قلم ښکته',
   signaturePadPenUp: 'قلم پورته',
   signaturePadDrawingLimit: 'د انځور کښلو حد ته ورسېدئ.',
+  catalogPickerSearchLoadFailed: 'د لټون خانه بار نه شوه.',
   localePickerInputLimit: 'یوازې د ژبې او سیمې لومړۍ 512 ننوتنې شته.',
   emojiPickerInputLimit: 'د ننوتو حد ته د رسېدو له امله د ایموجي ځینې معلومات پرېښودل شوي دي.',
 };

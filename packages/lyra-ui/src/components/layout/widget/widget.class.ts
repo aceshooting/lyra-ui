@@ -3,6 +3,7 @@ import { ModalSurfaceController } from '../../../internal/modal-surface-controll
 import { modalHostStyles } from '../../../internal/modal-host.styles.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -395,8 +396,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  private effectiveViews: readonly Readonly<LyraWidgetView>[] = Object.freeze([]);
-  private viewsSource?: unknown;
+  private readonly viewSnapshot = new SnapshotProperty(Object.freeze([]), snapshotWidgetViews);
 
   /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen
    *  snapshot (except `icon`, preserved by reference -- see `snapshotWidgetViews`'s doc); mutate a
@@ -406,14 +406,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  `label` is optional -- see `LyraWidgetView`'s own doc for the icon-only (`ariaLabel`) case. */
   @property({ attribute: false })
   get views(): readonly LyraWidgetView[] {
-    return this.effectiveViews;
+    return this.viewSnapshot.read();
   }
   set views(value: readonly LyraWidgetView[]) {
-    if (value === this.viewsSource || value === this.effectiveViews) return;
-    this.viewsSource = value;
-    const previous = this.effectiveViews;
-    this.effectiveViews = snapshotWidgetViews(value);
-    this.requestUpdate('views', previous);
+    this.viewSnapshot.assign(this, 'views', value);
   }
 
   /** The currently active view's `viewId` -- defaults to the first entry of `views` (or `''` when

@@ -274,6 +274,11 @@ it("honors an explicit copy delimiter over the format default", async () => {
     ).to.equal(1);
     await Promise.resolve();
     expect(copied).to.equal("Ada;7");
+    expect(element.copySelectedRows({
+      columnIds: ['name', 'score'], includeHeaders: false, delimiter: '',
+    })).to.equal(1);
+    await Promise.resolve();
+    expect(copied).to.equal('Ada\t7');
   } finally {
     if (clipboardDescriptor)
       Object.defineProperty(navigator, "clipboard", clipboardDescriptor);

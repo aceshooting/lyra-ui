@@ -357,6 +357,12 @@ describe('map camera helpers', () => {
     expect(normalizeCameraOptions({ bearing: Number.NaN })).to.equal(undefined);
   });
 
+  it('reduces large bearings to one turn before the engine can lose precision', () => {
+    const bearing = 2 ** 60;
+    expect(normalizeCameraOptions({ bearing })?.bearing).to.equal(136);
+    expect(normalizeCameraOptions({ bearing: -bearing })?.bearing).to.equal(-136);
+  });
+
   it('skips GeoJSON nodes, unknown geometry types and coordinate entries it cannot measure', () => {
     const extent = emptyExtent();
     extendExtentWithGeoJson(extent, {

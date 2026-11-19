@@ -4,7 +4,9 @@ import {
   loadChartAndZoom,
   loadChartAndRegisterZoom,
   loadChartAndDataLabels,
+  loadChartJsWithZoom,
   loadChartJsWithZoomResult,
+  loadChartJsWithDataLabels,
   loadChartJsWithDataLabelsResult,
   loadDataLabelsPlugin,
   loadAnnotationPlugin,
@@ -584,4 +586,19 @@ describe('annotation feature loading', () => {
     expect(first).to.equal(second);
     expect((await first).kind).to.equal('available');
   });
+});
+
+it('preserves the published chart feature adapters and shares each in-flight result', async () => {
+  const zoom = loadChartJsWithZoom();
+  expect(zoom).to.equal(loadChartJsWithZoom());
+  const labels = loadChartJsWithDataLabels();
+  expect(labels).to.equal(loadChartJsWithDataLabels());
+
+  const zoomResult = await loadChartJsWithZoomResult();
+  const labelsResult = await loadChartJsWithDataLabelsResult();
+  expect(zoomResult.kind).to.equal('available');
+  expect(labelsResult.kind).to.equal('available');
+  if (zoomResult.kind !== 'available' || labelsResult.kind !== 'available') return;
+  expect(await zoom).to.equal(zoomResult.mod);
+  expect(await labels).to.deep.equal({ mod: labelsResult.mod, plugin: labelsResult.plugin });
 });

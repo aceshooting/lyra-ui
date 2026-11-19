@@ -4,6 +4,8 @@ import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.js';
 import type { LyraCheckboxGroup } from '../checkbox-group/checkbox-group.js';
+import '../../../translations/fr/forms.js';
+import '../../../translations/fr/shared.js';
 
 const keys: RubricKey[] = [{ key: 'tags', type: 'category', label: 'Tags', description: 'Field guidance', multiple: true, options: [{ value: 'a' }, { value: 'b' }] }];
 
@@ -12,6 +14,22 @@ function owner(field: LyraRubricForm): HTMLElement {
 }
 
 describe('rubric controlled checked values', () => {
+  it('reuses score choices when another field is edited and relabels them on locale changes', async () => {
+    const schema: RubricKey[] = [{ key: 'score', type: 'score', min: 1000, max: 1002 },
+      { key: 'comment', type: 'comment' }];
+    const field = await fixture<LyraRubricForm>(html`<lr-rubric-form lang="en"
+      .keys=${schema} .value=${{ score: 1001 }}></lr-rubric-form>`);
+    const score = field.shadowRoot!.querySelector('lr-segmented')!;
+    const items = score.items;
+    expect(items.map(item => item.label)).to.deep.equal(['1,000', '1,001', '1,002']);
+    field.value = { score: 1001, comment: 'Edited' };
+    await field.updateComplete;
+    expect(score.items === items).to.equal(true);
+    field.lang = 'fr';
+    await field.updateComplete;
+    expect(score.items.map(item => item.label)).to.deep.equal(['1 000', '1 001', '1 002']);
+  });
+
   for (const settleUserEdit of [false, true]) {
     it(`reconciles child checked/group/submission after parent replacement (settled=${settleUserEdit})`, async () => {
       const form = await fixture<HTMLFormElement>(html`<form><lr-rubric-form name="review" .keys=${keys} .value=${{ tags: ['a'] }}></lr-rubric-form></form>`);

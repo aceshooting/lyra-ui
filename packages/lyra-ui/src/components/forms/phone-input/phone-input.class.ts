@@ -1,6 +1,6 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
-import { AutocorrectState, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeSelectionAccessors, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
@@ -12,7 +12,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { FormAssociated, isBarredFromValidation, isLiveDisabled } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
@@ -144,13 +144,14 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
+ * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-phone-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - The outer form-control wrapper.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - The visible label.
- * @csspart input-wrapper - The country selector and telephone input wrapper.
+ * @csspart input-wrapper - The country selector and telephone input row. Its nominal size tier grows to fit the selector’s hit target.
  * @csspart country-prefix - Optional country adornment slot wrapper; also receives the `start`
  *   alias slot's projected content.
  * @csspart end - Optional trailing adornment slot wrapper, after the telephone input.
@@ -215,17 +216,21 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  static {
+    installNativeSelectionAccessors(this.prototype, host => host.inputElement, { methods: false });
+  }
+
   static override styles = [LyraElement.styles, sizes, styles];
   static override properties = {
     country: { noAccessor: true },
   };
 
-  /**
-   * Lazily registers `<lr-flag>` (and its skeleton dependency) the first time any
-   * `<lr-phone-input>` enables `flags`, so consumers that never turn flags on ship none of that
-   * code. Kept static: registration is a page-global concern, not per-instance.
-   */
-  private static flagRegistration?: Promise<unknown>;
+  private static readonly flagRegistration = /* @__PURE__ */ createOptionalPeerLoader({
+    load: async () => (await import('../../media/flag/flag.js')).LyraFlag,
+    isCapability: (value): value is CustomElementConstructor => typeof value === 'function',
+    warningKey: 'phone-input-flag-registration',
+    warning: '<lr-phone-input> could not register its flag element.',
+  });
 
   /**
    * Show the selected country's flag in the country trigger. Rendering uses `<lr-flag
@@ -287,7 +292,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Visual treatment, with the same vocabulary and paint as every Lyra field. */
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
-  /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
+  /** Native telephone input name. An empty override is preserved. Whitespace alone falls back through phoneLabel, label, placeholder, and the localized name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Accessible name for the country selector, also shown as its empty-catalog placeholder.
    * Explicit copy wins over locale strings; omission localizes the shared country-picker label.
@@ -399,29 +404,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     return this.status;
   }
 
-  get selectionStart(): number | null {
-    return this.inputElement?.selectionStart ?? null;
-  }
+  declare selectionStart: number | null;
 
-  set selectionStart(value: number | null) {
-    if (this.inputElement) this.inputElement.selectionStart = value ?? 0;
-  }
+  declare selectionEnd: number | null;
 
-  get selectionEnd(): number | null {
-    return this.inputElement?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.inputElement) this.inputElement.selectionEnd = value ?? 0;
-  }
-
-  get selectionDirection(): LyraPhoneInputSelectionDirection | null {
-    return this.inputElement?.selectionDirection as LyraPhoneInputSelectionDirection | null;
-  }
-
-  set selectionDirection(value: LyraPhoneInputSelectionDirection | null) {
-    if (this.inputElement) this.inputElement.selectionDirection = value ?? 'none';
-  }
+  declare selectionDirection: LyraPhoneInputSelectionDirection | null;
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
@@ -551,16 +538,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     return this.countryLabelAuthored ? this.countryLabel : this.localize('countryPickerLabel');
   }
 
-  /** The telephone input's accessible name. Every consumer-supplied source wins, in the precedence
-   *  order this component documents; a bare `<lr-phone-input>` with none of them set still lands on
-   *  a localized generic name rather than shipping an unnamed field to the accessibility tree, the
-   *  same last-resort every sibling text-entry primitive has (`lr-input`, `lr-time-input`,
-   *  `lr-otp-input`, `lr-locale-picker`). A rendered label names the native input through its
-   *  `for` association; the generic fallback is needed only while that label is hidden.
-   *
-   *  Deliberately its own `phoneInputLabel` key rather than borrowing `lr-contact-viewer`'s
-   *  identically-worded one: the two read the same in English today, but a locale re-wording
-   *  contact-viewer's field label would otherwise silently re-label this control too. */
   private effectivePhoneLabel(hasLabel: boolean): string | typeof nothing {
     if (this.accessibleLabel === '') return '';
     const authored = normalizeLabel(this.accessibleLabel) ?? normalizeLabel(this.phoneLabel);
@@ -628,20 +605,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (this.flags && !LyraPhoneInput.flagRegistration) {
-      // Dynamic (not static) so the flag/skeleton modules stay out of every bundle that never
-      // enables flags; the rendered <lr-flag> upgrades in place once the registration lands.
-      const registration = import('../../media/flag/flag.js').catch((error) => {
-        // A transient failure (network, chunk 404) must not disable flags for the whole session:
-        // the next update retries. The notice is a development-only diagnostic.
-        if (LyraPhoneInput.flagRegistration === registration) LyraPhoneInput.flagRegistration = undefined;
-        devWarnOnce(
-          'phone-input-flag-registration',
-          `<lr-phone-input> failed to register <lr-flag> for its flags option (${error instanceof Error ? error.message : String(error)}).`,
-        );
-      });
-      LyraPhoneInput.flagRegistration = registration;
-    }
+    if (this.flags) void LyraPhoneInput.flagRegistration.load();
     if (
       !this.hasUpdated ||
       changed.has('countries') ||
@@ -762,10 +726,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
 
   private onBlur = (event: FocusEvent): void => {
-    // Regression guard: disabling a focused native form control
-    // forces the browser to blur it -- plain platform behavior, not a real user interaction.
-    // Unconditionally marking `touched` for it could reenter an in-flight Lit update and trip
-    // Lit's dev-mode "scheduled an update after an update completed" warning.
     if (!isLiveDisabled(this)) this.touched = true;
     relayNativeEvent(this, event);
   };

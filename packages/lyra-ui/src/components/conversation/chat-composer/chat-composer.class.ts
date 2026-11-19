@@ -249,9 +249,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     const previous = this.statusValue;
     const normalized = normalizeChatComposerStatus(value);
     this.statusValue = normalized;
-    // Lit correctly suppresses reflection while it is handling an attribute callback. Canonicalize
-    // an unsupported attribute synchronously in that path so `status="busy"` cannot survive when
-    // the normalized state happens to equal the previous idle value.
+    // Lit suppresses reflection during attribute changes, so repair invalid attributes here.
     if (
       typeof value === 'string' &&
       value !== normalized &&
@@ -259,9 +257,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     ) {
       this.setAttribute('status', normalized);
     }
-    // A hostile `status` attribute can arrive while the normalized property is already idle.
-    // Force the reflected canonical value in that equal-value case so the attribute cannot remain
-    // an unsupported state token.
+    // Reflect even when the normalized value stays the same.
     this.requestUpdate('status', previous, {
       reflect: true,
       hasChanged: () => true,
@@ -637,16 +633,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     const minHeight = lineHeight * minRows + paddingBlock + borderBlock;
     const maxHeight = lineHeight * maxRows + paddingBlock + borderBlock;
 
-    // Collapse first so a shrinking edit (e.g. deleting a wrapped line)
-    // reports its true scrollHeight rather than the previous, taller,
-    // explicitly-set height.
+    // Clear the applied height so deleting wrapped text can shrink the textarea.
     ta.style.height = 'auto';
-    // scrollHeight never includes border, so it's added back in to compare
-    // apples-to-apples against min/maxHeight, both of which are border-box
-    // figures (this component inherits box-sizing: border-box from
-    // LyraElement's tokens.styles.ts).
-    // Some browsers include wrapped placeholder text in scrollHeight. An empty draft
-    // stays at the minimum number of rows.
+    // Compare border-box heights and ignore wrapped placeholder text for empty drafts.
     const contentHeight = ta.value === '' ? minHeight : ta.scrollHeight + borderBlock;
     const next = Math.min(Math.max(contentHeight, minHeight), maxHeight);
     ta.style.height = `${next}px`;
@@ -701,9 +690,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     } else if (!this.withoutStop) {
       this.emit('lr-stop', null);
     }
-    // Busy under without-stop: the button already renders `disabled` above, so
-    // this is unreachable via a real click; guarded here too in case a
-    // consumer dispatches a synthetic click directly at the handler.
   };
 
   private submit(): void {
@@ -731,14 +717,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private onTextareaBlur = (event: FocusEvent): void => {
-    // Disabling this control while its internal textarea holds focus force-blurs that textarea as
-    // plain platform behavior, not a real user interaction -- that blur can land synchronously
-    // nested inside the very property write that disabled the control (before this render has even
-    // reached the textarea's own `disabled` attribute), so `effectiveDisabled` already reads true
-    // here whenever this is that case. Marking `touched` for it was, depending on timing, capable
-    // of reentering that same in-flight update and tripping Lit's dev-mode "scheduled an update
-    // after an update completed" warning for a state flip nothing observable needed -- a disabled
-    // control is barred from validation regardless.
+    // Disabling a focused textarea can trigger blur synchronously during the update.
     if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
   };

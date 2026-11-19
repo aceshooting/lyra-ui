@@ -1341,9 +1341,9 @@ calling the same methods through `map`, which the element neither knows about no
   no-op).
 - Every option is optional and an unusable one is ignored: `center` must be a finite
   `[longitude, latitude]` (clamped into range), `zoom` is clamped into the zoom limits
-  (`minZoom`/`maxZoom`, `[0, 22]` by default), `pitch` into
-  `[0, 85]`, and a negative or non-finite `duration` means the engine's default (a longer one is
-  capped at 60000 ms). With nothing
+  (`minZoom`/`maxZoom`, `[0, 22]` by default), and `pitch` is clamped into `[0, 85]`.
+  Very large bearings are reduced modulo 360 to preserve their orientation. A negative or
+  non-finite `duration` uses the engine's default, and a longer one is capped at 60000 ms. With nothing
   usable the call returns `false` (and warns in development) without moving anything.
 - Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
   applied without animation right after construction, unless `center` or `zoom` has been given a
@@ -1984,7 +1984,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
   way to place pins.
 - A marker uses `label` as its accessible name, then visible text extracted from trusted
-  `unsafeHtml`, and only then the localized map label. Popup ownership is exposed through
+  `unsafeHtml`, and then the localized marker name. Popup ownership is exposed through
   `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
   canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
@@ -2004,8 +2004,9 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
   dotted, and double border/shape encodings.
-- while the selected map peer is resolving, the host/base expose `aria-busy="true"` and show a
-  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
+- While the selected map peer is resolving, the base exposes `aria-busy="true"` and shows a
+  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container. The host
+  mirrors the base's busy state unless the application has set its own `aria-busy` value.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
 - `initialization='visible'` (the default) waits for the element to intersect the viewport before

@@ -105,6 +105,8 @@ const lockOpenGlyph = () =>
  * @cssprop [--lr-flow-controls-lock-active-color=var(--lr-color-brand)] - Pressed lock-button
  *   foreground.
  * @cssprop [--lr-icon-button-bg=transparent] - Control background in the resting state.
+ * @cssprop --lr-flow-controls-hover-bg - Hover background for enabled built-in and slotted buttons.
+ * @cssprop --lr-flow-controls-active-bg - Pressed background for enabled built-in and slotted buttons.
  * @cssprop [--lr-icon-button-border=0] - Control border in the resting state.
  * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.

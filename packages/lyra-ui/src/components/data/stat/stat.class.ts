@@ -30,9 +30,8 @@ export type StatOrientation = LyraOrientation;
 export interface StatRow {
   readonly label: string;
   readonly value: string;
-  /** Exact value shown as a hover/focus tooltip on this row's `row-value` (mirrors the headline
-   *  `exactValue`/`exact-value` behavior). Also makes this row's `[part='row-value']`
-   *  keyboard-focusable so the tooltip is reachable without a pointer. */
+  /** Exact text, exposed as a tooltip and accessible description. The unlinked row value is
+   * keyboard focusable when this is set. */
   readonly exactValue?: string;
 }
 
@@ -201,9 +200,8 @@ export class LyraStat extends LyraElement {
    *  the status `variant`; see the `[part='value']` selector below for how
    *  the two combine. */
   @property({ type: Boolean, reflect: true }) emphasis = false;
-  /** Exact value shown as a hover/focus tooltip on the headline `value` (e.g. `value="$1.2K"
-   *  exact-value="$1,204.37"`). Also makes `[part='value']` keyboard-focusable so the tooltip is
-   *  reachable without a pointer. */
+  /** Exact value shown as a tooltip on the headline `value` (e.g. `value="$1.2K"
+   * exact-value="$1,204.37"`). The keyboard-focusable value or card link exposes it as a description. */
   @property({ attribute: 'exact-value' }) exactValue = '';
   /** A secondary line distinct from `caption` (e.g. a comparison-period label), rendered between the
    *  trend pill and the caption. */
@@ -216,8 +214,7 @@ export class LyraStat extends LyraElement {
   /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
    *  or `small`/`medium`/`large`. `s` and the steps below it select the compact density (tighter
    *  padding and gap, for constrained spaces); `m` and the steps above it keep the default
-   *  density. Opt-in: with no size the stat renders exactly as before. Unsupported values
-   *  normalize to the omitted state and remove the attribute. */
+   *  density. Unsupported values normalize to the omitted state and remove the attribute. */
   @property({ reflect: true, converter: optionalSizeConverter })
   get size(): LyraSize | undefined {
     return this._size;
@@ -232,12 +229,7 @@ export class LyraStat extends LyraElement {
    *  both are set (nothing left to tighten), and it also drops `emphasis`'s accent edge — that
    *  edge is card chrome — while `emphasis`'s brand value tint still applies. A `plain` stat with
    *  a safe `href` swaps the card's border-color/lift hover affordance (invisible with no border)
-   *  for an underline on `[part='value']`; the `:focus-visible` ring is unchanged.
-   *
-   *  This was `appearance` before 8.0.0, where `appearance` meant two unrelated things across the
-   *  library; it now means "how a control fills itself" everywhere, and the container treatment it
-   *  used to double as is `frame`. A clean rename with no alias: `appearance` on `<lr-stat>` is
-   *  simply an unknown attribute now. */
+   *  for an underline on `[part='value']`. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
   /** Layout axis. `'vertical'` (the default) stacks label, value, trend, sub and caption.
    *  `'horizontal'` lays label, value+unit, trend, sub and caption out on a single wrapping
@@ -388,14 +380,11 @@ export class LyraStat extends LyraElement {
     const notice = this.inputLimitMessage();
     const href = safeLinkHref(this.href);
     const linked = Boolean(href);
+    const exactId = this.exactValue ? `${this.valueId}-exact` : undefined;
     const hasTrend = this.deltaPercent !== null;
     const effectiveDelta = this.deltaPercent ?? 0;
     const rawDirection = effectiveDelta > 0 ? 'up' : effectiveDelta < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;
-    // The trend pill previously rendered literal ▲/▼ glyphs — font-dependent
-    // and inconsistent with the rest of the icon set — swapped for the
-    // shared chevronIcon(), rotated per direction via CSS on the wrapping
-    // [part='trend'].
     const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
     const hasCaption = this.hasCaptionSlot || (this.caption ?? '').length > 0;
     const hasSub = this.hasSubSlot || (this.sub ?? '').length > 0;
@@ -405,9 +394,6 @@ export class LyraStat extends LyraElement {
       style: 'percent',
       maximumFractionDigits: Math.min(20, decimalPlaces(effectiveDelta)),
     }).format(Math.abs(effectiveDelta) / 100);
-    // The visible pill only ever shows the icon rotation + color to convey
-    // direction and good/bad polarity; both are invisible to screen readers,
-    // so mirror them into a plain-language sr-only announcement.
     const trendAnnouncement =
       rawDirection === 'flat'
         ? this.localize('trendUnchanged')
@@ -431,12 +417,14 @@ export class LyraStat extends LyraElement {
           role=${this.label || this.unit ? 'definition' : nothing}
           title=${this.exactValue || nothing}
           tabindex=${this.exactValue && !linked ? '0' : nothing}
+          aria-describedby=${exactId ?? nothing}
           aria-labelledby=${this.label || this.unit
             ? [this.label ? this.labelId : '', this.valueId, this.unit ? this.unitId : ''].filter(Boolean).join(' ')
             : nothing}
           >${this.value}</span
         >
         <span part="unit" id=${this.unitId}>${this.unit}</span>
+        ${exactId ? html`<span id=${exactId} hidden>${this.exactValue}</span>` : nothing}
       </div>
       ${hasTrend
         ? html`<span
@@ -462,6 +450,7 @@ export class LyraStat extends LyraElement {
         ${this.rows.map((row, i) => {
           const rowLabelId = this.rowLabelIds[i];
           const rowValueId = `${rowLabelId}-value`;
+          const rowExactId = row.exactValue ? `${rowValueId}-exact` : undefined;
           return html`
             <div part="row">
               <span part="row-label" id=${rowLabelId} role=${row.label ? 'term' : nothing}>${row.label}</span>
@@ -471,9 +460,11 @@ export class LyraStat extends LyraElement {
                 role=${row.label ? 'definition' : nothing}
                 title=${row.exactValue || nothing}
                 tabindex=${row.exactValue && !linked ? '0' : nothing}
+                aria-describedby=${rowExactId ?? nothing}
                 aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
                 >${row.value}</span
               >
+              ${rowExactId ? html`<span id=${rowExactId} hidden>${row.exactValue}</span>` : nothing}
             </div>
           `;
         })}
@@ -487,6 +478,7 @@ export class LyraStat extends LyraElement {
             target=${this.target || nothing}
             rel=${resolveGuardedRel(this.rel, this.target) ?? nothing}
             aria-label=${this.accessibleLabel ?? nothing}
+            aria-describedby=${exactId ?? nothing}
             ><span class="sr-only">${[this.label, this.value, this.unit].filter(Boolean).join(' ')}</span></a
           >
           <div class="linked-content" @click=${this.onLinkedContentClick}>${content}</div>

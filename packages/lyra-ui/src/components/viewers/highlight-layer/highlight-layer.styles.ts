@@ -1,5 +1,6 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -109,10 +110,8 @@ export const styles = css`
   }
   [part='highlight-action'] {
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    ${nativeControlSurface}
     border-radius: var(--lr-radius-xs);
-    color: var(--lr-color-text);
-    background: var(--lr-color-surface);
     pointer-events: auto;
     cursor: pointer;
   }
@@ -120,7 +119,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   [part='highlight-action']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='highlight-action']:focus-visible {
     outline: var(--lr-focus-ring);

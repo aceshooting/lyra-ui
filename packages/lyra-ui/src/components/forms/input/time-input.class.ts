@@ -14,7 +14,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation, isLiveDisabled } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR, type IntrinsicValidityMessage } from '../../../internal/anchored-validity.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -219,11 +219,11 @@ function containsElement(container: Element | null, value: unknown): value is El
  * group's label relationship.
  *
  * Removing label or hint safely omits that content while retaining native null property
- * readback. Explicit empty strings remain empty.
+ * readback. An empty host aria-label clears the group name. Whitespace alone uses its visible label or localized time name.
  *
  * @customElement lr-time-input
  * @event input - Native `InputEvent` fired for user edits.
- * @event change - Native `Event` fired when a complete value is committed.
+ * @event change - Native `Event` fired when the user commits a complete time or clears the last visible segment of a previously complete time.
  * @event focus - Re-dispatched when focus enters the segmented editing surface.
  * @event blur - Re-dispatched when focus leaves the segmented editing surface.
  * @event lr-input - Prefixed compatibility alias for `input` with `detail.value`.
@@ -434,6 +434,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private _step: LyraTimeInputStep = 60;
   private draft: TimeDraft = blankDraft();
   private partial = false;
+  private pendingKeyboardClear = false;
   private secondsVisible = false;
   /** The last explicitly assigned/typed value, normalized but never step-padded. The committed
    *  `value` is always re-derived from this (see `committedValue`), so second-precision padding
@@ -551,6 +552,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override set value(next: string | Date | null) {
+    this.pendingKeyboardClear = false;
     this.genuineValue = normalizeTimeValue(next);
     const normalized = this.committedValue;
     this.partial = false;
@@ -658,17 +660,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return this.segmentModel.order;
   }
 
+  private get liveDisabled(): boolean {
+    return isLiveDisabled(this);
+  }
+
   private get periodLabels(): Record<DayPeriod, string> {
     const model = this.segmentModel;
     return (model.labels ??= dayPeriodLabels(this.effectiveLocale));
-  }
-
-  /** Reads component state plus the UA's synchronous fieldset cascade when a browser selector
-   * predicate exists. Lit's server element shim has no callable `matches()`, so SSR falls back to
-   * the reactive authority instead of aborting public-state application before the first render. */
-  private get liveDisabled(): boolean {
-    const matches = (this as Partial<Element>).matches;
-    return this.effectiveDisabled || (typeof matches === 'function' && matches.call(this, ':disabled'));
   }
 
   private activeSegmentFor(order = this.segmentOrder): SegmentName {
@@ -689,7 +687,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private get draftHasAny(): boolean {
-    return Object.values(this.draft).some((value) => value !== null);
+    return this.segmentOrder.some(name => this.draft[name] !== null);
   }
 
   private syncDraft(value: string): void {
@@ -852,15 +850,17 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private publishDraftEdit(): void {
     const before = super.value;
     const next = this.canonicalDraftValue();
-    this.partial = this.draftHasAny && !this.draftComplete;
-    // Keeps `genuineValue` (the padding/precision source of truth) in sync with segment-typed
-    // commits too, not just programmatic `value` assignment.
+    const hasDraft = this.draftHasAny;
+    if (!hasDraft) this.draft = blankDraft();
+    this.partial = hasDraft && !this.draftComplete;
+    const commit = !this.partial && (next !== before || this.pendingKeyboardClear);
+    this.pendingKeyboardClear = this.partial && (before !== '' || this.pendingKeyboardClear);
     this.genuineValue = next;
     super.value = next;
     this.syncComponentStates();
     dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
     this.emit('lr-input', { value: this.value });
-    if (next !== before) {
+    if (commit) {
       dispatchNativeEvent(this, 'change');
       this.emit('lr-change', { value: this.value });
     }
@@ -1268,10 +1268,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   protected updateValidity(): void {
-    // Every barring condition, not just `readonly`: an own/fieldset-cascaded `disabled` (and any
-    // platform condition `willValidate` folds in) bars constraint validation exactly as `readonly`
-    // does, and this override used to check only the one it happened to own — so a
-    // `<lr-time-input required disabled>` kept publishing `valueMissing` and `:state(invalid)`.
     if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;

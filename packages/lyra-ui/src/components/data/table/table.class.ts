@@ -2,6 +2,7 @@ import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { compareNullable } from '../../../internal/sort-compare.js';
+import { createInputMemo } from '../../../internal/input-memo.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -2216,62 +2217,27 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return entries;
   }
 
-  /** Memoized across update cycles and re-validated against the exact inputs the computation
-   *  reads — `rows` and `filter` by identity, the trimmed filter text, and (only when there is
-   *  text to case-fold at all) the effective locale. This method is read (directly or
-   *  transitively, via `matchingTotalItems`/`pageCount`/`appliedPage`/`renderedEntries()`) around
-   *  a dozen times across one `willUpdate()` + `render()` pass, and an *unrelated* reactive
-   *  update (a roving-tabindex move, an inline-editor open, ...) shouldn't re-run the
-   *  `JSON.stringify()`-per-row default filter over the full `rows` array even once — comparing
-   *  the recorded inputs instead of dropping the cache on every update keeps both cases to a
-   *  single filtering pass. The locale is compared as its resolved string, so a change that
-   *  arrives without a matching reactive-property key (an ancestor `lang` edit picked up on the
-   *  next update, `setLyraLocale()`'s keyless `requestUpdate()`) still recomputes. */
-  private cachedMatchingEntries: TableRowEntry<T>[] | null = null;
-  private matchingEntriesInputs: {
-    entries: TableRowEntry<T>[];
-    filter: ((row: T, text: string) => boolean) | undefined;
-    text: string;
-    locale: string;
-  } | null = null;
+  private readonly matchEntries = createInputMemo((
+    entries: TableRowEntry<T>[], filter: LyraTable<T>['filter'], text: string, locale: string
+  ): TableRowEntry<T>[] => {
+    if (text === '') return entries;
+    const stringify = createFilterStringifier();
+    const normalized = prepareNeedle(text, locale);
+    return entries.filter((entry) => {
+      if (filter) return Reflect.apply(filter, this, [entry.row, text]);
+      let haystack = entry.search?.locale === locale ? entry.search.text : undefined;
+      if (haystack === undefined) {
+        haystack = foldSearchText(stringify(entry.row), locale);
+        if (isImmutableSearchRow(entry.row)) entry.search = { locale, text: haystack };
+      }
+      return haystack.includes(normalized);
+    });
+  });
+
   private matchingEntries(): TableRowEntry<T>[] {
     const text = (this.filterText ?? '').trim();
-    // The locale only affects case-folding, which only happens when there is
-    // filter text — skipping the read here keeps a locale change from
-    // invalidating an unfiltered cache.
     const locale = text === '' ? '' : this.effectiveLocale;
-    const canonicalEntries = this.sortedCanonicalEntries();
-    const inputs = this.matchingEntriesInputs;
-    if (
-      this.cachedMatchingEntries !== null &&
-      inputs !== null &&
-      inputs.entries === canonicalEntries &&
-      inputs.filter === this.filter &&
-      inputs.text === text &&
-      inputs.locale === locale
-    ) {
-      return this.cachedMatchingEntries;
-    }
-    let entries: TableRowEntry<T>[];
-    if (text === '') {
-      entries = canonicalEntries;
-    } else {
-      const stringify = createFilterStringifier();
-      const intlLocale = this.effectiveLocale;
-      const normalized = prepareNeedle(text, intlLocale);
-      entries = canonicalEntries.filter((entry) => {
-        if (this.filter) return this.filter(entry.row, text);
-        let haystack = entry.search?.locale === intlLocale ? entry.search.text : undefined;
-        if (haystack === undefined) {
-          haystack = foldSearchText(stringify(entry.row), intlLocale);
-          if (isImmutableSearchRow(entry.row)) entry.search = { locale: intlLocale, text: haystack };
-        }
-        return haystack.includes(normalized);
-      });
-    }
-    this.matchingEntriesInputs = { entries: canonicalEntries, filter: this.filter, text, locale };
-    this.cachedMatchingEntries = entries;
-    return entries;
+    return this.matchEntries(this.sortedCanonicalEntries(), this.filter, text, locale);
   }
 
   /** Read-time-safe view of `pageSize` -- finite, truncated and bounded to 1..500.
@@ -2319,145 +2285,67 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return finiteInteger(this.page, 1, 1, this.pageCount);
   }
 
-  /** Memoized on the same principle as `matchingEntries()` above, and re-validated against the
-   *  exact inputs the sort reads. `renderedEntries()` is read several times per update pass (the
-   *  `rowsByKey` rebuild, `focusedRowKey()`, and `render()` itself), and a miss costs one
-   *  consumer-supplied `sortValue()`/`cell()` call per row on top of the comparison pass — sorting
-   *  once per reader would multiply that callback work by the number of readers for no benefit.
-   *  `columns` is compared by identity because the ordering reads `sortValue`/`cell` off the
-   *  active column object; `locale` because it selects the collator. */
-  private cachedSortedEntries: TableRowEntry<T>[] | null = null;
-  private sortedEntriesInputs: {
-    entries: TableRowEntry<T>[];
-    columns: readonly TableColumn<T>[];
-    mode: TableSortMode;
-    key: string;
-    dir: TableSortDirection;
-    locale: string;
-    groupBy: ((row: T) => string | number) | undefined;
-  } | null = null;
-  /** Canonical rows reordered by the active sort column before query filtering. A no-op — the canonical array is
-   *  returned by identity, never copied — under `sortMode: 'server'`, with no `sortKey`, or when
-   *  `sortKey` names a column that is missing or not `sortable`, which is what keeps a table that
-   *  never sets `sortKey` rendering its input order verbatim.
-   *
-   *  When `groupBy` is set the sort is applied *within* each group rather than across the whole
-   *  set. `render()` emits a group header wherever the group key changes between consecutive
-   *  rendered rows, so a flat global sort on a column uncorrelated with the group key would
-   *  interleave the groups and emit a header before nearly every row — the grouping would be
-   *  visually destroyed by sorting. Groups keep their first-appearance order in `rows` (a `Map`
-   *  iterates in insertion order); the group key is deliberately *not* collated, because the
-   *  consumer controls group order through the order it supplies `rows` in, exactly as it does
-   *  when no sort is active.
-   *
-   *  The one exception: when the active column's value is constant inside *every* group, the
-   *  within-group sort is provably inert, so the *groups* are ordered by that constant value
-   *  instead. Without it, sorting on the group column would flip `aria-sort` and the chevron while
-   *  changing nothing — announcing an ordering the table never applied. */
-  private sortedEntries(): TableRowEntry<T>[] {
-    return this.matchingEntries();
-  }
-
   private sortedCanonicalEntries(): TableRowEntry<T>[] {
     const entries = this.canonicalRowEntries();
     if (this.sortMode !== 'client' || this.sortKey === '') return entries;
-    const col = this.columnsByKey.get(this.sortKey);
-    if (!col?.sortable) return entries;
-    const locale = this.effectiveLocale;
-    const inputs = this.sortedEntriesInputs;
-    if (
-      this.cachedSortedEntries !== null &&
-      inputs !== null &&
-      inputs.entries === entries &&
-      inputs.columns === this.columns &&
-      inputs.mode === this.sortMode &&
-      inputs.key === this.sortKey &&
-      inputs.dir === this.sortDir &&
-      inputs.locale === locale &&
-      inputs.groupBy === this.groupBy
-    ) {
-      return this.cachedSortedEntries;
-    }
-    const dir = this.sortDir === 'desc' ? -1 : 1;
-    // Decorate/sort/undecorate: `sortValue()`/`cell()` runs once per row rather than once per
-    // comparison, so a costly consumer accessor stays O(n) instead of O(n log n). A non-finite
-    // number is folded into the same "missing" bucket as null/undefined -- NaN would otherwise
-    // make the comparator self-inconsistent (every comparison against it returns 0) and leave the
-    // order engine-defined rather than merely surprising.
+    const column = this.columnsByKey.get(this.sortKey);
+    if (!column?.sortable) return entries;
+    return this.sortEntries(entries, column, this.sortDir, this.effectiveLocale, this.groupBy);
+  }
+
+  private readonly sortEntries = createInputMemo((
+    entries: TableRowEntry<T>[], column: TableColumn<T>, direction: TableSortDirection,
+    locale: string, groupBy: LyraTable<T>['groupBy']
+  ): TableRowEntry<T>[] => {
+    const dir = direction === 'desc' ? -1 : 1;
+    // Evaluate caller accessors once per row, outside the comparator.
     const decorated = entries.map((entry) => {
       const raw =
-        typeof col.sortValue === 'function'
-          ? col.sortValue(entry.row)
-          : typeof col.cell === 'function'
-            ? String(col.cell(entry.row) ?? '')
+        typeof column.sortValue === 'function'
+          ? column.sortValue(entry.row)
+          : typeof column.cell === 'function'
+            ? String(column.cell(entry.row) ?? '')
             : '';
       return { entry, value: typeof raw === 'number' && !Number.isFinite(raw) ? null : raw };
     });
-    // Array.prototype.sort is stable, so rows comparing equal keep their `rows` order.
     const compare = (
       a: { value: string | number | null | undefined },
       b: { value: string | number | null | undefined }
-    ): number => {
-      return compareNullable(a.value, b.value, dir, locale);
-    };
-    let sorted: TableRowEntry<T>[];
-    const groupBy = this.groupBy;
+    ): number => compareNullable(a.value, b.value, dir, locale);
     if (groupBy === undefined) {
       decorated.sort(compare);
-      sorted = decorated.map((decoration) => decoration.entry);
-    } else {
-      // Partition first, sort inside each partition. A `Map` keyed by the group key iterates in
-      // insertion order, so the groups come back in their first-appearance order in `rows` and
-      // stay contiguous -- see this method's doc comment.
-      const buckets = new Map<string | number, typeof decorated>();
-      for (const decoration of decorated) {
-        const groupKey = groupBy(decoration.entry.row);
-        const bucket = buckets.get(groupKey);
-        if (bucket === undefined) buckets.set(groupKey, [decoration]);
-        else bucket.push(decoration);
-      }
-      const ordered = [...buckets.values()];
-      // A column whose value never varies inside a group -- the group column itself being the
-      // obvious case, but also any column functionally determined by the group key, and the
-      // one-row-per-group case -- makes the within-group sort provably inert: every comparison
-      // ties, the sort is stable, and the rendered order is identical to the unsorted one. Sorting
-      // only the rows would then leave `render()` announcing `aria-sort="ascending"` and painting a
-      // chevron for an ordering the table never applied. Move the groups instead, keyed by that
-      // constant value, so the announced ordering genuinely holds. Every bucket is non-empty by
-      // construction, and `sort` is stable, so groups whose values tie keep first appearance.
-      const constantWithinEveryGroup = ordered.every((bucket) =>
-        bucket.every((decoration) => compare(decoration, bucket[0]!) === 0)
-      );
-      if (constantWithinEveryGroup) ordered.sort((a, b) => compare(a[0]!, b[0]!));
-      sorted = [];
-      for (const bucket of ordered) {
-        if (!constantWithinEveryGroup) bucket.sort(compare);
-        for (const decoration of bucket) sorted.push(decoration.entry);
-      }
+      return decorated.map((decoration) => decoration.entry);
     }
-    this.sortedEntriesInputs = {
-      entries,
-      columns: this.columns,
-      mode: this.sortMode,
-      key: this.sortKey,
-      dir: this.sortDir,
-      locale,
-      groupBy,
-    };
-    this.cachedSortedEntries = sorted;
-    return sorted;
-  }
 
-  private pageEntriesMemo?: { entries: TableRowEntry<T>[]; start: number; size: number; result: TableRowEntry<T>[] };
+    const buckets = new Map<string | number, typeof decorated>();
+    for (const decoration of decorated) {
+      const groupKey = groupBy(decoration.entry.row);
+      const bucket = buckets.get(groupKey);
+      if (bucket === undefined) buckets.set(groupKey, [decoration]);
+      else bucket.push(decoration);
+    }
+    const ordered = [...buckets.values()];
+    // When each group has one sort value, sort the groups to keep even that sort meaningful.
+    const constantWithinEveryGroup = ordered.every((bucket) =>
+      bucket.every((decoration) => compare(decoration, bucket[0]!) === 0)
+    );
+    if (constantWithinEveryGroup) ordered.sort((a, b) => compare(a[0]!, b[0]!));
+    const sorted: TableRowEntry<T>[] = [];
+    for (const bucket of ordered) {
+      if (!constantWithinEveryGroup) bucket.sort(compare);
+      for (const decoration of bucket) sorted.push(decoration.entry);
+    }
+    return sorted;
+  });
+
+  private readonly pageEntries = createInputMemo((entries: TableRowEntry<T>[], start: number, size: number) =>
+    entries.slice(start, start + size));
+
   private renderedEntries(): TableRowEntry<T>[] {
-    const entries = this.sortedEntries();
+    const entries = this.matchingEntries();
     const size = this.normalizedPageSize;
     const start = this.paginationMode === 'server' ? 0 : (this.appliedPage - 1) * size;
-    const cached = this.pageEntriesMemo;
-    if (cached && cached.entries === entries && cached.start === start && cached.size === size) return cached.result;
-    const result = entries.slice(start, start + size);
-    this.pageEntriesMemo = { entries, start, size, result };
-    return result;
+    return this.pageEntries(entries, start, size);
   }
 
   private readonly publicRowsMemo = new WeakMap<TableRowEntry<T>[], readonly T[]>();
@@ -2490,12 +2378,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** `rows` after filtering and (client-mode) sorting, ignoring pagination -- the same set
    *  `columns[].footer(rows)`/`grandTotal(rows)` and the heat-tint domain already compute over.
    *  Lets a consumer that needs "what the grid currently shows" (e.g. exporting the visible rows)
-   *  read this instead of re-implementing filtering/sorting itself. Reads `sortedEntries()`'s
+   *  read this instead of re-implementing filtering/sorting itself. Reads `matchingEntries()`'s
    *  existing memoized cache, so an unrelated update (a roving-tabindex move, an inline-editor
    *  open, ...) costs nothing extra here. Returns the same frozen array until its inputs change: mutating what this returns
    *  cannot reach or corrupt the table's own internal state. */
   get viewRows(): readonly T[] {
-    return this.publicRows(this.sortedEntries());
+    return this.publicRows(this.matchingEntries());
   }
 
   /** `viewRows` sliced to the page currently rendered in `<tbody>` -- exactly the rows on screen
@@ -2698,10 +2586,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // a controlled declaration stays authoritative over stale `localStorage` state instead of being
     // silently clobbered by it. The guard is `isPersistedPropertyExplicitlySet()`, which reports
     // whether the property's setter ever ran. Neither cheaper test can answer that:
-    // `changed.has('priorityColumnsVisible')` is unconditionally true on the first update (Lit
-    // enters a property carrying a declared default into that batch on its own), and reading the
-    // current value -- what this guard used to do -- cannot see a binding that deliberately assigns
-    // the declared default, so `.priorityColumnsVisible=${false}` was overwritten by a stored `true`.
     if (!this.hasUpdated) {
       const parsed = readPersistedState(
         this.storageFullKey,
@@ -2929,18 +2813,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       const inertMembers: string[] = [];
       const labelsInert = this.revealColumnsLabel !== undefined || this.columnsHideLabel !== undefined;
       if (labelsInert) inertMembers.push('`revealColumnsLabel`/`columnsHideLabel`');
-      // `isPersistedPropertyExplicitlySet()`, not the current value: `priorityColumnsVisible`
-      // defaults to `false`, so reading it cannot tell a deliberate `false` from an untouched one,
-      // and `changed.has()` is unconditionally true on the first update.
       if (isPersistedPropertyExplicitlySet(this, 'priorityColumnsVisible')) {
         inertMembers.push('`priorityColumnsVisible`');
       }
       if (this.storageKey) inertMembers.push('`storageKey`');
-      // An empty `columns` is not an authoring mistake to report: a table configured in markup
-      // routinely receives its columns a tick later, and `columns` is in this guard's trigger list
-      // precisely so the check re-runs when they land. Warning at that point would also spend the
-      // page-bounded diagnostic on a table that is about to be configured correctly, silencing the
-      // real instance somewhere else on the page.
+      // Declarative tables can receive their columns after connecting.
       if (inertMembers.length > 0 && this.columns.length > 0 && !this.columns.some((col) => col.priority)) {
         devWarnOnce(
           INERT_PRIORITY_COLUMN_CONFIG_WARNING,

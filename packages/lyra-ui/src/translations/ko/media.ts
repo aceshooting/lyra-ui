@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: '전체 화면 종료',
   videoPlaylistLabel: '동영상 재생목록',
   videoPlaylistUntitled: '동영상 {position}',
+  videoTimeReadout: '{duration} 중 {current}',
   pause: '일시 중지',
   qrCodeMissingLibrary: 'QR 코드를 렌더링하려면 선택적 "qrcode" 패키지를 설치해야 합니다.',
   qrCodeGenerationFailed: '이 값을 QR 코드로 인코딩할 수 없습니다.',

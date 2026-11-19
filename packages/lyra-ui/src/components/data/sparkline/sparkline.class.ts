@@ -207,6 +207,7 @@ export class LyraSparkline extends LyraElement {
     this.preparedSeries = undefined;
     this.preparedValues = [];
     this.pointsMemo = undefined;
+    this.pathMemo = undefined;
     if (!this.preparedActive) return;
     try {
       // Validate samples without chart-only separator nodes. The shared model reserves two
@@ -229,6 +230,7 @@ export class LyraSparkline extends LyraElement {
     this.preparedSeries = undefined;
     this.preparedValues = [];
     this.pointsMemo = undefined;
+    this.pathMemo = undefined;
     this.preparedDirty = true;
     this.mounted = false;
     this.announcedPreparedInvalid = false;
@@ -328,6 +330,31 @@ export class LyraSparkline extends LyraElement {
       .join(' ');
   }
 
+  private pathMemo?: {
+    points: ReadonlyArray<readonly [number, number]>;
+    curve: LyraSparklineCurve;
+    showFill: boolean;
+    path: string;
+    fillPath: string;
+  };
+
+  private paths(points: ReadonlyArray<readonly [number, number]>, showFill: boolean) {
+    const curve = normalizeCurve(this.curve);
+    const memo = this.pathMemo;
+    if (memo?.points === points && memo.curve === curve && memo.showFill === showFill) return memo;
+    const segments: (readonly [number, number])[][] = [];
+    for (let index = 0; index < points.length; index++) {
+      if (!segments.length || this.preparedSeries?.samples[index]?.breakBefore) segments.push([]);
+      segments[segments.length - 1]!.push(points[index]!);
+    }
+    const paths = segments.map(segment => this.linePath(segment));
+    const fillPath = showFill ? segments.map((segment, index) => {
+      const first = segment[0]!, last = segment[segment.length - 1]!;
+      return `${paths[index]} L${last[0]},${VIEW} L${first[0]},${VIEW} Z`;
+    }).join(' ') : '';
+    return this.pathMemo = { points, curve, showFill, path: paths.join(' '), fillPath };
+  }
+
   private accessibleName(values: readonly number[]): string {
     // An authored host attribute (including an intentional empty value) wins. The visible-series
     // label then outranks the property-only compatibility alias, followed by the generated summary.
@@ -391,20 +418,10 @@ export class LyraSparkline extends LyraElement {
     const values = this.plotValues();
     const points = this.points(values);
     const name = this.accessibleName(values);
-    const segments: (readonly [number, number])[][] = [];
-    for (let index = 0; index < points.length; index++) {
-      if (!segments.length || this.preparedSeries?.samples[index]?.breakBefore) segments.push([]);
-      segments[segments.length - 1]!.push(points[index]!);
-    }
-    const paths = segments.map(segment => this.linePath(segment));
-    const path = paths.join(' ');
     const appearance = normalizeAppearance(this.appearance);
     const showFill =
       this.mark !== 'bar' && appearance !== 'line' && points.length > 0;
-    const fillPath = segments.map((segment, index) => {
-      const first = segment[0]!, last = segment[segment.length - 1]!;
-      return `${paths[index]} L${last[0]},${VIEW} L${first[0]},${VIEW} Z`;
-    }).join(' ');
+    const paths = this.mark === 'bar' ? undefined : this.paths(points, showFill);
 
     return html`<svg
       part="sparkline"
@@ -424,10 +441,10 @@ export class LyraSparkline extends LyraElement {
       ${this.mark === 'bar'
         ? this.renderBars(points)
         : html`
-            ${showFill
+            ${paths?.fillPath
               ? svg`<path
                   part="fill"
-                  d=${fillPath}
+                  d=${paths.fillPath}
                   style=${
                     appearance === 'gradient'
                       ? `fill: url(#${this.gradientId})`
@@ -435,7 +452,7 @@ export class LyraSparkline extends LyraElement {
                   }
                 ></path>`
               : nothing}
-            ${path ? svg`<path part="line" d=${path}></path>` : nothing}
+            ${paths?.path ? svg`<path part="line" d=${paths.path}></path>` : nothing}
           `}
     </svg>`;
   }

@@ -3004,6 +3004,7 @@ export interface LyraComponentTypeMap {
       | '--lr-code-editor-radius'
       | '--lr-code-editor-tab-size'
       | '--lr-form-control-focus-shadow'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -3746,8 +3747,10 @@ export interface LyraComponentTypeMap {
       | 'lr-hide'
       | 'lr-input'
       | 'lr-invalid'
+      | 'lr-load-error'
       | 'lr-show';
-    cssNames:       | '--lr-form-control-label-color'
+    cssNames:       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight';
     attributeAliases: {
@@ -3839,10 +3842,18 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-activate'
+      | 'lr-after-hide'
+      | 'lr-after-show'
       | 'lr-change'
+      | 'lr-clear'
+      | 'lr-hide'
       | 'lr-input'
-      | 'lr-invalid';
-    cssNames:       | '--lr-form-control-label-color'
+      | 'lr-invalid'
+      | 'lr-load-error'
+      | 'lr-show';
+    cssNames:       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight';
     attributeAliases: {
@@ -5178,7 +5189,8 @@ export interface LyraComponentTypeMap {
       | '--lr-ebook-viewer-highlight-success-bg'
       | '--lr-ebook-viewer-highlight-warning-bg'
       | '--lr-ebook-viewer-max-height'
-      | '--lr-ebook-viewer-search-match-bg';
+      | '--lr-ebook-viewer-search-match-bg'
+      | '--lr-viewer-pager-button-hover-bg';
     attributeAliases: {
       'active-highlight-id'?: LyraEbookViewer['activeHighlightId'];
       'max-height'?: LyraEbookViewer['maxHeight'];
@@ -5903,7 +5915,9 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraFlowControlsEventMap;
     eventNames:       | 'lr-readonly-change';
-    cssNames:       | '--lr-flow-controls-lock-active-color'
+    cssNames:       | '--lr-flow-controls-active-bg'
+      | '--lr-flow-controls-hover-bg'
+      | '--lr-flow-controls-lock-active-color'
       | '--lr-icon-button-bg'
       | '--lr-icon-button-border'
       | '--lr-icon-button-color'
@@ -9304,6 +9318,7 @@ export interface LyraComponentTypeMap {
       | 'lr-input'
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -9337,6 +9352,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraPage,
       | 'accessibleLabel'
+      | 'autoStickyOffsets'
       | 'disableNavigationToggle'
       | 'locale'
       | 'mobileBreakpoint'
@@ -9379,6 +9395,7 @@ export interface LyraComponentTypeMap {
       | '--subheader-height';
     attributeAliases: {
       'aria-label'?: LyraPage['accessibleLabel'];
+      'auto-sticky-offsets'?: LyraPage['autoStickyOffsets'];
       'disable-navigation-toggle'?: LyraPage['disableNavigationToggle'];
       'disable-sticky'?: LyraAttributeValue<string>;
       'id'?: LyraAttributeValue<string | null>;
@@ -9587,7 +9604,8 @@ export interface LyraComponentTypeMap {
       | '--lr-pdf-viewer-search-match-bg'
       | '--lr-pdf-viewer-text-selection-bg'
       | '--lr-pdf-viewer-toolbar-bg'
-      | '--lr-pdf-viewer-toolbar-button-hover-bg';
+      | '--lr-pdf-viewer-toolbar-button-hover-bg'
+      | '--lr-viewer-pager-button-hover-bg';
     attributeAliases: {
       'active-highlight-id'?: LyraPdfViewer['activeHighlightId'];
       'max-height'?: LyraPdfViewer['maxHeight'];
@@ -9694,6 +9712,7 @@ export interface LyraComponentTypeMap {
       | 'lr-input'
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -10174,7 +10193,8 @@ export interface LyraComponentTypeMap {
       | 'lr-slide-change'
       | 'lr-text-select'
       | 'lr-viewer-diagnostic';
-    cssNames:       | '--lr-pptx-viewer-max-height';
+    cssNames:       | '--lr-pptx-viewer-max-height'
+      | '--lr-viewer-pager-button-hover-bg';
     attributeAliases: {
       'active-highlight-id'?: LyraPptxViewer['activeHighlightId'];
       'max-height'?: LyraPptxViewer['maxHeight'];
@@ -11781,14 +11801,22 @@ export interface LyraComponentTypeMap {
       | 'lr-change'
       | 'lr-clear'
       | 'lr-invalid';
-    cssNames:       | '--lr-form-control-label-color'
+    cssNames:       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
       | '--lr-signature-pad-aspect-ratio'
+      | '--lr-signature-pad-border-color'
+      | '--lr-signature-pad-clear-active-bg'
+      | '--lr-signature-pad-clear-hover-bg'
+      | '--lr-signature-pad-fill'
+      | '--lr-signature-pad-hover-border-color'
       | '--lr-signature-pad-ink'
+      | '--lr-signature-pad-invalid-border-color'
+      | '--lr-signature-pad-radius'
       | '--lr-signature-pad-stroke-width';
     attributeAliases: {
       'error-text'?: LyraSignaturePad['errorText'];
@@ -13453,10 +13481,18 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-activate'
+      | 'lr-after-hide'
+      | 'lr-after-show'
       | 'lr-change'
+      | 'lr-clear'
+      | 'lr-hide'
       | 'lr-input'
-      | 'lr-invalid';
-    cssNames:       | '--lr-form-control-label-color'
+      | 'lr-invalid'
+      | 'lr-load-error'
+      | 'lr-show';
+    cssNames:       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight';
     attributeAliases: {
@@ -13518,9 +13554,15 @@ export interface LyraComponentTypeMap {
       | '--lr-timeline-cluster-bg'
       | '--lr-timeline-cluster-color'
       | '--lr-timeline-cluster-size'
+      | '--lr-timeline-marker-brand-color'
       | '--lr-timeline-marker-color'
+      | '--lr-timeline-marker-danger-color'
+      | '--lr-timeline-marker-neutral-color'
       | '--lr-timeline-marker-number-color'
       | '--lr-timeline-marker-size'
+      | '--lr-timeline-marker-success-color'
+      | '--lr-timeline-marker-warning-color'
+      | '--lr-timeline-ordered-marker-size'
       | '--lr-timeline-rail-color'
       | '--lr-timeline-rail-width';
     attributeAliases: {};
@@ -13710,6 +13752,7 @@ export interface LyraComponentTypeMap {
       | 'lr-token-edit-request'
       | 'lr-token-remove-request';
     cssNames:       | '--lr-form-control-focus-shadow'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -14344,9 +14387,11 @@ export interface LyraComponentTypeMap {
       | '--lr-tree-badge-success-color'
       | '--lr-tree-badge-warning-bg'
       | '--lr-tree-badge-warning-color'
+      | '--lr-tree-checkbox-active-border-color'
       | '--lr-tree-checkbox-checked-bg'
       | '--lr-tree-checkbox-checked-border-color'
       | '--lr-tree-checkbox-checked-color'
+      | '--lr-tree-checkbox-hover-border-color'
       | '--lr-tree-checkbox-indeterminate-bg'
       | '--lr-tree-checkbox-indeterminate-border-color'
       | '--lr-tree-checkbox-indeterminate-color'
@@ -14427,10 +14472,18 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-activate'
+      | 'lr-after-hide'
+      | 'lr-after-show'
       | 'lr-change'
+      | 'lr-clear'
+      | 'lr-hide'
       | 'lr-input'
-      | 'lr-invalid';
-    cssNames:       | '--lr-form-control-label-color'
+      | 'lr-invalid'
+      | 'lr-load-error'
+      | 'lr-show';
+    cssNames:       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight';
     attributeAliases: {

@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'วางปากกาแล้ว',
   signaturePadPenUp: 'ยกปากกาแล้ว',
   signaturePadDrawingLimit: 'ถึงขีดจำกัดการวาดแล้ว',
+  catalogPickerSearchLoadFailed: 'ไม่สามารถโหลดช่องค้นหาได้',
   localePickerInputLimit: 'มีเฉพาะรายการภาษาและภูมิภาค 512 รายการแรกเท่านั้น',
   emojiPickerInputLimit: 'ละข้อมูลอีโมจิบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า',
 };

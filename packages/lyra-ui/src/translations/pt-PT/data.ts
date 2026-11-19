@@ -12,7 +12,7 @@ const strings: LyraLocaleStrings = {
   sequenceStripSourceRangeDetails: '{label}, itens {start} a {end}; {enabled} de {total} ativados; {markers} marcados.',
   sequenceStripSourceKeyboardHelp: 'Utilize as setas para a esquerda e para a direita para examinar itens adjacentes, Home e End para o primeiro e o último item e Enter para ativar o item examinado.',
   sequenceStripCategoryCount: '{label}: {count}',
-  sequenceStripCellKeyboardHelp: 'Pressione Enter ou Espaço para ativar este item.',
+  sequenceStripCellKeyboardHelp: 'Prima Enter ou Espaço para ativar este item.',
   sequenceStripUnnamedCategory: 'Categoria sem nome',
   sequenceStripBucketLabel: '{label}, itens {start} a {end}',
   sequenceStripBucketSummary: '{items} itens em {ranges} intervalos',

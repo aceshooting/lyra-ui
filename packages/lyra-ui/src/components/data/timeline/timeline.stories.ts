@@ -173,6 +173,16 @@ export const AncestorThemeHooks: Story = {
   `,
 };
 
+export const ThemedOrderedMarkers: Story = {
+  render: () => html`
+    <lr-timeline ordered aria-label="Release steps"
+      style="--lr-timeline-ordered-marker-size: var(--lr-size-2rem); --lr-timeline-marker-warning-color: var(--lr-color-danger)">
+      <lr-timeline-item variant="success">Build complete</lr-timeline-item>
+      <lr-timeline-item variant="warning">Approval pending</lr-timeline-item>
+    </lr-timeline>
+  `,
+};
+
 export const NarrowLongContent: Story = {
   parameters: {
     docs: {

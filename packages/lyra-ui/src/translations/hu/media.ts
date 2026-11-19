@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Kilépés a teljes képernyőből',
   videoPlaylistLabel: 'Videó-lejátszási lista',
   videoPlaylistUntitled: '{position}. videó',
+  videoTimeReadout: '{current} / {duration}',
   pause: 'Szüneteltetés',
   qrCodeMissingLibrary: 'A QR-kódok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „qrcode” csomagra.',
   qrCodeGenerationFailed: 'Ezt az értéket nem sikerült QR-kódként kódolni.',

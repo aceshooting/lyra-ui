@@ -1,3 +1,4 @@
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { BUILDER_CHILD_EVENTS, containShadowChildEvent } from '../../../internal/child-event-containment.js';
@@ -16,6 +17,7 @@ import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js'
 import { styles } from './condition-builder.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { loadConditionBuilderEditors } from './condition-builder-editor-loader.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderConditionAdded, LYRA_DEFAULT_queryBuilderConditionInvalid, LYRA_DEFAULT_queryBuilderConditionRemoved, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderRowControlName, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder } from '../../../internal/default-strings/data.generated.js';
@@ -419,15 +421,15 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  private _fields: readonly ConditionBuilderField[] = EMPTY_FIELDS;
-  private _value: ConditionBuilderValue = EMPTY_VALUE;
-  private fieldsSource?: unknown;
-  private valueSource?: unknown;
+  private readonly fieldsSnapshot = new SnapshotProperty(EMPTY_FIELDS, normalizeFields);
+  private readonly valueSnapshot = new SnapshotProperty(EMPTY_VALUE, normalizeConditionBuilderValue);
   private _disabled = false;
-  // Set right before a condition row is removed when focus was inside that row -- consumed by
-  // updated() to move focus to the add-button, so removing the focused row's remove-button
-  // doesn't silently drop focus to the document body.
   private pendingFocusAdd = false;
+  private editorRegistration?: Promise<unknown>;
+
+  private get _fields(): readonly ConditionBuilderField[] {
+    return this.fieldsSnapshot.read();
+  }
 
   /** Frozen snapshot of at most 200 fields, 500 options/operators per field, bounded strings, and
    * finite type-specific number constraints. Reassign after changing it. */
@@ -435,11 +437,11 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     return this._fields;
   }
   set fields(next: readonly ConditionBuilderField[]) {
-    if (next === this.fieldsSource || next === this._fields) return;
-    this.fieldsSource = next;
-    const old = this._fields;
-    this._fields = normalizeFields(next);
-    this.requestUpdate('fields', old);
+    this.fieldsSnapshot.assign(this, 'fields', next);
+  }
+
+  private get _value(): ConditionBuilderValue {
+    return this.valueSnapshot.read();
   }
 
   /** The current query: one combinator plus a flat list of conditions. Controlled — assigning
@@ -452,11 +454,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     return this._value;
   }
   set value(next: ConditionBuilderValue) {
-    if (next === this.valueSource || next === this._value) return;
-    this.valueSource = next;
-    const old = this._value;
-    this._value = normalizeConditionBuilderValue(next);
-    this.requestUpdate('value', old);
+    this.valueSnapshot.assign(this, 'value', next);
   }
 
   get disabled(): boolean {
@@ -682,10 +680,17 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.editorRegistration = loadConditionBuilderEditors(this.renderRoot) ?? this.editorRegistration;
     if (this.pendingFocusAdd) {
       this.pendingFocusAdd = false;
       (this.renderRoot.querySelector('[part="add-button"]') as (HTMLElement & { focus(): void }) | null)?.focus();
     }
+  }
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.editorRegistration;
+    return complete;
   }
 
   private renderCombinator(combinator: ConditionBuilderCombinator): TemplateResult {

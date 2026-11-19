@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,7 +33,7 @@ are out of scope.
 `lr-invalid` alias.
 
 **Keyboard and assistive technology.** The surface is one tab stop with `role="application"` and the
-role description "signature pad". It is named by a host `aria-label`, else by the label, else
+role description "signature pad". An empty `aria-label` clears the name. Whitespace alone falls back to the visible label, then
 "Signature". The focused surface follows the host’s `aria-describedby` references as they change,
 then announces the error, the hint, the keyboard instructions and its state ("No signature",
 "Signed, 2 strokes"). The arrow keys move a visible pen cursor by 1 % of the box (10 % with Shift),
@@ -94,7 +94,13 @@ as fractions of the box) and `LyraSignaturePadEventMap`; constants `SIGNATURE_PA
 
 **Themeable custom properties** (not declared on the host): `--lr-signature-pad-ink` (default
 `var(--lr-color-text)`), `--lr-signature-pad-stroke-width` (default
-`var(--lr-border-width-medium)`) and `--lr-signature-pad-aspect-ratio` (default `3 / 1`). The
+`var(--lr-border-width-medium)`) and `--lr-signature-pad-aspect-ratio` (default `3 / 1`).
+`--lr-signature-pad-fill`, `--lr-signature-pad-border-color` and `--lr-signature-pad-radius`
+style the drawing surface. Use `--lr-signature-pad-hover-border-color` and
+`--lr-signature-pad-invalid-border-color` for its hover and validation states. The invalid border
+falls back to `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
+`--lr-signature-pad-clear-hover-bg` and `--lr-signature-pad-clear-active-bg` set the clear
+button's hover and pressed backgrounds independently. The
 required marker takes the shared `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` (see "The required-field
 marker" above).

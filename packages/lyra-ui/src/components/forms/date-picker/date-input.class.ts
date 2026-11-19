@@ -1252,7 +1252,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return this.changeOpen(true);
   }
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
-  hide(restoreFocus = false): Promise<void> {
+  hide(restoreFocus: boolean = false): Promise<void> {
     return this.changeOpen(false, restoreFocus);
   }
 

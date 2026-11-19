@@ -3,7 +3,7 @@ import { sceneArc, scenePath, sceneSourceHarness } from '../../../../test/map-sc
 import { stageMapSceneAdmission } from './map-scene-admission.js';
 import type { AdmittedSceneObject } from './map-scene-admission.js';
 import { buildSceneLineData, sceneArcAltitude, sceneLineDataFrom, sceneLineGrounded, SCENE_ARC_MIN_SEGMENTS,
-  tessellateSceneLines, traceSceneLines } from './map-scene-lines.js';
+  traceSceneLines } from './map-scene-lines.js';
 import type { SceneLineObject } from './map-scene-lines.js';
 
 function admit(...objects: unknown[]): readonly AdmittedSceneObject[] {
@@ -31,12 +31,12 @@ describe('map scene line geometry', () => {
   it('keeps linear path vertices exactly and carries altitude as the third coordinate', () => {
     const [path] = lines({ ...scenePath(), interpolation: 'linear', positions: [
       { lngLat: [1, 2], altitude: 30 }, { lngLat: [3, 4] }, { lngLat: [5, 6], altitude: -5 }] });
-    expect(tessellateSceneLines([path!])).to.deep.equal([[[1, 2, 30], [3, 4, 0], [5, 6, -5]]]);
+    expect(traceSceneLines([path!])?.map(row => row.coordinates)).to.deep.equal([[[1, 2, 30], [3, 4, 0], [5, 6, -5]]]);
   });
 
   it('subdivides great-circle segments into at most one-degree steps between exact endpoints', () => {
     const [path] = lines({ ...scenePath(), positions: [{ lngLat: [-74, 40.7], altitude: 0 }, { lngLat: [2.35, 48.85], altitude: 1000 }] });
-    const [coordinates] = tessellateSceneLines([path!])!;
+    const { coordinates } = traceSceneLines([path!])![0]!;
     const total = angleDegrees([-74, 40.7], [2.35, 48.85]);
     expect(coordinates!.length).to.equal(Math.ceil(total) + 1);
     expect(coordinates![0]).to.deep.equal([-74, 40.7, 0]);
@@ -54,7 +54,7 @@ describe('map scene line geometry', () => {
     const [linear, great] = lines(
       { ...scenePath('linear'), interpolation: 'linear', positions: [{ lngLat: [170, 10] }, { lngLat: [-170, 10] }] },
       { ...scenePath('great'), positions: [{ lngLat: [170, 10] }, { lngLat: [-170, 10] }] });
-    const [first, second] = tessellateSceneLines([linear!, great!])!;
+    const [first, second] = traceSceneLines([linear!, great!])!.map(row => row.coordinates);
     expect(first).to.deep.equal([[170, 10, 0], [190, 10, 0]]);
     expect(second![0]).to.deep.equal([170, 10, 0]);
     expect(second!.at(-1)).to.deep.equal([190, 10, 0]);
@@ -63,7 +63,7 @@ describe('map scene line geometry', () => {
 
   it('samples arcs on their great circle with the documented parabolic height profile', () => {
     const [arc] = lines({ ...sceneArc(), start: { lngLat: [0, 0], altitude: 100 }, end: { lngLat: [1, 0], altitude: 300 }, height: 1000 });
-    const [coordinates] = tessellateSceneLines([arc!])!;
+    const { coordinates } = traceSceneLines([arc!])![0]!;
     expect(coordinates!.length).to.equal(SCENE_ARC_MIN_SEGMENTS + 1);
     expect(coordinates![0]).to.deep.equal([0, 0, 100]);
     expect(coordinates!.at(-1)).to.deep.equal([1, 0, 300]);
@@ -80,7 +80,7 @@ describe('map scene line geometry', () => {
       const [arc] = lines({ ...sceneArc(), start: { lngLat: [start, 30], altitude: 100 },
         end: { lngLat: [end, 30], altitude: 300 }, height: 1000 });
       expect(arc?.kind).to.equal('arc');
-      const [coordinates] = tessellateSceneLines([arc!])!;
+      const { coordinates } = traceSceneLines([arc!])![0]!;
       expect(coordinates!.length).to.equal(SCENE_ARC_MIN_SEGMENTS + 1);
       expect(coordinates![0]).to.deep.equal([start, 30, 100]);
       expect(coordinates!.at(-1)).to.deep.equal([crossing ? end + 360 : end, 30, 300]);
@@ -125,9 +125,9 @@ describe('map scene line geometry', () => {
   it('coarsens shared great-circle density to fit the generated vertex budget', () => {
     const objects = lines(...Array.from({ length: 10 }, (_, index) => ({ ...scenePath(`p${index}`),
       positions: [{ lngLat: [-170, -60 + index] }, { lngLat: [20, 50 - index] }, { lngLat: [170, 0] }] })));
-    const fine = tessellateSceneLines(objects)!;
+    const fine = traceSceneLines(objects)!.map(row => row.coordinates);
     const fineCount = fine.reduce((total, row) => total + row.length, 0);
-    const coarse = tessellateSceneLines(objects, 600)!;
+    const coarse = traceSceneLines(objects, 600)!.map(row => row.coordinates);
     const coarseCount = coarse.reduce((total, row) => total + row.length, 0);
     expect(fineCount).to.be.greaterThan(600);
     expect(coarseCount).to.be.at.most(600);
@@ -135,7 +135,7 @@ describe('map scene line geometry', () => {
       expect(row[0]!.slice(0, 2)).to.deep.equal(fine[index]![0]!.slice(0, 2));
       expect(row.at(-1)).to.deep.equal(fine[index]!.at(-1));
     }
-    expect(tessellateSceneLines(objects, 29)).to.equal(undefined);
+    expect(traceSceneLines(objects, 29)).to.equal(undefined);
   });
 
   it('builds one owned feature per line with resolved presentation properties', () => {

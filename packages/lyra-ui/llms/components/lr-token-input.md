@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,7 +50,7 @@ the inline token editor, and blocks adding, removing or editing a token while le
 input, tokens and remove buttons focusable and the current value submitted with the form, mirroring
 `lr-input`'s `readonly`),
 `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
-and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
+and draft text input. Whitespace alone falls back to the visible label, placeholder, or localized name. `aria-label=""` remains an explicit empty
 override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
 `on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
 token editor. The former camel-case `autoCorrect` property is removed; use the native-shaped
@@ -65,10 +65,13 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) bounds the number of mounted
-tokens while retaining the focused or editing token. `token-overflow` displays a localized count
-for the rest. Set `max-tokens-visible="0"` to mount every token. Non-finite values restore the
-200-token default. The value array and form submission include every token.
+`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) limits the number of mounted
+tokens. Set `max-tokens-visible="200"` for a bounded window or `max-tokens-visible="0"` to keep
+mounting every token. Omitting or removing the attribute, or supplying a non-finite limit,
+currently uses the deprecated implicit unlimited default.
+The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
+field. The `token-overflow` part shows how many tokens are outside the current window. The value
+array and form submission always include every token.
 The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
 (`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
 optional native attributes unset. The default accessible name is localized as "Tokens" when the
@@ -102,8 +105,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `token-overflow` (the localized count of unmounted tokens), `input`, `start`, `end`, `hint`,
-`error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
-internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
+`error`, `previous-page`, and `next-page`. `focus()`, `blur()`, `click()`, and `select()` forward
+to the internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
 writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
 `setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.
 `setRangeText()` synchronizes the pending draft without emitting `input`/`change`, so the next
@@ -211,4 +214,4 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   row holds focus. Default: `none`. Additive — the focus outline and the focused border are
   never replaced by it.
-- `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-token-input-invalid-border-color` overrides the shared `--lr-form-control-invalid-border-color` on this row. The default is `--lr-color-danger`.

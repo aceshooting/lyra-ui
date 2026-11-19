@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Pụọ na ihuenyo zuru ezu',
   videoPlaylistLabel: 'Ndepụta vidio',
   videoPlaylistUntitled: 'Vidio {position}',
+  videoTimeReadout: '{current} n’ime {duration}',
   pause: 'Kwụsịtụ',
   qrCodeMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu nhọrọ "qrcode" iji mepụta koodu QR.',
   qrCodeGenerationFailed: 'Enweghị ike itinye uru a n’ime koodu QR.',

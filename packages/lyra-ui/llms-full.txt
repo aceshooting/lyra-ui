@@ -9639,7 +9639,7 @@ disabled state.
 | `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean`                                                            | `false`      | SSR slot-presence hints; neither is required for hydrated client-side slot detection.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `errorText`              | `error-text`               | `string`                                                             | `''`         | Error text below the field, rendered before slotted `error` content. The field never renders its own `validationMessage`; style `:state(user-invalid)` or the `data-invalid` host attribute (invalid after interaction).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `customError`            | `custom-error`             | `string \| null`                                                     | `null`       | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it.                                                                                                                                                                                                                                                                                                                                                                                     |
-| `accessibleLabel`        | `aria-label`               | `string \| null`                                                     | `null`       | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default.                                                                                                                                                                                                                                                                                                              |
+| `accessibleLabel`        | `aria-label`               | `string \| null`                                                     | `null`       | An empty string clears the name. Whitespace alone falls back to the visible label, placeholder, or localized name.                                                                                                                                                                                                                                                                                                              |
 | `spellcheck`             | `spellcheck`               | `boolean`                                                            | `true`       | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `autofocus`              | `autofocus`                | `boolean`                                                            | `false`      | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `title`                  | `title`                    | `string`                                                             | `''`         | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -9777,7 +9777,8 @@ With no label text the part is hidden and no glyph is painted.
 ### Themeable custom properties
 
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
-  bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
+  bound scrolls inside the native textarea. Percentage bounds follow the available block size.
+  Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
 - `--lr-textarea-padding` (default `var(--lr-form-control-padding-inline)`),
   `--lr-textarea-font-size` (default `var(--lr-form-control-font-size)`) and
@@ -10456,6 +10457,7 @@ shared hit target (42px including the row border at the default theme); `l` and 
   `data-invalid`, the attribute every Lyra field publishes next to
   `:state(user-invalid)`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
+  preserves an empty override. Whitespace alone falls back to the visible label, placeholder, or localized input name.
 - `autocomplete: string = ''`
 - `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
@@ -11087,7 +11089,8 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `size` (shared `2xs`…`xl` ladder and `small`/`medium`/`large` aliases), and `pill = false`.
 - `label = ''`, `hint = ''`, `errorText = ''` (`error-text`), `withLabel = false`
   (`with-label`), and `withHint = false` (`with-hint`) provide complete form chrome. A host
-  `aria-label` wins for the internal editing surface's accessible name.
+  `aria-label` names the group. An empty attribute clears the name. Whitespace alone falls back
+  to the visible label or localized time name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
 - `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
@@ -11117,10 +11120,11 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-**Events:** native `input` on user edits and native `change` when the committed value changes,
-including when clearing a segment changes a previously complete time to an empty value.
+User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
+`badInput`, including after blur. Erasing its last visible segment commits the empty value and
+fires `change` once. Entering a complete time also fires `change`.
 The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
-`lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+`lr-clear` follows activation of the clear button. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
 The hidden native autofill seam treats an intentional empty `input` followed by `change` as a
@@ -11357,8 +11361,8 @@ also shows the selected country's `<lr-flag>`.
 
 Public `--lr-phone-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper
 can override size and pill fallbacks; a value set directly on the element still wins.
-The native country-selector target retains the shared icon-button hit floor, and the wrapper uses
-the same rendered action-height ladder as input, number-input, and segmented time-input.
+The size tier sets a nominal row height. The wrapper grows to accommodate the native country
+selector's hit target, just as an input row accommodates its clear button, stepper or time picker.
 
 **Types:**
 
@@ -11446,7 +11450,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   converter (Lit's default presence-based boolean converter would otherwise treat any attribute
   value, including the literal string `"false"`, as `true`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
-  telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
+  telephone input. An empty override clears the name. Whitespace-only candidates are skipped.
+  Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
   `placeholder`, and finally a localized generic "Phone" name, so a bare `<lr-phone-input>` with
   none of them set never reaches the accessibility tree unnamed. (The visible label part cannot
   stand in for it: it carries the native `hidden` attribute while there is no label text, which
@@ -11531,7 +11536,8 @@ receives the `start` alias slot's content), `end`, `country`
 content, like every sibling field. Style
 the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
 invalid after interaction, including after a failed submit or `reportValidity()`), or
-`--lr-phone-input-invalid-border-color`, which defaults to the resting border. Focus shows the
+`--lr-phone-input-invalid-border-color`. Its fallback is `--lr-form-control-invalid-border-color`,
+then the resting border. Focus shows the
 brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
 `'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
 exactly like `lr-input`. Native invalid/focus feedback therefore has one
@@ -11629,7 +11635,7 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   row holds focus. Default: `none`. Additive — the focus outline and the focused border are
   never replaced by it.
-- `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-phone-input-invalid-border-color` overrides the shared invalid border color for the telephone row.
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
 ---
@@ -13180,6 +13186,9 @@ the native editing control effectively disabled. The enabled first-legend except
 own-disabled state retain their native meaning; validity and form submission follow the effective
 disabled state.
 
+A whitespace-only host name falls back to the visible label or the localized verification-code
+name. An empty host name preserves an existing visible-label association.
+
 The segments are **presentational**. A single real `<input>` sits transparently across them and owns
 focus, selection and the value. It remains the native integration point for SMS autofill
 (`autocomplete` defaults to `one-time-code`), IME composition and mobile keyboards, and keeps the
@@ -13333,14 +13342,14 @@ every sibling field.
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
 `--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
-`--lr-otp-input-invalid-border-color`, with the shared focus and danger colors retained as
+`--lr-otp-input-invalid-border-color`, with the shared focus color and resting segment border as
 fallbacks.
 
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
-after interaction, and `--lr-otp-input-invalid-border-color` defaults to the
-resting segment border, so no danger edge paints unless you set it or style `:state(user-invalid)`.
+after interaction. `--lr-otp-input-invalid-border-color` takes precedence over
+`--lr-form-control-invalid-border-color`. With both unset, the segment keeps its resting border.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the
@@ -13639,7 +13648,7 @@ the inline token editor, and blocks adding, removing or editing a token while le
 input, tokens and remove buttons focusable and the current value submitted with the form, mirroring
 `lr-input`'s `readonly`),
 `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
-and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
+and draft text input. Whitespace alone falls back to the visible label, placeholder, or localized name. `aria-label=""` remains an explicit empty
 override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
 `on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
 token editor. The former camel-case `autoCorrect` property is removed; use the native-shaped
@@ -13654,10 +13663,13 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) bounds the number of mounted
-tokens while retaining the focused or editing token. `token-overflow` displays a localized count
-for the rest. Set `max-tokens-visible="0"` to mount every token. Non-finite values restore the
-200-token default. The value array and form submission include every token.
+`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) limits the number of mounted
+tokens. Set `max-tokens-visible="200"` for a bounded window or `max-tokens-visible="0"` to keep
+mounting every token. Omitting or removing the attribute, or supplying a non-finite limit,
+currently uses the deprecated implicit unlimited default.
+The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
+field. The `token-overflow` part shows how many tokens are outside the current window. The value
+array and form submission always include every token.
 The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
 (`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
 optional native attributes unset. The default accessible name is localized as "Tokens" when the
@@ -13691,8 +13703,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
 glyph), `token-overflow` (the localized count of unmounted tokens), `input`, `start`, `end`, `hint`,
-`error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
-internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
+`error`, `previous-page`, and `next-page`. `focus()`, `blur()`, `click()`, and `select()` forward
+to the internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
 writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
 `setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.
 `setRangeText()` synchronizes the pending draft without emitting `input`/`change`, so the next
@@ -13800,7 +13812,7 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   row holds focus. Default: `none`. Additive — the focus outline and the focused border are
   never replaced by it.
-- `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-token-input-invalid-border-color` overrides the shared `--lr-form-control-invalid-border-color` on this row. The default is `--lr-color-danger`.
 
 ## `lr-code-editor`
 
@@ -13837,7 +13849,7 @@ gutter placement follow the application direction.
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
   on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
   empty the insert nor throw out of `String.repeat()`.
-  Tab indents the selected lines and preserves the selection within `maxlength`.
+  Tab indents the selected lines and preserves the selection within `maxlength`. Native Undo and Redo treat the indentation as one edit.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
@@ -13865,7 +13877,7 @@ gutter placement follow the application direction.
   `inputMode`/`inputmode: string = ''`, `enterKeyHint`/`enterkeyhint: string = ''`,
   `autocapitalize: string = 'off'`, and `autocorrect: boolean = false` (attribute vocabulary
   `on`/`off`; boolean and string writes normalize through the shared native converter)
-- `accessibleLabel: string = ''` (attribute `aria-label`) — wins over `label`/the localized
+- `accessibleLabel: string = ''` (attribute `aria-label`) — an explicitly empty attribute clears the name. Whitespace alone falls back to the visible label or localized
   `codeEditorLabel` fallback on the internal textarea
 - The shared form surface adds `value`, `defaultValue`, `customError` (`custom-error`), `name`,
   `disabled`, `required`, `form`, `getForm()`, `checkValidity()`, `reportValidity()`, and
@@ -13904,9 +13916,9 @@ a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-requir
 With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
-frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-space-s`, the
+frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-form-control-padding-inline`, the
 gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
-(default `--lr-font-size-m`, the gutter's and textarea's font size) — all three come from the active
+(default `--lr-form-control-font-size`, the gutter's and textarea's font size) — all three come from the active
 `size` tier by default, and assigning one directly overrides that tier's value. Also
 `--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
 stay aligned with their lines).
@@ -13919,11 +13931,11 @@ the `:host` default of `2`. The component writes the token inline on the `textar
 still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
 spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 `--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
-`var(--lr-color-surface)`) retint the frame's resting border and background, independent of the
-hover and invalid states below.
+`var(--lr-color-surface)`) retint the frame's resting border and background. Setting the fill also
+colors the line-number gutter during scrolling.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
-`--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
-without changing brand/danger paint in sibling components.
+`--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
+`--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` on
@@ -13999,8 +14011,9 @@ swap under RTL), Home and End move to and select the next enabled swatch, like `
 When required, the trigger also includes the localized `fieldRequired` description; the editable
 value field exposes `aria-required`.
 
-Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
-required empty picker starts pristine, so the popup trigger and panel value input both expose
+The popup's editor parts are mounted while open. Inline mode keeps the editor mounted.
+Validation is projected onto both editing owners with an explicit stateful `aria-invalid`.
+A required empty picker starts pristine, so the popup trigger and mounted panel value input both expose
 `aria-invalid="false"` even though `checkValidity()` is false. Once focus leaves the control, the
 resulting `user-invalid` state changes both to `"true"`; `reportValidity()` reveals the same state
 without requiring a blur. A valid value or `form.reset()` clears the projection back to `"false"`,
@@ -15517,6 +15530,11 @@ of showing the complete list. An empty or unmatched query never creates a curren
 The readonly `input: HTMLInputElement | null` exposes that native filter (null in compact mode).
 After directly changing its DOM value, dispatch a native `input` event to update filtering.
 Mode changes, reset and reconnect clear unfinished filtering without changing the reset default.
+If the filter fails to load, `lr-load-error` fires and the compact picker remains usable.
+`search-error` and `search-retry` expose the localized notice and retry action.
+`--lr-form-control-invalid-border-color` themes the resting invalid border.
+The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
+in both modes, following the country picker's event contract.
 
 **Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
@@ -15531,8 +15549,8 @@ bind `currencies` to supply rows.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
 input-loss notice);
 `select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`,
-`select-clear-button`, `select-group-label`. Both composed controls preserve these part names
-and inherit shared form-control and surface tokens.
+`select-clear-button`, `select-group-label`, `search-error`, and `search-retry`. Both composed controls
+preserve their shared part names and inherit shared form-control and surface tokens.
 
 ```html
 <script type="module">
@@ -15677,7 +15695,10 @@ otherwise labels or the localized Country, Time zone or Unit name apply. Externa
 `positioningStrategy: 'fixed' | 'absolute'` (`positioning-strategy`) follow the select contract.
 An omitted positioning strategy inherits `--lr-positioning-strategy`, else both modes use `absolute`.
 The filter control (`lr-combobox`) loads the first time `searchable` is enabled, so a plain picker
-never ships it; `await picker.updateComplete` resolves once it has taken over. A committed `disabled`
+never ships it. `await picker.updateComplete` waits for the load to settle. On failure the
+picker emits `lr-load-error` and keeps the compact control available, with a localized
+`search-error` notice and a `search-retry` button. The notice uses `catalogPickerSearchLoadFailed`.
+A committed `disabled`
 entry stays visible and invalid with a "not in catalog" badge in all four pickers.
 
 `name`, `form`, `required`, `disabled`, `value`, `defaultValue`, fieldset disablement and native
@@ -15711,8 +15732,9 @@ and `blur` relay once; canceling `lr-invalid` suppresses native validation UI.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
 input-loss notice), `select-trigger`,
 `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`
-and `select-clear-button`; country additionally exposes `flag`. The three field slots are the only content slots; supply options through
-the catalog property. Shared form-control and surface tokens apply, including RTL and dark themes.
+`select-clear-button`, `search-error`, and `search-retry`; country additionally exposes `flag`.
+Supply options through the catalog property. Shared form-control and surface tokens apply,
+including RTL and dark themes. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 
 ```html
 <script type="module">
@@ -15759,11 +15781,15 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
+action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
+The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
+in both modes, following the country picker's event contract.
 **Slots:** `label`, `hint`, `error`.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
 `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
-`select-clear-button`.
+`select-clear-button`, `search-error`, and `search-retry`.
 
 ```html
 <script type="module">
@@ -15808,11 +15834,15 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
+action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
+The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
+in both modes, following the country picker's event contract.
 **Slots:** `label`, `hint`, `error`.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
 `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
-`select-clear-button`.
+`select-clear-button`, `search-error`, and `search-retry`.
 
 ```html
 <script type="module">
@@ -15889,7 +15919,7 @@ are out of scope.
 `lr-invalid` alias.
 
 **Keyboard and assistive technology.** The surface is one tab stop with `role="application"` and the
-role description "signature pad". It is named by a host `aria-label`, else by the label, else
+role description "signature pad". An empty `aria-label` clears the name. Whitespace alone falls back to the visible label, then
 "Signature". The focused surface follows the host’s `aria-describedby` references as they change,
 then announces the error, the hint, the keyboard instructions and its state ("No signature",
 "Signed, 2 strokes"). The arrow keys move a visible pen cursor by 1 % of the box (10 % with Shift),
@@ -15950,7 +15980,13 @@ as fractions of the box) and `LyraSignaturePadEventMap`; constants `SIGNATURE_PA
 
 **Themeable custom properties** (not declared on the host): `--lr-signature-pad-ink` (default
 `var(--lr-color-text)`), `--lr-signature-pad-stroke-width` (default
-`var(--lr-border-width-medium)`) and `--lr-signature-pad-aspect-ratio` (default `3 / 1`). The
+`var(--lr-border-width-medium)`) and `--lr-signature-pad-aspect-ratio` (default `3 / 1`).
+`--lr-signature-pad-fill`, `--lr-signature-pad-border-color` and `--lr-signature-pad-radius`
+style the drawing surface. Use `--lr-signature-pad-hover-border-color` and
+`--lr-signature-pad-invalid-border-color` for its hover and validation states. The invalid border
+falls back to `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
+`--lr-signature-pad-clear-hover-bg` and `--lr-signature-pad-clear-active-bg` set the clear
+button's hover and pressed backgrounds independently. The
 required marker takes the shared `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` (see "The required-field
 marker" above).
@@ -16162,9 +16198,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
-  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
-  `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
-  just hover. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`). An unlinked
+  value with exact text is a tab stop and exposes that text as its accessible description.
+  `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -16256,8 +16292,9 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 
 **Known gotchas:**
 
-- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
-  their own `tabindex` to avoid nesting focus targets inside the anchor.
+- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips and share
+  the card's tab stop. The link exposes the headline exact value as its accessible description.
+  Each breakdown value exposes its own exact text when supplied.
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
   more specific name than the visible label/value/unit.
@@ -16427,8 +16464,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   without emitting the user-only row events.
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
   when selection is empty) as TSV by default and returns the copied row count. Its options include
-  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
-  explicit delimiter overrides the one normally selected by `format`. Clipboard settlement is
+  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`.
+  A non-empty delimiter overrides the one selected by `format`. Clipboard settlement is
   asynchronous: `lr-copy` fires only after the owning context's write fulfills (including a
   successful legacy textarea fallback), while rejection emits `lr-error` plus `lr-copy-error` and
   announces the localized `copyFailed` string. Copy intent alone is never reported as success.
@@ -16437,8 +16474,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
   `filename` aliases were **removed in 9.0.0** — rename them to `columnIds` and `fileName` (the
   spellings `wa-data-grid` uses); an unrenamed call silently falls back to every visible column and
-  `data.csv`. Formula escaping is on by default for string cells beginning with `=`, `+`,
-  `-`, or `@`; numeric values remain numeric.
+  `data.csv`. An empty delimiter uses the default separator. Formula escaping applies to text
+  cells by default. Finite numbers retain numeric text and are quoted if they include the separator.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
   filter but before the named column's own filter. Server mode returns an empty map.
@@ -17747,9 +17784,9 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
 - no documented component-specific sizing custom property. The host box is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
-  on the element instead. The value/label captions are `em`-sized against that same host font-size,
-  so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
-  combine a small tier (or a small host `font-size`) with `without-value` for a slim,
+  on the element instead. The linear track stretches to fill its allocation. The captions keep
+  their proportions and size against the host font, including when the track narrows. Combine a
+  small tier (or a small host `font-size`) with `without-value` for a slim,
   thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
   `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
@@ -17915,6 +17952,10 @@ and repeated edge movements append repeated announcements even when their text i
 no live-region role of its own. Pointer input resolves the word under the pointer (else the one
 with the nearest edge) from the adequately-sized SVG surface; the potentially tiny text glyphs are
 not independent hit targets.
+
+The SVG scales to the space the parent provides, so `min-font-size` sets the floor in layout units.
+Set a CSS `min-inline-size` on the cloud when words must stay legible. Check the longest labels at
+that width and allow horizontal scrolling on the parent when the surrounding layout can be narrower.
 
 Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
 fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
@@ -18165,6 +18206,7 @@ Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring is redrawn over
 every draw, and the cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Calendar day inputs use canonical Gregorian `YYYY-MM-DD` dates, such as `2026-01-08`.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
 previous/next movement instead of swapping for RTL.
@@ -19592,7 +19634,9 @@ to a hover mix from the selected fill. The tree also exposes paired
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
+fallbacks). For unchecked boxes, `--lr-tree-checkbox-hover-border-color` and
+`--lr-tree-checkbox-active-border-color` set the hover and pressed borders. Selected rows use
+brand text at rest and on-quiet text while hovered or pressed;
 `--lr-tree-selected-color` overrides all three states. Pressed rows mix from the selected fill
 when selected and from `--lr-color-brand-quiet` otherwise. Each
 checkbox border token also paints that state's border under the pointer; and paired
@@ -20311,7 +20355,9 @@ page gives it.
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted while `without-lock` is set).
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
-`var(--lr-color-brand)`, pressed lock-button foreground); the buttons accept the shared
+`var(--lr-color-brand)`, pressed lock-button foreground). `--lr-flow-controls-hover-bg` and
+`--lr-flow-controls-active-bg` set the hover and pressed fills of enabled toolbar and slotted
+buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
 `var(--lr-radius)`); plus shared tokens —
@@ -20853,13 +20899,18 @@ inter-item spacing and the length each rail bridges. `--lr-timeline-cluster-size
 each horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
+`--lr-timeline-ordered-marker-size` (falls back to `--lr-timeline-marker-size`, then
+`var(--lr-size-1-5rem)`),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, with a private default that changes per `variant`),
+`var(--lr-color-text-quiet)` for neutral markers), `--lr-timeline-marker-neutral-color`,
+`--lr-timeline-marker-brand-color`, `--lr-timeline-marker-success-color`,
+`--lr-timeline-marker-warning-color`, and `--lr-timeline-marker-danger-color` (variant colors
+used when `--lr-timeline-marker-color` is unset),
 `--lr-timeline-marker-number-color` (default `var(--lr-color-text)`, the step number inside an
-`ordered` timeline's marker ring; the marker size defaults to `var(--lr-size-1-5rem)` there), and
+`ordered` timeline's marker ring), and
 `--lr-timeline-active-ring-color`
-(defaults to the effective marker color). All six item hooks inherit from theme
+(defaults to the effective marker color). Item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="marker-icon"`.
@@ -21350,7 +21401,9 @@ AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
 `components/data/condition-builder/condition-builder-register.js` registers the controls used by
 ordinary string, number, boolean and single-value enum rows. Import `lr-date-input.js` for date
-fields and `lr-combobox.js` for multi-value enum operators. The default entry registers both.
+fields and `lr-combobox.js` for multi-value enum operators when using that entry. The default
+entry loads text, number, date, and multi-value enum editors for the first row that uses them.
+Import an editor's tag-shaped entry to use that editor independently.
 
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
@@ -22884,7 +22937,9 @@ temporarily makes off-page slides inert and aria-hidden, then restores their ret
 when they become visible, are removed, or the carousel disconnects.
 
 **Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
-or vertical), Home, and End. Keys originating in a native input, textarea, contenteditable surface,
+or vertical), Home, and End. The viewport's accessible name uses the `carouselViewport` string
+("Slides" in English). Host `aria-label` names the outer carousel region. Keys originating in a
+native input, textarea, contenteditable surface,
 or supported custom control remain owned by that editor, including when the editor is the assigned
 slide itself; they do not change the active slide or move focus away from it.
 
@@ -25735,7 +25790,7 @@ nested disclosure.
 
 **Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
 Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
-locale-aware type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
+locale-aware, accent-insensitive type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
 composition keys, are never handled. Pressing a disabled or loading row with the mouse does not
 focus it. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
 inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership
@@ -26179,8 +26234,8 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle uses the stable `dockPanelToggle` accessible name and reports state through `aria-expanded`.
-The `dockPanelCollapse` and `dockPanelExpand` strings supply its action tooltip. A slotted glyph keeps its orientation.
+icons). The toggle's accessible name is the action it performs (`dockPanelCollapse` while expanded,
+`dockPanelExpand` while collapsed) and `aria-expanded` reports the state. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
@@ -26603,7 +26658,8 @@ and animated panel. The two components intentionally keep distinct vocabularies:
 use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
 `show()`/`hide()` belong only to Details.
 
-`lr-toggle` reports the direction and source of an accepted Details transition. Accordion
+`lr-toggle` reports the direction and source of an accepted Details transition. A synchronous
+DOM move keeps the pending toggle and after-event. Accordion
 coordinates only its direct `lr-accordion-item` children; Details retains independent state and
 optional grouping through a shared non-empty `name`.
 
@@ -27778,6 +27834,9 @@ and event listeners survive every breakpoint crossing.
   threshold. Changes to height alone skip this work. Changing the breakpoint or its font size,
   or reconnecting the Page, resolves the threshold again. `vw` and `vh` track the size of the
   owner window. Invalid values, including `%`, `calc()`, and `var()`, fall back to `768px`.
+- `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
+  sticky regions below the measured banner, header, and subheader. Their height properties still
+  set minimum sizes and provide offsets during server rendering and before measurement.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
@@ -27889,9 +27948,11 @@ ancestor to retheme only that region; `::part(header)` and its siblings still wi
 painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
-`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets
-use the three configured height properties, so set them to the real minimum heights when those rows
-carry content. Motion uses Lyra transition tokens and is removed under `prefers-reduced-motion`.
+`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. By default,
+sticky offsets use the three configured height properties. Enable `auto-sticky-offsets` for rows
+whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
+hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
+viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
 Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 
@@ -36381,9 +36442,9 @@ calling the same methods through `map`, which the element neither knows about no
   no-op).
 - Every option is optional and an unusable one is ignored: `center` must be a finite
   `[longitude, latitude]` (clamped into range), `zoom` is clamped into the zoom limits
-  (`minZoom`/`maxZoom`, `[0, 22]` by default), `pitch` into
-  `[0, 85]`, and a negative or non-finite `duration` means the engine's default (a longer one is
-  capped at 60000 ms). With nothing
+  (`minZoom`/`maxZoom`, `[0, 22]` by default), and `pitch` is clamped into `[0, 85]`.
+  Very large bearings are reduced modulo 360 to preserve their orientation. A negative or
+  non-finite `duration` uses the engine's default, and a longer one is capped at 60000 ms. With nothing
   usable the call returns `false` (and warns in development) without moving anything.
 - Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
   applied without animation right after construction, unless `center` or `zoom` has been given a
@@ -37024,7 +37085,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
   way to place pins.
 - A marker uses `label` as its accessible name, then visible text extracted from trusted
-  `unsafeHtml`, and only then the localized map label. Popup ownership is exposed through
+  `unsafeHtml`, and then the localized marker name. Popup ownership is exposed through
   `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
   canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
@@ -37044,8 +37105,9 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
   dotted, and double border/shape encodings.
-- while the selected map peer is resolving, the host/base expose `aria-busy="true"` and show a
-  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
+- While the selected map peer is resolving, the base exposes `aria-busy="true"` and shows a
+  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container. The host
+  mirrors the base's busy state unless the application has set its own `aria-busy` value.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
 - `initialization='visible'` (the default) waits for the element to intersect the viewport before
@@ -37804,7 +37866,7 @@ height for that content and the dropzone's minimum size.
 - `withoutPaste: boolean = false` (reflected, attribute `without-paste`) — ignores files pasted
   into the dropzone, which are otherwise accepted.
 - `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
-  button (unless a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone
+  button unless the host has a nonblank `aria-label`. It never replaces the dropzone
   instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
   Omitted, `''` and whitespace-only values render identically: no visible label, and the button is
   named by the localized instruction. `hint: string = ''`
@@ -37903,9 +37965,9 @@ the region is cleared (and unrendered) as soon as a subsequent selection rejects
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
-control: the semantic button's accessible name comes from a non-empty host `aria-label` (or
-`accessibleLabel`), then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
-content still announces correctly. Slotted content is a sibling of
+control. The semantic button and native file input use the first available name from the host's
+nonblank `aria-label`, the form label (`label` or the `label` slot), or the localized dropzone
+instruction. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
 content still activates the dropzone.
@@ -44084,7 +44146,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   geometry is captured when `highlights` is assigned: an invalid or accessor-backed `region` anchor
   is ignored, and mutating an accepted anchor later does not move its painted region. Reassign
   `highlights` to update it; the original public anchor identity remains available for
-  reference-based `scrollToAnchor()`.
+  reference-based `scrollToAnchor()`. Regions use on-image controls while their minimum hit areas
+  fit without overlapping. If the hit areas overlap, a separate action list provides the controls.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
@@ -44263,8 +44326,8 @@ value, without suppressing the visible `name` heading.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
-  marked active in the built-in `<lr-document-preview>` fallback. Registry renderers do not receive
-  it; call `scrollToAnchor(id)` to activate a highlight there.
+  marked active in the built-in `<lr-document-preview>` fallback. Call `scrollToAnchor(id)`
+  to jump to the corresponding highlight in a registry renderer.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.
@@ -44877,6 +44940,9 @@ remaining height; an auto-height host keeps the `10rem` minimum. The chapter ifr
 carry a `title` taken from `name` (or the localized region name). Changing `src` clears `location`
 unless the same update assigns a new one; a reconnect keeps it.
 
+`--lr-viewer-pager-button-hover-bg` (default `var(--lr-color-brand-quiet)`) sets the chapter
+buttons' hover fill and the base for their pressed fill.
+
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
 unambiguous beside other previous/next controls and are overridable through `.strings`.
@@ -44992,7 +45058,9 @@ mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
-property, which writes this token inline.
+property, which writes this token inline. `--lr-viewer-pager-button-hover-bg`
+(default `var(--lr-color-brand-quiet)`) sets the pager buttons' hover fill and the base for their
+pressed fill.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
@@ -45498,10 +45566,8 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
 `previous-button`, `next-button`, `zoom-out-button`,
 `zoom-in-button` (the four toolbar controls, each with its own part name because a descendant
-combinator after `::part()` never matches; these are borderless text toolbar buttons tinted by
-`--lr-pdf-viewer-toolbar-button-hover-bg`, unlike the bordered chevron pager buttons of
-`lr-pptx-viewer` and `lr-ebook-viewer`, so a `::part(previous-button)` rule written for one does not
-transfer unchanged), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+combinator after `::part()` never matches; all four controls are borderless text buttons),
+`page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
@@ -45539,7 +45605,8 @@ height, not a cap. `--lr-pdf-viewer-toolbar-bg` (default
 `--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. `--lr-pdf-viewer-text-selection-bg` (default
+visible against the toolbar behind it. `--lr-viewer-pager-button-hover-bg` overrides this fill
+and the base for the pressed fill on previous and next. `--lr-pdf-viewer-text-selection-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a native text selection over a `text-span`,
 independent of the shared `--lr-color-brand-quiet` token. `--lr-pdf-viewer-search-match-bg` (default
 `var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
@@ -46071,7 +46138,8 @@ and activation. With `without-interaction`, the base is `aria-hidden` pure paint
 accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
-re-click of the same source citation).
+re-click of the same source citation). Reassigning the original array or the snapshot returned
+by `items` keeps the current cue. Assigning a fresh array or disconnecting clears it.
 
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
 `detail: { highlightId }`.
@@ -51867,7 +51935,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Whitespace-only name overrides use the same fallback as an omitted name.
 
-The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). The workspace forwards the events listed below. Listen directly on a built-in child for its other control, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Listen directly on a built-in child for its native `input` and `change`, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
 
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
 
@@ -51975,6 +52043,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
+- `lr-link-activate` (`detail: { href: string }`) — forwarded from built-in Markdown content.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.

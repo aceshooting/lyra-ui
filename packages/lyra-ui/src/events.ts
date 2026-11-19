@@ -256,10 +256,11 @@ import type { LyraAnchorTargetEventMap } from './internal/anchor-target.js';
 import type { LyraTextViewerTargetEventMap } from './internal/text-viewer-target.js';
 
 /**
- * `lr-activate` — dispatched by 15 components: `<lr-combobox>`, `<lr-country-picker>`,
- * `<lr-data-grid>`, `<lr-emoji-picker>`, `<lr-knowledge-base-admin>`, `<lr-pagination>`,
- * `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`, `<lr-segmented>`,
- * `<lr-select>`, `<lr-swatch-picker>`, `<lr-tab-group>`, `<lr-widget>`; detail union of 13, e.g.
+ * `lr-activate` — dispatched by 18 components: `<lr-combobox>`, `<lr-country-picker>`,
+ * `<lr-currency-picker>`, `<lr-data-grid>`, `<lr-emoji-picker>`, `<lr-knowledge-base-admin>`,
+ * `<lr-pagination>`, `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`,
+ * `<lr-segmented>`, `<lr-select>`, `<lr-swatch-picker>`, `<lr-tab-group>`,
+ * `<lr-time-zone-picker>`, `<lr-unit-picker>`, `<lr-widget>`; detail union of 13, e.g.
  * `LyraComboboxEventMap['lr-activate']`.
  */
 export type LyraActivateEvent =
@@ -307,12 +308,12 @@ export type LyraAfterExpandEvent =
   | LyraTreeItemEventMap['lr-after-expand'];
 
 /**
- * `lr-after-hide` — dispatched by 18 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `lr-after-hide` — dispatched by 21 components: `<lr-alert>`, `<lr-color-picker>`,
  * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-country-picker>`,
- * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`,
- * `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`,
- * `<lr-toast-item>`, `<lr-tooltip>`; detail union of 15, e.g.
- * `LyraAlertEventMap['lr-after-hide']`.
+ * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`,
+ * `<lr-dropdown>`, `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-toast-item>`, `<lr-tooltip>`,
+ * `<lr-unit-picker>`; detail union of 15, e.g. `LyraAlertEventMap['lr-after-hide']`.
  */
 export type LyraAfterHideEvent =
   | LyraAlertEventMap['lr-after-hide']
@@ -338,12 +339,12 @@ export type LyraAfterHideEvent =
 export type LyraAfterMaximizeChangeEvent = LyraToolResultDialogEventMap['lr-after-maximize-change'];
 
 /**
- * `lr-after-show` — dispatched by 18 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `lr-after-show` — dispatched by 21 components: `<lr-alert>`, `<lr-color-picker>`,
  * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-country-picker>`,
- * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`,
- * `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`,
- * `<lr-toast-item>`, `<lr-tooltip>`; detail union of 15, e.g.
- * `LyraAlertEventMap['lr-after-show']`.
+ * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`,
+ * `<lr-dropdown>`, `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-toast-item>`, `<lr-tooltip>`,
+ * `<lr-unit-picker>`; detail union of 15, e.g. `LyraAlertEventMap['lr-after-show']`.
  */
 export type LyraAfterShowEvent =
   | LyraAlertEventMap['lr-after-show']
@@ -753,10 +754,11 @@ export type LyraClaimSelectEvent =
   | LyraRagAnswerEventMap['lr-claim-select'];
 
 /**
- * `lr-clear` — dispatched by 11 components: `<lr-combobox>`, `<lr-country-picker>`,
- * `<lr-date-input>`, `<lr-date-picker>`, `<lr-input>`, `<lr-native-time-input>`,
- * `<lr-number-input>`, `<lr-otp-input>`, `<lr-select>`, `<lr-signature-pad>`, `<lr-time-input>`;
- * detail union of 8, e.g. `LyraComboboxEventMap['lr-clear']`.
+ * `lr-clear` — dispatched by 14 components: `<lr-combobox>`, `<lr-country-picker>`,
+ * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-date-picker>`, `<lr-input>`,
+ * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-select>`,
+ * `<lr-signature-pad>`, `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`; detail
+ * union of 8, e.g. `LyraComboboxEventMap['lr-clear']`.
  */
 export type LyraClearEvent =
   | LyraComboboxEventMap['lr-clear']
@@ -1463,12 +1465,13 @@ export type LyraHiddenTypesChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-
 export type LyraHiddenTypesChangeRequestEvent = LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change-request'];
 
 /**
- * `lr-hide` — dispatched by 23 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-hide` — dispatched by 26 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-country-picker>`,
- * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown-item>`,
- * `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-menu-item>`,
- * `<lr-menubar-item>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`,
- * `<lr-tooltip>`; detail union of 18, e.g. `LyraAlertEventMap['lr-hide']`.
+ * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`,
+ * `<lr-dropdown-item>`, `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`,
+ * `<lr-locale-picker>`, `<lr-menu-item>`, `<lr-menubar-item>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-toast-item>`, `<lr-tooltip>`,
+ * `<lr-unit-picker>`; detail union of 18, e.g. `LyraAlertEventMap['lr-hide']`.
  */
 export type LyraHideEvent =
   | LyraAlertEventMap['lr-hide']
@@ -1782,10 +1785,13 @@ export type LyraLoadEvent =
 export type LyraLoadChildrenEvent = LyraFileTreeEventMap['lr-load-children'];
 
 /**
- * `lr-load-error` — dispatched by `<lr-emoji-picker>`; detail
- * `LyraEmojiPickerEventMap['lr-load-error']`.
+ * `lr-load-error` — dispatched by 5 components: `<lr-country-picker>`, `<lr-currency-picker>`,
+ * `<lr-emoji-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`; detail union of 2, e.g.
+ * `LyraCatalogPickerEventMap['lr-load-error']`.
  */
-export type LyraLoadErrorEvent = LyraEmojiPickerEventMap['lr-load-error'];
+export type LyraLoadErrorEvent =
+  | LyraCatalogPickerEventMap['lr-load-error']
+  | LyraEmojiPickerEventMap['lr-load-error'];
 
 /**
  * `lr-load-more` — dispatched by 3 components: `<lr-retrieval-results>`, `<lr-table>`,
@@ -3095,12 +3101,13 @@ export type LyraSendNowEvent =
 export type LyraSequenceStepEvent = LyraSequencePlaybackEventMap['lr-sequence-step'];
 
 /**
- * `lr-show` — dispatched by 23 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-show` — dispatched by 26 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-country-picker>`,
- * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown-item>`,
- * `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-menu-item>`,
- * `<lr-menubar-item>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`,
- * `<lr-tooltip>`; detail union of 18, e.g. `LyraAlertEventMap['lr-show']`.
+ * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`,
+ * `<lr-dropdown-item>`, `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`,
+ * `<lr-locale-picker>`, `<lr-menu-item>`, `<lr-menubar-item>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-toast-item>`, `<lr-tooltip>`,
+ * `<lr-unit-picker>`; detail union of 18, e.g. `LyraAlertEventMap['lr-show']`.
  */
 export type LyraShowEvent =
   | LyraAlertEventMap['lr-show']

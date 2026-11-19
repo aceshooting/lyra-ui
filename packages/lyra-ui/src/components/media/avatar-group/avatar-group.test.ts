@@ -745,6 +745,25 @@ for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
   });
 }
 
+it('applies group defaults in a windowless document and preserves author overrides after moving back', async () => {
+  const group = await fixture<LyraAvatarGroup>(html`<lr-avatar-group><lr-avatar></lr-avatar></lr-avatar-group>`);
+  const avatar = group.querySelector('lr-avatar')!;
+  const parent = group.parentNode!;
+  const inactive = document.implementation.createHTMLDocument();
+  try {
+    inactive.body.append(group);
+    group.shape = 'square';
+    await group.updateComplete;
+    expect(avatar.getAttribute('shape')).to.equal('square');
+  } finally {
+    parent.appendChild(group);
+  }
+  avatar.setAttribute('shape', 'rounded');
+  group.shape = 'circle';
+  await group.updateComplete;
+  expect(avatar.getAttribute('shape')).to.equal('rounded');
+});
+
 it('counts only author-visible, non-inert avatars and leaves invalid children untouched', async () => {
   const el = (await fixture(html`
     <lr-avatar-group max="1">

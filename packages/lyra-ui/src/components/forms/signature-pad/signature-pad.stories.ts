@@ -52,3 +52,13 @@ export const NarrowPanel: StoryObj = {
 export const Readonly: StoryObj = {
   render: () => html`<lr-signature-pad label="Signature" readonly .strokes=${SIGNATURE}></lr-signature-pad>`,
 };
+
+export const SurfaceColors: StoryObj = {
+  render: () => html`
+    <lr-signature-pad label="Signature" .strokes=${SIGNATURE}
+      style="--lr-signature-pad-fill: var(--lr-color-surface-raised);
+        --lr-signature-pad-hover-border-color: var(--lr-color-brand);
+        --lr-signature-pad-clear-hover-bg: var(--lr-color-brand-quiet)"
+    ></lr-signature-pad>
+  `,
+};

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Nakababa ang panulat',
   signaturePadPenUp: 'Nakataas ang panulat',
   signaturePadDrawingLimit: 'Naabot na ang limitasyon sa pagguhit.',
+  catalogPickerSearchLoadFailed: 'Hindi ma-load ang kahon ng paghahanap.',
   localePickerInputLimit: 'Ang unang 512 tala ng wika at rehiyon lang ang available.',
   emojiPickerInputLimit: 'May ilang datos ng emoji na hindi isinama dahil naabot ang limitasyon sa input.',
 };

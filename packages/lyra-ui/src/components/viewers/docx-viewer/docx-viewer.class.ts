@@ -7,8 +7,6 @@ import { srOnly } from '../../../internal/a11y.js';
 import {
   isResourceLimitError,
   LyraUserFacingError,
-  readResponseArrayBuffer,
-  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -60,7 +58,7 @@ export type {
 } from '../viewer-diagnostics.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -278,8 +276,25 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   );
   @state() private resolvedHighlightActions: LyraHighlight[] = [];
 
-  private generation = 0;
-  private pendingTransportGeneration?: number;
+  private pendingTransport?: object;
+  private readonly source = new ViewerSourceController(this, {
+    load: (response, token) => this.convertDocument(response, token),
+    onError: (error) => {
+      if (this.lastLoadSrc !== this.src) return;
+      if (error instanceof ViewerSourceUrlNotAllowedError) {
+        this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
+        return;
+      }
+      this.fetchState = {
+        kind: 'error',
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
+      };
+      this.emit('lr-render-error', { error });
+    },
+    retainAcrossMove: () => this.pendingTransport === undefined,
+  });
   private lastLoadSrc = '';
   private loadLibrary: () => Promise<DocxDeps> = loadDocxDeps;
   private readonly announcements = new ViewerAnnouncementController(this);
@@ -329,7 +344,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // The mixin's disconnect released the selection listener; the content itself stayed.
       const root = this.contentRoot();
       if (root) (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
-      if (this.pendingTransportGeneration === undefined) return;
+      if (this.pendingTransport === undefined) return;
     }
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
@@ -337,7 +352,6 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   override disconnectedCallback(): void {
-    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
     this.scrollRegion?.dispose();
     this.scrollRegion = undefined;
@@ -346,7 +360,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private releaseDetachedDocument(): void {
-    this.generation++;
+    this.source.cancel();
     this.resetResolvedHighlightActions();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
@@ -380,14 +394,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('fetchState')) {
-      // The content wrapper is a brand-new element every time fetchState transitions to 'loaded'
-      // (a different render() branch than idle/loading/error), unlike a stable always-rendered
-      // wrapper -- rebinding here (idempotent: bindTextSelection() cleans up its own previous
-      // listeners first) keeps selection tracking attached to whichever element is live.
       const root = this.contentRoot();
       if (root) (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
-      // Any fetchState transition means contentRoot() is either gone or a brand-new element (see
-      // above), so a previously cached text index (see getTextIndex()) can no longer describe it.
       this.textIndexCache = null;
       this.textIndexMappingDirty = false;
     }
@@ -416,92 +424,69 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
-    this.pendingTransportGeneration = undefined;
-    const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
     if (!this.src) {
+      this.source.cancel();
       this.fetchState = { kind: 'idle' };
       this.headingTree = [];
       return;
     }
+    const transport = {};
+    this.pendingTransport = transport;
+    this.fetchState = { kind: 'loading' };
+    try {
+      await this.source.begin(this.src);
+    } finally {
+      if (this.pendingTransport === transport) this.pendingTransport = undefined;
+    }
+  }
 
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
+  private async convertDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    const isStale = () => this.source.isStale(token) || this.lastLoadSrc !== this.src;
+    if (isStale()) return;
+    const arrayBuffer = await this.source.readArrayBuffer(response);
+    if (isStale()) return;
+    await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal: token.signal, strictAdmission: true });
+    if (isStale()) return;
+    const { mammoth, DOMPurify } = await this.loadLibrary();
+    if (isStale()) return;
+    if (!mammoth) {
+      this.failWithLocalizedMessage(() => this.localize('docxViewerMissingConverter'));
+      return;
+    }
+    if (!DOMPurify) {
+      this.failWithLocalizedMessage(() => this.localize('documentViewerMissingSanitizer'));
       return;
     }
 
-    // Conversion has no transport dependency, so only the acquisition phase honours the abort signal.
-    const isStale = (transport: boolean): boolean =>
-      (transport && signal?.aborted === true)
-      || !this.isConnected
-      || generation !== this.generation
-      || this.ownerDocument.defaultView !== fetchTarget.view;
-    this.pendingTransportGeneration = generation;
-    this.fetchState = { kind: 'loading' };
-    let acquiringDocument = true;
-    try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (isStale(true) || !response.ok) discardBody(response);
-      if (isStale(true)) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const arrayBuffer = await readResponseArrayBuffer(response);
-      if (isStale(true)) return;
-      await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal, strictAdmission: true });
-      if (isStale(true)) return;
-      const { mammoth, DOMPurify } = await this.loadLibrary();
-      if (isStale(true)) return;
-      if (!mammoth) {
-        this.failWithLocalizedMessage(() => this.localize('docxViewerMissingConverter'));
-        return;
-      }
-      if (!DOMPurify) {
-        this.failWithLocalizedMessage(() => this.localize('documentViewerMissingSanitizer'));
-        return;
-      }
-
-      acquiringDocument = false;
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
-      const rawConverted = await mammoth.convertToHtml({ arrayBuffer });
-      if (isStale(false)) return;
-      const converted = normalizeDocxConversion(rawConverted);
-      if (!converted) {
-        throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
-      }
-      const content = sanitizePassiveMarkupFragment(
-        DOMPurify,
-        converted.value,
-        this.ownerDocument,
-        'passive-document',
-      );
-      if (isStale(false)) return;
-      this.fetchState = {
-        kind: 'loaded',
-        content: this.stampHeadings(content),
-      };
-      for (const cause of converted.messages) {
-        this.emit('lr-viewer-diagnostic', {
-          diagnostic: Object.freeze({
-            code: 'docx-conversion-message',
-            severity: 'warning',
-            fatal: false,
-            source: 'mammoth',
-            cause,
-          } as const),
-        });
-      }
-    } catch (error) {
-      if (isStale(acquiringDocument)) return;
-      this.fetchState = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    } finally {
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
+    this.pendingTransport = undefined;
+    const rawConverted = await mammoth.convertToHtml({ arrayBuffer });
+    if (isStale()) return;
+    const converted = normalizeDocxConversion(rawConverted);
+    if (!converted) {
+      throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
+    }
+    const content = sanitizePassiveMarkupFragment(
+      DOMPurify,
+      converted.value,
+      this.ownerDocument,
+      'passive-document',
+    );
+    if (isStale()) return;
+    this.fetchState = {
+      kind: 'loaded',
+      content: this.stampHeadings(content),
+    };
+    for (const cause of converted.messages) {
+      this.emit('lr-viewer-diagnostic', {
+        diagnostic: Object.freeze({
+          code: 'docx-conversion-message',
+          severity: 'warning',
+          fatal: false,
+          source: 'mammoth',
+          cause,
+        } as const),
+      });
     }
   }
 

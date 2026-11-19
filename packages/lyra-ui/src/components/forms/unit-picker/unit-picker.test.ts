@@ -8,6 +8,8 @@ import { UNIT_CODES } from '../../../units.js';
 import './unit-picker.js';
 import '../../../translations/fr/forms.js';
 import '../../../translations/fr/shared.js';
+import '../../../translations/ja/forms.js';
+import '../../../translations/ja/shared.js';
 
 describe('<lr-unit-picker>', () => {
   it('offers standard measurement units without choosing or converting a value', async () => {
@@ -41,6 +43,13 @@ describe('<lr-unit-picker>', () => {
     el.value = 'MWh';
     expect(el.validity.customError).to.equal(true);
     expect(el.value).to.equal('MWh');
+  });
+
+  it('formats secondary identifiers and symbols with the locale list pattern', async () => {
+    const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker lang="ja" value="energy-credit"
+      .units=${[{ code: 'energy-credit', label: 'Energy credit', symbol: 'EC' }]}></lr-unit-picker>`);
+    const expected = new Intl.ListFormat('ja', { type: 'unit', style: 'short' }).format(['energy-credit', 'EC']);
+    expect(el.shadowRoot!.querySelector('lr-option')!.sub).to.equal(expected);
   });
 
   it('renders localized populated choices accessibly with no implicit unit change', async () => {

@@ -1,3 +1,4 @@
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { isLiveDisabled } from '../../../internal/form-associated.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -200,8 +201,7 @@ export class LyraNumberInput extends LyraInput {
   };
 
   private onLocalizedKeyDown = (event: KeyboardEvent): void => {
-    if (!this.localized || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.isComposing || event.keyCode === 229) return;
+    if (!this.localized || event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     if (event.composedPath()[0] !== this.input) return;
     event.preventDefault();

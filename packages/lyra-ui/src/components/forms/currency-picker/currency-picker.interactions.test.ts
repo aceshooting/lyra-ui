@@ -31,8 +31,10 @@ async function click(element: HTMLElement): Promise<void> {
 }
 async function open(picker: LyraCurrencyPicker): Promise<void> {
   await focusByKeyboard(picker);
+  const shown = oneEvent(picker, 'lr-after-show');
   await sendKeys({ press: 'ArrowDown' });
-  await waitUntil(() => child(picker).open);
+  await shown;
+  expect(child(picker).open).to.equal(true);
   await settle(picker);
   await waitUntil(() => getComputedStyle(part(picker, 'listbox')).opacity === '1');
 }

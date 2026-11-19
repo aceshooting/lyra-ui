@@ -237,11 +237,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
-    // disconnectedCallback then connectedCallback synchronously with no update in between, so
-    // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
-    // resume the overlay registration *and* restart the positioning subscription
-    // disconnectedCallback tore down (mirrors lr-tooltip's identical reconnect handling).
+    // A same-task reconnect can preserve `open` without triggering an update.
     if (this.hasUpdated) {
       this.syncOpenLifecycle();
       void this.syncRovingStops();
@@ -331,10 +327,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private syncOpenLifecycle(): void {
     if (!this.isConnected) {
-      // Lit can finish a queued update after removal. Never let that detached update resume the
-      // suspended handle against its former document (or activate a fresh document listener).
-      // Retiring the handle here also means the next connectedCallback necessarily registers
-      // against the element's then-current owner document.
+      // A queued update can run after removal. Retire the overlay in its former document.
       this.retirePositioning();
       this.overlay?.deactivate();
       this.overlay = undefined;
@@ -473,7 +466,6 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       )
     );
     await Promise.resolve();
-    // No asynchronous boundary separates this current snapshot from the roving writes.
     const buttons = this.actionButtons();
     if (
       request !== this.rovingGeneration ||

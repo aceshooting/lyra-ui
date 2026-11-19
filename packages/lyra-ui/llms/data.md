@@ -178,9 +178,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
-  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
-  `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
-  just hover. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`). An unlinked
+  value with exact text is a tab stop and exposes that text as its accessible description.
+  `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -272,8 +272,9 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 
 **Known gotchas:**
 
-- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips but omit
-  their own `tabindex` to avoid nesting focus targets inside the anchor.
+- When `href` makes the whole stat a link, exact-value spans keep their hover tooltips and share
+  the card's tab stop. The link exposes the headline exact value as its accessible description.
+  Each breakdown value exposes its own exact text when supplied.
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
   more specific name than the visible label/value/unit.
@@ -443,8 +444,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   without emitting the user-only row events.
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
   when selection is empty) as TSV by default and returns the copied row count. Its options include
-  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
-  explicit delimiter overrides the one normally selected by `format`. Clipboard settlement is
+  `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`.
+  A non-empty delimiter overrides the one selected by `format`. Clipboard settlement is
   asynchronous: `lr-copy` fires only after the owning context's write fulfills (including a
   successful legacy textarea fallback), while rejection emits `lr-error` plus `lr-copy-error` and
   announces the localized `copyFailed` string. Copy intent alone is never reported as success.
@@ -453,8 +454,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
   `filename` aliases were **removed in 9.0.0** — rename them to `columnIds` and `fileName` (the
   spellings `wa-data-grid` uses); an unrenamed call silently falls back to every visible column and
-  `data.csv`. Formula escaping is on by default for string cells beginning with `=`, `+`,
-  `-`, or `@`; numeric values remain numeric.
+  `data.csv`. An empty delimiter uses the default separator. Formula escaping applies to text
+  cells by default. Finite numbers retain numeric text and are quoted if they include the separator.
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
   filter but before the named column's own filter. Server mode returns an empty map.
@@ -1763,9 +1764,9 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
 - no documented component-specific sizing custom property. The host box is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
-  on the element instead. The value/label captions are `em`-sized against that same host font-size,
-  so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
-  combine a small tier (or a small host `font-size`) with `without-value` for a slim,
+  on the element instead. The linear track stretches to fill its allocation. The captions keep
+  their proportions and size against the host font, including when the track narrows. Combine a
+  small tier (or a small host `font-size`) with `without-value` for a slim,
   thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
   `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
@@ -1931,6 +1932,10 @@ and repeated edge movements append repeated announcements even when their text i
 no live-region role of its own. Pointer input resolves the word under the pointer (else the one
 with the nearest edge) from the adequately-sized SVG surface; the potentially tiny text glyphs are
 not independent hit targets.
+
+The SVG scales to the space the parent provides, so `min-font-size` sets the floor in layout units.
+Set a CSS `min-inline-size` on the cloud when words must stay legible. Check the longest labels at
+that width and allow horizontal scrolling on the parent when the surrounding layout can be narrower.
 
 Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
 fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
@@ -2181,6 +2186,7 @@ Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring is redrawn over
 every draw, and the cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Calendar day inputs use canonical Gregorian `YYYY-MM-DD` dates, such as `2026-01-08`.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
 previous/next movement instead of swapping for RTL.
@@ -3608,7 +3614,9 @@ to a hover mix from the selected fill. The tree also exposes paired
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
+fallbacks). For unchecked boxes, `--lr-tree-checkbox-hover-border-color` and
+`--lr-tree-checkbox-active-border-color` set the hover and pressed borders. Selected rows use
+brand text at rest and on-quiet text while hovered or pressed;
 `--lr-tree-selected-color` overrides all three states. Pressed rows mix from the selected fill
 when selected and from `--lr-color-brand-quiet` otherwise. Each
 checkbox border token also paints that state's border under the pointer; and paired
@@ -4327,7 +4335,9 @@ page gives it.
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted while `without-lock` is set).
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
-`var(--lr-color-brand)`, pressed lock-button foreground); the buttons accept the shared
+`var(--lr-color-brand)`, pressed lock-button foreground). `--lr-flow-controls-hover-bg` and
+`--lr-flow-controls-active-bg` set the hover and pressed fills of enabled toolbar and slotted
+buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
 `var(--lr-radius)`); plus shared tokens —
@@ -4869,13 +4879,18 @@ inter-item spacing and the length each rail bridges. `--lr-timeline-cluster-size
 each horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
+`--lr-timeline-ordered-marker-size` (falls back to `--lr-timeline-marker-size`, then
+`var(--lr-size-1-5rem)`),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, with a private default that changes per `variant`),
+`var(--lr-color-text-quiet)` for neutral markers), `--lr-timeline-marker-neutral-color`,
+`--lr-timeline-marker-brand-color`, `--lr-timeline-marker-success-color`,
+`--lr-timeline-marker-warning-color`, and `--lr-timeline-marker-danger-color` (variant colors
+used when `--lr-timeline-marker-color` is unset),
 `--lr-timeline-marker-number-color` (default `var(--lr-color-text)`, the step number inside an
-`ordered` timeline's marker ring; the marker size defaults to `var(--lr-size-1-5rem)` there), and
+`ordered` timeline's marker ring), and
 `--lr-timeline-active-ring-color`
-(defaults to the effective marker color). All six item hooks inherit from theme
+(defaults to the effective marker color). Item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="marker-icon"`.
@@ -5366,7 +5381,9 @@ AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
 `components/data/condition-builder/condition-builder-register.js` registers the controls used by
 ordinary string, number, boolean and single-value enum rows. Import `lr-date-input.js` for date
-fields and `lr-combobox.js` for multi-value enum operators. The default entry registers both.
+fields and `lr-combobox.js` for multi-value enum operators when using that entry. The default
+entry loads text, number, date, and multi-value enum editors for the first row that uses them.
+Import an editor's tag-shaped entry to use that editor independently.
 
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases

@@ -27,10 +27,6 @@ export const styles = css`
     display: inline-block;
     inline-size: 100%;
     min-inline-size: 0;
-    /* Same shipped 24rem ceiling lr-model-select carries, and published under the same contract:
-       kept as the default so no existing layout moves, read as a var() fallback so a consumer can
-       retune it or set none for a full-width row, and never declared on :host so an ancestor theme
-       wrapper's value still reaches this control. */
     max-inline-size: var(--lr-voice-picker-max-inline-size, var(--lr-size-24rem));
     --_lr-voice-picker-gap-default: var(--lr-space-xs);
     --_lr-voice-picker-radius-default: var(--lr-form-control-radius);
@@ -38,10 +34,6 @@ export const styles = css`
     --_lr-voice-picker-trigger-padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
     --_lr-voice-picker-font-size: var(--lr-form-control-font-size);
     --_lr-voice-picker-expand-size: var(--lr-size-1-75rem);
-    /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
-       undeclared -- only this private copy of it is declared -- so a value set on :root or any
-       ancestor still reaches this trigger, while the halo itself is painted in one place for every
-       field-shaped control in the library. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host(:disabled) {
@@ -57,8 +49,6 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  /* required plus a visible label, marked like every other field; the [hidden] rule above keeps
-     the marker from orphaning a stray glyph when no label is set. */
   ${formControlRequiredMarker}
 
   .control-row {
@@ -74,9 +64,7 @@ export const styles = css`
     gap: var(--lr-voice-picker-gap, var(--_lr-voice-picker-gap-default));
     flex: 1 1 auto;
     min-inline-size: 0;
-    /* Neither public name is declared on :host: both are read only through these var() fallbacks,
-       so a declared value (even auto) would dead-arm them. The shared ladder height is the floor;
-       --lr-voice-picker-trigger-height pins an exact height, flooring and capping at once. */
+    /* Leave the height hook unset so the minimum can supply the default. */
     min-block-size: var(
       --lr-voice-picker-trigger-height,
       var(
@@ -87,9 +75,6 @@ export const styles = css`
     block-size: var(--lr-voice-picker-trigger-height, auto);
     box-sizing: border-box;
     padding: var(--lr-voice-picker-trigger-padding, var(--_lr-voice-picker-trigger-padding));
-    /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
-       ancestor or :root value still wins -- the same shape as lr-select's own trigger, which had
-       the identical hardcoded pair before its own fix. */
     border: var(--lr-border-width-thin) solid
       var(--lr-voice-picker-trigger-border-color, var(--lr-color-border));
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
@@ -117,10 +102,7 @@ export const styles = css`
   [part='combobox']:focus-within {
     ${focusRing}
   }
-  /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
-     lr-select and lr-model-select): the outline above is the accessibility answer to keyboard
-     focus and stays unchanged, while a halo a consumer deliberately configured should read on a
-     pointer focus too. Unset it resolves to none, so this rule paints nothing by default. */
+  /* An opted-in focus halo is also visible after a pointer click. */
   [part='trigger']:focus,
   [part='combobox']:focus-within {
     ${formControlFocusHalo}
@@ -170,12 +152,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     inline-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
-    /* The action sits beside the trigger in an align-items: stretch row, but stretch does not
-       apply to an item with a definite cross size -- so a definite block-size here would stay at
-       the ladder height while the field moved, leaving a short top-aligned square next to a taller
-       field. It reads the SAME two-name chain the field reads, in the same order: raising only the
-       floor moves the field exactly as pinning an exact height does, so an action that followed
-       only -trigger-height would reproduce that defect for every consumer who set the floor. */
+    /* Match either height override so the preview button tracks the trigger. */
     block-size: var(
       --lr-voice-picker-trigger-height,
       var(
@@ -183,9 +160,6 @@ export const styles = css`
         max(var(--lr-icon-button-size), var(--lr-form-control-height))
       )
     );
-    /* Compact picker chrome may be smaller than the WCAG interaction floor; the independent
-       preview action never is -- the floor stays below the hook, so pinning a short field cannot
-       shrink this hit area. */
     ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
@@ -226,29 +200,20 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    /* Clamped against internal/positioner.js's place()-published available-space properties, as in
-       menu.styles.ts and combobox.styles.ts, so the popup can't overflow a short viewport. */
     max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
-    /* Pinned explicitly: per spec, once one axis is forced non-'visible' the other computes to
-       'auto' too, so sub-pixel rounding can raise a phantom horizontal scrollbar (the bug
-       lr-tab-group's tablist was fixed for). inline-size is max-content below, so this axis never
-       needs to scroll. */
+    /* Prevent a horizontal scrollbar when rounding the popup width. */
     overflow-x: hidden;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem), var(--lr-positioner-available-inline-size, 100vw));
     padding: var(--lr-space-xs);
-    /* Fill and edge from the shared overlay-surface family
-       (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with
-       the family only as its middle fallback, so a component-scoped override still wins. */
     ${overlaySurfaceFill}
     ${overlaySurfaceControlEdge}
     border-radius: var(
       --lr-voice-picker-radius,
       var(--lr-overlay-radius, var(--_lr-voice-picker-radius-default))
     );
-    /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     ${anchoredPopupReveal}
   }
@@ -285,17 +250,11 @@ export const styles = css`
       var(--lr-font-weight-semibold)
     );
   }
-  /* The three row-state rules below must stay AFTER the [aria-selected='true'] rule above: all
-     four are (0,2,0) on the same row element, so source order decides the selected row's
-     background. Reversed, --lr-voice-picker-option-selected-bg (transparent by default) swallowed
-     hover, press and the [data-active] aria-activedescendant highlight. The selected rule still
-     paints border-color, color and font-weight, untouched here. */
+  /* Interaction backgrounds take priority over selection. */
   [part='option']:where(:not([aria-disabled='true'])):hover,
   [part='option'][data-active] {
     background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
-  /* Mixes the SAME --lr-voice-picker-option-active-bg as the hover/active-descendant rule above,
-     so retinting the highlight gets a matching pressed step. */
   [part='option']:where(:not([aria-disabled='true'])):active {
     background: color-mix(
       in oklab,
@@ -303,11 +262,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  /* A row whose catalog entry declares disabled is non-actionable: it keeps its own label and meta
-     text (still the datum it always was) but loses the pointer cursor and every hover/press
-     affordance that promises activation, gated above rather than overridden here -- the
-     option-preview control beside it is unaffected, since previewing a voice is a separate
-     affordance from selecting it. */
+  /* A voice can still be previewed when selection is disabled. */
   [part='option'][aria-disabled='true'] {
     cursor: default;
     opacity: var(--lr-voice-picker-option-disabled-opacity, var(--lr-opacity-disabled));
@@ -364,8 +319,6 @@ export const styles = css`
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
-  /* Mixes the SAME --lr-voice-picker-preview-hover-bg as the rule above, so retinting the hover
-     fill gets a matching pressed step with no second property to keep in sync. */
   [part='option-preview']:active {
     background: color-mix(
       in oklab,

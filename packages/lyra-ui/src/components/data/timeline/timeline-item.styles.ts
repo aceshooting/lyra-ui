@@ -7,40 +7,30 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* The public marker/rail hooks stay undeclared so a theme wrapper can supply them; this
-       private marker default is swapped per variant and consumed only when no public value
-       inherits from an ancestor or is set on the item. */
-    --_lr-timeline-marker-color-default: var(--lr-color-text-quiet);
+    --_lr-timeline-marker-color-default: var(--lr-timeline-marker-neutral-color, var(--lr-color-text-quiet));
   }
   :host([variant='brand']) {
-    --_lr-timeline-marker-color-default: var(--lr-color-brand);
+    --_lr-timeline-marker-color-default: var(--lr-timeline-marker-brand-color, var(--lr-color-brand));
   }
   :host([variant='success']) {
-    --_lr-timeline-marker-color-default: var(--lr-color-success);
+    --_lr-timeline-marker-color-default: var(--lr-timeline-marker-success-color, var(--lr-color-success));
   }
   :host([variant='warning']) {
-    --_lr-timeline-marker-color-default: var(--lr-color-warning);
+    --_lr-timeline-marker-color-default: var(--lr-timeline-marker-warning-color, var(--lr-color-warning));
   }
   :host([variant='danger']) {
-    --_lr-timeline-marker-color-default: var(--lr-color-danger);
+    --_lr-timeline-marker-color-default: var(--lr-timeline-marker-danger-color, var(--lr-color-danger));
   }
 
   [part='base'] {
     display: flex;
     min-inline-size: 0;
-    /* Driven by the private orientation property inherited from <lr-timeline>'s :host across the
-       slot boundary: row (marker beside content) when the timeline is vertical, column (marker
-       above) when horizontal. This component has no orientation attribute of its own;
-       <lr-timeline>'s styles are the source of truth. */
     flex-direction: var(--_lr-timeline-item-direction, row);
     gap: var(--lr-space-s);
   }
 
   [part='track'] {
     display: flex;
-    /* Always the *opposite* axis from [part='base'] -- see the class doc's rail-mechanism note. A
-       second property from the same <lr-timeline> source, since CSS cannot derive the other of
-       row/column from one custom property's value. */
     flex-direction: var(--_lr-timeline-item-track-direction, column);
     align-items: center;
     flex: 0 0 auto;
@@ -52,16 +42,12 @@ export const styles = css`
     border-radius: 50%;
     flex: 0 0 auto;
     background: var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
-    /* A slotted <lr-icon>, or any currentColor-stroked glyph, inherits the variant tint with no
-       extra wiring. */
     color: var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
     display: inline-flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
-  /* The icon slot overrides the fallback dot outright -- only the fill is suppressed, not color,
-     so a slotted <lr-icon> still inherits the variant tint. */
   [part='marker'][data-has-icon] {
     background: transparent;
   }
@@ -71,10 +57,11 @@ export const styles = css`
      whatever surface the timeline sits on. It is at least the marker size and grows for a long
      number instead of clipping it. */
   [part='marker'][data-ordered] {
+    --_lr-timeline-ordered-marker-size: var(--lr-timeline-ordered-marker-size, var(--lr-timeline-marker-size, var(--lr-size-1-5rem)));
     box-sizing: border-box;
     inline-size: auto;
-    min-inline-size: var(--lr-timeline-marker-size, var(--lr-size-1-5rem));
-    block-size: var(--lr-timeline-marker-size, var(--lr-size-1-5rem));
+    min-inline-size: var(--_lr-timeline-ordered-marker-size);
+    block-size: var(--_lr-timeline-ordered-marker-size);
     padding-inline: var(--lr-space-2xs);
     border: var(--lr-border-width-medium) solid
       var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
@@ -87,8 +74,6 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
   }
 
-  /* The pulsing in-progress treatment -- same token/guard shape as lr-stream-status's
-     streaming-phase dot pulse. */
   :host([active]) [part='marker'] {
     outline: var(--lr-border-width-medium) solid
       var(
@@ -117,10 +102,6 @@ export const styles = css`
 
   [part='rail'] {
     flex: 1 1 auto;
-    /* Both dimensions take the same fixed thickness: whichever is [part='track']'s cross axis is
-       the rail's visible width, while the main-axis one is only flex-basis's start, immediately
-       overridden by flex-grow filling whatever length [part='content']'s own padding/height
-       creates (see the class doc's rail mechanism). One declaration covers both orientations. */
     inline-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
     block-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
     background: var(--lr-timeline-rail-color, var(--lr-color-border-subtle));

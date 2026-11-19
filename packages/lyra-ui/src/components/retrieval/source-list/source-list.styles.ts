@@ -1,5 +1,8 @@
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import {
+  disclosureChevron,
+  iconHitTarget,
+} from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -57,22 +60,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
-  [part='toggle'] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    transition: transform var(--lr-transition-fast);
-  }
-  :host([expanded]) [part='toggle'] {
-    transform: rotate(90deg);
-  }
-  /* RTL: the resting (collapsed) chevron mirrors to point left, the conventional mirrored
-     disclosure-triangle direction for RTL. Scoped to the collapsed state rather than a plain
-     :dir(rtl) rule so it never competes with the rule above: the expanded state needs no mirroring,
-     because rotating this left-right-asymmetric glyph 90deg already produces a left-right-symmetric
-     down chevron. Mirrors lr-code-block's identical toggle chevron. */
-  :host(:not([expanded]):dir(rtl)) [part='toggle'] {
-    transform: scaleX(-1);
-  }
+  ${disclosureChevron({
+    glyph: "[part='toggle']",
+    expanded: ":host([expanded]) [part='toggle']",
+    collapsedRtl: ":host(:not([expanded]):dir(rtl)) [part='toggle']",
+  })}
   [part='list'] {
     display: flex;
     flex-direction: column;
@@ -85,10 +77,5 @@ export const styles = css`
   }
   [part='list'][hidden] {
     display: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [part='toggle'] {
-      transition: none !important;
-    }
   }
 `;

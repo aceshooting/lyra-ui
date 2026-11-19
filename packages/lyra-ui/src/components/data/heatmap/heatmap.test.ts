@@ -19,6 +19,7 @@ import type { LyraHeatmapStickyLabels as RootHeatmapStickyLabels } from "../../.
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 
 type MatrixData = Extract<LyraHeatmap["data"], { kind: "matrix" }>;
 type CalendarData = Extract<LyraHeatmap["data"], { kind: "calendar" }>;
@@ -3859,6 +3860,9 @@ describe("coverage: color/theme helper edge cases", () => {
     const ctx = canvas.getContext("2d")!;
     // The label fillStyle assignment is the last one drawMatrix() makes, so it's still current here.
     expect(ctx.fillStyle).to.equal("#009600");
+    el.style.setProperty('--lr-color-text-quiet', 'initial');
+    el.refreshTheme();
+    await waitUntil(() => ctx.fillStyle === '#6b7280');
   });
 
   it("bucket-count: removing the attribute resets to the default via fromAttribute(null)", async () => {
@@ -6320,23 +6324,28 @@ describe("accessible cell overlay edge paths", () => {
     el.addEventListener("lr-cell-activate", () => clicks++);
 
     cell.dataset["cellKey"] = "matrix-99-99";
-    cell.dispatchEvent(new FocusEvent("focus"));
-    cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    const arrow = new KeyboardEvent("keydown", {
-      key: "ArrowRight",
-      bubbles: true,
-      cancelable: true,
-    });
-    cell.dispatchEvent(arrow);
+    await focusByKeyboard(cell);
+    cell.click();
+    let arrowPrevented: boolean | undefined;
+    cell.addEventListener('keydown', event => { arrowPrevented = event.defaultPrevented; }, { once: true });
+    await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
     expect(clicks, "an unresolvable key emits nothing").to.equal(0);
-    expect(arrow.defaultPrevented).to.be.false;
+    expect(arrowPrevented).to.equal(false);
 
     delete cell.dataset["cellKey"];
-    cell.dispatchEvent(new FocusEvent("focus"));
-    cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await focusByKeyboard(cell);
+    cell.click();
     await el.updateComplete;
     expect(clicks, "a missing key emits nothing either").to.equal(0);
+  });
+
+  it('keeps the first accessible window when the saved focus key is stale', async () => {
+    const el = await fixture<LyraHeatmap>(overlay());
+    (el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell = { row: 99, col: 99 };
+    await el.updateComplete;
+    const cellKeys = Array.from(el.shadowRoot!.querySelectorAll('[part="cell"]'), cell => cell.getAttribute('data-cell-key'));
+    expect(cellKeys).to.deep.equal(['matrix-0-0', 'matrix-0-1', 'matrix-1-0', 'matrix-1-1']);
   });
 
   it("ignores a non-arrow key on an accessible cell", async () => {

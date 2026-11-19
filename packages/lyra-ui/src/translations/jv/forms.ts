@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pulpen mudhun',
   signaturePadPenUp: 'Pulpen munggah',
   signaturePadDrawingLimit: 'Wates nggambar wis tekan.',
+  catalogPickerSearchLoadFailed: 'Kothak panggolèkan ora bisa dimuat.',
   localePickerInputLimit: 'Mung 512 entri setelan basa lan wilayah sing kapisan sing kasedhiya.',
   emojiPickerInputLimit: 'Sawetara data emoji ora dilebokake amarga wates input wis tekan.',
 };

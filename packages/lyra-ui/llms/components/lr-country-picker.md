@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,7 +83,10 @@ otherwise labels or the localized Country, Time zone or Unit name apply. Externa
 `positioningStrategy: 'fixed' | 'absolute'` (`positioning-strategy`) follow the select contract.
 An omitted positioning strategy inherits `--lr-positioning-strategy`, else both modes use `absolute`.
 The filter control (`lr-combobox`) loads the first time `searchable` is enabled, so a plain picker
-never ships it; `await picker.updateComplete` resolves once it has taken over. A committed `disabled`
+never ships it. `await picker.updateComplete` waits for the load to settle. On failure the
+picker emits `lr-load-error` and keeps the compact control available, with a localized
+`search-error` notice and a `search-retry` button. The notice uses `catalogPickerSearchLoadFailed`.
+A committed `disabled`
 entry stays visible and invalid with a "not in catalog" badge in all four pickers.
 
 `name`, `form`, `required`, `disabled`, `value`, `defaultValue`, fieldset disablement and native
@@ -117,8 +120,9 @@ and `blur` relay once; canceling `lr-invalid` suppresses native validation UI.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
 input-loss notice), `select-trigger`,
 `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`
-and `select-clear-button`; country additionally exposes `flag`. The three field slots are the only content slots; supply options through
-the catalog property. Shared form-control and surface tokens apply, including RTL and dark themes.
+`select-clear-button`, `search-error`, and `search-retry`; country additionally exposes `flag`.
+Supply options through the catalog property. Shared form-control and surface tokens apply,
+including RTL and dark themes. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 
 ```html
 <script type="module">

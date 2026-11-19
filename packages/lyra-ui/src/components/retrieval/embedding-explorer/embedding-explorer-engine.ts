@@ -150,8 +150,7 @@ export class EmbeddingEngineController {
   }
 
   private fail(reason: Engine3dFallbackReason): void {
-    // Only a failed WebGL renderer descends here. Repeated callbacks from a lost context must
-    // never claim that the independently rendered SVG fallback has failed as well.
+    // Late WebGL failure callbacks cannot invalidate the SVG fallback.
     const detail = this.selection.renderer === 'webgl' ? this.selection.fail(reason) : null;
     this.loading = this.ready = false;
     if (reason !== 'context-lost') {

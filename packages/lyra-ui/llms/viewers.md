@@ -114,7 +114,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   geometry is captured when `highlights` is assigned: an invalid or accessor-backed `region` anchor
   is ignored, and mutating an accepted anchor later does not move its painted region. Reassign
   `highlights` to update it; the original public anchor identity remains available for
-  reference-based `scrollToAnchor()`.
+  reference-based `scrollToAnchor()`. Regions use on-image controls while their minimum hit areas
+  fit without overlapping. If the hit areas overlap, a separate action list provides the controls.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds: readonly LyraAnchor['kind'][] = ['region']` (this viewer's supported
@@ -293,8 +294,8 @@ value, without suppressing the visible `name` heading.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the highlight id
-  marked active in the built-in `<lr-document-preview>` fallback. Registry renderers do not receive
-  it; call `scrollToAnchor(id)` to activate a highlight there.
+  marked active in the built-in `<lr-document-preview>` fallback. Call `scrollToAnchor(id)`
+  to jump to the corresponding highlight in a registry renderer.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.
@@ -907,6 +908,9 @@ remaining height; an auto-height host keeps the `10rem` minimum. The chapter ifr
 carry a `title` taken from `name` (or the localized region name). Changing `src` clears `location`
 unless the same update assigns a new one; a reconnect keeps it.
 
+`--lr-viewer-pager-button-hover-bg` (default `var(--lr-color-brand-quiet)`) sets the chapter
+buttons' hover fill and the base for their pressed fill.
+
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
 unambiguous beside other previous/next controls and are overridable through `.strings`.
@@ -1022,7 +1026,9 @@ mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
-property, which writes this token inline.
+property, which writes this token inline. `--lr-viewer-pager-button-hover-bg`
+(default `var(--lr-color-brand-quiet)`) sets the pager buttons' hover fill and the base for their
+pressed fill.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
@@ -1528,10 +1534,8 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
 `previous-button`, `next-button`, `zoom-out-button`,
 `zoom-in-button` (the four toolbar controls, each with its own part name because a descendant
-combinator after `::part()` never matches; these are borderless text toolbar buttons tinted by
-`--lr-pdf-viewer-toolbar-button-hover-bg`, unlike the bordered chevron pager buttons of
-`lr-pptx-viewer` and `lr-ebook-viewer`, so a `::part(previous-button)` rule written for one does not
-transfer unchanged), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+combinator after `::part()` never matches; all four controls are borderless text buttons),
+`page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
@@ -1569,7 +1573,8 @@ height, not a cap. `--lr-pdf-viewer-toolbar-bg` (default
 `--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
 fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
-visible against the toolbar behind it. `--lr-pdf-viewer-text-selection-bg` (default
+visible against the toolbar behind it. `--lr-viewer-pager-button-hover-bg` overrides this fill
+and the base for the pressed fill on previous and next. `--lr-pdf-viewer-text-selection-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a native text selection over a `text-span`,
 independent of the shared `--lr-color-brand-quiet` token. `--lr-pdf-viewer-search-match-bg` (default
 `var(--lr-color-warning-quiet)`) and `--lr-pdf-viewer-search-match-active-bg` (default
@@ -2101,7 +2106,8 @@ and activation. With `without-interaction`, the base is `aria-hidden` pure paint
 accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
-re-click of the same source citation).
+re-click of the same source citation). Reassigning the original array or the snapshot returned
+by `items` keeps the current cue. Assigning a fresh array or disconnecting clears it.
 
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
 `detail: { highlightId }`.

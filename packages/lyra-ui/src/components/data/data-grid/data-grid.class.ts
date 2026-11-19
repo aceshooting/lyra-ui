@@ -1,5 +1,6 @@
 import { copyOutcome, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { downloadBlob } from '../../../internal/csv.js';
+import { createInputMemo } from '../../../internal/input-memo.js';
 import { MeasuredOffsetIndex } from '../../../internal/measured-offset-index.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
@@ -941,12 +942,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** The value each snapshotting collection setter last received. */
   private readonly assignedSources = new CollectionSourceTracker();
 
-  /**
-   * Whether assigning `value` to `name` is a rebind rather than a change: the exact value that
-   * property last received, or its current snapshot read back. Declarative hosts re-commit object
-   * and array bindings on every render; snapshotting such a rebind used to look like new data
-   * (resetting the shift-range anchor, re-running the pipeline, dropping row measurements).
-   */
   private isRebind(name: string, value: unknown, current: unknown): boolean {
     return this.assignedSources.isRebind(name, value, current);
   }
@@ -1309,16 +1304,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   set selectedKeys(value: readonly DataGridKey[]) {
     this.selectedRowKeys = value;
   }
-  /** Selected rows, derived from `selectedRowKeys`. Assigning current source rows updates those keys. */
-  get selectedRows(): readonly Row[] {
-    const rows = this.allSourceRows;
-    return this.memoize('selectedRows', [rows, this.selectedKeys], () => {
+  private readonly selectedRowsFor = createInputMemo(
+    (_rows: readonly Row[], keys: readonly DataGridKey[]): readonly Row[] => {
       const byKey = this.canonicalRowIndex();
       const positions = this.sourceIndexMap();
-      return frozenArray(this.selectedKeys.flatMap(key => {
-        const row = byKey.get(key); return row === undefined ? [] : [row];
+      return frozenArray(keys.flatMap(key => {
+        const row = byKey.get(key);
+        return row === undefined ? [] : [row];
       }).sort((left, right) => positions.get(left)! - positions.get(right)!));
-    });
+    }
+  );
+
+  /** Selected rows, derived from `selectedRowKeys`. Assigning current source rows updates those keys. */
+  get selectedRows(): readonly Row[] {
+    return this.selectedRowsFor(this.allSourceRows, this.selectedKeys);
   }
   set selectedRows(next: readonly Row[]) {
     const assignment = ++this.selectionAssignment;
@@ -2338,7 +2337,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   /** Copies selected rows, or all processed rows when nothing is selected, and returns the row count.
-   *  An explicit `delimiter` takes precedence over the default selected by `format`. */
+   *  A non-empty `delimiter` takes precedence over the default selected by `format`. */
   copySelectedRows(options: DataGridCopyOptions = {}): number {
     const rowsToCopy =
       this.selectedRows.length > 0
@@ -2347,7 +2346,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const format = options.format ?? 'tsv';
     const text = this.delimitedRows(rowsToCopy, {
       ...options,
-      delimiter: options.delimiter ?? (format === 'csv' ? ',' : '\t'),
+      delimiter: options.delimiter || (format === 'csv' ? ',' : '\t'),
     });
     void this.copyAndReport(text);
     return rowsToCopy.length;
@@ -2446,11 +2445,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this.delimitedRows(this.getProcessedRows(), options);
   }
 
+  private readonly processedRowsFor = createInputMemo(frozenArray<Row>);
+
   /** Returns all filtered and sorted rows before pagination, with each admitted source-row
    * occurrence retained once, matching facets, CSV, and rendered identity. */
   getProcessedRows(): readonly Row[] {
-    const rows = this.processedClientRows;
-    return this.memoize('publicProcessedRows', [rows], () => frozenArray(rows));
+    return this.processedRowsFor(this.processedClientRows);
   }
 
   /** Returns the current page (or all rows when pagination is off). */
@@ -5332,19 +5332,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     `;
   }
 
-  /** The all-columns visibility panel: the library's own checkbox menu (`<lr-dropdown>` plus one
-   *  `<lr-dropdown-item type="checkbox">` per column), the same composition `<lr-filter-bar>`'s
-   *  `'checkbox-menu'` filter type uses. It replaced a hand-rolled `<button>` + `role="group"` +
-   *  native `<input type="checkbox">` panel, which had to be routed through this component's own
-   *  managed-overlay helper for Escape and focus return; the dropdown owns all of that, plus
-   *  `role="menuitemcheckbox"` rows, roving focus and type-ahead, so `columnsMenuOpen` is now only
-   *  mirrored state used to keep the per-column panels mutually exclusive with this one.
-   *
-   *  Rows are controlled, never self-toggling: the cancelable `lr-menu-item-change-request` is
-   *  always prevented and the next visibility comes back out of `columnVisibility` on the next
-   *  render, so a refused toggle (a `hideable: false` column) can never leave a checkmark the grid
-   *  disagrees with. The item's deprecated `lr-menu-item-change` alias is only kept from escaping
-   *  the grid. */
+  // The grid owns column visibility so rejected menu requests preserve the checkmark.
   private renderColumnsMenu(): TemplateResult {
     const label = this.localize('showAllColumns');
     return html`

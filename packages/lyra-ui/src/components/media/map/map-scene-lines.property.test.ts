@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import { sceneArcAltitude, SCENE_ARC_MIN_SEGMENTS, tessellateSceneLines } from './map-scene-lines.js';
+import { sceneArcAltitude, SCENE_ARC_MIN_SEGMENTS, traceSceneLines } from './map-scene-lines.js';
 import type { SceneLineObject } from './map-scene-lines.js';
 
 const radians = Math.PI / 180;
@@ -34,7 +34,7 @@ describe('map scene line geometry properties', () => {
         const arc: SceneLineObject = { kind: 'arc', id: 'arc', label: 'Arc', opacity: 1, interactive: true,
           showLabel: false, start: position([longitude, latitude], 100), end: position([end, latitude], 300),
           height, width: 2 };
-        const [coordinates] = tessellateSceneLines([arc])!;
+        const { coordinates } = traceSceneLines([arc])![0]!;
         expect(coordinates!.length).to.equal(SCENE_ARC_MIN_SEGMENTS + 1);
         expect(coordinates!.every(vertex => vertex.every(Number.isFinite))).to.equal(true);
         expect(coordinates![0]![2]).to.equal(100);
@@ -49,7 +49,7 @@ describe('map scene line geometry properties', () => {
 
   it('keeps great-circle vertices finite, continuous and on the plane of their endpoints', () => {
     fc.assert(fc.property(pair, ([a, b]) => {
-      const [coordinates] = tessellateSceneLines([path([a, b], 'great-circle')])!;
+      const { coordinates } = traceSceneLines([path([a, b], 'great-circle')])![0]!;
       const normal = cross(unit(a), unit(b)), length = Math.hypot(...normal);
       expect(coordinates!.length).to.be.at.least(2);
       expect(coordinates![0]!.slice(0, 2)).to.deep.equal([a[0] === 0 ? 0 : a[0], a[1] === 0 ? 0 : a[1]]);
@@ -71,10 +71,10 @@ describe('map scene line geometry properties', () => {
     fc.assert(fc.property(fc.array(pair, { minLength: 1, maxLength: 20 }), fc.integer({ min: 0, max: 2000 }), (pairs, extra) => {
       const objects = pairs.map(([a, b], index) => ({ ...path([a, b], index % 3 ? 'great-circle' : 'linear'), id: `p${index}` }));
       const floor = objects.length * 2, limit = floor + extra;
-      const generated = tessellateSceneLines(objects, limit);
+      const generated = traceSceneLines(objects, limit);
       expect(generated !== undefined).to.equal(true);
-      expect(generated!.reduce((total, row) => total + row.length, 0)).to.be.at.most(limit);
-      expect(tessellateSceneLines(objects, floor - 1)).to.equal(undefined);
+      expect(generated!.reduce((total, row) => total + row.coordinates.length, 0)).to.be.at.most(limit);
+      expect(traceSceneLines(objects, floor - 1)).to.equal(undefined);
     }), propertyRuns());
   });
 

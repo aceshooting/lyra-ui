@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Kaluar tina salayar',
   videoPlaylistLabel: 'Daptar pidéo',
   videoPlaylistUntitled: 'Pidéo {position}',
+  videoTimeReadout: '{current} tina {duration}',
   pause: 'Reureuh',
   qrCodeMissingLibrary: 'Komponén ieu merlukeun paket "qrcode" opsional pikeun dipasang supaya kode QR bisa dijieun.',
   qrCodeGenerationFailed: 'Nilai ieu teu bisa dikodekeun jadi kode QR.',

@@ -20,6 +20,8 @@ async function openAndWait(
   await element.updateComplete;
   await waitUntil(
     () => renderedPosition(element) === expectedPosition && listbox(element).style.left !== '',
+    `listbox never received live ${expectedPosition} positioning`,
+    { timeout: 3000 },
   );
 }
 

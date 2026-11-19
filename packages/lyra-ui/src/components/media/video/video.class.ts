@@ -11,7 +11,8 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime } from '../../../internal/media-time.js';
+import { resolveLocalizedSlots } from '../../../internal/localization-runtime.js';
+import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.js';
 import { formatProgressPercent } from '../../../internal/progress-value.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
@@ -34,7 +35,7 @@ import type { ThumbnailCue } from './video-thumbnails.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -214,6 +215,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     videoMute: LYRA_DEFAULT_videoMute,
     videoPictureInPicture: LYRA_DEFAULT_videoPictureInPicture,
     videoPlayerLabel: LYRA_DEFAULT_videoPlayerLabel,
+    videoTimeReadout: LYRA_DEFAULT_videoTimeReadout,
     videoUnmute: LYRA_DEFAULT_videoUnmute,
     videoVolume: LYRA_DEFAULT_videoVolume,
   };
@@ -725,20 +727,22 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.mediaController.playbackRate = next;
   }
 
-  /** `[data-control="rate"]`'s `<option>` values -- `PLAYBACK_RATES`, plus the current
-   *  `playbackRate` spliced in (numerically sorted) when it isn't already one of them. Mirrors
-   *  av-player's `rateOptions()`: a native `<select>` shows its first option whenever none
-   *  carries `selected`, so a `playbackRate` reached outside the fixed preset list (e.g. a native
-   *  `ratechange` from a platform media key or a picture-in-picture window) would otherwise
-   *  silently misreport the real rate. */
-  private rateSelectOptions(): readonly number[] {
-    const rates: readonly number[] = PLAYBACK_RATES;
-    return rates.includes(this.playbackRate) ? rates : [...rates, this.playbackRate].sort((a, b) => a - b);
+  private renderTimeReadout(): Array<TemplateResult | typeof nothing> {
+    const times: Record<string, string> = {
+      current: formatMediaTime(this.currentTime, this.effectiveLocale),
+      duration: formatMediaTime(this.duration, this.effectiveLocale),
+    };
+    return resolveLocalizedSlots(this.localize('videoTimeReadout'), ['current', 'duration'], (markers) =>
+      this.localize('videoTimeReadout', undefined, { current: markers['current']!, duration: markers['duration']! })
+    ).map((part) => {
+      if (typeof part !== 'string') return html`<span data-time>${times[part.slot]}</span>`;
+      return part.trim() ? html`<span aria-hidden="true">${part.trim()}</span>` : nothing;
+    });
   }
 
   private renderRateOptions(): TemplateResult[] {
     const format = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
-    return this.rateSelectOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${
+    return withCurrentRate(PLAYBACK_RATES, this.playbackRate).map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${
       this.localize('avPlayerRateOption', undefined, { rate: format.format(rate) })
     }</option>`);
   }
@@ -1176,9 +1180,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
             <span part="timeline-thumb" style=${styleMap({ 'inset-inline-start': `${progress}%` })}></span>
             ${this.renderThumbnail()}
           </div>
-          <span data-time>${formatMediaTime(this.currentTime, this.effectiveLocale)}</span>
-          <span aria-hidden="true">/</span>
-          <span data-time>${formatMediaTime(this.duration, this.effectiveLocale)}</span>
+          ${this.renderTimeReadout()}
           <span class="icon-button-stack">
             <button
               type="button"

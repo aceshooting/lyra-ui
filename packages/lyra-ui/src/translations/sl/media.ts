@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Zapri celozaslonski način',
   videoPlaylistLabel: 'Seznam videoposnetkov',
   videoPlaylistUntitled: 'Videoposnetek {position}',
+  videoTimeReadout: '{current} od {duration}',
   pause: 'Začasno ustavi',
   qrCodeMissingLibrary: 'Ta komponenta za izris kod QR potrebuje nameščen izbirni paket »qrcode«.',
   qrCodeGenerationFailed: 'Te vrednosti ni bilo mogoče kodirati kot kodo QR.',

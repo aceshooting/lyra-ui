@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Rašiklis nuleistas',
   signaturePadPenUp: 'Rašiklis pakeltas',
   signaturePadDrawingLimit: 'Pasiekta piešimo riba.',
+  catalogPickerSearchLoadFailed: 'Nepavyko įkelti paieškos lauko.',
   localePickerInputLimit: 'Pasiekiami tik pirmieji 512 lokalės įrašų.',
   emojiPickerInputLimit: 'Dalis jaustukų duomenų praleista, nes pasiekta įvesties riba.',
 };

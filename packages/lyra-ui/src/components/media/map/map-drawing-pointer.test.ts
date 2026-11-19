@@ -100,6 +100,33 @@ describe('MapDrawingPointer', () => {
     expect(fixture.controller.begin(pointer('pointerdown'))).to.equal(false);
     expect(fixture.order).to.deep.equal(['pan', 'capture', 'release-capture', 'release-pan']);
   });
+  it('releases pan only once when capture acquisition disposes its owner and throws', () => {
+    const { canvas, controller, order } = setup();
+    canvas.setPointerCapture = () => {
+      order.push('capture');
+      controller.dispose();
+      throw new Error('Capture failed after disposal');
+    };
+    const down = pointer('pointerdown');
+    expect(controller.begin(down)).to.equal(false);
+    expect(down.defaultPrevented).to.equal(false);
+    expect(order).to.deep.equal(['pan', 'capture', 'release-capture', 'release-pan']);
+  });
+  for (const dispose of [false, true]) {
+    it(`releases capture and pan once when cancelling the press throws${dispose ? ' after disposal' : ''}`, () => {
+      const { controller, order } = setup();
+      const down = pointer('pointerdown');
+      Object.defineProperty(down, 'preventDefault', {
+        value() {
+          if (dispose) controller.dispose();
+          throw new Error('Could not cancel the press');
+        },
+      });
+      expect(controller.begin(down)).to.equal(false);
+      controller.dispose();
+      expect(order).to.deep.equal(['pan', 'capture', 'release-capture', 'release-pan']);
+    });
+  }
   it('does not replace after unproject invalidation and removes all listeners on dispose', () => {
     const fixture = setup(); fixture.context.unproject = point => { fixture.stale(); return point; };
     fixture.controller.begin(pointer('pointerdown')); fixture.canvas.dispatchEvent(pointer('pointermove', 50, 70));

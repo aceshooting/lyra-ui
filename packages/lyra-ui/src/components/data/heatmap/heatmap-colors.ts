@@ -1,4 +1,5 @@
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { readCanvasRgba, toRgbaString } from '../../../internal/canvas-color.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 
 const HEX_RE = /^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -44,36 +45,7 @@ function parseRgbString(
   return [Number(match[1]), Number(match[2]), Number(match[3]), a];
 }
 
-/** Resolves the color `ctx.fillStyle` currently holds to concrete `[r, g, b, a]` bytes by
- *  rendering and reading back a single pixel, the same `getImageData(0, 0, 1, 1)` idiom
- *  `theme.ts`/`shiki-dark-theme.ts`/`color-core.ts` already use elsewhere in this library. Unlike
- *  string-matching the canvas's read-back serialization, this resolves any CSS color syntax the
- *  canvas accepts -- including `oklch()`, `lab()`, and `color(display-p3 ...)`, which canvas
- *  round-trips through `ctx.fillStyle` using their own literal syntax rather than normalizing to
- *  a form `hexToRgb`/`parseRgbString` recognize -- without hand-implementing each color space's
- *  conversion math. Returns `null` if `getImageData` itself throws (e.g. a tainted canvas). */
-function resolveViaPixelReadback(
-  ctx: CanvasRenderingContext2D
-): [number, number, number, number] | null {
-  try {
-    ctx.clearRect(0, 0, 1, 1);
-    ctx.fillRect(0, 0, 1, 1);
-    const [r = 0, g = 0, b = 0, a = 0] = ctx.getImageData(0, 0, 1, 1).data;
-    return [r, g, b, a / 255];
-  } catch {
-    return null;
-  }
-}
-
-/** Formats an `[r, g, b, a]` quadruple as the shortest equivalent CSS color —
- *  `rgb(r, g, b)` when fully opaque (matching every pre-alpha-support call
- *  site's output exactly), `rgba(r, g, b, a)` otherwise. */
-export function formatRgb([r, g, b, a]: [number, number, number, number]): string {
-  const alpha = Math.min(1, Math.max(0, a));
-  return alpha >= 1
-    ? `rgb(${r}, ${g}, ${b})`
-    : `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
-}
+export { toRgbaString as formatRgb };
 
 function warnInvalidColor(color: string): void {
   devWarnOnce(
@@ -83,17 +55,7 @@ function warnInvalidColor(color: string): void {
   );
 }
 
-let warnedNoCanvasContext = false;
-
-/** Distinct from `warnInvalidColor()`: that one means "this color string is not valid CSS", this
- *  one means "the environment can't tell us, because there is no canvas 2D context to parse it
- *  with". Both end at the same fallback, so without separate messages a consumer debugging a wrong
- *  ramp color cannot tell a typo'd token from a headless/canvas-disabled environment. Warned once
- *  per page, not once per color: the cause is environmental, and `resolveRgb()` runs per ramp
- *  endpoint on every draw pass. */
 function warnNoCanvasContext(): void {
-  if (warnedNoCanvasContext) return;
-  warnedNoCanvasContext = true;
   devWarnOnce(
     'heatmap-no-canvas-context',
     '<lr-heatmap>: no 2D canvas context is available in this environment; color resolution ' +
@@ -110,15 +72,7 @@ function warnNoCanvasContext(): void {
  * "quiet surface" token) round-trips its alpha rather than silently
  * resolving to the fully opaque equivalent.
  *
- * Hand-rolling a parser for every CSS color syntax is unnecessary and
- * error-prone (a naive hex-only parser silently turns an unrecognized format
- * into `NaN` -> `0`, i.e. solid black). The canvas 2D context already
- * implements the full CSS color grammar via its `fillStyle` setter, so this
- * normalizes through that instead. Assigning an unparsable string to
- * `fillStyle` is a spec'd no-op (the previous value is kept, it never
- * throws), so a sentinel round-trip is used to detect that case and fall
- * back to `fallbackHex` (with a one-time development diagnostic) instead of
- * silently drawing the wrong color.
+ * Uses canvas normalization and falls back to `fallbackHex` for invalid colors.
  */
 export function resolveRgb(
   color: string,
@@ -135,20 +89,23 @@ export function resolveRgb(
     return fallback;
   }
 
-  const sentinel = 'rgb(1, 2, 3)';
-  ctx.fillStyle = sentinel;
+  ctx.fillStyle = 'rgb(1, 2, 3)';
   const sentinelNormalized = ctx.fillStyle;
   ctx.fillStyle = color;
-  if (ctx.fillStyle === sentinelNormalized && color.trim() !== sentinel) {
-    warnInvalidColor(color);
-    return fallback;
+  if (ctx.fillStyle === sentinelNormalized) {
+    ctx.fillStyle = 'rgb(4, 5, 6)';
+    const second = ctx.fillStyle;
+    ctx.fillStyle = color;
+    if (ctx.fillStyle === second) {
+      warnInvalidColor(color);
+      return fallback;
+    }
   }
   const normalized = ctx.fillStyle;
-  return (
-    hexToRgb(normalized) ??
-    parseRgbString(normalized) ??
-    resolveViaPixelReadback(ctx) ??
-    fallback
-  );
+  // A pixel read quantizes alpha, so prefer the serialized value when possible.
+  const parsed = hexToRgb(normalized) ?? parseRgbString(normalized);
+  if (parsed) return parsed;
+  const rgba = readCanvasRgba(ctx.canvas.ownerDocument, normalized, ctx);
+  return rgba ? [...rgba] : fallback;
 }
 

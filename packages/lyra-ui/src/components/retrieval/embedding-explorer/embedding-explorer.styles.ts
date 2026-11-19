@@ -155,19 +155,14 @@ export const styles = css`
   [part='page-button']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
   [part='page-button']:active { border-color: var(--lr-color-brand); }
   [part='page-button']:disabled { background: var(--lr-embedding-explorer-page-disabled-fill, var(--lr-color-surface)); cursor: default; opacity: var(--lr-opacity-disabled); }
-
-
   lr-graph-legend::part(item) { padding: 0; color: var(--lr-color-text-quiet); }
   lr-graph-legend::part(label) { overflow-wrap: anywhere; white-space: normal; }
-
 
   [part='empty'] {
     margin: 0;
     color: var(--lr-color-text-quiet);
   }
 
-  /* A floor, never a fixed size: min-block-size only ever raises the resolved block-size, so a
-     taller height still wins at narrow allocations. */
   @container ${compactContainerQuery} {
     [part='plot'] {
       min-block-size: var(--lr-size-12rem);

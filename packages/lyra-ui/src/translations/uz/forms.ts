@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Qalam pastda',
   signaturePadPenUp: 'Qalam tepada',
   signaturePadDrawingLimit: 'Chizish chegarasiga yetildi.',
+  catalogPickerSearchLoadFailed: 'Qidiruv maydonini yuklab boʻlmadi.',
   localePickerInputLimit: 'Faqat dastlabki 512 ta til va hudud yozuvi mavjud.',
   emojiPickerInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim emoji maʼlumotlari tashlab ketildi.',
 };

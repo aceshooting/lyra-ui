@@ -9,9 +9,8 @@ import { finiteCount, finiteNumber, finiteRange } from '../../../internal/number
 import { resolveBoundedCanvasAllocation, type BoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import {
-  isAbortError,
+  isPdfRenderCancellation,
   LyraUserFacingError,
-  readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
@@ -47,7 +46,7 @@ import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/vir
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
@@ -130,13 +129,6 @@ interface PdfTextAccumulator {
 interface PdfTextLayerBudget {
   remainingItems: number;
   remainingCodeUnits: number;
-}
-
-/** pdf.js rejects a cancelled render task with its own exception, not a DOM AbortError. */
-function isPdfRenderCancellation(error: unknown): boolean {
-  if (isAbortError(error)) return true;
-  const name = typeof error === 'object' && error !== null ? (error as { name?: unknown }).name : undefined;
-  return name === 'RenderingCancelledException' || name === 'AbortException';
 }
 
 function isReadablePdfTextStream(value: unknown): value is ReadableStream<unknown> {
@@ -466,6 +458,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @cssprop [--lr-pdf-viewer-toolbar-button-hover-bg=var(--lr-color-surface)] - Hover fill of the
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
  *   state is actually visible against it.
+ * @cssprop --lr-viewer-pager-button-hover-bg - Hover fill and press tint base for the pager buttons.
  * @cssprop [--lr-pdf-viewer-text-selection-bg=var(--lr-color-brand-quiet)] - Background of a
  *   native text selection over a `text-span`, independent of the shared `--lr-color-brand-quiet`
  *   token.
@@ -554,8 +547,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   @state() private scrollDrivenPage = false;
   private firstVisiblePage = 1;
   private loadLibrary: (workerSrc?: string | null) => Promise<PdfJsApi | null> = loadPdfJs;
-  private generation = 0;
-  private pendingTransportGeneration?: number;
+  private loadSrc = '';
+  private pendingTransport?: object;
+  private readonly source = new ViewerSourceController(this, {
+    load: (response, token) => this.parseDocument(response, token),
+    onError: (error, token) => this.reportLoadError(error, token),
+    retainAcrossMove: () => this.pendingTransport === undefined,
+  });
   private pendingDocument?: { task: PdfLoadingTaskApi; retired: boolean };
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
   private readonly pageRenderTasks = new Map<number, { cancel(): void }>();
@@ -753,13 +751,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.hasUpdated) {
       const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
       if (base && !this.textSelectionCleanup) this.bindTextSelection(base);
-      if (this.src && (!moved || this.pendingTransportGeneration !== undefined)) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
+      if (this.src && (!moved || this.pendingTransport !== undefined)) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
     }
   }
 
   override disconnectedCallback(): void {
-    // Transport is aborted immediately by the base element; an acquired parser task survives a move.
-    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.textSelectionCleanup?.();
     this.textSelectionCleanup = undefined;
     this.announcements.disconnect();
@@ -768,12 +764,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   private teardownDetachedDocument(): void {
-    this.generation++;
+    this.source.cancel();
     this.retirePendingDocument();
     this.resetSearchState();
     this.pendingSearchResetEvent = false;
     this.anchorOperationGeneration++;
-    this.beginAbortableLoad();
     this.cancelPendingPageMountWaits();
     for (const task of this.pageRenderTasks.values()) task.cancel();
     for (const layer of this.textLayers.values()) layer.cancel();
@@ -865,88 +860,81 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async load(): Promise<void> {
     const src = this.src;
-    const generation = ++this.generation;
-    const current = () => this.isConnected && generation === this.generation && src === this.src;
-    this.pendingTransportGeneration = undefined;
+    this.loadSrc = src;
+    this.source.cancel();
     this.firstVisiblePage = 1;
     this.retirePendingDocument();
     this.pageViewerState.advance();
-    const signal = this.beginAbortableLoad();
     this.destroyLoadedDoc();
     if (!src) {
       this.loadState = { kind: 'idle' };
       this.publishPageViewerSnapshot('idle', 0);
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, src);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.loadState = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
+    const transport = {};
+    this.pendingTransport = transport;
+    this.loadState = { kind: 'loading' };
+    try {
+      if (resolveOwnerFetchTarget(this, src)) this.publishPageViewerSnapshot('loading', 0);
+      if (this.isConnected && src === this.src) await this.source.begin(src);
+    } finally {
+      if (this.pendingTransport === transport) this.pendingTransport = undefined;
+    }
+  }
+
+  private isLoadStale(token: ViewerSourceToken): boolean {
+    return this.source.isStale(token) || this.loadSrc !== this.src;
+  }
+
+  private async parseDocument(response: Response, token: ViewerSourceToken): Promise<void> {
+    if (this.isLoadStale(token)) return;
+    const data = await this.source.readArrayBuffer(response);
+    if (this.isLoadStale(token)) return;
+    const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
+    if (this.isLoadStale(token)) return;
+    if (!pdfjsLib) {
+      throw new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'), localize => localize('pdfViewerMissingLibrary'));
+    }
+
+    const pending = { task: pdfjsLib.getDocument({ data }), retired: false };
+    if (this.isLoadStale(token)) {
+      pending.retired = true;
+      this.destroyDocumentResource(pending.task);
+    } else {
+      this.pendingDocument = pending;
+      this.pendingTransport = undefined;
+    }
+    let doc: PdfDocumentApi;
+    try {
+      doc = await pending.task.promise;
+    } catch (error) {
+      if (this.pendingDocument === pending) this.retirePendingDocument();
+      throw error;
+    }
+    if (this.pendingDocument === pending) this.pendingDocument = undefined;
+    if (pending.retired || this.isLoadStale(token)) {
+      if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
       return;
     }
-    this.pendingTransportGeneration = generation;
-    this.loadState = { kind: 'loading' };
-    let acquiringDocument = true;
-    try {
-      this.publishPageViewerSnapshot('loading', 0);
-      if (!current()) return;
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (signal?.aborted || !current() || !response.ok) discardBody(response);
-      if (signal?.aborted || !current()) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const data = await readResponseArrayBuffer(response);
-      if (signal?.aborted || !current()) return;
-      const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
-      if (signal?.aborted || !current()) return;
-      if (!pdfjsLib) {
-        const error = new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'));
-        this.loadState = { kind: 'error', message: () => this.localize('pdfViewerMissingLibrary') };
-        this.publishPageViewerSnapshot('error', 0);
-        if (current()) this.emit('lr-render-error', { error });
-        return;
-      }
-      const pending = { task: pdfjsLib.getDocument({ data }), retired: false };
-      if (signal?.aborted || !current()) {
-        pending.retired = true;
-        this.destroyDocumentResource(pending.task);
-      } else this.pendingDocument = pending;
-      // From here the parser owns its lifetime independently of the completed transport signal.
-      acquiringDocument = false;
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
-      let doc: PdfDocumentApi;
-      try {
-        doc = await pending.task.promise;
-      } catch (error) {
-        if (this.pendingDocument === pending) this.retirePendingDocument();
-        throw error;
-      }
-      if (this.pendingDocument === pending) this.pendingDocument = undefined;
-      if (pending.retired || !current()) {
-        if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
-        return;
-      }
-      const pageCount = finiteCount(doc.numPages, 0, MAX_PAGE_COUNT);
-      if (pageCount < 1 || pageCount !== doc.numPages) {
-        await doc.destroy?.();
-        throw new LyraUserFacingError(this.localize('documentPreviewResourceTooLarge'), localize => localize('documentPreviewResourceTooLarge'));
-      }
-      this.page = 1;
-      this.loadState = { kind: 'ready', doc, pageCount };
-      this.publishPageViewerSnapshot('ready', pageCount);
-      if (current()) this.emit('lr-load', { pageCount });
-    } catch (error) {
-      if ((acquiringDocument && signal?.aborted) || !current()) return;
-      this.loadState = {
-        kind: 'error',
-        message: viewerFailureMessage(error, this.localize.bind(this)),
-      };
-      this.publishPageViewerSnapshot('error', 0);
-      if (current()) this.emit('lr-render-error', { error });
-    } finally {
-      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
+    const pageCount = finiteCount(doc.numPages, 0, MAX_PAGE_COUNT);
+    if (pageCount < 1 || pageCount !== doc.numPages) {
+      await doc.destroy?.();
+      throw new LyraUserFacingError(this.localize('documentPreviewResourceTooLarge'), localize => localize('documentPreviewResourceTooLarge'));
     }
+    this.page = 1;
+    this.loadState = { kind: 'ready', doc, pageCount };
+    this.publishPageViewerSnapshot('ready', pageCount);
+    if (!this.isLoadStale(token)) this.emit('lr-load', { pageCount });
+  }
+
+  private reportLoadError(cause: unknown, token: ViewerSourceToken): void {
+    if (this.isLoadStale(token)) return;
+    const error = cause instanceof ViewerSourceUrlNotAllowedError
+      ? new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'), localize => localize('documentPreviewUrlNotAllowed'))
+      : cause;
+    this.loadState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
+    this.publishPageViewerSnapshot('error', 0);
+    if (!this.isLoadStale(token)) this.emit('lr-render-error', { error });
   }
 
   nextPage(): void { this.scrollDrivenPage = false; this.setPage(this.page + 1); }
@@ -2260,15 +2248,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       viewport,
     });
     this.textLayers.set(pageNumber, textLayer);
-    const renderPromise = textLayer.render().then(
-      () => undefined,
-      (error: unknown) => {
-        if (!isAbortError(error) && this.isConnected && this.textLayers.get(pageNumber) === textLayer) this.emit('lr-render-error', { error });
-      },
-    );
+    const current = (): boolean => this.isConnected
+      && this.textLayers.get(pageNumber) === textLayer
+      && this.pageRenderVersions.get(pageNumber) === version;
+    const renderPromise = textLayer.render().catch((error: unknown) => {
+      if (current()) this.emit('lr-render-error', { error });
+    });
     this.textLayerReadyPromises.set(pageNumber, renderPromise);
     await renderPromise;
-    if (this.textLayers.get(pageNumber) === textLayer && this.pageRenderVersions.get(pageNumber) === version) {
+    if (current()) {
       this.markTextRunParts(container);
       this.resolveMountedPageHighlights();
       // A page that mounts (or remounts, e.g. after a zoom change re-renders every visible page) while

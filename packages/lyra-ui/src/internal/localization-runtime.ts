@@ -2,7 +2,7 @@ import { canonicalizeLocaleTag } from './locale-tag.js';
 import { warnLocaleFallback } from './dev-warning.js';
 import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
 import { readOwnDataValue } from './data-descriptors.js';
-import { getNumberFormat, getPluralRules } from './intl-cache.js';
+import { getMessageNumberFormat, getPluralRules } from './intl-cache.js';
 import { isPlainRecord } from './object-guards.js';
 import type {
   LyraLocaleDirection,
@@ -1255,7 +1255,7 @@ export function resolveLyraStringWithLocale(
       if (typeof value !== 'number') return match;
       if (!Number.isFinite(value)) return String(value);
       locale ??= resolveLocale();
-      return getNumberFormat(locale, { useGrouping: false, maximumFractionDigits: 20 }).format(value + 0);
+      return getMessageNumberFormat(locale).format(value + 0);
     } catch {
       return match;
     }

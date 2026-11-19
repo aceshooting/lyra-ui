@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Penn ned',
   signaturePadPenUp: 'Penn opp',
   signaturePadDrawingLimit: 'Teiknegrensa er nådd.',
+  catalogPickerSearchLoadFailed: 'Søkefeltet kunne ikkje lastast inn.',
   localePickerInputLimit: 'Berre dei første 512 språk- og områdeoppføringane er tilgjengelege.',
   emojiPickerInputLimit: 'Nokre emojidata vart utelatne fordi ei inndatagrense vart nådd.',
 };

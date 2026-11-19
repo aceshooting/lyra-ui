@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Kalem aşağıda',
   signaturePadPenUp: 'Kalem yukarıda',
   signaturePadDrawingLimit: 'Çizim sınırına ulaşıldı.',
+  catalogPickerSearchLoadFailed: 'Arama alanı yüklenemedi.',
   localePickerInputLimit: 'Yalnızca ilk 512 dil ve bölge girdisi kullanılabilir.',
   emojiPickerInputLimit: 'Girdi sınırına ulaşıldığı için bazı emoji verileri atlandı.',
 };

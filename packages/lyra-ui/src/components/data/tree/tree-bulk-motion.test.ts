@@ -1,8 +1,51 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 import { twoFrames } from '../../../../test/frames.js';
+
+it('reads computed animation style once per expanded branch', async () => {
+  const tree = await fixture<LyraTree>(html`
+    <lr-tree label="Motion" data-lr-motion="system" style="--show-duration: 20ms">
+      <lr-tree-item label="First"><lr-tree-item label="Child"></lr-tree-item></lr-tree-item>
+      <lr-tree-item label="Second"><lr-tree-item label="Child"></lr-tree-item></lr-tree-item>
+    </lr-tree>
+  `);
+  const branches = [...tree.children] as LyraTreeItem[];
+  await Promise.all(branches.map(branch => branch.updateComplete));
+  const reads = [0, 0];
+  const original = window.getComputedStyle;
+  window.getComputedStyle = (target, pseudo) => {
+    const index = branches.findIndex(branch =>
+      target === branch || target === branch.shadowRoot!.querySelector('[part="children"]'));
+    const computed = original.call(window, target, pseudo);
+    if (index < 0) return computed;
+    let counted = false;
+    const countMotionRead = () => {
+      if (counted) return;
+      counted = true;
+      reads[index] = reads[index]! + 1;
+    };
+    return new Proxy(computed, {
+      get(style, key) {
+        if (key === 'animationName') countMotionRead();
+        if (key === 'getPropertyValue') return (property: string) => {
+          if (property === '--show-duration') countMotionRead();
+          return style.getPropertyValue(property);
+        };
+        return Reflect.get(style, key, style);
+      },
+    });
+  };
+  try {
+    const after = Promise.all(branches.map(branch => oneEvent(branch, 'lr-after-expand')));
+    await tree.expandAll();
+    await after;
+    expect(reads).to.deep.equal([1, 1]);
+  } finally {
+    window.getComputedStyle = original;
+  }
+});
 
 it('preserves separately styled sibling completion deadlines during bulk expansion', async () => {
   const tree = await fixture<LyraTree>(html`<lr-tree label="Motion" data-lr-motion="system">

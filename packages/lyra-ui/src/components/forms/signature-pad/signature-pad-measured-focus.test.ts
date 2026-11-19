@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraSignaturePad, SignatureStroke } from './signature-pad.class.js';
 import './signature-pad.js';
@@ -74,4 +75,35 @@ describe('lr-signature-pad focus and key repeat', () => {
     expect(changes).to.equal(1);
     expect(el.strokes.length).to.equal(1);
   });
+});
+
+it('themes the signature surface and both pointer states of its clear button', async () => {
+  const pad = await fixture<LyraSignaturePad>(html`
+    <lr-signature-pad .strokes=${LINE} style="--lr-signature-pad-fill: rgb(1, 2, 3);
+      --lr-signature-pad-radius: 17px; --lr-signature-pad-border-color: rgb(2, 3, 4);
+      --lr-signature-pad-hover-border-color: rgb(3, 4, 5);
+      --lr-signature-pad-clear-hover-bg: rgb(4, 5, 6); --lr-signature-pad-clear-active-bg: rgb(5, 6, 7);
+      --lr-transition-interactive: none"></lr-signature-pad>
+  `);
+  const surface = pad.shadowRoot!.querySelector<HTMLElement>('[part="surface"]')!;
+  const button = pad.shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
+  try {
+    await hoverUntilMatched(button, 'the enabled clear button receives the pointer');
+    expect(getComputedStyle(surface).borderTopColor).to.equal('rgb(2, 3, 4)');
+    expect(getComputedStyle(surface).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(surface).borderStartStartRadius).to.equal('17px');
+    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(4, 5, 6)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(5, 6, 7)');
+    await sendMouse({ type: 'up' });
+    await hoverUntilMatched(surface, 'the drawing surface receives the pointer');
+    expect(getComputedStyle(surface).borderTopColor).to.equal('rgb(3, 4, 5)');
+    pad.style.setProperty('--lr-form-control-invalid-border-color', 'rgb(7, 8, 9)');
+    pad.style.setProperty('--lr-signature-pad-invalid-border-color', 'rgb(6, 7, 8)');
+    pad.setCustomValidity('Invalid signature');
+    expect(pad.reportValidity()).to.equal(false);
+    await waitUntil(() => getComputedStyle(surface).borderTopColor === 'rgb(6, 7, 8)');
+  } finally {
+    await resetMouse();
+  }
 });

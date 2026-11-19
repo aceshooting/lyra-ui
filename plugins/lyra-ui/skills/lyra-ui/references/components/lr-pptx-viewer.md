@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aiden0z/pptx-renderer` — see `llms/peers.md`
-- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -96,7 +96,9 @@ mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
-property, which writes this token inline.
+property, which writes this token inline. `--lr-viewer-pager-button-hover-bg`
+(default `var(--lr-color-brand-quiet)`) sets the pager buttons' hover fill and the base for their
+pressed fill.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`

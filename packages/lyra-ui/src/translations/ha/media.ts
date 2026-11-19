@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Fita daga cika allo',
   videoPlaylistLabel: 'Jerin bidiyo',
   videoPlaylistUntitled: 'Bidiyo na {position}',
+  videoTimeReadout: '{current} cikin {duration}',
   pause: 'Dakata',
   qrCodeMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓi na "qrcode" don nuna lambobin QR.',
   qrCodeGenerationFailed: 'Ba a iya ɓoye wannan ƙima a matsayin lambar QR ba.',

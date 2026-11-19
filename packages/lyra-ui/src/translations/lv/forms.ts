@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pildspalva nolaista',
   signaturePadPenUp: 'Pildspalva pacelta',
   signaturePadDrawingLimit: 'Sasniegts zīmēšanas ierobežojums.',
+  catalogPickerSearchLoadFailed: 'Neizdevās ielādēt meklēšanas lauku.',
   localePickerInputLimit: 'Pieejami tikai pirmie 512 lokalizācijas ieraksti.',
   emojiPickerInputLimit: 'Daži emocijzīmju dati tika izlaisti, jo tika sasniegts ievades ierobežojums.',
 };

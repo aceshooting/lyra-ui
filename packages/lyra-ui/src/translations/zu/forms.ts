@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Ipeni phansi',
   signaturePadPenUp: 'Ipeni phezulu',
   signaturePadDrawingLimit: 'Umkhawulo wokudweba ufinyelelwe.',
+  catalogPickerSearchLoadFailed: 'Ibhokisi lokusesha alikwazanga ukulayishwa.',
   localePickerInputLimit: 'Kutholakala okufakiwe kokuqala kolimi nesifunda okungu-512 kuphela.',
   emojiPickerInputLimit: 'Enye idatha yama-emoji ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };

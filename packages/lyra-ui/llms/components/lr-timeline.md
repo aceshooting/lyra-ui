@@ -159,13 +159,18 @@ inter-item spacing and the length each rail bridges. `--lr-timeline-cluster-size
 each horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
+`--lr-timeline-ordered-marker-size` (falls back to `--lr-timeline-marker-size`, then
+`var(--lr-size-1-5rem)`),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, with a private default that changes per `variant`),
+`var(--lr-color-text-quiet)` for neutral markers), `--lr-timeline-marker-neutral-color`,
+`--lr-timeline-marker-brand-color`, `--lr-timeline-marker-success-color`,
+`--lr-timeline-marker-warning-color`, and `--lr-timeline-marker-danger-color` (variant colors
+used when `--lr-timeline-marker-color` is unset),
 `--lr-timeline-marker-number-color` (default `var(--lr-color-text)`, the step number inside an
-`ordered` timeline's marker ring; the marker size defaults to `var(--lr-size-1-5rem)` there), and
+`ordered` timeline's marker ring), and
 `--lr-timeline-active-ring-color`
-(defaults to the effective marker color). All six item hooks inherit from theme
+(defaults to the effective marker color). Item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="marker-icon"`.

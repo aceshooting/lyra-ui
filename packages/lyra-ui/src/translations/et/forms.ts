@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pliiats all',
   signaturePadPenUp: 'Pliiats üleval',
   signaturePadDrawingLimit: 'Joonistamise piirang on saavutatud.',
+  catalogPickerSearchLoadFailed: 'Otsinguvälja ei õnnestunud laadida.',
   localePickerInputLimit: 'Saadaval on ainult esimesed 512 lokaadikirjet.',
   emojiPickerInputLimit: 'Osa emotikonide andmeid jäeti välja, kuna sisendi piirang sai täis.',
 };

@@ -25,15 +25,41 @@ describe('gauge remediation', () => {
   });
 });
 
-it('keeps linear captions uniformly scaled when the host narrows', async () => {
-  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 110px">
-    <lr-gauge shape="linear" value="30" label="CPU"></lr-gauge>
-  </div>`);
-  const gauge = wrapper.querySelector('lr-gauge')!;
-  const caption = gauge.shadowRoot!.querySelector<SVGTextElement>('[part="value"]')!;
-  const transform = caption.getScreenCTM()!;
-  expect(Math.abs(transform.a)).to.be.closeTo(Math.abs(transform.d), 0.01);
-});
+for (const direction of ['ltr', 'rtl']) {
+  it(`keeps localized linear captions proportional across allocations (${direction})`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div dir=${direction}>
+      <lr-gauge shape="linear" locale="de-DE" value="1234.5" max="2000" label="Datenträgerauslastung"
+        .strings=${{ gaugeValueLabel: '{label}: {value}' }}></lr-gauge>
+    </div>`);
+    const gauge = wrapper.querySelector('lr-gauge')!;
+    const label = gauge.shadowRoot!.querySelector<SVGTextElement>('[part="label"]')!;
+    const value = gauge.shadowRoot!.querySelector<SVGTextElement>('[part="value"]')!;
+    const track = gauge.shadowRoot!.querySelector<SVGLineElement>('[part="track"]')!;
+    expect(value.textContent).to.equal('1.234,5');
+    expect(gauge.shadowRoot!.querySelector('title')?.textContent).to.equal('Datenträgerauslastung: 1.234,5');
+    const defaultWidth = gauge.getBoundingClientRect().width;
+    const labelWidth = label.getBoundingClientRect().width;
+    const valueWidth = value.getBoundingClientRect().width;
+    for (const width of [defaultWidth, 110, 320]) {
+      wrapper.style.inlineSize = `${width}px`;
+      gauge.style.inlineSize = `${width}px`;
+      const bounds = gauge.getBoundingClientRect();
+      const labelBounds = label.getBoundingClientRect();
+      const valueBounds = value.getBoundingClientRect();
+      expect(track.getBoundingClientRect().width).to.be.closeTo(bounds.width, 0.5);
+      expect(labelBounds.width).to.be.closeTo(labelWidth, 0.5);
+      expect(valueBounds.width).to.be.closeTo(valueWidth, 0.5);
+      for (const caption of [label, value]) {
+        const transform = caption.getScreenCTM()!;
+        expect(Math.abs(transform.a)).to.be.closeTo(Math.abs(transform.d), 0.01);
+      }
+      const [left, right] = direction === 'rtl' ? [valueBounds, labelBounds] : [labelBounds, valueBounds];
+      expect(left.left).to.be.closeTo(bounds.left, 1);
+      expect(right.right).to.be.closeTo(bounds.right, 1);
+      expect(left.right).to.be.below(right.left);
+    }
+  });
+}
 
 it('keeps data paint visible in forced colors', async () => {
   await setForcedColors('active');

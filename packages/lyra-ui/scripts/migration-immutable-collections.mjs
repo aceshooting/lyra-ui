@@ -19,9 +19,7 @@
 //    `jumpTo({ center })` is the explicit way to re-centre. Reported as `MAP_CENTER_REVIEW`.
 //
 // Report a site as reviewed with `lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:<property>` (or
-// `MAP_CENTER_REVIEW:center`) on the reported line or alone on the line above it. Dependency-free
-// and filesystem-free: this module
-// is copied beside migrate-wa.mjs into dist/cli.
+// `MAP_CENTER_REVIEW:center`) on the reported line or alone on the line above it.
 
 export const IMMUTABLE_COLLECTION_RULE = 'immutable-collections';
 const IMMUTABLE_COLLECTION_CODE = 'IMMUTABLE_COLLECTION_REVIEW';
@@ -46,6 +44,7 @@ export const IMMUTABLE_COLLECTION_PAIRS = Object.freeze([
   { tag: 'lr-prompt-queue', className: 'LyraPromptQueue', properties: ['items'] },
   { tag: 'lr-retrieval-results', className: 'LyraRetrievalResults', properties: ['chunks'] },
   { tag: 'lr-span-waterfall', className: 'LyraSpanWaterfall', properties: ['spans'] },
+  { tag: 'lr-stat', className: 'LyraStat', properties: ['rows'] },
   { tag: 'lr-swatch-picker', className: 'LyraSwatchPicker', properties: ['items'] },
   { tag: 'lr-task-list', className: 'LyraTaskList', properties: ['items'] },
   { tag: 'lr-test-results', className: 'LyraTestResults', properties: ['suites'] },

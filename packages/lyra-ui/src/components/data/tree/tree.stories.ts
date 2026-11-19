@@ -201,7 +201,16 @@ export const RetintedSelectionCheckboxes: Story = {
   },
   render: () => html`
     <div
-      style="--lr-tree-checkbox-checked-border-color: var(--lr-color-success); --lr-tree-checkbox-checked-bg: var(--lr-color-success-quiet); --lr-tree-checkbox-checked-color: var(--lr-color-success); --lr-tree-checkbox-indeterminate-border-color: var(--lr-color-warning); --lr-tree-checkbox-indeterminate-bg: var(--lr-color-warning-quiet); --lr-tree-checkbox-indeterminate-color: var(--lr-color-warning)"
+      style="
+        --lr-tree-checkbox-hover-border-color: var(--lr-color-brand);
+        --lr-tree-checkbox-active-border-color: var(--lr-color-text);
+        --lr-tree-checkbox-checked-border-color: var(--lr-color-success);
+        --lr-tree-checkbox-checked-bg: var(--lr-color-success-quiet);
+        --lr-tree-checkbox-checked-color: var(--lr-color-success);
+        --lr-tree-checkbox-indeterminate-border-color: var(--lr-color-warning);
+        --lr-tree-checkbox-indeterminate-bg: var(--lr-color-warning-quiet);
+        --lr-tree-checkbox-indeterminate-color: var(--lr-color-warning);
+      "
     >
       <lr-tree style="max-width: var(--lr-size-20rem)" label="Themed selection" selection="multiple">
         <lr-tree-item expanded>

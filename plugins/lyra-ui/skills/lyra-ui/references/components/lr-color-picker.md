@@ -63,8 +63,9 @@ swap under RTL), Home and End move to and select the next enabled swatch, like `
 When required, the trigger also includes the localized `fieldRequired` description; the editable
 value field exposes `aria-required`.
 
-Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
-required empty picker starts pristine, so the popup trigger and panel value input both expose
+The popup's editor parts are mounted while open. Inline mode keeps the editor mounted.
+Validation is projected onto both editing owners with an explicit stateful `aria-invalid`.
+A required empty picker starts pristine, so the popup trigger and mounted panel value input both expose
 `aria-invalid="false"` even though `checkValidity()` is false. Once focus leaves the control, the
 resulting `user-invalid` state changes both to `"true"`; `reportValidity()` reveals the same state
 without requiring a blur. A valid value or `form.reset()` clears the projection back to `"false"`,

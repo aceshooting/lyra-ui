@@ -29,6 +29,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getFormOwner,
   isBarredFromValidation,
+  isLiveDisabled,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
@@ -251,11 +252,9 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Accessible-name override for the start handle. `undefined` uses the localized default;
-   * every supplied string, including empty and `"Range start"`, is caller-owned verbatim. */
+  /** Start handle name. Omission or whitespace alone uses the localized default. An empty string clears the name. */
   @property({ attribute: 'start-label' }) startLabel?: string;
-  /** Accessible-name override for the end handle. `undefined` uses the localized default;
-   * every supplied string, including empty and `"Range end"`, is caller-owned verbatim. */
+  /** End handle name. Omission or whitespace alone uses the localized default. An empty string clears the name. */
   @property({ attribute: 'end-label' }) endLabel?: string;
   /** Optional human-readable formatter for each handle's `aria-valuetext`. Receives the same
    *  finite, clamped number exposed through `aria-valuenow` plus `'start'`/`'end'`; leaving it
@@ -375,9 +374,8 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     this.reflectValidityStates();
   };
 
-  /** Includes the UA's synchronous fieldset cascade before its callback updates cached state. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
+    return isLiveDisabled(this);
   }
 
   private emitInput(): Readonly<{ start: number; end: number }> {

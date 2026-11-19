@@ -61,7 +61,7 @@ interface PathOccurrence {
  * targetNodeId?, occurrenceIndex }` — source/target resolved from the adjacent retained node
  * elements, `undefined` when the path is malformed at that position. `occurrenceIndex` is the
  * element's index in the supplied path, so deliberately repeated identities remain distinct.
- * @cssprop --lr-path-strip-action-hover-fill - Background of the hovered control.
+ * @cssprop [--lr-path-strip-action-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The root wrapper, hosting the delegated roving-tabindex keydown handler.
  * @csspart node - One `node`-kind element (a `<button>`).
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).
@@ -157,9 +157,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     super.updated(changed);
     if (!changed.has('path') || !this.restoreFocusAfterPathChange) return;
     this.restoreFocusAfterPathChange = false;
-    // Focusing dispatches the control's focus handler, which updates the live-region text.
-    // Run it after this update completes so that reactive announcement does not schedule another
-    // update from inside updated() and trigger Lit's change-in-update warning.
+    // Wait until the update completes because focusing also triggers a reactive announcement.
     this.scheduleAfterUpdate(() => {
       if (this.pathOccurrences.length === 0) {
         this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();

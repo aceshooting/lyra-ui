@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Zamknij pełny ekran',
   videoPlaylistLabel: 'Playlista wideo',
   videoPlaylistUntitled: 'Wideo {position}',
+  videoTimeReadout: '{current} z {duration}',
   pause: 'Wstrzymaj',
   qrCodeMissingLibrary: 'Aby generować kody QR, zainstaluj opcjonalny pakiet "qrcode".',
   qrCodeGenerationFailed: 'Nie można zakodować tej wartości jako kodu QR.',

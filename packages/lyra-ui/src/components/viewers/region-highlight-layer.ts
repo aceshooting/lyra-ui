@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 import { getNumberFormat } from '../../internal/intl-cache.js';
+import { resolveListMove } from '../../internal/list-navigation.js';
 
 interface RegionHighlightItem {
   readonly id: string;
@@ -52,6 +53,29 @@ export function renderRegionHighlightLayer<T extends RegionHighlightItem>(
 
 type RegionRect = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
+/** Tests for intersecting hit areas belonging to different highlights. */
+export function highlightHitAreasOverlap(
+  rectsByItem: readonly (readonly RegionRect[])[],
+  { width, height }: Pick<DOMRectReadOnly, 'width' | 'height'>,
+  min: number,
+): boolean {
+  const boxes = rectsByItem.flatMap((rects, index) => rects.map((rect) => {
+    const boxWidth = Math.max((rect.width / 100) * width, min);
+    const boxHeight = Math.max((rect.height / 100) * height, min);
+    const left = ((rect.x + rect.width / 2) / 100) * width - boxWidth / 2;
+    const top = ((rect.y + rect.height / 2) / 100) * height - boxHeight / 2;
+    return { index, left, top, right: left + boxWidth, bottom: top + boxHeight };
+  })).sort((first, second) => first.left - second.left);
+  for (let first = 0; first < boxes.length; first++) {
+    const a = boxes[first]!;
+    for (let second = first + 1; second < boxes.length && boxes[second]!.left < a.right; second++) {
+      const b = boxes[second]!;
+      if (b.index !== a.index && b.top < a.bottom && a.top < b.bottom) return true;
+    }
+  }
+  return false;
+}
+
 /** Structural equality of two region anchors' `page` and `rect`. */
 export function sameRegionRect(
   a: { readonly page?: number; readonly rect: RegionRect },
@@ -82,14 +106,15 @@ export function regionHighlightLabel(
 /** Moves focus along the action list with the arrow keys, Home and End (direction-aware under RTL).
  *  Every button keeps its native tab stop; this is a faster alternative to repeated Tab. */
 function moveHighlightActionFocus(root: ParentNode, rtl: boolean, e: KeyboardEvent, index: number, total: number): void {
-  const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
-  const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
-  let nextIndex: number | undefined;
-  if (forward) nextIndex = Math.min(total - 1, index + 1);
-  else if (backward) nextIndex = Math.max(0, index - 1);
-  else if (e.key === 'Home') nextIndex = 0;
-  else if (e.key === 'End') nextIndex = total - 1;
-  if (nextIndex === undefined || nextIndex === index) return;
+  if (e.shiftKey) return;
+  const nextIndex = resolveListMove(e, {
+    count: total,
+    current: index,
+    orientation: 'both',
+    direction: rtl ? 'rtl' : 'ltr',
+    wrap: false,
+  });
+  if (nextIndex === null || nextIndex === index) return;
   e.preventDefault();
   root.querySelectorAll<HTMLElement>('[part="region-highlight-action"]')[nextIndex]?.focus();
 }
@@ -101,8 +126,9 @@ export function renderRegionHighlightActions<T extends RegionHighlightItem & { r
   root: ParentNode,
   rtl: boolean,
   activate: (id: string) => void,
+  showActions = highlights.length >= 2,
 ): TemplateResult | typeof nothing {
-  if (highlights.length < 2) return nothing;
+  if (!showActions) return nothing;
   return html`<div part="highlight-actions">
     ${highlights.map((highlight, index) => {
       const name = label(highlight, index, highlights.length);

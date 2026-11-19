@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'పూర్తి తెర నుంచి బయటకు రండి',
   videoPlaylistLabel: 'వీడియో ప్లేలిస్ట్',
   videoPlaylistUntitled: 'వీడియో {position}',
+  videoTimeReadout: '{duration}లో {current}',
   pause: 'పాజ్ చేయండి',
   qrCodeMissingLibrary: 'QR కోడ్‌లను చూపించడానికి ఈ కాంపోనెంట్‌లో ఐచ్ఛిక "qrcode" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
   qrCodeGenerationFailed: 'ఈ విలువను QR కోడ్‌గా ఎన్‌కోడ్ చేయలేకపోయాం.',

@@ -74,8 +74,7 @@ const INTERACTIVE_DESCENDANT_SELECTOR =
  *  number-only attributes did; any other value stays the authored CSS length string. */
 const DASHBOARD_LENGTH_CONVERTER: ComplexAttributeConverter<number | string> = {
   fromAttribute: (value) => {
-    // A removed attribute writes `null` back, exactly as the number-only conversion did; `null` is
-    // outside the declared type but every read treats it as unset.
+    // Attribute removal retains Lit's null readback.
     if (value === null) return value as unknown as number;
     const number = Number(value);
     return Number.isNaN(number) ? value : number;
@@ -426,9 +425,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     this.restoreManagedAuthoredSlots();
     this.clearSuppressedClick();
     this.pendingPlacementAnnouncement = undefined;
-    // An in-flight drag/resize gesture holds window-level listeners; if the element is removed
-    // mid-gesture nothing else ever detaches them, and a later unrelated pointerup would fire
-    // against a detached tree with stale gesture state.
     this.cancelCellDrag();
     this.cancelCellResize();
     super.disconnectedCallback();

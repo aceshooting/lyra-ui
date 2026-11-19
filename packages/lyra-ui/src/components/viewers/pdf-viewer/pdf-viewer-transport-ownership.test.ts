@@ -80,6 +80,32 @@ describe('lr-pdf-viewer transport ownership', () => {
     expect(errors.length).to.equal(1);
   });
 
+  for (const outcome of ['response', 'failure'] as const) {
+    it(`ignores a fetch ${outcome} queued just before src is replaced`, async () => {
+      const pending = deferred<Response>();
+      const fresh = await bytes(true);
+      let calls = 0;
+      window.fetch = () => ++calls === 1
+        ? pending.promise
+        : Promise.resolve(new Response(fresh.slice(0)));
+      const { element, errors } = await mount();
+      element.src = 'https://example.test/retired';
+      await waitUntil(() => calls === 1);
+      let cancelled = false;
+      if (outcome === 'response') {
+        pending.resolve(new Response(new ReadableStream<Uint8Array>({
+          cancel() { cancelled = true; },
+        })));
+      } else {
+        pending.reject(new Error('Retired fetch failed'));
+      }
+      element.src = 'https://example.test/current';
+      await loaded(element);
+      expect(errors).to.deep.equal([]);
+      if (outcome === 'response') expect(cancelled).to.be.true;
+    });
+  }
+
   for (const action of ['replace', 'disconnect'] as const) {
     it(`silences an owner-aborted fetch on ${action} while allowing the next load`, async () => {
       const pending = deferred<Response>();

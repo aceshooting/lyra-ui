@@ -23,14 +23,15 @@ type NativeSelectionDirection = 'forward' | 'backward' | 'none';
 
 /**
  * Property descriptors forwarding the native selection API (`selectionStart`, `selectionEnd`,
- * `selectionDirection`, `setSelectionRange()`, `select()`) to the control's inner field. Reads are
- * `null` and writes are no-ops while no field is rendered. Install with
- * {@linkcode installNativeSelectionAccessors} and declare the members with `declare`.
+ * `selectionDirection`, and with `methods` also `setSelectionRange()` and `select()`) to the
+ * control's inner field. Reads are `null` and writes are no-ops while no field is rendered. Install
+ * with {@linkcode installNativeSelectionAccessors} and declare the members with `declare`.
  */
 function nativeSelectionAccessors<T extends object>(
   getEl: (host: T) => NativeTextElement | null | undefined,
+  methods: boolean,
 ): PropertyDescriptorMap & ThisType<T> {
-  return {
+  const accessors: PropertyDescriptorMap & ThisType<T> = {
     selectionStart: {
       configurable: true,
       get(this: T): number | null { return getEl(this)?.selectionStart ?? null; },
@@ -51,6 +52,10 @@ function nativeSelectionAccessors<T extends object>(
         if (el) el.selectionDirection = value ?? 'none';
       },
     },
+  };
+  if (!methods) return accessors;
+  return {
+    ...accessors,
     setSelectionRange: {
       configurable: true,
       writable: true,
@@ -66,12 +71,23 @@ function nativeSelectionAccessors<T extends object>(
   };
 }
 
+/** Options for {@linkcode installNativeSelectionAccessors}. */
+export interface NativeSelectionInstallOptions {
+  /**
+   * Also install `select()` and `setSelectionRange()` (default `true`). Pass `false` when the class
+   * declares those methods itself: the manifest analyzer reads a `declare`d member as a field, so a
+   * documented method must stay a real class method.
+   */
+  methods?: boolean;
+}
+
 /** Defines {@linkcode nativeSelectionAccessors} on `proto` (a component's `prototype`). */
 export function installNativeSelectionAccessors<T extends object>(
   proto: T,
   getEl: (host: T) => NativeTextElement | null | undefined,
+  options: NativeSelectionInstallOptions = {},
 ): void {
-  Object.defineProperties(proto, nativeSelectionAccessors<T>(getEl));
+  Object.defineProperties(proto, nativeSelectionAccessors<T>(getEl, options.methods !== false));
 }
 
 /** Defines the lowercase `inputmode` / `enterkeyhint` IDL aliases over `inputMode` / `enterKeyHint`. */

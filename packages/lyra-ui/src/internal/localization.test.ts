@@ -385,8 +385,8 @@ it('selects Persian one/other and Hebrew one/two/other catalog forms through reg
   const matches = (host: HTMLElement, count: number) =>
     resolveLyraString(host, 'viewerSearchMatchCount', undefined, undefined, { count });
 
-  expect(matches(persian, 1)).to.equal('1 تطابق');
-  expect(matches(persian, 2)).to.equal('2 تطابق');
+  expect(matches(persian, 1)).to.equal('۱ تطابق');
+  expect(matches(persian, 2)).to.equal('۲ تطابق');
   expect(matches(hebrew, 1)).to.equal('1 התאמה');
   expect(matches(hebrew, 2)).to.equal('2 התאמות');
   expect(matches(hebrew, 3)).to.equal('3 התאמות');
@@ -890,12 +890,13 @@ it('selects all six Arabic categories', async () => {
   });
   const host = await localeHost('ar');
   const at = (count: number) => resolveLyraString(host, 'x-plural-probe', undefined, undefined, { count });
+  const decimal = new Intl.NumberFormat('ar', { useGrouping: false });
   expect(at(0)).to.equal('ZERO');
   expect(at(1)).to.equal('ONE');
   expect(at(2)).to.equal('TWO');
-  expect(at(3)).to.equal('FEW 3');
-  expect(at(11)).to.equal('MANY 11');
-  expect(at(100)).to.equal('OTHER 100');
+  expect(at(3)).to.equal(`FEW ${decimal.format(3)}`);
+  expect(at(11)).to.equal(`MANY ${decimal.format(11)}`);
+  expect(at(100)).to.equal(`OTHER ${decimal.format(100)}`);
 });
 
 it('widens a missing category through the documented fallback chain', async () => {

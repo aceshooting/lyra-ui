@@ -247,6 +247,7 @@ describe('lr-currency-picker composed field ownership', () => {
     await settled(picker);
     expect(invalid).to.equal(1);
     expect(resolveValidityAnchor(select(picker))!.getAttribute('aria-invalid')).to.equal('true');
+    picker.blur();
     expect(getComputedStyle(resolveValidityAnchor(select(picker))!).borderTopColor).to.equal('rgb(22, 33, 44)');
     picker.setCustomValidity('');
     await settled(picker);

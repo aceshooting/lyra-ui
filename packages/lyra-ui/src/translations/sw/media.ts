@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Toka kwenye skrini nzima',
   videoPlaylistLabel: 'Orodha ya video',
   videoPlaylistUntitled: 'Video ya {position}',
+  videoTimeReadout: '{current} kati ya {duration}',
   pause: 'Sitisha',
   qrCodeMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari "qrcode" kisakinishwe ili kuonyesha misimbo ya QR.',
   qrCodeGenerationFailed: 'Thamani hii haikuweza kusimbwa kama msimbo wa QR.',

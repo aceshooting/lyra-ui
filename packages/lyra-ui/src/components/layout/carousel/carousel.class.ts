@@ -33,7 +33,7 @@ import { styles } from './carousel.styles.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselPauseRotation, LYRA_DEFAULT_carouselResumeRotation, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselPauseRotation, LYRA_DEFAULT_carouselResumeRotation, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_carouselViewport } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -56,8 +56,7 @@ type CarouselChangeOrigin = 'manual' | 'autoplay';
 
 export type LyraCarouselOrientation = LyraOrientation;
 
-/** How long the viewport must stay quiet before the scrolled-to slide is published. Unchanged
- *  from the inline literal this debounce used before it moved onto the shared controller. */
+/** How long scrolling must stay idle before publishing the new slide. */
 const SCROLL_SETTLE_MS = 120;
 
 const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
@@ -201,6 +200,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     carouselSlideAnnouncement: LYRA_DEFAULT_carouselSlideAnnouncement,
     carouselSlideAnnouncementSeparator: LYRA_DEFAULT_carouselSlideAnnouncementSeparator,
     carouselSlidePosition: LYRA_DEFAULT_carouselSlidePosition,
+    carouselViewport: LYRA_DEFAULT_carouselViewport,
     next: LYRA_DEFAULT_next,
     previous: LYRA_DEFAULT_previous,
   };
@@ -500,21 +500,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange` --
-    // see `collectInitialSlotAssignment`'s own doc -- so `slides` (the public "live count of
-    // assigned slides") would otherwise stay 0 forever for a carousel whose `<lr-carousel-item>`
-    // children already exist at connect: `handleSlidesChanged()` -- the only place `_slides` is
-    // ever written -- runs exclusively from `onSlotChange` today, and `connectedCallback()`'s own
-    // reconnect refresh only re-runs it once `hasUpdated` is already true. Collect once here too;
-    // `handleSlidesChanged()` re-derives the count from the slot's live assignment and is already
-    // written to be idempotent (it compares `_slides` before writing, and every side effect it
-    // triggers -- `syncSlides()`, `syncLoopClones()`, `restartAutoplay()` -- is itself idempotent
-    // against an unchanged slide set), so a real browser also firing the initial event contributes
-    // no duplicate side effect. Deferred a microtask, through this file's own realm-safe
-    // `queueOwnerMicrotask()`, for the same reason `select.class.ts`'s own `firstUpdated()` defers:
-    // `handleSlidesChanged()` calls `requestUpdate()`, and doing so synchronously here -- after
-    // this same update has already been marked complete -- would trip Lit's "scheduled an update
-    // after an update completed" dev warning.
+    // Initial assignments can exist without a slotchange. Defer reconciliation until Lit finishes.
     const slot = this.slideSlot;
     this.queueOwnerMicrotask(() => {
       collectInitialSlotAssignment(slot, () => this.handleSlidesChanged());
@@ -1478,7 +1464,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       <div
         part="scroll-container"
         role="group"
-        aria-label=${label || this.localize('carouselLabel')}
+        aria-label=${this.localize('carouselViewport')}
         tabindex="0"
         @keydown=${this.onViewportKeyDown}
         @scroll=${this.onViewportScroll}

@@ -3,6 +3,27 @@ import { expect, fixture, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
 
+it('skips line geometry in bar mode and reuses it across label updates', async () => {
+  const el = await fixture<LyraSparkline>(html`<lr-sparkline mark="bar" .values=${[1, 5, 2]}></lr-sparkline>`);
+  const target = el as unknown as { linePath(points: ReadonlyArray<readonly [number, number]>): string };
+  const linePath = target.linePath;
+  let paths = 0;
+  target.linePath = points => { paths++; return linePath.call(el, points); };
+  el.label = 'Bars';
+  await el.updateComplete;
+  expect(paths).to.equal(0);
+  el.mark = 'line';
+  await el.updateComplete;
+  expect(paths).to.equal(1);
+  el.label = 'Line';
+  await el.updateComplete;
+  expect(paths).to.equal(1);
+  el.curve = 'step';
+  await el.updateComplete;
+  expect(paths).to.equal(2);
+  expect(el.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d')).to.contain(' H');
+});
+
 it('does not clip the first and last points of its own plot', async () => {
   const el = await fixture<LyraSparkline>(html`<lr-sparkline mark="bar" .values=${[1, 5, 2]}></lr-sparkline>`);
   expect(getComputedStyle(el.shadowRoot!.querySelector('svg')!).overflow).to.equal('visible');

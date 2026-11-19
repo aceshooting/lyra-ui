@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,7 +49,7 @@ gutter placement follow the application direction.
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
   on assignment to a finite integer clamped to `1..16`, so a `NaN`/`Infinity` value can neither
   empty the insert nor throw out of `String.repeat()`.
-  Tab indents the selected lines and preserves the selection within `maxlength`.
+  Tab indents the selected lines and preserves the selection within `maxlength`. Native Undo and Redo treat the indentation as one edit.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
@@ -77,7 +77,7 @@ gutter placement follow the application direction.
   `inputMode`/`inputmode: string = ''`, `enterKeyHint`/`enterkeyhint: string = ''`,
   `autocapitalize: string = 'off'`, and `autocorrect: boolean = false` (attribute vocabulary
   `on`/`off`; boolean and string writes normalize through the shared native converter)
-- `accessibleLabel: string = ''` (attribute `aria-label`) — wins over `label`/the localized
+- `accessibleLabel: string = ''` (attribute `aria-label`) — an explicitly empty attribute clears the name. Whitespace alone falls back to the visible label or localized
   `codeEditorLabel` fallback on the internal textarea
 - The shared form surface adds `value`, `defaultValue`, `customError` (`custom-error`), `name`,
   `disabled`, `required`, `form`, `getForm()`, `checkValidity()`, `reportValidity()`, and
@@ -116,9 +116,9 @@ a copy of it, so `--lr-form-control-required-content`, `--lr-form-control-requir
 With no label text the element is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-code-editor-min-block-size` (default `--lr-size-8rem`, the
-frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-space-s`, the
+frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-form-control-padding-inline`, the
 gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
-(default `--lr-font-size-m`, the gutter's and textarea's font size) — all three come from the active
+(default `--lr-form-control-font-size`, the gutter's and textarea's font size) — all three come from the active
 `size` tier by default, and assigning one directly overrides that tier's value. Also
 `--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
 stay aligned with their lines).
@@ -131,11 +131,11 @@ the `:host` default of `2`. The component writes the token inline on the `textar
 still sets the visual tab stops for literal tab characters, but is not reinterpreted as a count of
 spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 `--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
-`var(--lr-color-surface)`) retint the frame's resting border and background, independent of the
-hover and invalid states below.
+`var(--lr-color-surface)`) retint the frame's resting border and background. Setting the fill also
+colors the line-number gutter during scrolling.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
-`--lr-code-editor-invalid-border` (default `var(--lr-color-danger)`) retint those frame states
-without changing brand/danger paint in sibling components.
+`--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
+`--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` on

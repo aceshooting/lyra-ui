@@ -1,4 +1,4 @@
-import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
 import './pptx-viewer.js';
@@ -53,6 +53,24 @@ function assertCurrent(element: LyraPptxViewer): void {
 }
 
 describe('lr-pptx-viewer transport ownership', () => {
+  it('releases the unread response when the renderer fails to load', async () => {
+    const originalFetch = window.fetch;
+    let cancelled = false;
+    window.fetch = async () => new Response(new ReadableStream<Uint8Array>({
+      cancel() { cancelled = true; },
+    }));
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      const failure = new Error('Could not load the renderer');
+      el.loadRenderer = () => Promise.reject(failure);
+      const reported = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/deck.pptx';
+      expect((await reported).detail.error === failure).to.equal(true);
+      await waitUntil(() => cancelled, 'the renderer failure left a response stream open');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
   const originalFetch = window.fetch;
   afterEach(() => { fixtureCleanup(); window.fetch = originalFetch; });
   async function mount() {
@@ -90,6 +108,32 @@ describe('lr-pptx-viewer transport ownership', () => {
     expect(element.shadowRoot!.querySelector('[part~="error"]') === null).to.equal(true);
     expect(errors.length).to.equal(1);
   });
+
+  for (const outcome of ['response', 'failure'] as const) {
+    it(`ignores a fetch ${outcome} queued just before src is replaced`, async () => {
+      const pending = deferred<Response>();
+      const fresh = await bytes(true);
+      let calls = 0;
+      window.fetch = () => ++calls === 1
+        ? pending.promise
+        : Promise.resolve(new Response(fresh.slice(0)));
+      const { element, errors } = await mount();
+      element.src = 'https://example.test/retired';
+      await waitUntil(() => calls === 1);
+      let cancelled = false;
+      if (outcome === 'response') {
+        pending.resolve(new Response(new ReadableStream<Uint8Array>({
+          cancel() { cancelled = true; },
+        })));
+      } else {
+        pending.reject(new Error('Retired fetch failed'));
+      }
+      element.src = 'https://example.test/current';
+      await loaded(element);
+      expect(errors).to.deep.equal([]);
+      if (outcome === 'response') expect(cancelled).to.be.true;
+    });
+  }
 
   for (const action of ['replace', 'disconnect'] as const) {
     it(`silences an owner-aborted fetch on ${action} while allowing the next load`, async () => {

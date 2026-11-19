@@ -5,7 +5,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
+import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -27,9 +29,6 @@ export interface LyraFunnelStage {
 /** The largest fraction-digit count Intl.NumberFormat accepts. */
 const MAX_SHARE_PRECISION = 20;
 
-/** Caps the rendered stage count so an unbounded host-supplied `stages`/`comparison` array can
- *  never mount an unbounded number of bar rows. Matches the 500-row ceiling used by every other
- *  bounded list in this library (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
 const MAX_RENDERED_STAGES = 500;
 
 interface StageScan {
@@ -156,8 +155,8 @@ export class LyraFunnel extends LyraElement {
     return finiteInteger(this.sharePrecision, 0, 0, MAX_SHARE_PRECISION);
   }
 
-  private formatValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: chartValueFractionDigits(value) }).format(value);
+  private formatAbsoluteValue(value: number): string {
+    return this.formatLocaleNumber(value, { maximumFractionDigits: chartValueFractionDigits(value) });
   }
 
   private formatShare(ratio: number): string {
@@ -206,13 +205,14 @@ export class LyraFunnel extends LyraElement {
     for (; scan.cursor < end && scan.stages.length <= MAX_RENDERED_STAGES; scan.cursor++) {
       try {
         const stage = scan.source[scan.cursor];
-        if (!stage || typeof stage !== 'object' || Array.isArray(stage)) continue;
-        const record = stage as { readonly label?: unknown; readonly value?: unknown; readonly color?: unknown };
-        if (typeof record.label !== 'string') continue;
+        if (!isSafeNonArrayObject(stage)) continue;
+        const { label } = stage;
+        if (typeof label !== 'string') continue;
+        const { value, color } = stage;
         scan.stages.push(Object.freeze({
-          label: record.label,
-          value: typeof record.value === 'number' ? finiteNumber(record.value, 0) : 0,
-          ...(typeof record.color === 'string' ? { color: record.color } : {}),
+          label,
+          value: typeof value === 'number' ? finiteNumber(value, 0) : 0,
+          ...(typeof color === 'string' ? { color: color } : {}),
         }));
       } catch {
         // An invalid entry does not hide later valid stages.
@@ -230,13 +230,19 @@ export class LyraFunnel extends LyraElement {
   }
 
   private validStages(value: unknown): readonly LyraFunnelStage[] {
-    if (!Array.isArray(value)) return [];
-    let scan = this.stageScans.get(value);
-    if (!scan) {
-      scan = { source: value, stages: [], length: value.length, cursor: 0, done: false };
-      this.stageScans.set(value, scan);
-      this.continueStageScan(scan);
+    const cached = this.stageScans.get(value);
+    if (cached) return cached.stages;
+    let length: number | undefined;
+    try {
+      if (!Array.isArray(value)) return [];
+      length = readOwnArrayLength(value);
+    } catch {
+      return [];
     }
+    if (length === undefined) return [];
+    const scan: StageScan = { source: value, stages: [], length, cursor: 0, done: false };
+    this.stageScans.set(value, scan);
+    this.continueStageScan(scan);
     return scan.stages;
   }
 
@@ -307,7 +313,7 @@ export class LyraFunnel extends LyraElement {
         : nothing}
       <span part="stage-header">
         <span part="stage-label">${stage.label}</span>
-        <span part="stage-value">${this.formatValue(value)}</span>
+        <span part="stage-value">${this.formatAbsoluteValue(value)}</span>
         ${share === null
           ? nothing
           : html`<span part="stage-share">${this.formatShare(share)}</span>`}
@@ -354,7 +360,7 @@ export class LyraFunnel extends LyraElement {
       </ol>
       ${truncated
         ? html`<p part="limit" role="note">${this.localize('funnelStagesLimit', undefined, {
-            count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_STAGES),
+            count: this.formatLocaleNumber(MAX_RENDERED_STAGES),
           })}</p>`
         : nothing}
     </div>`;

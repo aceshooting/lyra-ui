@@ -21,7 +21,9 @@ AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
 `components/data/condition-builder/condition-builder-register.js` registers the controls used by
 ordinary string, number, boolean and single-value enum rows. Import `lr-date-input.js` for date
-fields and `lr-combobox.js` for multi-value enum operators. The default entry registers both.
+fields and `lr-combobox.js` for multi-value enum operators when using that entry. The default
+entry loads text, number, date, and multi-value enum editors for the first row that uses them.
+Import an editor's tag-shaped entry to use that editor independently.
 
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases

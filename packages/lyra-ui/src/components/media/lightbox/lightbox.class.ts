@@ -1,6 +1,7 @@
 import type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 export type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalOpenRequest } from '../../../internal/modal-open-request.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -262,7 +263,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
   set open(next: boolean) {
     const normalized = Boolean(next);
-    if (this.coalesceOpenRequest(normalized)) return;
+    if (this.openRequest.coalesce(normalized)) return;
     if (normalized === this._open) return;
     if (!this.hasUpdated) {
       this.applyOpenState(normalized);
@@ -416,8 +417,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   };
   private connectionGeneration = 0;
   private transitionGeneration = 0;
-  private openRequestTarget?: boolean;
-  private openRequestDuringPreflight?: boolean;
+  private readonly openRequest = new ModalOpenRequest();
   private readonly captionId = nextId('lightbox-caption');
 
   /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative,
@@ -463,11 +463,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** Request opening, then resolve once the open panel is rendered. */
   async show(): Promise<void> {
-    if (this.coalesceOpenRequest(true) || this._open) return;
-    this.beginOpenRequest(true);
+    if (this.openRequest.coalesce(true) || this._open) return;
+    this.openRequest.begin(true);
     const prevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
-    const superseded = this.openRequestWasSuperseded(true);
-    this.finishOpenRequest();
+    const superseded = this.openRequest.superseded(true);
+    this.openRequest.finish();
     if (prevented || superseded) {
       this.syncOpenAttribute();
       return;
@@ -494,49 +494,28 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private async closeFrom(reason: LyraLightboxCloseReason, source: Element): Promise<void> {
-    if (this.coalesceOpenRequest(false) || !this._open) return;
-    this.beginOpenRequest(false);
+    if (this.openRequest.coalesce(false) || !this._open) return;
+    this.openRequest.begin(false);
     if (
       this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented ||
-      this.openRequestWasSuperseded(false)
+      this.openRequest.superseded(false)
     ) {
-      this.finishOpenRequest();
+      this.openRequest.finish();
       this.syncOpenAttribute();
       return;
     }
     const proposal = this.emit('lr-close-request', { reason }, { cancelable: true });
-    if (proposal.defaultPrevented || this.openRequestWasSuperseded(false)) {
-      this.finishOpenRequest();
+    if (proposal.defaultPrevented || this.openRequest.superseded(false)) {
+      this.openRequest.finish();
       this.syncOpenAttribute();
       return;
     }
-    this.finishOpenRequest();
+    this.openRequest.finish();
     this.applyOpenState(false);
     const generation = ++this.transitionGeneration;
     this.emit('lr-close', { reason });
     await this.updateComplete;
     if (generation === this.transitionGeneration && !this._open) this.emit('lr-after-hide', null);
-  }
-
-  private coalesceOpenRequest(next: boolean): boolean {
-    if (this.openRequestTarget === undefined) return false;
-    this.openRequestDuringPreflight = next;
-    return true;
-  }
-
-  private beginOpenRequest(next: boolean): void {
-    this.openRequestTarget = next;
-    this.openRequestDuringPreflight = undefined;
-  }
-
-  private openRequestWasSuperseded(next: boolean): boolean {
-    return this.openRequestDuringPreflight !== undefined &&
-      this.openRequestDuringPreflight !== next;
-  }
-
-  private finishOpenRequest(): void {
-    this.openRequestTarget = undefined;
-    this.openRequestDuringPreflight = undefined;
   }
 
   private applyOpenState(next: boolean): void {
@@ -589,12 +568,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       // during willUpdate into the current cycle, so schedule a named paint for the newest input.
       queueDocumentMicrotask(this.ownerDocument, () => { if (this.isConnected) this.sourceState++; });
     }
-    // Purely derived from already-current state (images/the just-synced index/strings/locale)
-    // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
-    // (a reactive property) from updated()/firstUpdated() schedules a *second* update on top of
-    // the one that just finished, which Lit's dev-mode console flags ("scheduled an update ...
-    // after an update completed") -- mirrors lr-multi-split's/lr-virtual-list's identical
-    // willUpdate()-not-updated() fix for their own derived-property writes.
     if (this.sourceBindingCurrent && (changed.has('index') || changed.has('images') || changed.has('imageSource') || changed.has('sourceState') || changed.has('strings') || changed.has('locale'))) {
       this.updateLiveRegion();
     }
@@ -608,13 +581,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
   }
 
-  // Runs after render so the manager can resolve the panel and its composed focus targets, and
-  // so [part="panel"]/the embedded frame have already landed in the DOM.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // The first render (including initially-open markup) is state, not a navigation. Each
-    // connection captures the current image/index as a baseline, so an update requested while
-    // detached stays silent even when its Lit update flushes only after reattachment.
+    // Reconnecting establishes a silent baseline for navigation announcements.
     const isConnectionBaseline =
       this.announcementBaseline?.index === this.currentIndex() &&
       this.announcementBaseline.images === this.images &&
@@ -641,8 +610,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       this.modalSurface.show();
       this.overlay?.focusInitial();
     }
-    // Imperative, not a binding -- see the class doc for why this is required for the reset to
-    // keep working past the first navigation.
     let currentSourceChanged = false;
     if (changed.has('images')) {
       const previousImages = changed.get('images') as readonly LyraLightboxImage[] | undefined;
@@ -672,9 +639,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const generation = ++this.connectionGeneration;
     const connectionDocument = this.ownerDocument;
     this.captureAnnouncementBaseline();
-    // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
-    // disconnectedCallback then connectedCallback synchronously with no update in between, so
-    // willUpdate never reruns to notice `open` is still true -- restore what it dropped.
+    // Moving an open host can reconnect it without another Lit update.
     if (this.hasUpdated && this.open) {
       if (this.overlay?.isActive()) {
         this.overlay.resume();
@@ -706,9 +671,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.modalSurface.disconnect();
     this.overlay?.suspend();
     if (this.open) {
-      // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
-      // reconnect) isn't mistaken for a real removal -- mirrors <lr-dialog>'s identical
-      // disconnectedCallback rationale.
+      // Give a synchronous reparent time to reconnect before delivering unmount events.
       queueDocumentMicrotask(connectionDocument, () => {
         if (
           this.connectionGeneration === generation &&
@@ -739,10 +702,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         const backdrop = this.renderRoot.querySelector('[part="backdrop"]') ?? this;
         void this.closeFrom('backdrop', backdrop);
       },
-      // An intentionally safe default action -- a full-screen image grabbing focus should hand
-      // it to a predictable, always-present, non-destructive escape hatch first, rather than
-      // whatever happens to be first in DOM tab order (which could otherwise be a consumer's own
-      // actions-slot content if placed before close-button).
       preferredInitialFocus: () => this.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]') ?? null,
       lockScroll: true,
       suspendWhenUnrendered: true,
@@ -764,10 +723,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     void this.closeFrom('close-button', button);
   };
 
-  // RTL-aware. Attached on part="panel"
-  // itself so it sees keydowns bubbling from anywhere inside, including from within the embedded
-  // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
-  // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || shouldIgnoreNavigationKey(event) || event.shiftKey) return;
     // A slotted button/link (actions slot) owns Arrow keys; the lightbox's own shadow controls do not.

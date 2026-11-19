@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'பேனா கீழே',
   signaturePadPenUp: 'பேனா மேலே',
   signaturePadDrawingLimit: 'வரைதல் வரம்பை அடைந்துவிட்டது.',
+  catalogPickerSearchLoadFailed: 'தேடல் புலத்தை ஏற்ற முடியவில்லை.',
   localePickerInputLimit: 'முதல் 512 மொழி மற்றும் வட்டாரப் பதிவுகள் மட்டுமே கிடைக்கின்றன.',
   emojiPickerInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில எமோஜித் தரவுகள் விடுபட்டுள்ளன.',
 };

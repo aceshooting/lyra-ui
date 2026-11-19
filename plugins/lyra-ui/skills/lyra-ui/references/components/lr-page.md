@@ -45,6 +45,9 @@ and event listeners survive every breakpoint crossing.
   threshold. Changes to height alone skip this work. Changing the breakpoint or its font size,
   or reconnecting the Page, resolves the threshold again. `vw` and `vh` track the size of the
   owner window. Invalid values, including `%`, `calc()`, and `var()`, fall back to `768px`.
+- `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
+  sticky regions below the measured banner, header, and subheader. Their height properties still
+  set minimum sizes and provide offsets during server rendering and before measurement.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
@@ -156,9 +159,11 @@ ancestor to retheme only that region; `::part(header)` and its siblings still wi
 painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
-`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets
-use the three configured height properties, so set them to the real minimum heights when those rows
-carry content. Motion uses Lyra transition tokens and is removed under `prefers-reduced-motion`.
+`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. By default,
+sticky offsets use the three configured height properties. Enable `auto-sticky-offsets` for rows
+whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
+hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
+viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
 Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 

@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Stilou jos',
   signaturePadPenUp: 'Stilou sus',
   signaturePadDrawingLimit: 'A fost atinsă limita de desenare.',
+  catalogPickerSearchLoadFailed: 'Câmpul de căutare nu a putut fi încărcat.',
   localePickerInputLimit: 'Sunt disponibile doar primele 512 intrări de limbă și regiune.',
   emojiPickerInputLimit: 'Unele date emoji au fost omise deoarece s-a atins o limită de intrare.',
 };

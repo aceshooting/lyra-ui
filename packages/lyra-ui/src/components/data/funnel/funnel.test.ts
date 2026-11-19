@@ -218,6 +218,40 @@ describe('<lr-funnel>', () => {
     expect(parts(el, 'comparison-value').map(text)).to.deep.equal(['Comparison: 100%', 'Comparison: 40%']);
   });
 
+  it('keeps valid stages when the comparison array has been revoked', async () => {
+    const revoked = Proxy.revocable<LyraFunnelStage[]>([], {});
+    revoked.revoke();
+    const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${[{ label: 'Visited', value: 200 }]}></lr-funnel>`);
+    el.comparison = revoked.proxy;
+    await el.updateComplete;
+    expect(parts(el, 'stage-label').map(text)).to.deep.equal(['Visited']);
+    expect(parts(el, 'comparison-bar').length).to.equal(0);
+  });
+
+  it('uses the array length descriptor without calling a length getter', async () => {
+    let lengthReads = 0;
+    const stages = new Proxy([{ label: 'Visited', value: 200 }], {
+      get(target, key, receiver) {
+        if (key === 'length') {
+          lengthReads++;
+          throw new Error('Length access rejected');
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${stages}></lr-funnel>`);
+    expect(parts(el, 'stage-label').map(text)).to.deep.equal(['Visited']);
+    expect(lengthReads).to.equal(0);
+    el.stages = new Proxy(stages, {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('Length reflection rejected');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    await el.updateComplete;
+    expect(parts(el, 'stage-label').length).to.equal(0);
+  });
+
   it('formats values and shares through the effective locale, never a hardcoded English one', async () => {
     const el = await fixture<LyraFunnel>(
       html`<lr-funnel

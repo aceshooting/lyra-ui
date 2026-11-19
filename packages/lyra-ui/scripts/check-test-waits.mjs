@@ -2,56 +2,85 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
+import { parseProgram, visitAst } from './lib/ast.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(packageDir, 'scripts/fixtures/test-wait-baseline.json');
 const TEST = /\b(?:it|test|specify)\s*\(\s*(['"`])([^'"`]+)\1/;
 const MIN_WAIT_MS = 100;
-const CONSTANT = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(\d{3,})\s*(?:;|,|$)/;
-const SLEEP_WRAPPER = /(?:\bconst|\blet)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*(?::[^=]+)?=>|\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/;
 
-/** Names of local helpers whose body wraps `setTimeout` in a promise, so `sleep(300)` is a wait too. */
-function sleepWrappers(lines) {
-  const names = new Set();
-  lines.forEach((line, index) => {
-    const declared = SLEEP_WRAPPER.exec(line);
-    if (!declared) return;
-    const body = lines.slice(index, index + 4).join('\n');
-    if (/new Promise/.test(body) && /setTimeout\s*\(/.test(body)) names.add(declared[1] ?? declared[2]);
+function timerDelay({ callee, arguments: [callback, delay] }, resolver) {
+  const target = callee.type === 'MemberExpression' && !callee.computed ? callee.property : callee;
+  if (target.name === 'setTimeout' && callback?.type === 'Identifier' &&
+      (resolver === undefined || callback.name === resolver)) return delay;
+}
+
+/** Find which argument a local promise-based sleep passes to its timer. */
+function sleepParameter(callable) {
+  if (!callable?.params) return -1;
+  let parameter = -1;
+  visitAst(callable.body, (node) => {
+    if (node.type !== 'NewExpression' || node.callee.name !== 'Promise') return;
+    const executor = node.arguments[0];
+    const resolve = executor?.params?.[0];
+    if (resolve?.type !== 'Identifier') return;
+    visitAst(executor.body, (bodyNode) => {
+      if (bodyNode.type !== 'CallExpression') return;
+      const delay = timerDelay(bodyNode, resolve.name);
+      const index = callable.params.findIndex((param) => param.type === 'Identifier' && param.name === delay?.name);
+      if (index >= 0) parameter = index;
+    });
   });
-  return names;
+  return parameter;
+}
+
+function waitCalls(program) {
+  const constants = new Map();
+  const wrappers = new Map([['aTimeout', 0]]);
+  const calls = [];
+  visitAst(program, (node) => {
+    if (node.type === 'VariableDeclaration' && node.kind === 'const') {
+      for (const { id, init } of node.declarations) {
+        if (id.type === 'Identifier' && typeof init?.value === 'number') constants.set(id.name, init.value);
+      }
+    }
+    if (node.type === 'FunctionDeclaration' || node.type === 'VariableDeclarator') {
+      const parameter = sleepParameter(node.type === 'FunctionDeclaration' ? node : node.init);
+      if (node.id?.type === 'Identifier' && parameter >= 0) wrappers.set(node.id.name, parameter);
+    }
+    if (node.type === 'CallExpression') calls.push(node);
+  });
+
+  const waits = [];
+  for (const call of calls) {
+    const name = call.callee.type === 'Identifier' ? call.callee.name : undefined;
+    const parameter = wrappers.get(name);
+    const delay = parameter === undefined ? timerDelay(call) : call.arguments[parameter];
+    const milliseconds = delay?.type === 'Identifier' ? constants.get(delay.name) : delay?.value;
+    if (typeof milliseconds !== 'number' || milliseconds < MIN_WAIT_MS) continue;
+    const argument = delay.type === 'Identifier' ? `${delay.name}=${milliseconds}` : milliseconds;
+    waits.push({ start: call.start, fingerprint: `${parameter === undefined ? 'setTimeout' : name}(${argument})` });
+  }
+  return waits;
 }
 
 /** Stable test title + call fingerprint; line moves do not renew a wait allowance. */
 export function literalLongWaits(source, file) {
-  const rows = [];
+  if (!/\b(?:aTimeout|setTimeout)\b/.test(source)) return [];
+  const calls = waitCalls(parseProgram(file, source));
   let scope = '<module>';
   const lines = source.split(/\r?\n/);
-  const constants = new Map();
-  for (const line of lines) {
-    const constant = CONSTANT.exec(line);
-    if (constant) constants.set(constant[1], Number(constant[2]));
-  }
-  const callees = ['aTimeout', ...sleepWrappers(lines)].map(name => name.replace(/[$]/g, '\\$'));
-  const direct = new RegExp(`\\b(${callees.join('|')})\\s*\\(\\s*(\\d{3,}|[A-Za-z_$][\\w$]*)\\s*\\)`, 'g');
-  const timer = /\bsetTimeout\s*\(\s*[A-Za-z_$][\w$]*\s*,\s*(\d{3,}|[A-Za-z_$][\w$]*)\s*\)/g;
-  for (let index = 0; index < lines.length; index++) {
-    const title = TEST.exec(lines[index]);
+  const scopes = lines.map((line) => {
+    const title = TEST.exec(line);
     if (title) scope = title[2];
-    const calls = [];
-    for (const match of lines[index].matchAll(direct)) calls.push([match[1], match[2]]);
-    for (const match of lines[index].matchAll(timer)) calls.push(['setTimeout', match[1]]);
-    for (const [name, argument] of calls) {
-      const literal = /^\d+$/.test(argument);
-      const milliseconds = literal ? Number(argument) : constants.get(argument);
-      if (milliseconds === undefined || milliseconds < MIN_WAIT_MS) continue;
-      const call = `${name}(${literal ? argument : `${argument}=${milliseconds}`})`;
-      const key = `${file}\t${scope}\t${call}`;
-      const reason = lines.slice(Math.max(0, index - 2), index + 1).some(line => /wait-reason:\s*\S/.test(line));
-      rows.push({ key, reason, line: index + 1 });
-    }
-  }
-  return rows;
+    return scope;
+  });
+  return calls.map(({ start, fingerprint }) => {
+    const line = source.slice(0, start).split('\n').length;
+    const key = `${file}\t${scopes[line - 1]}\t${fingerprint}`;
+    const reason = lines.slice(Math.max(0, line - 3), line).some((text) => /wait-reason:\s*\S/.test(text));
+    return { key, reason, line };
+  });
 }
 
 export function newLongWaits(rows, baseline) {

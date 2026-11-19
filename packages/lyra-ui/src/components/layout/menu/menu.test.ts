@@ -458,6 +458,18 @@ it('supports localized typeahead and skips unavailable matches', async () => {
   expect(document.activeElement?.id).to.equal('istanbul');
 });
 
+it('type-ahead matches accented labels and keys without regard to accents', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="plain" value="plain">Plain</lr-menu-item>
+      <lr-menu-item id="elan" value="elan">\u00c9lan</lr-menu-item>
+    </lr-menu>
+  `);
+  byId(menu, 'plain').focus();
+  press(byId(menu, 'plain'), 'e');
+  expect(document.activeElement?.id).to.equal('elan');
+});
+
 it('uses host aria-label, explicit label, dropdown fallback, then localized Menu', async () => {
   const menu = await fixture<LyraMenu>(html`<lr-menu></lr-menu>`);
   expect(list(menu).getAttribute('aria-label')).to.equal('Menu');

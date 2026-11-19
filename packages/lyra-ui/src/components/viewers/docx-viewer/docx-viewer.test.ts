@@ -1,4 +1,5 @@
 import { twoFrames } from '../../../../test/frames.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import './docx-viewer.js';
@@ -58,6 +59,37 @@ async function loadWithMarkup(markup: string): Promise<{ el: LyraDocxViewer; res
   await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
   return { el, restore };
 }
+
+it('discards conversion diagnostics if sanitizing the document replaces its source', async () => {
+  const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+  const replacement = 'https://example.test/replacement.docx';
+  useLibrary(el, {
+    mammoth: {
+      convertToHtml: () => Promise.resolve(el.src === replacement
+        ? { value: '<p>Retained document</p>', messages: [] }
+        : { value: '<p>Retired document</p>', messages: [{ type: 'warning', message: 'Retired diagnostic' }] }),
+    },
+    DOMPurify: {
+      sanitize(markup: string) {
+        el.src = replacement;
+        return markup;
+      },
+    },
+  });
+  let diagnostics = 0;
+  el.addEventListener('lr-viewer-diagnostic', () => diagnostics++);
+  const restore = stubFetch(BUFFER);
+  try {
+    el.src = 'https://example.test/retired.docx';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="content"] p')?.textContent === 'Retained document',
+      'the replacement document never rendered',
+    );
+    expect(diagnostics).to.equal(0);
+  } finally {
+    restore();
+  }
+});
 
 /** Turkish has no shipped lyra-ui catalog at all, so the `lang = 'tr'` Turkish-dotless-i
  *  case-folding tests below deliberately fall back to the English default for docxViewerLabel --
@@ -1537,6 +1569,29 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       }
     } finally {
       (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
+  it('removes fallback mark transitions under reduced motion', async () => {
+    const globals = globalThis as { Highlight?: unknown };
+    const originalHighlight = globals.Highlight;
+    globals.Highlight = undefined;
+    try {
+      await setReducedMotion('no-preference');
+      const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+      try {
+        el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+        await el.updateComplete;
+        const mark = el.shadowRoot!.querySelector<HTMLElement>('[part="content"] mark[data-lr-highlight-tone]')!;
+        expect(getComputedStyle(mark).transitionProperty).to.equal('background-color');
+        await setReducedMotion('reduce');
+        expect(getComputedStyle(mark).transitionProperty).to.equal('none');
+      } finally {
+        restore();
+      }
+    } finally {
+      globals.Highlight = originalHighlight;
+      await setReducedMotion('no-preference');
     }
   });
 

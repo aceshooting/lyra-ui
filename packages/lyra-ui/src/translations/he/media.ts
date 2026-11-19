@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'צא ממסך מלא',
   videoPlaylistLabel: 'רשימת השמעה של סרטונים',
   videoPlaylistUntitled: 'סרטון {position}',
+  videoTimeReadout: '{current} מתוך {duration}',
   pause: 'השהה',
   qrCodeMissingLibrary: 'כדי להציג קודי QR, יש להתקין את החבילה האופציונלית "qrcode".',
   qrCodeGenerationFailed: 'לא ניתן היה לקודד ערך זה כקוד QR.',

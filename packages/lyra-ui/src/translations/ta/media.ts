@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'முழுத்திரையிலிருந்து வெளியேறு',
   videoPlaylistLabel: 'காணொளிப் பட்டியல்',
   videoPlaylistUntitled: 'காணொளி {position}',
+  videoTimeReadout: '{duration}-இல் {current}',
   pause: 'இடைநிறுத்து',
   qrCodeMissingLibrary: 'QR குறியீடுகளை உருவாக்க இந்தக் கூறுக்கு விருப்பமான "qrcode" தொகுப்பை நிறுவ வேண்டும்.',
   qrCodeGenerationFailed: 'இந்த மதிப்பை QR குறியீடாக மாற்ற முடியவில்லை.',

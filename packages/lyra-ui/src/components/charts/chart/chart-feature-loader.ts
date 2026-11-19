@@ -121,11 +121,87 @@ const annotation = createPluginLoader('chartjs-plugin-annotation', () => import(
   notifyAnnotationPluginRegistered();
 });
 
-export const loadChartAndRegisterZoom = zoom.withCore;
-export const loadChartJsWithZoomResult = zoom.cached;
-export const loadDataLabelsPlugin = dataLabels.plugin;
-export const loadChartAndDataLabels = dataLabels.withCore;
-export const loadChartJsWithDataLabelsResult = dataLabels.cached;
-export const loadAnnotationPlugin = annotation.plugin;
-export const loadChartAndAnnotation = annotation.withCore;
-export const loadChartJsWithAnnotationResult = annotation.cached;
+export function loadChartAndRegisterZoom(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importZoom?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<ZoomPlugin>> {
+  return zoom.withCore(loadChart, importZoom);
+}
+
+export function loadChartJsWithZoomResult(
+  importZoom?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<ZoomPlugin>> {
+  return zoom.cached(importZoom);
+}
+
+export function loadDataLabelsPlugin(
+  importDataLabels?: () => Promise<unknown>,
+): Promise<DataLabelsPlugin | undefined> {
+  return dataLabels.plugin(importDataLabels);
+}
+
+export function loadChartAndDataLabels(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importDataLabels?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<DataLabelsPlugin>> {
+  return dataLabels.withCore(loadChart, importDataLabels);
+}
+
+export function loadChartJsWithDataLabelsResult(
+  importDataLabels?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<DataLabelsPlugin>> {
+  return dataLabels.cached(importDataLabels);
+}
+
+export function loadAnnotationPlugin(
+  importAnnotation?: () => Promise<unknown>,
+): Promise<AnnotationPlugin | undefined> {
+  return annotation.plugin(importAnnotation);
+}
+
+export function loadChartAndAnnotation(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importAnnotation?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<AnnotationPlugin>> {
+  return annotation.withCore(loadChart, importAnnotation);
+}
+
+export function loadChartJsWithAnnotationResult(
+  importAnnotation?: () => Promise<unknown>,
+): Promise<ChartFeatureLoadResult<AnnotationPlugin>> {
+  return annotation.cached(importAnnotation);
+}
+
+function projectCachedFeature<Result>(
+  load: (importer?: ImportPeer) => Promise<ChartFeatureLoadResult<ChartPluginCapability>>,
+  project: (result: ChartFeatureLoadResult<ChartPluginCapability>) => Result,
+): (importer?: ImportPeer) => Promise<Result> {
+  let projection: { source: Promise<ChartFeatureLoadResult<ChartPluginCapability>>; value: Promise<Result> } | undefined;
+  return (importer) => {
+    const source = load(importer);
+    if (projection?.source !== source) projection = { source, value: source.then(project) };
+    return projection.value;
+  };
+}
+
+const chartWithZoom = projectCachedFeature(loadChartJsWithZoomResult, (result) =>
+  result.kind === 'core-unavailable' ? null : result.mod,
+);
+const chartWithDataLabels = projectCachedFeature(loadChartJsWithDataLabelsResult, (result) =>
+  result.kind === 'core-unavailable' ? null : {
+    mod: result.mod,
+    plugin: result.kind === 'available' ? result.plugin : undefined,
+  },
+);
+
+/** Returns the usable core module even when the optional zoom plugin is unavailable. */
+export function loadChartJsWithZoom(importZoom?: () => Promise<unknown>): Promise<ChartJsModule | null> {
+  return chartWithZoom(importZoom);
+}
+
+/** Returns the per-chart data-labels plugin alongside the core module when available. */
+export function loadChartJsWithDataLabels(
+  importDataLabels?: () => Promise<unknown>,
+): Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null> {
+  return chartWithDataLabels(importDataLabels);
+}

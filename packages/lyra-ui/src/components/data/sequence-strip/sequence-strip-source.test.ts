@@ -3,6 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './sequence-strip.js';
 import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
@@ -17,6 +18,18 @@ const source = (): LyraSequenceSource<SequenceStripItem> => ({ revision: 1, leng
   summarize: () => [{ startIndex: 0, endIndex: 1000000, categoryCounts: { a: 1000000 }, markerCount: 1, enabledCount: 1000000 }],
 });
 describe('sequence complete source', () => {
+  it('acquires its source live region only when a source is assigned', async () => {
+    const sink = () => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`) !== null;
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .items=${[item(0)]}></lr-sequence-strip>`);
+    expect(sink()).to.equal(false);
+    el.source = source();
+    await waitUntil(sink);
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-range-end]') !== null);
+    el.source = null;
+    await el.updateComplete;
+    expect(sink()).to.equal(false);
+  });
+
   it('represents the full range and resolves the final exact item', async () => {
     const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .strings=${{ sequenceStripSourceItemLabel: '{label}, item {index} of {total}' }} .source=${source()}></lr-sequence-strip>`);
     await waitUntil(() => el.shadowRoot!.querySelector('[data-range-end]')?.getAttribute('data-range-end') === '999999');

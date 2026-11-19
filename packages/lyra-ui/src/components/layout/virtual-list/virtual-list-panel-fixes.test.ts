@@ -158,3 +158,22 @@ it('keeps subpixel dense-row offsets exact after appending and measuring rows', 
   await waitUntil(() => el.offsetForIndex(3) === 2.25, 'three measured rows occupy 2.25 pixels');
   expect(el.indexAtOffset(1.5)).to.equal(2);
 });
+
+it('folds each measured row and group marker into the following offsets', async () => {
+  const heightOf = (item: unknown): number => 20 + ((item as number) % 3) * 10;
+  const el = await fixture<LyraVirtualList>(html`<lr-virtual-list style="--lr-virtual-list-height:2000px"
+    row-height="auto" .items=${Array.from({ length: 12 }, (_, i) => i)}
+    .groups=${[{ key: 'late', label: 'Late', startIndex: 6 }]}
+    .renderItem=${(item: unknown) => html`<div style=${`height:${heightOf(item)}px`}></div>`}></lr-virtual-list>`);
+  const rowsTotal = Array.from({ length: 12 }, (_, i) => heightOf(i)).reduce((a, b) => a + b, 0);
+  await waitUntil(() => el.renderedRows.length === 12, 'every row renders');
+  await waitUntil(() => {
+    const marker = el.shadowRoot!.querySelector<HTMLElement>('[part="group"]');
+    return marker !== null && Math.abs(el.offsetForIndex(12) - rowsTotal - marker.getBoundingClientRect().height) < 0.5;
+  }, 'row and group heights are folded into the total');
+  for (let index = 1; index < 12; index += 1) {
+    const slot = el.offsetForIndex(index + 1) - el.offsetForIndex(index);
+    expect(slot >= heightOf(index) - 0.5, `row ${index} keeps its measured height`).to.equal(true);
+  }
+  expect(el.indexAtOffset(el.offsetForIndex(7) + 1)).to.equal(7);
+});

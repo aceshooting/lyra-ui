@@ -2,6 +2,7 @@ import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { VirtualListCompositionController } from '../../../internal/virtual-list-composition.js';
+import { MeasuredOffsetIndex } from '../../../internal/measured-offset-index.js';
 import {
   html,
   nothing,
@@ -998,9 +999,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * browser contract through LyraElement's hydration-aware seed helper. */
   private renderUnmeasuredWindow = true;
 
-  /** `offsets[i]` = row `i`'s pixel top for array sources. Indexed sources compute offsets from
-   * their count plus sparse measurements and never allocate this array at source cardinality. */
-  private offsets: number[] = [0];
+  /** Prefix sums of each array row's height, group marker included. Indexed sources compute
+   * offsets from their count plus sparse measurements and keep this empty. */
+  private readonly offsetIndex = new MeasuredOffsetIndex(DEFAULT_ROW_ESTIMATE_PX, 0, {
+    minimumHeight: 0,
+    maximumTotal: Number.MAX_VALUE,
+  });
+  /** Rows whose measured height or group marker changed since the last rebuild. */
+  private readonly dirtyHeightIndices = new Set<number>();
   private offsetDirtyStart = 0;
   private appendIdentityStart = -1;
   private identityIndices = new Map<string, number>();
@@ -1678,7 +1684,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private offsetAt(index: number): number {
     return isIndexedSource(this.effectiveSource)
       ? this.indexedOffsetForIndex(index)
-      : this.offsets[index] ?? 0;
+      : this.arrayOffsetAt(index);
+  }
+
+  private arrayOffsetAt(index: number): number {
+    if (index >= this.offsetIndex.length) return this.offsetIndex.total;
+    return this.offsetIndex.offsetOf(index) + this.groupHeightAt(index);
+  }
+
+  private rowSlotHeightAt(index: number): number {
+    return finiteAdd(this.groupHeightAt(index), this.rowHeightAt(index));
   }
 
   private recomputeOffsets(): void {
@@ -1691,7 +1706,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // Count-backed sources intentionally stay sparse. Offset queries use count arithmetic plus
       // only the rows actually measured by ResizeObserver; no count-sized items/keys/offsets array
       // is synthesized here.
-      this.offsets = [0];
+      this.offsetIndex.reset([]);
+      this.dirtyHeightIndices.clear();
       this.rowIdentities = [];
       this.rowKeys = [];
       this.identityIndices.clear();
@@ -1702,8 +1718,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     const append = this.appendIdentityStart >= 0;
     const start = this.identitiesDirty && !append ? 0 : Math.min(n, this.offsetDirtyStart);
-    const offsets = start > 0 ? this.offsets : new Array<number>(n + 1);
-    let cursor = start > 0 ? finiteAdd(this.offsets[start - 1]!, this.rowHeightAt(start - 1)) : 0;
+    const heights = new Array<number>(Math.max(0, n - start));
     // Only build the live-keys set (and only when in row-height="auto" mode,
     // where measuredHeights is actually populated) when items itself changed
     // -- a measurement-only or rowHeight/keyFunction-only recompute has no
@@ -1721,8 +1736,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const reuse = !this.identitiesDirty && this.rowIdentities.length === n;
     const identities = reuse || append ? this.rowIdentities : new Array<string>(n);
     for (let i = start; i < n; i++) {
-      cursor = finiteAdd(cursor, this.groupHeightAt(i));
-      offsets[i] = cursor;
       if (!reuse) {
         const key = this.keyOf(this.itemAt(i), i);
         const token = domKeyToken(key);
@@ -1741,11 +1754,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         liveKeys?.add(identity);
         h = this.measuredHeights.get(identity) ?? DEFAULT_ROW_ESTIMATE_PX;
       }
-      cursor = finiteAdd(cursor, h);
+      heights[i - start] = finiteAdd(this.groupHeightAt(i), h);
     }
-    offsets[n] = cursor;
-    this.offsets = offsets;
+    if (start === 0) this.offsetIndex.reset(heights);
+    else this.offsetIndex.append(heights);
     this.rowIdentities = identities;
+    for (const index of this.dirtyHeightIndices) {
+      if (index < n) this.offsetIndex.set(index, this.rowSlotHeightAt(index));
+    }
+    this.dirtyHeightIndices.clear();
     if (!reuse) this.keyOccurrences = occurrences;
     this.identitiesDirty = false;
     this.itemsChangedPendingPrune = false;
@@ -2112,7 +2129,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       if (replaced || prev === undefined || Math.abs(prev - height) > 0.5) {
         const oldHeight = prev ?? DEFAULT_ROW_ESTIMATE_PX;
         const oldBottom = indexed ? finiteAdd(this.offsetAt(index), oldHeight) : this.rowBottomAt(index);
-        this.offsetDirtyStart = Math.min(this.offsetDirtyStart, index);
+        this.dirtyHeightIndices.add(index);
         if (replaced) {
           this.measuredHeights.delete(previousKey);
           this.measuredIndices.delete(previousKey);
@@ -2173,7 +2190,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       const previous = this.measuredGroupHeights.get(index) ?? DEFAULT_GROUP_ESTIMATE_PX;
       if (Math.abs(previous - height) <= 0.5) continue;
       const oldRowTop = this.offsetAt(index);
-      this.offsetDirtyStart = Math.min(this.offsetDirtyStart, index);
+      this.dirtyHeightIndices.add(index);
       this.groupPrefixDirty = true;
       this.measuredGroupHeights.set(index, height);
       if (oldRowTop <= oldScrollTop) scrollAdjustment += height - previous;

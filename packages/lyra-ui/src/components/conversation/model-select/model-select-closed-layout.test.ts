@@ -20,6 +20,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
       await waitUntil(
         () => listbox.style.getPropertyValue('--lr-positioner-available-inline-size') !== '',
         'opened listbox never received live positioner geometry',
+        { timeout: 3000 },
       );
       control.open = false;
       await control.updateComplete;

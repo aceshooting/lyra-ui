@@ -38,6 +38,41 @@ describe('lr-document-preview remediation', () => {
     }
   });
 
+  it('reports oversized text and releases the unread stream', async () => {
+    const original = window.fetch;
+    let cancelled = false;
+    window.fetch = async () => new Response(new ReadableStream<Uint8Array>({
+      cancel() { cancelled = true; },
+    }), { headers: { 'content-length': '30000000' } });
+    try {
+      const el = await fixture<LyraDocumentPreview>(html`
+        <lr-document-preview mime-type="text/plain" src="https://example.test/oversized.txt"
+          .strings=${{ documentPreviewResourceTooLarge: 'Text exceeds the preview limit' }}></lr-document-preview>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Text exceeds the preview limit');
+      expect(cancelled).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('reports when the owner window has no fetch implementation', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview mime-type="text/plain"
+        .strings=${{ documentPreviewUrlNotAllowed: 'The document source is unavailable' }}></lr-document-preview>
+    `);
+    const original = window.fetch;
+    try {
+      Object.defineProperty(window, 'fetch', { value: undefined });
+      el.src = 'https://example.test/preview.txt';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('The document source is unavailable');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('shows an error state and emits one render error when the image fails to load', async () => {
     const el = await fixture<LyraDocumentPreview>(html`
       <lr-document-preview mime-type="image/png" src="https://example.invalid/missing.png"></lr-document-preview>

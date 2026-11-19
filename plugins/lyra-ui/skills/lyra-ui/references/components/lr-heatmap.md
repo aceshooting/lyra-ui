@@ -27,6 +27,7 @@ Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring is redrawn over
 every draw, and the cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
+Calendar day inputs use canonical Gregorian `YYYY-MM-DD` dates, such as `2026-01-08`.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
 previous/next movement instead of swapping for RTL.

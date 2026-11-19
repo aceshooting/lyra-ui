@@ -1,5 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './time-input.js';
+import './number-input.js';
 import '../time-range/time-range.js';
 import '../otp-input/otp-input.js';
 import '../token-input/token-input.js';
@@ -17,6 +18,16 @@ function press(target: Element, key: string, init: KeyboardEventInit = {}): Keyb
 const MODIFIERS: KeyboardEventInit[] = [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }];
 
 describe('text controls leave modified and composing keys to the browser', () => {
+  it('leaves modified localized number steps to the native input', async () => {
+    const el = await fixture<HTMLElementTagNameMap['lr-number-input']>(html`<lr-number-input localized value="3"></lr-number-input>`);
+    for (const init of MODIFIERS) {
+      expect(press(el.input!, 'ArrowUp', init).defaultPrevented).to.equal(false);
+      expect(el.value).to.equal('3');
+    }
+    expect(press(el.input!, 'ArrowUp').defaultPrevented).to.equal(true);
+    expect(el.value).to.equal('4');
+  });
+
   it('lr-time-input segments neither act on nor cancel them', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:30"></lr-time-input>`);
     const hour = el.shadowRoot!.querySelector<HTMLElement>('[data-segment="hour"]')!;

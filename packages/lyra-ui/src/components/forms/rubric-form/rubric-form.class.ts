@@ -8,6 +8,7 @@ import { FormControlController, reflectFormName } from '../../../internal/form-c
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { guard } from 'lit/directives/guard.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
@@ -512,7 +513,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   @property({ attribute: 'error-text' }) errorText = '';
   /** SSR label-presence hint; hydrated instances also discover populated slots. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
-  /** SSR hint-presence hint; hydrated instances also discover populated hint/help-text slots. */
+  /** SSR hint-presence hint; hydrated instances also discover a populated hint slot. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
 
   @state() private _errors: Record<string, string> = {};
@@ -1036,12 +1037,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
       .filter((value): value is string => Boolean(value))
       .join('. ');
     if (this.isSegmentedScore(k)) {
-      const numberFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 });
-      const items: LyraSegmentedItem[] = this.scoreValues(k).map((score) => ({
-        value: String(score),
-        label: numberFormat.format(score),
-        disabled,
-      }));
+      const locale = this.effectiveLocale;
       const value = typeof current === 'number' ? String(current) : '';
       return html`<lr-segmented
         @lr-activate=${this.stopChildEvent}
@@ -1049,7 +1045,14 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
         class="control"
         part="scale"
         size="s"
-        .items=${items}
+        .items=${guard([k, locale, disabled], (): LyraSegmentedItem[] => {
+          const formatter = getNumberFormat(locale, { maximumFractionDigits: 20 });
+          return this.scoreValues(k).map(score => ({
+            value: String(score),
+            label: formatter.format(score),
+            disabled,
+          }));
+        })}
         .value=${value}
         label=${accessibleLabel}
         @lr-input=${this.stopChildEvent}
@@ -1248,18 +1251,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
           <div part="fields form-control-input">
             ${this._keys.length === 0
               ? html`<p part="empty">${this.localize('noData')}</p>`
-              : repeat(
-                  (() => {
-                    const occurrences = new Map<string, number>();
-                    return this._keys.map((key, index) => {
-                      const occurrence = occurrences.get(key.key) ?? 0;
-                      occurrences.set(key.key, occurrence + 1);
-                      return { key, index, identity: `${key.key}\u0000${occurrence}` };
-                    });
-                  })(),
-                  (entry) => entry.identity,
-                  (entry) => this.renderField(entry.key, entry.index),
-                )}
+              : repeat(this._keys, key => key.key, (key, index) => this.renderField(key, index))}
           </div>
           <div
             id=${this.aggregateErrorId}

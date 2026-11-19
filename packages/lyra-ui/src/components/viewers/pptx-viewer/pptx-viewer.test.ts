@@ -1822,18 +1822,24 @@ describe("styling", () => {
       el.src = 'https://example.test/deck.pptx';
       await loaded;
 
-      for (const selector of [
-        '[part="previous-button"]',
-        '[part="next-button"]',
-      ]) {
-        const button = el.shadowRoot!.querySelector(selector) as HTMLElement;
-        await hoverUntilMatched(button, `${selector} never registered :hover`);
-        // background-color eases over --lr-transition-fast, so "differs from resting" alone would
-        // match a mid-interpolation frame -- poll for the exact settled hover value instead.
-        await waitUntil(
-          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
-          `${selector} never entered its rendered hover state`,
-        );
+      const previous = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="previous-button"]')!;
+      const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!;
+      previous.style.transition = 'none';
+      next.style.transition = 'none';
+      for (const [enabled, disabled] of [[next, previous], [previous, next]] as const) {
+        expect(disabled.disabled).to.equal(true);
+        const resting = getComputedStyle(disabled).backgroundColor;
+        await hoverUntilMatched(disabled, 'disabled pager button never registered :hover');
+        expect(getComputedStyle(disabled).backgroundColor).to.equal(resting);
+
+        expect(enabled.disabled).to.equal(false);
+        el.style.removeProperty('--lr-viewer-pager-button-hover-bg');
+        await hoverUntilMatched(enabled, 'enabled pager button never registered :hover');
+        expect(getComputedStyle(enabled).backgroundColor).to.equal('rgb(1, 2, 3)');
+        el.style.setProperty('--lr-viewer-pager-button-hover-bg', 'rgb(4, 5, 6)');
+        expect(getComputedStyle(enabled).backgroundColor).to.equal('rgb(4, 5, 6)');
+        enabled.click();
+        await waitUntil(() => !disabled.disabled);
       }
     } finally {
       await resetMouse();

@@ -300,5 +300,6 @@ export const ExactHeightScrollableTokens: Story = {
 /** The value stays complete while keyboard navigation brings retained tokens into view. */
 export const BoundedTokens: Story = {
   render: () => html`<lr-token-input editable label="Recipients" max-tokens-visible="8"
+    hint="Use Previous and Next to reach every recipient."
     .value=${Array.from({ length: 1000 }, (_, index) => `recipient-${index}`)}></lr-token-input>`,
 };

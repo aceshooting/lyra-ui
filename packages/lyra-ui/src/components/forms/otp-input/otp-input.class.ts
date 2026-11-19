@@ -118,6 +118,8 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * Host aria-describedby targets supplement local error/hint guidance on the native control
  * input. Relationships track missing IDs, target replacement, removal/reinsertion, reconnect,
  * and document adoption.
+ * A whitespace-only host name uses the visible label or the localized verification-code name.
+ * An empty host name retains the visible label association.
  *
  * @customElement lr-otp-input
  * @slot label - Rich label content, rendered after any `label` text.
@@ -154,6 +156,7 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red
  * before the user has entered a digit is hostile.
+ * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-otp-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart base - The outer wrapper; retained alias for `form-control`.
  * @csspart form-control - The outer wrapper; shared form-control alias for `base`.

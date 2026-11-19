@@ -773,7 +773,9 @@ temporarily makes off-page slides inert and aria-hidden, then restores their ret
 when they become visible, are removed, or the carousel disconnects.
 
 **Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
-or vertical), Home, and End. Keys originating in a native input, textarea, contenteditable surface,
+or vertical), Home, and End. The viewport's accessible name uses the `carouselViewport` string
+("Slides" in English). Host `aria-label` names the outer carousel region. Keys originating in a
+native input, textarea, contenteditable surface,
 or supported custom control remain owned by that editor, including when the editor is the assigned
 slide itself; they do not change the active slide or move focus away from it.
 
@@ -3625,7 +3627,7 @@ nested disclosure.
 
 **Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
 Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
-locale-aware type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
+locale-aware, accent-insensitive type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
 composition keys, are never handled. Pressing a disabled or loading row with the mouse does not
 focus it. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
 inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership
@@ -4069,8 +4071,8 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle uses the stable `dockPanelToggle` accessible name and reports state through `aria-expanded`.
-The `dockPanelCollapse` and `dockPanelExpand` strings supply its action tooltip. A slotted glyph keeps its orientation.
+icons). The toggle's accessible name is the action it performs (`dockPanelCollapse` while expanded,
+`dockPanelExpand` while collapsed) and `aria-expanded` reports the state. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
@@ -4493,7 +4495,8 @@ and animated panel. The two components intentionally keep distinct vocabularies:
 use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
 `show()`/`hide()` belong only to Details.
 
-`lr-toggle` reports the direction and source of an accepted Details transition. Accordion
+`lr-toggle` reports the direction and source of an accepted Details transition. A synchronous
+DOM move keeps the pending toggle and after-event. Accordion
 coordinates only its direct `lr-accordion-item` children; Details retains independent state and
 optional grouping through a shared non-empty `name`.
 
@@ -5668,6 +5671,9 @@ and event listeners survive every breakpoint crossing.
   threshold. Changes to height alone skip this work. Changing the breakpoint or its font size,
   or reconnecting the Page, resolves the threshold again. `vw` and `vh` track the size of the
   owner window. Invalid values, including `%`, `calc()`, and `var()`, fall back to `768px`.
+- `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
+  sticky regions below the measured banner, header, and subheader. Their height properties still
+  set minimum sizes and provide offsets during server rendering and before measurement.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
@@ -5779,9 +5785,11 @@ ancestor to retheme only that region; `::part(header)` and its siblings still wi
 painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
-`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets
-use the three configured height properties, so set them to the real minimum heights when those rows
-carry content. Motion uses Lyra transition tokens and is removed under `prefers-reduced-motion`.
+`banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. By default,
+sticky offsets use the three configured height properties. Enable `auto-sticky-offsets` for rows
+whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
+hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
+viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
 Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 

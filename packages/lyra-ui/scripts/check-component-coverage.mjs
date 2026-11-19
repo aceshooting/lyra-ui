@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
+import { parseProgram, visitAst } from './lib/ast.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(packageDir, 'src', 'components');
@@ -18,9 +19,31 @@ export function exercisesTag(tests, tag) {
   return new RegExp(`<${tag}(?:\\s|>)`).test(tests) || new RegExp(`['"\`]${tag}['"\`]`).test(tests);
 }
 
-/** A tag is axe-checked only by a test file that both mounts it and calls `to.be.accessible`. */
+function isAccessibilityAssertion(node) {
+  if (node.type !== 'CallExpression') return false;
+  const { callee } = node;
+  if (callee.type !== 'MemberExpression' || callee.computed || callee.property.name !== 'accessible') return false;
+  let chain = callee.object;
+  while (chain.type === 'MemberExpression' && !chain.computed && chain.property.name !== 'not') {
+    chain = chain.object;
+  }
+  return chain.type === 'CallExpression' && chain.callee.name === 'expect';
+}
+
+/** A tag is axe-checked only by a test file that mounts it and makes a positive axe assertion. */
 export function hasAccessibilityAssertion(testFiles, tag) {
-  return testFiles.some((source) => source.includes('to.be.accessible') && exercisesTag(source, tag));
+  const openingTag = new RegExp(`<${tag}(?:\\s|>)`);
+  return testFiles.some((source) => {
+    if (!source.includes('accessible') || !exercisesTag(source, tag)) return false;
+    let mountsTag = false;
+    let checksAccessibility = false;
+    visitAst(parseProgram(`${tag}.test.ts`, source), (node) => {
+      const text = node.type === 'TemplateElement' ? node.value.raw : node.type === 'Literal' ? node.value : undefined;
+      mountsTag ||= typeof text === 'string' && (text === tag || openingTag.test(text));
+      checksAccessibility ||= isAccessibilityAssertion(node);
+    });
+    return mountsTag && checksAccessibility;
+  });
 }
 
 function main() {

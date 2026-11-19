@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Comot fullscreen',
   videoPlaylistLabel: 'List of videos',
   videoPlaylistUntitled: 'Video number {position}',
+  videoTimeReadout: '{current} out of {duration}',
   pause: 'Pause am',
   qrCodeMissingLibrary: 'Dis component need make you install di optional "qrcode" package before e fit show QR codes.',
   qrCodeGenerationFailed: 'E no fit encode dis value as QR code.',

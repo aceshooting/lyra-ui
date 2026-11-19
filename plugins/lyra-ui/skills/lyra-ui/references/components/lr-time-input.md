@@ -68,7 +68,8 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `size` (shared `2xs`…`xl` ladder and `small`/`medium`/`large` aliases), and `pill = false`.
 - `label = ''`, `hint = ''`, `errorText = ''` (`error-text`), `withLabel = false`
   (`with-label`), and `withHint = false` (`with-hint`) provide complete form chrome. A host
-  `aria-label` wins for the internal editing surface's accessible name.
+  `aria-label` names the group. An empty attribute clears the name. Whitespace alone falls back
+  to the visible label or localized time name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
 - `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
@@ -98,10 +99,11 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
 `lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
-**Events:** native `input` on user edits and native `change` when the committed value changes,
-including when clearing a segment changes a previously complete time to an empty value.
+User edits fire native `input`. Erasing part of a complete time produces an incomplete draft with
+`badInput`, including after blur. Erasing its last visible segment commits the empty value and
+fires `change` once. Entering a complete time also fires `change`.
 The aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
-`lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+`lr-clear` follows activation of the clear button. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
 The hidden native autofill seam treats an intentional empty `input` followed by `change` as a

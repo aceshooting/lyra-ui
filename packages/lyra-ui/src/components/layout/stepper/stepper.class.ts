@@ -3,7 +3,7 @@ import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { checkIcon } from '../../../internal/icons.js';
 import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
-import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -221,9 +221,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
-  private effectiveSteps: readonly Readonly<LyraStepItem>[] = Object.freeze([]);
-  private readonly sources = new CollectionSourceTracker();
   private omitted = 0;
+  private readonly stepsSnapshot = new SnapshotProperty<readonly Readonly<LyraStepItem>[]>(
+    Object.freeze([]),
+    value => {
+      this.omitted = 0;
+      return snapshotSteps(value, count => { this.omitted = count; });
+    },
+  );
 
   /** Input positions beyond the 256-position limit on the latest assignment. */
   get omittedSteps(): number { return this.omitted; }
@@ -234,14 +239,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  locked. */
   @property({ attribute: false })
   get steps(): readonly LyraStepItem[] {
-    return this.effectiveSteps;
+    return this.stepsSnapshot.read();
   }
   set steps(value: readonly LyraStepItem[]) {
-    if (this.sources.isRebind('steps', value, this.effectiveSteps)) return;
-    this.omitted = 0;
-    const previous = this.effectiveSteps;
-    this.effectiveSteps = snapshotSteps(value, count => { this.omitted = count; });
-    this.requestUpdate('steps', previous);
+    this.stepsSnapshot.assign(this, 'steps', value);
   }
 
   /** `'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);

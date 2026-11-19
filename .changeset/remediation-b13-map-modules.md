@@ -12,4 +12,6 @@
 - Use the attribution link’s hostname when its label is blank.
 - Use the surface colour for a data label’s halo when only the halo width is specified.
 - Cap map camera animations at 60 seconds.
+- Preserve camera orientation when a very large bearing would lose precision in the map engine.
 - Suspend canvas allocation polling while the drawing target is offscreen.
+- Release a drawing drag's pan lease once if pointer capture fails during teardown.

@@ -1311,29 +1311,57 @@ describe('findable closed-content gate', () => {
     }
   });
 
-  it('does not leak lr-after-show when a pending show is interrupted by a move', async () => {
-    const staging = document.createElement('div');
-    document.body.append(staging);
-    const el = (await fixture(
-      html`<lr-details summary="Projects" style="--show-duration:120ms">Project body</lr-details>`
-    )) as LyraDetails;
-    let afterShows = 0;
-    el.addEventListener('lr-after-show', () => {
-      afterShows += 1;
-    });
-    try {
-      const showing = el.show();
-      staging.append(el);
-      await showing;
-      // wait-reason: negative assertion: lr-after-show must not leak after the 120ms show duration elapses
-      await new Promise<void>((resolve) => setTimeout(resolve, 180));
-
-      expect(el.open).to.equal(true);
-      expect(afterShows).to.equal(0);
-    } finally {
-      el.remove();
-      staging.remove();
+  it('delivers toggle and after-events for a same-task move during show or hide', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <lr-details summary="Projects">Project body</lr-details>
+      <div id="destination"></div>
+    </div>`);
+    const el = wrapper.querySelector('lr-details')!;
+    const destination = wrapper.querySelector('#destination')!;
+    await el.updateComplete;
+    const events: string[] = [];
+    for (const type of ['lr-show', 'lr-hide', 'lr-toggle', 'lr-after-show', 'lr-after-hide']) {
+      wrapper.addEventListener(type, (event) => events.push(event.type));
     }
+
+    const showing = el.show();
+    destination.append(el);
+    await showing;
+    expect(el.open).to.equal(true);
+    expect(events).to.deep.equal(['lr-show', 'lr-toggle', 'lr-after-show']);
+
+    const hiding = el.hide();
+    wrapper.append(el);
+    await hiding;
+    expect(el.open).to.equal(false);
+    expect(events.slice(3)).to.deep.equal(['lr-hide', 'lr-toggle', 'lr-after-hide']);
+  });
+
+  it('suppresses pending toggle and after-events on permanent detach', async () => {
+    const el = await fixture<LyraDetails>(html`<lr-details summary="Projects">Project body</lr-details>`);
+    const events: string[] = [];
+    for (const type of ['lr-toggle', 'lr-after-show']) {
+      el.addEventListener(type, (event) => events.push(event.type));
+    }
+
+    const showing = el.show();
+    el.remove();
+    await showing;
+
+    expect(el.open).to.equal(true);
+    expect(events).to.deep.equal([]);
+  });
+
+  it('suppresses an after-event when a toggle listener detaches the panel', async () => {
+    const el = await fixture<LyraDetails>(html`<lr-details summary="Projects">Project body</lr-details>`);
+    let afterShows = 0;
+    el.addEventListener('lr-toggle', () => el.remove(), { once: true });
+    el.addEventListener('lr-after-show', () => { afterShows += 1; });
+
+    await el.show();
+
+    expect(el.isConnected).to.equal(false);
+    expect(afterShows).to.equal(0);
   });
 
   it('restores a divergent private native toggle after a veto', async () => {

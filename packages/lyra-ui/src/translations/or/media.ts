@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'ପୂର୍ଣ୍ଣ ପରଦାରୁ ବାହାରନ୍ତୁ',
   videoPlaylistLabel: 'ଭିଡିଓ ପ୍ଲେଲିଷ୍ଟ',
   videoPlaylistUntitled: 'ଭିଡିଓ {position}',
+  videoTimeReadout: '{duration}ରୁ {current}',
   pause: 'ବିରତ କରନ୍ତୁ',
   qrCodeMissingLibrary: 'QR କୋଡ୍ ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ "qrcode" ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
   qrCodeGenerationFailed: 'ଏହି ମୂଲ୍ୟକୁ QR କୋଡ୍ ଭାବେ ଏନକୋଡ୍ କରିହେଲା ନାହିଁ।',

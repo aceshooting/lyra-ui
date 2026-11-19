@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Qalamni gadi',
   signaturePadPenUp: 'Qalamni ol',
   signaturePadDrawingLimit: 'Daangaan fakkii kaasuu ga’eera.',
+  catalogPickerSearchLoadFailed: 'Dirree barbaacha fe’uun hin danda’amne.',
   localePickerInputLimit: 'Galmeewwan afaanii fi naannoo jalqabaa 512 qofa argamu.',
   emojiPickerInputLimit: 'Daangaan galtee waan gaʼameef daataan emoji tokko tokko hafee jira.',
 };

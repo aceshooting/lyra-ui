@@ -24,7 +24,9 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-type AvatarPresentationAttribute = 'size' | 'shape' | 'variant';
+const presentationAttributes = ['size', 'shape', 'variant'] as const;
+type AvatarPresentationAttribute = (typeof presentationAttributes)[number];
+const observedAttributes: Array<AvatarPresentationAttribute | 'hidden' | 'inert'> = ['hidden', 'inert', ...presentationAttributes];
 
 export interface LyraAvatarGroupOverflowDetail {
   readonly hiddenCount: number;
@@ -213,23 +215,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    // The seed above reads `this.children` directly, which is right for direct light-DOM avatars
-    // but UNDER-COUNTS when this element sits behind another component's forwarding `<slot>`: its
-    // own light children are then just that one forwarding `<slot>`, not the real projected
-    // `<lr-avatar>`s the group's own default slot flattens to. happy-dom (through at least
-    // 20.14.5) never fires the default slot's INITIAL `slotchange` either -- see
-    // `collectInitialSlotAssignment`'s own doc -- so an environment that never fires it would
-    // otherwise never correct the under-count. Collect once here too, from the slot's current
-    // (flattened) assignment; `onSlotChangeFromSlot()`/`reconcileAvatars()` are idempotent, so a
-    // real browser firing the initial event as well (the ordinary, already-covered case) or a
-    // forwarding host's own initial event contributes no duplicate side effect.
-    // Deferred a microtask, mirroring `lr-select`'s own `firstUpdated()`: `reconcileAvatars()`
-    // writes reactive `@state` (`eligibleAvatarCount`/`overflowHiddenAvatars`), and writing it
-    // synchronously here -- after this same update has already been marked complete -- trips
-    // Lit's "scheduled an update after an update completed" dev warning. A real `slotchange`
-    // event runs this same collection from a task/microtask entirely outside the update cycle,
-    // which never trips it; queuing a microtask here reproduces that same "outside the cycle"
-    // timing instead of writing state from inside it.
+    // Resolve forwarded slots after the first render, outside Lit's update cycle.
     const slot = this.avatarsSlot;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => this.onSlotChangeFromSlot(s));
@@ -274,8 +260,6 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   private get hasOverflow(): boolean {
-    // `max`'s own accessor already sanitizes to a finite, non-negative integer (or `undefined`)
-    // on assignment, so no further finiteness check is needed here.
     const max = this.max;
     return max != null && this.eligibleAvatarCount > max;
   }
@@ -350,12 +334,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
         return;
       let externalChange = false;
       for (const record of records) {
-        const attribute = record.attributeName;
+        const attribute = record.attributeName as (typeof observedAttributes)[number];
         if (attribute === 'inert' || attribute === 'hidden') {
           externalChange = true;
           continue;
         }
-        if (attribute !== 'size' && attribute !== 'shape' && attribute !== 'variant') continue;
         const avatar = record.target as LyraAvatar;
         if (this.consumeOwnedAttributeWrite(avatar, attribute)) continue;
         externalChange = true;
@@ -372,7 +355,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     for (const avatar of avatars) {
       observer.observe(avatar, {
         attributes: true,
-        attributeFilter: ['hidden', 'inert', 'size', 'shape', 'variant'],
+        attributeFilter: observedAttributes,
       });
     }
   }
@@ -390,7 +373,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     avatar: LyraAvatar,
     attribute: AvatarPresentationAttribute
   ): void {
-    if (!this.avatarObserver || !this.observedAvatars.has(avatar)) return;
+    if (!this.observedAvatars.has(avatar)) return;
     let writes = this.pendingOwnedAttributeWrites.get(avatar);
     if (!writes) {
       writes = new Map();
@@ -420,7 +403,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     } as const;
     for (const avatar of this.assignedAvatars) {
       let ownership = this.defaultOwnership.get(avatar);
-      for (const attribute of ['size', 'shape', 'variant'] as const) {
+      for (const attribute of presentationAttributes) {
         const applied = ownership?.get(attribute);
         if (applied != null && avatar.getAttribute(attribute) !== applied) {
           ownership!.delete(attribute);

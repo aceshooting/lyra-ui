@@ -1,7 +1,7 @@
 import { finiteCount } from '../../../internal/numbers.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
 import { formControlSupportingState } from '../../../internal/form-control-template.js';
-import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -199,10 +199,14 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     () => Array.from(this.renderRoot.querySelectorAll('[part="hint"]:not([hidden])')),
   );
 
-  private effectiveItems: readonly Readonly<LyraSegmentedItem>[] =
-    Object.freeze([]);
-  private readonly sources = new CollectionSourceTracker();
   private omitted = 0;
+  private readonly itemsSnapshot = new SnapshotProperty<readonly Readonly<LyraSegmentedItem>[]>(
+    Object.freeze([]),
+    value => {
+      this.omitted = 0;
+      return snapshotSegmentedItems(value, count => { this.omitted = count; });
+    },
+  );
 
   /** Input positions beyond the 256-position limit on the latest assignment. */
   get omittedItems(): number { return this.omitted; }
@@ -210,14 +214,10 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   /** The button row's immutable, bounded items. Later duplicate values are ignored. */
   @property({ attribute: false })
   get items(): readonly LyraSegmentedItem[] {
-    return this.effectiveItems;
+    return this.itemsSnapshot.read();
   }
   set items(value: readonly LyraSegmentedItem[]) {
-    if (this.sources.isRebind('items', value, this.effectiveItems)) return;
-    this.omitted = 0;
-    const previous = this.effectiveItems;
-    this.effectiveItems = snapshotSegmentedItems(value, count => { this.omitted = count; });
-    this.requestUpdate('items', previous);
+    this.itemsSnapshot.assign(this, 'items', value);
   }
 
   /** The currently selected item's `value`. */

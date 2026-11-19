@@ -2035,23 +2035,7 @@ it("adopts author slide state changed immediately before disconnect", async () =
 });
 
 it("formats generated slide indices with the effective locale", async () => {
-  // The real shipped `ar` catalog is registered (see the top-of-file import) so this render
-  // never falls through to the dev-mode locale-fallback warning strict-console lanes treat as
-  // fatal -- capture console.warn around the render to prove that directly, independent of
-  // whichever strict-console/exit-code behavior the current wtr version happens to have.
-  //
-  // The fallback warning is deduped by `devWarnOnce()` (dev-mode-attribute-warning.ts) adding
-  // each `(locale, key)` pair to the page-global `litIssuedWarnings` Set BEFORE logging. This
-  // test's own `it` body is what web-test-runner.config.js's `testFramework.config.retries: 1`
-  // re-runs verbatim after a first failing attempt, in the same page -- so leaving that Set
-  // alone would let a real regression warn (and fail) on attempt 1, then silently dedupe into
-  // an ordinary-looking pass on attempt 2, with the first failure invisible in the summary.
-  // Forcing a BRAND-NEW Set immediately before every render this test performs (this code runs
-  // again on retry, same as the rest of the body) makes each attempt observe the real warning
-  // state independently, exactly like `request-commit.test.ts`'s and
-  // `localization-runtime.test.ts`'s own `warningsWhile()` helpers use the same fresh-Set
-  // pattern for this exact dedupe-across-runs hazard. It also makes the assertion deterministic
-  // regardless of whether Lit's dev-mode signal happens to be ambiently on already.
+  // Reset warning deduplication so every attempt detects locale fallback.
   type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
   const warningsGlobal = globalThis as LitWarningGlobal;
   const hadWarningsSignal = "litIssuedWarnings" in warningsGlobal;
@@ -2063,7 +2047,7 @@ it("formats generated slide indices with the effective locale", async () => {
   let el: LyraCarousel;
   try {
     el = await carousel(html`
-      <lr-carousel locale="ar-EG" pagination>
+      <lr-carousel locale="ar-EG" pagination .strings=${{ carouselViewport: 'الشرائح' }}>
         <lr-carousel-item>One</lr-carousel-item>
         <lr-carousel-item>Two</lr-carousel-item>
       </lr-carousel>
@@ -2190,10 +2174,10 @@ it("keeps an explicitly empty host aria-label on the region but never leaves the
     '[part~="scroll-container"]'
   ) as HTMLElement;
   expect(base.getAttribute("aria-label")).to.equal("");
-  expect(viewport.getAttribute("aria-label")).to.equal("Carousel");
+  expect(viewport.getAttribute('aria-label')).to.equal('Slides');
 });
 
-it('names the focusable viewport with role="group", following the same label arbitration as the region', async () => {
+it('gives the focusable slides viewport a distinct localized name', async () => {
   const el = await carousel(html`
     <lr-carousel>
       <div>Slide one</div>
@@ -2205,11 +2189,20 @@ it('names the focusable viewport with role="group", following the same label arb
   ) as HTMLElement;
   expect(viewport.getAttribute("tabindex")).to.equal("0");
   expect(viewport.getAttribute("role")).to.equal("group");
-  expect(viewport.getAttribute("aria-label")).to.equal("Carousel");
+  const region = el.shadowRoot!.querySelector('[role="region"]')!;
+  expect(region.getAttribute('aria-label')).to.equal('Carousel');
+  expect(viewport.getAttribute('aria-label')).to.equal('Slides');
 
   el.setAttribute("aria-label", "Product screenshots");
   await el.updateComplete;
-  expect(viewport.getAttribute("aria-label")).to.equal("Product screenshots");
+  expect(region.getAttribute('aria-label')).to.equal('Product screenshots');
+  expect(viewport.getAttribute('aria-label')).to.equal('Slides');
+
+  el.setAttribute('aria-label', '');
+  el.strings = { carouselViewport: 'Diapositives' };
+  await el.updateComplete;
+  expect(region.getAttribute('aria-label')).to.equal('');
+  expect(viewport.getAttribute('aria-label')).to.equal('Diapositives');
 });
 
 it("gives indicator a hover state that recolors its dot", () => {

@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'ဘောပင်ချထားသည်',
   signaturePadPenUp: 'ဘောပင်မထားသည်',
   signaturePadDrawingLimit: 'ရေးဆွဲမှု ကန့်သတ်ချက် ပြည့်သွားပါပြီ။',
+  catalogPickerSearchLoadFailed: 'ရှာဖွေရေးအကွက်ကို ဖွင့်၍ မရပါ။',
   localePickerInputLimit: 'ပထမဆုံး ဘာသာစကားနှင့် ဒေသဆိုင်ရာ ဆက်တင်စာရင်း 512 ခုကိုသာ ရနိုင်သည်။',
   emojiPickerInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အီမိုဂျီဒေတာအချို့ကို ချန်လှပ်ထားသည်။',
 };

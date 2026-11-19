@@ -22,7 +22,7 @@ const fixtureUrl = new URL('./fixtures/table-stale-frame.pptx', import.meta.url)
 export const RealFixture: Story = {
   name: 'Real PPTX fixture',
   render: () => html`<lr-pptx-viewer
-    style="display:block; min-height:24rem;"
+    style="display:block; min-height:24rem; --lr-viewer-pager-button-hover-bg: var(--lr-color-warning-quiet);"
     src=${fixtureUrl}
     name="Table fixture"
     page="1"

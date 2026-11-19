@@ -7,6 +7,24 @@ import type { LyraLightbox, LyraLightboxSource } from './lightbox.js';
 
 const pixel = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
 
+it('honors the last open write during a close request and accepts the next close', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox open></lr-lightbox>`);
+  const events: string[] = [];
+  el.addEventListener('lr-close-request', () => {
+    el.open = false;
+    el.open = true;
+  }, { once: true });
+  for (const name of ['lr-hide', 'lr-close-request', 'lr-close', 'lr-after-hide']) {
+    el.addEventListener(name, () => events.push(name));
+  }
+  await el.hide();
+  expect(el.hasAttribute('open')).to.equal(true);
+  expect(events).to.deep.equal(['lr-hide', 'lr-close-request']);
+  await el.hide();
+  expect(el.hasAttribute('open')).to.equal(false);
+  expect(events.slice(2)).to.deep.equal(['lr-hide', 'lr-close-request', 'lr-close', 'lr-after-hide']);
+});
+
 for (const mode of ['light', 'dark']) {
   it(`paints source-mode status text legibly on the backdrop in ${mode} mode`, async () => {
     const failing: LyraLightboxSource = { revision: 1, images: { count: 1, read: () => Promise.reject(new Error('unavailable')) } };

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Thoát chế độ toàn màn hình',
   videoPlaylistLabel: 'Danh sách phát video',
   videoPlaylistUntitled: 'Video {position}',
+  videoTimeReadout: '{current} trên {duration}',
   pause: 'Tạm dừng',
   qrCodeMissingLibrary: 'Cần cài gói tùy chọn "qrcode" để hiển thị mã QR.',
   qrCodeGenerationFailed: 'Không thể mã hóa giá trị này thành mã QR.',

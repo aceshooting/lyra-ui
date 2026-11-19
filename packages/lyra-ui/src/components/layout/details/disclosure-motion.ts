@@ -13,16 +13,12 @@ export class DisclosureMotionController {
     private readonly animatedPartSelector: string,
   ) {}
 
-  cancel(): void {
-    this.generation += 1;
-    setCustomState(this.internals, 'animating', false);
-  }
-
   cancelIfDetached(): void {
     const generation = this.generation;
     queueMicrotask(() => {
       if (this.host.isConnected || this.generation !== generation) return;
-      this.cancel();
+      this.generation += 1;
+      setCustomState(this.internals, 'animating', false);
     });
   }
 
@@ -42,16 +38,17 @@ export class DisclosureMotionController {
       await this.host.updateComplete;
       if (this.generation !== generation) return false;
       afterRender?.();
+      let animations: Animation[] = [];
       if (this.host.isConnected) {
         const view = this.host.ownerDocument.defaultView;
         if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
         if (this.generation !== generation) return false;
         const base = this.root().querySelector(this.animatedPartSelector);
-        const animations = base?.getAnimations({ subtree: true }) ?? [];
-        await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-        if (this.generation !== generation) return false;
+        animations = base?.getAnimations({ subtree: true }) ?? [];
       }
-      return true;
+      // A toggle listener can queue a detach cancellation even when there are no animations.
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+      return this.generation === generation;
     } finally {
       if (this.generation === generation) setCustomState(this.internals, 'animating', false);
     }

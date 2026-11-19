@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'မျက်နှာပြင်အပြည့်မှ ထွက်ရန်',
   videoPlaylistLabel: 'ဗီဒီယိုအစီအစဉ်စာရင်း',
   videoPlaylistUntitled: 'ဗီဒီယို {position}',
+  videoTimeReadout: 'စုစုပေါင်း {duration} အနက် {current}',
   pause: 'ခေတ္တရပ်ရန်',
   qrCodeMissingLibrary: 'QR ကုဒ်များ ပြသရန် ဤအစိတ်အပိုင်းတွင် ရွေးချယ်နိုင်သော "qrcode" ပက်ကေ့ဂျ်ကို ထည့်သွင်းရန် လိုအပ်သည်။',
   qrCodeGenerationFailed: 'ဤတန်ဖိုးကို QR ကုဒ်အဖြစ် ကုဒ်ပြောင်း၍မရပါ။',

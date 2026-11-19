@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Peann síos',
   signaturePadPenUp: 'Peann suas',
   signaturePadDrawingLimit: 'Sroicheadh an teorainn líníochta.',
+  catalogPickerSearchLoadFailed: 'Níorbh fhéidir an réimse cuardaigh a lódáil.',
   localePickerInputLimit: 'Níl ar fáil ach an chéad 512 iontráil logchaighdeáin.',
   emojiPickerInputLimit: 'Fágadh cuid de shonraí na emoji ar lár mar gur sroicheadh teorainn ionchuir.',
 };

@@ -183,18 +183,21 @@ it('renders the lr-tree-item label attribute first and adopts the slot after hyd
   expect(el.shadowRoot?.querySelectorAll('[part="label"] slot').length).to.equal(1);
 });
 
-it('renders lr-color-picker without the eyedropper first and adds it after hydration', async () => {
-  const el = await mountServerRendered(
+it('keeps the lr-color-picker label exposed until its slot is resolved at hydration', async () => {
+  const authored = await mountServerRendered(
     `<lr-color-picker inline>${SERVER_SHADOW}<span slot="label">Brand</span></lr-color-picker>`,
   );
-  await el.updateComplete;
-  expect(el.shadowRoot?.querySelectorAll('[part~="eyedropper-button"]').length).to.equal(0);
-  expect(el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden')).to.be.true;
+  await authored.updateComplete;
+  const label = (el: LyraElement) => el.shadowRoot?.querySelector('[part~="label"]');
+  expect(authored.shadowRoot?.querySelectorAll('[part~="eyedropper-button"]').length).to.equal(0);
+  expect(label(authored)?.hasAttribute('hidden')).to.be.false;
 
-  await waitUntil(
-    () => !el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden'),
-  );
-  expect(el.shadowRoot?.querySelector('[part~="label"]')?.hasAttribute('hidden')).to.be.false;
+  const empty = await mountServerRendered(`<lr-color-picker inline>${SERVER_SHADOW}</lr-color-picker>`);
+  await empty.updateComplete;
+  expect(label(empty)?.hasAttribute('hidden')).to.be.false;
+
+  await waitUntil(() => label(empty)?.hasAttribute('hidden'));
+  expect(label(authored)?.hasAttribute('hidden')).to.be.false;
 });
 
 it('renders lr-chat-composer without adornment slots first and adopts them after hydration', async () => {
@@ -293,17 +296,18 @@ it('renders lr-locale-picker hint exposed first, keeping authored content and co
   expect(hint(authored)?.hasAttribute('hidden')).to.be.false;
 });
 
-it('renders lr-phone-input country-prefix collapsed first and reveals it after hydration', async () => {
-  const el = await mountServerRendered(
+it('keeps the lr-phone-input country-prefix exposed until its slot is resolved at hydration', async () => {
+  const authored = await mountServerRendered(
     `<lr-phone-input>${SERVER_SHADOW}<span slot="country-prefix">+1</span></lr-phone-input>`,
   );
-  await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden')).to.be.true;
+  const empty = await mountServerRendered(`<lr-phone-input>${SERVER_SHADOW}</lr-phone-input>`);
+  await Promise.all([authored.updateComplete, empty.updateComplete]);
+  const prefix = (el: LyraElement) => el.shadowRoot?.querySelector('[part="country-prefix"]');
+  expect(prefix(authored)?.hasAttribute('hidden')).to.be.false;
+  expect(prefix(empty)?.hasAttribute('hidden')).to.be.false;
 
-  await waitUntil(
-    () => !el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden'),
-  );
-  expect(el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden')).to.be.false;
+  await waitUntil(() => prefix(empty)?.hasAttribute('hidden'));
+  expect(prefix(authored)?.hasAttribute('hidden')).to.be.false;
 });
 
 it('renders lr-token-input start adornment exposed first, keeping authored content and collapsing an empty slot after hydration', async () => {

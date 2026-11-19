@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,11 +52,15 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
+action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
+The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
+in both modes, following the country picker's event contract.
 **Slots:** `label`, `hint`, `error`.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
 `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
-`select-clear-button`.
+`select-clear-button`, `search-error`, and `search-retry`.
 
 ```html
 <script type="module">

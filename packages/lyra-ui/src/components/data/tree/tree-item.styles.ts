@@ -18,11 +18,6 @@ export const styles = css`
   [part~='item'] {
     --_lr-tree-selected-fill: initial;
     border-radius: var(--lr-radius);
-    /* Hover/active below (plus the selected variants further down) only ever repaint background,
-       so background-color is all this needs; without it this item's fill snaps while
-       lr-button/lr-copy-button/lr-icon-button ease. No local reduced-motion override needed --
-       tokens.styles.ts's shared reduced-motion block already flattens --lr-transition-fast to
-       0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   :host(:focus-visible) [part='row'] {
@@ -88,8 +83,6 @@ export const styles = css`
   :host([aria-disabled='true']) [part~='item']:hover {
     background: transparent;
   }
-  /* A disabled item stays inert under the pointer for the press as well as the hover -- otherwise
-     it lights up on mousedown and then does nothing. */
   :host([aria-disabled='true']) [part~='item']:active {
     background: transparent;
   }
@@ -115,16 +108,9 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     flex: 0 0 auto;
-    /* Hover/active/data-pressed below only ever repaint background, so background-color is all
-       this needs; without it this toggle's fill snaps while lr-button/lr-copy-button/
-       lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
-       reduced-motion block already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
-    /* --lr-color-neutral-fill-quiet, not --lr-color-border: a toggle button's own hover/press fill
-       is a neutral tint on top of the surface it sits on, not a border color borrowed as a fill --
-       the same class of fix as this release's lr-avatar/lr-skeleton/lr-empty sweep. */
     background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
     border-radius: var(--lr-radius);
   }
@@ -135,8 +121,6 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  /* Firefox suppresses native :active because the toggle's mousedown deliberately prevents the
-     hidden button from stealing focus from the treeitem. Mirror the same short-lived press state. */
   :where([part='toggle'])[data-pressed]:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
@@ -205,10 +189,15 @@ export const styles = css`
     flex: 0 0 auto;
   }
   [part='checkbox']:hover [part~='checkbox__control'] {
-    border-color: var(--lr-color-brand);
+    --_lr-tree-checkbox-hover-border: var(--lr-tree-checkbox-hover-border-color, var(--lr-color-brand));
+    border-color: var(--_lr-tree-checkbox-hover-border);
   }
   [part='checkbox']:active [part~='checkbox__control'] {
-    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-tree-checkbox-active-border: var(
+      --lr-tree-checkbox-active-border-color,
+      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    border-color: var(--_lr-tree-checkbox-active-border);
   }
   [part='checkbox']:hover [part~='checkbox__control--checked'] {
     border-color: var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand));
@@ -312,7 +301,7 @@ export const styles = css`
     flex: 0 0 auto;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text);
-    background: var(--lr-color-border);
+    background: var(--lr-tree-badge-neutral-bg, var(--lr-color-neutral-fill-quiet));
     border-radius: var(--lr-radius);
     padding: 0 var(--lr-space-xs);
   }

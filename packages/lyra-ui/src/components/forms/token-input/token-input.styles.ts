@@ -200,9 +200,29 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* The hit target takes the shared --lr-icon-button-size floor, as lr-swatch-picker's
-     [part='swatch'] does, while closeIcon() stays at 1em and is only flex-centered inside it, so
-     the dense token row keeps its compact glyph. */
+  [part="previous-page"], [part="next-page"] {
+    ${iconHitTarget}
+    padding-inline: var(--lr-space-xs);
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  :is([part="previous-page"], [part="next-page"]):where([aria-disabled="false"]):hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  :is([part="previous-page"], [part="next-page"]):where([aria-disabled="false"]):active {
+    background: var(--lr-color-brand);
+    color: var(--lr-color-on-brand);
+  }
+  :is([part="previous-page"], [part="next-page"]):focus-visible { ${focusRing} }
+  :is([part="previous-page"], [part="next-page"]):where([aria-disabled="true"]) {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
+  }
   [part="remove"] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -309,7 +329,7 @@ export const styles = css`
   :host([data-invalid]) [part="input-wrapper"] {
     border-color: var(
       --lr-token-input-invalid-border-color,
-      var(--lr-color-danger)
+      var(--lr-form-control-invalid-border-color, var(--lr-color-danger))
     );
   }
   /* :host(:disabled), not :host([disabled]) -- only the pseudo-class matches an ancestor

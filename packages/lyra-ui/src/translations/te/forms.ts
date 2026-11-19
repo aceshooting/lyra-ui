@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'పెన్ను కింద',
   signaturePadPenUp: 'పెన్ను పైన',
   signaturePadDrawingLimit: 'గీయడానికి ఉన్న పరిమితిని చేరుకున్నారు.',
+  catalogPickerSearchLoadFailed: 'శోధన ఫీల్డ్‌ను లోడ్ చేయడం సాధ్యం కాలేదు.',
   localePickerInputLimit: 'మొదటి 512 భాష మరియు ప్రాంత నమోదులు మాత్రమే అందుబాటులో ఉన్నాయి.',
   emojiPickerInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొంత ఎమోజీ డేటా వదిలివేయబడింది.',
 };

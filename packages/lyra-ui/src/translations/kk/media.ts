@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Толық экраннан шығу',
   videoPlaylistLabel: 'Бейне ойнату тізімі',
   videoPlaylistUntitled: 'Бейне {position}',
+  videoTimeReadout: '{current} / {duration}',
   pause: 'Кідірту',
   qrCodeMissingLibrary: 'QR кодтарын көрсету үшін бұл компонентке қосымша «qrcode» бумасын орнату қажет.',
   qrCodeGenerationFailed: 'Бұл мәнді QR кодқа кодтау мүмкін болмады.',

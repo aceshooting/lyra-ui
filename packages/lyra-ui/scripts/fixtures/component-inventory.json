@@ -30103,7 +30103,7 @@
             "name": "--lr-code-editor-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-font-size-m)"
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-code-editor-hover-border",
@@ -30133,7 +30133,7 @@
             "name": "--lr-code-editor-padding",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-s)"
+            "default": "var(--lr-form-control-padding-inline)"
           },
           {
             "name": "--lr-code-editor-radius",
@@ -30152,6 +30152,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-color",
@@ -39170,18 +39175,21 @@
           },
           {
             "name": "lr-activate",
-            "type": "unknown",
-            "cancelable": "never"
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-after-hide",
-            "type": "unknown",
-            "cancelable": "never"
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-after-show",
-            "type": "unknown",
-            "cancelable": "never"
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-change",
@@ -39191,13 +39199,15 @@
           },
           {
             "name": "lr-clear",
-            "type": "unknown",
-            "cancelable": "never"
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-hide",
-            "type": "unknown",
-            "cancelable": "never"
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
@@ -39212,9 +39222,16 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-load-error",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-show",
-            "type": "unknown",
-            "cancelable": "always"
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -39240,6 +39257,14 @@
           },
           {
             "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "search-error",
+            "deprecated": null
+          },
+          {
+            "name": "search-retry",
             "deprecated": null
           },
           {
@@ -39276,6 +39301,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
           {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
@@ -40510,8 +40541,38 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-clear",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -40523,6 +40584,18 @@
           },
           {
             "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-load-error",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -40547,6 +40620,14 @@
           },
           {
             "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "search-error",
+            "deprecated": null
+          },
+          {
+            "name": "search-retry",
             "deprecated": null
           },
           {
@@ -40583,6 +40664,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
           {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
@@ -45350,7 +45437,7 @@
                 "parameters": [
                   {
                     "name": "restoreFocus",
-                    "type": "unknown",
+                    "type": "boolean",
                     "optional": false,
                     "hasDefault": true,
                     "default": false
@@ -55588,6 +55675,12 @@
             "name": "--lr-ebook-viewer-search-match-bg",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-viewer-pager-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -56459,12 +56552,14 @@
           {
             "name": "--lr-embedding-explorer-page-disabled-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-embedding-explorer-row-selected-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-fill-quiet)"
           },
           {
             "name": "--lr-embedding-explorer-selected-stroke",
@@ -64038,6 +64133,16 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-flow-controls-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-flow-controls-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-flow-controls-lock-active-color",
             "deprecated": null,
             "hasDefault": true,
@@ -68009,7 +68114,8 @@
           {
             "name": "--lr-graph-spatial-control-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           }
         ],
         "cssStates": [],
@@ -68312,7 +68418,8 @@
           {
             "name": "--lr-graph-legend-item-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           }
         ],
         "cssStates": [],
@@ -79767,7 +79874,8 @@
           {
             "name": "--lr-knowledge-graph-explorer-source-action-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -84858,7 +84966,7 @@
           {
             "name": "aria-busy",
             "property": "aria-busy",
-            "type": "unknown",
+            "type": "'true' | 'false'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -98702,7 +98810,8 @@
           {
             "name": "--lr-neighbor-list-node-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -99055,7 +99164,8 @@
           {
             "name": "--lr-node-palette-item-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))"
           },
           {
             "name": "--lr-node-palette-search-font-size",
@@ -102463,6 +102573,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -102964,6 +103079,16 @@
             "default": null
           },
           {
+            "name": "auto-sticky-offsets",
+            "property": "autoStickyOffsets",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "disable-navigation-toggle",
             "property": "disableNavigationToggle",
             "type": "boolean",
@@ -103061,6 +103186,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "autoStickyOffsets",
+            "attribute": "auto-sticky-offsets",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "disableNavigationToggle",
@@ -105297,7 +105432,8 @@
           {
             "name": "--lr-path-strip-action-hover-fill",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -105732,6 +105868,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-viewer-pager-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -107363,6 +107504,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-color",
@@ -112136,6 +112282,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-viewer-pager-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -130862,6 +131014,11 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -130904,10 +131061,47 @@
             "default": "3 / 1"
           },
           {
+            "name": "--lr-signature-pad-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-signature-pad-clear-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-signature-pad-clear-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-signature-pad-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-signature-pad-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-signature-pad-ink",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-signature-pad-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-signature-pad-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-radius)"
           },
           {
             "name": "--lr-signature-pad-stroke-width",
@@ -150217,8 +150411,38 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-clear",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -150230,6 +150454,18 @@
           },
           {
             "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-load-error",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -150254,6 +150490,14 @@
           },
           {
             "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "search-error",
+            "deprecated": null
+          },
+          {
+            "name": "search-retry",
             "deprecated": null
           },
           {
@@ -150290,6 +150534,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
           {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
@@ -150960,7 +151210,25 @@
             "default": "var(--lr-size-2rem)"
           },
           {
+            "name": "--lr-timeline-marker-brand-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-timeline-marker-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-timeline-marker-danger-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-timeline-marker-neutral-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
@@ -150976,6 +151244,23 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-1-25rem)"
+          },
+          {
+            "name": "--lr-timeline-marker-success-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-timeline-marker-warning-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-timeline-ordered-marker-size",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-timeline-rail-color",
@@ -152587,7 +152872,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 200
+            "default": 0
           },
           {
             "name": "name",
@@ -152868,7 +153153,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 200
+            "default": 0
           },
           {
             "name": "name",
@@ -153115,6 +153400,14 @@
             "deprecated": null
           },
           {
+            "name": "next-page",
+            "deprecated": null
+          },
+          {
+            "name": "previous-page",
+            "deprecated": null
+          },
+          {
             "name": "remove",
             "deprecated": null
           },
@@ -153145,6 +153438,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-color",
@@ -160293,6 +160591,11 @@
             "default": "var(--lr-color-warning)"
           },
           {
+            "name": "--lr-tree-checkbox-active-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tree-checkbox-checked-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -160309,6 +160612,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-on-brand)"
+          },
+          {
+            "name": "--lr-tree-checkbox-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-tree-checkbox-indeterminate-bg",
@@ -161314,8 +161623,38 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-activate",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-clear",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -161327,6 +161666,18 @@
           },
           {
             "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-load-error",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -161351,6 +161702,14 @@
           },
           {
             "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "search-error",
+            "deprecated": null
+          },
+          {
+            "name": "search-retry",
             "deprecated": null
           },
           {
@@ -161387,6 +161746,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
           {
             "name": "--lr-form-control-label-color",
             "deprecated": null,

@@ -47,6 +47,16 @@ describe('word-cloud remediation', () => {
   });
 });
 
+it('honors an author minimum inline size inside a narrow scrollport', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size:96px;overflow:auto">
+    <lr-word-cloud style="min-inline-size:256px" .words=${words}></lr-word-cloud>
+  </div>`);
+  const cloud = wrapper.querySelector('lr-word-cloud')!;
+  expect(wrapper.clientWidth).to.equal(96);
+  expect(svgOf(cloud).getBoundingClientRect().width).to.be.at.least(256);
+  expect(wrapper.scrollWidth).to.be.at.least(256);
+});
+
 it('keeps data paint visible in forced colors', async () => {
   await setForcedColors('active');
   try {

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'پوري اسڪرين مان نڪرو',
   videoPlaylistLabel: 'وڊيو پلي لسٽ',
   videoPlaylistUntitled: 'وڊيو {position}',
+  videoTimeReadout: '{duration} مان {current}',
   pause: 'روڪيو',
   qrCodeMissingLibrary: 'QR ڪوڊ ڏيکارڻ لاءِ هن جزو کي اختياري "qrcode" پيڪيج گهربل آهي.',
   qrCodeGenerationFailed: 'هن قدر کي QR ڪوڊ طور انڪوڊ نه ڪري سگهيو.',

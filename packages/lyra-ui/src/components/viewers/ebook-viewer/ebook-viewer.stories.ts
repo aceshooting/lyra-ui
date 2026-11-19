@@ -19,7 +19,7 @@ export const ChapterSelection: StoryObj = {
   parameters: { docs: { description: { story: 'Select text inside the chapter. lr-text-select carries bounded normalized text, a CFI anchor, and rectangles translated into the viewer owner viewport.' } } },
   render: () => html`
     <div>
-      <lr-ebook-viewer src=${source}
+      <lr-ebook-viewer src=${source} style="--lr-viewer-pager-button-hover-bg: var(--lr-color-warning-quiet);"
         @lr-text-select=${(event: CustomEvent<{ text: string }>) => {
           const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
           if (output) output.textContent = event.detail.text;

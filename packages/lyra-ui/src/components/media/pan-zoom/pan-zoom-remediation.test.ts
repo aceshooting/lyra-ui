@@ -117,6 +117,24 @@ it('emits lr-render-error once and recovers when src changes', async () => {
   el.remove();
 });
 
+it('reports only the first failure from the currently displayed image', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom src=${good}></lr-pan-zoom>`);
+  const oldImage = el.shadowRoot!.querySelector('img')!;
+  let errors = 0;
+  el.addEventListener('lr-render-error', () => { errors++; });
+  el.src = `${good}#replacement`;
+  oldImage.dispatchEvent(new Event('error'));
+  await el.updateComplete;
+  oldImage.dispatchEvent(new Event('error'));
+  expect(errors).to.equal(0);
+  const current = el.shadowRoot!.querySelector('img')!;
+  current.dispatchEvent(new Event('error'));
+  current.dispatchEvent(new Event('error'));
+  expect(errors).to.equal(1);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('The image failed to load.');
+});
+
 it('leaves Alt-modified and composing zoom keys alone', async () => {
   const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom src=${good}></lr-pan-zoom>`);
   const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;

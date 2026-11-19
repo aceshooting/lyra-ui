@@ -29,6 +29,39 @@ describe('lr-timeline-item variant name', () => {
     await item.updateComplete;
     expect(variantName(item)).to.equal(null);
   });
+
+  it('uses an inherited tint for only the matching variant unless the shared marker color is set', async () => {
+    const timeline = await fixture<HTMLElement>(html`
+      <lr-timeline style="--lr-timeline-marker-warning-color: rgb(9, 18, 27)">
+        <lr-timeline-item variant="warning">Warning</lr-timeline-item>
+        <lr-timeline-item variant="danger">Danger</lr-timeline-item>
+      </lr-timeline>
+    `);
+    const items = [...timeline.querySelectorAll<LyraTimelineItem>('lr-timeline-item')];
+    const colors = () => items.map(item =>
+      getComputedStyle(item.shadowRoot!.querySelector('[part="marker"]')!).backgroundColor);
+    for (const item of items) await item.updateComplete;
+    expect(colors()[0]).to.equal('rgb(9, 18, 27)');
+    expect(colors()[1]).to.not.equal('rgb(9, 18, 27)');
+    timeline.style.setProperty('--lr-timeline-marker-color', 'rgb(27, 18, 9)');
+    expect(colors()).to.deep.equal(['rgb(27, 18, 9)', 'rgb(27, 18, 9)']);
+  });
+
+  it('allows sizing the ordered marker independently of the plain marker', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-timeline-marker-size: 20px; --lr-timeline-ordered-marker-size: 28px">
+        <lr-timeline><lr-timeline-item>Plain</lr-timeline-item></lr-timeline>
+        <lr-timeline ordered><lr-timeline-item>Ordered</lr-timeline-item></lr-timeline>
+      </div>
+    `);
+    const items = [...wrapper.querySelectorAll<LyraTimelineItem>('lr-timeline-item')];
+    for (const item of items) await item.updateComplete;
+    const heights = () => items.map(item =>
+      getComputedStyle(item.shadowRoot!.querySelector('[part="marker"]')!).blockSize);
+    expect(heights()).to.deep.equal(['20px', '28px']);
+    wrapper.style.removeProperty('--lr-timeline-ordered-marker-size');
+    expect(heights()).to.deep.equal(['20px', '20px']);
+  });
 });
 
 it('uses the supplied variant wording in the item title', async () => {

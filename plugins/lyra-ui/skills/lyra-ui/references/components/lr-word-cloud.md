@@ -35,6 +35,10 @@ no live-region role of its own. Pointer input resolves the word under the pointe
 with the nearest edge) from the adequately-sized SVG surface; the potentially tiny text glyphs are
 not independent hit targets.
 
+The SVG scales to the space the parent provides, so `min-font-size` sets the floor in layout units.
+Set a CSS `min-inline-size` on the cloud when words must stay legible. Check the longest labels at
+that width and allow horizontal scrolling on the parent when the surrounding layout can be narrower.
+
 Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
 fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
 remain nonnegative; placement budgets, font-size limits, and the omitted-word policy are unchanged.

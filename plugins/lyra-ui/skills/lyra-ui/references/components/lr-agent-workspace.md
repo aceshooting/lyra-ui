@@ -18,7 +18,7 @@
 
 Whitespace-only name overrides use the same fallback as an omitted name.
 
-The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). The workspace forwards the events listed below. Listen directly on a built-in child for its other control, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Listen directly on a built-in child for its native `input` and `change`, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
 
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
 
@@ -126,6 +126,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
+- `lr-link-activate` (`detail: { href: string }`) — forwarded from built-in Markdown content.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.

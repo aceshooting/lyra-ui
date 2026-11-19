@@ -654,8 +654,12 @@ it('cancels a viewport drag silently when the canvas turns readonly before the p
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
-  (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+  let captured: number | undefined;
+  rect.setPointerCapture = id => { captured = id; };
+  rect.hasPointerCapture = id => captured === id;
+  rect.releasePointerCapture = () => { captured = undefined; };
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
+  expect(captured).to.equal(1);
   const internals = minimap as unknown as { dragState?: unknown; disarmClickSuppression?: unknown };
   expect(internals.dragState !== undefined).to.equal(true);
 
@@ -664,8 +668,27 @@ it('cancels a viewport drag silently when the canvas turns readonly before the p
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 60, clientY: 60 }));
 
   expect(internals.dragState === undefined, 'the drag state is released').to.equal(true);
+  expect(captured, 'the pointer capture is released').to.equal(undefined);
   expect(internals.disarmClickSuppression === undefined, 'no drag-click suppression is armed').to.equal(true);
   expect(sinkTexts(), 'a canceled viewport drag must remain silent').to.deep.equal([]);
+});
+
+it('releases capture if the minimap disconnects during pointer capture', async () => {
+  const canvas = await fixture<LyraFlowCanvas>(html`
+    <lr-flow-canvas style="width:400px;height:300px" .nodes=${nodes}>
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `);
+  const minimap = canvas.querySelector<LyraFlowMinimap>('lr-flow-minimap')!;
+  await waitUntil(() => minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') !== null);
+  const rect = minimap.shadowRoot!.querySelector<SVGElement>('[part="viewport-hit-area"]')!;
+  const released: number[] = [];
+  rect.setPointerCapture = () => minimap.remove();
+  rect.hasPointerCapture = () => true;
+  rect.releasePointerCapture = id => { released.push(id); };
+  rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 65, bubbles: true }));
+  expect(minimap.isConnected).to.equal(false);
+  expect(released).to.deep.equal([65]);
 });
 
 it('tracks an adopted iframe viewport drag on its owner window and releases it symmetrically', async () => {

@@ -129,6 +129,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'القلم لأسفل',
   signaturePadPenUp: 'القلم لأعلى',
   signaturePadDrawingLimit: 'تم بلوغ حد الرسم.',
+  catalogPickerSearchLoadFailed: 'تعذّر تحميل حقل البحث.',
   localePickerInputLimit: 'تتوفر أول 512 إدخالًا للإعدادات المحلية فقط.',
   emojiPickerInputLimit: 'حُذفت بعض بيانات الرموز التعبيرية لبلوغ حد الإدخال.',
 };

@@ -123,6 +123,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pero dole',
   signaturePadPenUp: 'Pero nahoře',
   signaturePadDrawingLimit: 'Bylo dosaženo limitu kreslení.',
+  catalogPickerSearchLoadFailed: 'Vyhledávací pole se nepodařilo načíst.',
   localePickerInputLimit: 'Dostupných je pouze prvních 512 položek jazykových a místních nastavení.',
   emojiPickerInputLimit: 'Některá data emoji byla vynechána kvůli dosažení limitu vstupu.',
 };

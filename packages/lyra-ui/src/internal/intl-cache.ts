@@ -219,6 +219,19 @@ export function getNumberFormat(
   );
 }
 
+const messageNumberOptions = Object.assign(Object.create(null) as Intl.NumberFormatOptions, {
+  maximumFractionDigits: 20,
+  useGrouping: false,
+});
+const messageNumberKey = cacheKey('', messageNumberOptions);
+
+/** Numeric message substitution uses one fixed option set across all callers. */
+export function getMessageNumberFormat(locale: string): Intl.NumberFormat {
+  const safeLocale = resolveIntlLocale(locale);
+  return getCached(numberFormatCache, safeLocale + messageNumberKey,
+    () => new Intl.NumberFormat(safeLocale, messageNumberOptions));
+}
+
 /** A shared `Intl.DateTimeFormat` for the given locale and options. */
 export function getDateTimeFormat(locale: string | undefined, options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   return getFormatter(

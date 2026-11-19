@@ -242,10 +242,14 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   private sourceCursor?: number;
   private sourceFocusIntent = 0;
   @state() private sourceVersion = 0;
-  private readonly sourceController = new SequenceStripSourceController(this, () => { this.sourceVersion++; }, () => this.effectiveLocale);
-  private readonly sourceAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private sequenceController?: SequenceStripSourceController;
+  private sourceAnnouncements?: AnnouncementSinkController;
   private sourceStatusInitialized = false;
   private previousSourceStatus = '';
+
+  private get sourceController(): SequenceStripSourceController {
+    return this.sequenceController ??= new SequenceStripSourceController(this, () => { this.sourceVersion++; }, () => this.effectiveLocale);
+  }
 
   /** Complete indexed sequence. Null or undefined restores items; invalid defined sources fail visibly.
    * Same-source assignment or a keyless requestUpdate refreshes the immutable provider revision. */
@@ -253,6 +257,12 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   get source(): LyraSequenceSource<SequenceStripItem> | null { return this._source; }
   set source(value: LyraSequenceSource<SequenceStripItem> | null) {
     const previous = this._source; this._source = value;
+    if (value != null) {
+      this.sourceAnnouncements ??= new AnnouncementSinkController(this);
+      this.sourceAnnouncements.setExclusiveChannel('polite');
+    } else {
+      this.sourceAnnouncements?.setExclusiveChannel(undefined);
+    }
     this.invalidateSource(); this.sourceVersion = (this.sourceVersion ?? 0) + 1; this.requestUpdate('source', previous);
   }
   private get sourceMode(): boolean { return this.source != null; }
@@ -261,11 +271,11 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.sourceFocusIntent = (this.sourceFocusIntent ?? 0) + 1;
     this.sourceMetadataFailed = false;
     this.sourceInputs = undefined; this.sourceSelection = undefined; this.sourceCursor = undefined;
-    this.sourceController?.detach();
+    this.sequenceController?.detach();
     this.hoverIndex = null; this.keyboardIndex = null;
   }
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    if (args[0] === undefined && this.sourceController) this.invalidateSource();
+    if (args[0] === undefined && this.sequenceController) this.invalidateSource();
     super.requestUpdate(...args);
   }
   private syncSource(): void {
@@ -545,7 +555,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (this.sourceMode) {
       const status = this.sourceController.pending ? this.localize('loading') : this.sourceController.error ? this.localize('sequenceStripSourceError')
         : this.sourceController.exactUnavailable ? this.localize('sequenceStripSourceItemUnavailable') : '';
-      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.sourceAnnouncements.announcePolite(status);
+      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.sourceAnnouncements?.announcePolite(status);
       this.sourceStatusInitialized = true; this.previousSourceStatus = status;
       return;
     }
@@ -573,7 +583,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   }
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.sourceController.requests.adopted(); this.sourceAnnouncements.adopted();
+    this.sequenceController?.requests.adopted(); this.sourceAnnouncements?.adopted();
     this.invalidateSource(); this.requestUpdate('source');
   }
   private tooltipOverlay?: OverlayHandle;

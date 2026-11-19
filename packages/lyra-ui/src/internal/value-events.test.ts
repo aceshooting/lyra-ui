@@ -25,8 +25,8 @@ it('publishes native events and typed date values without changing clear orderin
   expect(events[0] instanceof InputEvent).to.equal(true);
   expect((events[0] as InputEvent).inputType).to.equal('deleteContentBackward');
   expect(events[2] instanceof CustomEvent).to.equal(false);
-  expect((events[1] as CustomEvent).detail).to.deep.equal({ value: '' });
-  expect((events[3] as CustomEvent).detail).to.deep.equal({ value: '' });
+  expect((events[1] as CustomEvent).detail).to.deep.equal({ value: '', previousValue: '2025-01-02' });
+  expect((events[3] as CustomEvent).detail).to.deep.equal({ value: '', previousValue: '2025-01-02' });
   control.value = '2025-02-03';
   await control.updateComplete;
   expect(events.length).to.equal(4);

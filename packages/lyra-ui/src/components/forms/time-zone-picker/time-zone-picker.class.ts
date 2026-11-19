@@ -6,8 +6,8 @@ import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCat
 import { styles } from './time-zone-picker.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_timeZonePickerLabel } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerSearchLoadFailed, LYRA_DEFAULT_timeZonePickerLabel } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -45,6 +45,16 @@ let defaultEntries: readonly LyraTimeZoneEntry[] | undefined;
  * @csspart select-group-label - A caller-provided group heading.
  * @csspart select-clear-button - The optional clear action.
  * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
+ * @csspart search-error - Localized notice when the optional filter cannot be loaded.
+ * @csspart search-retry - Button that retries loading the filter.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Invalid resting border color.
+ * @event lr-load-error - The optional filter could not be loaded. The compact picker remains available.
+ * @event lr-show - Cancelable request to open the options.
+ * @event lr-hide - Request to close the options; an ordinary transition can be vetoed.
+ * @event lr-after-show - The options finished opening.
+ * @event lr-after-hide - The options finished closing.
+ * @event lr-activate - An enabled option was activated, including a repeated selection.
+ * @event lr-clear - The clear action emptied the selection.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
  * @event {Event} input - User selection changed the committed value and form state.
@@ -63,8 +73,10 @@ export class LyraTimeZonePicker extends LyraCatalogPickerBase {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
+    catalogPickerSearchLoadFailed: LYRA_DEFAULT_catalogPickerSearchLoadFailed,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
+    retry: LYRA_DEFAULT_retry,
     select: LYRA_DEFAULT_select,
     timeZonePickerLabel: LYRA_DEFAULT_timeZonePickerLabel,
   };

@@ -12,6 +12,7 @@ import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
 import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
@@ -133,9 +134,7 @@ function projectContextMeterSegments(value: unknown): readonly Readonly<ContextM
       if (
         entry === MISSING_OWN_DATA_DESCRIPTOR ||
         entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        entry.value === null ||
-        typeof entry.value !== 'object' ||
-        Array.isArray(entry.value)
+        !isSafeNonArrayObject(entry.value)
       )
         continue;
       const label = getOwnDataDescriptor(entry.value, 'label');
@@ -173,11 +172,6 @@ function projectContextMeterSegments(value: unknown): readonly Readonly<ContextM
   } catch {
     return EMPTY_CONTEXT_METER_SEGMENTS;
   }
-}
-
-function formatCount(n: number, locale: string): string {
-  const value = finiteNumber(n, 0);
-  return getNumberFormat(locale, { maximumFractionDigits: chartValueFractionDigits(value) }).format(value);
 }
 
 /**
@@ -429,13 +423,17 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     return { used, total };
   }
 
+  private formatCount(value: number): string {
+    return this.formatLocaleNumber(value, { maximumFractionDigits: chartValueFractionDigits(value) });
+  }
+
   private get summary(): string {
     const { used: usedForSummary, total: totalValue } = this.clampedUsedTotal;
-    const used = formatCount(usedForSummary, this.effectiveLocale);
+    const used = this.formatCount(usedForSummary);
     return totalValue > 0
       ? this.localize('contextMeterUsedOfTotal', undefined, {
           used,
-          total: formatCount(totalValue, this.effectiveLocale),
+          total: this.formatCount(totalValue),
         })
       : this.localize('contextMeterUsed', undefined, { used });
   }
@@ -445,7 +443,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private segmentTitle(segment: Readonly<ContextMeterSegment>, value = this.normalizedSegmentValue(segment)): string {
     return this.localize('contextMeterSegmentLabel', undefined, {
       label: segment.label,
-      count: formatCount(value, this.effectiveLocale),
+      count: this.formatCount(value),
     });
   }
 
@@ -675,10 +673,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
             <span part="legend-label">${segment.label}</span>
             ${showsValue
               ? html`<span part="legend-value"
-                  >${formatCount(
-                    this.normalizedSegmentValue(segment),
-                    this.effectiveLocale,
-                  )}</span
+                  >${this.formatCount(this.normalizedSegmentValue(segment))}</span
                 >`
               : nothing}
             ${showsPercent

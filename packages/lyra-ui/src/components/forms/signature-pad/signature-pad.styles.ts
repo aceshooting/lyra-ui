@@ -1,5 +1,5 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing, hoverFill, activeFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -26,9 +26,9 @@ export const styles = css`
     box-sizing: border-box;
     aspect-ratio: var(--lr-signature-pad-aspect-ratio, 3 / 1);
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--_lr-form-control-border-color);
-    border-radius: var(--lr-form-control-radius);
-    background: var(--_lr-form-control-fill);
+    border: var(--lr-border-width-thin) solid var(--lr-signature-pad-border-color, var(--_lr-form-control-border-color));
+    border-radius: var(--lr-signature-pad-radius, var(--lr-form-control-radius));
+    background: var(--lr-signature-pad-fill, var(--_lr-form-control-fill));
     color: var(--lr-signature-pad-ink, var(--lr-color-text));
     cursor: crosshair;
     touch-action: none;
@@ -38,14 +38,14 @@ export const styles = css`
   }
   /* no-pressed-state: the stroke being drawn is the press feedback */
   :host(:where(:not([readonly]))) [part='surface']:where([tabindex]):hover {
-    border-color: var(--lr-color-text-quiet);
+    border-color: var(--lr-signature-pad-hover-border-color, var(--lr-color-text-quiet));
   }
   [part='surface']:focus-visible,
   [part='clear-button']:focus-visible {
     ${focusRing}
   }
   :host(:state(user-invalid)) [part='surface'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-signature-pad-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
   :host([readonly]) [part='surface'] { cursor: default; }
   :host(:disabled) [part='surface'] {
@@ -98,10 +98,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='clear-button']:not(:disabled):hover {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: var(--lr-signature-pad-clear-hover-bg, ${hoverFill('var(--lr-color-surface)')});
   }
   [part='clear-button']:not(:disabled):active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-signature-pad-clear-active-bg, ${activeFill('var(--lr-color-surface)')});
   }
   [part='clear-button']:disabled {
     opacity: var(--lr-opacity-disabled);

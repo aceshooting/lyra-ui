@@ -128,9 +128,6 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  /* Row wrapper introduced alongside [part='search-clear'] -- [part='search'] previously carried
-     the toolbar's own flex-basis directly; nested one level deeper now, the wrapper carries the
-     same sizing so the pair together occupy exactly the space the bare input used to. */
   [part="search-wrapper"] {
     display: flex;
     align-items: stretch;
@@ -262,8 +259,6 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
 
-  /* columns-menu is deliberately not in this group any more: it is now an <lr-dropdown>, whose
-     own shell lays out a trigger plus a positioned popup. A flex row here would fight that. */
   [part="column-menu"],
   [part="filter-panel"] {
     display: flex;

@@ -17,6 +17,7 @@ export const styles = css`
     flex-wrap: wrap;
   }
   [part="toolbar"] button {
+    --_lr-pdf-viewer-button-hover-bg: var(--lr-pdf-viewer-toolbar-button-hover-bg, var(--lr-color-surface));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -29,16 +30,19 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  [part="toolbar"] button:hover:not(:disabled) {
-    background: var(
-      --lr-pdf-viewer-toolbar-button-hover-bg,
-      var(--lr-color-surface)
+  [part="toolbar"] button:where([part="previous-button"], [part="next-button"]) {
+    --_lr-pdf-viewer-button-hover-bg: var(
+      --lr-viewer-pager-button-hover-bg,
+      var(--lr-pdf-viewer-toolbar-button-hover-bg, var(--lr-color-surface))
     );
+  }
+  [part="toolbar"] button:hover:not(:disabled) {
+    background: var(--_lr-pdf-viewer-button-hover-bg);
   }
   [part="toolbar"] button:active:not(:disabled) {
     background: color-mix(
       in oklab,
-      var(--lr-pdf-viewer-toolbar-button-hover-bg, var(--lr-color-surface)),
+      var(--_lr-pdf-viewer-button-hover-bg),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

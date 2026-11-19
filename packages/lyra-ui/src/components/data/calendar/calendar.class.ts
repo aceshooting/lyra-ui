@@ -18,6 +18,7 @@ import {
   weekdayLabels,
 } from '../../forms/date-picker/calendar-core.js';
 import type { LyraDatePickerFirstDayOfWeek } from '../../forms/date-picker/date-picker.class.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './calendar.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -93,15 +94,6 @@ function normalizeCalendarEventDate(value: unknown): string | undefined {
   }
 }
 
-function isSafeNonArrayObject(value: unknown): value is object {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    return !Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /** Copies only fields rendered by the calendar; the original event stays opaque and is emitted by identity. */
 function projectCalendarEvent(value: unknown): CanonicalCalendarEvent | undefined {
   if (!isSafeNonArrayObject(value)) return undefined;
@@ -120,7 +112,7 @@ function projectCalendarEvent(value: unknown): CanonicalCalendarEvent | undefine
   const normalizedDate = normalizeCalendarEventDate(date.value);
   if (!normalizedDate) return undefined;
   return Object.freeze({
-    source: value as CalendarEvent,
+    source: value as CalendarEvent & Record<string, unknown>,
     date: normalizedDate,
     title: title.value,
     color:
@@ -305,18 +297,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     return this.agendaMemo.rows;
   }
   private weeks(): Date[][] { const start = this.viewStart; return monthMatrix(start.getFullYear(), start.getMonth(), this.normalizedFirstDayOfWeek); }
-  /** The first and last date actually rendered by the current 6×7 grid — wider than the
-   *  visible month itself (leading/trailing days from adjacent months fill out the fixed
-   *  42-cell layout), so both the roving-tabindex anchor and arrow-key navigation must bound
-   *  themselves against this, not just the shown month. */
-  // safe: `weeks` is monthMatrix()'s fixed 6×7 grid, so row 0 / its column 0 and the last row's column 6 always exist.
+  /** Roving focus can reach adjacent-month days within the fixed 6×7 grid. */
   private gridBounds(weeks: Date[][]): [Date, Date] { return [weeks[0]![0]!, weeks[weeks.length - 1]![6]!]; }
-  /** Arrow-key navigation that lands past the currently rendered 6-week grid (there is no
-   *  7th row to step into) used to leave `focusedDate` pointing at a date with no matching
-   *  cell anywhere on screen — a keyboard dead end, since neither the roving tab stop nor the
-   *  post-move `.focus()` lookup could ever find it. Rolling the view to the target date's own
-   *  month, mirroring how `changeMonth()` already updates `viewDate`, guarantees the new grid
-   *  always contains it. */
   private onDayKeyDown(event: KeyboardEvent, date: Date): void {
     if (shouldIgnoreNavigationKey(event)) return;
     const rtl = this.effectiveDirection === 'rtl';

@@ -1,5 +1,6 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fileIcon } from '../../../internal/icons.js';
@@ -8,16 +9,20 @@ import { safeDownloadHref, safeFetchUrl, safeMediaSrc } from '../../../internal/
 import {
   isResourceLimitError,
   LyraUserFacingError,
-  readResponseText,
-  resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { applyComposedFocusRepair, captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import {
+  highlightHitAreasOverlap,
   regionHighlightLabel,
   renderRegionHighlightActions,
   renderRegionHighlightLayer,
@@ -35,7 +40,7 @@ import {
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import { ViewerSourceController, ViewerSourceUrlNotAllowedError } from '../../../internal/viewer-source-controller.js';
 import {
   snapshotLyraHighlightAnchorKind,
   snapshotLyraHighlights,
@@ -387,13 +392,36 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @state() private textFetch: TextFetchState = IDLE_TEXT_FETCH;
   /** The `src` whose image failed to load; a different `src` clears the failure. */
   @state() private imageFailedSrc: string | null = null;
+  @state() private regionHitsOverlap = true;
+  private regionFrame?: Element;
+  private regionFocusRepair: ReturnType<typeof captureComposedFocusRepair> = null;
+  private readonly regionMeasurement = new OwnedFrame(this);
+  private readonly regionResize = new OwnedResizeObserver(this, (entries) => {
+    for (const { target } of entries) this.scheduleRegionMeasurement(target);
+  });
   private readonly scrollRegions = new Map<Element, { child: Element | null; name: string; dispose: () => void }>();
 
-  // Bumped on every fetchText() call so a stale in-flight fetch (superseded
-  // by a newer src/mime-type/status before it settles) can detect it's no
-  // longer current and skip writing its result over a more recent one --
-  // same guard <lr-tool-result-view>'s resolve() uses.
-  private generation = 0;
+  private readonly textSource = new ViewerSourceController(this, {
+    load: async (response, token) => {
+      const text = await this.textSource.readText(response);
+      if (!this.textSource.isStale(token)) this.textFetch = { kind: 'loaded', text };
+    },
+    onError: (error) => {
+      if (error instanceof ViewerSourceUrlNotAllowedError) {
+        const message = () => this.localize('documentPreviewUrlNotAllowed');
+        this.textFetch = { kind: 'error', message };
+        this.emit('lr-render-error', { error: new LyraUserFacingError(message()) });
+        return;
+      }
+      this.textFetch = {
+        kind: 'error',
+        message: isResourceLimitError(error)
+          ? () => this.localize('documentPreviewResourceTooLarge')
+          : () => this.localize('documentPreviewFailedToLoad'),
+      };
+      this.emit('lr-render-error', { error });
+    },
+  });
   private invalidUrlReportedFor: string | null = null;
   private readonly announcements = new ViewerAnnouncementController(this);
 
@@ -401,6 +429,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.regionResize.resume();
     this.announcements.connect();
     if (this.hasUpdated) this.syncScrollRegions();
     const moved = this.detached.cancel();
@@ -414,7 +443,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   override disconnectedCallback(): void {
-    if (this.textFetch.kind === 'loading') this.generation++;
+    this.regionResize.disconnect();
+    this.regionMeasurement.cancel();
+    this.regionFocusRepair = null;
     this.announcements.disconnect();
     this.disposeScrollRegions();
     super.disconnectedCallback();
@@ -422,8 +453,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private releaseDetachedPreview(): void {
-    this.generation++;
-    this.beginAbortableLoad();
     this.textFetch = IDLE_TEXT_FETCH;
   }
 
@@ -443,12 +472,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       (classifyFormat(this.mimeType) !== 'text' ||
         safeFetchUrl(this.src) === null ||
         this.status === 'converting' ||
-        this.status === 'error')
+        this.status === 'error' ||
+        changed.has('src') ||
+        changed.has('mimeType'))
     ) {
-      // Drop obsolete text before rendering the new format or host-driven state. Invalidation
-      // also prevents a pending response body from committing after this transition.
-      this.generation++;
-      this.beginAbortableLoad();
+      this.textSource.cancel();
       this.textFetch = IDLE_TEXT_FETCH;
     }
   }
@@ -478,6 +506,15 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     super.updated(changed);
     this.syncAnnouncementState();
     this.syncScrollRegions();
+    const focusRepair = this.regionFocusRepair;
+    if (changed.has('regionHitsOverlap') && focusRepair) {
+      this.regionFocusRepair = null;
+      const buttons = this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-highlight-id]');
+      applyComposedFocusRepair(focusRepair, [...buttons].find(
+        (button) => button.getAttribute('data-highlight-id') === focusRepair.activeElement.getAttribute('data-highlight-id'),
+      ));
+    }
+    if (changed.has('highlights')) this.syncRegionTargets();
 
     const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
@@ -487,9 +524,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       this.status !== 'error';
 
     if (shouldFetchText) {
-      // Refetch when the target itself changed, or when this just became
-      // fetchable (e.g. a "converting" -> "ready" transition) and nothing
-      // has been fetched yet -- but not on every unrelated property change.
       if (
         changed.has('src') ||
         changed.has('mimeType') ||
@@ -546,42 +580,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.announcements.transition('preview', 'loading', this.localize('loadingDocument'));
   }
 
-  private async fetchText(url: string): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
-    const fetchTarget = resolveOwnerFetchTarget(this, url);
-    if (!fetchTarget) {
-      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
-      this.textFetch = { kind: 'error', message: () => this.localize('documentPreviewUrlNotAllowed') };
-      this.emit('lr-render-error', { error });
-      return;
-    }
+  private fetchText(url: string): Promise<void> {
     this.textFetch = { kind: 'loading' };
-    try {
-      const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      const stale = signal?.aborted || !this.isConnected || generation !== this.generation;
-      if (stale || !response.ok) discardBody(response);
-      if (stale) return;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const text = await readResponseText(response);
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.textFetch = { kind: 'loaded', text };
-    } catch (error) {
-      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
-      this.textFetch = {
-        kind: 'error',
-        message: isResourceLimitError(error)
-          ? () => this.localize('documentPreviewResourceTooLarge')
-          : () => this.localize('documentPreviewFailedToLoad'),
-      };
-      this.emit('lr-render-error', { error });
-    }
+    return this.textSource.begin(url);
   }
 
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-  // fix), even though the assigned child's own `slot` attribute never changed.
+  // Read slot names directly because WebKit assignedElements() can be transiently empty.
   private onUnsupportedSlotChange = (): void => {
     this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
   };
@@ -641,9 +645,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     if (safeFetchUrl(this.src) === null) {
       if (this.invalidUrlReportedFor !== this.src) {
         this.invalidUrlReportedFor = this.src;
-        // Its own key: this reports a *rejected URL*, not a load. Under the shared default key a
-        // reconnect that also scheduled the text fetch would swallow this emit entirely, and the
-        // consumer would never learn the src was disallowed.
+        // Keep the URL error independent of any queued load.
         this.scheduleAfterUpdate(() => {
           if (this.isConnected && this.invalidUrlReportedFor === this.src) {
             this.emit('lr-render-error', {
@@ -688,20 +690,58 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     event.stopPropagation();
   }
 
-  /** Wraps `content` in the internal `<lr-pan-zoom>` when `zoomable`; otherwise renders it
-   *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
-   *  way) unwrapped, preserving pre-`zoomable` DOM exactly. Mirrors `<lr-svg-viewer>`'s identical
-   *  helper. */
   private renderZoomableWrapper(content: TemplateResult): TemplateResult {
-    const regionHighlights = this.regionHighlights();
-    const inner = html`<div class="zoom-content">
-      ${content}${this.renderHighlightLayer(regionHighlights, regionHighlights.length === 1)}
+    const highlights = this._regionHighlights;
+    const showActions = highlights.length > 1 && this.regionHitsOverlap;
+    const inner = html`<div class="zoom-content" ${ref(this.bindRegionFrame)}>
+      ${content}${renderRegionHighlightLayer(highlights, this.activeHighlightId, !showActions,
+        this.highlightActionLabel, this.activateHighlight)}
     </div>`;
     const frame = this.zoomable ? html`<lr-pan-zoom
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
       @lr-zoom-change=${this.stopPanZoomEvent}
     >${inner}</lr-pan-zoom>` : inner;
-    return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
+    return html`${frame}${renderRegionHighlightActions(highlights, this.highlightActionLabel,
+      this.renderRoot, this.effectiveDirection === 'rtl', this.activateHighlight, showActions)}`;
+  }
+
+  private readonly bindRegionFrame = (frame: Element | undefined): void => {
+    this.regionFrame = frame;
+    this.syncRegionTargets();
+  };
+
+  private syncRegionTargets(): void {
+    this.regionResize.clear();
+    const frame = this.regionFrame;
+    if (!frame || !this.isConnected || this._regionHighlights.length < 2) {
+      this.regionMeasurement.cancel();
+      return;
+    }
+    this.regionResize.observe(frame);
+    this.scheduleRegionMeasurement(frame);
+  }
+
+  private scheduleRegionMeasurement(frame: Element): void {
+    this.regionMeasurement.schedule(() => this.updateRegionTargets(frame));
+  }
+
+  private updateRegionTargets(frame: Element): void {
+    const view = this.ownerDocument.defaultView!;
+    const min = resolveCssTokenLength(
+      view.getComputedStyle(frame).getPropertyValue('--lr-icon-button-size').trim(),
+      { host: frame },
+    ) ?? 0;
+    const overlaps = highlightHitAreasOverlap(
+      this._regionHighlights.map(({ anchor }) => [anchor.rect]),
+      { width: frame.clientWidth, height: frame.clientHeight },
+      min,
+    );
+    if (overlaps === this.regionHitsOverlap) return;
+    const focused = shadowFocusTarget(this);
+    if (focused?.localName === 'button' && focused.hasAttribute('data-highlight-id')) {
+      this.regionFocusRepair = captureComposedFocusRepair(this, focused as HTMLButtonElement);
+    }
+    this.regionHitsOverlap = overlaps;
   }
 
   private projectRegionHighlights(
@@ -722,36 +762,18 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     return Object.freeze(regions);
   }
 
-  private regionHighlights(): readonly ProjectedRegionHighlight[] {
-    return this._regionHighlights;
-  }
-
-  private highlightActionLabel(
+  private readonly highlightActionLabel = (
     highlight: ProjectedRegionHighlight,
     index: number,
     total: number,
-  ): string {
+  ): string => {
     return regionHighlightLabel(highlight, index, total, this.effectiveLocale,
       (key, values) => this.localize(key, undefined, values));
-  }
+  };
 
-  private renderHighlightLayer(
-    regionHighlights: readonly ProjectedRegionHighlight[],
-    interactive: boolean,
-  ): TemplateResult | typeof nothing {
-    return renderRegionHighlightLayer(regionHighlights, this.activeHighlightId, interactive,
-      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
-      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
-  }
-
-  private renderHighlightActions(
-    regionHighlights: readonly ProjectedRegionHighlight[],
-  ): TemplateResult | typeof nothing {
-    return renderRegionHighlightActions(regionHighlights,
-      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
-      this.renderRoot, this.effectiveDirection === 'rtl',
-      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
-  }
+  private readonly activateHighlight = (highlightId: string): void => {
+    this.emit('lr-highlight-activate', { highlightId });
+  };
 
   /** Scrolls a `region` highlight into view (image format only). See `<lr-svg-viewer>`'s
    *  identical method for the id/anchor-reference resolution and no-retry-loop rationale. */

@@ -1,8 +1,9 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
-import { AutocorrectState, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -51,11 +52,14 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputLabel, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 installFormControlLabelSupport();
+
+/** @deprecated The implicit unlimited window will default to 200. Explicit zero stays unlimited. */
+const IMPLICIT_TOKEN_LIMIT = 0;
 
 export interface LyraTokenInputEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -173,6 +177,7 @@ const stringArrayConverter = {
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
+ * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-token-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - Outer control wrapper.
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
@@ -180,6 +185,8 @@ const stringArrayConverter = {
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
+ * @csspart previous-page - Shows the previous window of tokens.
+ * @csspart next-page - Shows the next window of tokens.
  * @csspart token-overflow - Count of tokens omitted by `max-tokens-visible`.
  * @csspart token - Individual token.
  * @csspart token-label - The token's text, as the roving-focus edit trigger. Rendered only while
@@ -257,6 +264,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    next: LYRA_DEFAULT_next,
+    previous: LYRA_DEFAULT_previous,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
     tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
@@ -264,6 +273,10 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  static {
+    installNativeSelectionAccessors(this.prototype, host => host.inputEl, { methods: false });
+  }
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
@@ -315,8 +328,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   override set autocorrect(next: boolean | string) {
     this.autocorrectState.set(next);
   }
-  /** Accessible-name override forwarded to the input wrapper and draft input. Attribute presence
-   *  wins, including an explicitly empty `aria-label`, which suppresses visible-label linkage. */
+  /** Names the wrapper and draft input. An empty attribute suppresses label linkage.
+   * Whitespace alone falls back to the visible label, placeholder, or localized name. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
@@ -349,10 +362,19 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    *  `delimiter=""` — disables both, so a token may contain the delimiter verbatim. Defaults to `,`. */
   @property({ attribute: 'delimiter', converter: delimiterConverter })
   delimiter: string | null = ',';
-  /** Maximum mounted tokens (default 200). Set 0 to mount every token. The active/editor token stays
-   * in the window and remaining tokens appear as a localized +N count. Counts are truncated and
-   * floored at zero. Non-finite values restore the default. Form values include all tokens. */
-  @property({ type: Number, attribute: 'max-tokens-visible', useDefault: true }) maxTokensVisible = 200;
+  private authoredTokenLimit: number | null = null;
+  /** Maximum mounted tokens. Counts truncate at zero or greater. Explicit zero mounts every token.
+   * The deprecated implicit unlimited default will change to 200.
+   * @default 0
+   */
+  @property({ type: Number, attribute: 'max-tokens-visible' })
+  get maxTokensVisible(): number { return this.authoredTokenLimit ?? IMPLICIT_TOKEN_LIMIT; }
+  set maxTokensVisible(next: number | null) {
+    const authored = Number.isFinite(next) ? next : null;
+    if (this.authoredTokenLimit === authored) return;
+    this.authoredTokenLimit = authored;
+    this.requestUpdate();
+  }
 
   private tokenIndices = new WeakMap<Element, number>();
   private tokenElement(index: number): HTMLElement | undefined {
@@ -366,21 +388,44 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       this.tokenEntriesFor = this.value;
       const occurrences = new Map<string, number>();
       this.tokenEntries = this.value.map((token, index) => {
-        const count = occurrences.get(token) ?? 0; occurrences.set(token, count + 1);
+        const count = occurrences.get(token) ?? 0;
+        occurrences.set(token, count + 1);
         return { token, index, key: `${token.length}:${token}:${count}` };
       });
     }
-    const limit = finiteCount(this.maxTokensVisible, 200);
-    if (!limit || this.tokenEntries.length <= limit) return this.tokenEntries;
-    const retained = new Set<number>();
-    const focused = shadowFocusTarget(this)?.closest<HTMLElement>('[part="token"]');
-    const focusedIndex = focused ? this.tokenIndices.get(focused) ?? -1 : -1;
-    for (const index of [this.editingIndex, this.focusTokenPending, this.tokenFocusRepairPending?.index ?? -1,
-      this.editable ? this.activeTokenIndex : -1, focusedIndex]) {
-      if (index >= 0 && index < this.value.length && retained.size < limit) retained.add(index);
+    if (this.value.length > 200 && this.authoredTokenLimit === null) {
+      devWarnOnce(`lyra-deprecated:${this.localName}:default:maxTokensVisible`,
+        `<${this.localName}>: the implicit unlimited token window is deprecated. Set max-tokens-visible="200" for paging or "0" for unlimited rendering.`);
     }
-    for (let index = 0; index < limit && retained.size < limit; index++) retained.add(index);
-    return [...retained].sort((a, b) => a - b).map(index => this.tokenEntries[index]!);
+    const limit = finiteCount(this.maxTokensVisible);
+    if (!limit || this.tokenEntries.length <= limit) return this.tokenEntries;
+    const anchor = this.editingIndex >= 0 ? this.editingIndex : this.activeTokenIndex;
+    const pageStart = Math.floor(anchor / limit) * limit;
+    const start = Math.min(pageStart, this.tokenEntries.length - limit);
+    return this.tokenEntries.slice(start, start + limit);
+  }
+
+  private onPagePointerDown(event: PointerEvent): void {
+    // Let the click settle an active edit once, before transferring focus.
+    if (this.editingIndex >= 0) event.preventDefault();
+  }
+
+  private pageTokens(button: HTMLButtonElement, direction: -1 | 1): void {
+    if (isLiveDisabled(this) || button.getAttribute('aria-disabled') === 'true') return;
+    const editing = this.editingIndex >= 0;
+    if (editing) {
+      this.commitEdit(false);
+      if (this.editingIndex >= 0 || !this.isConnected || isLiveDisabled(this)) return;
+    }
+    const limit = finiteCount(this.maxTokensVisible);
+    if (!limit) return;
+    const index = (Math.floor(this.activeTokenIndex / limit) + direction) * limit;
+    if (index < 0 || index >= this.value.length) return;
+    this.rovingIndex = index;
+    if (editing) {
+      this.tokenFocusRepairPending = undefined;
+      button.focus();
+    }
   }
 
   private tokenEventIndex(event: Event): number {
@@ -680,26 +725,11 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.inputEl?.select();
   }
   /** Native draft selection start, or `null` before the internal input renders. */
-  get selectionStart(): number | null {
-    return this.inputEl?.selectionStart ?? null;
-  }
-  set selectionStart(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionStart = value ?? 0;
-  }
+  declare selectionStart: number | null;
   /** Native draft selection end, or `null` before the internal input renders. */
-  get selectionEnd(): number | null {
-    return this.inputEl?.selectionEnd ?? null;
-  }
-  set selectionEnd(value: number | null) {
-    if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
-  }
+  declare selectionEnd: number | null;
   /** Native draft selection direction, or `null` before the internal input renders. */
-  get selectionDirection(): HTMLInputElement['selectionDirection'] {
-    return this.inputEl?.selectionDirection ?? null;
-  }
-  set selectionDirection(value: HTMLInputElement['selectionDirection']) {
-    if (this.inputEl) this.inputEl.selectionDirection = value ?? 'none';
-  }
+  declare selectionDirection: HTMLInputElement['selectionDirection'];
   /** Passthrough to the native draft input's selection range. */
   setSelectionRange(
     selectionStart: number,
@@ -774,36 +804,29 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   }
   private addDraft(): void {
     if (isLiveDisabled(this) || this.readonly) return;
-    // A null/empty delimiter means the whole draft is one token -- `''.split('')` would otherwise
-    // explode the draft into one token per character.
-    const parts = this.delimiter
-      ? this.draft.split(this.delimiter)
-      : [this.draft];
-    const candidates = parts.map((token) => token.trim()).filter(Boolean);
     const next = [...this.value];
     const seen = this.allowDuplicates ? null : new Set(next);
     const added: string[] = [];
-    for (const token of candidates) {
-      if (seen?.has(token)) continue;
-      seen?.add(token);
-      next.push(token);
-      added.push(token);
+    const { draft, delimiter } = this;
+    let start = 0;
+    while (start <= draft.length) {
+      const end = delimiter ? draft.indexOf(delimiter, start) : -1;
+      const token = draft.slice(start, end < 0 ? draft.length : end).trim();
+      if (token && !seen?.has(token)) {
+        seen?.add(token);
+        next.push(token);
+        added.push(token);
+      }
+      if (end < 0) break;
+      start = end + delimiter!.length;
     }
     if (added.length === 0) {
       this.draft = '';
       return;
     }
-    // Emit-then-check-then-mutate, matching `removeToken()`'s veto shape: a host that can already
-    // veto a removal has no equivalent way to veto an add otherwise. A vetoed add leaves the draft
-    // text in place rather than clearing it -- the user typed something real and gets to correct
-    // it, the same way a rejected form submission doesn't blank the field.
-    const addDetail = () =>
-      Object.freeze({
-        value: added[added.length - 1]!,
-        values: Object.freeze([...added]),
-      });
     const before = this.value;
-    const request = this.emit('lr-token-add-request', addDetail(), { cancelable: true });
+    const detail = Object.freeze({ value: added[added.length - 1]!, values: Object.freeze(added) });
+    const request = this.emit('lr-token-add-request', detail, { cancelable: true });
     if (request.defaultPrevented) return;
     // A listener may have written `value` itself (the controlled pattern), disabled the field or
     // detached it; the commit rebuilds from the live list instead of overwriting that write.
@@ -1151,7 +1174,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    * the token it replaces only exist after the render that this update produced.
    */
   protected override updated(changed: PropertyValues): void {
-    super.updated(changed); // no-op today, but keeps a future mixin's updated reachable
+    super.updated(changed);
     if (this.focusEditorPending) {
       this.focusEditorPending = false;
       const editor = this.renderRoot?.querySelector(
@@ -1285,7 +1308,17 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
                 ><span>${token}</span>${this.renderRemoveButton(token)}</span
               >`
         )}
-        ${overflow > 0 ? html`<span part="token-overflow">${this.localize('selectSelectedOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(overflow) })}</span>` : nothing}
+        ${overflow > 0 ? html`
+          <span part="token-overflow">${this.localize('selectSelectedOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(overflow) })}</span>
+          <button part="previous-page" type="button" ?disabled=${this.effectiveDisabled}
+            aria-disabled=${String(this.effectiveDisabled || entries[0]!.index === 0)}
+            @pointerdown=${this.onPagePointerDown}
+            @click=${(event: MouseEvent) => this.pageTokens(event.currentTarget as HTMLButtonElement, -1)}>${this.localize('previous')}</button>
+          <button part="next-page" type="button" ?disabled=${this.effectiveDisabled}
+            aria-disabled=${String(this.effectiveDisabled || entries[entries.length - 1]!.index === this.value.length - 1)}
+            @pointerdown=${this.onPagePointerDown}
+            @click=${(event: MouseEvent) => this.pageTokens(event.currentTarget as HTMLButtonElement, 1)}>${this.localize('next')}</button>
+        ` : nothing}
         <input
           id="input"
           part="input"

@@ -3,7 +3,7 @@ import { foldSearchText } from '../../../internal/search-haystack.js';
 import { parseIsoDate, localDate } from '../../../internal/calendar-date.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import { getCollator, resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { escapeCsvField, UNSAFE_LEADING } from '../../../internal/csv.js';
+import { escapeDelimitedField } from '../../../internal/csv.js';
 import type {
   DataGridAggregation,
   DataGridColumn,
@@ -386,32 +386,31 @@ export function aggregateValues<Row>(
   return [minimum, maximum];
 }
 
-function csvCell(value: unknown, delimiter: string, escapeFormulas: boolean): string {
-  if (delimiter === ',' && escapeFormulas) return escapeCsvField(typeof value === 'number' ? value : comparableText(value));
-  let text = comparableText(value);
-  if (escapeFormulas && typeof value !== 'number' && UNSAFE_LEADING.test(text)) text = `'${text}`;
-  if (text.includes(delimiter) || /[\x22\r\n]/u.test(text)) text = `\x22${text.replaceAll('\x22', '\x22\x22')}\x22`;
-  return text;
-}
-
 export function rowsAsDelimited<Row>(
   rows: readonly Row[],
   columns: readonly DataGridColumn<Row>[],
   options: DataGridCsvOptions = {},
 ): string {
-  const delimiter = options.delimiter ?? ',';
+  const delimiter = options.delimiter || ',';
   const includeHeaders = options.includeHeaders ?? true;
-  const escapeFormulas = options.escapeFormulas ?? true;
+  const bodyOptions = { delimiter, escapeFormulas: options.escapeFormulas ?? true };
+  const textOptions = { delimiter, escapeFormulas: false };
   const requested = options.columnIds ? new Set(options.columnIds) : undefined;
   const visible = columns.filter(
     (column, index) => column.hidden !== true && (!requested || requested.has(columnId(column, index))),
   );
   const lines: string[] = [];
   if (includeHeaders) {
-    lines.push(visible.map((column, index) => csvCell(column.label ?? columnId(column, index), delimiter, false)).join(delimiter));
+    lines.push(visible.map((column, index) =>
+      escapeDelimitedField(column.label ?? columnId(column, index), textOptions)).join(delimiter));
   }
   for (const row of rows) {
-    lines.push(visible.map((column) => csvCell(columnValue(column, row), delimiter, escapeFormulas)).join(delimiter));
+    lines.push(visible.map((column) => {
+      const value = columnValue(column, row);
+      // Numeric cells still need quoting when their text contains the separator.
+      const finiteNumeric = typeof value === 'number' && Number.isFinite(value);
+      return escapeDelimitedField(comparableText(value), finiteNumeric ? textOptions : bodyOptions);
+    }).join(delimiter));
   }
   return lines.join('\r\n');
 }

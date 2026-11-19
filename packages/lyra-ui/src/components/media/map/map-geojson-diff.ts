@@ -15,19 +15,6 @@ function isRuntimeArray(value: unknown): value is readonly unknown[] {
   }
 }
 
-function ownDataValue(
-  value: object,
-  property: PropertyKey,
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
-
-function isUnsafeDescriptor(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>,
-): descriptor is typeof UNSAFE_OWN_DATA_DESCRIPTOR {
-  return descriptor === UNSAFE_OWN_DATA_DESCRIPTOR;
-}
-
 /** Automatic diff ceiling; larger collections can use an explicit caller-authored source diff. */
 const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
 /** Maximum values traversed while proving retained GeoJSON geometry unchanged. */
@@ -96,8 +83,8 @@ function projectedGeoJsonOwnValue(
   budget: GeoJsonProjectionBudget,
 ): unknown {
   if (!spendGeoJsonProjectionWork(budget)) return INVALID_GEOJSON_PROJECTION_VALUE;
-  const descriptor = ownDataValue(value, key);
-  if (isUnsafeDescriptor(descriptor)) return INVALID_GEOJSON_PROJECTION_VALUE;
+  const descriptor = getOwnDataDescriptor(value, key);
+  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return INVALID_GEOJSON_PROJECTION_VALUE;
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? descriptor : descriptor.value;
 }
 

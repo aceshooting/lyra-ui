@@ -60,6 +60,38 @@ describe('lr-code-editor Tab', () => {
     el.remove();
   });
 
+  for (const [start, end, indented] of [[1, 1, 'a  b'], [0, 2, '  ab']] as const) {
+    it(`includes Tab in native undo and redo with selection ${start}–${end}`, async () => {
+      const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="ab"></lr-code-editor>`);
+      const events: string[] = [];
+      for (const type of ['input', 'lr-input']) el.addEventListener(type, () => events.push(type));
+      await pressTab(el, [start, end]);
+      expect(el.value).to.equal(indented);
+      expect(events.splice(0)).to.deep.equal(['input', 'lr-input']);
+      expect(document.execCommand('undo')).to.equal(true);
+      expect(el.value).to.equal('ab');
+      expect(events.splice(0)).to.deep.equal(['input', 'lr-input']);
+      expect(document.execCommand('redo')).to.equal(true);
+      expect(el.value).to.equal(indented);
+      expect(events).to.deep.equal(['input', 'lr-input']);
+    });
+  }
+
+  it('indents once when the editing command is unavailable', async () => {
+    const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="ab"></lr-code-editor>`);
+    const events: string[] = [];
+    for (const type of ['input', 'lr-input']) el.addEventListener(type, () => events.push(type));
+    const original = document.execCommand;
+    try {
+      document.execCommand = () => false;
+      await pressTab(el, [1, 1]);
+      expect(el.value).to.equal('a  b');
+      expect(events).to.deep.equal(['input', 'lr-input']);
+    } finally {
+      document.execCommand = original;
+    }
+  });
+
   it('never grows the value past maxlength', async () => {
     const el = await fixture<LyraCodeEditor>(html`<lr-code-editor tab-size="4" maxlength="6" value="abcde"></lr-code-editor>`);
     await pressTab(el, [5, 5]);
@@ -109,4 +141,44 @@ describe('lr-code-editor rows', () => {
     expect(el.rows).to.equal(4);
     expect(textareaOf(el).rows).to.equal(4);
   });
+});
+
+it('reads a live textarea line height without reacquiring computed styles on every scroll', async () => {
+  const el = await fixture<LyraCodeEditor>(html`
+    <lr-code-editor wrap="off" .value=${'code\n'.repeat(500)}></lr-code-editor>
+  `);
+  const editor = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+  const field = textareaOf(el);
+  const read = window.getComputedStyle;
+  let reads = 0;
+  const firstRow = () => Number(el.shadowRoot!.querySelector('.gutter-line')!.textContent);
+  try {
+    window.getComputedStyle = (element, pseudo) => {
+      if (element === field) reads++;
+      return read.call(window, element, pseudo);
+    };
+    field.style.lineHeight = '20px';
+    editor.scrollTop = 1200;
+    for (let i = 0; i < 4; i++) editor.dispatchEvent(new Event('scroll'));
+    await el.updateComplete;
+    expect(firstRow()).to.equal(41);
+    field.style.lineHeight = '24px';
+    editor.dispatchEvent(new Event('scroll'));
+    await el.updateComplete;
+    expect(firstRow()).to.equal(31);
+    expect(reads).to.be.at.most(1);
+  } finally {
+    window.getComputedStyle = read;
+  }
+});
+
+it('keeps the native editor usable on reconnect when its measurement element is missing', async () => {
+  const holder = await fixture<HTMLElement>(html`<div><lr-code-editor></lr-code-editor></div>`);
+  const el = holder.querySelector('lr-code-editor')!;
+  await el.updateComplete;
+  el.remove();
+  el.shadowRoot!.querySelector('.editor-measure')!.remove();
+  holder.append(el);
+  await pressTab(el, [0, 0]);
+  expect(el.value).to.equal('  ');
 });

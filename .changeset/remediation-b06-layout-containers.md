@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': patch
+'@aceshooting/lyra-ui': minor
 ---
 
 - Give multi-page autoplay carousels a localized pause and resume button.
@@ -17,3 +17,6 @@
 - Show dashboard resize grips at rest and reserve the cell hover outline for draggable cells.
 - Skip unavailable accordion items during keyboard navigation, match trigger heights to the size tier and preserve settled events when moving an item within its group.
 - Limit carousel and dashboard mutation observation to the content each mode needs and scope post-drag click suppression to the originating component.
+- Give the focusable carousel viewport its own localized accessible name.
+- Deliver Details toggle and after-events when a disclosure moves during a transition.
+- Add opt-in measured sticky offsets for page regions with wrapping or changing content.

@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Stylo na nse',
   signaturePadPenUp: 'Stylo na likoló',
   signaturePadDrawingLimit: 'Okómi na ndelo ya kosala elilingi.',
+  catalogPickerSearchLoadFailed: 'Esika ya koluka efungwamaki te.',
   localePickerInputLimit: 'Kaka makomi 512 ya liboso ya mibeko ya monoko mpe etúká nde ezali.',
   emojiPickerInputLimit: 'Balongoli ndambo ya ba données ya emoji mpo motango ya kokɔtisa ekómi na ndelo.',
 };

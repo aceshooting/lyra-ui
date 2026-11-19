@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Kynä alhaalla',
   signaturePadPenUp: 'Kynä ylhäällä',
   signaturePadDrawingLimit: 'Piirtoraja saavutettu.',
+  catalogPickerSearchLoadFailed: 'Hakukenttää ei voitu ladata.',
   localePickerInputLimit: 'Vain ensimmäiset 512 kieli- ja alueasetusmerkintää ovat käytettävissä.',
   emojiPickerInputLimit: 'Osa emojitiedoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };

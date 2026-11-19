@@ -1,3 +1,4 @@
+import { applyHierarchySourceEffects, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
 import { optionalSizeConverter, writeOptionalSize, type LyraSize } from '../../../internal/variants.js';
 import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
@@ -380,12 +381,18 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   private announceSource(): void {
-    const status = this.hierarchy.error ? this.localize('treeSourceError') : this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
-    if (this.sourceAnnouncement !== undefined && status !== this.sourceAnnouncement) this.sourceAnnouncer.announce(status);
-    this.sourceAnnouncement = status;
-    if (this.hierarchy.rowsObserved) this.sourceAnnouncer.transition('source-rows', this.hierarchy.rowError ? 'error' : 'ready',
-      this.hierarchy.rowError ? this.localize('treeSourceError') : '');
+    const source = this.treeSource;
+    const snapshot = captureHierarchySourceEffects(this, this.hierarchy, () => this.treeSource === source);
+    const status = applyHierarchySourceEffects(snapshot, {
+      errorText: () => this.localize('treeSourceError'),
+      loadingText: () => this.localize('loading'),
+      summary: () => this.sourceSummary(),
+      announce: text => this.sourceAnnouncer.announce(text),
+      rowsTransition: (state, message) => this.sourceAnnouncer.transition('source-rows', state, message),
+    }, this.sourceAnnouncement);
+    if (status !== undefined) this.sourceAnnouncement = status;
   }
+
   private sourceSummary(): string {
     const projection = this.hierarchy.projection;
     return projection ? this.localize('treeSourceSummary', undefined, {

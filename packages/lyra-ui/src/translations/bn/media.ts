@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'পূর্ণপর্দা থেকে বেরিয়ে আসুন',
   videoPlaylistLabel: 'ভিডিও প্লেলিস্ট',
   videoPlaylistUntitled: '{position} নম্বর ভিডিও',
+  videoTimeReadout: 'মোট {duration}-এর মধ্যে {current}',
   pause: 'থামান',
   qrCodeMissingLibrary: 'QR কোড দেখাতে এই কম্পোনেন্টের ঐচ্ছিক "qrcode" প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
   qrCodeGenerationFailed: 'এই মানটি QR কোড হিসেবে এনকোড করা যায়নি।',

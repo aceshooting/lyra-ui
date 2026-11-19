@@ -4,6 +4,24 @@ import { classifyFiles, matchesAccept } from './accept.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
+it('falls back to the visible label or localized instruction for a whitespace-only host name', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`
+    <lr-file-input aria-label="   " label="Receipts" .strings=${{ fileInputDefaultLabel: 'Choose receipts' }}></lr-file-input>
+  `);
+  const controls = Array.from(el.shadowRoot!.querySelectorAll('[part="file-input"], [part="input"]'));
+  expect(controls.length).to.equal(2);
+  for (const control of controls) {
+    expect(control.getAttribute('aria-labelledby')).to.equal('file-input-label');
+    expect(control.hasAttribute('aria-label')).to.equal(false);
+  }
+  el.label = '';
+  await el.updateComplete;
+  for (const control of controls) {
+    expect(control.hasAttribute('aria-labelledby')).to.equal(false);
+    expect(control.getAttribute('aria-label')).to.equal('Choose receipts');
+  }
+});
+
 for (const property of ['label', 'hint'] as const) {
   it(`consumes removed ${property} without changing null readback and recovers text and association`, async () => {
     const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input></lr-file-input>`);

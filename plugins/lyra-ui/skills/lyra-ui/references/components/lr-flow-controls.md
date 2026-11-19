@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,9 @@ page gives it.
 `frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted while `without-lock` is set).
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
-`var(--lr-color-brand)`, pressed lock-button foreground); the buttons accept the shared
+`var(--lr-color-brand)`, pressed lock-button foreground). `--lr-flow-controls-hover-bg` and
+`--lr-flow-controls-active-bg` set the hover and pressed fills of enabled toolbar and slotted
+buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
 `var(--lr-radius)`); plus shared tokens —

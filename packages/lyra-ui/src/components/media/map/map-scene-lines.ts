@@ -158,13 +158,6 @@ export function traceSceneLines(objects: readonly SceneLineObject[],
   return Object.freeze(objects.map((object, index) => trace(object, rows[index]!, step)));
 }
 
-/** Line coordinates only; see `traceSceneLines()`. */
-export function tessellateSceneLines(objects: readonly SceneLineObject[],
-  limit = SCENE_LINE_VERTEX_LIMIT): readonly (readonly SceneLineCoordinate[])[] | undefined {
-  const geometry = traceSceneLines(objects, limit);
-  return geometry && Object.freeze(geometry.map(row => row.coordinates));
-}
-
 /** One frozen GeoJSON feature per line from already traced geometry. */
 export function sceneLineDataFrom(objects: readonly SceneLineObject[], geometry: readonly SceneLineGeometry[],
   colors: ReadonlyMap<string, string>): SceneLineData | undefined {

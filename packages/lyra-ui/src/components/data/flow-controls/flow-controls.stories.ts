@@ -90,3 +90,13 @@ export const LockActiveColor: Story = {
     </lr-flow-canvas>
   `,
 };
+
+export const ButtonStateColors: Story = {
+  render: () => html`
+    <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
+      <lr-flow-controls slot="bottom-start"
+        style="--lr-flow-controls-hover-bg: var(--lr-color-brand-quiet); --lr-flow-controls-active-bg: var(--lr-color-success-quiet)">
+      </lr-flow-controls>
+    </lr-flow-canvas>
+  `,
+};

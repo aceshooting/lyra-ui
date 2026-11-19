@@ -142,9 +142,9 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
 - no documented component-specific sizing custom property. The host box is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) against the host font size, so `size` is the supported
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
-  on the element instead. The value/label captions are `em`-sized against that same host font-size,
-  so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
-  combine a small tier (or a small host `font-size`) with `without-value` for a slim,
+  on the element instead. The linear track stretches to fill its allocation. The captions keep
+  their proportions and size against the host font, including when the track narrows. Combine a
+  small tier (or a small host `font-size`) with `without-value` for a slim,
   thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
   `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`

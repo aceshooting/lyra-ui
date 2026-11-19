@@ -2,18 +2,18 @@
   "locale": "lt",
   "direction": "ltr",
   "source": {
-    "keyCount": 1712,
-    "sha256": "sha256:7a01f27d32f7efa31e93a065efa64d21d6076a6ce7b72c257b88eaa1d5b3b741"
+    "keyCount": 1714,
+    "sha256": "sha256:a4d22358f6e6ca15cd5b2d7826bd7b934a4e39858c6406f2f80a8020cafaef0b"
   },
   "catalog": {
-    "keyCount": 1712,
-    "sha256": "sha256:34293c2b68279ba235e22c9fa47cc1356b9929d33ebf36fff0e6b4ef6516ee91"
+    "keyCount": 1714,
+    "sha256": "sha256:38bc0dbd0f56727398500b1725e3e5922af081ecb9bd4b3d7128153628b183bb"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-11-16",
-    "evidence": "Original Lithuanian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
+    "evidence": "Original Lithuanian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, many, one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs"
   },
   "reviewer": {
     "status": "approved",

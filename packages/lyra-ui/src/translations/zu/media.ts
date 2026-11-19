@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   videoExitFullscreen: 'Phuma esikrinini esigcwele',
   videoPlaylistLabel: 'Uhlu lwamavidiyo',
   videoPlaylistUntitled: 'Ividiyo {position}',
+  videoTimeReadout: '{current} kokungu-{duration}',
   pause: 'Misa isikhashana',
   qrCodeMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "qrcode" ukuze ibonise amakhodi e-QR.',
   qrCodeGenerationFailed: 'Leli nani alikwazanga ukubhalwa njengekhodi ye-QR.',

@@ -1,4 +1,5 @@
 import { twoFrames } from '../../../../test/frames.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./document-preview.js";
@@ -115,7 +116,7 @@ it("validates maxHeight before assigning the base custom property", async () => 
 
 it("filters invalid public region rectangles before rendering highlight geometry", async () => {
   const el = await fixture<LyraDocumentPreview>(
-    html`<lr-document-preview></lr-document-preview>`
+    html`<lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>`
   );
   el.highlights = [
     {
@@ -130,10 +131,9 @@ it("filters invalid public region rectangles before rendering highlight geometry
       anchor: { kind: "region", rect: { x: 10, y: 20, width: 30, height: 40 } },
     },
   ];
-  const highlights = (
-    el as unknown as { regionHighlights(): Array<{ id: string }> }
-  ).regionHighlights();
-  expect(highlights.map((highlight) => highlight.id)).to.deep.equal(["safe"]);
+  await el.updateComplete;
+  const regions = el.shadowRoot!.querySelectorAll('[part="region-highlight"]');
+  expect([...regions].map((region) => region.getAttribute('data-id'))).to.deep.equal(['safe']);
 });
 
 it('contains accessor-backed region geometry while retaining a later rendered highlight', async () => {
@@ -1595,12 +1595,53 @@ describe("region highlights (image format)", () => {
       ...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]'),
     ] as HTMLElement[];
     expect(actions.length).to.equal(2);
+    el.style.fontFamily = 'Georgia, serif';
+    expect(getComputedStyle(actions[0]!).fontFamily).to.equal(getComputedStyle(el).fontFamily);
     const first = actions[0]!.getBoundingClientRect();
     const second = actions[1]!.getBoundingClientRect();
     expect(first.bottom).to.be.at.most(second.top);
     const eventPromise = oneEvent(el, "lr-highlight-activate");
     actions[1]!.click();
     expect((await eventPromise).detail).to.deep.equal({ highlightId: "b" });
+  });
+
+  it('uses on-image targets until their minimum hit areas overlap', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+    `);
+    const root = el.shadowRoot!;
+    const imageFrame = root.querySelector<HTMLElement>('.zoom-content')!;
+    imageFrame.style.inlineSize = '400px';
+    imageFrame.style.blockSize = '200px';
+    el.highlights = [
+      { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 40, width: 2, height: 2 } } },
+      { id: 'b', anchor: { kind: 'region', rect: { x: 80, y: 40, width: 2, height: 2 } } },
+    ];
+    const targets = () => root.querySelectorAll<HTMLButtonElement>('[part="region-highlight-target"]');
+    const actions = () => root.querySelectorAll<HTMLButtonElement>('[part="region-highlight-action"]');
+    await waitUntil(() => targets().length === 2, 'separate regions never gained on-image targets');
+    expect(actions().length).to.equal(0);
+    const second = targets()[1]!;
+    await focusByKeyboard(second);
+    const activated = oneEvent(el, 'lr-highlight-activate');
+    second.click();
+    expect((await activated).detail).to.deep.equal({ highlightId: 'b' });
+
+    imageFrame.style.inlineSize = '40px';
+    await waitUntil(() => actions().length === 2, 'overlapping targets never switched to separate actions');
+    expect(targets().length).to.equal(0);
+    expect(root.activeElement === actions()[1]).to.be.true;
+
+    imageFrame.style.inlineSize = '400px';
+    await waitUntil(() => targets().length === 2, 'expanding the frame did not restore on-image controls');
+    expect(actions().length).to.equal(0);
+    expect(root.activeElement === targets()[1]).to.be.true;
+
+    el.style.setProperty('--lr-icon-button-size', 'auto');
+    imageFrame.style.inlineSize = '40px';
+    await twoFrames();
+    expect(targets().length).to.equal(2);
+    expect(actions().length).to.equal(0);
   });
 
   it("gives unlabeled dense highlight actions distinct ordinal names", async () => {
@@ -1928,7 +1969,7 @@ it("moves focus across region-highlight actions with ArrowDown/ArrowUp and clamp
       new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true }),
     );
 
-  actions[0]!.focus();
+  await focusByKeyboard(actions[0]!);
   press(actions[0]!, "ArrowDown");
   expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
   // Clamps rather than wrapping past the last action.
@@ -1936,6 +1977,30 @@ it("moves focus across region-highlight actions with ArrowDown/ArrowUp and clamp
   expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
   press(actions[1]!, "ArrowUp");
   expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[0]).to.be.true;
+  viewer.dir = 'rtl';
+  await viewer.updateComplete;
+  press(actions[0]!, 'ArrowLeft');
+  expect(viewer.shadowRoot!.activeElement === actions[1]).to.be.true;
+});
+
+it('leaves modified and composing arrow keys to the browser in the region action list', async () => {
+  const viewer = await fixture<LyraDocumentPreview>(html`
+    <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+  `);
+  viewer.highlights = [
+    { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
+    { id: 'b', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
+  ];
+  await viewer.updateComplete;
+  const root = viewer.shadowRoot!;
+  const first = root.querySelector<HTMLButtonElement>('[part="region-highlight-action"]')!;
+  await focusByKeyboard(first);
+
+  for (const modifier of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { isComposing: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true, ...modifier });
+    expect(first.dispatchEvent(event)).to.be.true;
+    expect(root.activeElement === first).to.be.true;
+  }
 });
 
 describe("identity re-assignment", () => {

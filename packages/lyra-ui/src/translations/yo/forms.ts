@@ -114,6 +114,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Ìkọ̀wé wà nísàlẹ̀',
   signaturePadPenUp: 'Ìkọ̀wé wà lókè',
   signaturePadDrawingLimit: 'A ti dé ààlà yíya.',
+  catalogPickerSearchLoadFailed: 'Kò ṣeé gbé àpótí ìṣàwárí wọlé.',
   localePickerInputLimit: 'Àwọn àkọsílẹ̀ èdè àti agbègbè 512 àkọ́kọ́ nìkan ló wà.',
   emojiPickerInputLimit: 'A fi díẹ̀ lára dátà emoji sílẹ̀ nítorí pé a ti dé ààlà ìwọlé.',
 };

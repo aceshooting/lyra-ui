@@ -120,6 +120,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'העט למטה',
   signaturePadPenUp: 'העט למעלה',
   signaturePadDrawingLimit: 'הגעת למגבלת הציור.',
+  catalogPickerSearchLoadFailed: 'לא ניתן לטעון את שדה החיפוש.',
   localePickerInputLimit: 'רק 512 הרשומות הראשונות של הגדרות השפה והאזור זמינות.',
   emojiPickerInputLimit: 'חלק מנתוני האימוג׳י הושמטו משום שהקלט הגיע למגבלה.',
 };

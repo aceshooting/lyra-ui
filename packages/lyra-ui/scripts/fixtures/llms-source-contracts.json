@@ -1725,7 +1725,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalToolApprovalDetail",
       "kind": "interface",
-      "fingerprint": "dd66d9e34811913ce685",
+      "fingerprint": "0f1fb622c0090a8c7a6b",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -2293,7 +2293,7 @@
       "module": "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
       "exportName": "ToolCallBlockRenderErrorDetail",
       "kind": "interface",
-      "fingerprint": "fdadf7709d2f5ea38c8a",
+      "fingerprint": "3807e3f95e93027eaf8d",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2315,7 +2315,7 @@
       "module": "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
       "exportName": "ToolCallBlockToggleDetail",
       "kind": "interface",
-      "fingerprint": "a7c17ff50f0443a45ab2",
+      "fingerprint": "ecdb100384a90797add8",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2337,7 +2337,7 @@
       "module": "src/components/agent-tools/tool-call-chip/tool-call-chip.class.ts",
       "exportName": "ToolChipSelectDetail",
       "kind": "interface",
-      "fingerprint": "5f5aecaaf9d1b524e328",
+      "fingerprint": "4e3c36f64a07dc5a83c3",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2602,7 +2602,7 @@
       "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
       "exportName": "ToolTimelineApprovalDetail",
       "kind": "interface",
-      "fingerprint": "454935d12b569744d153",
+      "fingerprint": "5107ec3a0ad0d4ef4a85",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2940,7 +2940,7 @@
       "module": "src/components/charts/chart/chart-core-loader.ts",
       "exportName": "loadChartJs",
       "kind": "function",
-      "fingerprint": "c3fe036c5236da6d4bac",
+      "fingerprint": "78739072f2dc4c13b9a8",
       "routes": [
         "src/components/charts/chart/chart-core-loader.ts"
       ],
@@ -2988,7 +2988,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadAnnotationPlugin",
       "kind": "function",
-      "fingerprint": "bfd94c48e2320f5ac3ae",
+      "fingerprint": "e0d41b89a34037c0b48a",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3004,7 +3004,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartAndAnnotation",
       "kind": "function",
-      "fingerprint": "c466141d2f4e3291b5c9",
+      "fingerprint": "227925aa512404e77f43",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3020,7 +3020,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartAndDataLabels",
       "kind": "function",
-      "fingerprint": "bf8a7f53b987bc0380ec",
+      "fingerprint": "656a0a15f9f8776c0ad5",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3036,7 +3036,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartAndRegisterZoom",
       "kind": "function",
-      "fingerprint": "21e8ba42a181939cee1c",
+      "fingerprint": "5d26a9864f8d8b208e07",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3068,7 +3068,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithAnnotationResult",
       "kind": "function",
-      "fingerprint": "4f7a87ced41eee3bd58c",
+      "fingerprint": "8348794b91763a69ceff",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3084,7 +3084,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithDataLabels",
       "kind": "function",
-      "fingerprint": "e5812ef06756d87c6aa5",
+      "fingerprint": "cbf21c94fe9de5e7a378",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3100,7 +3100,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithDataLabelsResult",
       "kind": "function",
-      "fingerprint": "461651e8534ea8012957",
+      "fingerprint": "2faf78adce7eb0c23305",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3116,7 +3116,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithZoom",
       "kind": "function",
-      "fingerprint": "3ee7022d54a48be3170c",
+      "fingerprint": "caa27cb2d95bedf68aac",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3132,7 +3132,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithZoomResult",
       "kind": "function",
-      "fingerprint": "8af4553b46e45b7bff21",
+      "fingerprint": "52047d1ed2febfa8d721",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3148,7 +3148,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadDataLabelsPlugin",
       "kind": "function",
-      "fingerprint": "650071ca3241f4c9b026",
+      "fingerprint": "fc3217f234060319b59a",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3419,7 +3419,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartInstance",
       "kind": "interface",
-      "fingerprint": "004ac6fa465a08ef0d3d",
+      "fingerprint": "dc8356e4f26548b53995",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -5614,7 +5614,7 @@
       "module": "src/components/data/document-library/document-library.class.ts",
       "exportName": "DocumentLibrarySelectionChangeDetail",
       "kind": "interface",
-      "fingerprint": "f3cb73cd78251ecac47d",
+      "fingerprint": "b0451b8ff400e28957dc",
       "routes": [
         "src/all.ts",
         "src/components/data/document-library/document-library.class.ts",
@@ -9152,7 +9152,7 @@
       "module": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
       "exportName": "LyraAttachmentFilesDetail",
       "kind": "interface",
-      "fingerprint": "922bd51f7a662972a32e",
+      "fingerprint": "5966e89558af085d79b7",
       "routes": [
         "src/all.ts",
         "src/components/lr-attachment-trigger.ts",
@@ -9284,7 +9284,7 @@
       "module": "src/components/media/drop-zone/drop-zone.class.ts",
       "exportName": "LyraDropZoneFilesDetail",
       "kind": "interface",
-      "fingerprint": "f42e29f77f26b731fd37",
+      "fingerprint": "af0219db3a854e804de1",
       "routes": [
         "src/all.ts",
         "src/components/lr-drop-zone.ts",
@@ -9306,7 +9306,7 @@
       "module": "src/components/media/drop-zone/drop-zone.class.ts",
       "exportName": "LyraDropZoneFilesEvent",
       "kind": "interface",
-      "fingerprint": "af54de9b27a19fdc3e7e",
+      "fingerprint": "fd3f039043bfe47dc5d9",
       "routes": [
         "src/all.ts",
         "src/components/lr-drop-zone.ts",
@@ -9328,7 +9328,7 @@
       "module": "src/components/media/drop-zone/drop-zone.class.ts",
       "exportName": "LyraDropZoneRejectedFile",
       "kind": "interface",
-      "fingerprint": "ece14b77504bbfb486dc",
+      "fingerprint": "e0153377d4f12d668b45",
       "routes": [
         "src/all.ts",
         "src/components/lr-drop-zone.ts",
@@ -9476,7 +9476,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputFilesDetail",
       "kind": "interface",
-      "fingerprint": "46f1ec5709e1fc194615",
+      "fingerprint": "d3c31e830f199b3dd65f",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9498,7 +9498,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputFilesEvent",
       "kind": "interface",
-      "fingerprint": "7b02befbc438149dff33",
+      "fingerprint": "78e1d834e12b9647c175",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9564,7 +9564,7 @@
       "module": "src/components/media/file-input/file-input.class.ts",
       "exportName": "LyraFileInputRejectedFile",
       "kind": "interface",
-      "fingerprint": "ece14b77504bbfb486dc",
+      "fingerprint": "93956aca8182131c82dc",
       "routes": [
         "src/all.ts",
         "src/components/lr-file-input.ts",
@@ -9634,7 +9634,7 @@
       "module": "src/components/media/flag/flag-url-resolver.ts",
       "exportName": "loadBulkFlagUrl",
       "kind": "function",
-      "fingerprint": "29b0ebec903315108dcd",
+      "fingerprint": "961808580e27a061e169",
       "routes": [
         "src/components/lr-flag.ts",
         "src/components/media/flag/flag.class.ts",
@@ -9653,7 +9653,7 @@
       "module": "src/components/media/flag/flag-url-resolver.ts",
       "exportName": "loadFlagUrl",
       "kind": "function",
-      "fingerprint": "1076c58ec469b6539109",
+      "fingerprint": "ac939f302e10221cd209",
       "routes": [
         "src/components/lr-flag.ts",
         "src/components/media/flag/flag.class.ts",
@@ -13852,7 +13852,7 @@
       "module": "src/components/viewers/docx-viewer/docx-loader.ts",
       "exportName": "loadDocxDeps",
       "kind": "function",
-      "fingerprint": "24a5e4b95d11feff0b52",
+      "fingerprint": "abb42b0ef831c5ad89ba",
       "routes": [
         "src/all.ts",
         "src/components/lr-docx-viewer.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "a07c9762c91bba7087ed",
+      "fingerprint": "6ec27ae09c9822307e30",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "c800abe55ccc0b73b2ea",
+      "fingerprint": "65ac25d93b5027d6606b",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "bc014079e7e209868353",
+      "fingerprint": "afe9c1e157b0131db3d3",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "98dc2f637d4d522a92ec",
+      "fingerprint": "7f6851c8bf1de0863e00",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "f81f9c5c85d5c93499dd",
+      "fingerprint": "71353efd222261e42572",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "2c3e5ffc36c9b028cfea",
+      "fingerprint": "4b40118a00708f4cb624",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "282f88dd7e96b1e0631a",
+      "fingerprint": "725504893056f620689a",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "abfecf7b192096ec3dc9",
+      "fingerprint": "e6e3258ab96bc741b025",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "452aca2d7d5e4900f35d",
+      "fingerprint": "1c85daf72eb3ce5ccf64",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "d329e88c6478d3952dcb",
+      "fingerprint": "6c5e0621db4ac6e813ba",
       "routes": [
         "src/localization.ts"
       ],

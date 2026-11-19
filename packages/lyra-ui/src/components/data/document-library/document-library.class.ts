@@ -1,4 +1,5 @@
 import { compareNullable } from '../../../internal/sort-compare.js';
+import { createInputMemo } from '../../../internal/input-memo.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraCursorSource, LyraCursorNavigationState } from '../../../data-sources.js';
 import { SourceCursorController } from '../../../internal/source-cursor-controller.js';
 import { setSourcePageScope, sourcePageScope, shareSourcePageQueries } from '../../../internal/source-page-scope.js';
@@ -1185,62 +1186,53 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private compareDocuments = (a: LibraryDocument, b: LibraryDocument): number =>
     compareNullable(this.sortValue(a), this.sortValue(b), this.sortDir === 'asc' ? 1 : -1, this.sortLocale);
 
-  private matchingMemo?: { inputs: unknown[]; rows: LibraryDocument[] };
+  private readonly matchDocuments = createInputMemo((
+    documents: readonly LibraryDocument[], query: string, _tags: readonly string[],
+    filter: LyraDocumentLibrary['filter'], _locale: string, _refresh: number
+  ): LibraryDocument[] => {
+    const match = filter ?? this.defaultFilter;
+    return documents.filter(document => (query === '' || match(document, query)) && this.matchesTagFilter(document));
+  });
+
   /** The current search+tag-facet-filtered view, in input order. */
   private get matchingDocuments(): LibraryDocument[] {
     const term = this.searchTerm ?? '';
     const query = this.filter ? term.trim().toLocaleLowerCase(this.effectiveLocale) : prepareNeedle(term, this.effectiveLocale);
-    const inputs = [this._documents, query, this.tagFilter, this.filter, this.effectiveLocale,
-      this.filter ? this.explicitRefresh : 0];
-    if (!this.matchingMemo || inputs.some((input, index) => input !== this.matchingMemo!.inputs[index])) {
-      const matchFn = this.filter ?? this.defaultFilter;
-      const rows = this._documents.filter(document =>
-        (query === '' || matchFn(document, query)) && this.matchesTagFilter(document));
-      this.matchingMemo = { inputs, rows };
-    }
-    return this.matchingMemo.rows;
+    return this.matchDocuments(this._documents, query, this.tagFilter, this.filter, this.effectiveLocale,
+      this.filter ? this.explicitRefresh : 0);
   }
 
-  private sortedMemo?: { rows: LibraryDocument[]; key: LibraryDocumentSortKey; dir: TableSortDirection; locale: string; sorted: LibraryDocument[] };
-  private get sortedDocuments(): LibraryDocument[] {
-    const rows = this.matchingDocuments;
-    const locale = this.effectiveLocale;
-    const previous = this.sortedMemo;
-    if (previous?.rows === rows && previous.key === this.sortKey && previous.dir === this.sortDir && previous.locale === locale) return previous.sorted;
+  private readonly sortDocuments = createInputMemo((
+    rows: LibraryDocument[], key: LibraryDocumentSortKey, _direction: TableSortDirection, locale: string
+  ): LibraryDocument[] => {
     this.sortLocale = locale;
-    if (this.sortKey === 'updatedAt') for (const row of rows) this.documentDate(row);
-    const sorted = [...rows].sort(this.compareDocuments);
-    this.sortedMemo = { rows, key: this.sortKey, dir: this.sortDir, locale, sorted };
-    return sorted;
+    if (key === 'updatedAt') for (const row of rows) this.documentDate(row);
+    return [...rows].sort(this.compareDocuments);
+  });
+
+  private get sortedDocuments(): LibraryDocument[] {
+    return this.sortDocuments(this.matchingDocuments, this.sortKey, this.sortDir, this.effectiveLocale);
   }
 
-  /** Every distinct tag across `documents`, sorted for stable combobox ordering. Empty when no
-   *  document declares any tag -- the tag-filter combobox itself is only rendered while this is
-   *  non-empty. */
-  private tagsMemo?: { documents: readonly LibraryDocument[]; locale: string; tags: string[]; set: ReadonlySet<string> };
-  private get allTags(): string[] {
-    const locale = this.effectiveLocale;
-    if (this.tagsMemo?.documents === this._documents && this.tagsMemo.locale === locale) return this.tagsMemo.tags;
+  private readonly documentTagIndex = createInputMemo((documents: readonly LibraryDocument[], locale: string) => {
     const tags = new Set<string>();
-    for (const document of this._documents)
+    for (const document of documents)
       for (const tag of document.tags ?? []) tags.add(tag);
-    const sorted = [...tags].sort(getCollator(locale).compare);
-    this.tagsMemo = { documents: this._documents, locale, tags: sorted, set: tags };
-    return sorted;
+    return { sorted: [...tags].sort(getCollator(locale).compare), tags };
+  });
+
+  private get allTags(): string[] {
+    return this.documentTagIndex(this._documents, this.effectiveLocale).sorted;
   }
 
   private get tagSet(): ReadonlySet<string> {
-    void this.allTags;
-    return this.tagsMemo!.set;
+    return this.documentTagIndex(this._documents, this.effectiveLocale).tags;
   }
 
-  private selectedMemo?: { ids: readonly string[]; set: ReadonlySet<string> };
-  /** The selection as a Set, rebuilt only when `selectedDocumentIds` is replaced. */
+  private readonly selectedIdSetFor = createInputMemo((ids: readonly string[]) => new Set(ids));
+
   private get selectedIdSet(): ReadonlySet<string> {
-    if (this.selectedMemo?.ids !== this._selectedDocumentIds) {
-      this.selectedMemo = { ids: this._selectedDocumentIds, set: new Set(this._selectedDocumentIds) };
-    }
-    return this.selectedMemo.set;
+    return this.selectedIdSetFor(this._selectedDocumentIds);
   }
 
   private emitFilterChange(): void {

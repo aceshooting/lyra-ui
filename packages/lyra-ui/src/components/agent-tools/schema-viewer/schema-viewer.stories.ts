@@ -36,7 +36,7 @@ export const Narrow320: Story = {
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-json-schema-viewer
-        style="--lr-json-schema-viewer-selected-bg: var(--lr-color-info-quiet)"
+        style="--lr-json-schema-viewer-selected-bg: var(--lr-color-brand-quiet)"
         selected-path="/properties/long_customer_support_configuration_identifier"
         .issues=${[
           {

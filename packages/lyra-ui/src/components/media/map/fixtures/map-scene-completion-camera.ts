@@ -1,4 +1,4 @@
-import type { SceneCompletionCameraFacts, SceneRenderPublication } from './map-scene-render-contract.js';
+import type { SceneCompletionCameraFacts, SceneRenderPublication } from '../map-scene-render-contract.js';
 
 interface CameraMap {
   getCenter?(): { readonly lat: number };

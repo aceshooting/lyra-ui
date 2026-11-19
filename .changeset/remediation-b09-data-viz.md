@@ -16,3 +16,9 @@ Calendars announce month navigation and preserve hover feedback on selected days
 The context meter uses its summary as a fallback name and emits `lr-segment-selection-change` after a default selection toggle.
 Stats and context meters show when a collection exceeds the input limit.
 Sparkline marks, stat exact-value hover color, and calendar event hover tint have component theme tokens.
+Heatmaps accept equivalent CSS color spellings and require canonical Gregorian dates for calendar cells.
+Cancelled heatmap drags suppress their own release click without swallowing later clicks.
+Canvas-only heatmaps build the cell index on demand, and sparklines reuse line geometry across unrelated updates.
+Static sequence strips mount a source announcement region only when a source is assigned.
+Funnel rendering tolerates revoked arrays and reads array limits without invoking a length getter.
+Stat values expose their exact text to assistive technology, including when the card is a link.

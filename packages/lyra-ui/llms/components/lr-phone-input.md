@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,8 +47,8 @@ also shows the selected country's `<lr-flag>`.
 
 Public `--lr-phone-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper
 can override size and pill fallbacks; a value set directly on the element still wins.
-The native country-selector target retains the shared icon-button hit floor, and the wrapper uses
-the same rendered action-height ladder as input, number-input, and segmented time-input.
+The size tier sets a nominal row height. The wrapper grows to accommodate the native country
+selector's hit target, just as an input row accommodates its clear button, stepper or time picker.
 
 **Types:**
 
@@ -136,7 +136,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   converter (Lit's default presence-based boolean converter would otherwise treat any attribute
   value, including the literal string `"false"`, as `true`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
-  telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
+  telephone input. An empty override clears the name. Whitespace-only candidates are skipped.
+  Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
   `placeholder`, and finally a localized generic "Phone" name, so a bare `<lr-phone-input>` with
   none of them set never reaches the accessibility tree unnamed. (The visible label part cannot
   stand in for it: it carries the native `hidden` attribute while there is no label text, which
@@ -221,7 +222,8 @@ receives the `start` alias slot's content), `end`, `country`
 content, like every sibling field. Style
 the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
 invalid after interaction, including after a failed submit or `reportValidity()`), or
-`--lr-phone-input-invalid-border-color`, which defaults to the resting border. Focus shows the
+`--lr-phone-input-invalid-border-color`. Its fallback is `--lr-form-control-invalid-border-color`,
+then the resting border. Focus shows the
 brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
 `'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
 exactly like `lr-input`. Native invalid/focus feedback therefore has one
@@ -319,7 +321,7 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   row holds focus. Default: `none`. Additive — the focus outline and the focused border are
   never replaced by it.
-- `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-phone-input-invalid-border-color` overrides the shared invalid border color for the telephone row.
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
 ---

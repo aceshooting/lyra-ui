@@ -924,30 +924,69 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
-  it("emits lr-render-error when the text layer render itself rejects", async () => {
-    const el = (await fixture(
-      html`<lr-pdf-viewer></lr-pdf-viewer>`
-    )) as LyraPdfViewer;
-    const boom = new Error("text layer boom");
-    class FailingTextLayer {
-      constructor(_options: { container: HTMLElement }) {}
-      render(): Promise<void> {
-        return Promise.reject(boom);
+  for (const boom of [new Error('Failed text-layer rendering'), new DOMException('Interrupted text-layer rendering', 'AbortError')]) {
+    it(`reports an active ${boom.name} during text-layer rendering`, async () => {
+      const el = (await fixture(
+        html`<lr-pdf-viewer></lr-pdf-viewer>`
+      )) as LyraPdfViewer;
+      class FailingTextLayer {
+        constructor(_options: { container: HTMLElement }) {}
+        render(): Promise<void> {
+          return Promise.reject(boom);
+        }
+        cancel(): void {}
       }
-      cancel(): void {}
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
+        () =>
+          Promise.resolve({
+            getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+            GlobalWorkerOptions: { workerSrc: "" },
+            TextLayer: FailingTextLayer,
+          });
+      const restore = stubFetch();
+      try {
+        const eventPromise = oneEvent(el, "lr-render-error");
+        el.src = "https://example.test/report.pdf";
+        expect((await eventPromise).detail.error).to.equal(boom);
+      } finally {
+        restore();
+      }
+    });
+  }
+
+  it('keeps a retired text-layer cancellation quiet when zoom replaces the render', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    let renders = 0;
+    let cancellations = 0;
+    class ReplaceableTextLayer {
+      private reject?: (error: unknown) => void;
+
+      render(): Promise<void> {
+        if (++renders > 1) return Promise.resolve();
+        return new Promise((_resolve, reject) => { this.reject = reject; });
+      }
+
+      cancel(): void {
+        cancellations++;
+        this.reject?.(new DOMException('Retired by zoom', 'AbortError'));
+      }
     }
-    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
-      () =>
-        Promise.resolve({
-          getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
-          GlobalWorkerOptions: { workerSrc: "" },
-          TextLayer: FailingTextLayer,
-        });
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: ReplaceableTextLayer,
+    });
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => errors++);
     const restore = stubFetch();
     try {
-      const eventPromise = oneEvent(el, "lr-render-error");
-      el.src = "https://example.test/report.pdf";
-      expect((await eventPromise).detail.error).to.equal(boom);
+      el.src = 'https://example.test/report.pdf';
+      await waitUntil(() => renders === 1);
+      el.zoom = 2;
+      await waitUntil(() => renders === 2);
+      expect(cancellations).to.equal(1);
+      expect(errors).to.equal(0);
+      expect(el.pageViewerSnapshot.status).to.equal('ready');
     } finally {
       restore();
     }
@@ -5089,6 +5128,11 @@ describe("styling", () => {
         () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
         'the PDF toolbar button never entered its rendered hover state',
       );
+      el.style.setProperty('--lr-viewer-pager-button-hover-bg', 'rgb(4, 5, 6)');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(4, 5, 6)',
+        'the PDF pager did not use the shared hover token',
+      );
     } finally {
       await resetMouse();
       restore();
@@ -6620,31 +6664,42 @@ describe('lr-pdf-viewer remediation', () => {
     }
   });
 
-  it('resolves false instead of rejecting when pdf.js cancels a superseded thumbnail render', async () => {
-    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
-    let renders = 0;
-    const doc = docWithRender(2, () => {
-      renders += 1;
-      if (renders === 1) return { promise: Promise.resolve(), cancel: () => {} };
-      let reject!: (reason: unknown) => void;
-      const promise = new Promise<void>((_resolve, rej) => { reject = rej; });
-      return { promise, cancel: () => reject({ name: 'RenderingCancelledException', message: 'cancelled' }) };
-    });
-    installFakeLoader(el, doc as ReturnType<typeof fakeDocument>);
-    const restore = stubFetch();
-    try {
-      el.src = 'https://example.test/thumb.pdf';
-      await waitFor(el, '[part="toolbar"]');
+  for (const name of ['RenderingCancelledException', 'AbortException', 'AbortError']) {
+    it(`resolves false for a superseded thumbnail render that rejects with ${name}`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
       const canvas = document.createElement('canvas');
-      const first = el.renderPageThumbnail(2, canvas, { width: 96 });
-      await aTimeout(0);
-      const second = el.renderPageThumbnail(2, canvas, { width: 96 });
-      expect(await first).to.equal(false);
-      second.catch(() => undefined);
-    } finally {
-      restore();
-    }
-  });
+      let renders = 0;
+      let cancellations = 0;
+      const doc = {
+        numPages: 2,
+        getPage: (pageNumber: number) => Promise.resolve({
+          ...fakePage(pageNumber),
+          render: (options?: { canvasContext: CanvasRenderingContext2D }) => {
+            if (options?.canvasContext.canvas !== canvas || ++renders > 1) {
+              return { promise: Promise.resolve(), cancel: () => {} };
+            }
+            let reject!: (reason: unknown) => void;
+            const promise = new Promise<void>((_resolve, rej) => { reject = rej; });
+            return { promise, cancel: () => { cancellations++; reject({ name, message: 'cancelled' }); } };
+          },
+        }),
+      };
+      installFakeLoader(el, doc);
+      const restore = stubFetch();
+      try {
+        el.src = 'https://example.test/thumb.pdf';
+        await waitFor(el, '[part="toolbar"]');
+        const first = el.renderPageThumbnail(2, canvas, { width: 96 });
+        await waitUntil(() => renders === 1, 'the first thumbnail task never started');
+        const second = el.renderPageThumbnail(2, canvas, { width: 96 });
+        expect(await first).to.equal(false);
+        expect(await second).to.equal(true);
+        expect(cancellations).to.equal(1);
+      } finally {
+        restore();
+      }
+    });
+  }
 
   it('reports a current page render that fails with an AbortError instead of staying blank', async () => {
     const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);

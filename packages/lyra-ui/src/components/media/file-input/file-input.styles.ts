@@ -13,18 +13,10 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     --_lr-file-input-font-size: var(--lr-form-control-font-size);
-    /* The dropzone's own ladder. sizes.styles.ts carries only the six shared --lr-form-control-*
-       knobs, which describe a single-line row control; this is a block drop target whose
-       instructional text, glyph, padding and detail text each need their own tier, or size ends up
-       resizing the label alone. These :host values ARE the m/medium tier, so an unset or
-       default-size control renders unchanged. */
     --_lr-file-input-dropzone-font-size: var(--lr-font-size-md-sm);
     --_lr-file-input-dropzone-icon-size: var(--lr-font-size-xl);
     --_lr-file-input-dropzone-padding: var(--lr-space-l);
     --_lr-file-input-detail-font-size: var(--lr-font-size-sm);
-    /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
-       declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
-       reaches this dropzone. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([size="2xs"]),
@@ -75,9 +67,6 @@ export const styles = css`
   [part="error"][hidden] {
     display: none;
   }
-  /* Accepts required and renders a visible label like every other field in the library, so it marks
-     it the same way; the [hidden] rule above keeps the marker from orphaning a stray glyph when no
-     label is set. */
   ${formControlRequiredMarker}
   .dropzone {
     position: relative;
@@ -97,9 +86,6 @@ export const styles = css`
       --lr-file-input-dropzone-padding,
       var(--_lr-file-input-dropzone-padding)
     );
-    /* Resting edge and fill, each an inline var() fallback rather than a :host declaration, so an
-       ancestor or :root value still wins. The drag accept/reject states below already had their
-       hooks; the resting state it spends most of its life in did not. */
     border: var(--lr-border-width-medium) dashed
       var(--lr-file-input-dropzone-border-color, var(--lr-color-border));
     border-radius: var(--lr-file-input-radius, var(--lr-radius));
@@ -154,7 +140,6 @@ export const styles = css`
     min-inline-size: 0;
     pointer-events: auto;
   }
-  /* Small-size overrides retain the ordinary size ladder when omitted. */
   :host(:is([size='s'], [size='small'])) [part~='file-input'],
   :host(:is([size='s'], [size='small'])) .dropzone-content {
     padding: var(--lr-file-input-compact-padding,
@@ -165,11 +150,6 @@ export const styles = css`
   :host(:is([size='s'], [size='small'])) .dropzone-content {
     gap: var(--lr-file-input-compact-gap, var(--lr-file-input-gap, var(--lr-space-xs)));
   }
-  /* Inline var() fallbacks rather than :host-declared properties (re-declared per instance,
-     shadowing ancestor values), so a consumer can retint just this dropzone's drag accept/reject
-     highlight without hijacking the shared --lr-color-success and --lr-color-danger tokens used
-     everywhere else in their theme. Unset, each falls back to the pre-hatch value, so default
-     rendering is unchanged. */
   [part~="file-input"][data-drag-state="accept"] {
     border-color: var(
       --lr-file-input-accept-border-color,
@@ -213,10 +193,6 @@ export const styles = css`
   :host(:not(:disabled)) .dropzone:hover [part~="file-input"] {
     border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
-  /* [part~='file-input'] opens the file dialog, so a press is a real activation needing its own answer --
-     the hover border alone repeats what hover already said. Both selector shapes are mirrored
-     because the pointer can be over the button itself or over the pointer-events: none content
-     stacked on top of it in the same grid cell. */
   :host(:not(:disabled)) [part~="file-input"]:active {
     border-color: var(
       --lr-file-input-dropzone-active-border-color,
@@ -259,8 +235,6 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  /* Visible per-file rejection feedback, rendered alongside (not instead of) the sr-only status
-     count summary -- see file-input.class.ts's rejectionMessage(). */
   [part="rejection"] {
     min-inline-size: 0;
     max-inline-size: 100%;

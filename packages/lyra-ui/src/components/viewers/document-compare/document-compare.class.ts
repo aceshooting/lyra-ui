@@ -357,9 +357,6 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   @query('[part="pane-old"] lr-document-preview') private previewOldEl?: LyraDocumentPreview;
   @query('[part="pane-new"] lr-document-preview') private previewNewEl?: LyraDocumentPreview;
 
-  // Guards the fraction-based mirrored scrollTop write below from re-triggering its own 'scroll'
-  // listener on the pane it just wrote to -- same guard `<lr-compare-panel>`'s own
-  // onPaneScroll() uses.
   private suppressSync = false;
   private syncReleaseFrame?: number;
   private syncReleaseView?: Window;

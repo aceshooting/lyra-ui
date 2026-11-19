@@ -75,7 +75,7 @@ it('rejects accessor-backed swatches without invoking them while retaining later
       throw new Error('do not invoke swatch accessors');
     },
   });
-  const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+  const el = (await fixture(html`<lr-color-picker inline></lr-color-picker>`)) as LyraColorPicker;
   el.swatches = [accessorBacked, { color: '#123456', label: 'Safe' }] as unknown as typeof el.swatches;
   await el.updateComplete;
 
@@ -92,7 +92,7 @@ describe('per-swatch disabled', () => {
   ];
 
   it('renders a genuinely disabled swatch and leaves an ordinary one unset (unset-regression)', async () => {
-    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    const el = (await fixture(html`<lr-color-picker inline .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
     await el.updateComplete;
     const swatches = parts(el, 'swatch') as HTMLButtonElement[];
     expect(swatches[0]!.disabled, 'an ordinary swatch is not disabled').to.equal(false);
@@ -101,7 +101,7 @@ describe('per-swatch disabled', () => {
   });
 
   it('a click on a disabled swatch commits nothing', async () => {
-    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    const el = (await fixture(html`<lr-color-picker inline .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-change', () => (fired = true));
@@ -112,7 +112,7 @@ describe('per-swatch disabled', () => {
   });
 
   it('leaves the other swatches pickable while one entry is disabled', async () => {
-    const el = (await fixture(html`<lr-color-picker .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
+    const el = (await fixture(html`<lr-color-picker inline .swatches=${withDisabled}></lr-color-picker>`)) as LyraColorPicker;
     await el.updateComplete;
     const changed = oneEvent(el, 'lr-change');
     (parts(el, 'swatch')[0] as HTMLButtonElement).click();
@@ -122,7 +122,7 @@ describe('per-swatch disabled', () => {
   });
 
   it('keeps a swatch whose disabled is not a boolean, omitting the field (fails open, like an absent disabled)', async () => {
-    const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+    const el = (await fixture(html`<lr-color-picker inline></lr-color-picker>`)) as LyraColorPicker;
     el.swatches = [
       { color: '#ff0000', label: 'Red', disabled: 'yes' },
       { color: '#00ff00', label: 'Green' },
@@ -143,7 +143,7 @@ describe('per-swatch disabled', () => {
         return true;
       },
     });
-    const el = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+    const el = (await fixture(html`<lr-color-picker inline></lr-color-picker>`)) as LyraColorPicker;
     el.swatches = [hostile, { color: '#00ff00', label: 'Green' }] as unknown as typeof el.swatches;
     await el.updateComplete;
 
@@ -309,6 +309,8 @@ it("keeps the black preview separate from the empty public default, validity, re
   const el = form.querySelector("lr-color-picker") as LyraColorPicker;
   await el.updateComplete;
 
+  el.show();
+  await el.updateComplete;
   expect((part(el, "input") as HTMLInputElement).value).to.equal("#000000");
   expect(el.value).to.equal("");
   expect(new FormData(form).get("accent")).to.equal("");
@@ -331,15 +333,17 @@ it("publishes pristine and user-invalid state on both accessibility owners and c
   `)) as HTMLFormElement;
   const el = form.querySelector("lr-color-picker") as LyraColorPicker;
   await el.updateComplete;
+  const shown = oneEvent(el, "lr-after-show");
+  el.show();
+  await shown;
   const trigger = part(el, "trigger");
   const input = part(el, "input");
 
   expect(trigger.getAttribute("aria-invalid")).to.equal("false");
   expect(input.getAttribute("aria-invalid")).to.equal("false");
 
-  trigger.focus();
-  trigger.blur();
-  await el.updateComplete;
+  el.blur();
+  await waitUntil(() => trigger.getAttribute("aria-invalid") === "true");
   expect(trigger.getAttribute("aria-invalid")).to.equal("true");
   expect(input.getAttribute("aria-invalid")).to.equal("true");
 
@@ -377,6 +381,8 @@ it("reportValidity marks an invalid picker for assistive technology", async () =
   expect(el.reportValidity()).to.equal(false);
   await el.updateComplete;
   expect(part(el, "trigger").getAttribute("aria-invalid")).to.equal("true");
+  el.show();
+  await el.updateComplete;
   expect(part(el, "input").getAttribute("aria-invalid")).to.equal("true");
 });
 
@@ -486,17 +492,18 @@ it("visually marks direct and fieldset-cascaded disabled state across every poin
   const form = (await fixture(html`
     <form>
       <fieldset disabled>
-        <lr-color-picker opacity swatches="#ff0000"></lr-color-picker>
+        <lr-color-picker></lr-color-picker>
+        <lr-color-picker inline opacity swatches="#ff0000"></lr-color-picker>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector("lr-color-picker") as LyraColorPicker;
+  const [trigger, el] = [...form.querySelectorAll("lr-color-picker")] as [LyraColorPicker, LyraColorPicker];
+  await trigger.updateComplete;
   await el.updateComplete;
   expect(getComputedStyle(el).opacity).to.equal(
     getComputedStyle(el).getPropertyValue("--lr-opacity-disabled").trim()
   );
   const pointerParts = [
-    "trigger",
     "grid",
     "grid-handle",
     "hue-slider",
@@ -507,6 +514,7 @@ it("visually marks direct and fieldset-cascaded disabled state across every poin
     "format-button",
     "swatch",
   ];
+  expect(getComputedStyle(part(trigger, "trigger")).cursor).to.equal("not-allowed");
   for (const name of pointerParts) {
     expect(
       getComputedStyle(part(el, name)).cursor,
@@ -516,7 +524,10 @@ it("visually marks direct and fieldset-cascaded disabled state across every poin
 
   (form.querySelector("fieldset") as HTMLFieldSetElement).disabled = false;
   el.disabled = true;
+  trigger.disabled = true;
+  await trigger.updateComplete;
   await el.updateComplete;
+  expect(getComputedStyle(part(trigger, "trigger")).cursor).to.equal("not-allowed");
   for (const name of pointerParts) {
     expect(getComputedStyle(part(el, name)).cursor, `direct ${name}`).to.equal(
       "not-allowed"
@@ -1171,7 +1182,7 @@ it("moves the grid to its saturation extremes with Home/End and ignores unrelate
 
 it("ignores keydown on every slider handle while effectively disabled", async () => {
   const el = await opened(
-    html`<lr-color-picker label="A" opacity value="#ff0000"></lr-color-picker>`
+    html`<lr-color-picker inline label="A" opacity value="#ff0000"></lr-color-picker>`
   );
   el.disabled = true;
   await el.updateComplete;
@@ -2380,6 +2391,8 @@ it("clears an interrupted keyboard commit when an input listener reparents the p
     })
   );
   await el.updateComplete;
+  el.show();
+  await el.updateComplete;
   part(el, "hue-slider-handle").dispatchEvent(
     new KeyboardEvent("keyup", {
       key: "ArrowRight",
@@ -2489,7 +2502,7 @@ it("ignores a dispatched click on the eyedropper button while disabled", async (
       }
     };
     const el = (await fixture(
-      html`<lr-color-picker label="A" disabled></lr-color-picker>`
+      html`<lr-color-picker inline label="A" disabled></lr-color-picker>`
     )) as LyraColorPicker;
     await el.updateComplete;
     part(el, "eyedropper-button").dispatchEvent(
@@ -2581,6 +2594,7 @@ it("uses the adopted owner realm for EyeDropper and its abort signal", async () 
     };
     el = await opened();
     frameDocument.body.append(frameDocument.adoptNode(el));
+    el.show();
     await el.updateComplete;
     expect(count(el, "eyedropper-button")).to.equal(1);
 
@@ -2626,6 +2640,7 @@ it("aborts an owner-realm EyeDropper and ignores its late result after adoption"
       }
     };
     frameDocument.body.append(frameDocument.adoptNode(el));
+    el.show();
     await el.updateComplete;
     (part(el, "eyedropper-button") as HTMLButtonElement).click();
     expect(signal instanceof frameWindow.AbortSignal).to.be.true;

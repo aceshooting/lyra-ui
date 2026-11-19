@@ -116,6 +116,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Pen dị n\'ala',
   signaturePadPenUp: 'Pen dị elu',
   signaturePadDrawingLimit: 'E ruru oke ise ihe.',
+  catalogPickerSearchLoadFailed: 'Enweghị ike ibubata oghere ọchụchọ ahụ.',
   localePickerInputLimit: 'Naanị ndekọ 512 mbụ nke ntọala asụsụ na mpaghara dị.',
   emojiPickerInputLimit: 'A hapụrụ ụfọdụ data emoji n\'ihi na e ruru oke ntinye.',
 };

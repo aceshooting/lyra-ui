@@ -437,7 +437,9 @@ to a hover mix from the selected fill. The tree also exposes paired
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
+fallbacks). For unchecked boxes, `--lr-tree-checkbox-hover-border-color` and
+`--lr-tree-checkbox-active-border-color` set the hover and pressed borders. Selected rows use
+brand text at rest and on-quiet text while hovered or pressed;
 `--lr-tree-selected-color` overrides all three states. Pressed rows mix from the selected fill
 when selected and from `--lr-color-brand-quiet` otherwise. Each
 checkbox border token also paints that state's border under the pointer; and paired

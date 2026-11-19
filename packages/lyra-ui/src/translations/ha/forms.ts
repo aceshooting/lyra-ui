@@ -117,6 +117,7 @@ const strings: LyraLocaleStrings = {
   signaturePadPenDown: 'Alƙalami a ƙasa',
   signaturePadPenUp: 'Alƙalami a sama',
   signaturePadDrawingLimit: 'An kai iyakar zane.',
+  catalogPickerSearchLoadFailed: 'Ba a iya ɗora filin bincike ba.',
   localePickerInputLimit: 'Shigarwa 512 na farko na saitunan harshe da yanki kawai ake samu.',
   emojiPickerInputLimit: 'An bar wasu bayanan emoji saboda an kai iyakar shigarwa.',
 };

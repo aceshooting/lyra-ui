@@ -126,6 +126,52 @@ describe('lr-flow-canvas keyboard connect boundaries', () => {
 });
 
 describe('lr-flow-canvas pointer and drop boundaries', () => {
+  it('keeps an edge connection bound to the pointer that started it', async () => {
+    const canvas = await fixture<LyraFlowCanvas>(html`
+      <lr-flow-canvas connectable style="width:400px;height:300px" .nodes=${pair}></lr-flow-canvas>
+    `);
+    const connects = countEvents(canvas, 'lr-connect');
+    const output = addHandle(canvas, 'a', 'output', 'out');
+    const target = wrapper(canvas, 'b');
+    const dispatch = (element: EventTarget, type: string, pointerId: number, clientX = 0) => {
+      element.dispatchEvent(new PointerEvent(type, { pointerId, clientX, bubbles: true, composed: true }));
+    };
+    dispatch(output, 'pointerdown', 81);
+    await canvas.updateComplete;
+    const line = canvas.shadowRoot!.querySelector('[part="connection-line"]')!;
+    const path = line.getAttribute('d');
+    dispatch(target, 'pointermove', 82, 200);
+    expect(line.getAttribute('d')).to.equal(path);
+    dispatch(window, 'pointercancel', 82);
+    dispatch(target, 'pointerup', 82, 200);
+    expect(connects.count).to.equal(0);
+    dispatch(target, 'pointerup', 81, 200);
+    expect(connects.details).to.deep.equal([{ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' }]);
+  });
+
+  for (const kind of ['pan', 'node'] as const) {
+    it(`releases a captured ${kind} pointer when the canvas becomes readonly`, async () => {
+      const canvas = await fixture<LyraFlowCanvas>(html`
+        <lr-flow-canvas nodes-draggable style="width:400px;height:300px" .nodes=${pair}></lr-flow-canvas>
+      `);
+      const target = kind === 'node' ? wrapper(canvas, 'a') :
+        canvas.shadowRoot!.querySelector<HTMLElement>('[part="background"]')!;
+      let captured: number | undefined;
+      target.setPointerCapture = id => { captured = id; };
+      target.hasPointerCapture = id => captured === id;
+      target.releasePointerCapture = () => { captured = undefined; };
+      target.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 61, bubbles: true }));
+      expect(captured).to.equal(61);
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 61, clientX: 40 }));
+      canvas.readonly = true;
+      await canvas.updateComplete;
+      expect(captured).to.equal(undefined);
+      expect(canvas.viewport.x).to.equal(0);
+      const position = new DOMMatrix(getComputedStyle(wrapper(canvas, 'a')).transform);
+      expect([position.e, position.f]).to.deep.equal([0, 0]);
+    });
+  }
+
   it('ignores a second pointer while a background pan is in progress', async () => {
     const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas style="width:400px;height:300px" .nodes=${pair}></lr-flow-canvas>`);
     const bg = el.shadowRoot!.querySelector<HTMLElement>('[part="background"]')!;

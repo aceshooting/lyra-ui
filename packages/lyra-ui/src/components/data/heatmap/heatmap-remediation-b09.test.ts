@@ -1,7 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.class.js';
+import { resolveRgb, type LyraHeatmap } from './heatmap.class.js';
 import type { LyraHeatmapMatrixSource } from './heatmap-matrix-source.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
@@ -12,6 +12,74 @@ const key = (target: HTMLElement, init: KeyboardEventInit) => {
   target.dispatchEvent(event);
   return event;
 };
+
+it('accepts equivalent spellings of the first canvas color probe', () => {
+  expect(resolveRgb('rgb(1 2 3)', '#123456')).to.deep.equal([1, 2, 3, 1]);
+});
+
+it('does not index a canvas-only calendar until keyboard navigation needs its cells', async () => {
+  let calls = 0;
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap
+    .cellInteractive=${() => { calls++; return true; }}
+    .data=${{ kind: 'calendar', days: [{ date: '2026-01-04', value: 3 }] }}
+  ></lr-heatmap>`);
+  const canvas = canvasOf(el);
+  expect(calls).to.equal(0);
+  await focusByKeyboard(canvas);
+  expect(key(canvas, { key: 'End' }).defaultPrevented).to.equal(true);
+  expect(calls).to.equal(7);
+  expect(key(canvas, { key: 'Home' }).defaultPrevented).to.equal(true);
+  expect(calls).to.equal(7);
+});
+
+it('expires selection click suppression after a cancelled pointer gesture', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap multiple .data=${matrix}></lr-heatmap>`);
+  await waitUntil(() => el.matrixGeometry !== undefined);
+  const canvas = canvasOf(el);
+  const bounds = canvas.getBoundingClientRect();
+  const { padLeft, padTop, cellSize } = el.matrixGeometry!;
+  const clientX = bounds.left + padLeft + cellSize / 2;
+  const clientY = bounds.top + padTop + cellSize / 2;
+  let activations = 0;
+  el.addEventListener('lr-cell-activate', () => { activations++; });
+  const secondary = new PointerEvent('pointerdown', {
+    button: 2, pointerId: 1, isPrimary: true, clientX, clientY, bubbles: true, cancelable: true,
+  });
+  canvas.dispatchEvent(secondary);
+  expect(secondary.defaultPrevented).to.equal(false);
+  canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, isPrimary: true, clientX, clientY, bubbles: true }));
+  canvas.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, bubbles: true }));
+  canvas.dispatchEvent(new MouseEvent('click', { detail: 1, clientX, clientY }));
+  expect(activations).to.equal(0);
+  canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 2, isPrimary: true, clientX, clientY, bubbles: true }));
+  canvas.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 2, bubbles: true }));
+  await aTimeout(20);
+  canvas.dispatchEvent(new MouseEvent('click', { detail: 1, clientX, clientY }));
+  expect(activations).to.equal(1);
+});
+
+it('cancels selection when pointer focus moves the heatmap into a document without a window', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap multiple .data=${matrix}></lr-heatmap>`);
+  await waitUntil(() => el.matrixGeometry !== undefined);
+  const parent = el.parentElement!;
+  const detached = document.implementation.createHTMLDocument();
+  const canvas = canvasOf(el);
+  const bounds = canvas.getBoundingClientRect();
+  const { padLeft, padTop, cellSize } = el.matrixGeometry!;
+  let activations = 0;
+  el.addEventListener('lr-cell-activate', () => { activations++; });
+  el.addEventListener('focusin', () => detached.body.append(el), { once: true });
+  try {
+    canvas.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 1, isPrimary: true, bubbles: true,
+      clientX: bounds.left + padLeft + cellSize / 2, clientY: bounds.top + padTop + cellSize / 2,
+    }));
+    expect(el.ownerDocument === detached).to.equal(true);
+    expect(activations).to.equal(0);
+  } finally {
+    parent.append(el);
+  }
+});
 
 describe('heatmap keyboard guards', () => {
   it('leaves modified and composing grid keys to the browser', async () => {

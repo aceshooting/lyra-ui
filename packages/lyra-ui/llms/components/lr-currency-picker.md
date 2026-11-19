@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -96,6 +96,11 @@ of showing the complete list. An empty or unmatched query never creates a curren
 The readonly `input: HTMLInputElement | null` exposes that native filter (null in compact mode).
 After directly changing its DOM value, dispatch a native `input` event to update filtering.
 Mode changes, reset and reconnect clear unfinished filtering without changing the reset default.
+If the filter fails to load, `lr-load-error` fires and the compact picker remains usable.
+`search-error` and `search-retry` expose the localized notice and retry action.
+`--lr-form-control-invalid-border-color` themes the resting invalid border.
+The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
+in both modes, following the country picker's event contract.
 
 **Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
@@ -110,8 +115,8 @@ bind `currencies` to supply rows.
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
 input-loss notice);
 `select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`,
-`select-clear-button`, `select-group-label`. Both composed controls preserve these part names
-and inherit shared form-control and surface tokens.
+`select-clear-button`, `select-group-label`, `search-error`, and `search-retry`. Both composed controls
+preserve their shared part names and inherit shared form-control and surface tokens.
 
 ```html
 <script type="module">

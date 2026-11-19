@@ -95,12 +95,13 @@ it('refreshes rendered labels after replacing the same locale catalog', async ()
     .documents=${[{ id: 'alpha', name: 'Alpha', freshness: 'fresh', tags: Array.from({ length: 501 }, (_, i) => `tag${i}`) }]}
   ></lr-document-library>`);
   const table = el.shadowRoot!.querySelector<LyraTable>('lr-table')!;
-  registerLyraLocale(locale, { documentLibraryNameColumn: 'Replacement column', documentLibraryFreshnessFresh: 'Replacement fresh', tagFacetLimit: '+{count} replacement tags' });
+  registerLyraLocale(locale, { documentLibraryNameColumn: 'Replacement column', documentLibraryFreshnessFresh: 'Replacement fresh',
+    tagFacetLimit: { one: '+{count} replacement tag', other: '+{count} replacement tags' } });
   el.loading = false;
   el.requestUpdate();
   await el.updateComplete;
   await table.updateComplete;
   await waitUntil(() => table.shadowRoot!.textContent!.includes('Replacement column'));
   expect(table.shadowRoot!.textContent).to.include('Replacement fresh');
-  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('+1 replacement tags');
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('+1 replacement tag');
 });

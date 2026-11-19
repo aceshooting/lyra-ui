@@ -27,3 +27,4 @@
 - Theme media control hover and press states, file preview geometry, and avatar overflow badge rings with component-level properties.
 - Match drag verdict tints across file inputs and drop targets and scale rejection text with the field.
 - Synchronize iframe theme properties without enumerating standard CSS longhands.
+- Use the visible label or localized instruction to name file inputs when the host `aria-label` contains only whitespace.
