@@ -50,7 +50,7 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
 );
 
 export interface LyraSwatchPickerEventMap {
-  'lr-change': CustomEvent<{ value: string; previousValue: string | null }>;
+  'lr-change': CustomEvent<{ value: string; previousValue?: string | null }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
 

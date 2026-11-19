@@ -21,7 +21,7 @@ import { overallSemanticLabel } from '../semantic-owner.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioLargeWorkspace, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioLargeWorkspace, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioMoveMessageDown, LYRA_DEFAULT_promptStudioMoveMessageUp, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRemoveMessageNumbered, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -154,6 +154,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     promptStudioMoveMessageUp: LYRA_DEFAULT_promptStudioMoveMessageUp,
     promptStudioPreview: LYRA_DEFAULT_promptStudioPreview,
     promptStudioPreviewLimit: LYRA_DEFAULT_promptStudioPreviewLimit,
+    promptStudioRemoveMessage: LYRA_DEFAULT_promptStudioRemoveMessage,
     promptStudioRemoveMessageNumbered: LYRA_DEFAULT_promptStudioRemoveMessageNumbered,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
@@ -641,12 +642,15 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   };
 
   private renderRemoveMessage(id: string, displayIndex: string): TemplateResult {
+    const numbered = this.localize('promptStudioRemoveMessageNumbered', undefined, { index: displayIndex });
+    const numberedName = this.strings.promptStudioRemoveMessageNumbered !== undefined && this.strings.promptStudioRemoveMessage === undefined;
     return html`<button
       part="remove-message"
       data-agent-action="neutral"
       type="button"
       ?disabled=${this.disabled}
-      aria-label=${this.localize('promptStudioRemoveMessageNumbered', undefined, { index: displayIndex })}
+      aria-label=${numberedName ? numbered : this.localize('promptStudioRemoveMessage')}
+      aria-description=${numberedName ? nothing : numbered}
       @click=${() => this.removeMessage(id)}
     >
       ×

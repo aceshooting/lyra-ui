@@ -1,6 +1,6 @@
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { PropertyValues, TemplateResult } from 'lit';
-import { resolveIsDarkTheme } from '../code-block/shiki-dark-theme.js';
+import { resolveIsDarkTheme } from '../../../internal/shiki/dark-theme.js';
 import { normalizeShikiLanguage } from '../code-block/shiki-types.js';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';

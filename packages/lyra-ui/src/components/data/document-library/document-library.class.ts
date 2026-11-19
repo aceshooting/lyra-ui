@@ -88,7 +88,7 @@ export type DocumentLibrarySortDetail =
   | DocumentLibrarySortRequestDetail
   | DocumentLibrarySortCommitDetail;
 export interface DocumentLibrarySelectionChangeDetail {
-  readonly selectedRowKeys: readonly string[];
+  readonly selectedRowKeys?: readonly string[];
   readonly documentIds: readonly string[];
 }
 export interface DocumentLibraryOpenDetail {
@@ -1174,11 +1174,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return this.documentDates.get(document);
   }
 
-  private sortValue(document: LibraryDocument): string | number | undefined {
+  private sortValue(document: LibraryDocument): string | number {
     switch (this.sortKey) {
-      case 'freshness': return document.freshness && FRESHNESS_RANK[document.freshness];
-      case 'updatedAt': return this.documentDate(document)?.getTime();
-      default: return document[this.sortKey];
+      case 'freshness': return document.freshness ? FRESHNESS_RANK[document.freshness] : 3;
+      case 'updatedAt': return this.documentDate(document)?.getTime() ?? 0;
+      default: return document[this.sortKey] ?? '';
     }
   }
 

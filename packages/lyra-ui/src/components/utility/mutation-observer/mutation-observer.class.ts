@@ -87,6 +87,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   })
   attributeFilter: string[] = [];
 
+  // @renderController SlottedObserverController
   private readonly slotted = new SlottedObserverController<MutationObserver>(this, {
     schedule: (rebuild) => this.scheduleAfterUpdate(rebuild),
     // Records queued before a reconfiguration belong to the old options; deliver them first.

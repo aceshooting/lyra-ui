@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'เรียกใช้พรอมป์',
   promptStudioSave: 'บันทึกเวอร์ชัน',
   promptStudioAddMessage: 'เพิ่มข้อความ',
+  promptStudioRemoveMessage: 'นำข้อความออก',
   promptStudioRemoveMessageNumbered: 'นำข้อความ {index} ออก',
   promptStudioMessageRole: 'บทบาทข้อความ {index} ({role})',
   promptStudioMessageContent: 'เนื้อหาข้อความ {index} ({role})',

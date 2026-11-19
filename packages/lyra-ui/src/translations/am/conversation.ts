@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'መላክ አልተሳካም',
   chatFailedAnnounce: 'መልዕክቱን መላክ አልተሳካም።',
   chatCompleteAnnounce: 'መልዕክቱ ተጠናቋል።',
+  expandCode: 'ኮዱን አስፋ',
+  collapseCode: 'ኮዱን አጠቃልል',
   copyCode: 'ኮዱን ቅዳ',
   copiedToClipboard: 'ወደ ቅንጥብ ሰሌዳ ተቅድቷል',
   codeRegion: 'ኮድ',

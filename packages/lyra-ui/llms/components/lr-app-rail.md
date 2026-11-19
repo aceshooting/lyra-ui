@@ -305,9 +305,9 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`navigation` key) and `collapse-icon` (the decorative glyph wrapper),
+`appRailCollapse` or `appRailExpand` key) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from the `appRailPin` key, and it
+while pinned and `"false"` otherwise, the name comes from `appRailUnpin` while pinned and `appRailPin` otherwise, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -588,9 +588,9 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
 
-For localized rail controls, use `navigation` for the main and collapse toggles, `appRailPin` for the pin,
-`appRailItemToggle` for an item, and `appRailGroupToggle` for a group without a heading. Each name
-stays the same as its expanded or pressed state changes.
+Use `openNavigation` and `closeNavigation` for the mobile toggle and `appRailItemExpand` and
+`appRailItemCollapse` for an item disclosure. Set `.strings.appRailItemToggle` on an item to
+use one name for both disclosure states.
 
 Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
 
@@ -785,7 +785,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 ### `lr-app-rail-group`
 
-A group with no heading uses the localized `appRailGroupToggle` name in both disclosure states.
+A group with no heading uses the localized `expand` and `collapse` actions. Set
+`.strings.appRailGroupToggle` on the group to use one name in both states.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can

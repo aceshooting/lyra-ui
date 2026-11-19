@@ -18,10 +18,10 @@ import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import {
-  DocumentAnchorTarget,
+  DocumentAnchorTargetBase as DocumentAnchorTarget,
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
-} from '../../../internal/anchor-target.js';
+} from '../../../internal/anchor-target-base.js';
 import {
   normalizeQuoteText,
   scopeFromItems,

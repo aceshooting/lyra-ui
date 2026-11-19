@@ -110,7 +110,8 @@ until something else registers it, the same trade `icon-button-register.js` docu
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
   Reset is enabled whenever `hasChangedFilters` is true and the bar is neither disabled nor loading.
-  Clearing a defaulted filter therefore makes Reset available even with an empty chip row.
+  In `'all'` and `'hidden'` modes, active filters also enable Reset when they match their defaults.
+  Clearing a defaulted filter makes Reset available even with an empty chip row.
   When Reset disables itself, keyboard focus moves to the first available control or to the bar
   if no control remains.
 

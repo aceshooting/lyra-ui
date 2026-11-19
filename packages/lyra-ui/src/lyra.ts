@@ -620,6 +620,7 @@ export type {
   LyraLiteChartTableCellFormatter,
 } from './components/charts/chart/lite-chart.class.js';
 export { binValues } from './components/charts/chart/histogram-bin.js';
+export type { ChartHit, RuntimeChart } from './components/charts/chart/chart-types.js';
 export type { HistogramBucket } from './components/charts/chart/histogram-bin.js';
 export type {
   LyraChartAnnotation,
@@ -1250,6 +1251,7 @@ export type {
   LyraFileTypeMetadataRegistry,
   LyraResolvedFileTypeMetadata,
 } from './components/media/file-icon/file-type-metadata.js';
+export type { TableViewerScrollMode } from './components/viewers/table-viewer-shared.js';
 export type {
   DatasetTable,
   DatasetViewerSource,
@@ -1473,6 +1475,7 @@ export type {
   LyraCommandPaletteCloseDetail,
   LyraCommandPaletteCloseReason,
 } from './components/layout/command-palette/command-palette.class.js';
+export type { LyraTextResize, SafeCssResize } from './internal/safe-css.js';
 export type {
   LyraCodeEditorEventMap,
   LyraCodeEditorResize,
@@ -1704,6 +1707,7 @@ export type {
 } from './components/retrieval/source-picker/source-picker.class.js';
 export type {
   LyraProvenance,
+  LyraProvenancePanelDisclosureDetail,
   LyraProvenancePanelEventMap,
 } from './components/retrieval/provenance-panel/provenance-panel.class.js';
 export type {
@@ -1810,6 +1814,7 @@ export type {
 export type {
   LyraEntityDossierTab,
   LyraEntityDossierConfidence,
+  LyraEntityDossierDisclosureDetail,
   LyraEntityDossierEventMap,
 } from './components/retrieval/entity-dossier/entity-dossier.class.js';
 export type {
@@ -1934,6 +1939,7 @@ export type {
   LyraMemoryAddDetail,
   LyraMemoryRemoveDetail,
   LyraMemoryExpandDetail,
+  LyraMemoryPanelDisclosureDetail,
   LyraMemoryPanelEventMap,
 } from './components/retrieval/memory-panel/memory-panel.class.js';
 export type {
@@ -1974,6 +1980,7 @@ export type {
   RetrievalStageKind,
   RetrievalStageEvidence,
   RetrievalStage,
+  LyraRetrievalTraceDisclosureDetail,
   LyraRetrievalTraceEventMap,
   LyraRetrievalTraceChunkActionDetail,
 } from './components/retrieval/retrieval-trace/retrieval-trace.class.js';
@@ -2057,6 +2064,8 @@ export type {
   LyraArchiveViewerEventMap,
 } from './components/viewers/archive-viewer/archive-viewer.class.js';
 export type { LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
+export type { FileIntakeDetail } from './components/media/file-input/file-intake.js';
+export type { FileIntakeRejected } from './components/media/file-input/accept.js';
 export type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 export type { LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
 export type {
@@ -2148,6 +2157,7 @@ export type { LyraTabGroupEventMap } from './components/layout/tab-group/tab-gro
 export type { LyraTextareaEventMap } from './components/forms/textarea/textarea.class.js';
 export type { LyraThinkingPanelEventMap } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 export type { LyraTimeRangeEventMap } from './components/forms/time-range/time-range.class.js';
+export type { NotificationDismissReason } from './components/overlays/toast/toast-region-protocol.js';
 export type { LyraToastItemEventMap } from './components/overlays/toast/toast-item.class.js';
 export type { LyraToolApprovalDialogEventMap } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
 export type { LyraToolParamFormEventMap } from './components/agent-tools/tool-param-form/tool-param-form.class.js';
@@ -2282,6 +2292,7 @@ export type * from './ai/types.js';
 // program that imports the package root, which is what types `document.addEventListener('lr-...')`.
 export type { LyraGlobalEventMap } from './events.js';
 
+export type { LyraMenubarItemEventMap } from './components/layout/menubar/menubar-item.class.js';
 export type { LyraMenubarEventMap } from './components/layout/menubar/menubar.class.js';
 
 export type {

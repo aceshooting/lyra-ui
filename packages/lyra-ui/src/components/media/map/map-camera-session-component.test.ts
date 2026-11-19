@@ -7,7 +7,8 @@ import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature-loader.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { CameraPeer } from '../../../../test/map-camera-peer.js';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { resolveSceneAttachment } from '../../../internal/map-scene-session-registry.js';
+import { createMapSceneSessionFacade, mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
 
 const originalObserver = window.IntersectionObserver;
 const originalContext = HTMLCanvasElement.prototype.getContext;
@@ -242,6 +243,25 @@ describe('map camera session component attachment', () => {
     expect(controller.capture()).to.deep.equal({ center: [18, 0], zoom: 6, bearing: 30, pitch: 40 });
     expect(events).to.deep.equal(['command', 'command']);
     expect(peer.calls.filter(name => name === 'setCenter' || name === 'setZoom')).to.deep.equal([]);
+  });
+
+  it('follows a missing object synchronously and creates the full attachment only for its first peer', async () => {
+    const { element, peer } = await mount();
+    const camera = createMapCameraSessionController(element);
+    camera.follow({ mode: 'ground', objectId: 'target' });
+    expect(camera.snapshot).to.include({ trackingStatus: 'missing', active: false });
+    expect(element.shadowRoot!.querySelector('[part~="scene-panel"]') === null).to.equal(true);
+
+    element.scene = { objects: [sceneMarker('target', 17)] };
+    expect(peer.center).to.deep.equal([17, 0]);
+    let created = 0;
+    const attachment = resolveSceneAttachment(element, options => {
+      created++;
+      return createMapSceneSessionFacade(options);
+    });
+    expect(created).to.equal(1);
+    expect(attachment?.target('target').status).to.equal('accepted');
+    expect(mapSceneSessionAttachment(element) === attachment).to.equal(true);
   });
 
   it('uses accepted model geography without waiting for rendering and ignores source-only updates', async () => {

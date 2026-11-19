@@ -7,7 +7,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
-import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree-status.js';
+import { GIT_STATUSES, type GitStatus } from '../../../internal/git-status.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';

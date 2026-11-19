@@ -199,6 +199,38 @@ function sameSequence(a: unknown, b: unknown): boolean {
  *  identical in every realm, including the one a server render runs in). */
 const ELEMENT_NODE_TYPE = 1;
 
+function flushObservations<Key>(
+  observer: ResizeObserver | undefined,
+  observed: ReadonlyMap<Key, HTMLElement>,
+  deferred: Map<Key, HTMLElement>,
+): void {
+  for (const [key, element] of deferred) {
+    if (observed.get(key) === element) observer?.observe(element);
+  }
+  deferred.clear();
+}
+
+function observeWindow<Key>(
+  observer: ResizeObserver,
+  current: ReadonlyMap<Key, HTMLElement>,
+  observed: Map<Key, HTMLElement>,
+  deferred: Map<Key, HTMLElement>,
+  defer: boolean,
+): void {
+  for (const [key, element] of observed) {
+    if (current.get(key) === element) continue;
+    observer.unobserve(element);
+    observed.delete(key);
+    deferred.delete(key);
+  }
+  for (const [key, element] of current) {
+    if (observed.has(key)) continue;
+    observed.set(key, element);
+    if (defer) deferred.set(key, element);
+    else observer.observe(element);
+  }
+}
+
 /** Only a `Window` is its own `window`, in any realm -- so this stays correct for a scroller handed
  *  in from an iframe, which an `instanceof Window` check against this realm would misclassify. */
 function isWindowScroller(target: Element | Window): target is Window {
@@ -1276,8 +1308,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // would be observed and measured while their projected content is still torn down.
       this.syncRowProjection();
       this.attachContainerListeners();
-      this.syncRowObservers();
-      this.syncGroupObservers();
+      this.#syncRowObservers();
+      this.#syncGroupObservers();
       this.syncStickyOverlay();
     }
   }
@@ -1476,8 +1508,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // maybeCorrectPendingScroll() -> performScrollTo() -> readScrollMetrics() forces layout, which
     // would otherwise read a list of zero-height rows.
     this.syncRowProjection();
-    this.syncRowObservers();
-    this.syncGroupObservers();
+    this.#syncRowObservers();
+    this.#syncGroupObservers();
     this.syncStickyOverlay();
     // Re-point every listener at the element that is now scrolling. attachContainerListeners()
     // detaches from the stored previous target first, so the element this component is leaving
@@ -2096,7 +2128,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // Reading is always safe inside the delivery; folding the result into the offsets is what
     // resizes an observed box, so that waits for the frame flush whenever it would. See
     // `beginResizeDelivery()`.
-    if (!this.defersMeasurementApplication) this.applyPendingRowMeasurements();
+    if (!this.inResizeDelivery) this.applyPendingRowMeasurements();
   };
 
   /** Folds every stashed row observation into `measuredHeights`, anchoring and re-rendering once
@@ -2153,15 +2185,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (changed) {
       this.indexedMeasurementIndexDirty = true;
-      if (base && scrollAdjustment !== 0 && !this.smoothScrollWait) {
-        const nextScrollTop = oldScrollTop + scrollAdjustment;
-        this.applyScrollPosition(nextScrollTop);
-        this.containerScrollTop = Math.max(0, nextScrollTop);
-        this.pendingScrollTop = null;
-      }
-      this.offsetsDirty = true;
-      this.measurementGeneration += 1;
-      super.requestUpdate();
+      this.#commitHeightMeasurements(base, oldScrollTop, scrollAdjustment);
     }
   }
 
@@ -2177,11 +2201,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       if (!Number.isFinite(height) || height < 0) continue;
       this.pendingGroupMeasurements.set(index, height);
     }
-    if (!this.defersMeasurementApplication) this.applyPendingGroupMeasurements();
+    if (!this.inResizeDelivery) this.#applyPendingGroupMeasurements();
   };
 
   /** The group-marker half of `applyPendingRowMeasurements()`, on the same terms. */
-  private applyPendingGroupMeasurements(): void {
+  #applyPendingGroupMeasurements(): void {
     if (this.pendingGroupMeasurements.size === 0) return;
     const observations = [...this.pendingGroupMeasurements];
     this.pendingGroupMeasurements.clear();
@@ -2204,7 +2228,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       if (oldRowTop <= oldScrollTop) scrollAdjustment += height - previous;
       changed = true;
     }
-    if (!changed) return;
+    if (changed) this.#commitHeightMeasurements(base, oldScrollTop, scrollAdjustment);
+  }
+
+  #commitHeightMeasurements(base: HTMLElement | undefined, oldScrollTop: number, scrollAdjustment: number): void {
     if (base && scrollAdjustment !== 0 && !this.smoothScrollWait) {
       const nextScrollTop = oldScrollTop + scrollAdjustment;
       this.applyScrollPosition(nextScrollTop);
@@ -2214,13 +2241,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.offsetsDirty = true;
     this.measurementGeneration += 1;
     super.requestUpdate();
-  }
-
-  /** True while folding a fresh measurement into the offsets would resize a box one of this
-   *  component's own `ResizeObserver`s is watching, from inside that observer's own delivery.
-   *  See `beginResizeDelivery()`. */
-  private get defersMeasurementApplication(): boolean {
-    return this.inResizeDelivery;
   }
 
   /**
@@ -2263,21 +2283,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     this.rowObserveFrame.schedule(() => {
       this.inResizeDelivery = false;
-      const ro = this.rowResizeObserver;
-      for (const [identity, el] of this.deferredRowObservations) {
-        // Defensive: syncRowObservers() already keeps this map a subset of observedRows.
-        if (ro && this.observedRows.get(identity) === el) ro.observe(el);
-      }
-      this.deferredRowObservations.clear();
-      const groupObserver = this.groupResizeObserver;
-      for (const [index, el] of this.deferredGroupObservations) {
-        if (groupObserver && this.observedGroups.get(index) === el)
-          groupObserver.observe(el);
-      }
-      this.deferredGroupObservations.clear();
+      flushObservations(this.rowResizeObserver, this.observedRows, this.deferredRowObservations);
+      flushObservations(this.groupResizeObserver, this.observedGroups, this.deferredGroupObservations);
       // Now that the loop this frame belongs to is over, the offsets may move again.
       this.applyPendingRowMeasurements();
-      this.applyPendingGroupMeasurements();
+      this.#applyPendingGroupMeasurements();
     });
   }
 
@@ -2285,7 +2295,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  rows in `row-height="auto"` mode -- rows that scroll out of the
    *  rendered window are unobserved so the observer doesn't accumulate
    *  references to detached elements it can never usefully report on again. */
-  private syncRowObservers(): void {
+  #syncRowObservers(): void {
     const ro = this.rowResizeObserver;
     if (!ro) return;
     if (this.fixedRowHeight != null) {
@@ -2302,46 +2312,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.observedRowKeys.set(el, identity);
       this.observedRowIndices.set(el, index);
     }
-    for (const [identity, el] of this.observedRows) {
-      if (current.get(identity) !== el) {
-        ro.unobserve(el);
-        this.observedRows.delete(identity);
-        this.deferredRowObservations.delete(identity);
-      }
-    }
-    for (const [identity, el] of current) {
-      if (!this.observedRows.has(identity)) {
-        this.observedRows.set(identity, el);
-        // See beginResizeDelivery(): observing from inside the browser's current
-        // resize-observation loop is what trips its "undelivered notifications" guard.
-        if (this.inResizeDelivery) this.deferredRowObservations.set(identity, el);
-        else ro.observe(el);
-      }
-    }
+    observeWindow(ro, current, this.observedRows, this.deferredRowObservations, this.inResizeDelivery);
   }
 
   /** Watches only the real, windowed group markers; position-only anchors have no box to measure. */
-  private syncGroupObservers(): void {
+  #syncGroupObservers(): void {
     const observer = this.groupResizeObserver;
     if (!observer) return;
-    const current = new Map<number, HTMLElement>();
-    for (const [index, marker] of this.groupElements) {
-      current.set(index, marker);
-      this.observedGroupIndices.set(marker, index);
-    }
-    for (const [index, marker] of this.observedGroups) {
-      if (current.get(index) !== marker) {
-        observer.unobserve(marker);
-        this.observedGroups.delete(index);
-        this.deferredGroupObservations.delete(index);
-      }
-    }
-    for (const [index, marker] of current) {
-      if (this.observedGroups.has(index)) continue;
-      this.observedGroups.set(index, marker);
-      if (this.inResizeDelivery) this.deferredGroupObservations.set(index, marker);
-      else observer.observe(marker);
-    }
+    for (const [index, marker] of this.groupElements) this.observedGroupIndices.set(marker, index);
+    observeWindow(observer, this.groupElements, this.observedGroups, this.deferredGroupObservations, this.inResizeDelivery);
   }
 
   /** How much of the viewport's top edge the sticky overlay covers. `0` whenever there is no sticky

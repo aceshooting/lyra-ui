@@ -90,8 +90,8 @@ focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCusto
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** selecting a different emoji emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows any value events. `lr-load-error` (no detail,
+**Events:** each emoji pick, including a repeat selection, emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows the value events. `lr-load-error` (no detail,
 non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
@@ -103,8 +103,7 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. ArrowUp and ArrowDown navigate results, Enter picks, and
-ArrowLeft and ArrowRight move the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,

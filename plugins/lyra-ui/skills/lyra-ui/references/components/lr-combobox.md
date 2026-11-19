@@ -35,9 +35,9 @@ When `multiple` becomes false, the public value, live option flags, popup `aria-
 retained multiple-selection history returns if multiple is enabled again without another selection
 write. A populated `multiple` combobox describes its input by every committed label (visually
 hidden), so the tags collapsed behind "+N" are announced too.
-Equal-valued suggestions can be selected independently in multiple mode. Each activation toggles
-one occurrence, and each selected row supplies its own label and data. Use `FormData#getAll()` to
-read repeated submitted values.
+Activating an equal-valued suggestion in multiple mode toggles the shared value. A chosen row
+supplies its label and data. Programmatically supplied repeated values can be read with
+`FormData#getAll()` until a suggestion activation replaces the selection.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -473,8 +473,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. An independently rejected `AbortError` from the current source displays
-the same retry action. Rejections from superseded or disconnected requests are ignored.
+never shows the raw error. A current request that rejects with `AbortError` settles silently.
+Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and

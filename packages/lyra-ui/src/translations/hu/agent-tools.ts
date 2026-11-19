@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Prompt futtatása',
   promptStudioSave: 'Verzió mentése',
   promptStudioAddMessage: 'Üzenet hozzáadása',
+  promptStudioRemoveMessage: 'Üzenet eltávolítása',
   promptStudioRemoveMessageNumbered: '{index}. üzenet eltávolítása',
   promptStudioMessageRole: '{index}. üzenet szerepköre ({role})',
   promptStudioMessageContent: '{index}. üzenet tartalma ({role})',

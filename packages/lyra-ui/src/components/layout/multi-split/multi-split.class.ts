@@ -2603,13 +2603,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  existing `lr-resize` notification remains the non-cancelable post-commit
    *  signal, so property-driven layouts stay silent while hosts can veto an
    *  interaction before it changes their persistence-facing state. */
-  private requestResize(next: number[], commit: boolean, index: number): boolean {
+  private requestResize(next: number[], commit: boolean, index: number, keyEvent?: KeyboardEvent): boolean {
     if (
       next.length === this.sizes.length &&
       next.every((size, index) => Math.abs(size - this.sizes[index]!) <= 1e-9)
     ) {
       return false;
     }
+    keyEvent?.preventDefault();
     const before = this.sizes;
     const constraints = this.panelConstraints;
     const minimum = this.min;
@@ -2645,7 +2646,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.emit('lr-resize-change', { sizes: [...this.sizes] });
   }
 
-  private applyDelta(index: number, delta: number): void {
+  private applyDelta(index: number, delta: number, keyEvent: KeyboardEvent): void {
     const pair = this.dividerPair(index)!;
     const next = this.clampPair(
       this.sizes,
@@ -2654,7 +2655,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       delta,
       this.getContainerSize()
     );
-    this.requestResize(next, true, index);
+    this.requestResize(next, true, index, keyEvent);
   }
 
   /** The collapsing pane's light-DOM element itself — the `'floating'`
@@ -2864,16 +2865,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.effectiveOrientation === 'horizontal' && isRtl(this),
     );
     if (e.key === 'Home' || e.key === 'End') {
-      e.preventDefault();
       const { min, max } = this.dividerValueRange(index);
       const current = this.sizes[this.dividerPair(index)?.[0] ?? index];
       if (current !== undefined) {
         const target = e.key === 'Home' ? min : max;
-        this.applyDelta(index, target - current);
+        this.applyDelta(index, target - current, e);
       }
     } else if (direction === 1 || direction === -1) {
-      e.preventDefault();
-      this.applyDelta(index, direction * KEYBOARD_STEP);
+      this.applyDelta(index, direction * KEYBOARD_STEP, e);
     }
   };
 

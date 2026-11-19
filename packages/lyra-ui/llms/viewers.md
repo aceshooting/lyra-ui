@@ -2658,6 +2658,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   token, so setting nothing preserves existing behaviour. In `view="diff"` it caps the diff view's
   own block size instead.
 
+The composed diff uses the default 5,000-line limit per input. Use standalone `lr-diff-view`
+when setting a different `max-lines`. Side-by-side image previews use the version name as image
+alternative text. Standalone `lr-document-preview` also exposes custom `alt` and image zoom.
+
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
 
@@ -2686,7 +2690,9 @@ named by the localized old/new version names so the regions stay distinguishable
 
 **Slots:** none.
 
-**CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+**CSS parts:** `base`, `diff`, `diff-base`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+In diff mode, `diff` styles the child host. Use `diff-base` to style the element that owns
+the scrollbar, for example `lr-document-compare::part(diff-base) { max-block-size: 30rem; }`.
 
 **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.

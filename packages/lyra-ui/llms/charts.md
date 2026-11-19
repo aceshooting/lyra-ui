@@ -2328,6 +2328,36 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r'`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
+  `ChartHit {
+    datasetIndex: number;
+    index: number;
+  }`
+  `RuntimeChart {
+    render?(): void;
+    data: {
+      labels?: unknown[];
+      datasets: LyraChartDatasetConfiguration[];
+    };
+    options: Record<string, unknown>;
+    config: {
+      type?: unknown;
+    };
+    legend?: unknown;
+    chartArea?: LyraChartArea;
+    destroy(): void;
+    update(mode?: string): void;
+    toBase64Image?(): string;
+    getElementsAtEventForMode(event: Event, mode: string, options: Record<string, unknown>, useFinalPosition: boolean): ChartHit[];
+    getDatasetMeta?(index: number): {
+      hidden: boolean | null;
+    };
+    isDatasetVisible(index: number): boolean;
+    setDatasetVisibility(index: number, visible: boolean): void;
+    getDataVisibility?(index: number): boolean;
+    toggleDataVisibility?(index: number): void;
+    getZoomedScaleBounds?(): Record<string, { min: number; max: number } | undefined>;
+    zoomScale?(id: string, range: { min: number; max: number }, mode?: string): void;
+  }`
   `LyraChartInstance extends RuntimeChart {
     // Inherited from RuntimeChart.
     render?(): void;

@@ -15,7 +15,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
-import { normalizeChatComposerStatus } from '../chat-composer/chat-composer-status.js';
+import { normalizeChatComposerStatus } from '../../../internal/chat-composer-status.js';
 import type { ChatComposerStatus, ChatComposerWrap } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunCancelDetail, AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';

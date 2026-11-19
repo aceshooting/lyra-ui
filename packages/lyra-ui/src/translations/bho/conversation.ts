@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'भेजल ना जा सकल',
   chatFailedAnnounce: 'संदेश भेजल ना जा सकल।',
   chatCompleteAnnounce: 'संदेश पूरा भइल।',
+  expandCode: 'कोड फैलाईं',
+  collapseCode: 'कोड समेटीं',
   copyCode: 'कोड नकल करीं',
   copiedToClipboard: 'क्लिपबोर्ड पर नकल भइल',
   codeRegion: 'कोड',

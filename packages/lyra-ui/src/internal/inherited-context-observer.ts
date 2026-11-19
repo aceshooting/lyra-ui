@@ -10,9 +10,11 @@ import {
   domParentElement,
   flattenedParentElement,
   ownerView,
+  sameNodes,
+  visitAncestorChain,
 } from './composed-tree.js';
 import { nodeContainsSlot, someListedNode } from './dom-guards.js';
-import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
+import { addAncestorSubscriber, removeAncestorSubscriber, subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
   'locale',
@@ -133,13 +135,6 @@ function queueSubscription(
   queueMicrotask(flushInheritedContextChanges);
 }
 
-function subscribersFor(
-  map: WeakMap<Element, Set<InheritedContextSubscription>>,
-  target: Element
-): ReadonlySet<InheritedContextSubscription> | undefined {
-  return map.get(target);
-}
-
 function createRootObservation(
   root: Node,
   Observer: typeof MutationObserver
@@ -155,6 +150,9 @@ function createRootObservation(
     Set<InheritedContextSubscription>
   >();
   const directionSubscriptions = new Set<InheritedContextSubscription>();
+  const queueSlotChanges = (): void => {
+    for (const subscription of [...directionSubscriptions]) queueSubscription(subscription, false, true, true);
+  };
   let releaseObserver: (() => void) | undefined;
   let slotchange: EventListener | undefined;
   try {
@@ -181,11 +179,9 @@ function createRootObservation(
             continue;
           const mutationTarget = record.target as Element;
           const attribute = record.attributeName;
-          if (attribute === 'locale' || attribute === 'lang') {
-            for (const subscription of subscribersFor(
-              localeSubscribers,
-              mutationTarget
-            ) ?? []) {
+          const localeChanged = attribute === 'locale' || attribute === 'lang';
+          if (localeChanged) {
+            for (const subscription of localeSubscribers.get(mutationTarget) ?? []) {
               queueSubscription(subscription, true, false);
             }
           }
@@ -193,36 +189,23 @@ function createRootObservation(
             attribute === 'dir' ||
             attribute === 'class' ||
             attribute === 'style' ||
-            attribute === 'locale' ||
-            attribute === 'lang';
+            localeChanged;
           const flattenedTreeChanged =
             attribute === 'slot' || attribute === 'name';
           if (directionRelevant || flattenedTreeChanged) {
-            for (const subscription of subscribersFor(
-              directionSubscribers,
-              mutationTarget
-            ) ?? []) {
+            for (const subscription of directionSubscribers.get(mutationTarget) ?? []) {
               queueSubscription(subscription, false, true, flattenedTreeChanged);
             }
           }
         }
-        // Once per callback, not once per record.
-        if (flattenedTreeMoved) {
-          for (const subscription of [...directionSubscriptions]) {
-            queueSubscription(subscription, false, true, true);
-          }
-        }
+        if (flattenedTreeMoved) queueSlotChanges();
       },
     });
     // A live target and observer constructor were already validated above. A failed subscription
     // must abort the entire acquisition so earlier roots cannot remain partially bound.
     if (!releaseObserver) throw new Error('Unable to subscribe to inherited attributes.');
     if (root.nodeType === 11) {
-      slotchange = () => {
-        for (const subscription of [...directionSubscriptions]) {
-          queueSubscription(subscription, false, true, true);
-        }
-      };
+      slotchange = queueSlotChanges;
       root.addEventListener('slotchange', slotchange);
     }
   } catch {
@@ -254,13 +237,8 @@ function createRootObservation(
 }
 
 function openShadowRoot(element: Element | null): Node | null {
-  if (!element) return null;
-  const candidate = (element as { shadowRoot?: unknown }).shadowRoot;
-  return candidate !== null &&
-    typeof candidate === 'object' &&
-    (candidate as { nodeType?: number }).nodeType === 11
-    ? (candidate as Node)
-    : null;
+  const root = element?.shadowRoot;
+  return typeof root === 'object' && root?.nodeType === 11 ? root : null;
 }
 
 function groupedAncestors(
@@ -269,29 +247,17 @@ function groupedAncestors(
 ): Map<Node, Element[]> {
   const byRoot = new Map<Node, Element[]>();
   const visited = new Set<Element>();
-  const addChain = (
-    first: Element | null,
-    parent: (element: Element) => Element | null
-  ): void => {
-    let ancestor = first;
-    while (ancestor && !visited.has(ancestor)) {
-      visited.add(ancestor);
-      const root = ancestor.getRootNode();
-      const group = byRoot.get(root) ?? [];
-      group.push(ancestor);
-      byRoot.set(root, group);
-      ancestor = parent(ancestor);
-    }
+  const groupAncestor = (ancestor: Element): void => {
+    const root = ancestor.getRootNode();
+    const group = byRoot.get(root);
+    if (group) group.push(ancestor);
+    else byRoot.set(root, [ancestor]);
   };
-  if (kind === 'locale') {
-    addChain(domParentElement(host), domParentElement);
-  } else {
-    addChain(flattenedParentElement(host), flattenedParentElement);
-    // `:lang()` matching for a slotted host follows its DOM language ancestry, even though CSS
-    // property inheritance follows its assigned slot. Observe both paths so a light-parent lang
-    // change cannot leave a direction declaration selected by `:lang()` stale.
-    addChain(domParentElement(host), domParentElement);
+  if (kind === 'direction') {
+    visitAncestorChain(flattenedParentElement(host), flattenedParentElement, visited, groupAncestor);
   }
+  // A slotted host inherits CSS through its slot, but `:lang()` still follows its DOM ancestry.
+  visitAncestorChain(domParentElement(host), domParentElement, visited, groupAncestor);
 
   // An unassigned light child cannot yet expose its eventual slot in the flattened-parent walk.
   // When the parent has an open root, share one root-level slotchange listener so later slot
@@ -405,27 +371,6 @@ function acquireRootBindings(
   }
 }
 
-function addToMap(
-  map: WeakMap<Element, Set<InheritedContextSubscription>>,
-  ancestor: Element,
-  subscription: InheritedContextSubscription
-): void {
-  const subscribers =
-    map.get(ancestor) ?? new Set<InheritedContextSubscription>();
-  subscribers.add(subscription);
-  map.set(ancestor, subscribers);
-}
-
-function removeFromMap(
-  map: WeakMap<Element, Set<InheritedContextSubscription>>,
-  ancestor: Element,
-  subscription: InheritedContextSubscription
-): void {
-  const subscribers = map.get(ancestor);
-  subscribers?.delete(subscription);
-  if (subscribers?.size === 0) map.delete(ancestor);
-}
-
 function attachBindings(
   subscription: InheritedContextSubscription,
   kind: InheritedContextKind,
@@ -436,7 +381,7 @@ function attachBindings(
       kind === 'locale'
         ? observation.localeSubscribers
         : observation.directionSubscribers;
-    for (const ancestor of ancestors) addToMap(map, ancestor, subscription);
+    for (const ancestor of ancestors) addAncestorSubscriber(map, ancestor, subscription);
     if (kind === 'direction')
       observation.directionSubscriptions.add(subscription);
   }
@@ -453,7 +398,7 @@ function detachBindings(
         ? observation.localeSubscribers
         : observation.directionSubscribers;
     for (const ancestor of ancestors)
-      removeFromMap(map, ancestor, subscription);
+      removeAncestorSubscriber(map, ancestor, subscription);
     if (kind === 'direction')
       observation.directionSubscriptions.delete(subscription);
   }
@@ -504,8 +449,7 @@ function sameBindings(
       const other = next[index]!;
       return (
         binding.observation === other.observation &&
-        binding.ancestors.length === other.ancestors.length &&
-        binding.ancestors.every((ancestor, position) => ancestor === other.ancestors[position])
+        sameNodes(binding.ancestors, other.ancestors)
       );
     })
   );

@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Käivita viip',
   promptStudioSave: 'Salvesta versioon',
   promptStudioAddMessage: 'Lisa sõnum',
+  promptStudioRemoveMessage: 'Eemalda sõnum',
   promptStudioRemoveMessageNumbered: 'Eemalda sõnum {index}',
   promptStudioMessageRole: 'Sõnumi {index} roll ({role})',
   promptStudioMessageContent: 'Sõnumi {index} sisu ({role})',

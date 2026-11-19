@@ -1,4 +1,6 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './prompt-input.js';
 
 async function openSuggestions() {
@@ -32,6 +34,56 @@ it('dismisses a stale suggestion when the textarea selection moves', async () =>
   }));
   await el.updateComplete;
   expect(el.value).to.equal('hello @a');
+  expect(popover.open).to.equal(false);
+});
+
+it('closes suggestions when the live caret leaves the query without editing', async () => {
+  const { input, el, popover } = await openSuggestions();
+  let inputEvents = 0;
+  el.addEventListener('lr-input', () => { inputEvents += 1; });
+
+  await focusByKeyboard(input);
+  expect(popover.open).to.equal(true);
+  await sendKeys({ press: 'ArrowLeft' });
+  expect(input.selectionStart).to.equal(7);
+  await waitUntil(() => !popover.open, 'the stale suggestion popup closes after selection changes');
+
+  expect(el.value).to.equal('hello @a');
+  expect(inputEvents).to.equal(0);
+});
+
+it('leaves a native textarea selection set by a suggestion listener in place', async () => {
+  const { input, el, popover } = await openSuggestions();
+  const typed: string[] = [];
+  el.addEventListener('lr-input', event => {
+    typed.push(event.detail.value);
+    input.setSelectionRange(1, 3, 'backward');
+  }, { once: true });
+  el.addEventListener('lr-mention-select', event => typed.push(event.detail.suggestionId));
+
+  popover.dispatchEvent(new CustomEvent('lr-mention-select', {
+    detail: { suggestionId: 'ada', index: 0, label: 'Ada' }, bubbles: true, composed: true,
+  }));
+  await el.updateComplete;
+  await Promise.resolve();
+
+  expect(typed).to.deep.equal(['hello @Ada ', 'ada']);
+  expect(input.selectionStart).to.equal(1);
+  expect(input.selectionEnd).to.equal(3);
+  expect(input.selectionDirection).to.equal('backward');
+});
+
+it('dismisses a suggestion when the textarea text changes at the same caret', async () => {
+  const { input, el, popover } = await openSuggestions();
+  input.setRangeText('b', 7, 8, 'end');
+  expect(input.selectionStart).to.equal(8);
+  popover.dispatchEvent(new CustomEvent('lr-mention-select', {
+    detail: { suggestionId: 'ada', index: 0, label: 'Ada' }, bubbles: true, composed: true,
+  }));
+  await el.updateComplete;
+
+  expect(el.value).to.equal('hello @a');
+  expect(input.value).to.equal('hello @b');
   expect(popover.open).to.equal(false);
 });
 

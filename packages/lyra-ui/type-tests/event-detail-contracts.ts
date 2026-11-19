@@ -1,3 +1,4 @@
+import type { LyraRubricFormEventMap, RubricValue } from '../src/components/forms/rubric-form/rubric-form.class.js';
 import type { LyraVoicePickerEventMap } from '../src/components/conversation/voice-picker/voice-picker.class.js';
 import type { LyraModelSelectEventMap } from '../src/components/conversation/model-select/model-select.class.js';
 import type { LyraPushToTalkEventMap } from '../src/components/conversation/push-to-talk/push-to-talk.class.js';
@@ -96,3 +97,9 @@ export type EventDetailContractAssertions =
   | _ToolResultMaximizeIsNotPrimitive
   | _PollStatusPauseIsNamed
   | _RandomContentPauseIsNamed;
+
+const rubricEventDetail: Readonly<{ value: RubricValue }> = { value: { score: 3 } };
+export const rubricProducerEvents = {
+  'lr-input': new CustomEvent('lr-input', { detail: rubricEventDetail }),
+  'lr-change': new CustomEvent('lr-change', { detail: rubricEventDetail }),
+} satisfies Pick<LyraRubricFormEventMap, 'lr-input' | 'lr-change'>;

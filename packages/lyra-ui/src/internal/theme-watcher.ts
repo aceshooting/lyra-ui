@@ -1,7 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { flattenedThemeParent, THEME_ATTRIBUTES } from './theme-observation.js';
+import { sameNodes, visitAncestorChain } from './composed-tree.js';
 import { nodeContainsSlot, someListedNode } from './dom-guards.js';
-import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
+import { addAncestorSubscriber, removeAncestorSubscriber, subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 export type LyraThemeRoot = Document | ShadowRoot | Element;
 
@@ -259,27 +260,20 @@ function containsStyleCarrier(node: Node): boolean {
   return node.nodeType === ELEMENT_NODE && Boolean((node as Element).querySelector('style, link'));
 }
 
-function sameNodes(left: readonly object[], right: readonly object[]): boolean {
-  return left.length === right.length && left.every((node, index) => node === right[index]);
-}
-
 /**
  * The host's flattened ancestry (the host first) and every root whose styles or theme attributes
  * can reach it: the document, the host's own shadow root (its `:host` rules and adopted sheets),
  * and each shadow root that contains an element of that ancestry.
  */
-function flattenedPath(host: Element): [Element[], ObservedRoot[]] {
-  const chain: Element[] = [];
+function flattenedPath(host: Element): [Set<Element>, Set<ObservedRoot>] {
+  const chain = new Set<Element>();
   const roots = new Set<ObservedRoot>([host.ownerDocument]);
   if (host.shadowRoot) roots.add(host.shadowRoot);
-  const seen = new Set<Element>();
-  for (let current: Element | null = host; current && !seen.has(current); current = flattenedThemeParent(current)) {
-    seen.add(current);
-    chain.push(current);
+  visitAncestorChain(host, flattenedThemeParent, chain, current => {
     const root = current.getRootNode();
     if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) roots.add(root as ShadowRoot);
-  }
-  return [chain, [...roots]];
+  });
+  return [chain, roots];
 }
 
 function sheetsForRoot(root: ObservedRoot): CSSStyleSheet[] {
@@ -507,25 +501,17 @@ function releaseRoot(registry: ThemeRegistry, root: ObservedRoot, binding: Theme
   registry.roots.delete(root);
 }
 
-function unindexAncestor(binding: ThemeBinding, element: Element): void {
-  const bindings = binding.registry.ancestors.get(element);
-  bindings?.delete(binding);
-  if (bindings?.size === 0) binding.registry.ancestors.delete(element);
-}
-
 /** Re-resolves a watcher's ancestry and roots; returns whether either changed. */
 function rebind(binding: ThemeBinding): boolean {
   const { registry } = binding;
-  const [chain, roots] = flattenedPath(binding.host);
+  const [nextChain, nextRoots] = flattenedPath(binding.host);
+  const chain = [...nextChain];
+  const roots = [...nextRoots];
   if (sameNodes(chain, binding.chain) && sameNodes(roots, binding.roots)) return false;
-  const nextChain = new Set(chain);
-  for (const element of binding.chain) if (!nextChain.has(element)) unindexAncestor(binding, element);
-  for (const element of chain) {
-    let bindings = registry.ancestors.get(element);
-    if (!bindings) registry.ancestors.set(element, (bindings = new Set()));
-    bindings.add(binding);
+  for (const element of binding.chain) {
+    if (!nextChain.has(element)) removeAncestorSubscriber(registry.ancestors, element, binding);
   }
-  const nextRoots = new Set(roots);
+  for (const element of chain) addAncestorSubscriber(registry.ancestors, element, binding);
   for (const root of binding.roots) if (!nextRoots.has(root)) releaseRoot(registry, root, binding);
   binding.chain = chain;
   binding.roots = roots;
@@ -721,7 +707,7 @@ function bindWatcher(
   return () => {
     if (!binding.active) return;
     binding.active = false;
-    for (const element of binding.chain) unindexAncestor(binding, element);
+    for (const element of binding.chain) removeAncestorSubscriber(registry.ancestors, element, binding);
     for (const root of binding.roots) releaseRoot(registry, root, binding);
     for (const subscription of binding.media.values()) releaseMedia(subscription, binding);
     binding.media.clear();

@@ -1,6 +1,6 @@
-import { relativeLuminance } from '../../../internal/color-math.js';
-import { getScratchCtx } from '../../../internal/canvas.js';
-import { readCanvasRgba } from '../../../internal/canvas-color.js';
+import { relativeLuminance } from '../color-math.js';
+import { getScratchCtx } from '../canvas.js';
+import { readCanvasRgba } from '../canvas-color.js';
 
 function parseRgbTriplet(value: string): [number, number, number] | null {
   const match = value.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);

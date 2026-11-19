@@ -1663,15 +1663,32 @@ describe('nested children (treeitem-with-link)', () => {
     `)) as LyraAppRailItem;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Toggle Projects');
+    expect(toggle.getAttribute('aria-label')).to.equal('Expand Projects');
     el.expanded = true;
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
-    ).to.equal('Toggle Projects');
+    ).to.equal('Collapse Projects');
   });
 
   it('honors a strings override for the disclosure name', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item .strings=${{ appRailItemCollapse: 'Replier {label}', appRailItemExpand: 'Déplier {label}' }}>
+        Projects
+        <lr-app-rail-item slot="children">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('Déplier Projects');
+    el.expanded = true;
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('Replier Projects');
+  });
+
+  it('uses an explicit stable disclosure name in both states', async () => {
     const el = (await fixture(html`
       <lr-app-rail-item .strings=${{ appRailItemToggle: 'Afficher ou masquer {label}' }}>
         Projects
@@ -1809,7 +1826,7 @@ describe('app-rail-item flyout, name and rel', () => {
     el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('mouseenter'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Account');
-    expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')).to.equal('Toggle Account');
+    expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')).to.equal('Expand Account');
   });
 
   it('merges an authored rel with the target guard and drops opener', async () => {

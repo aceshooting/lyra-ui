@@ -2305,7 +2305,7 @@ describe('reset button enablement under activeFiltersDisplay', () => {
     expect(resetButton(el).disabled, 'one filter moved off its default').to.equal(false);
   });
 
-  it('disables reset at defaults in both "all" and "hidden" modes', async () => {
+  it('keeps reset enabled for the identical all-defaults bar under "all" and "hidden" (non-regression)', async () => {
     for (const display of ['all', 'hidden'] as const) {
       const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
         active-filters-display=${display}
@@ -2313,18 +2313,21 @@ describe('reset button enablement under activeFiltersDisplay', () => {
         .value=${atDefaults()}
       ></lr-filter-bar>`);
 
-      expect(resetButton(el).disabled).to.equal(true);
+      expect(
+        resetButton(el).disabled,
+        `${display} gates reset on hasActiveFilters, exactly as it always has`
+      ).to.equal(false);
     }
   });
 
-  it('disables reset at defaults with the chip display mode unset', async () => {
+  it('keeps reset enabled for an all-defaults bar with activeFiltersDisplay left unset (unset-regression)', async () => {
     const el = await fixture<LyraFilterBar>(html`<lr-filter-bar
       .filters=${defaultedFilters()}
       .value=${atDefaults()}
     ></lr-filter-bar>`);
 
     expect(el.activeFiltersDisplay).to.equal('all');
-    expect(resetButton(el).disabled).to.equal(true);
+    expect(resetButton(el).disabled).to.equal(false);
   });
 
   it('still lets disabled/loading disable reset under "changed"', async () => {

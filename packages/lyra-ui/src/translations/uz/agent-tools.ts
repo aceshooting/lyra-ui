@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Promptni ishga tushirish',
   promptStudioSave: 'Versiyani saqlash',
   promptStudioAddMessage: 'Xabar qoʻshish',
+  promptStudioRemoveMessage: 'Xabarni olib tashlash',
   promptStudioRemoveMessageNumbered: '{index}-xabarni olib tashlash',
   promptStudioMessageRole: '{index}-xabar roli ({role})',
   promptStudioMessageContent: '{index}-xabar mazmuni ({role})',

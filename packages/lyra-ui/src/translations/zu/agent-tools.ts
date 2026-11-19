@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Qalisa umyalo',
   promptStudioSave: 'Londoloza inguqulo',
   promptStudioAddMessage: 'Engeza umlayezo',
+  promptStudioRemoveMessage: 'Susa umlayezo',
   promptStudioRemoveMessageNumbered: 'Susa umlayezo {index}',
   promptStudioMessageRole: 'Indima yomlayezo {index} ({role})',
   promptStudioMessageContent: 'Okuqukethwe komlayezo {index} ({role})',

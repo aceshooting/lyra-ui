@@ -349,7 +349,6 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
   private _type: ButtonType = 'button';
   private loadingFocus?: 'authored' | 'temporary';
   private implicitForm: HTMLFormElement | null = null;
-  private readonly localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
   private internals: ElementInternals;
   private validityController: FormControlController;
@@ -1023,7 +1022,7 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
       return;
     }
     if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => this.localDescriptionIds);
+    else this.externalDescriptionLease = acquireNativeControlDescription(this, target, () => '');
   }
 
   private releaseExternalDescription(): void {

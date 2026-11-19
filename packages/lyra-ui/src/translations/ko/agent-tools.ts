@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: '프롬프트 실행',
   promptStudioSave: '새 버전으로 저장',
   promptStudioAddMessage: '메시지 추가하기',
+  promptStudioRemoveMessage: '메시지 삭제',
   promptStudioRemoveMessageNumbered: '메시지 {index} 제거',
   promptStudioMessageRole: '메시지 {index} 역할 ({role})',
   promptStudioMessageContent: '메시지 {index} 콘텐츠 ({role})',

@@ -1,7 +1,8 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import { projectMapVectorStyle, resolveMapVectorStyle } from './map-vector-style.js';
+import { resolveMapVectorStyle } from './map-vector-style-compiler.js';
+import { projectMapVectorStyle } from './map-vector-style.js';
 
 const line = (value: unknown) => projectMapVectorStyle({ render: 'line', hasLabel: false, paint: { 'line-color': value } });
 

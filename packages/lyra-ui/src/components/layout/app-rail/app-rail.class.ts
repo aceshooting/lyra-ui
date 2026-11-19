@@ -48,7 +48,7 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_appRailUnpin, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_navigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -244,7 +244,7 @@ export interface LyraAppRailEventMap {
  * @csspart backdrop - The mobile overlay's scrim. Visible while open.
  * @csspart collapse-toggle - The opt-in desktop collapse control, rendered inside
  *   `[part="header"]` only while `collapsible` is set and `mode` is not `'mobile'`. Carries the
- *   stable localized navigation name and renders `aria-expanded` in both states, so a
+ *   localized action name and renders `aria-expanded` in both states, so a
  *   screen reader announces the rail's current presentation rather than only its label.
  *   `aria-expanded` is deliberate even though collapsing removes nothing from the accessibility
  *   tree: `'icon-only'` only clips each item's `[part="label"]`/`[part="meta"]` visually, so a
@@ -425,8 +425,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    appRailCollapse: LYRA_DEFAULT_appRailCollapse,
+    appRailExpand: LYRA_DEFAULT_appRailExpand,
     appRailPin: LYRA_DEFAULT_appRailPin,
+    appRailUnpin: LYRA_DEFAULT_appRailUnpin,
+    closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
+    openNavigation: LYRA_DEFAULT_openNavigation,
     resizeNavigation: LYRA_DEFAULT_resizeNavigation,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
@@ -2154,7 +2159,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         type="button"
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.navId}
-        aria-label=${this.localize('navigation')}
+        aria-label=${this.open ? this.localize('closeNavigation') : this.localize('openNavigation')}
         @click=${this.onToggleClick}
       >
         ${this.open ? closeIcon() : menuIcon()}
@@ -2187,7 +2192,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-controls=${this.navRegionId}
-                aria-label=${this.localize('navigation')}
+                aria-label=${expanded ? this.localize('appRailCollapse') : this.localize('appRailExpand')}
                 @click=${this.onCollapseToggleClick}
               ><span part="collapse-icon" aria-hidden="true"
                 ><slot name="collapse-icon" @slotchange=${this.onCollapseIconSlotChange}>${chevronIcon()}</slot></span
@@ -2198,7 +2203,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 part="pin-button"
                 type="button"
                 aria-pressed=${pinned ? 'true' : 'false'}
-                aria-label=${this.localize('appRailPin')}
+                aria-label=${pinned ? this.localize('appRailUnpin') : this.localize('appRailPin')}
                 @click=${this.onPinClick}
               ><span part="pin-icon" aria-hidden="true"
                 ><slot name="pin-icon">${pinIcon()}</slot></span

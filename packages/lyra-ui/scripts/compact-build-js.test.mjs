@@ -363,4 +363,38 @@ try {
   await rm(pruneFixture, { recursive: true, force: true });
 }
 
+const styleFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-static-style-'));
+try {
+  const dist = path.join(styleFixture, 'dist');
+  const components = path.join(dist, 'components', 'forms');
+  const css = 'css`:host{color:red}/* 雪 */`';
+  const literal = 'import{css}from"lit";const styles=' + css + ';export{styles};';
+  const stylePath = name => path.join(components, name, name + '.styles.js');
+  const classPath = name => path.join(components, name, name + '.class.js');
+  for (const name of ['leaf', 'public', 'used', 'asset', 'dynamic', 'typed', 'side', 'collision', 'query', 'early', 'interpolation']) {
+    await mkdir(path.dirname(stylePath(name)), { recursive: true });
+    await writeFile(stylePath(name), name === 'interpolation' ? literal.replace('color:red', 'color:${1}') : literal);
+    await writeFile(classPath(name), (name === 'early' ? 'console.log(sheet);' : '') + 'import{styles as sheet}from"./' + name + '.styles.js' + (name === 'query' ? '?raw' : '') + '";export{sheet};' +
+      (name === 'collision' ? 'const lyraStaticStyleCss=1;export{lyraStaticStyleCss};' : ''));
+  }
+  await writeFile(path.join(dist, 'other.js'), [
+    'export{styles}from"./components/forms/used/used.styles.js";',
+    'new URL("./components/forms/asset/asset.styles.js?raw",import.meta.url);',
+    'import("./components/forms/dynamic/dynamic.styles.js");',
+  ].join('\n'));
+  await writeFile(stylePath('typed').replace(/\.js$/u, '.d.ts'), 'export declare const styles: unknown;');
+  const manifest = { exports: { './style': './dist/components/forms/public/public.styles.js' }, sideEffects: ['./dist/components/forms/side/*.js'] };
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, []);
+  const { removedPaths } = await pruneEmptyBuildJavaScript(dist, manifest, { foldStaticStyles: true });
+  assert.deepEqual(removedPaths, ['components/forms/leaf/leaf.styles.js']);
+  const consumer = await readFile(classPath('leaf'), 'utf8');
+  assert.ok(consumer.includes('const sheet=lyraStaticStyleCss' + css.slice(3)));
+  for (const name of ['public', 'used', 'asset', 'dynamic', 'typed', 'side', 'collision', 'query', 'early', 'interpolation']) {
+    assert.ok(fs.existsSync(stylePath(name)), name);
+  }
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest, { foldStaticStyles: true })).removedPaths, []);
+} finally {
+  await rm(styleFixture, { recursive: true, force: true });
+}
+
 console.log('published JavaScript compaction test passed.');

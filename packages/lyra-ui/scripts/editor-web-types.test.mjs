@@ -16,7 +16,7 @@ import {
   isEditorProperty,
   webTypesElementContributions,
 } from './editor-web-types.mjs';
-import { editorDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
+import { editorDescription, editorMemberDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -104,9 +104,7 @@ assert.deepEqual(
 const datasets = properties[0];
 assert.equal(datasets.type, 'readonly ExampleDataset[]');
 assert.equal(datasets.default, '[]');
-assert.equal(datasets.description, editorDescription('Series rendered by the chart.', 'lr-example'));
-assert.ok(!datasets.description.includes('Second paragraph.'));
-assert.match(datasets.description, /\[Documentation\]\(https:\/\//);
+assert.equal(datasets.description, 'Series rendered by the chart.');
 assert.ok(!Object.hasOwn(datasets, 'read-only'), 'a writable property carries no read-only flag');
 
 const labelText = properties[1];
@@ -121,6 +119,11 @@ assert.equal(editorSummary('First sentence. Second sentence.'), 'First sentence.
 assert.equal(editorSummary('x'.repeat(500)).length, 238);
 assert.deepEqual(elementEvents(synthetic).map(({ name }) => name), ['lr-cell-click', 'lr-change']);
 assert.equal(elementEvents(synthetic)[0].description, editorDescription('Fired on cell activation.', 'lr-example'));
+assert.equal(elementEvents(synthetic)[1].description, editorDescription(undefined, 'lr-example'));
+assert.equal(elementSlots(synthetic)[0].description, editorDescription('Default content.', 'lr-example'));
+const authored = 'See the [configuration guide](https://example.test/configuration).';
+assert.equal(editorMemberDescription(authored, 'lr-example'), authored);
+assert.equal(editorMemberDescription('  ', 'lr-example'), editorDescription(undefined, 'lr-example'));
 assert.deepEqual(elementSlots(synthetic).map(({ name }) => name), ['', 'header']);
 assert.deepEqual(elementEvents({ events: [{ name: 'old', deprecated: true }] }), []);
 assert.deepEqual(elementSlots({ slots: [{ name: 'old', deprecation: { since: '21.0.0' } }] }), []);
@@ -155,6 +158,23 @@ for (const module of manifest.modules ?? []) {
   }
 }
 assert.ok(declarations.length > 250, 'the manifest still describes the full component inventory');
+
+const webTypes = JSON.parse(readFileSync(join(packageDir, 'web-types.json'), 'utf8'));
+const htmlData = JSON.parse(readFileSync(join(packageDir, 'vscode-html-data.json'), 'utf8'));
+const jetBrainsModel = webTypes.contributions.html.elements.find(({ name }) => name === 'lr-model-select');
+const vsCodeModel = htmlData.tags.find(({ name }) => name === 'lr-model-select');
+const modelSelect = declarations.find(({ tagName }) => tagName === 'lr-model-select');
+const attribute = modelSelect.attributes.find(({ name }) => name === 'allow-custom');
+const jetBrainsAttribute = jetBrainsModel.attributes.find(({ name }) => name === attribute.name);
+const vsCodeAttribute = vsCodeModel.attributes.find(({ name }) => name === attribute.name);
+const link = editorDescription(undefined, modelSelect.tagName);
+assert.ok(jetBrainsModel.description.includes(link), 'the JetBrains tag retains its documentation link');
+assert.ok(vsCodeModel.description.value.includes(link), 'the VS Code tag retains its documentation link');
+assert.ok(jetBrainsAttribute.description.startsWith(editorSummary(attribute.description)));
+assert.ok(!jetBrainsAttribute.description.includes(link), 'documented JetBrains attributes omit the repeated tag link');
+assert.ok(vsCodeAttribute.description.value.startsWith(editorSummary(attribute.description)));
+assert.ok(!vsCodeAttribute.description.value.includes(link), 'documented VS Code attributes omit the repeated tag link');
+
 
 let projectedProperties = 0;
 let projectedEvents = 0;

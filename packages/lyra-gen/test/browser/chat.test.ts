@@ -4,6 +4,7 @@ import { focusByKeyboard } from '../../../lyra-ui/test/wtr-focus.js';
 import { twoFrames } from '../../../lyra-ui/test/frames.js';
 import { sinkTexts } from '../../../lyra-ui/test/announcements.js';
 import type { LyraGenViewElement } from '@aceshooting/lyra-gen/gen-view.js';
+import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';
 import { moveChatSurface } from '@aceshooting/lyra-gen/chat.js';
 import { mountInteractiveChat } from '../../examples/chat.js';
 
@@ -126,7 +127,9 @@ it('shows a host resume control while retaining a complete safe form and its edi
   expect(resumes).to.equal(1);
   expect(app.controller.snapshot.status).to.equal('streaming');
   app.push('The remainder</text>\n```\n'); app.finish();
-  await ready(app, 1);
+  const secondView = await ready(app, 1);
+  expect(view.catalog === initialCatalog).to.equal(true);
+  expect(secondView.catalog === view.catalog).to.equal(true);
   expect((await ready(app)) === view).to.equal(true);
   expect(nativeInput(view).value).to.equal('Retained through interruption');
 });

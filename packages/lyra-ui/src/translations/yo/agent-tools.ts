@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Ṣiṣẹ́ prompt',
   promptStudioSave: 'Fi ẹ̀dà pamọ́',
   promptStudioAddMessage: 'Fi ìfiránṣẹ́ kún un',
+  promptStudioRemoveMessage: 'Yọ ìfiránṣẹ́ kúrò',
   promptStudioRemoveMessageNumbered: 'Yọ ifiranṣẹ {index} kuro',
   promptStudioMessageRole: 'Ipa ìfiránṣẹ́ {index} ({role})',
   promptStudioMessageContent: 'Àkóónú ìfiránṣẹ́ {index} ({role})',

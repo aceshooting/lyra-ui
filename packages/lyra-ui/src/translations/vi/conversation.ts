@@ -38,6 +38,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Gửi không thành công',
   chatFailedAnnounce: 'Không gửi được tin nhắn.',
   chatCompleteAnnounce: 'Đã hoàn tất tin nhắn.',
+  expandCode: 'Mở rộng mã',
+  collapseCode: 'Thu gọn mã',
   copyCode: 'Sao chép mã',
   copiedToClipboard: 'Đã sao chép vào bộ nhớ tạm',
   codeRegion: 'Mã',

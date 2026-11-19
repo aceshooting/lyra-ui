@@ -7,7 +7,7 @@ import { templateContent } from 'lit/directives/template-content.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
-import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTargetBase as DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target-base.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { isResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
@@ -514,10 +514,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * shared `LyraAnchorTargetEventMap` every `DocumentAnchorTarget` adopter carries -- neither is
  * actually emitted by this viewer: there is no keyboard-accessible highlight-activation surface
  * (docx-viewer's/ebook-viewer's own click-to-activate needs a raw content DOM to hit-test or an
- * annotation-click callback, neither of which this cell-level model has), and the mixin's default
- * `bindTextSelection()` would anchor a selection as a `text-quote`, a kind outside this viewer's own
- * `anchorKinds`/highlight-resolution model, so wiring it would offer a selection event whose own
- * anchor could never be fed back in as a highlight.
+ * annotation-click callback, neither of which this cell-level model has). Selections within cell
+ * content do not identify a whole cell, so they do not produce a selection anchor.
  *
  * `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` follow the shared viewer search
  * contract (`internal/text-viewer-target.ts`'s `LyraTextViewerTarget`): `search()` resolves the

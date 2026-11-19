@@ -1,3 +1,5 @@
+import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
+import { registerSceneAttachmentProvider, resolveSceneAttachment } from './map-scene-session-registry.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR,
   readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
 import type { MapSceneSessionAttachment, MapSceneSessionBacking, MapSceneSessionFacade, MapSceneSessionState,
@@ -40,7 +42,6 @@ const budgetExceeded = Object.freeze({});
 const absent: SceneTargetLookup = Object.freeze({ status: 'absent' });
 const emptyView: StateView = { snapshot: Object.freeze({ acceptedSceneRevision: 0, registryRevision: 0,
   targets: Object.freeze([]), viewport: undefined }), targets: new Map() };
-const attachments = new WeakMap<HTMLElement, MapSceneSessionAttachment>();
 
 function invalid(): never { throw new TypeError('Invalid map scene capability'); }
 function own(value: object, key: string): unknown {
@@ -203,11 +204,10 @@ function copyProjection(value: unknown, revision: number): SceneTargetProjection
 
 /** Register only once per connection; an old unregister cannot erase a newer attachment. */
 export function registerMapSceneSession(host: HTMLElement, attachment: MapSceneSessionAttachment): Release {
-  attachments.set(host, attachment);
-  return () => { if (attachments.get(host) === attachment) attachments.delete(host); };
+  return registerSceneAttachmentProvider(host, () => attachment, () => createMapCameraFollowScene(attachment));
 }
 export function mapSceneSessionAttachment(host: HTMLElement): MapSceneSessionAttachment | undefined {
-  return attachments.get(host);
+  return resolveSceneAttachment(host, createMapSceneSessionFacade);
 }
 
 /** Stable accepted-state authority with independently replaceable completed-frame demand. */

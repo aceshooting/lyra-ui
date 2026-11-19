@@ -251,6 +251,16 @@ interface PendingMessageFeedbackSubmission {
  *   pressed thumbs-down button.
  * @cssprop [--lr-message-feedback-down-active-border=var(--lr-color-danger)] - Border color of the
  *   pressed thumbs-down button.
+ * @cssprop --lr-icon-button-bg - Resting background of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the rating buttons.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the rating buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-color - Resting foreground of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-radius - Corner radius of the rating buttons.
  * @status stable
  * @since 4.0.0
  */

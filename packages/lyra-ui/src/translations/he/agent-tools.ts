@@ -248,6 +248,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'הפעל הנחיה',
   promptStudioSave: 'שמור גרסה',
   promptStudioAddMessage: 'הוסף הודעה',
+  promptStudioRemoveMessage: 'הסר הודעה',
   promptStudioRemoveMessageNumbered: 'הסר את ההודעה {index}',
   promptStudioMessageRole: 'תפקיד הודעה {index} ({role})',
   promptStudioMessageContent: 'תוכן הודעה {index} ({role})',

@@ -250,6 +250,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Zaženi poziv',
   promptStudioSave: 'Shrani različico',
   promptStudioAddMessage: 'Dodaj sporočilo',
+  promptStudioRemoveMessage: 'Odstrani sporočilo',
   promptStudioRemoveMessageNumbered: 'Odstrani sporočilo {index}',
   promptStudioMessageRole: 'Vloga sporočila {index} ({role})',
   promptStudioMessageContent: 'Vsebina sporočila {index} ({role})',

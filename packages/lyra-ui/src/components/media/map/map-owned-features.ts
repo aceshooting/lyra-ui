@@ -353,3 +353,5 @@ export class MapOwnedFeatures {
     };
   }
 }
+
+export { buildMapExternalLayers } from './map-external-layer-builder.js';

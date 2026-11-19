@@ -103,10 +103,19 @@ it('reports a copy of empty source after the code attribute is removed', async (
 });
 
 for (const name of ['lr-code-block', 'lr-code-block-core']) {
-  it(`${name} gives the disclosure a stable localized name`, async () => {
+  it(`${name} uses localized disclosure actions and supports a stable override`, async () => {
     const el = await fixture<LyraCodeBlock>(`<${name} collapsible></${name}>`);
     const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
-    expect(toggle.getAttribute('aria-label')).to.equal('Toggle code');
+    expect(toggle.getAttribute('aria-label')).to.equal('Collapse code');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Expand code');
+    el.strings = { expandCode: 'Show source', collapseCode: 'Hide source' };
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Show source');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Hide source');
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     el.strings = { codeBlockToggle: 'Show or hide source' };
     toggle.click();

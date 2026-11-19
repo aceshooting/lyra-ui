@@ -40,6 +40,7 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ reflect: true }) box: ResizeObserverBox = 'content-box';
 
+  // @renderController SlottedObserverController
   private readonly slotted = new SlottedObserverController<ResizeObserver>(this, {
     schedule: (rebuild) => this.scheduleAfterUpdate(rebuild),
     configure: (ownerDocument) => {

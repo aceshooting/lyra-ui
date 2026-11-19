@@ -250,6 +250,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Spustit prompt',
   promptStudioSave: 'Uložit verzi',
   promptStudioAddMessage: 'Přidat zprávu',
+  promptStudioRemoveMessage: 'Odebrat zprávu',
   promptStudioRemoveMessageNumbered: 'Odebrat zprávu {index}',
   promptStudioMessageRole: 'Role zprávy {index} ({role})',
   promptStudioMessageContent: 'Obsah zprávy {index} ({role})',

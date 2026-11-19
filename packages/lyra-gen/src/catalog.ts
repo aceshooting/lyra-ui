@@ -1,77 +1,18 @@
 import type { LyraGenCatalog, LyraGenComponent, LyraGenResult } from './types.js';
-import { assertComponentContentPolicy, snapshotFieldPolicy } from './content-policy.js';
+import { createCatalog as createCatalogDefinition, initialCatalog as builtInCatalog } from './catalogs/examples.js';
 import { catalogPresetRoles } from './catalogs/presets.js';
 import type { LyraGenCatalogPresetName } from './catalogs/presets.js';
 export { catalogPresetNames, catalogPresetRoles } from './catalogs/presets.js';
 export type { LyraGenCatalogPresetName } from './catalogs/presets.js';
-import { reviewedExamples } from './catalogs/examples.js';
-import { formComponents } from './catalogs/forms.js';
-import { conversationComponents } from './catalogs/conversation.js';
-import { dataComponents } from './catalogs/data.js';
-import { retrievalComponents } from './catalogs/retrieval.js';
 import { answerBlockComponents } from './catalogs/blocks.js';
-import { appearance, boolean, choice, documentation, label, size, string, variant } from './catalogs/shared.js';
-
-function freeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value)) freeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 /** Create a trusted host catalog. Generated content must never construct this definition. */
 export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
-  if (!definition.id.trim() || !definition.version.trim()) throw new TypeError('Catalog id and version are required.');
-  if (Object.keys(definition.components).length === 0) throw new TypeError('A catalog must contain at least one reviewed role.');
-  const fieldPolicy = snapshotFieldPolicy(definition);
-  const components: Record<string, LyraGenComponent> = Object.create(null) as Record<string, LyraGenComponent>;
-  for (const [role, component] of Object.entries(definition.components)) {
-    assertComponentContentPolicy(component);
-    if (!/^[a-z][a-z0-9-]*$/.test(role)) throw new TypeError(`Invalid catalog role: ${role}`);
-    if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(component.tag)) throw new TypeError(`Invalid trusted tag: ${component.tag}`);
-    for (const key of Object.keys(component.properties)) {
-      if (/^(?:on|innerHTML$|outerHTML$|srcdoc$|style$|className$|constructor$|prototype$|__proto__$)/i.test(key)) throw new TypeError(`Unsafe catalog property: ${key}`);
-    }
-    if (component.accessibleName?.required && !(component.accessibleName.text && component.text) && !component.accessibleName.properties?.some(key => Object.hasOwn(component.properties, key))) throw new TypeError(`Missing accessible name source for ${role}`);
-    for (const key of component.required ?? []) if (!(key in component.properties)) throw new TypeError(`Unknown required property ${role}.${key}`);
-    for (const [key, binding] of Object.entries(component.bindings ?? {})) {
-      if (!(key in component.properties) || !(binding.property in component.properties)) throw new TypeError(`Unknown binding property ${role}.${key}`);
-    }
-    components[role] = component;
-  }
-  for (const [role, component] of Object.entries(components)) {
-    if (Array.isArray(component.children)) for (const child of component.children) {
-      if (!Object.hasOwn(components, child)) throw new TypeError(`Missing child role ${role}.${child}`);
-    }
-    for (const child of component.optionalChildren ?? []) if (!Array.isArray(component.children) || !component.children.includes(child)) throw new TypeError(`Optional child ${role}.${child} must also be listed in children`);
-  }
-  return freeze({ ...definition, components, ...(fieldPolicy ? { fieldPolicy } : {}) });
+  return createCatalogDefinition(definition);
 }
 
-const structuralComponents: Readonly<Record<string, LyraGenComponent>> = {
-  stack: { tag: 'div', properties: {}, children: true, description: 'Group related content vertically.' },
-  row: { tag: 'div', properties: {}, children: true, description: 'Group a short row of related content; the renderer controls responsive wrapping.' },
-  text: { tag: 'p', properties: {}, text: true, description: 'Plain text, never interpreted as HTML.' },
-  heading: { tag: 'h2', properties: {}, text: true, accessibleName: { required: true, text: true } },
-  card: { tag: 'lr-card', properties: { appearance }, children: true, slots: ['', 'header', 'footer', 'actions'], load: () => import('@aceshooting/lyra-ui/components/lr-card.js'), documentation: documentation('lr-card') },
-  badge: { tag: 'lr-badge', properties: { variant, appearance, size, pill: boolean }, text: true, load: () => import('@aceshooting/lyra-ui/components/lr-badge.js'), documentation: documentation('lr-badge') },
-  alert: { tag: 'lr-alert', properties: { variant, open: boolean, closable: boolean }, text: true, children: ['text', 'button'], optionalChildren: ['text', 'button'], slots: [''], load: () => import('@aceshooting/lyra-ui/components/lr-alert.js'), documentation: documentation('lr-alert') },
-  empty: { tag: 'lr-empty', properties: { heading: label, description: string(1024), size }, required: ['heading'], children: ['button'], optionalChildren: ['button'], slots: ['actions'], load: () => import('@aceshooting/lyra-ui/components/lr-empty.js'), documentation: documentation('lr-empty') },
-  skeleton: { tag: 'lr-skeleton', properties: { label, shape: choice('rect', 'circle', 'text'), effect: choice('none', 'pulse', 'sheen') }, load: () => import('@aceshooting/lyra-ui/components/lr-skeleton.js'), documentation: documentation('lr-skeleton') },
-  stat: { tag: 'lr-stat', properties: { label, value: string(256), unit: string(64), caption: string(512), variant }, required: ['label', 'value'], load: () => import('@aceshooting/lyra-ui/components/lr-stat.js'), documentation: documentation('lr-stat') },
-};
-
 /** A reviewed, bounded subset of Lyra APIs, independent of the complete component inventory. */
-export const initialCatalog = createCatalog({
-  id: 'lyra-reviewed',
-  version: '1',
-  components: Object.fromEntries(Object.entries({ ...structuralComponents, ...formComponents, ...conversationComponents, ...dataComponents, ...retrievalComponents }).map(([role, component]) => {
-    const metadata = reviewedExamples[role];
-    if (!metadata) throw new TypeError(`Missing reviewed example for ${role}`);
-    return [role, { ...component, ...(component.bindings ? { fieldPurpose: 'general' as const } : {}), useWhen: metadata.useWhen, examples: [metadata.example] }];
-  })),
-});
+export const initialCatalog: LyraGenCatalog = builtInCatalog;
 
 /** Narrow a catalog deliberately; unknown roles and missing child dependencies are refused. */
 export function subsetCatalog(catalog: LyraGenCatalog, roles: readonly string[], actionNames: readonly string[] = []): LyraGenResult<LyraGenCatalog> {

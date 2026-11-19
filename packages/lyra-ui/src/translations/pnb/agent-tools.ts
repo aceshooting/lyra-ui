@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'پرامپٹ چلاؤ',
   promptStudioSave: 'ورژن محفوظ کرو',
   promptStudioAddMessage: 'پیغام شامل کرو',
+  promptStudioRemoveMessage: 'پیغام ہٹاؤ',
   promptStudioRemoveMessageNumbered: 'پیغام {index} ہٹاؤ',
   promptStudioMessageRole: 'پیغام {index} دا کردار ({role})',
   promptStudioMessageContent: 'پیغام {index} دا مواد ({role})',

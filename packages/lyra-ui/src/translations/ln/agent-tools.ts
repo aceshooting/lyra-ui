@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Tambwisa prompt',
   promptStudioSave: 'Bomba version',
   promptStudioAddMessage: 'Bakisa message',
+  promptStudioRemoveMessage: 'Longola message',
   promptStudioRemoveMessageNumbered: 'Longola nsango {index}',
   promptStudioMessageRole: 'Rôle ya message {index} ({role})',
   promptStudioMessageContent: 'Contenu ya message {index} ({role})',

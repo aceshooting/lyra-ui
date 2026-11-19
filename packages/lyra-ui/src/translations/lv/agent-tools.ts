@@ -248,6 +248,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Izpildīt uzvedni',
   promptStudioSave: 'Saglabāt versiju',
   promptStudioAddMessage: 'Pievienot ziņojumu',
+  promptStudioRemoveMessage: 'Noņemt ziņojumu',
   promptStudioRemoveMessageNumbered: 'Noņemt ziņu {index}',
   promptStudioMessageRole: 'Ziņojuma {index} loma ({role})',
   promptStudioMessageContent: 'Ziņojuma {index} saturs ({role})',

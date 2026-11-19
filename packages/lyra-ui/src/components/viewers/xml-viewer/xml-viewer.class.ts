@@ -11,7 +11,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
-import { DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTargetBase as DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target-base.js';
 import type {
   AnchorResultDetail,
   HighlightActivateDetail,
@@ -451,7 +451,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 5000;
   /** Maximum UTF-8 input bytes, from 1 to 262,144,000; invalid values use 26,214,400.
    * @default 26214400 */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
   private _treeSource?: XmlViewerTreeSource;
   private sourceMode = false;
   private sourceAnchorTask?: object;
@@ -1176,7 +1176,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       const intent = this.sourceSearch.generation;
       this.requestUpdate('sourceSearchIntent', null);
       await this.updateComplete;
-      return intent === this.sourceSearch.generation ? this.sourceSearch.task : 0;
+      if (intent !== this.sourceSearch.generation) return 0;
+      return this.sourceSearch.task;
     }
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;

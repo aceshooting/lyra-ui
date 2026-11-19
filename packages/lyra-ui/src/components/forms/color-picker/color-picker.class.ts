@@ -227,12 +227,12 @@ function isElementValue(value: unknown): value is Element {
 
 export interface LyraColorPickerEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;

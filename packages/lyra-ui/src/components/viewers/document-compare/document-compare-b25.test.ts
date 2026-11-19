@@ -23,12 +23,27 @@ describe('lr-document-compare remediation', () => {
   it('caps the diff view block size with max-height in view="diff"', async () => {
     const lines = Array.from({ length: 200 }, (_, i) => `line ${i}`).join('\n');
     const el = await fixture<LyraDocumentCompare>(html`
-      <lr-document-compare max-height="120px" .oldVersion=${{ id: 'a', text: lines }} .newVersion=${{ id: 'b', text: `${lines}\nmore` }}></lr-document-compare>
+      <lr-document-compare max-height="120px" .oldVersion=${{ id: 'a', name: 'old.txt', text: lines }} .newVersion=${{ id: 'b', name: 'new.txt', text: `${lines}\nmore` }}></lr-document-compare>
     `);
     const diff = el.shadowRoot!.querySelector<HTMLElement & { updateComplete: Promise<boolean> }>('[part="diff"]')!;
     await diff.updateComplete;
     const base = diff.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
     expect(getComputedStyle(base).maxHeight).to.equal('120px');
+    expect(base.clientHeight).to.be.within(115, 120);
+    expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
+    base.scrollTop = 60;
+    expect(base.scrollTop).to.equal(60);
+    expect(diff.scrollTop).to.equal(0);
+
+    const style = document.createElement('style');
+    style.textContent = 'lr-document-compare::part(diff-base) { max-block-size: 80px; }';
+    el.before(style);
+    try {
+      expect(base.clientHeight).to.be.within(75, 80);
+      expect(base.scrollTop).to.equal(60);
+    } finally {
+      style.remove();
+    }
   });
 
   it('forwards contextLines and languageLoaders to the diff view', async () => {

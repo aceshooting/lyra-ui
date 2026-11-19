@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { assignedSlotOf, domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
+import { assignedSlotOf, domParentElement, flattenedParentElement, ownerView, visitAncestorChain } from './composed-tree.js';
 
 describe('composed-tree walkers', () => {
   it('distinguishes the DOM parent chain from the flattened (slot-first) chain', () => {
@@ -23,6 +23,21 @@ describe('composed-tree walkers', () => {
     } finally {
       shell.remove();
     }
+  });
+
+  it('stops at a cycle or the common ancestor of a previously visited path', () => {
+    const first = document.createElement('div');
+    const common = document.createElement('section');
+    const second = document.createElement('span');
+    const parents = new Map<Element, Element>([[first, common], [common, first], [second, common]]);
+    const visited = new Set<Element>();
+    const names: string[] = [];
+    for (const start of [first, second]) {
+      visitAncestorChain(start, element => parents.get(element) ?? null, visited, element => {
+        names.push(element.localName);
+      });
+    }
+    expect(names).to.deep.equal(['div', 'section', 'span']);
   });
 
   it('recognizes shadow roots and slots from another realm by shape', () => {

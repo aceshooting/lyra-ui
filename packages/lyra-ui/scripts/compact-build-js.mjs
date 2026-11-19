@@ -1,5 +1,6 @@
 import { isMainModule } from './is-main-module.mjs';
 
+import { existsSync } from 'node:fs';
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -240,10 +241,25 @@ export async function compactBuildJavaScript(directory) {
   return { files: files.length, beforeBytes, afterBytes };
 }
 
-/** Remove only empty private runtime markers after the complete module tree is compacted.
- * Package entry points, declared side effects and every runtime reference are protected; an
- * unknown dynamic import keeps all candidates. Declaration files are never removed. */
-export async function pruneEmptyBuildJavaScript(directory, manifest) {
+/** Only a standalone Lit CSS literal can move without importing any sibling runtime or evaluating an expression. */
+function staticStyleTemplate(program) {
+  if (program.body.length !== 3) return;
+  const [dependency, declaration, exported] = program.body;
+  const css = dependency.specifiers?.[0];
+  const styles = declaration.declarations?.[0];
+  const template = styles?.init;
+  const binding = exported.specifiers?.[0];
+  if (dependency.type === 'ImportDeclaration' && dependency.source.value === 'lit' &&
+      dependency.specifiers.length === 1 && css.type === 'ImportSpecifier' &&
+      css.imported.name === 'css' && css.local.name === 'css' &&
+      declaration.kind === 'const' && declaration.declarations.length === 1 && styles.id.name === 'styles' &&
+      template?.type === 'TaggedTemplateExpression' && template.tag.name === 'css' && !template.quasi.expressions.length &&
+      exported.type === 'ExportNamedDeclaration' && !exported.source && exported.specifiers.length === 1 &&
+      binding.local.name === 'styles' && binding.exported.name === 'styles') return template.quasi;
+}
+
+/** Remove unreferenced private ESM markers and fold single-consumer static styles into sibling classes. */
+export async function pruneEmptyBuildJavaScript(directory, manifest, { foldStaticStyles = false } = {}) {
   const files = await javascriptFiles(directory);
   const modules = await Promise.all(files.map(async file => {
     const parsed = parseSync(file, await readFile(file, 'utf8'));
@@ -271,11 +287,24 @@ export async function pruneEmptyBuildJavaScript(directory, manifest) {
   // Package subpath stars substitute arbitrary substrings, including directory separators.
   const targetPatterns = targets.map(target => new RegExp('^' + target.replace(/^\.\//u, '').split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('.*') + '$'));
   const protectedFiles = new Set();
+  const styles = new Map();
+  const byPath = new Map(modules.map(module => [path.resolve(module.file), module]));
+  for (const { file, program } of modules) {
+    if (!foldStaticStyles || !file.endsWith('.styles.js') || !path.relative(directory, file).startsWith('components' + path.sep)) continue;
+    const template = staticStyleTemplate(program);
+    if (template && !existsSync(file.replace(/\.js$/u, '.d.ts'))) {
+      styles.set(path.resolve(file), { template, references: new Set() });
+    }
+  }
   let unknownReference = false;
-  function protectReference(file, specifier, moduleUrl = false) {
+  function protectReference(file, literal, moduleUrl = false) {
+    const specifier = literal.value;
     if (moduleUrl ? /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(specifier) : !specifier.startsWith('.')) return;
     const target = path.resolve(path.dirname(file), specifier.split(/[?#]/u)[0]);
-    for (const suffix of ['', '.js', '.mjs', '/index.js', '/index.mjs']) protectedFiles.add(target + suffix);
+    for (const suffix of ['', '.js', '.mjs', '/index.js', '/index.mjs']) {
+      protectedFiles.add(target + suffix);
+      styles.get(target + suffix)?.references.add(literal);
+    }
   }
   for (const { file, program } of modules) {
     function visit(node) {
@@ -284,16 +313,16 @@ export async function pruneEmptyBuildJavaScript(directory, manifest) {
       const dynamicSource = node.type === 'ImportExpression' ? node.source :
         node.type === 'CallExpression' && ((node.callee?.type === 'Identifier' && node.callee.name === 'require') ||
           (node.callee?.type === 'MemberExpression' && node.callee.object?.name === 'require' && node.callee.property?.name === 'resolve')) ? node.arguments[0] : null;
-      if (typeof staticSource?.value === 'string') protectReference(file, staticSource.value);
+      if (typeof staticSource?.value === 'string') protectReference(file, staticSource);
       if (dynamicSource) {
-        if (typeof dynamicSource.value === 'string') protectReference(file, dynamicSource.value);
+        if (typeof dynamicSource.value === 'string') protectReference(file, dynamicSource);
         else unknownReference = true;
       }
       // Relative module strings also protect uncommon loader aliases such as requireFromPackage.
-      if (typeof node.value === 'string' && /^\.{1,2}\/.*\.m?js(?:[?#].*)?$/u.test(node.value)) protectReference(file, node.value);
+      if (typeof node.value === 'string' && /^\.{1,2}\/.*\.m?js(?:[?#].*)?$/u.test(node.value)) protectReference(file, node);
       const base = node.type === 'NewExpression' && node.callee?.type === 'Identifier' && node.callee.name === 'URL' ? node.arguments[1] : null;
       if (base?.type === 'MemberExpression' && base.object?.type === 'MetaProperty' && base.object.meta?.name === 'import' && base.property?.name === 'url') {
-        if (typeof node.arguments[0]?.value === 'string') protectReference(file, node.arguments[0].value, true);
+        if (typeof node.arguments[0]?.value === 'string') protectReference(file, node.arguments[0], true);
         else unknownReference = true;
       }
       for (const [key, value] of Object.entries(node)) {
@@ -305,11 +334,30 @@ export async function pruneEmptyBuildJavaScript(directory, manifest) {
     visit(program);
   }
   const removedPaths = [];
-  for (const file of candidates.sort()) {
+  if (unknownReference || manifest.sideEffects === true) return { removedPaths };
+  function published(file) {
     const packagePath = path.relative(path.dirname(directory), file).split(path.sep).join('/');
-    if (unknownReference || manifest.sideEffects === true || protectedFiles.has(path.resolve(file)) ||
-      targetPatterns.some(pattern => pattern.test(packagePath)) ||
-      sideEffectTargets.some(target => path.posix.matchesGlob(packagePath, target.replace(/^\.\//u, '')))) continue;
+    return targetPatterns.some(pattern => pattern.test(packagePath)) ||
+      sideEffectTargets.some(target => path.posix.matchesGlob(packagePath, target.replace(/^\.\//u, '')));
+  }
+  for (const [file, { template, references }] of styles) {
+    if (references.size !== 1 || published(file)) continue;
+    const consumer = byPath.get(file.replace(/\.styles\.js$/u, '.class.js'));
+    const imported = consumer?.program.body.find(node => node.type === 'ImportDeclaration' &&
+      references.has(node.source) && node.source.value === './' + path.basename(file) && !node.attributes?.length && node.specifiers.length === 1 &&
+      node.specifiers[0].type === 'ImportSpecifier' && node.specifiers[0].imported.name === 'styles');
+    if (!imported || consumer.program.body.some(node => node.start < imported.start && node.type !== 'ImportDeclaration')) continue;
+    const source = await readFile(consumer.file, 'utf8');
+    if (source.includes('lyraStaticStyleCss')) continue;
+    const literal = (await readFile(file, 'utf8')).slice(template.start, template.end);
+    const folded = 'import{css as lyraStaticStyleCss}from"lit";const ' +
+      imported.specifiers[0].local.name + '=lyraStaticStyleCss' + literal + ';';
+    await writeFile(consumer.file, source.slice(0, imported.start) + folded + source.slice(imported.end));
+    await rm(file);
+    removedPaths.push(path.relative(directory, file).split(path.sep).join('/'));
+  }
+  for (const file of candidates.sort()) {
+    if (protectedFiles.has(path.resolve(file)) || published(file)) continue;
     await rm(file);
     removedPaths.push(path.relative(directory, file).split(path.sep).join('/'));
   }

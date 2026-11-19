@@ -37,6 +37,20 @@ inside intrinsic grid rows. A definite host height (such as an absolutely positi
 drop target) gives the dropzone the remaining space after the other field content; leave enough
 height for that content and the dropzone's minimum size.
 
+The shared file-intake event detail and rejection types are available as type-only root exports.
+
+`FileIntakeDetail {
+  readonly files: readonly File[];
+  readonly rejected: readonly FileIntakeRejected[];
+  readonly remainingFiles: number | null;
+  readonly remainingTotalSize: number | null;
+}`
+
+`FileIntakeRejected {
+  readonly file: File;
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+}`
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected) — `multiple="false"` reads as false, like

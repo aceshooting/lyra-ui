@@ -254,6 +254,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'تشغيل المُوجّه',
   promptStudioSave: 'حفظ الإصدار',
   promptStudioAddMessage: 'إضافة رسالة',
+  promptStudioRemoveMessage: 'إزالة الرسالة',
   promptStudioRemoveMessageNumbered: 'إزالة الرسالة {index}',
   promptStudioMessageRole: 'دور الرسالة {index} ({role})',
   promptStudioMessageContent: 'محتوى الرسالة {index} ({role})',

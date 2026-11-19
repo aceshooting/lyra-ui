@@ -11670,7 +11670,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 308,
+              "line": 310,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11883,7 +11883,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 308,
+              "line": 310,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12566,7 +12566,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2717,
+              "line": 2734,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15016,7 +15016,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 430,
+              "line": 440,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18104,7 +18104,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 482,
+              "line": 483,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23430,7 +23430,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1484,
+              "line": 1485,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36253,7 +36253,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -36366,10 +36365,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -36458,7 +36457,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -38915,7 +38914,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2717,
+              "line": 2734,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39542,7 +39541,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 515,
+              "line": 523,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43011,7 +43010,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 586,
+              "line": 582,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56581,7 +56580,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 815,
+              "line": 825,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62850,7 +62849,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -62933,10 +62931,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -63007,7 +63005,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 597,
+              "line": 626,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63031,7 +63029,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",

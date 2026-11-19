@@ -252,6 +252,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Ħaddem il-prompt',
   promptStudioSave: 'Issejvja l-verżjoni',
   promptStudioAddMessage: 'Żid messaġġ',
+  promptStudioRemoveMessage: 'Neħħi l-messaġġ',
   promptStudioRemoveMessageNumbered: 'Neħħi l-messaġġ {index}',
   promptStudioMessageRole: 'Rwol tal-messaġġ {index} ({role})',
   promptStudioMessageContent: 'Kontenut tal-messaġġ {index} ({role})',

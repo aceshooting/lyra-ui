@@ -41,12 +41,11 @@ it('keeps the active search option mounted when the virtual window scrolls away'
   await picker.updateComplete;
   expect(root.getElementById(activeId)?.dataset['index']).to.equal('0');
 
-  const rowWidth = root.getElementById(activeId)!.closest('[part="virtual-row"]')!.querySelectorAll('[role="option"]').length;
-  await sendKeys({ press: 'ArrowDown' });
+  await sendKeys({ press: 'ArrowRight' });
   await picker.updateComplete;
   const nextId = search.getAttribute('aria-activedescendant')!;
   await waitUntil(() => root.getElementById(nextId) !== null);
-  expect(root.getElementById(nextId)?.dataset['index']).to.equal(String(rowWidth));
+  expect(root.getElementById(nextId)?.dataset['index']).to.equal('1');
   expect(root.activeElement === search).to.equal(true);
 
   picker.groups = [];

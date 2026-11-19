@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Yehlulekile ukuthumela',
   chatFailedAnnounce: 'Umlayezo awuthunyelwanga.',
   chatCompleteAnnounce: 'Umlayezo uqediwe.',
+  expandCode: 'Nweba ikhodi',
+  collapseCode: 'Goqa ikhodi',
   copyCode: 'Kopisha ikhodi',
   copiedToClipboard: 'Kukopishwe ebhodini lokunamathisela',
   codeRegion: 'Ikhodi',

@@ -1,6 +1,6 @@
 import type { MessagePart } from '@aceshooting/lyra-ui/ai';
 import { createIslandParser, type IslandParser, type IslandResult } from './islands.js';
-import { validateCanonicalView } from './view-admission.js';
+import { validateCanonicalView } from './isolation.js';
 import { snapshotJson } from './schema.js';
 import type { MarkupOptions } from './parser.js';
 import type { JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenNode, LyraGenRecoveryMode, LyraGenValidationResult, LyraGenView } from './types.js';

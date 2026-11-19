@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'ጥያቄውን አስኪድ',
   promptStudioSave: 'ስሪቱን አስቀምጥ',
   promptStudioAddMessage: 'መልዕክት ጨምር',
+  promptStudioRemoveMessage: 'መልዕክት አስወግድ',
   promptStudioRemoveMessageNumbered: 'መልእክት {index}ን አስወግድ',
   promptStudioMessageRole: 'የመልዕክት {index} ሚና ({role})',
   promptStudioMessageContent: 'የመልዕክት {index} ይዘት ({role})',

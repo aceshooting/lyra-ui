@@ -7,10 +7,10 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
-  DocumentAnchorTarget,
+  DocumentAnchorTargetBase as DocumentAnchorTarget,
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
-} from '../../../internal/anchor-target.js';
+} from '../../../internal/anchor-target-base.js';
 import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';

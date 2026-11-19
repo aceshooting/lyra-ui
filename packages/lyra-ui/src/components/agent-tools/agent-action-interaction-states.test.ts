@@ -61,7 +61,7 @@ describe('agent action interaction states', () => {
     const message = await fixture<HTMLElement>(html`<lr-message-parts .parts=${[part]}></lr-message-parts>`);
     const stream = await fixture<HTMLElement>(html`<lr-stream-status connection-state="interrupted" resumable></lr-stream-status>`);
 
-    await assertHoverAndPress(message.shadowRoot!.querySelector<HTMLButtonElement>('[part~="resume"]')!, '--_lr-message-parts-resume-hover-bg', '--_lr-message-parts-resume-active-bg');
-    await assertHoverAndPress(stream.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!, '--_lr-stream-status-resume-hover-bg', '--_lr-stream-status-resume-active-bg');
+    await assertComposedButtonHoverAndPress(message.shadowRoot!.querySelector<HTMLElement>('[part~="resume"]')!);
+    await assertComposedButtonHoverAndPress(stream.shadowRoot!.querySelector<HTMLElement>('[part="resume"]')!);
   });
 });

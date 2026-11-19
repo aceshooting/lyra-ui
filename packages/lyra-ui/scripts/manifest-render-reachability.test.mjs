@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 import { literalDOMPartNames, renderSurfaceFor } from "./manifest-render-reachability.mjs";
 
@@ -322,4 +323,15 @@ test("literal DOM part sinks exclude text, other token lists and computed names"
 
 test("literal DOM part sinks fail closed on invalid source", () => {
   assert.deepEqual([...literalDOMPartNames("element.part.add('phantom'); function {")], []);
+});
+
+test("observer hosts expose the base part rendered by their slotted controller", () => {
+  const controller = "src/internal/slotted-observer.ts";
+  for (const name of ["intersection-observer", "mutation-observer", "resize-observer"]) {
+    const host = `src/components/utility/${name}/${name}.class.ts`;
+    const sources = new Map([host, controller].map(file => [
+      file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8"),
+    ]));
+    assert.match(renderSurfaceFor(host, sources), /<[\w-]+\s+[^>]*\bpart="base"/, name);
+  }
 });

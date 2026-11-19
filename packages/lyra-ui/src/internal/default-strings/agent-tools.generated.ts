@@ -191,6 +191,7 @@ export const LYRA_DEFAULT_promptStudioMoveMessageDown: LyraMessage = 'Move messa
 export const LYRA_DEFAULT_promptStudioMoveMessageUp: LyraMessage = 'Move message {index} up';
 export const LYRA_DEFAULT_promptStudioPreview: LyraMessage = 'Resolved preview';
 export const LYRA_DEFAULT_promptStudioPreviewLimit: LyraMessage = 'Preview unavailable: expansion limit exceeded.';
+export const LYRA_DEFAULT_promptStudioRemoveMessage: LyraMessage = 'Remove message';
 export const LYRA_DEFAULT_promptStudioRemoveMessageNumbered: LyraMessage = 'Remove message {index}';
 export const LYRA_DEFAULT_promptStudioRoleTool: LyraMessage = 'Tool';
 export const LYRA_DEFAULT_promptStudioRun: LyraMessage = 'Run prompt';

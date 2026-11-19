@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { projectMapVectorStyle, resolveMapVectorStyle, type CanonicalMapVectorStyle } from './map-vector-style.js';
+import { resolveMapVectorStyle } from './map-vector-style-compiler.js';
+import { projectMapVectorStyle, type CanonicalMapVectorStyle } from './map-vector-style.js';
 
 const line = (paint: unknown, filter?: unknown) => projectMapVectorStyle({ render: 'line', hasLabel: false, paint, ...(filter === undefined ? {} : { filter }) });
 describe('map vector style', () => {

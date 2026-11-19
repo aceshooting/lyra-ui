@@ -218,7 +218,7 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  * is tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap
  * under RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to
  * the first/last option, and Enter/Space picks. The search input doubles as a `role="combobox"`
- * over the same listbox: Up/Down navigate the options and Enter selects while Left/Right move the text caret,
+ * over the same listbox: arrow keys navigate the options and Enter selects,
  * with `aria-activedescendant` tracking the active option. Composing keyboard events remain with
  * text editing and do not navigate or pick an emoji. Large data sets automatically window
  * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
@@ -254,7 +254,7 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  * @event input - Native `InputEvent` emitted in the host's current owner realm after a user pick.
  * @event change - Native commit `Event` emitted in the host's current owner realm with `input`.
  * @event lr-activate - An emoji was activated, including a repeat pick. `detail: { value }`.
- * @event lr-input - The selected emoji changed. `detail: { value, previousValue }`.
+ * @event lr-input - An emoji was picked, including a repeat selection. `detail: { value, previousValue }`.
  * @event lr-change - An emoji pick was committed. `detail: { value, previousValue }`.
  * @event lr-load-error - The built-in emoji set failed to load. A retry button reloads it.
  * @event blur - Native owner-realm `FocusEvent` relayed from the internal search input.
@@ -966,14 +966,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private pick(item: EmojiPickerItem): void {
     if (isLiveDisabled(this)) return;
     const detail = { value: item.emoji, previousValue: this.value };
-    if (item.emoji !== this.value) {
-      this.value = item.emoji;
-      this.syncSelectedProjection();
-      dispatchNativeInputEvent(this);
-      this.emit('lr-input', detail);
-      dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', detail);
-    }
+    this.value = item.emoji;
+    this.syncSelectedProjection();
+    dispatchNativeInputEvent(this);
+    this.emit('lr-input', detail);
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', detail);
     this.emit('lr-activate', { value: item.emoji });
   }
 
@@ -990,8 +988,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let target: number;
-    if (!inSearch && event.key === forwardKey) target = this.activeIndex + 1;
-    else if (!inSearch && event.key === backwardKey) target = this.activeIndex - 1;
+    if (event.key === forwardKey) target = this.activeIndex + 1;
+    else if (event.key === backwardKey) target = this.activeIndex - 1;
     else if (event.key === 'ArrowDown') target = this.activeIndex + this.columnsPerRow();
     else if (event.key === 'ArrowUp') target = this.activeIndex - this.columnsPerRow();
     // In the input, Home/End keep their native caret meaning.

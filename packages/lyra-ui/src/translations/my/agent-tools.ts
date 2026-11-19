@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Prompt လုပ်ဆောင်ရန်',
   promptStudioSave: 'ဗားရှင်း သိမ်းရန်',
   promptStudioAddMessage: 'မက်ဆေ့ချ် ထည့်ရန်',
+  promptStudioRemoveMessage: 'မက်ဆေ့ချ် ဖယ်ရှားရန်',
   promptStudioRemoveMessageNumbered: 'မက်ဆေ့ချ် {index} ကို ဖယ်ရှားပါ',
   promptStudioMessageRole: 'မက်ဆေ့ချ် {index} ၏ အခန်းကဏ္ဍ ({role})',
   promptStudioMessageContent: 'မက်ဆေ့ချ် {index} ၏ အကြောင်းအရာ ({role})',

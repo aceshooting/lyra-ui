@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import { createGroundFollowScene } from './map-camera-ground-follow-scene.js';
 import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
 import { createMapSceneSessionFacade } from './map-scene-session.js';
 import { admitMapCameraFollowProfile } from './map-camera-follow-data.js';
@@ -62,6 +63,27 @@ function runnerHarness(scene: MapCameraFollowScene, mode: 'ground' | 'geographic
 
 describe('camera follow adapter for completed scene facts', () => {
   afterEach(() => { for (const cleanup of cleanups.splice(0).reverse()) cleanup(); });
+
+  it('observes only the followed geography and current allocation before the renderer exists', () => {
+    const h = sceneStateHarness();
+    const scene = createGroundFollowScene(h.state, 'tracked');
+    const notices: MapCameraFollowNotice[] = [];
+    const stop = scene.subscribeTargets(notice => {
+      notices.push(notice);
+      if (notice.kind === 'target') h.viewport(sceneViewport(3));
+    });
+    expect(scene.target('tracked').kind).to.equal('absent');
+    h.viewport(sceneViewport(2), false);
+    h.set([sceneTarget('other'), { id: 'tracked', kind: 'path' }]);
+    expect(scene.target('tracked')).to.deep.equal({ kind: 'unsupported', objectKind: 'path' });
+    expect(scene.target('other').kind).to.equal('eligible');
+    h.set([sceneTarget('other', 2, 2), { id: 'tracked', kind: 'path' }]);
+    h.viewport(undefined);
+    expect(notices).to.deep.equal([{ kind: 'target', objectId: 'tracked' }, { kind: 'viewport', revision: 3 }]);
+    stop();
+    h.set([sceneTarget('tracked')]);
+    expect(notices.length).to.equal(2);
+  });
 
   it('constructs without subscriptions, demand, state binding or frame work', () => {
     const { h, b, scene } = setup(false);

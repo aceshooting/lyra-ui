@@ -40,6 +40,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Échec de l’envoi',
   chatFailedAnnounce: 'L’envoi du message a échoué.',
   chatCompleteAnnounce: 'Message terminé.',
+  expandCode: 'Développer le code',
+  collapseCode: 'Réduire le code',
   copyCode: 'Copier le code',
   copiedToClipboard: 'Copié dans le presse-papiers',
   codeRegion: 'Code',

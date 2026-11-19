@@ -245,6 +245,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Gbaa arịrịọ',
   promptStudioSave: 'Chekwaa ụdị',
   promptStudioAddMessage: 'Tinye ozi',
+  promptStudioRemoveMessage: 'Wepụ ozi',
   promptStudioRemoveMessageNumbered: 'Wepụ ozi {index}',
   promptStudioMessageRole: 'Ọrụ ozi {index} ({role})',
   promptStudioMessageContent: 'Ọdịnaya ozi {index} ({role})',

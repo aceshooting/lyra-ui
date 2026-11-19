@@ -248,6 +248,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Pokreni upit',
   promptStudioSave: 'Spremi verziju',
   promptStudioAddMessage: 'Dodaj poruku',
+  promptStudioRemoveMessage: 'Ukloni poruku',
   promptStudioRemoveMessageNumbered: 'Ukloni poruku {index}',
   promptStudioMessageRole: 'Uloga poruke {index} ({role})',
   promptStudioMessageContent: 'Sadržaj poruke {index} ({role})',

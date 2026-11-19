@@ -38,6 +38,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: '보내지 못했습니다',
   chatFailedAnnounce: '메시지를 보내지 못했습니다.',
   chatCompleteAnnounce: '메시지가 완료되었습니다.',
+  expandCode: '코드 펼치기',
+  collapseCode: '코드 접기',
   copyCode: '코드 복사',
   copiedToClipboard: '클립보드에 복사되었습니다',
   codeRegion: '코드',

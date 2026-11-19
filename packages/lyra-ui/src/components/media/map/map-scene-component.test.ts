@@ -1,7 +1,8 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { createMapSceneSessionFacade, mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { resolveSceneAttachment } from '../../../internal/map-scene-session-registry.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -71,6 +72,34 @@ describe('lr-map accepted geographic scene', () => {
     expect(element.map === undefined).to.equal(true);
     expect(mapSceneSessionAttachment(element) === a).to.equal(true);
   });
+
+  it('creates the first peer session on demand and binds the already-owned scene', async () => {
+    const { element } = await mount();
+    const marker = sceneMarker('first', 7);
+    element.scene = { objects: [marker] };
+    marker.position.lngLat[0] = 99;
+    let creations = 0;
+    const first = resolveSceneAttachment(element, options => {
+      creations++;
+      return createMapSceneSessionFacade(options);
+    });
+    const target = first?.target('first');
+    expect(creations).to.equal(1);
+    expect(target?.status === 'accepted' && target.target.position.lngLat[0]).to.equal(7);
+    expect(attachment(element) === first).to.equal(true);
+  });
+
+  for (const peerFirst of [true, false]) {
+    it(`retires a mismatched connection when the ${peerFirst ? 'peer' : 'scene'} arrives first`, async () => {
+      const { element } = await mount();
+      const scene = { objects: [sceneMarker('first', 7)] };
+      if (!peerFirst) element.scene = scene;
+      const stale = resolveSceneAttachment(element, () => createMapSceneSessionFacade({ connection: {} }));
+      if (peerFirst) element.scene = scene;
+      expect(mapSceneSessionAttachment(element) === undefined).to.equal(true);
+      expect(stale?.target('first').status === 'accepted').to.equal(false);
+    });
+  }
 
   it('accepts configured input on connect before the held native library completes', async () => {
     const { element } = await mount({ objects: [sceneMarker('first', 7)] });

@@ -40,6 +40,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'השליחה נכשלה',
   chatFailedAnnounce: 'שליחת ההודעה נכשלה.',
   chatCompleteAnnounce: 'ההודעה הושלמה.',
+  expandCode: 'הרחב את הקוד',
+  collapseCode: 'כווץ קוד',
   copyCode: 'העתק קוד',
   copiedToClipboard: 'הועתק ללוח',
   codeRegion: 'קוד',

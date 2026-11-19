@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Η αποστολή απέτυχε',
   chatFailedAnnounce: 'Η αποστολή του μηνύματος απέτυχε.',
   chatCompleteAnnounce: 'Το μήνυμα ολοκληρώθηκε.',
+  expandCode: 'Ανάπτυξη κώδικα',
+  collapseCode: 'Σύμπτυξη κώδικα',
   copyCode: 'Αντιγραφή κώδικα',
   copiedToClipboard: 'Αντιγράφηκε στο πρόχειρο',
   codeRegion: 'Κώδικας',

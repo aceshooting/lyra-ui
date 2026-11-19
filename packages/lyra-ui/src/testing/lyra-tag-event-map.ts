@@ -552,6 +552,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-app-rail': { 'lr-rail-resize-request': true, 'lr-toggle-request': true },
   'lr-app-rail-group': { 'lr-toggle-request': true },
   'lr-app-rail-item': { 'lr-toggle-request': true },
+  'lr-approval-queue': { 'lr-approval-decision-request': true },
   'lr-artifact-panel': { 'lr-view-change-request': true },
   'lr-bar-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-box-plot': { 'lr-legend-visibility-change-request': true },

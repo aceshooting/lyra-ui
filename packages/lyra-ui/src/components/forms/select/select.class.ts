@@ -11,7 +11,6 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
 import type { Placement } from '@floating-ui/dom';
 import {
   LyraElement,
@@ -2595,9 +2594,7 @@ export class LyraSelect<
           ${o.dotColor
             ? html`<span
                 part="option-dot"
-                style=${styleMap({
-                  background: sanitizeCssColor(o.dotColor) ?? 'transparent',
-                })}
+                style=${'background:' + (sanitizeCssColor(o.dotColor) ?? 'transparent') + ';'}
               ></span>`
             : ''}
           <span part="option-label">

@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Patakbuhin ang prompt',
   promptStudioSave: 'I-save ang bersyon',
   promptStudioAddMessage: 'Magdagdag ng mensahe',
+  promptStudioRemoveMessage: 'Alisin ang mensahe',
   promptStudioRemoveMessageNumbered: 'Alisin ang mensahe {index}',
   promptStudioMessageRole: 'Gampanin ng mensahe {index} ({role})',
   promptStudioMessageContent: 'Nilalaman ng mensahe {index} ({role})',

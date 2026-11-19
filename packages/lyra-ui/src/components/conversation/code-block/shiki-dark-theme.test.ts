@@ -1,5 +1,5 @@
 import { expect, fixture, html, aTimeout } from "@open-wc/testing";
-import { resolveIsDarkTheme } from "./shiki-dark-theme.js";
+import { resolveIsDarkTheme } from "../../../internal/shiki/dark-theme.js";
 import { flattenedThemeParent, THEME_ATTRIBUTES } from "../../../internal/theme-observation.js";
 
 function watchDarkTheme(

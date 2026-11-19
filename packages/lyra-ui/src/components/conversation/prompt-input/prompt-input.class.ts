@@ -44,7 +44,7 @@ import type {
   LyraMentionPopover,
   LyraMentionSelectDetail,
 } from '../../utility/mention-popover/mention-popover.class.js';
-import { normalizeChatComposerStatus } from '../chat-composer/chat-composer-status.js';
+import { normalizeChatComposerStatus } from '../../../internal/chat-composer-status.js';
 import type {
   ChatComposerActionsLayout,
   ChatComposerToolbarAlign,
@@ -363,7 +363,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @query('lr-chat-composer') private composer?: LyraChatComposer;
   private descriptionLease?: ResolvedAriaRelationshipLease;
   @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
-  private suggestionAnchor?: HTMLElement;
+  private suggestionAnchor?: HTMLTextAreaElement;
   private pendingSuggestionValue: string | undefined;
   private suggestionNavigationGeneration = 0;
 
@@ -463,9 +463,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       invalidate ||= !internal;
     }
     if (invalidate) {
-      this.suggestionNavigationGeneration += 1;
-      this.activeSuggestion = null;
-      this.suggestionAnchor = undefined;
+      this.closeSuggestions();
     }
   }
 
@@ -537,12 +535,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private onInput(event: CustomEvent<{ value: string }>): void {
     event.stopPropagation();
     if (this.disabled || this.readOnly) return;
-    const composer = event.currentTarget as LyraChatComposer | null;
-    this.suggestionAnchor =
-      composer?.input ?? this.composer?.input ?? undefined;
     this.pendingSuggestionValue = event.detail.value;
     this.value = event.detail.value;
     this.detectSuggestion(this.value);
+    this.setSuggestionAnchor(this.activeSuggestion ? this.input ?? undefined : undefined);
     this.emit('lr-input', { value: this.value });
   }
 
@@ -628,8 +624,28 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private closeSuggestions(): void {
     this.suggestionNavigationGeneration += 1;
     this.activeSuggestion = null;
-    this.suggestionAnchor = undefined;
+    this.setSuggestionAnchor(undefined);
   }
+
+  private setSuggestionAnchor(anchor: HTMLTextAreaElement | undefined): void {
+    if (anchor === this.suggestionAnchor) return;
+    // Some browsers report caret-only textarea moves on the document rather than the textarea.
+    for (const event of ['selectionchange', 'select', 'keyup', 'pointerup']) {
+      this.suggestionAnchor?.removeEventListener(event, this.onSuggestionSelectionChange);
+      anchor?.addEventListener(event, this.onSuggestionSelectionChange);
+    }
+    this.suggestionAnchor = anchor;
+  }
+
+  private onSuggestionSelectionChange = (): void => {
+    const active = this.activeSuggestion;
+    if (!active) return;
+    const input = this.input;
+    const caret = active.start + active.query.length + 1;
+    if (input?.selectionStart !== caret || input.selectionEnd !== caret) {
+      this.closeSuggestions();
+    }
+  };
 
   private onCompositeKeyDown = (event: KeyboardEvent): void => {
     if (event.composedPath()[0] === this.composer?.input) this.onKeyDown(event);
@@ -722,8 +738,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       return;
     const item = occurrence as LyraPromptSuggestion;
     const composer = this.composer;
+    const input = composer?.input;
     const caret = active.start + active.query.length + 1;
-    if (composer?.selectionStart !== caret || composer.selectionEnd !== caret ||
+    if (input?.selectionStart !== caret || input.selectionEnd !== caret || input.value !== this.value ||
         this.value.slice(active.start, caret) !== active.trigger + active.query) {
       this.closeSuggestions();
       return;
@@ -735,6 +752,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       this.value.slice(0, active.start) + inserted + this.value.slice(caret);
     const caretGeneration = this.suggestionCaretGeneration;
     const nextCaret = active.start + inserted.length;
+    const selectionDirection = input.selectionDirection;
     this.closeSuggestions();
     this.emit('lr-input', { value: this.value });
     this.emit('lr-mention-select', {
@@ -743,13 +761,21 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       label: event.detail.label,
       trigger: active.trigger,
     });
+    const { selectionStart, selectionEnd, selectionDirection: direction } = input;
+    const listenerMovedSelection =
+      selectionStart !== caret || selectionEnd !== caret || direction !== selectionDirection;
     void this.updateComplete.then(() => {
       if (
         caretGeneration === this.suggestionCaretGeneration &&
         this.isConnected &&
-        this.composer === composer
+        this.composer === composer &&
+        composer?.input === input
       ) {
-        composer?.setSelectionRange(nextCaret, nextCaret);
+        composer.setSelectionRange(
+          listenerMovedSelection ? selectionStart : nextCaret,
+          listenerMovedSelection ? selectionEnd : nextCaret,
+          listenerMovedSelection ? direction : undefined
+        );
       }
     });
   }

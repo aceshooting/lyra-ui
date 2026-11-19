@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { buildMapExternalLayers, projectMapDataLayerModel, projectMapLabelOptions, projectMapRowPlacement } from './map-data-layer-model.js';
+import { buildMapExternalLayers } from './map-external-layer-builder.js';
+import { projectMapDataLayerModel, projectMapLabelOptions, projectMapRowPlacement } from './map-data-layer-model.js';
 
 const baseUrl = 'https://example.test/maps/';
 const vector = { kind: 'vector', sourceId: 'places', sourceLayer: 'places', render: 'line', source: { tiles: ['./{z}/{x}/{y}.pbf'] } };

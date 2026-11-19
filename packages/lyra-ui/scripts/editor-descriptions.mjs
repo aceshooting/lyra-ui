@@ -6,13 +6,17 @@ export function editorSummary(description) {
   return sentence.length > 240 ? `${sentence.slice(0, 237).trimEnd()}…` : sentence;
 }
 
-function componentDocumentation(tagName) {
-  return `https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/${tagName}.md`;
+function editorDocumentationLink(tagName) {
+  return `[Documentation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/${tagName}.md)`;
 }
 
 export function editorDescription(description, tagName) {
-  return [editorSummary(description), `[Documentation](${componentDocumentation(tagName)})`]
-    .filter(Boolean).join('\n\n');
+  return [editorSummary(description), editorDocumentationLink(tagName)].filter(Boolean).join('\n\n');
+}
+
+/** Member hovers with their own prose can rely on the tag documentation link. */
+export function editorMemberDescription(description, tagName) {
+  return editorSummary(description) || editorDocumentationLink(tagName);
 }
 
 /** Deprecated entries stay available in the manifest and migration reference, not completion. */

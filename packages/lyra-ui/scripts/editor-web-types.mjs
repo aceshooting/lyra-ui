@@ -20,7 +20,7 @@
 // assert the projection is complete relative to `custom-elements.json` -- a new element, or a new
 // member on an existing element, cannot ship without reaching an editor.
 
-import { editorDescription, isCurrentEditorEntry } from './editor-descriptions.mjs';
+import { editorDescription, editorMemberDescription, isCurrentEditorEntry } from './editor-descriptions.mjs';
 
 /**
  * A manifest member reaches `js/properties` when it is a public instance field. `static` members
@@ -37,7 +37,7 @@ export function isEditorProperty(member) {
 
 function propertyDescription(member, tagName) {
   const sections = [];
-  sections.push(editorDescription(member.description, tagName));
+  sections.push(editorMemberDescription(member.description, tagName));
   const meta = [];
   if (member.attribute) meta.push(`Attribute: \`${member.attribute}\``);
   if (member.reflects) meta.push('Reflected to its attribute.');

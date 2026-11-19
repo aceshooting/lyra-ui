@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Kör prompt',
   promptStudioSave: 'Spara version',
   promptStudioAddMessage: 'Lägg till meddelande',
+  promptStudioRemoveMessage: 'Ta bort meddelande',
   promptStudioRemoveMessageNumbered: 'Ta bort meddelande {index}',
   promptStudioMessageRole: 'Roll för meddelande {index} ({role})',
   promptStudioMessageContent: 'Innehåll i meddelande {index} ({role})',

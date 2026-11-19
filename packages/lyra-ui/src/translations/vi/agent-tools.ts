@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Chạy lời nhắc',
   promptStudioSave: 'Lưu phiên bản',
   promptStudioAddMessage: 'Thêm tin nhắn',
+  promptStudioRemoveMessage: 'Xóa tin nhắn',
   promptStudioRemoveMessageNumbered: 'Xóa tin nhắn {index}',
   promptStudioMessageRole: 'Vai trò tin nhắn {index} ({role})',
   promptStudioMessageContent: 'Nội dung tin nhắn {index} ({role})',

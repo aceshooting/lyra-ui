@@ -7703,9 +7703,9 @@ When `multiple` becomes false, the public value, live option flags, popup `aria-
 retained multiple-selection history returns if multiple is enabled again without another selection
 write. A populated `multiple` combobox describes its input by every committed label (visually
 hidden), so the tags collapsed behind "+N" are announced too.
-Equal-valued suggestions can be selected independently in multiple mode. Each activation toggles
-one occurrence, and each selected row supplies its own label and data. Use `FormData#getAll()` to
-read repeated submitted values.
+Activating an equal-valued suggestion in multiple mode toggles the shared value. A chosen row
+supplies its label and data. Programmatically supplied repeated values can be read with
+`FormData#getAll()` until a suggestion activation replaces the selection.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -8141,8 +8141,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. An independently rejected `AbortError` from the current source displays
-the same retry action. Rejections from superseded or disconnected requests are ignored.
+never shows the raw error. A current request that rejects with `AbortError` settles silently.
+Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -9370,7 +9370,7 @@ internal native date input.
 **Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
 `lr-input` and `lr-change` carry `{ value, previousValue }` in ISO form. During an uncommitted text edit both refer to the committed date. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
-bubbling, composed, and non-cancelable. Method calls and live `open` property or attribute changes emit cancelable `lr-show`/`lr-hide` requests.
+bubbling, composed, and non-cancelable. `show()` and `hide()` emit cancelable `lr-show`/`lr-hide` requests. Assigning `open` or changing the attribute commits the state directly without request or after-events.
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
 settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
 it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open
@@ -14383,8 +14383,8 @@ focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCusto
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** selecting a different emoji emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows any value events. `lr-load-error` (no detail,
+**Events:** each emoji pick, including a repeat selection, emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows the value events. `lr-load-error` (no detail,
 non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
@@ -14396,8 +14396,7 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. ArrowUp and ArrowDown navigate results, Enter picks, and
-ArrowLeft and ArrowRight move the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
@@ -21132,7 +21131,7 @@ readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter']
 The component's `filter` property uses this same callback contract.
 
 Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.
-The default local filter ignores case and accents. Local sorts place missing values last in either direction and preserve the order of ties. Provider row tags use the active locale's list formatting.
+The default local filter ignores case and accents. Local sorts treat a missing owner or version as empty text, a missing or invalid date as the Unix epoch, and missing freshness as the rank after stale. Ties retain input order. Provider row tags use the active locale's list formatting.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
 (default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
@@ -21771,7 +21770,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySelectionChangeDetail {
-    readonly selectedRowKeys: readonly string[];
+    readonly selectedRowKeys?: readonly string[];
     readonly documentIds: readonly string[];
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
@@ -22211,7 +22210,7 @@ Unconstrained panels have a zero block minimum, so long content stays inside the
 escaping into following content. Set `overflow` directly on an individual panel when its content
 needs a different scrolling surface.
 
-A focused enabled divider consumes its resize keys at either limit. Clamped steps leave sizes and persistence untouched.
+A focused enabled divider consumes a resize key when it proposes a change, including when a listener vetoes the proposal. A fully clamped step leaves the browser default, sizes and persistence untouched.
 Alt, Ctrl, and Meta chords, IME composition, and previously handled key events pass through.
 
 **Properties:**
@@ -24961,9 +24960,9 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`navigation` key) and `collapse-icon` (the decorative glyph wrapper),
+`appRailCollapse` or `appRailExpand` key) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from the `appRailPin` key, and it
+while pinned and `"false"` otherwise, the name comes from `appRailUnpin` while pinned and `appRailPin` otherwise, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -25244,9 +25243,9 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
 
-For localized rail controls, use `navigation` for the main and collapse toggles, `appRailPin` for the pin,
-`appRailItemToggle` for an item, and `appRailGroupToggle` for a group without a heading. Each name
-stays the same as its expanded or pressed state changes.
+Use `openNavigation` and `closeNavigation` for the mobile toggle and `appRailItemExpand` and
+`appRailItemCollapse` for an item disclosure. Set `.strings.appRailItemToggle` on an item to
+use one name for both disclosure states.
 
 Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
 
@@ -25441,7 +25440,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 ### `lr-app-rail-group`
 
-A group with no heading uses the localized `appRailGroupToggle` name in both disclosure states.
+A group with no heading uses the localized `expand` and `collapse` actions. Set
+`.strings.appRailGroupToggle` on the group to use one name in both states.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can
@@ -27355,7 +27355,8 @@ until something else registers it, the same trade `icon-button-register.js` docu
   own `clearValue` comparison); a `'date-range'` value is a single composed string, so it compares
   like any other string. Removing a chip always clears that filter, unaffected by this property.
   Reset is enabled whenever `hasChangedFilters` is true and the bar is neither disabled nor loading.
-  Clearing a defaulted filter therefore makes Reset available even with an empty chip row.
+  In `'all'` and `'hidden'` modes, active filters also enable Reset when they match their defaults.
+  Clearing a defaulted filter makes Reset available even with an empty chip row.
   When Reset disables itself, keyboard focus moves to the first available control or to the bar
   if no control remains.
 
@@ -30067,7 +30068,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button includes its visible count in its accessible name. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button takes its accessible name from `showMoreCount` and its visible text from `showMoreCollapsed`. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -37812,6 +37813,20 @@ inside intrinsic grid rows. A definite host height (such as an absolutely positi
 drop target) gives the dropzone the remaining space after the other field content; leave enough
 height for that content and the dropzone's minimum size.
 
+The shared file-intake event detail and rejection types are available as type-only root exports.
+
+`FileIntakeDetail {
+  readonly files: readonly File[];
+  readonly rejected: readonly FileIntakeRejected[];
+  readonly remainingFiles: number | null;
+  readonly remainingTotalSize: number | null;
+}`
+
+`FileIntakeRejected {
+  readonly file: File;
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+}`
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected) — `multiple="false"` reads as false, like
@@ -43877,6 +43892,36 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartFormatterAxis = 'x' | 'y' | 'y2' | 'r'`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
+  `ChartHit {
+    datasetIndex: number;
+    index: number;
+  }`
+  `RuntimeChart {
+    render?(): void;
+    data: {
+      labels?: unknown[];
+      datasets: LyraChartDatasetConfiguration[];
+    };
+    options: Record<string, unknown>;
+    config: {
+      type?: unknown;
+    };
+    legend?: unknown;
+    chartArea?: LyraChartArea;
+    destroy(): void;
+    update(mode?: string): void;
+    toBase64Image?(): string;
+    getElementsAtEventForMode(event: Event, mode: string, options: Record<string, unknown>, useFinalPosition: boolean): ChartHit[];
+    getDatasetMeta?(index: number): {
+      hidden: boolean | null;
+    };
+    isDatasetVisible(index: number): boolean;
+    setDatasetVisibility(index: number, visible: boolean): void;
+    getDataVisibility?(index: number): boolean;
+    toggleDataVisibility?(index: number): void;
+    getZoomedScaleBounds?(): Record<string, { min: number; max: number } | undefined>;
+    zoomScale?(id: string, range: { min: number; max: number }, mode?: string): void;
+  }`
   `LyraChartInstance extends RuntimeChart {
     // Inherited from RuntimeChart.
     render?(): void;
@@ -46699,6 +46744,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   token, so setting nothing preserves existing behaviour. In `view="diff"` it caps the diff view's
   own block size instead.
 
+The composed diff uses the default 5,000-line limit per input. Use standalone `lr-diff-view`
+when setting a different `max-lines`. Side-by-side image previews use the version name as image
+alternative text. Standalone `lr-document-preview` also exposes custom `alt` and image zoom.
+
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
 
@@ -46727,7 +46776,9 @@ named by the localized old/new version names so the regions stay distinguishable
 
 **Slots:** none.
 
-**CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+**CSS parts:** `base`, `diff`, `diff-base`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+In diff mode, `diff` styles the child host. Use `diff-base` to style the element that owns
+the scrollbar, for example `lr-document-compare::part(diff-base) { max-block-size: 30rem; }`.
 
 **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.
@@ -49913,8 +49964,8 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
-The collapse control uses the stable `codeBlockToggle` string and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+The collapse control uses `collapseCode` or `expandCode` and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -50156,8 +50207,8 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
-The collapse control uses the stable `codeBlockToggle` string and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+The collapse control uses `collapseCode` or `expandCode` and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -52421,7 +52472,7 @@ Whitespace-only name overrides use the same fallback as an omitted name.
 
 In `readonly` mode the built-in pickers and prompt queue preserve their values. Queue pagination and attachment previews remain available.
 
-An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret out of a pending suggestion range dismisses that suggestion on selection.
+An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret away from a pending suggestion dismisses the popup without editing the draft. When a suggestion is inserted, the caret moves after it unless an event listener changes the textarea selection.
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
@@ -57370,6 +57421,9 @@ is required.
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.
+The remove button uses `promptStudioRemoveMessage` for its name and describes the message number
+with `promptStudioRemoveMessageNumbered`. Set only `.strings.promptStudioRemoveMessageNumbered`
+to use the numbered message as its name.
 
 **Slots:** none. **Optional peer deps:** none.
 

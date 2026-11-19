@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Εκτέλεση προτροπής',
   promptStudioSave: 'Αποθήκευση έκδοσης',
   promptStudioAddMessage: 'Προσθήκη μηνύματος',
+  promptStudioRemoveMessage: 'Αφαίρεση μηνύματος',
   promptStudioRemoveMessageNumbered: 'Κατάργηση μηνύματος {index}',
   promptStudioMessageRole: 'Ρόλος μηνύματος {index} ({role})',
   promptStudioMessageContent: 'Περιεχόμενο μηνύματος {index} ({role})',

@@ -4,6 +4,7 @@
  * boundaries and de-duplication of an unchanged range. A leaf below the anchor-target mixins, so a
  * selection-only consumer pulls neither the element base nor the text-quote resolver.
  */
+import { listenUntilPointerEnd } from './document-pointer.js';
 import type { TextSelectRect } from '../components/viewers/document-viewer/anchors.js';
 import { boundedSelectionRects, boundedSelectionText } from './text-selection.js';
 
@@ -59,8 +60,7 @@ function subscribeSelectionEnd(document: Document, root: Element, shadows: reado
     const state: SelectionDispatcher = { subscribers, roots, shadows: shadowCounts, cleanup() {
       document.removeEventListener('selectionchange', change);
       document.removeEventListener('pointerdown', down, true);
-      document.removeEventListener('pointerup', release, true);
-      document.removeEventListener('pointercancel', release, true);
+      releasePointerListeners();
       if (frame !== undefined) view?.cancelAnimationFrame(frame);
     } };
     const route =(node: Node | null, into: Set<() => void>): void => {
@@ -105,8 +105,7 @@ function subscribeSelectionEnd(document: Document, root: Element, shadows: reado
     };
     document.addEventListener('selectionchange', change);
     document.addEventListener('pointerdown', down, true);
-    document.addEventListener('pointerup', release, true);
-    document.addEventListener('pointercancel', release, true);
+    const releasePointerListeners = listenUntilPointerEnd(document, release, { capture: true });
     selectionDispatchers.set(document, state);
     dispatcher = state;
   }

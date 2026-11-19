@@ -1,3 +1,4 @@
+import { followTarget } from './map-camera-ground-follow-scene.js';
 import type { MapCameraFollowFrame, MapCameraFollowNotice, MapCameraFollowScene, MapCameraFollowStamp,
   MapCameraFollowTarget } from './map-camera-follow-controller.js';
 import type { MapSceneSessionAttachment, SceneCameraProfile, SceneCompletedFrame,
@@ -49,12 +50,7 @@ export function createMapCameraFollowScene(attachment: MapSceneSessionAttachment
   return Object.freeze({
     target(objectId: string): MapCameraFollowTarget {
       const lookup = attachment.target(objectId);
-      if (lookup.status === 'absent') return Object.freeze({ kind: 'absent' });
-      if (lookup.status === 'unsupported-kind') return Object.freeze({ kind: 'unsupported', objectKind: lookup.kind });
-      const { target } = lookup;
-      return Object.freeze({ kind: 'eligible', objectKind: target.kind, positionRevision: target.acceptedPositionRevision,
-        center: Object.freeze([target.position.lngLat[0], target.position.lngLat[1]] as const),
-        altitude: target.position.altitude, altitudeReference: target.position.altitudeReference });
+      return followTarget(lookup);
     },
     subscribeTargets(listener: (notice: MapCameraFollowNotice) => void): () => void {
       let active = true;

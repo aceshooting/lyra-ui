@@ -2492,3 +2492,54 @@ test('classifies the first generated CSS names as additive for framework consume
   assert.equal(minimumRequiredBump(compare('never', 'string')), 'major');
   assert.equal(minimumRequiredBump(compare('never', "'--lr-size'", 'result')), 'major');
 });
+
+function literalAliasFixture(body, extra = {}) {
+  const files = { 'dist/index.d.ts': body, ...extra };
+  return normalizePublicApi({
+    packageJson: { name: 'literal-alias', version: '1.0.0', exports: { '.': './dist/index.js' } },
+    manifest: { modules: [] },
+    declarations: { namedEntry: 'dist/index.d.ts', files, packageFiles: Object.keys(files) },
+  });
+}
+
+test('only equal resolved finite string aliases preserve their direct type contract', () => {
+  const before = literalAliasFixture("export type Mode = 'auto' | 'none' | 'both';");
+  const imported = "import type { Native as Base } from './native.js'; export type Mode = 'auto' | Base;";
+  const after = literalAliasFixture(imported, { 'dist/native.d.ts': "export type Native = 'both' | 'none';" });
+  const root = ['named-export:Mode:type', 'subpath-export:.:Mode:contract'];
+  const changes = diffPublicApi(before, after);
+  assert.ok(!changes.some(change => root.includes(change.id)));
+  assert.ok(changes.some(change => change.id.endsWith(':Mode:dependencies')),
+    'the new dependency edge remains observable');
+  const narrow = literalAliasFixture(imported, { 'dist/native.d.ts': "export type Native = 'none';" });
+  assert.ok(diffPublicApi(before, narrow).some(change => root.includes(change.id) && change.bump === 'major'));
+
+  for (const [source, files] of [
+    ["import type { Native } from 'external'; export type Mode = Native;", {}],
+    ["import type { Native } from './unknown.js'; export type Mode = Native;", {}],
+    ["export type Mode = Loop; type Loop = Mode;", {}],
+    ["type Box<T> = 'auto' | 'none' | 'both'; export type Mode = Box<unknown>;", {}],
+    ["import type { Native } from './barrel.js'; export type Mode = Native;", {
+      'dist/barrel.d.ts': "export * from './a.js'; export * from './b.js';",
+      'dist/a.d.ts': "export type Native = 'auto' | 'none' | 'both';",
+      'dist/b.d.ts': "export type Native = 'auto' | 'none';",
+    }],
+  ]) {
+    assert.ok(diffPublicApi(before, literalAliasFixture(source, files))
+      .some(change => root.includes(change.id) && change.bump === 'major'));
+  }
+
+  const stars = "export * from './a.js'; export * from './b.js';";
+  const ambiguous = type => literalAliasFixture(stars, {
+    'dist/a.d.ts': type, 'dist/b.d.ts': "export type Mode = 'unrelated';",
+  });
+  assert.ok(diffPublicApi(ambiguous("export type Mode = 'a' | 'b';"),
+    ambiguous("type Local = 'a' | 'b'; export type Mode = Local;"))
+    .some(change => root.includes(change.id) && change.bump === 'major'));
+
+  const moved = literalAliasFixture(imported.replace('./native.js', './replacement.js'), {
+    'dist/replacement.d.ts': "export type Native = 'both' | 'none';",
+  });
+  assert.ok(diffPublicApi(after, moved).some(change => change.id.endsWith(':Mode:dependencies') &&
+    change.bump === 'major'), 'an equal literal set cannot hide a replaced dependency');
+});

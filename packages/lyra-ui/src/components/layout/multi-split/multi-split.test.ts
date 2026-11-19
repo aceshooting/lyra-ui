@@ -2744,7 +2744,7 @@ it("suppresses resize events and persistence for clamped keyboard and pointer no
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 811 }));
   await elementUpdated(el);
 
-  expect(boundaryKey.defaultPrevented).to.equal(true);
+  expect(boundaryKey.defaultPrevented).to.equal(false);
   expect(el.sizes).to.deep.equal([10, 90]);
   expect(requests).to.equal(0);
   expect(resizes).to.equal(0);

@@ -30,7 +30,7 @@
 - Reporting an invalid checkbox or radio group preserves the positions of its choices.
 - Select popups respect their allocated inline space.
 - Stacked select chips leave room for the clear button and chevron.
-- Combobox suggestions with equal values toggle independently and keep their own labels and payloads. Use `FormData#getAll()` to read repeated submitted values.
+- Combobox preserves the label and payload of a chosen suggestion, including when other suggestions share its value.
 - Sliders reserve room for endpoint hit targets and remove inactive value bubbles from layout. The vertical track length includes the endpoint reserve.
 - Slider thumbs, checkboxes and switches follow the shared interaction transition.
 - Select and combobox skip hidden and ARIA-disabled options and update their open rows when option availability changes.

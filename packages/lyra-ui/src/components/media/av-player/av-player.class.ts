@@ -10,7 +10,7 @@ import { ref } from 'lit/directives/ref.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTargetBase as DocumentAnchorTarget } from '../../../internal/anchor-target-base.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,

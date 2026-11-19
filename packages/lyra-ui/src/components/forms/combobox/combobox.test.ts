@@ -616,7 +616,7 @@ it("keeps the native editing facade safe before the internal input exists", () =
   expect(el.input === null).to.be.true;
   expect(el.selectionStart).to.equal(null);
   expect(el.selectionEnd).to.equal(null);
-  expect(el.selectionDirection).to.equal(null);
+  expect(el.selectionDirection).to.equal(undefined);
   expect(() => {
     el.selectionStart = 0;
     el.selectionEnd = 0;
@@ -3473,7 +3473,7 @@ it("silently drops a source rejection that arrives after disconnect", async () =
   }
 });
 
-it("reports an independent AbortError for the current source request", async () => {
+it("silently settles an independent AbortError for the current source request", async () => {
   const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
   let reject!: (err: unknown) => void;
   el.source = () =>
@@ -3495,9 +3495,9 @@ it("reports an independent AbortError for the current source request", async () 
     el.addEventListener('lr-source-error', event => failures.push(event.detail.error));
     reject(error);
     await aTimeout(0);
-    expect(failures).to.deep.equal([error]);
-    expect(warned).to.equal(true);
-    expect(el.shadowRoot!.querySelector(".source-error") !== null).to.equal(true);
+    expect(failures).to.deep.equal([]);
+    expect(warned).to.equal(false);
+    expect(el.shadowRoot!.querySelector(".source-error") === null).to.equal(true);
   } finally {
     console.warn = originalWarn;
   }

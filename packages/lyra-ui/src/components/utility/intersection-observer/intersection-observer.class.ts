@@ -189,6 +189,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     ) this.slotted.schedule();
   }
 
+  // @renderController SlottedObserverController
   private readonly slotted: SlottedObserverController<IntersectionObserver> = new SlottedObserverController(this, {
     schedule: (rebuild) => this.scheduleAfterUpdate(rebuild),
     retired: () => this.pendingRoot.clear(),

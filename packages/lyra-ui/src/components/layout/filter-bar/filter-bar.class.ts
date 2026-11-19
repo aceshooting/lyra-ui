@@ -1144,7 +1144,8 @@ export class LyraFilterBar<
    *  filter, exactly as it always has -- this property only changes which already-active filters
    *  get a chip in the row, never what removing one does.
    *
-   *  In every display mode, reset is available when a filter differs from its default. */
+   *  In every display mode, reset is available when a filter differs from its default.
+   *  In 'all' and 'hidden', an active filter also enables reset at its default. */
   @property({ reflect: true, attribute: 'active-filters-display' })
   activeFiltersDisplay: LyraFilterBarActiveFiltersDisplay = 'all';
 
@@ -1855,13 +1856,18 @@ export class LyraFilterBar<
     }
   }
 
+  private get resetDisabled(): boolean {
+    return this.disabled || this.loading ||
+      !(this.hasChangedFilters || (this.activeFiltersDisplay !== 'changed' && this.hasActiveFilters));
+  }
+
   private resetLostFocus = false;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('disabled') && this.disabled) this.cancelDebounce();
     this.resetLostFocus = shadowFocusTarget(this)?.matches('[part="reset-button"]') === true &&
-      (this.disabled || this.loading || !this.hasChangedFilters);
+      this.resetDisabled;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -2344,7 +2350,7 @@ export class LyraFilterBar<
               <lr-button
                 part="reset-button"
                 appearance="quiet"
-                ?disabled=${this.disabled || this.loading || !this.hasChangedFilters}
+                ?disabled=${this.resetDisabled}
                 @click=${() => this.reset()}
               >
                 ${this.localize('filterBarReset')}

@@ -1328,6 +1328,7 @@ function declarationGraph(filesValue) {
     moduleDependencyCache: new Map(),
     directDependencyCache: new Map(),
     publicOrigins: new Map(),
+    publicAliasCandidates: new Map(),
   };
   return graph;
 }
@@ -1370,6 +1371,98 @@ function normalizedTypeAliases(graph) {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, definitions]) => [name, [...definitions].sort()]),
   );
+}
+
+/** Public routes with competing or unresolved wildcard exports cannot prove one alias authority. */
+function recordPublicOrigin(graph, base, entryFile, name, resolved) {
+  graph.publicOrigins.set(base, declarationIdentity(resolved));
+  if (resolved.records.length !== 1 || resolved.records[0].node.type !== 'TSTypeAliasDeclaration') return;
+  const seen = new Set();
+  let file = entryFile;
+  let exported = name;
+  while (file) {
+    const key = JSON.stringify([file, exported]);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const module = graph.getModule(file);
+    const binding = module?.directExports.get(exported);
+    if (binding && !binding.source) {
+      const local = binding.localPath ?? (binding.local ? [binding.local] : undefined);
+      if (local && resolveLocalDeclaration(module, local)) {
+        graph.publicAliasCandidates.set(base, resolved);
+        return;
+      }
+      const imported = module.imports.get(binding.local);
+      if (!imported || imported.imported === '*') return;
+      file = resolveDeclarationFile(graph.files, file, imported.source);
+      exported = imported.imported;
+    } else if (binding) {
+      file = resolveDeclarationFile(graph.files, file, binding.source);
+      exported = binding.local;
+    } else {
+      if (module?.exportStars.length !== 1) return;
+      file = resolveDeclarationFile(graph.files, file, module.exportStars[0].source);
+    }
+  }
+}
+
+/** A proof for public, non-generic string-union aliases. Only a local declaration or a direct
+ * relative named import can supply a referenced alias. Preserve the original declaration text
+ * and dependency edges for every other part of the comparison. */
+function publicLiteralAliasSets(graph) {
+  if (!graph) return {};
+  const cache = new Map();
+  const visiting = new Set();
+  const fingerprints = {};
+  const literals = (owner) => {
+    const declaration = owner?.records.length === 1 && owner.records[0].node;
+    if (!declaration || declaration.type !== 'TSTypeAliasDeclaration' ||
+        declaration.typeParameters?.params?.length || owner.namespace) return undefined;
+    if (cache.has(declaration)) return cache.get(declaration);
+    if (visiting.has(declaration)) return undefined;
+    visiting.add(declaration);
+    const values = new Set();
+    const collect = (node) => {
+      if (node.type === 'TSParenthesizedType') return collect(node.typeAnnotation);
+      if (node.type === 'TSUnionType') return node.types.every(collect);
+      if (node.type === 'TSLiteralType' && typeof node.literal?.value === 'string') {
+        values.add(node.literal.value);
+        return true;
+      }
+      if (node.type !== 'TSTypeReference' || node.typeName.type !== 'Identifier' ||
+          node.typeArguments?.params?.length) return false;
+      const name = node.typeName.name;
+      let target = resolveScopedLocalDeclaration(owner.module, owner.path, [name]);
+      if (!target) {
+        const imported = owner.module.imports.get(name);
+        const file = imported && resolveDeclarationFile(graph.files, owner.module.file, imported.source);
+        const module = file && graph.getModule(file);
+        const binding = module?.directExports.get(imported.imported);
+        if (!binding || binding.source) return false;
+        const local = binding.localPath ?? (binding.local ? [binding.local] : undefined);
+        target = local && resolveLocalDeclaration(module, local);
+      }
+      const nested = literals(target);
+      if (!nested) return false;
+      for (const value of nested) values.add(value);
+      return true;
+    };
+    const result = collect(declaration.typeAnnotation) ? values : undefined;
+    visiting.delete(declaration);
+    cache.set(declaration, result);
+    return result;
+  };
+  const byDeclaration = new Map();
+  for (const [route, owner] of graph.publicAliasCandidates) {
+    if (!byDeclaration.has(owner.records[0].node)) {
+      const values = literals(owner);
+      byDeclaration.set(owner.records[0].node, values && createHash('sha256')
+        .update(JSON.stringify([...values].sort())).digest('hex'));
+    }
+    const proof = byDeclaration.get(owner.records[0].node);
+    if (proof) fingerprints[route] = proof;
+  }
+  return fingerprints;
 }
 
 function resolveLocalDeclaration(module, pathParts) {
@@ -2602,7 +2695,7 @@ function normalizeNamedExports(declarations, entries, graph) {
     const base = `named-export:${name}`;
     addEntry(entries, base, 'named-export', 'export', { kind }, name);
     if (resolved) {
-      graph.publicOrigins.set(base, declarationIdentity(resolved));
+      recordPublicOrigin(graph, base, entryFile, name, resolved);
       addCachedDeclarationSurface(entries, base, 'named-export', name, graph, resolved);
       addReachableTypeSurfaces(entries, base, 'named-export', graph, resolved);
     }
@@ -2677,7 +2770,7 @@ function normalizeSubpathDeclarations(exportTargets, entries, graph) {
       const base = `subpath-export:${variant.specifier}${conditionNamespace}:${name}`;
       addEntry(entries, base, 'subpath-export', 'export', { kind }, `${variant.specifier} ${name}`);
       if (resolved) {
-        graph.publicOrigins.set(base, declarationIdentity(resolved));
+        recordPublicOrigin(graph, base, variant.entryFile, name, resolved);
         addCompactDeclarationSurface(
           entries,
           base,
@@ -2840,6 +2933,7 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
         })]),
     ),
     typeAliases: normalizedTypeAliases(graph),
+    literalAliasSets: publicLiteralAliasSets(graph),
     shadowedReadonly: [...(graph?.modules.values() ?? [])].some((module) =>
       module.imports.has('Readonly') || [...module.symbols.values()].some((records) =>
         records.some((record) => record.name === 'Readonly'))),
@@ -3197,6 +3291,25 @@ function changedBump(entry, before, after, baseline, current) {
   return 'major';
 }
 
+/** A finite union can keep exactly the same members when its spelling changes. A matching
+ * set explains only the alias body, never a change to its other metadata or its dependencies. */
+function samePublicLiteralAlias(id, before, after, baseline, current) {
+  const separator = id.lastIndexOf(':');
+  const field = id.slice(separator + 1);
+  if (field !== 'type' && field !== 'contract') return false;
+  const base = id.slice(0, separator);
+  const origin = baseline.publicOrigins?.[base];
+  const proof = baseline.literalAliasSets?.[base];
+  if (!proof || origin !== current.publicOrigins?.[base] ||
+      proof !== current.literalAliasSets?.[base]) return false;
+  if (field === 'type') return before.semantic === 'type' && after.semantic === 'type';
+  const old = baseline.contracts?.[before.value];
+  const next = current.contracts?.[after.value];
+  return old?.[':type']?.semantic === 'type' && next?.[':type']?.semantic === 'type' &&
+    Object.keys(old).length === Object.keys(next).length &&
+    Object.entries(old).every(([key, entry]) => key === ':type' || sameValue(entry, next[key]));
+}
+
 export function diffPublicApi(baseline, current) {
   declarationBumpCache = new WeakMap();
   declarationOrigins = publicOriginCorrespondence(baseline, current);
@@ -3238,6 +3351,7 @@ export function diffPublicApi(baseline, current) {
       continue;
     }
     if (!sameValue(beforeEntry.value, afterEntry.value)) {
+      if (samePublicLiteralAlias(id, beforeEntry, afterEntry, baseline, current)) continue;
       changes.push({
         id,
         surface: afterEntry.surface,

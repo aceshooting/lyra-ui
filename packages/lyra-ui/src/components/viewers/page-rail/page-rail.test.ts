@@ -236,6 +236,65 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(3);
   });
 
+  it('avoids target lookups for unrelated subtree edits and rebinds after a moved ancestor loses its id target', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><section><div id="bounded-source"></div></section><aside><div></div></aside>
+        <lr-page-rail for="bounded-source"></lr-page-rail></div>
+    `);
+    const rail = wrapper.querySelector('lr-page-rail')!;
+    const branch = wrapper.querySelector('section')!;
+    const viewer = branch.firstElementChild!;
+    const elsewhere = wrapper.querySelector('aside div')!;
+    const lookup = document.getElementById;
+    let calls = 0;
+    document.getElementById = function(id) {
+      if (id === 'bounded-source') calls++;
+      return lookup.call(this, id);
+    };
+    try {
+      elsewhere.append(document.createElement('span'));
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+      elsewhere.append(branch);
+      await aTimeout(0);
+      branch.remove();
+      await aTimeout(0);
+      const replacement = document.createElement('div');
+      elsewhere.append(replacement);
+      replacement.id = 'bounded-source';
+      await aTimeout(0);
+      replacement.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 7 } }));
+      viewer.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 9 } }));
+      expect(rail.page).to.equal(7);
+      replacement.id = 'released-source';
+      await aTimeout(0);
+      replacement.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 11 } }));
+      expect(rail.page).to.equal(7);
+    } finally {
+      delete (document as Partial<Document>).getElementById;
+    }
+  });
+
+  it('binds the same id in the adopted document and releases the previous document target', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><div id="adopted-source"></div><lr-page-rail for="adopted-source"></lr-page-rail></div>
+    `);
+    const oldViewer = wrapper.firstElementChild!;
+    const rail = wrapper.querySelector('lr-page-rail')!;
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const nextDocument = frame.contentDocument!;
+    const viewer = nextDocument.createElement('div');
+    viewer.id = 'adopted-source';
+    nextDocument.body.append(viewer, rail);
+    try {
+      viewer.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 3 } }));
+      oldViewer.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 8 } }));
+      expect(rail.page).to.equal(3);
+    } finally {
+      wrapper.append(rail);
+    }
+  });
+
   it('clicking a page row emits lr-page-select and (wired mode) sets viewer.page', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);

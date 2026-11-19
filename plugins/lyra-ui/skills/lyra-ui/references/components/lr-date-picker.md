@@ -342,7 +342,7 @@ internal native date input.
 **Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
 `lr-input` and `lr-change` carry `{ value, previousValue }` in ISO form. During an uncommitted text edit both refer to the committed date. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
-bubbling, composed, and non-cancelable. Method calls and live `open` property or attribute changes emit cancelable `lr-show`/`lr-hide` requests.
+bubbling, composed, and non-cancelable. `show()` and `hide()` emit cancelable `lr-show`/`lr-hide` requests. Assigning `open` or changing the attribute commits the state directly without request or after-events.
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
 settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
 it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open

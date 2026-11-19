@@ -248,6 +248,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Exécuter le prompt',
   promptStudioSave: 'Enregistrer la version',
   promptStudioAddMessage: 'Ajouter un message',
+  promptStudioRemoveMessage: 'Retirer le message',
   promptStudioRemoveMessageNumbered: 'Supprimer le message {index}',
   promptStudioMessageRole: 'Rôle du message {index} ({role})',
   promptStudioMessageContent: 'Contenu du message {index} ({role})',

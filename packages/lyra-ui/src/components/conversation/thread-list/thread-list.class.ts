@@ -306,6 +306,16 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   `<mark>` descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
  *   returned by `renderExcerpt`.
+ * @cssprop --lr-icon-button-bg - Resting background of the search clear button.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the search clear button.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the search clear button.
+ * @cssprop --lr-icon-button-border - Resting border of the search clear button.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the search clear button.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the search clear button.
+ * @cssprop --lr-icon-button-color - Resting foreground of the search clear button.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the search clear button.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the search clear button.
+ * @cssprop --lr-icon-button-radius - Corner radius of the search clear button.
  * @status stable
  * @since 4.0.0
  */

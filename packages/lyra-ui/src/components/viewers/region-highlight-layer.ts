@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
+import { normalizeLabel } from '../../internal/accessible-name.js';
 import { getNumberFormat } from '../../internal/intl-cache.js';
 import { resolveListMove } from '../../internal/list-navigation.js';
 
@@ -98,7 +99,8 @@ export function regionHighlightLabel(
   locale: string,
   localize: (key: 'highlightWithLabel' | 'highlightOfTotal', values: Record<string, string>) => string,
 ): string {
-  if (highlight.label) return localize('highlightWithLabel', { label: highlight.label });
+  const label = normalizeLabel(highlight.label);
+  if (label !== undefined) return localize('highlightWithLabel', { label });
   const numberFormat = getNumberFormat(locale);
   return localize('highlightOfTotal', { index: numberFormat.format(index + 1), total: numberFormat.format(total) });
 }
@@ -141,7 +143,7 @@ export function renderRegionHighlightActions<T extends RegionHighlightItem & { r
         @click=${() => activate(highlight.id)}
         @keydown=${(e: KeyboardEvent) => moveHighlightActionFocus(root, rtl, e, index, highlights.length)}
       >
-        ${highlight.label || name}
+        ${normalizeLabel(highlight.label) ?? name}
       </button>
     `;
     })}

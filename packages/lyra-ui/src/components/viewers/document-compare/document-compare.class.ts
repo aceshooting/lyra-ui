@@ -213,6 +213,7 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  * @event lr-text-select - Bubbles from the internal `<lr-diff-view>` when a text selection ends.
  * @csspart base - The root wrapper.
  * @csspart diff - The internal `<lr-diff-view>`, rendered while `view="diff"`.
+ * @csspart diff-base - The diff view’s scrollable content wrapper.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes, rendered while `view="side-by-side"`.
  * @csspart pane-old - The first (old/before) version's labeled, independently-scrollable pane.
  * @csspart pane-new - The second (new/after) version's labeled, independently-scrollable pane.
@@ -508,6 +509,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     return html`
       <lr-diff-view
         part="diff"
+        exportparts="base:diff-base"
         .oldText=${this.oldVersion?.text ?? ''}
         .newText=${this.newVersion?.text ?? ''}
         layout=${this.diffLayout}

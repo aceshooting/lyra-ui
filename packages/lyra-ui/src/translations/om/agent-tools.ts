@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Ajaja raawwadhu',
   promptStudioSave: 'Fooyya\'insa olkaa\'i',
   promptStudioAddMessage: 'Ergaa dabali',
+  promptStudioRemoveMessage: 'Ergaa haqi',
   promptStudioRemoveMessageNumbered: 'Ergaa {index} balleessi',
   promptStudioMessageRole: 'Gahee ergaa {index} ({role})',
   promptStudioMessageContent: 'Qabiyyee ergaa {index} ({role})',

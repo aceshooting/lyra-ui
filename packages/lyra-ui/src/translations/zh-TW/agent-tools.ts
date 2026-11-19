@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: '執行提示詞',
   promptStudioSave: '儲存版本',
   promptStudioAddMessage: '新增訊息',
+  promptStudioRemoveMessage: '移除訊息',
   promptStudioRemoveMessageNumbered: '移除訊息 {index}',
   promptStudioMessageRole: '第{index}條訊息的角色（{role}）',
   promptStudioMessageContent: '第{index}條訊息的內容（{role}）',

@@ -1,4 +1,3 @@
-import { labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -508,7 +507,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? visible : labelWithVisibleText(visible, this.localize('showMoreCount', undefined, { count: formattedHiddenCount }))}
+              aria-label=${this.expanded ? visible : this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}
               @click=${this.onToggleOverflow}
             >
               ${visible}

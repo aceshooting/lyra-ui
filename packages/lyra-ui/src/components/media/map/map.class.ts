@@ -40,7 +40,9 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { admitMapViewpoint, type MapViewpoint } from '../../../internal/map-camera-session-data.js';
 import { registerMapCameraSession, type CameraOwnerReason, type MapCameraPreparedCommand,
   type MapCameraSessionCallbacks, type MapCameraSessionLease } from '../../../internal/map-camera-session.js';
-import { createMapSceneSessionFacade, registerMapSceneSession } from '../../../internal/map-scene-session.js';
+import { createGroundFollowScene } from '../../../internal/map-camera-ground-follow-scene.js';
+import { registerSceneAttachmentProvider } from '../../../internal/map-scene-session-registry.js';
+import type { MapSceneSessionFacade } from '../../../internal/map-scene-contract.js';
 import { registerMapCustomLayers, type MapCustomLayerActivation, type MapCustomLayerCallbacks,
   type MapCustomLayerLease } from '../../../internal/map-custom-layer-attachment.js';
 import { createMapSceneOwner, type SceneOwnerView } from './map-scene-owner.js';
@@ -147,7 +149,8 @@ import type { LyraMapImage } from './map-image-admission.js';
 import type { LyraMapImageProvider } from './map-image-provider.js';
 export type { LyraMapImageProvider } from './map-image-provider.js';
 import type { MapLayerOrderGroup } from './map-layer-order.js';
-import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
+import type { buildMapExternalLayers } from './map-external-layer-builder.js';
+import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOptions, buildMapLabelLayer,
   type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
 export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
   LyraMapVectorNumericValue, LyraMapVectorColorValue, LyraMapVectorPaint, LyraMapVectorLayout } from './map-vector-style.js';
@@ -3118,7 +3121,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   ]);
   private geographicSceneValue?: LyraMapScene;
   private geographicSceneOwner?: ReturnType<typeof createMapSceneOwner>;
-  private geographicSceneFacade?: ReturnType<typeof createMapSceneSessionFacade>;
+  private geographicSceneFacade?: MapSceneSessionFacade;
   private geographicSceneDocument?: Document;
   private unregisterGeographicScene?: () => void;
   private geographicSceneRender?: MapSceneRenderController;
@@ -3143,32 +3146,43 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.geographicSceneValue = value;
     this.requestUpdate('scene', previous);
     if (this.geographicSceneOwner) this.geographicSceneOwner.assign(value);
-    else if (this.geographicSceneFacade) this.startGeographicScene();
+    else if (this.geographicSceneConnection) this.startGeographicScene();
   }
 
   private connectGeographicScene(): void {
     this.closeGeographicScene();
     const connection = Object.freeze({});
-    const facade = createMapSceneSessionFacade({ connection });
     this.geographicSceneDocument = this.ownerDocument;
     this.geographicSceneConnection = connection;
-    this.geographicSceneFacade = facade;
-    this.unregisterGeographicScene = registerMapSceneSession(this, facade.attachment);
+    this.unregisterGeographicScene = registerSceneAttachmentProvider(this, create => {
+      if (!this.geographicSceneFacade) {
+        const facade = create({ connection });
+        this.geographicSceneFacade = facade;
+        if (this.geographicSceneOwner && !facade.bindState(this.geographicSceneOwner.state)) {
+          this.closeGeographicScene();
+          return undefined;
+        }
+      }
+      return this.geographicSceneFacade.attachment;
+    }, objectId => {
+      if (!this.geographicSceneOwner) this.startGeographicScene();
+      return this.geographicSceneOwner && createGroundFollowScene(this.geographicSceneOwner.state, objectId);
+    });
     if (this.geographicSceneValue !== undefined) this.startGeographicScene();
   }
 
   private geographicSceneConnection?: object;
 
   private startGeographicScene(): void {
-    const facade = this.geographicSceneFacade!, document = this.ownerDocument, generation = this._connectGeneration;
+    const document = this.ownerDocument, generation = this._connectGeneration;
     const owner = createMapSceneOwner({ element: this, connection: this.geographicSceneConnection!,
       isCurrentConnection: () => this.isConnected && this.ownerDocument === document &&
         this._connectGeneration === generation && this.geographicSceneOwner === owner,
       changed: () => this.geographicSceneChanged(owner),
     });
     this.geographicSceneOwner = owner;
-    if (!facade.bindState(owner.state)) { this.closeGeographicScene(); return; }
-    owner.assign(this.geographicSceneValue);
+    if (this.geographicSceneFacade && !this.geographicSceneFacade.bindState(owner.state)) { this.closeGeographicScene(); return; }
+    if (this.geographicSceneValue !== undefined) owner.assign(this.geographicSceneValue);
   }
 
   private closeGeographicScene(): void {
@@ -7629,17 +7643,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private externalSourceEffects?: MapExternalSourceEffects;
 
-  private externalLayerInput(owned: MapOwnedOverlaySnapshot, identities: MapLayerIdentityDraft): ReturnType<typeof buildMapExternalLayers> {
+  private externalLayerInput(build: typeof buildMapExternalLayers | undefined, owned: MapOwnedOverlaySnapshot, identities: MapLayerIdentityDraft): ReturnType<typeof buildMapExternalLayers> {
     if (identities.externalStyle !== this._styleGeneration) {
       identities.externalStyle = this._styleGeneration;
       identities.external.clear();
     }
+    if (!build) return { sources: [], layers: [], hits: new Map() };
     const reserved = new Set([...owned.sources.map(source => source.id), ...owned.layers.map(layer => layer.layer.id)]);
     const available = (id: string, retained: boolean): boolean => !reserved.has(id) &&
       !reserved.has(`${id}-render`) && !reserved.has(`${id}-label`) && !reserved.has(`${id}-hit`) && !reserved.has(`${id}-hit-source`) &&
       ((!this._map?.getSource(`${id}-hit-source`) && !this._map?.getLayer(`${id}-hit`)) || this.externalFeatures?.ownsLayer(`${id}-hit`) === true) &&
       (retained || (!this._map?.getSource(id) && !this._map?.getLayer(`${id}-render`) && !this._map?.getLayer(`${id}-label`)));
-    return buildMapExternalLayers(this._canonicalExternalLayers, {
+    return build(this._canonicalExternalLayers, {
       nativeId: row => {
         const previous = identities.external.get(row.sourceId);
         if (previous && available(previous, this.externalFeatures?.ownsLayer(`${previous}-render`) === true)) return previous;
@@ -7940,7 +7955,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         const id = this.resolveDataLayerSourceId(row, identities);
         if (reserved.has(id) || DATA_LAYER_SUFFIXES.some(suffix => reserved.has(`${id}${suffix}`))) throw new Error('Map resource identity conflicts.');
       }
-      externalInput = this.externalLayerInput(owned, identities);
+      externalInput = this.externalLayerInput(runtime?.buildMapExternalLayers, owned, identities);
       if (!current() || controller.signal.aborted) { finish(); return; }
       const overrideOrders = (ownedInput.styleOverrides as readonly LyraMapStyleOverride[]).some(entry => entry.before !== undefined);
       retainGroupOrder = overrideOrders || this.canonicalDataLayers.some(row => row.before !== undefined) ||

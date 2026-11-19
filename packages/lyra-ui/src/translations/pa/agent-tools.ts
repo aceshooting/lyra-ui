@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'ਪ੍ਰੌੰਪਟ ਚਲਾਓ',
   promptStudioSave: 'ਵਰਜਨ ਸੰਭਾਲੋ',
   promptStudioAddMessage: 'ਸੁਨੇਹਾ ਸ਼ਾਮਲ ਕਰੋ',
+  promptStudioRemoveMessage: 'ਸੁਨੇਹਾ ਹਟਾਓ',
   promptStudioRemoveMessageNumbered: 'ਸੁਨੇਹਾ {index} ਹਟਾਓ',
   promptStudioMessageRole: 'ਸੁਨੇਹਾ {index} ਦੀ ਭੂਮਿਕਾ ({role})',
   promptStudioMessageContent: 'ਸੁਨੇਹਾ {index} ਦੀ ਸਮੱਗਰੀ ({role})',

@@ -35,11 +35,12 @@ export interface MapCameraFollowScene {
   current(stamp: MapCameraFollowStamp): boolean;
   requestFrame(objectId: string): void;
 }
-export interface MapCameraFollowDependencies {
+export type MapCameraFollowTargets = Pick<MapCameraFollowScene, 'target' | 'subscribeTargets'>;
+export interface MapCameraFollowDependencies<Scene extends MapCameraFollowTargets = MapCameraFollowScene> {
   current(): boolean;
   capture(): MapViewpoint;
   reducedMotion(): boolean;
-  readonly scene?: MapCameraFollowScene;
+  readonly scene?: Scene;
 }
 export interface MapCameraFollowSnapshot {
   readonly status: 'ground' | 'missing' | 'pending' | 'centering' | 'centered' | 'limited' | 'unavailable';
@@ -65,7 +66,7 @@ export interface MapCameraFollowRunner {
 }
 interface Plan {
   readonly options: MapCameraFollowOptions;
-  readonly dependencies: MapCameraFollowDependencies;
+  readonly dependencies: MapCameraFollowDependencies<MapCameraFollowScene | MapCameraFollowTargets>;
   readonly view: MapViewpoint;
   readonly reduced: boolean;
 }
@@ -73,7 +74,7 @@ const plans = new WeakMap<MapCameraFollowPlan, Plan>();
 const unavailable = (): never => { throw new Error('Camera follow unavailable'); };
 
 /** Performs inert admission before the caller retires its previous camera action. */
-export function prepareMapCameraFollow(input: unknown, dependencies: MapCameraFollowDependencies): MapCameraFollowPlan {
+export function prepareMapCameraFollow(input: unknown, dependencies: Plan['dependencies']): MapCameraFollowPlan {
   const options = admitMapCameraFollowOptions(input);
   // Screen following cannot seed an unqualified camera change before its frame is admitted.
   if (options.mode === 'geographic-visual' && (options.zoom !== undefined || options.bearing !== undefined || options.pitch !== undefined)) {
@@ -100,6 +101,7 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
   if (!admitted) throw new TypeError('Invalid camera follow plan');
   const { options, dependencies, view } = admitted;
   const scene = dependencies.scene;
+  const frames = scene && 'subscribeFrames' in scene ? scene : undefined;
   let disposed = false, failed = false, starting = true, draining = false;
   let revision = 0, pendingTarget = false, queuedFrame: MapCameraFollowFrame | undefined;
   let target: MapCameraFollowTarget = { kind: 'absent' }, positionRevision: number | undefined;
@@ -147,8 +149,8 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
     attempt = createMapCameraFollowAttempt({ reducedMotion: restricted }); profileRefused = false; limitedByMotion = false;
   };
   const request = (): void => {
-    if (!live() || failed || !scene || options.mode !== 'geographic-visual') return;
-    scene.requestFrame(options.objectId);
+    if (!live() || failed || !frames || options.mode !== 'geographic-visual') return;
+    frames.requestFrame(options.objectId);
     if (!live()) dispose();
   };
   const targetCurrent = (expected: number, delivery: number): boolean => {
@@ -196,9 +198,9 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
   };
   const deliverFrame = (frame: MapCameraFollowFrame): void => {
     const delivery = revision;
-    if (!guard(delivery) || !scene || options.mode !== 'geographic-visual' || target.kind !== 'eligible' ||
+    if (!guard(delivery) || !frames || options.mode !== 'geographic-visual' || target.kind !== 'eligible' ||
       profileRefused || limitedByMotion || attempt.status !== 'centering' || frame.serial <= lastSerial || frame.serial <= lastObservedSerial || frame.stamp.position !== target.positionRevision) return;
-    if (!scene.current(frame.stamp) || !guard(delivery) || !targetCurrent(target.positionRevision, delivery)) return;
+    if (!frames.current(frame.stamp) || !guard(delivery) || !targetCurrent(target.positionRevision, delivery)) return;
     if (!Number.isSafeInteger(frame.serial) || frame.serial < 0) return;
     lastObservedSerial = frame.serial;
     const profile = admitMapCameraFollowProfile(frame.profile);
@@ -221,7 +223,7 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
       publish({ status: 'limited', corrections: attempt.corrections }); return;
     }
     const prepared = owner.preparePan(step.correction, frame.stamp);
-    if (!guard(delivery) || !targetCurrent(frame.stamp.position, delivery) || !scene.current(frame.stamp) || !guard(delivery)) return;
+    if (!guard(delivery) || !targetCurrent(frame.stamp.position, delivery) || !frames.current(frame.stamp) || !guard(delivery)) return;
     const accepted = owner.commitPan(prepared);
     if (accepted) {
       writes++; lastSerial = Math.max(lastSerial, frame.serial);
@@ -286,9 +288,10 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
     add(scene.subscribeTargets(notice));
     if (!live()) return runner;
     if (options.mode === 'geographic-visual') {
-      add(scene.watchTarget(options.objectId));
+      if (!frames) throw new Error('Scene frame capability is unavailable');
+      add(frames.watchTarget(options.objectId));
       if (!live()) return runner;
-      add(scene.subscribeFrames(options.objectId, receiveFrame));
+      add(frames.subscribeFrames(options.objectId, receiveFrame));
       if (!live()) return runner;
     }
     pendingTarget = true; starting = false; drain();

@@ -4,9 +4,8 @@ import { admitMapCameraTour, admitMapViewpoint, sampleMapCameraTour, type Admitt
 import { mapCameraSessionAttachment, type MapCameraPreparedCommand, type MapCameraSessionLease } from './map-camera-session.js';
 import { admitMapCameraFollowOptions, type MapCameraFollowOptions as AdmittedFollowOptions } from './map-camera-follow-data.js';
 import { prepareMapCameraFollow, startMapCameraFollow, type MapCameraFollowPlan, type MapCameraFollowRunner,
-  type MapCameraFollowScene, type MapCameraFollowSnapshot } from './map-camera-follow-controller.js';
-import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
-import { mapSceneSessionAttachment } from './map-scene-session.js';
+  type MapCameraFollowSnapshot } from './map-camera-follow-controller.js';
+import { resolveGroundFollowScene } from './map-scene-session-registry.js';
 
 export type { MapViewpoint } from './map-camera-session-data.js';
 /** Why a camera-session call failed. Every failure leaves the previous action unchanged. */
@@ -147,7 +146,6 @@ export function createMapCameraSessionController(host: HTMLElement, options?: Ma
   let lease: MapCameraSessionLease | undefined;
   let action: Action | undefined;
   let startingFollow: { readonly action: Action; readonly generation: number } | undefined;
-  let scene: MapCameraFollowScene | undefined;
   let snapshot: MapCameraSessionSnapshot = Object.freeze({ mode: 'idle', active: false, reason: 'initial' });
   const subscriptions = new Set<Subscription>();
   const active = (): void => { if (disposed) fail('disposed'); };
@@ -261,11 +259,8 @@ export function createMapCameraSessionController(host: HTMLElement, options?: Ma
     let accepted: AdmittedFollowOptions;
     try { accepted = admitMapCameraFollowOptions(input); } catch { return fail('invalid-follow'); }
     if (accepted.mode !== 'ground') return fail('unavailable');
-    if (!scene) {
-      const attachment = mapSceneSessionAttachment(host);
-      if (!attachment) return fail('unavailable');
-      scene = createMapCameraFollowScene(attachment);
-    }
+    const scene = resolveGroundFollowScene(host, accepted.objectId);
+    if (!scene) return fail('unavailable');
     const preflightCurrent = (): boolean => lease?.current() === true && !disposed && generation === intent;
     let unsupported: boolean;
     try { unsupported = scene.target(accepted.objectId).kind === 'unsupported'; } catch { return fail('unavailable'); }

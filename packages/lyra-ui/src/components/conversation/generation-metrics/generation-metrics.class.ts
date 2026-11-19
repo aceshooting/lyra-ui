@@ -171,6 +171,16 @@ const GENERATION_METRICS_STATUS = {
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
  * @csspart stop-button - The built-in Stop button. Only rendered while `status="running"` and `without-stop` is unset.
+ * @cssprop --lr-icon-button-bg - Resting background of the Stop button.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the Stop button.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the Stop button.
+ * @cssprop --lr-icon-button-border - Resting border of the Stop button.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the Stop button.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the Stop button.
+ * @cssprop --lr-icon-button-color - Resting foreground of the Stop button.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the Stop button.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the Stop button.
+ * @cssprop --lr-icon-button-radius - Corner radius of the Stop button.
  * @status stable
  * @since 9.0.0
  */

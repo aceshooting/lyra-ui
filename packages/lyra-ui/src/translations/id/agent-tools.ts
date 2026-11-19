@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Jalankan prompt',
   promptStudioSave: 'Simpan versi',
   promptStudioAddMessage: 'Tambahkan pesan',
+  promptStudioRemoveMessage: 'Hapus pesan',
   promptStudioRemoveMessageNumbered: 'Hapus pesan {index}',
   promptStudioMessageRole: 'Peran pesan {index} ({role})',
   promptStudioMessageContent: 'Isi pesan {index} ({role})',

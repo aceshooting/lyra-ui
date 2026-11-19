@@ -36,6 +36,23 @@ export function flattenedParentElement(element: Element): Element | null {
   return assignedSlotOf(element) ?? domParentElement(element);
 }
 
+/** Visits each element once, including the common portion of intersecting ancestry walks. */
+export function visitAncestorChain(
+  first: Element | null,
+  parent: (element: Element) => Element | null,
+  visited: Set<Element>,
+  visit: (element: Element) => void,
+): void {
+  for (let element = first; element && !visited.has(element); element = parent(element)) {
+    visited.add(element);
+    visit(element);
+  }
+}
+
+export function sameNodes(left: readonly Node[], right: readonly Node[]): boolean {
+  return left.length === right.length && left.every((node, index) => node === right[index]);
+}
+
 /** Whether `candidate` is `container` or inside it along the flattened tree. */
 export function composedContains(container: Element, candidate: Element | null): boolean {
   let current = candidate;

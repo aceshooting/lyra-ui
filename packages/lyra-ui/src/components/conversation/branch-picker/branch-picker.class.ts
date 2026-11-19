@@ -45,6 +45,16 @@ export interface LyraBranchPickerEventMap {
  * @csspart next-button - The next-branch chevron button.
  * @csspart next-glyph - The chevron glyph wrapper inside `next-button`.
  * @csspart position - The visible "2 / 5" text.
+ * @cssprop --lr-icon-button-bg - Resting background of the previous and next buttons.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the previous and next buttons.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the previous and next buttons.
+ * @cssprop --lr-icon-button-border - Resting border of the previous and next buttons.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the previous and next buttons.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the previous and next buttons.
+ * @cssprop --lr-icon-button-color - Resting foreground of the previous and next buttons.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the previous and next buttons.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the previous and next buttons.
+ * @cssprop --lr-icon-button-radius - Corner radius of the previous and next buttons.
  * @status stable
  * @since 4.0.0
  */

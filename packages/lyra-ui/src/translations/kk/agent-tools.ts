@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Промптты іске қосу',
   promptStudioSave: 'Нұсқаны сақтау',
   promptStudioAddMessage: 'Хабарлама қосу',
+  promptStudioRemoveMessage: 'Хабарламаны жою',
   promptStudioRemoveMessageNumbered: '{index}-хабарламаны жою',
   promptStudioMessageRole: 'Хабарлама {index} рөлі ({role})',
   promptStudioMessageContent: 'Хабарлама {index} мазмұны ({role})',

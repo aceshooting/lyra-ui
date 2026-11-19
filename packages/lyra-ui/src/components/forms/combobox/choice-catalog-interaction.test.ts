@@ -218,8 +218,8 @@ it('settles an independently aborted source without leaving the value loading', 
     const error = new DOMException('Canceled', 'AbortError');
     reject(error);
     await waitUntil(() => !!combo.shadowRoot!.querySelector('[part~="unknown-value"]'), 'the settled source reports the unmatched selection');
-    expect(combo.shadowRoot!.querySelector('[part="source-error-row"]') !== null).to.equal(true);
-    expect(warnings).to.include(error);
+    expect(combo.shadowRoot!.querySelector('[part="source-error-row"]') === null).to.equal(true);
+    expect(warnings).to.deep.equal([]);
   } finally {
     console.warn = originalWarn;
   }
@@ -332,37 +332,31 @@ it('keeps the selected remote payload when the next query has different rows', a
   expect(combo.value).to.deep.equal(['one', 'two']);
 });
 
-it('selects and removes equal-valued combobox rows independently', async () => {
-  const combo = await fixture<LyraCombobox>(html`<lr-combobox multiple open>
+it('toggles a multiple selection by value across equal-valued suggestions', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-combobox name="choice" multiple open>
     <lr-option value="same" .data=${1}>First</lr-option>
     <lr-option value="same" .data=${2}>Second</lr-option>
     <lr-option value="other" .data=${3}>Other</lr-option>
-  </lr-combobox>`);
+  </lr-combobox></form>`);
+  const combo = form.querySelector('lr-combobox')!;
   const rows = () => Array.from(combo.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]'));
   const states = () => rows().map(row => row.getAttribute('aria-selected'));
   const proposals: unknown[] = [];
   combo.addEventListener('lr-change-request', event => { proposals.push(event.detail.data); });
   rows()[1]!.click();
   await combo.updateComplete;
-  expect(states()).to.deep.equal(['false', 'true', 'false']);
+  expect(states()).to.deep.equal(['true', 'true', 'false']);
   expect(combo.selectedRows.map(row => row.data)).to.deep.equal([2]);
+  expect(new FormData(form).getAll('choice')).to.deep.equal(['same']);
   rows()[0]!.click();
   await combo.updateComplete;
-  rows()[2]!.click();
-  await combo.updateComplete;
-  expect(combo.value).to.deep.equal(['same', 'same', 'other']);
-  expect(combo.selectedRows.map(row => row.data)).to.deep.equal([2, 1, 3]);
-  expect(Array.from(combo.shadowRoot!.querySelectorAll('[part="tag__content"]'), tag => tag.textContent))
-    .to.deep.equal(['Second', 'First', 'Other']);
-  rows()[1]!.click();
-  await combo.updateComplete;
-  expect(states()).to.deep.equal(['true', 'false', 'true']);
-  expect(combo.value).to.deep.equal(['same', 'other']);
-  expect(combo.selectedRows.map(row => row.data)).to.deep.equal([1, 3]);
-  expect(proposals).to.deep.equal([[2], [2, 1], [2, 1, 3], [1, 3]]);
+  expect(combo.value).to.deep.equal([]);
+  expect(new FormData(form).getAll('choice')).to.deep.equal([]);
+  expect(states()).to.deep.equal(['false', 'false', 'false']);
+  expect(proposals).to.deep.equal([[2], []]);
 });
 
-it('keeps equal-valued async rows distinct through a source refresh and tag removal', async () => {
+it('keeps value identity and the chosen payload across an async source refresh', async () => {
   const combo = await fixture<LyraCombobox>(html`<lr-combobox multiple open source-delay="0"></lr-combobox>`);
   let calls = 0;
   combo.source = async query => {
@@ -376,18 +370,15 @@ it('keeps equal-valued async rows distinct through a source refresh and tag remo
   await waitUntil(() => rows().length === 2);
   const before = calls;
   rows()[1]!.click();
-  await waitUntil(() => calls > before && states().join() === 'false,true');
+  await waitUntil(() => calls > before && states().join() === 'true,true');
   combo.inputValue = 'First';
   await waitUntil(() => rows().length === 1);
-  expect(states()).to.deep.equal(['false']);
+  expect(states()).to.deep.equal(['true']);
   expect(combo.selectedRows.map(row => row.data)).to.deep.equal([2]);
   rows()[0]!.click();
   await waitUntil(() => rows().length === 2);
-  expect(states()).to.deep.equal(['true', 'true']);
-  combo.shadowRoot!.querySelector<HTMLElement>('[part="tag__remove-button"]')!.click();
-  await combo.updateComplete;
-  expect(states()).to.deep.equal(['true', 'false']);
-  expect(combo.selectedRows.map(row => row.data)).to.deep.equal([1]);
+  expect(states()).to.deep.equal(['false', 'false']);
+  expect(combo.value).to.deep.equal([]);
 });
 
 it('retains the selected option occurrence at reset and through a multiple mode change', async () => {
@@ -416,12 +407,12 @@ it('retains the selected option occurrence at reset and through a multiple mode 
   expect(combo.selectedRows.map(row => row.data)).to.deep.equal([2]);
 });
 
-it('deselects one of several equal unknown values from its synthetic row', async () => {
+it('deselects an unknown value from all equal synthetic rows', async () => {
   const combo = await fixture<LyraCombobox>(html`<lr-combobox multiple with-unknown-option
     .value=${['ghost', 'other', 'ghost']}></lr-combobox>`);
   await combo.show();
   const rows = combo.shadowRoot!.querySelectorAll<HTMLElement>('[data-unknown-value][role="option"]');
   expect(Array.from(rows, row => row.dataset['value'])).to.deep.equal(['ghost', 'other', 'ghost']);
   rows[2]!.click();
-  expect(combo.value).to.deep.equal(['ghost', 'other']);
+  expect(combo.value).to.deep.equal(['other']);
 });

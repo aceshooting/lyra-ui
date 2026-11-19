@@ -37,7 +37,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import { styles } from './app-rail-item.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailItemToggle } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand, LYRA_DEFAULT_appRailItemToggle } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailItemToggleDetail {
@@ -213,6 +213,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    appRailItemCollapse: LYRA_DEFAULT_appRailItemCollapse,
+    appRailItemExpand: LYRA_DEFAULT_appRailItemExpand,
     appRailItemToggle: LYRA_DEFAULT_appRailItemToggle,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -626,7 +628,9 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
           aria-expanded=${this._expanded ? 'true' : 'false'}
           aria-controls=${this.childrenId}
           aria-label=${this.localize(
-            'appRailItemToggle',
+            this.strings.appRailItemToggle !== undefined
+              ? 'appRailItemToggle'
+              : this._expanded ? 'appRailItemCollapse' : 'appRailItemExpand',
             undefined,
             { label: this.tooltipText },
           )}

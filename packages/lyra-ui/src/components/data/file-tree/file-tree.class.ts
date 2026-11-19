@@ -14,9 +14,9 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
-import { GIT_STATUSES, type GitStatus } from './file-tree-status.js';
-export { GIT_STATUSES } from './file-tree-status.js';
-export type { GitStatus } from './file-tree-status.js';
+import { GIT_STATUSES, type GitStatus } from '../../../internal/git-status.js';
+export { GIT_STATUSES } from '../../../internal/git-status.js';
+export type { GitStatus } from '../../../internal/git-status.js';
 import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.

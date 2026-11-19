@@ -26,10 +26,9 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
-import { normalizeChatComposerStatus } from './chat-composer-status.js';
-export { CHAT_COMPOSER_STATUSES, normalizeChatComposerStatus } from './chat-composer-status.js';
-export type { ChatComposerStatus } from './chat-composer-status.js';
-import type { ChatComposerStatus } from './chat-composer-status.js';
+import { normalizeChatComposerStatus, type ChatComposerStatus } from '../../../internal/chat-composer-status.js';
+export { CHAT_COMPOSER_STATUSES, normalizeChatComposerStatus } from '../../../internal/chat-composer-status.js';
+export type { ChatComposerStatus } from '../../../internal/chat-composer-status.js';
 import {
   autocorrectConverter,
   literalSetConverter,

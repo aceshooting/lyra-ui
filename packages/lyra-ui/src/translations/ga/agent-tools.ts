@@ -252,6 +252,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Rith an leid',
   promptStudioSave: 'Sábháil an leagan',
   promptStudioAddMessage: 'Cuir teachtaireacht leis',
+  promptStudioRemoveMessage: 'Bain an teachtaireacht',
   promptStudioRemoveMessageNumbered: 'Bain teachtaireacht {index}',
   promptStudioMessageRole: 'Ról theachtaireacht {index} ({role})',
   promptStudioMessageContent: 'Ábhar theachtaireacht {index} ({role})',

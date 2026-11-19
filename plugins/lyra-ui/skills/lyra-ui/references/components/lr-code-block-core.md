@@ -98,8 +98,8 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
-The collapse control uses the stable `codeBlockToggle` string and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+The collapse control uses `collapseCode` or `expandCode` and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string

@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Tekeleza agizo',
   promptStudioSave: 'Hifadhi toleo',
   promptStudioAddMessage: 'Ongeza ujumbe',
+  promptStudioRemoveMessage: 'Ondoa ujumbe',
   promptStudioRemoveMessageNumbered: 'Ondoa ujumbe {index}',
   promptStudioMessageRole: 'Jukumu la ujumbe {index} ({role})',
   promptStudioMessageContent: 'Maudhui ya ujumbe {index} ({role})',

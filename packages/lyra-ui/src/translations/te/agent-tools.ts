@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'ప్రాంప్ట్‌ను అమలు చేయండి',
   promptStudioSave: 'వెర్షన్‌ను భద్రపరచండి',
   promptStudioAddMessage: 'సందేశాన్ని జోడించండి',
+  promptStudioRemoveMessage: 'సందేశాన్ని తొలగించండి',
   promptStudioRemoveMessageNumbered: 'సందేశం {index} ని తీసివేయండి',
   promptStudioMessageRole: 'సందేశం {index} పాత్ర ({role})',
   promptStudioMessageContent: 'సందేశం {index} విషయం ({role})',

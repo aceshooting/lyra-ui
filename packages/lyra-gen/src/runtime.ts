@@ -1,6 +1,6 @@
-import { failure } from './result.js';
+import { failure } from './json-bytes.js';
 import { escapePointerSegment, snapshotJson, validateSchema, resolveLimits } from './schema.js';
-import { REPAIRABLE_DIAGNOSTIC_CODES as repairableCodes, isNodeMember, isValidatedView, object, validateCanonicalView, validatePatchedView } from './view-admission.js';
+import { REPAIRABLE_DIAGNOSTIC_CODES as repairableCodes, isNodeMember, isValidatedView, object, validateCanonicalView, validatePatchedView } from './isolation.js';
 import { parsePointer, readPointer } from './references.js';
 import { LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
 import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenValidationResult, LyraGenView } from './types.js';

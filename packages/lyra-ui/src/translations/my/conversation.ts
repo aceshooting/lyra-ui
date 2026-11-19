@@ -38,6 +38,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'ပို့၍မရပါ',
   chatFailedAnnounce: 'မက်ဆေ့ချ် ပို့၍မရပါ။',
   chatCompleteAnnounce: 'မက်ဆေ့ချ် ပြီးပါပြီ။',
+  expandCode: 'ကုဒ် ချဲ့ရန်',
+  collapseCode: 'ကုဒ် ခေါက်သိမ်းရန်',
   copyCode: 'ကုဒ် ကူးယူရန်',
   copiedToClipboard: 'ကလစ်ဘုတ်သို့ ကူးယူပြီး',
   codeRegion: 'ကုဒ်',

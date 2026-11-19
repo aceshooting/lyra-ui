@@ -2322,8 +2322,8 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
-The collapse control uses the stable `codeBlockToggle` string and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+The collapse control uses `collapseCode` or `expandCode` and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -2565,8 +2565,8 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
-The collapse control uses the stable `codeBlockToggle` string and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to customize the name.
+The collapse control uses `collapseCode` or `expandCode` and reports its state through
+`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -4831,7 +4831,7 @@ Whitespace-only name overrides use the same fallback as an omitted name.
 
 In `readonly` mode the built-in pickers and prompt queue preserve their values. Queue pagination and attachment previews remain available.
 
-An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret out of a pending suggestion range dismisses that suggestion on selection.
+An omitted attachment, attachment capability, source, selected source ID or queue item shows the localized `promptInputCollectionLimit` notice. Moving the caret away from a pending suggestion dismisses the popup without editing the draft. When a suggestion is inserted, the caret moves after it unless an event listener changes the textarea selection.
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no

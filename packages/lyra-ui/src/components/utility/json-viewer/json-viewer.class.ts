@@ -1276,7 +1276,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       const currentIntent = this.sourceSearch.generation;
       this.requestUpdate('sourceSearchIntent', null);
       await this.updateComplete;
-      return currentIntent === this.sourceSearch.generation ? this.sourceSearch.task : 0;
+      if (currentIntent !== this.sourceSearch.generation) return 0;
+      return this.sourceSearch.task;
     }
     this.query = query;
     await this.updateComplete;

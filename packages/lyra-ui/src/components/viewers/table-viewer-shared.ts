@@ -10,7 +10,7 @@ import { tag } from '../../internal/prefix.js';
 import { resolveCssTokenLength } from '../../internal/css-token-length.js';
 import { html, nothing, type ReactiveController, type PropertyValues, type ReactiveControllerHost, type TemplateResult } from 'lit';
 import { parseCellRange, type ParsedCellRange } from '../../internal/cell-range.js';
-import { prioritizedHighlightCandidates } from '../../internal/anchor-target.js';
+import { prioritizedHighlightCandidates } from '../../internal/anchor-target-base.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
 import { OwnerAnimationFrameWaiter } from '../../internal/owner-animation-frame.js';
 import type { LyraSearchChangeDetail } from '../../internal/text-viewer-target.js';

@@ -19,9 +19,9 @@ test('build removes stale emissions before compilation and preserves authored ne
         assert.deepEqual(args, ['exec', 'tsc', '-p', 'tsconfig.build.json']);
         assert.equal(existsSync(join(directory, 'dist/retired.js')), false);
         mkdirSync(join(directory, 'dist'));
-        writeFileSync(join(directory, 'dist/current.js'), 'fresh');
+        writeFileSync(join(directory, 'dist/current.js'), '/** Already documented in the declarations. */\nexport const current = /* @__PURE__ */ makeValue();');
       },
-      check(cwd) { assert.equal(readFileSync(join(cwd, 'dist/current.js'), 'utf8'), 'fresh'); checked = true; },
+      check(cwd) { const code = readFileSync(join(cwd, 'dist/current.js'), 'utf8'); assert.match(code, /@__PURE__/u); assert.doesNotMatch(code, /Already documented/u); checked = true; },
     });
     assert.equal(checked, true);
     assert.equal(readFileSync(join(directory, 'src/current.ts'), 'utf8'), 'authored');

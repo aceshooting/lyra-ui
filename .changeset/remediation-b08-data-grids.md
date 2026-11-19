@@ -3,7 +3,6 @@
 ---
 
 - Use `aria-expanded` on the table’s additional-columns button. Set its stable visible name with `tableAdditionalColumns`. The existing show and hide labels supply action tooltips.
-- Sort missing document-library values last in either direction, retaining input order for ties.
 - Use the shared pagination controls in the data grid, with compact page jumps, range summaries, unknown server totals and zero-based page events.
 - Veto grid or table paging before it commits, including when a synchronous listener changes the destination.
 - Observe grid sort, selection and expansion through the collection events. Veto selection and expansion requests before keys change.

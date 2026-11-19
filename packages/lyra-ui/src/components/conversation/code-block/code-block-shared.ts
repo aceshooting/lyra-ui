@@ -43,7 +43,7 @@ import type {
   LyraHighlight,
   TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
-import { resolveIsDarkTheme } from './shiki-dark-theme.js';
+import { resolveIsDarkTheme } from '../../../internal/shiki/dark-theme.js';
 
 const INVALID_HIGHLIGHT_LINES_WARNING_KEY = 'lyra-code-block-invalid-highlight-lines';
 const INVALID_HIGHLIGHT_LINES_WARNING =
@@ -486,10 +486,7 @@ export function codeBlockLineTransformer(
     },
     line(node, line: number) {
       node.properties['data-line'] = String(line);
-      const parts: string[] = [];
       const contentNode = node as unknown as { children?: unknown[] };
-      const children = contentNode.children ?? [];
-      contentNode.children = children;
       let gutter: unknown;
       if (options.activatableLines && options.lineNumbers) {
         gutter = {
@@ -520,18 +517,13 @@ export function codeBlockLineTransformer(
         type: 'element',
         tagName: 'span',
         properties: { class: ['line-source'] },
-        children: [...children],
+        children: contentNode.children ?? [],
       };
-      children.splice(
-        0,
-        children.length,
-        ...(gutter ? [gutter, source] : [source])
-      );
+      contentNode.children = gutter ? [gutter, source] : [source];
       if (options.highlightedLines.has(line)) {
-        parts.push('line-highlight');
+        node.properties.part = ['line-highlight'];
         node.properties['data-highlighted'] = '';
       }
-      if (parts.length > 0) node.properties.part = parts;
       if (options.activeLines.has(line)) node.properties['data-active'] = '';
     },
   };
@@ -630,6 +622,7 @@ export interface LyraCodeBlockToggleDetail {
 interface CodeBlockHeaderOptions {
   collapsible: boolean;
   collapsed: boolean;
+  stableToggleName: boolean;
   /** `id` of `[part="body"]`, for the toggle's `aria-controls`. */
   bodyId: string;
   filename: string;
@@ -674,7 +667,7 @@ function renderCodeBlockHeader(
                 type="button"
                 aria-expanded=${options.collapsed ? 'false' : 'true'}
                 aria-controls=${options.bodyId}
-                aria-label=${options.localize('codeBlockToggle')}
+                aria-label=${options.localize(options.stableToggleName ? 'codeBlockToggle' : options.collapsed ? 'expandCode' : 'collapseCode')}
                 @click=${options.onToggle}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -720,6 +713,7 @@ export interface CodeBlockShellOptions {
   hasHeaderActions: boolean;
   collapsible: boolean;
   collapsed: boolean;
+  stableToggleName: boolean;
   justCopied: boolean;
   copyFailed: boolean;
   bodyId: string;
@@ -773,21 +767,7 @@ export function renderCodeBlockShell(
   return html`
       <div part="base">
         ${hasHeader
-          ? renderCodeBlockHeader({
-              collapsible: options.collapsible,
-              collapsed: options.collapsed,
-              bodyId: options.bodyId,
-              filename: options.filename,
-              language: options.language,
-              copyable: options.copyable,
-              copyAppearance: options.copyAppearance,
-              hasHeaderActions: options.hasHeaderActions,
-              justCopied: options.justCopied,
-              copyFailed: options.copyFailed,
-              localize: options.localize,
-              onToggle: options.onToggle,
-              onCopy: options.onCopy,
-            })
+          ? renderCodeBlockHeader(options)
           : nothing}
         <div
           part="body"

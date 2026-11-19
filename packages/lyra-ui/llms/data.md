@@ -5100,7 +5100,7 @@ readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter']
 The component's `filter` property uses this same callback contract.
 
 Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.
-The default local filter ignores case and accents. Local sorts place missing values last in either direction and preserve the order of ties. Provider row tags use the active locale's list formatting.
+The default local filter ignores case and accents. Local sorts treat a missing owner or version as empty text, a missing or invalid date as the Unix epoch, and missing freshness as the rank after stale. Ties retain input order. Provider row tags use the active locale's list formatting.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
 (default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
@@ -5739,7 +5739,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.
   `DocumentLibrarySelectionChangeDetail {
-    readonly selectedRowKeys: readonly string[];
+    readonly selectedRowKeys?: readonly string[];
     readonly documentIds: readonly string[];
   }`
   Import: `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`.

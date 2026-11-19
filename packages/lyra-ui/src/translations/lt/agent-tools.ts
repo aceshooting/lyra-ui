@@ -250,6 +250,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Paleisti raginimą',
   promptStudioSave: 'Išsaugoti versiją',
   promptStudioAddMessage: 'Pridėti pranešimą',
+  promptStudioRemoveMessage: 'Pašalinti pranešimą',
   promptStudioRemoveMessageNumbered: 'Pašalinti pranešimą {index}',
   promptStudioMessageRole: '{index} pranešimo vaidmuo ({role})',
   promptStudioMessageContent: '{index} pranešimo turinys ({role})',

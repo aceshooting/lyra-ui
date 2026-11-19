@@ -1,4 +1,4 @@
-import { TEXT_QUOTE_LIMITS } from '../../internal/text-quote.js';
+import { TEXT_QUOTE_LIMITS } from '../../internal/text-selection.js';
 import { resolveIntlLocale } from '../../internal/intl-cache.js';
 
 /** Resource ceilings for model-backed searches that cannot use a DOM `TextQuoteIndex` directly. */

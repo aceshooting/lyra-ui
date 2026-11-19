@@ -26,7 +26,7 @@ import {
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
-import { DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTargetBase as DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target-base.js';
 import type {
   AnchorResultDetail,
   HighlightActivateDetail,

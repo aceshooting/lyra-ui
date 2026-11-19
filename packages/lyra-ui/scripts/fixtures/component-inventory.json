@@ -14649,7 +14649,58 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [
           {
@@ -23914,34 +23965,7 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/conversation/chat-composer/chat-composer.class.ts",
-            "name": "CHAT_COMPOSER_STATUSES",
-            "kind": "variable",
-            "type": "unknown",
-            "readonly": false,
-            "deprecated": null
-          },
-          {
-            "module": "src/components/conversation/chat-composer/chat-composer.class.ts",
-            "name": "normalizeChatComposerStatus",
-            "kind": "function",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "value",
-                    "type": "unknown",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "ChatComposerStatus"
-              }
-            ]
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": true,
           "properties": [
@@ -24532,6 +24556,56 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-transition-ambient",
@@ -31350,7 +31424,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -31362,7 +31436,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -38290,6 +38364,56 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in srgb, var(--lr-color-text) 6%, transparent)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [
@@ -39837,7 +39961,7 @@
           {
             "name": "max-bytes",
             "property": "maxBytes",
-            "type": "unknown",
+            "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -39977,7 +40101,7 @@
           {
             "name": "maxBytes",
             "attribute": "max-bytes",
-            "type": "unknown",
+            "type": "number",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -43607,7 +43731,7 @@
           {
             "name": "max-bytes",
             "property": "maxBytes",
-            "type": "unknown",
+            "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -43737,7 +43861,7 @@
           {
             "name": "maxBytes",
             "attribute": "max-bytes",
-            "type": "unknown",
+            "type": "number",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45037,15 +45161,6 @@
             "default": false
           },
           {
-            "name": "select",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "selectionDirection",
             "attribute": null,
             "type": "LyraDateInputSelectionDirection | null",
@@ -45067,15 +45182,6 @@
             "name": "selectionStart",
             "attribute": null,
             "type": "number | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "setSelectionRange",
-            "attribute": null,
-            "type": "( start: number | null, end: number | null, direction?: LyraDateInputSelectionDirection ) => void",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45356,7 +45462,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45374,7 +45480,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45835,6 +45941,15 @@
             ]
           },
           {
+            "name": "select",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "setCustomValidity",
             "overloads": [
               {
@@ -45925,6 +46040,34 @@
             ]
           },
           {
+            "name": "setSelectionRange",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "start",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "end",
+                    "type": "number | null",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "direction",
+                    "type": "LyraDateInputSelectionDirection",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "show",
             "overloads": [
               {
@@ -45969,7 +46112,9 @@
             "blur",
             "click",
             "focus",
-            "setRangeText"
+            "select",
+            "setRangeText",
+            "setSelectionRange"
           ]
         }
       }
@@ -46640,7 +46785,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -46658,7 +46803,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -49739,6 +49884,10 @@
           },
           {
             "name": "diff",
+            "deprecated": null
+          },
+          {
+            "name": "diff-base",
             "deprecated": null
           },
           {
@@ -62789,16 +62938,7 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/data/file-tree/file-tree.class.ts",
-            "name": "GIT_STATUSES",
-            "kind": "variable",
-            "type": "ReadonlySet<GitStatus>",
-            "readonly": false,
-            "deprecated": null
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [],
@@ -67228,7 +67368,58 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -92949,6 +93140,56 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-message-feedback-down-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -94579,6 +94820,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -94595,6 +94841,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-padding-block",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-padding-inline",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-radius",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-required-color",
@@ -94773,6 +95034,131 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-container-high)"
+          },
+          {
+            "name": "--lr-picker-expand-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-gap",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-max-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-open-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-disabled-opacity",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-font-weight",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-border-style",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-font-style",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-hover-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-min-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-block-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-inline-size",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-positioning-strategy",
@@ -126599,13 +126985,13 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>",
+            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue?: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>",
+            "type": "CustomEvent<Readonly<{ value: RubricValue; previousValue?: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -136083,7 +136469,7 @@
           {
             "name": "max-bytes",
             "property": "maxBytes",
-            "type": "unknown",
+            "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -136213,7 +136599,7 @@
           {
             "name": "maxBytes",
             "attribute": "max-bytes",
-            "type": "unknown",
+            "type": "number",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -140438,7 +140824,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; previousValue: string | null }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string | null }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -148634,6 +149020,56 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-thread-list-excerpt-highlight-bg",
             "deprecated": null,
@@ -165847,6 +166283,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -165863,6 +166304,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-padding-block",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-padding-inline",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-radius",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-required-color",
@@ -165905,6 +166361,131 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-container-high)"
+          },
+          {
+            "name": "--lr-picker-expand-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-gap",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-max-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-open-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-disabled-opacity",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-selected-font-weight",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-border-style",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-option-synthetic-font-style",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-hover-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-min-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-picker-trigger-padding",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-block-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-positioner-available-inline-size",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-positioning-strategy",
@@ -167532,7 +168113,7 @@
           {
             "name": "max-bytes",
             "property": "maxBytes",
-            "type": "unknown",
+            "type": "number",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -167663,7 +168244,7 @@
           {
             "name": "maxBytes",
             "attribute": "max-bytes",
-            "type": "unknown",
+            "type": "number",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

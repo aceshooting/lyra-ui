@@ -18,7 +18,8 @@
       "shiki"
     ],
     "forbiddenInputs": [
-      "node_modules/@shikijs/langs/dist/"
+      "node_modules/@shikijs/langs/dist/",
+      "internal/text-quote.js"
     ]
   },
   "dist/components/conversation/agent-workspace/agent-workspace-register.js": {
@@ -130,6 +131,66 @@
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "theme/looks/"
+    ]
+  },
+  "dist/components/media/av-player/av-player.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/media/image-viewer/image-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/conversation/code-block/code-block.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/utility/diff-view/diff-view.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/csv-viewer/csv-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/dataset-viewer/dataset-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/svg-viewer/svg-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/xml-viewer/xml-viewer.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
+    ]
+  },
+  "dist/components/viewers/notebook-viewer/notebook-viewer.class.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "internal/text-quote.js"
     ]
   }
 }

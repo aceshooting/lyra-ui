@@ -825,9 +825,9 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
   // Implementation modules only those runtimes need; the class may still import their types.
   const onDemand = [
     ...runtimes, 'map-anchor-options.ts', 'map-drawing.ts', 'map-drawing-gesture.ts', 'map-drawing-pan.ts', 'map-drawing-pointer.ts',
-    'map-export-attribution.ts', 'map-feature-state.ts', 'map-hash.ts', 'map-image-admission.ts', 'map-image-export.ts',
+    'map-export-attribution.ts', 'map-external-layer-builder.ts', 'map-feature-state.ts', 'map-hash.ts', 'map-image-admission.ts', 'map-image-export.ts',
     'map-image-metadata.ts', 'map-layer-order.ts', 'map-overlay-admission.ts', 'map-owned-feature-input.ts', 'map-owned-resources.ts',
-    'map-source-updates.ts', 'map-style-override-admission.ts',
+    'map-source-updates.ts', 'map-style-override-admission.ts', 'map-vector-style-compiler.ts',
   ].map((name) => path.join(mapDir, name));
   const sharedOverlayInternals = ['anchored-overlay-runtime.ts', 'overlay-manager.ts', 'overlay-stack.ts', 'positioner-geometry.ts']
     .map((name) => path.join(internalDir, name));
@@ -873,4 +873,9 @@ test('lr-map admits a scene synchronously without loading the scene session used
   const reachable = staticValueImportClosure(entry);
   assert.ok(reachable.has(path.join(packageDir, 'src/components/media/map/map-scene-admission.ts')));
   assert.ok(!reachable.has(path.join(packageDir, 'src/internal/map-scene-session.ts')));
+  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/map-camera-follow-scene.ts')),
+    'the map uses accepted ground targets without the visual follow adapter');
+  const camera = staticValueImportClosure(path.join(packageDir, 'src/internal/map-camera-session-controller.ts'));
+  assert.ok(!camera.has(path.join(packageDir, 'src/internal/map-scene-session.ts')),
+    'ground camera follow reads accepted geography without loading the frame facade');
 });

@@ -1,5 +1,6 @@
 import { expect, fixture, html, aTimeout } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { observeInheritedContext, recordInheritedLocaleRead } from './inherited-context-observer.js';
 import { invalidateLyraTheme, ThemeWatcher } from './theme-watcher.js';
 
 const activeDisconnects = new Set<() => void>();
@@ -1341,6 +1342,47 @@ describe('ThemeWatcher shared observation', () => {
       window.MutationObserver = OriginalObserver;
       document.body.removeAttribute('data-theme');
       hosts.forEach(({ disconnect }) => disconnect());
+    }
+  });
+
+  it('shares a foreign document observer with locale readers until the last owner disconnects', async () => {
+    const frame = document.body.appendChild(document.createElement('iframe'));
+    const realm = frame.contentWindow!;
+    const doc = frame.contentDocument!;
+    const OriginalObserver = realm.MutationObserver;
+    let constructed = 0;
+    let disconnects = 0;
+    realm.MutationObserver = class extends OriginalObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructed++;
+      }
+      override disconnect(): void {
+        disconnects++;
+        super.disconnect();
+      }
+    };
+    const { host, connect, disconnect } = await makeHost(doc);
+    const stop = observeInheritedContext(host);
+    try {
+      doc.body.lang = 'en';
+      recordInheritedLocaleRead(host, 'en');
+      let changes = 0;
+      new ThemeWatcher(host, () => { changes++; });
+      connect();
+      expect(constructed).to.equal(1);
+      stop();
+      doc.body.setAttribute('data-theme', 'shared');
+      await aTimeout(0);
+      expect(changes).to.equal(1);
+      expect(disconnects).to.equal(0);
+      disconnect();
+      expect(disconnects).to.equal(1);
+    } finally {
+      stop();
+      disconnect();
+      realm.MutationObserver = OriginalObserver;
+      frame.remove();
     }
   });
 

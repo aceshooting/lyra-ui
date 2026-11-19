@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { buildMapExternalLayers, buildMapLabelLayer, projectMapDataLayerModel, projectMapLabelOptions } from './map-data-layer-model.js';
+import { buildMapExternalLayers } from './map-external-layer-builder.js';
+import { buildMapLabelLayer, projectMapDataLayerModel, projectMapLabelOptions } from './map-data-layer-model.js';
 
 const baseUrl = 'https://example.test/maps/';
 const coordinates = [[-10, 10], [10, 10], [10, -10], [-10, -10]];
@@ -308,6 +309,15 @@ describe('map row bounds and physical label placement', () => {
 
 
 describe('typed vector style integration', () => {
+  it('caps generated layers when labels expand the admitted rows', () => {
+    const model = project([{ ...vector, label: { field: 'name' } }]);
+    if (!model.ok) throw new Error('Expected a vector layer with labels');
+    const context = { nativeId: () => 'native', glyphs: true, hidden: new Set<string>(), color: () => '#000' };
+    const rows = Array.from({ length: 64 }, () => model.external[0]!);
+    expect(buildMapExternalLayers(rows, context).layers.length).to.equal(128);
+    expect(() => buildMapExternalLayers([...rows, model.external[0]!], context)).to.throw('Map data layer limit exceeded.');
+  });
+
   it('admits explicit vector paint and resolves only typed color outputs', () => {
     const model = project([{ ...vector, paint: {
       'line-color': ['match', ['get', 'var(--feature-key)'], 'var(--match-label)', 'var(--line-color)', '#0000ff'],

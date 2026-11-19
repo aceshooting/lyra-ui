@@ -57,6 +57,37 @@ describe('observeTextSelection', () => {
     expect(textSelectionShadowRoots(page, page.firstElementChild!)).to.deep.equal([]);
   });
 
+  it('delivers a cancelled drag during capture and releases the document listeners', async () => {
+    const page = await fixture<HTMLDivElement>(html`<div><span>Selected</span><button></button></div>`);
+    const content = page.firstElementChild!;
+    const outside = page.lastElementChild!;
+    const selection = window.getSelection()!;
+    const reports: string[] = [];
+    const release = observeTextSelection(page, content, (_range, text) => reports.push(text));
+    outside.addEventListener('pointercancel', event => event.stopPropagation());
+    try {
+      outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, isPrimary: true, button: 0 }));
+      selection.removeAllRanges();
+      selection.addRange(contentRange(content));
+      document.dispatchEvent(new Event('selectionchange'));
+      await frames();
+      expect(reports).to.deep.equal([]);
+      outside.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+      expect(reports).to.deep.equal(['Selected']);
+      release();
+      const shorter = contentRange(content);
+      shorter.setEnd(content.firstChild!, 3);
+      selection.removeAllRanges();
+      selection.addRange(shorter);
+      document.dispatchEvent(new Event('selectionchange'));
+      await frames();
+      expect(reports).to.deep.equal(['Selected']);
+    } finally {
+      release();
+      selection.removeAllRanges();
+    }
+  });
+
   it('reports synchronously from mouseup only when opted in, sharing the range de-duplication', async () => {
     const page = await fixture<HTMLDivElement>(html`<div><span>Opted in</span><span>Default</span></div>`);
     const [optedIn, plain] = [...page.children] as HTMLElement[];

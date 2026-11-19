@@ -295,12 +295,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       });
       this.resizeObserver.observe(this);
     }
-    this.observeForTarget();
     // disconnectedCallback unbinds the wired viewer on every disconnect, but willUpdate only
     // rebinds on the first update or when `viewer`/`for` themselves change -- a bare reconnect
     // (e.g. a reparent) schedules no update and changes neither property, so rebind here or the
     // rail stays permanently unbound (page tracking stops; wired mode renders an empty rail).
     if (this.hasUpdated) this.resolveViewer();
+    this.observeForTarget();
   }
 
   override disconnectedCallback(): void {
@@ -357,14 +357,22 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.targetObserver?.disconnect();
     this.targetObserver = undefined;
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    if (!this.isConnected || !this.for || !MutationObserverCtor) return;
-    this.targetObserver = new MutationObserverCtor(() => this.resolveViewer());
-    this.targetObserver.observe(this.getRootNode(), {
-      attributes: true,
-      attributeFilter: ['id'],
-      childList: true,
-      subtree: true,
+    if (!this.isConnected || this.viewer || !this.for || !MutationObserverCtor) return;
+    const observer = new MutationObserverCtor(() => {
+      this.resolveViewer();
+      if (target || this.boundViewer) this.observeForTarget();
     });
+    this.targetObserver = observer;
+    const target = this.boundViewer as Element | null;
+    if (target) {
+      observer.observe(target, { attributeFilter: ['id'] });
+      // Removing or moving any ancestor can change the binding, including a move within this root.
+      for (let ancestor = target.parentNode; ancestor; ancestor = ancestor.parentNode) {
+        observer.observe(ancestor, { childList: true });
+      }
+    } else {
+      observer.observe(this.getRootNode(), { attributeFilter: ['id'], childList: true, subtree: true });
+    }
   }
 
   private unbindViewer(): void {

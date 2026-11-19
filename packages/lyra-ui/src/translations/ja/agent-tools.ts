@@ -244,6 +244,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'プロンプトを実行',
   promptStudioSave: 'バージョンを保存',
   promptStudioAddMessage: 'メッセージを追加',
+  promptStudioRemoveMessage: 'メッセージを削除',
   promptStudioRemoveMessageNumbered: 'メッセージ {index} を削除',
   promptStudioMessageRole: 'メッセージ {index} のロール（{role}）',
   promptStudioMessageContent: 'メッセージ {index} の内容（{role}）',

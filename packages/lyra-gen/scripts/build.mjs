@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { rmSync, realpathSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { transformSync } from 'esbuild';
 import { checkGenBuildArtifacts } from './check-build-artifacts.mjs';
 
 export const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,6 +17,13 @@ export function runCommand(command, args, directory) {
 export function buildPackage(directory = packageDirectory, { run = runCommand, check = checkGenBuildArtifacts } = {}) {
   rmSync(join(directory, 'dist'), { recursive: true, force: true });
   run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsc', '-p', 'tsconfig.build.json'], directory);
+  const outputDirectory = join(directory, 'dist');
+  for (const file of readdirSync(outputDirectory, { recursive: true })) {
+    if (!file.endsWith('.js')) continue;
+    const path = join(outputDirectory, file);
+    const { code } = transformSync(readFileSync(path, 'utf8'), { target: 'es2022', legalComments: 'inline' });
+    writeFileSync(path, code);
+  }
   check(directory);
 }
 

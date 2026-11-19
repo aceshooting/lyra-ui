@@ -45,6 +45,7 @@ export const SplitDiff: Story = {
   render: () => html`
     <lr-document-compare
       style="max-width: 48rem;"
+      max-height="8rem"
       diff-layout="split"
       copyable
       .oldVersion=${{ id: 'v1', name: 'v1.0', text: oldPolicy }}

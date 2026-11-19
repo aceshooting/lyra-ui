@@ -1932,25 +1932,43 @@ it('shares selection endpoints and editing hints with the rendered input', async
   expect([el.input!.selectionStart, el.input!.selectionEnd, el.input!.selectionDirection]).to.deep.equal([1, 4, 'backward']);
 });
 
-it('uses the same cancelable requests and settled events for open property and attribute writes', async () => {
-  const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+it('commits controlled property and attribute writes without popup lifecycle events', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input style="--show-duration: 0s; --hide-duration: 0s"></lr-date-input>`);
   const names: string[] = [];
-  for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) el.addEventListener(name, () => names.push(name));
-  el.addEventListener('lr-show', event => event.preventDefault(), { once: true });
-  el.setAttribute('open', '');
-  expect(el.open).to.equal(false);
-  expect(el.hasAttribute('open')).to.equal(false);
-  const shown = oneEvent(el, 'lr-after-show');
-  el.open = true;
-  await shown;
-  el.addEventListener('lr-hide', event => event.preventDefault(), { once: true });
-  el.removeAttribute('open');
+  for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    el.addEventListener(name, event => {
+      names.push(name);
+      event.preventDefault();
+    });
+  }
+  for (const write of [(open: boolean) => { el.open = open; }, (open: boolean) => { el.toggleAttribute('open', open); }]) {
+    write(true);
+    expect(el.open).to.equal(true);
+    const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+    await waitUntil(() => popup.hasAttribute('data-positioned'));
+    expect(el.hasAttribute('open')).to.equal(true);
+    await el.hide();
+    expect(el.open).to.equal(true);
+    write(false);
+    expect(el.open).to.equal(false);
+    await waitUntil(() => popup.hidden);
+    expect(el.hasAttribute('open')).to.equal(false);
+    await el.show();
+    expect(el.open).to.equal(false);
+  }
+  expect(names).to.deep.equal(['lr-hide', 'lr-show', 'lr-hide', 'lr-show']);
+});
+
+it('keeps a controlled write made inside a vetoed popup request', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input></lr-date-input>`);
+  el.addEventListener('lr-show', event => {
+    el.open = true;
+    event.preventDefault();
+  }, { once: true });
+  await el.show();
   expect(el.open).to.equal(true);
-  expect(el.hasAttribute('open')).to.equal(true);
-  const hidden = oneEvent(el, 'lr-after-hide');
-  el.open = false;
-  await hidden;
-  expect(names).to.deep.equal(['lr-show', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-hide', 'lr-after-hide']);
+  await el.hide();
+  expect(el.open).to.equal(false);
 });
 
 it('reports the previous ISO value on typed edits, calendar picks and clearing', async () => {

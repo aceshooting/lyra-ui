@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   chatFailedToSend: 'Erguun hin milkoofne',
   chatFailedAnnounce: 'Ergaan erguun hin milkoofne.',
   chatCompleteAnnounce: 'Ergaan xumurameera.',
+  expandCode: 'Koodii bal\'isi',
+  collapseCode: 'Koodii cufi',
   copyCode: 'Koodii garagalchi',
   copiedToClipboard: 'Gara kuusaa waraqaatti garagalchameera',
   codeRegion: 'Koodii',

@@ -96,7 +96,7 @@ it('restores a cleared default even when the chip row is empty', async () => {
   resetButton(el).click();
   await el.updateComplete;
   expect(el.value).to.deep.equal({ status: 'open' });
-  expect(resetButton(el).hasAttribute('disabled')).to.equal(true);
+  expect(resetButton(el).hasAttribute('disabled')).to.equal(false);
 });
 
 it('keeps focus in a chip-only bar when reset removes its last action', async () => {

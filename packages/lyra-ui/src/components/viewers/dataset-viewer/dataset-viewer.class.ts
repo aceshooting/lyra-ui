@@ -23,9 +23,9 @@ import { srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
 import {
-  DocumentAnchorTarget,
+  DocumentAnchorTargetBase as DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
-} from '../../../internal/anchor-target.js';
+} from '../../../internal/anchor-target-base.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { styles } from './dataset-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -231,7 +231,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
    * @default 26214400 */
   // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
   private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
   private readonly input = new TabularInputSnapshot<DatasetTable>({
     snapshot: (value, limits) => this.snapshotTable(value, limits),

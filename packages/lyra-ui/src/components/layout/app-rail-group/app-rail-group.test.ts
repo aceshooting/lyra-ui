@@ -476,17 +476,17 @@ describe('<lr-app-rail-group>', () => {
     const el = (await fixture<LyraAppRailGroup>(html`
       <lr-app-rail-group
         collapsible
-        .strings=${{ appRailGroupToggle: 'Navigation du groupe' }}
+        .strings=${{ collapse: 'Replier', expand: 'Déplier' }}
       ></lr-app-rail-group>
     `)) as LyraAppRailGroup;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Navigation du groupe');
+    expect(toggle.getAttribute('aria-label')).to.equal('Replier');
     el.collapsed = true;
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
-    ).to.equal('Navigation du groupe');
+    ).to.equal('Déplier');
   });
 });
 

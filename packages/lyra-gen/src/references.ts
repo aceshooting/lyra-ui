@@ -1,4 +1,4 @@
-import { failure } from './result.js';
+import { failure } from './json-bytes.js';
 import { isSafeKey, resolveLimits, snapshotJson } from './schema.js';
 import type { JsonValue, LyraGenLimits, LyraGenResult } from './types.js';
 

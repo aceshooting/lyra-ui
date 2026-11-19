@@ -316,8 +316,8 @@ export interface LyraDateInputEventMap {
   'lr-hide': CustomEvent<null>;
   'lr-after-hide': CustomEvent<null>;
   'lr-clear': CustomEvent<null>;
-  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
-  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -532,7 +532,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return this._open;
   }
   set open(next: boolean) {
-    void this.changeOpen(Boolean(next));
+    void this.changeOpen(Boolean(next), false);
   }
   /** Shows the clear action while there is a value; same as `withClear`. */
   @property({ type: Boolean, reflect: true }) clearable = false;
@@ -711,10 +711,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private previousCalendarValue?: string;
 
   private cleanupFn?: DeferredOperationHandle;
+  private notifyPopupSettlement = false;
   private readonly popupController = new PopupController({
     host: this,
     popup: () => this.renderRoot.querySelector('[part="popup"]'),
-    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    emit: (name, cancelable) => this.notifyPopupSettlement && emitPopupEvent(this, name, cancelable),
     onPointer: (event) => this.onDocPointer(event),
   });
   private visibilityListenerDocument?: Document;
@@ -1249,29 +1250,29 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
   show(): Promise<void> {
-    return this.changeOpen(true);
+    return this.changeOpen(true, true);
   }
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
   hide(restoreFocus: boolean = false): Promise<void> {
-    return this.changeOpen(false, restoreFocus);
+    return this.changeOpen(false, true, restoreFocus);
   }
 
-  private changeOpen(next: boolean, restoreFocus = false): Promise<void> {
+  private changeOpen(next: boolean, notify: boolean, restoreFocus = false): Promise<void> {
     const old = this._open;
     const opening = next && !this.readonly && !this.liveDisabled;
-    if (opening === old || this.requestingOpen) {
+    if (opening === old || (notify && this.requestingOpen)) {
       if (next !== old) this.toggleAttribute('open', old);
       return Promise.resolve();
     }
-    const announce = this.hasUpdated && this.isConnected;
-    if (announce) {
+    const live = this.hasUpdated && this.isConnected;
+    if (live && notify) {
       this.requestingOpen = true;
       try {
         const request = opening
           ? this.emit('lr-show', null, { cancelable: true })
           : this.emit('lr-hide', null, { cancelable: !this.forcingClose });
         const blocked = this.readonly || this.liveDisabled;
-        if (!this.isConnected || (opening ? blocked || request.defaultPrevented : !blocked && request.defaultPrevented)) {
+        if (!this.isConnected || this._open !== old || (opening ? blocked || request.defaultPrevented : !blocked && request.defaultPrevented)) {
           this.toggleAttribute('open', this._open);
           return Promise.resolve();
         }
@@ -1279,11 +1280,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         this.requestingOpen = false;
       }
     }
-    const settled = announce ? this.popupController.wait(opening) : Promise.resolve();
+    this.notifyPopupSettlement = notify;
+    const settled = live ? this.popupController.wait(opening) : Promise.resolve();
     this.restorePopupFocusOnClose ||= restoreFocus;
     this._open = opening;
     this.requestUpdate('open', old);
-    if (announce) void this.settleTransition(opening ? 'lr-after-show' : 'lr-after-hide');
+    if (live) void this.settleTransition(opening ? 'lr-after-show' : 'lr-after-hide');
     return settled;
   }
 
@@ -1902,14 +1904,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   /** Select all editable date text. */
-  declare select: () => void;
+  select(): void {
+    this.inputElement?.select();
+  }
 
   /** Set the selection range in the editable date text. */
-  declare setSelectionRange: (
+  setSelectionRange(
     start: number | null,
     end: number | null,
     direction?: LyraDateInputSelectionDirection
-  ) => void;
+  ): void {
+    this.inputElement?.setSelectionRange(start, end, direction);
+  }
 
   setRangeText(replacement: string): void;
   setRangeText(
@@ -2165,7 +2171,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 }
 
-installNativeSelectionAccessors(LyraDateInput.prototype, host => host.input);
+installNativeSelectionAccessors(LyraDateInput.prototype, host => host.input, { methods: false });
 installNativeInputModeAliases(LyraDateInput.prototype);
 
 declare global {

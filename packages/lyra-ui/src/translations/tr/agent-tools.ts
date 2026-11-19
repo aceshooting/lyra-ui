@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'İstemi çalıştır',
   promptStudioSave: 'Sürümü kaydet',
   promptStudioAddMessage: 'İleti ekle',
+  promptStudioRemoveMessage: 'İletiyi kaldır',
   promptStudioRemoveMessageNumbered: '{index}. iletiyi kaldır',
   promptStudioMessageRole: '{index}. iletinin rolü ({role})',
   promptStudioMessageContent: '{index}. iletinin içeriği ({role})',

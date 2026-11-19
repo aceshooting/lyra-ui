@@ -167,6 +167,16 @@ export interface LyraConversationItemEventMap {
  * @cssstate menu-open - Present while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened
  *   from the `actions` slot is open, e.g. `lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu`.
  * @cssprop [--lr-conversation-item-hover-bg=color-mix(in srgb, var(--lr-color-text) 6%, transparent)] - Row background on hover or while an actions menu is open.
+ * @cssprop --lr-icon-button-bg - Resting background of the rename button.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the rename button.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the rename button.
+ * @cssprop --lr-icon-button-border - Resting border of the rename button.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the rename button.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the rename button.
+ * @cssprop --lr-icon-button-color - Resting foreground of the rename button.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the rename button.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the rename button.
+ * @cssprop --lr-icon-button-radius - Corner radius of the rename button.
  * @status stable
  * @since 4.0.0
  */

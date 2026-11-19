@@ -1,3 +1,4 @@
+import type { LyraGenResult } from './types.js';
 /** Exact UTF-8 byte length of `JSON.stringify(value)` for a string, computed without allocating. */
 export function jsonStringBytes(value: string): number {
   let bytes = 2;
@@ -14,4 +15,9 @@ export function jsonStringBytes(value: string): number {
     else bytes += 3;
   }
   return bytes;
+}
+
+/** A single validation failure for a whole value. */
+export function failure<T>(code: string, message: string): LyraGenResult<T> {
+  return { ok: false, diagnostics: [{ code, path: '', message, severity: 'error' }] };
 }

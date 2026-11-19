@@ -945,12 +945,16 @@ describe('keyboard navigation', () => {
     expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
 
     await focusByKeyboard(input);
-    for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End', ' ']) {
+    for (const key of ['Home', 'End', ' ']) {
       const keydown = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
       input.dispatchEvent(keydown);
       expect(keydown.defaultPrevented, key).to.equal(false);
       expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
     }
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-1$/);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(input.getAttribute('aria-activedescendant')).to.match(/-item-2$/);
     expect(el.shadowRoot!.activeElement === input).to.equal(true);
@@ -2501,19 +2505,21 @@ it('keeps modified navigation and held activation out of the emoji selection', a
   expect(el.value).to.equal('');
 });
 
-it('emits value edits only for a new emoji selection', async () => {
+it('emits the native and Lyra pick events before activation on both first and repeat picks', async () => {
   const el = await connectEmojiPicker();
   el.groups = groups;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!;
   const events: string[] = [];
   for (const name of ['input', 'lr-input', 'change', 'lr-change']) el.addEventListener(name, () => events.push(name));
-  const activations: string[] = [];
-  el.addEventListener('lr-activate', event => activations.push((event as CustomEvent<{ value: string }>).detail.value));
+  const edits: { value: string; previousValue: string }[] = [];
+  el.addEventListener('lr-change', event => edits.push(event.detail));
+  el.addEventListener('lr-activate', event => events.push(`activate:${event.detail.value}`));
   button.click();
   button.click();
-  expect(activations).to.deep.equal(['😀', '😀']);
-  expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(edits).to.deep.equal([{ value: '😀', previousValue: '' }, { value: '😀', previousValue: '😀' }]);
+  const pick = ['input', 'lr-input', 'change', 'lr-change', 'activate:😀'];
+  expect(events).to.deep.equal([...pick, ...pick]);
   expect(el.value).to.equal('😀');
 });
 

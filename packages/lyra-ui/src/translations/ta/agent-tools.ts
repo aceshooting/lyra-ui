@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'ப்ராம்ப்டை இயக்கு',
   promptStudioSave: 'பதிப்பைச் சேமி',
   promptStudioAddMessage: 'செய்தியைச் சேர்',
+  promptStudioRemoveMessage: 'செய்தியை நீக்கு',
   promptStudioRemoveMessageNumbered: 'செய்தி {index} ஐ அகற்று',
   promptStudioMessageRole: 'செய்தி {index} பங்கு ({role})',
   promptStudioMessageContent: 'செய்தி {index} உள்ளடக்கம் ({role})',

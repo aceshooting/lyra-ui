@@ -133,8 +133,8 @@ await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
 await chmod(join(migrationCliDir, 'lyra-ui.mjs'), 0o755);
 
 const prunedRuntime = await pruneEmptyBuildJavaScript(join(packageDir, 'dist'),
-  JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')));
-console.log(`Published empty private runtime modules removed: ${prunedRuntime.removedPaths.length}.`);
+  JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')), { foldStaticStyles: true });
+console.log(`Published private runtime modules consolidated or removed: ${prunedRuntime.removedPaths.length}.`);
 
 await checkLocalizationSlices(packageDir);
 console.log('Unbundled localization slice imports and public fallback catalog verified.');

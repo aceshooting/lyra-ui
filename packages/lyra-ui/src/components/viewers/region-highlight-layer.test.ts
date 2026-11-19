@@ -1,5 +1,5 @@
-import { expect } from '@open-wc/testing';
-import { regionHighlightLabel, sameRegionRect } from './region-highlight-layer.js';
+import { expect, fixture, html } from '@open-wc/testing';
+import { regionHighlightLabel, renderRegionHighlightActions, renderRegionHighlightLayer, sameRegionRect } from './region-highlight-layer.js';
 
 describe('region highlight helpers', () => {
   const rect = { x: 1, y: 2, width: 3, height: 4 };
@@ -23,4 +23,25 @@ describe('region highlight helpers', () => {
       ['highlightOfTotal', { index: '2', total: '12' }],
     ]);
   });
+});
+
+it('renders a localized ordinal on both controls for a whitespace-only region label', async () => {
+  const root = await fixture<HTMLDivElement>(html`<div></div>`);
+  const highlights = [
+    { id: 'first', label: '  Named area  ', anchor: { rect: { x: 1, y: 2, width: 3, height: 4 } } },
+    { id: 'second', label: '  \t  ', anchor: { rect: { x: 10, y: 20, width: 30, height: 40 } } },
+  ];
+  const name = (highlight: (typeof highlights)[number], index: number, total: number) =>
+    regionHighlightLabel(highlight, index, total, 'en', (key, values) =>
+      key === 'highlightWithLabel' ? `Area: ${values['label']}` : `Area ${values['index']} of ${values['total']}`);
+  const activate = () => undefined;
+  const controls = await fixture<HTMLDivElement>(html`<div>
+    ${renderRegionHighlightLayer(highlights, null, true, name, activate)}
+    ${renderRegionHighlightActions(highlights, name, root, false, activate)}
+  </div>`);
+  const names = (part: string) => Array.from(controls.querySelectorAll(`[part="${part}"]`), button => button.getAttribute('aria-label'));
+  expect(names('region-highlight-target')).to.deep.equal(['Area: Named area', 'Area 2 of 2']);
+  expect(names('region-highlight-action')).to.deep.equal(['Area: Named area', 'Area 2 of 2']);
+  expect(Array.from(controls.querySelectorAll('[part="region-highlight-action"]'), button => button.textContent?.trim()))
+    .to.deep.equal(['Named area', 'Area 2 of 2']);
 });

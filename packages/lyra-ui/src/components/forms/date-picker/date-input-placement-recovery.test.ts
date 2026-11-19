@@ -40,7 +40,7 @@ for (const failure of ['import', 'setup'] as const) {
         expect(getComputedStyle(popup).display).to.equal('none');
         expect(popup.querySelectorAll('lr-date-picker').length).to.equal(0);
         expect(popup.getAttribute('aria-hidden')).to.equal('true');
-        const expected = opening === 'reconnect' ? [] : ['lr-show'];
+        const expected = opening === 'show' ? ['lr-show'] : [];
         expect(events).to.deep.equal(expected);
         expect(el.value).to.equal('2026-07-15');
         failing = false;

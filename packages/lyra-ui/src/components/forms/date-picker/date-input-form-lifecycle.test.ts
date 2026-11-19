@@ -684,9 +684,18 @@ describe("native-wrapper focus/selection/editing surface", () => {
     expect(el.selectionStart).to.equal(0);
     expect(el.selectionEnd).to.equal(el.input!.value.length);
 
-    el.setSelectionRange(1, 3);
+    el.setSelectionRange(1, 3, 'backward');
     expect(el.selectionStart).to.equal(1);
     expect(el.selectionEnd).to.equal(3);
+    expect(el.input!.selectionDirection).to.equal('backward');
+    el.setSelectionRange(null, null);
+    expect(el.selectionStart).to.equal(0);
+    expect(el.selectionEnd).to.equal(0);
+
+    const unrendered = document.createElement('lr-date-input');
+    unrendered.select();
+    unrendered.setSelectionRange(0, 1);
+    expect(unrendered.selectionStart).to.equal(null);
   });
 
   it("setRangeText() edits the field and re-parses it into a new value, keeping value/validity in sync", async () => {

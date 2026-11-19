@@ -6,7 +6,6 @@ import { LyraSuggestionChips } from '@aceshooting/lyra-ui/components/lr-suggesti
 import '@aceshooting/lyra-ui/components/lr-artifact-panel.js';
 import { acquireAnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { LyraGenViewElement } from '@aceshooting/lyra-gen/gen-view.js';
-import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';
 import { createChatStream, moveChatSurface, type LyraGenChatAsk, type LyraGenChatSource } from '@aceshooting/lyra-gen/chat.js';
 
 export function mountInteractiveChat(root: HTMLElement, host: {
@@ -25,8 +24,10 @@ export function mountInteractiveChat(root: HTMLElement, host: {
     invalid: 'This generated content could not be displayed.', sourceUnavailable: 'Source unavailable',
     complete: 'Generated content ready.', panel: 'Generated answer', open: 'Open generated content in panel',
     return: 'Return to conversation', panelLink: 'Generated content is in the panel', retry: 'Retry', resume: 'Resume' };
+  // Use the first island's renderer to select the same catalog for stream admission.
+  let firstView: LyraGenViewElement | undefined = new LyraGenViewElement();
   const controller = createChatStream({ messageId: 'assistant-answer', surfaceId: 'chat-answer',
-    catalog: initialCatalog, strings: labels, provenance: host.provenance, sources: host.sources,
+    catalog: firstView.catalog, strings: labels, provenance: host.provenance, sources: host.sources,
     suggestions: [{ id: 'ask:details', label: 'Explain further', question: 'Explain the answer in more detail.', context: { kind: 'follow-up' } }],
     canAsk: host.canAsk, onAsk: host.onAsk });
   const shells = new Map<string, HTMLElement>();
@@ -71,7 +72,9 @@ export function mountInteractiveChat(root: HTMLElement, host: {
       }
       let view = views.get(island.partId);
       if (!view) {
-        view = new LyraGenViewElement(); view.catalog = initialCatalog; views.set(island.partId, view);
+        view = firstView ?? new LyraGenViewElement();
+        firstView = undefined;
+        views.set(island.partId, view);
         const ownedShell = shell;
         view.addEventListener('lr-gen-ready', event => {
           const current = controller.islandForPart(island.partId);
@@ -149,6 +152,6 @@ export function mountInteractiveChat(root: HTMLElement, host: {
     cancel: () => { controller.cancel(); update(); host.onCancel(); },
     refreshSources: () => { controller.refreshSources(); update(); },
     openInPanel, returnToTranscript,
-    dispose: () => { disposed = true; if (followFrame !== undefined) root.ownerDocument.defaultView?.cancelAnimationFrame(followFrame); controller.dispose(); announcements.release(); root.removeEventListener('lr-citation-activate', selectSource); render(null, root); shells.clear(); views.clear(); panelParts.clear(); completed.clear(); },
+    dispose: () => { disposed = true; firstView = undefined; if (followFrame !== undefined) root.ownerDocument.defaultView?.cancelAnimationFrame(followFrame); controller.dispose(); announcements.release(); root.removeEventListener('lr-citation-activate', selectSource); render(null, root); shells.clear(); views.clear(); panelParts.clear(); completed.clear(); },
   };
 }

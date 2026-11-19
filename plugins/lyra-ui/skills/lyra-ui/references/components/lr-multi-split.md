@@ -50,7 +50,7 @@ Unconstrained panels have a zero block minimum, so long content stays inside the
 escaping into following content. Set `overflow` directly on an individual panel when its content
 needs a different scrolling surface.
 
-A focused enabled divider consumes its resize keys at either limit. Clamped steps leave sizes and persistence untouched.
+A focused enabled divider consumes a resize key when it proposes a change, including when a listener vetoes the proposal. A fully clamped step leaves the browser default, sizes and persistence untouched.
 Alt, Ctrl, and Meta chords, IME composition, and previously handled key events pass through.
 
 **Properties:**

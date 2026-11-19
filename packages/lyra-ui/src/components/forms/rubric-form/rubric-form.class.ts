@@ -347,8 +347,8 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
 
 export interface LyraRubricFormEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>;
-  'lr-change': CustomEvent<Readonly<{ value: RubricValue; previousValue: RubricValue }>>;
+  'lr-input': CustomEvent<Readonly<{ value: RubricValue; previousValue?: RubricValue }>>;
+  'lr-change': CustomEvent<Readonly<{ value: RubricValue; previousValue?: RubricValue }>>;
   input: Event;
   change: Event;
   'lr-validity-change': CustomEvent<{

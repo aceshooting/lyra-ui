@@ -202,6 +202,35 @@ describe("codeBlockLineTransformer", () => {
     expect(node.properties["data-active"]).to.equal("");
   });
 
+  it('keeps highlighted tokens in order beside a noninteractive line number', () => {
+    const transformer = codeBlockLineTransformer({
+      lineNumbers: true,
+      activatableLines: false,
+      focusedLine: 1,
+      highlightedLines: new Set(),
+      activeLines: new Set(),
+      lineLabel: () => '',
+      lineNumberText: String,
+    });
+    const tokens = [{ type: 'text', value: 'const ' }, { type: 'text', value: 'x' }];
+    const node = { properties: {}, children: [...tokens] as unknown[] };
+    transformer.line!(node, 3);
+    expect(node.children).to.deep.equal([
+      {
+        type: 'element',
+        tagName: 'span',
+        properties: { class: ['line-number'], 'aria-hidden': 'true' },
+        children: [{ type: 'text', value: '3' }],
+      },
+      {
+        type: 'element',
+        tagName: 'span',
+        properties: { class: ['line-source'] },
+        children: tokens,
+      },
+    ]);
+  });
+
   it("prepends a named gutter button without turning highlighted source text into a control", () => {
     const transformer = codeBlockLineTransformer({
       lineNumbers: true,

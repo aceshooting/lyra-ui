@@ -35,7 +35,7 @@ import {
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
 import { webTypesElementContributions } from './editor-web-types.mjs';
-import { editorDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
+import { editorDescription, editorMemberDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
@@ -63,8 +63,7 @@ function literalValues(typeText) {
 }
 
 function attributeDescriptionText(attribute, tagName) {
-  const lines = [];
-  lines.push(editorDescription(attribute.description, tagName));
+  const lines = [editorMemberDescription(attribute.description, tagName)];
   const meta = [];
   if (attribute.type?.text) meta.push(`Type: \`${attribute.type.text}\``);
   if (attribute.default !== undefined) meta.push(`Default: \`${attribute.default}\``);

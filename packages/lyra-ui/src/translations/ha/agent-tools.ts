@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Gudanar da umarni',
   promptStudioSave: 'Ajiye siga',
   promptStudioAddMessage: 'Ƙara saƙo',
+  promptStudioRemoveMessage: 'Cire saƙo',
   promptStudioRemoveMessageNumbered: 'Cire saƙo {index}',
   promptStudioMessageRole: 'Matsayin saƙo {index} ({role})',
   promptStudioMessageContent: 'Abin da ke saƙo {index} ({role})',

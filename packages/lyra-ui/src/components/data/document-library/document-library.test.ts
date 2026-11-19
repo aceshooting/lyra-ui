@@ -1459,14 +1459,14 @@ it('selects the plural category from the numeric selection count and sizes its c
   expect(Math.min(rect.width, rect.height)).to.be.at.least(24);
 });
 
-it('keeps documents with a missing sort value after known values in both directions', async () => {
+it('sorts a missing document owner as empty text in both directions', async () => {
   const library = await fixture<LyraDocumentLibrary>(html`<lr-document-library sort-key="owner"
     .documents=${[{ id: 'a', name: 'Missing' }, { id: 'b', name: 'Known', owner: 'Z' }]}></lr-document-library>`);
   for (const direction of ['asc', 'desc'] as const) {
     library.sortDir = direction;
     await library.updateComplete;
     const names = [...library.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('[part="document-name"]')];
-    expect(names.map(name => name.textContent!.trim())).to.deep.equal(['Known', 'Missing']);
+    expect(names.map(name => name.textContent!.trim())).to.deep.equal(direction === 'asc' ? ['Missing', 'Known'] : ['Known', 'Missing']);
   }
 });
 

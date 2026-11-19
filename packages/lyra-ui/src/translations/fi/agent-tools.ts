@@ -246,6 +246,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRun: 'Suorita kehote',
   promptStudioSave: 'Tallenna versio',
   promptStudioAddMessage: 'Lisää viesti',
+  promptStudioRemoveMessage: 'Poista viesti',
   promptStudioRemoveMessageNumbered: 'Poista viesti {index}',
   promptStudioMessageRole: 'Viestin {index} rooli ({role})',
   promptStudioMessageContent: 'Viestin {index} sisältö ({role})',

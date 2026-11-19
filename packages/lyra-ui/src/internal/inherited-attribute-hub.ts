@@ -165,3 +165,16 @@ export function subscribeInheritedAttributes(
     },
   });
 }
+
+/** Indexes a subscription under each ancestor whose changes can reach its host. */
+export function addAncestorSubscriber<T>(index: WeakMap<Element, Set<T>>, ancestor: Element, subscriber: T): void {
+  let subscribers = index.get(ancestor);
+  if (!subscribers) index.set(ancestor, (subscribers = new Set()));
+  subscribers.add(subscriber);
+}
+
+export function removeAncestorSubscriber<T>(index: WeakMap<Element, Set<T>>, ancestor: Element, subscriber: T): void {
+  const subscribers = index.get(ancestor);
+  subscribers?.delete(subscriber);
+  if (subscribers?.size === 0) index.delete(ancestor);
+}

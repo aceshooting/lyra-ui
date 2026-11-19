@@ -170,9 +170,9 @@ When `multiple` becomes false, the public value, live option flags, popup `aria-
 retained multiple-selection history returns if multiple is enabled again without another selection
 write. A populated `multiple` combobox describes its input by every committed label (visually
 hidden), so the tags collapsed behind "+N" are announced too.
-Equal-valued suggestions can be selected independently in multiple mode. Each activation toggles
-one occurrence, and each selected row supplies its own label and data. Use `FormData#getAll()` to
-read repeated submitted values.
+Activating an equal-valued suggestion in multiple mode toggles the shared value. A chosen row
+supplies its label and data. Programmatically supplied repeated values can be read with
+`FormData#getAll()` until a suggestion activation replaces the selection.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -608,8 +608,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. An independently rejected `AbortError` from the current source displays
-the same retry action. Rejections from superseded or disconnected requests are ignored.
+never shows the raw error. A current request that rejects with `AbortError` settles silently.
+Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -1837,7 +1837,7 @@ internal native date input.
 **Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
 `lr-input` and `lr-change` carry `{ value, previousValue }` in ISO form. During an uncommitted text edit both refer to the committed date. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
-bubbling, composed, and non-cancelable. Method calls and live `open` property or attribute changes emit cancelable `lr-show`/`lr-hide` requests.
+bubbling, composed, and non-cancelable. `show()` and `hide()` emit cancelable `lr-show`/`lr-hide` requests. Assigning `open` or changing the attribute commits the state directly without request or after-events.
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
 settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
 it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open
@@ -6850,8 +6850,8 @@ focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCusto
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** selecting a different emoji emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows any value events. `lr-load-error` (no detail,
+**Events:** each emoji pick, including a repeat selection, emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`. Both aliases carry `detail: { value, previousValue }`. Listen to `lr-activate` for every pick, including a repeat selection. It carries `{ value }` and follows the value events. `lr-load-error` (no detail,
 non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
@@ -6863,8 +6863,7 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. ArrowUp and ArrowDown navigate results, Enter picks, and
-ArrowLeft and ArrowRight move the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,

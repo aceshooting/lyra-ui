@@ -129,8 +129,8 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
 };
 
 export interface LyraDatePickerEventMap {
-  'lr-input': CustomEvent<{ value: string; previousValue: string }>;
-  'lr-change': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
+  'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
   change: Event;
   'lr-focus-day': CustomEvent<{ date: Date }>;

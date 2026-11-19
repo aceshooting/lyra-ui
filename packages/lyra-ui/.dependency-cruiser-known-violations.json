@@ -375,20 +375,6 @@
   {
     "type": "dependency",
     "from": "src/components/conversation/markdown/markdown-shared.ts",
-    "to": "src/components/conversation/code-block/shiki-dark-theme.ts",
-    "unresolvedTo": "../code-block/shiki-dark-theme.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/markdown/markdown-shared.ts",
     "to": "src/components/conversation/code-block/shiki-types.ts",
     "unresolvedTo": "../code-block/shiki-types.js",
     "dependencyTypes": [

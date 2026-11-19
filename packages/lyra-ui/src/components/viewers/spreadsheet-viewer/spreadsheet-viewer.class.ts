@@ -26,9 +26,9 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight, type TableViewerScrollMode, tableViewerScrollMode } from '../table-viewer-shared.js';
 import { delimitedColumnCount } from '../../../internal/delimited-data.js';
 import {
-  DocumentAnchorTarget,
+  DocumentAnchorTargetBase as DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
-} from '../../../internal/anchor-target.js';
+} from '../../../internal/anchor-target-base.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { loadSheetJsCached, type SheetJsApi } from './spreadsheet-loader.js';
@@ -236,7 +236,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
    * @default 26214400 */
   // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes = DEFAULT_MAX_RESOURCE_BYTES;
+  @property({ type: Number, attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
   private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
   private readonly input = new TabularInputSnapshot<SpreadsheetViewerWorkbook>({
     snapshot: (value, limits) => this.snapshotWorkbook(value, limits),
