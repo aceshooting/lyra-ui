@@ -2,7 +2,8 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import type { AgentRunActivateDetail } from '../run-events.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
@@ -39,8 +40,8 @@ export interface BackgroundRun {
 type NormalizedRun = Omit<BackgroundRun, 'status'> & { status: BackgroundRunStatus | 'unknown' };
 
 export interface LyraBackgroundRunsEventMap {
-  'lr-run-activate': CustomEvent<{ runId: string }>;
-  'lr-run-cancel': CustomEvent<{ runId: string }>;
+  'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<BackgroundRun>>>;
+  'lr-run-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
 
 const MAX_RENDERED_RUNS = 100;
@@ -66,7 +67,9 @@ const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['que
  * normalized; an explicit foreign status remains visible as a neutral unknown row.
  *
  * @customElement lr-background-runs
- * @event lr-run-activate - A run was requested for opening. `detail: { runId }`.
+ * @event lr-run-activate - A run was requested for opening. `detail: { runId, run }`, where `run` is
+ *   a frozen snapshot of the host's `runs` record for that id, with its original `status`
+ *   spelling (the same detail shape `lr-subagent-panel` emits).
  * @event lr-run-cancel - An active (queued, running, collecting or waiting) run was requested for cancellation. `detail: { runId }`.
  *   Terminal or missing runs cannot emit this event.
  * @csspart base - The fieldset and group.
@@ -115,6 +118,8 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
+
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-run-activate', 'lr-run-cancel']);
 
   static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
 
@@ -181,22 +186,29 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
 
   private normalizedFor?: readonly BackgroundRun[];
   private normalizedCache: NormalizedRun[] = [];
+  /** The first admitted `runs` record per id, as assigned (before status normalization). */
+  private sourceById = new Map<string, BackgroundRun>();
 
   private get normalizedRuns(): NormalizedRun[] {
     if (this.normalizedFor !== this.runs) {
       this.normalizedFor = this.runs;
       const valid: NormalizedRun[] = [];
+      const sources = new Map<NormalizedRun, BackgroundRun>();
       for (const run of Array.isArray(this.runs) ? this.runs : []) {
         try {
           const terminal = normalizeAgentTerminalStatus(run.status);
           const status = terminal === 'success' ? 'completed' : terminal === 'error' ? 'failed' : terminal === 'cancelled' ? 'cancelled' : run.status;
-          if (typeof run.label === 'string')
-            valid.push({ ...run, status: (STATUSES as readonly string[]).includes(status) ? status as BackgroundRunStatus : 'unknown' });
+          if (typeof run.label === 'string') {
+            const normalized: NormalizedRun = { ...run, status: (STATUSES as readonly string[]).includes(status) ? status as BackgroundRunStatus : 'unknown' };
+            valid.push(normalized);
+            sources.set(normalized, run);
+          }
         } catch {
           // A malformed row is skipped.
         }
       }
       this.normalizedCache = firstByIdentity(valid, (run) => run.id);
+      this.sourceById = new Map(this.normalizedCache.map((run) => [run.id, sources.get(run)!]));
     }
     return this.normalizedCache;
   }
@@ -205,7 +217,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
     if (this.disabled || !this.normalizedRuns.some((run) => run.id === runId) || this.dispatchingRequest) return;
     this.dispatchingRequest = true;
     try {
-      this.emit('lr-run-activate', { runId });
+      this.emit('lr-run-activate', { runId, run: this.sourceById.get(runId) });
     } finally {
       this.dispatchingRequest = false;
     }

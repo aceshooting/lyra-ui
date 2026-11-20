@@ -246,6 +246,24 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  (see `effectiveLabel`). */
   @property() label?: string;
 
+  /**
+   * Shows every submenu this menu opens, nested submenus included, in the browser top layer
+   * wherever the native Popover API exists, so it paints above every page layer whatever the
+   * stacking contexts around it. Use it for a menu inside a fixed or sticky header, toolbar or
+   * rail with its own `z-index` that a sibling surface stacked higher would otherwise cover: such
+   * an ancestor is only a stacking context, not a containing block, so the automatic top-layer
+   * escape never applies, and no `z-index` on a submenu can lift it out of that ancestor's
+   * context. While set, submenus are placed with the `fixed` strategy whatever
+   * `--lr-positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement,
+   * focus, Escape and the show/hide transition are unchanged. A submenu stays promoted through its
+   * hide transition and leaves the top layer once it settles closed. An enclosing menu's or
+   * `<lr-menubar>`'s `top-layer` applies too. Stacking contexts are deliberately not detected
+   * automatically. Without native Popover API support a submenu keeps its ordinary `z-index`
+   * stacking. Same contract as `<lr-dropdown>`'s `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+
   /** @internal Supplies only the menu interaction engine inside another component's popup. */
   @property({ type: Boolean, attribute: false }) dropdownContained = false;
 
@@ -494,6 +512,24 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.syncPresentationState();
     }
     if (changed.has('dropdownSize')) this.applyDropdownSize();
+    if (changed.has('topLayer') && this.hasUpdated && this.presentationOpen && this.submenuAnchor) {
+      this.reposition();
+    }
+  }
+
+  /** Whether this submenu opens in the top layer: its own `topLayer`, an enclosing menu's, or the
+   *  owning menubar's. */
+  private submenuTopLayer(anchor: HTMLElement): boolean {
+    if (this.topLayer) return true;
+    const menuTag = tag('menu');
+    for (
+      let menu = anchor.closest<HTMLElement & { topLayer?: boolean }>(menuTag);
+      menu;
+      menu = menu.parentElement?.closest<HTMLElement & { topLayer?: boolean }>(menuTag) ?? null
+    ) {
+      if (menu.topLayer === true) return true;
+    }
+    return anchor.closest<HTMLElement & { topLayer?: boolean }>(tag('menubar'))?.topLayer === true;
   }
 
   private reposition(): void {
@@ -507,8 +543,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       const placement = this.menubarAnchored
         ? MENUBAR_PLACEMENT
         : rtlAwarePlacement(SUBMENU_PLACEMENT, this);
-      const bar = this.submenuAnchor.closest<HTMLElement & { topLayer?: boolean }>(tag('menubar'));
-      const topLayer = bar?.topLayer === true;
+      const topLayer = this.submenuTopLayer(this.submenuAnchor);
       this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, topLayer);
       this.cleanup = place(this.submenuAnchor, popup, {
         placement,

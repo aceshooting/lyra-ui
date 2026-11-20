@@ -57,6 +57,15 @@ menu's fallback name; a `label` or `aria-label` on the menu itself takes precede
   not comparison with an English sentinel, is what selects localization.
 - `dropdownOpen: boolean = false` (attribute: false) — the containing dropdown's controlled open
   state, used to synchronize the menu interaction engine while it is rendered inside a popup.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every submenu this menu
+  opens, nested ones included, in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail the menu sits in. No DOM node moves; a submenu
+  leaves the top layer once it settles closed. Applies live while open; without Popover API support
+  submenus keep their ordinary `z-index`. An enclosing menu's or `<lr-menubar>`'s `top-layer`
+  applies too.
+  A submenu surface stacks at its enclosing overlay's `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`.
 
 **Events:**
 

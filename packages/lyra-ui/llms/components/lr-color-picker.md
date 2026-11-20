@@ -149,6 +149,13 @@ and:
 - `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
   UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
   `left`/`right` component is swapped under RTL
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`:
+  shows the open panel in the browser top layer where the Popover API exists, placed `fixed`
+  whatever `positioning-strategy` resolves to, so it paints above a sticky or fixed `z-index`ed
+  header, toolbar or rail that a higher sibling would otherwise cover. It leaves the top layer when
+  the panel closes, changes apply live while open, and it has no effect with `inline`. Without
+  Popover API support the panel keeps its ordinary
+  `var(--lr-overlay-stack-index, var(--lr-layer-popover))` stacking
 - `open: boolean = false` (reflected) — whether the popup panel is open. Assigning `true` while the
   control is effectively disabled is ignored, and a `disabled` that flips on while the popup is
   already open closes it. Inline rendering remains visible at either value
@@ -181,6 +188,13 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 `detail: { value, previousValue }`. On commit, `previousValue` is the value at the start of the interaction. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
+Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
+cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
+keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
+may instead resolve the request by assigning `value` itself, which also suppresses the built-in
+commit. Re-picking the current colour, programmatic writes and the continuous pointer and
+keyboard gestures (which preview through `input` as they move) dispatch no request.
 Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
 disablement, disconnection, or document adoption restores the pre-gesture colour and submitted
 form value without emitting another `input` or a commit pair. A direct consumer `value` assignment

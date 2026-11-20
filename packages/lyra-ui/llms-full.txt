@@ -9274,7 +9274,14 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
+**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
+writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
+new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and
+suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
+assigning `value` itself, which also suppresses the built-in commit. `clear()` and programmatic
+writes request nothing, and a date input keeps its calendar's request inside its popup.
+All other events are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
 values. Their typed aliases `lr-input` and `lr-change` carry `{ value, previousValue }` after the corresponding
 native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
@@ -9364,6 +9371,12 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
+- `topLayer: boolean = false` (`top-layer`, reflected) — shows the open calendar popover in the
+  browser top layer where the native Popover API exists, so it paints above a sibling stacked over
+  a fixed/sticky, `z-index`ed header the field sits in. The popover is then placed `fixed`; no DOM
+  node moves, and anchoring, RTL, focus, Escape and transitions are unchanged. It leaves the top
+  layer once it settles closed; changes apply live while open. Same contract as `lr-popover`'s
+  `top-layer`; without Popover API support it keeps its ordinary `z-index`.
 - `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
   It defaults to the internal input after first render; assign another element to override it, or
   assign `undefined` to restore the internal input
@@ -11153,6 +11166,10 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `aria-label` names the group. An empty attribute clears the name. Whitespace alone falls back
   to the visible label or localized time name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
+  `topLayer = false` (`top-layer`, reflected) shows the open popup in the browser top layer where
+  the native Popover API exists (placed `fixed`, no DOM node moves), so it paints above a sibling
+  stacked over a fixed/sticky, `z-index`ed header; it leaves the top layer once it settles closed
+  and applies live while open. Same contract as `lr-popover`'s `top-layer`.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
 - `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
   (reflected), the spelling `lr-input`/`lr-select`/`lr-combobox` use, is equivalent. `withNow = false`
@@ -12009,7 +12026,12 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
+**Events:** `lr-swatch-picker-select-request` (`detail: { value, previousValue }`) — cancelable,
+dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
+`value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
+`lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
+suppresses the built-in commit. `lr-activate` still follows either way.
+`lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
 Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
@@ -14206,6 +14228,13 @@ and:
 - `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
   UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
   `left`/`right` component is swapped under RTL
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`:
+  shows the open panel in the browser top layer where the Popover API exists, placed `fixed`
+  whatever `positioning-strategy` resolves to, so it paints above a sticky or fixed `z-index`ed
+  header, toolbar or rail that a higher sibling would otherwise cover. It leaves the top layer when
+  the panel closes, changes apply live while open, and it has no effect with `inline`. Without
+  Popover API support the panel keeps its ordinary
+  `var(--lr-overlay-stack-index, var(--lr-layer-popover))` stacking
 - `open: boolean = false` (reflected) — whether the popup panel is open. Assigning `true` while the
   control is effectively disabled is ignored, and a `disabled` that flips on while the popup is
   already open closes it. Inline rendering remains visible at either value
@@ -14238,6 +14267,13 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 `detail: { value, previousValue }`. On commit, `previousValue` is the value at the start of the interaction. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
+Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
+cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
+keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
+may instead resolve the request by assigning `value` itself, which also suppresses the built-in
+commit. Re-picking the current colour, programmatic writes and the continuous pointer and
+keyboard gestures (which preview through `input` as they move) dispatch no request.
 Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
 disablement, disconnection, or document adoption restores the pre-gesture colour and submitted
 form value without emitting another `input` or a commit pair. A direct consumer `value` assignment
@@ -15627,7 +15663,10 @@ owner selected by `form`. `setCustomValidity(message)` sets or clears `customErr
 `resetValidity()` clears only that consumer error and recomputes the current required/catalog
 constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 
-`topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
+`topLayer` (attribute `top-layer`, reflected) defaults to `false`; enable it inside clipped or
+`z-index`ed sticky headers, toolbars and native dialogs. It follows the `lr-select` `top-layer`
+contract in all four catalog pickers, applies live while open, and the listbox otherwise stacks at
+`var(--lr-overlay-stack-index, var(--lr-layer-dropdown))`.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`; with neither, the list uses `absolute` in both
 modes.
@@ -15649,8 +15688,12 @@ If the filter fails to load, `lr-load-error` fires and the compact picker remain
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
 in both modes, following the country picker's event contract.
 
-**Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
-`input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
+**Events:** A user choice or clear first dispatches the cancelable `lr-change-request`
+(`detail: { value, previousValue }`, the proposed code while `value` still holds the current one).
+`preventDefault()` keeps the current value and suppresses the change sequence and `lr-clear`; a
+listener may instead resolve it by assigning `value` itself, which also suppresses the built-in
+commit. This veto is shared by all four catalog pickers. An accepted user choice or clear updates
+`value` synchronously, then emits exactly one `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
@@ -15838,7 +15881,9 @@ The readonly `input: HTMLInputElement | null` exposes the filter, or null in com
 After directly editing its DOM value, dispatch a native `input` event to refilter. Keyboard
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 `lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
 be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
 `lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
@@ -15904,7 +15949,9 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
 On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
 action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
@@ -15957,7 +16004,9 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
 On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
 action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
@@ -23521,6 +23570,13 @@ focus off the tab the user was on.
 
 **Events:**
 
+- `lr-tab-group-select-request` (`detail: { value: string, previousValue: string }`) — a user
+  activation (click, Arrow/Home/End under `activation="auto"`, Enter/Space under
+  `activation="manual"`) is about to switch to a tab that is not active; `active` still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current tab, and
+  none of `lr-tab-hide`/`lr-tab-show`/`lr-activate` fire. A listener may instead resolve it by
+  assigning `active` itself, which also suppresses the built-in switch. Re-picking the active tab
+  and `show()` never ask.
 - `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
   or because the active tab was removed, disabled or made inert and selection moved to its following
   (else preceding) tab. Not fired for the initial default or a direct `active` write.
@@ -24231,6 +24287,11 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
+- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+  key is about to select a segment whose value differs from `value`, which still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
+  and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning
+  `value` itself, which also suppresses the built-in commit. Re-picking the current value never asks.
 - `lr-change` (`detail: { value }`) — fired when the selected value changes via click or keyboard.
 - `lr-activate` (`detail: { value }`) — fired on **every** activation of a non-disabled
   segment (a click, or an Arrow/Home/End key that lands on one), whether or not the selection
@@ -25882,6 +25943,15 @@ menu's fallback name; a `label` or `aria-label` on the menu itself takes precede
   not comparison with an English sentinel, is what selects localization.
 - `dropdownOpen: boolean = false` (attribute: false) — the containing dropdown's controlled open
   state, used to synchronize the menu interaction engine while it is rendered inside a popup.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every submenu this menu
+  opens, nested ones included, in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail the menu sits in. No DOM node moves; a submenu
+  leaves the top layer once it settles closed. Applies live while open; without Popover API support
+  submenus keep their ordinary `z-index`. An enclosing menu's or `<lr-menubar>`'s `top-layer`
+  applies too.
+  A submenu surface stacks at its enclosing overlay's `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`.
 
 **Events:**
 
@@ -31267,6 +31337,12 @@ The menu content is exactly what `lr-dropdown` takes, so every row type composes
   press-and-hold is cancelled. Becoming disabled while open closes the menu through a cancelable
   `lr-hide`.
 - `size: LyraSize = 'm'` (reflected) — propagated to the directly owned rows.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-dropdown>`:
+  shows the open menu in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`.
 - `open: boolean` — **read-only**. `true` from the moment the menu opens until a close commits, so
   it still reads `true` inside `lr-hide` handlers. A context menu needs a point, so there is no
   `open` setter and no argument-less `show()`: open it with a gesture or `showAt()`.
@@ -32152,6 +32228,11 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
+- `lr-rating-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
+  click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
+  gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
+  suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
+  assigning `value` itself, which also suppresses the built-in commit. `lr-activate` still follows.
 - `lr-input` — `detail: { value }` after the native `input` event when an interactive commit
   changes the value. Programmatic writes and unchanged commits are silent.
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
@@ -32453,6 +32534,13 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
   a nonempty visible label or the localized fallback
 - `open: boolean = false` (reflected)
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-dropdown>`:
+  shows the open format menu in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`; re-placing it never moves focus. The menu
+  stacks at the button's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
@@ -33506,6 +33594,13 @@ preserving null readback; an explicitly empty query remains empty.
   for the platform's element-reference ARIA API.
 - `listboxId: string` — read-only getter; the internal `id` of the `role="listbox"` element. Like
   `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  shows the open listbox in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`. The listbox
+  stacks at an enclosing overlay's `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Methods:**
 
@@ -34600,6 +34695,13 @@ When the tour ends, focus returns to the element that held it when the tour star
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
   dots.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — also shows `interactiveTarget`
+  steps in the browser top layer (default modal steps always are), so the backdrop, spotlight and
+  popover paint above a sibling surface stacked higher than a `z-index`ed fixed or sticky header,
+  toolbar or rail the host sits in. Unset, an interactive step is promoted only when an ancestor
+  traps the host or its target is itself in the top layer, so overlays the live target opens stay
+  above the tour; with it set, such an overlay needs its own `top-layer`. Applies live while open;
+  without Popover API support the tour keeps its ordinary `z-index`.
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
@@ -51905,7 +52007,12 @@ algorithm (which has no minutes/hours tier) in both the visible strip and the to
 `lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
 shows full grouped figures. This badge has no density mode: use `abbreviate` for compact counts; a `compact` attribute is inert. `summary: string =
-''` supplies visible fallback text when no built-in segment is present.
+''` supplies visible fallback text when no built-in segment is present. `topLayer: boolean = false`
+(attribute `top-layer`, reflected) — shows the open breakdown tooltip in the browser top layer,
+placed `fixed`, so it paints above a sibling surface stacked higher than a `z-index`ed fixed or
+sticky header, toolbar or rail it sits in; no DOM node moves, it leaves the top layer once it
+closes, applies live while open, and without Popover API support keeps its ordinary `z-index`. The
+tooltip stacks at the badge's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the
 property); `details` — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
@@ -52739,8 +52846,8 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
-`lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, the cancelable `lr-toggle-request` and committed `lr-toggle`
+(from reasoning panels and tool-call blocks), `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
@@ -52797,6 +52904,8 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-retry-request` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle-request` event — Cancelable passthrough from a rendered reasoning panel or tool-call
+  block, before its header activation commits.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
@@ -53639,6 +53748,13 @@ its content.
   ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open detail tooltip in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`.
+  The tooltip stacks at the chip's leased `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
 click or Enter/Space activation of the pill, exactly once per activation. `lr-tool-activate`
@@ -57229,8 +57345,10 @@ and `waiting-approval` have their own localized sentence ("{label} started", "{l
 `queued`, `collecting` and application-defined statuses announce "{label}: {status}" using the status's
 localized name or its `label`; `idle` is silent.
 
-**Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
-boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
+**Events:** cancelable `lr-toggle-request` (`detail: EvalExampleToggleDetail`, the proposed state)
+before a summary activation expands or collapses an example — preventing it keeps the example as is
+and no `lr-example-toggle` fires; `lr-example-toggle` (`detail: EvalExampleToggleDetail` =
+`{ exampleId: string; expanded: boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-citation-open` (same
 detail, for a citation's full-preview request), `lr-example-tool-approval-decide-request`
@@ -58641,6 +58759,10 @@ progress, and `No data` only for a terminal status.
 
 **Events:**
 
+- `lr-toggle-request` (`detail: ToolCallBlockToggleDetail`, the proposed `expanded`) — cancelable;
+  fires before a header activation changes `expanded`, never for programmatic writes.
+  `preventDefault()` keeps the block as is and no `lr-toggle` fires; a listener may instead resolve
+  it by assigning `expanded` itself, which also suppresses the built-in commit
 - `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
   after a header activation changes `expanded`; never for programmatic writes. Not cancelable
 - `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;
@@ -58920,7 +59042,7 @@ overrides the internal fieldset name.
 | `decision-base` | A decision button's internal control (forwarded from `<lr-button>`). |
 | `decision-label` | A decision button's label wrapper (forwarded from `<lr-button>`). |
 
-**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.
+**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation. The event is itself the request: a click changes no state, so there is nothing to veto. To refuse or defer a decision, leave `status` at `pending`; to settle it, assign `status`.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-grant.js';
 
@@ -58981,7 +59103,7 @@ remains empty visually, but the fieldset keeps the localized accessible name whe
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 
-**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`.
+**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`. The event is itself the request: a click changes no connector state, so there is nothing to veto. To refuse an action, leave the row's `status` unchanged.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-connector-manager.js';
 import type { AgentConnector } from '@aceshooting/lyra-ui/components/agent-tools/connector-manager/connector-manager.class.js';
@@ -59008,7 +59130,7 @@ shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` a
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
 `collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
-buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+buttons emit `lr-run-activate` (`{ runId, run }`); active (queued, running, collecting and waiting)
 records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -59023,8 +59145,9 @@ and `waiting-approval` render with the agent-run labels and, like `queued` and `
 Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
 `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
-`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run.
+`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId, run }`) requests
+opening a run; `run` is a frozen snapshot of the assigned record for that id, original `status`
+spelling included, the same shape `lr-subagent-panel` emits.
 
 **CSS parts:**
 
@@ -60539,7 +60662,12 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
   omitted state and removes the attribute
 
-**Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
+**Events:** `lr-selection-change-request` (`detail: { selectedSourceIds, previousSelectedSourceIds }`)
+is dispatched before a user toggle (row click, Space, or select-all) commits. Cancelable:
+`preventDefault()` keeps the current selection, select-all checkbox included, and emits no
+`lr-selection-change`; a listener may instead resolve it by assigning a new `selectedSourceIds`
+array itself, which also suppresses the built-in commit. A `sources` reassignment that prunes the
+selection does not ask. `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
 `selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's
@@ -61964,6 +62092,13 @@ filtered-out id). None change `selectedNodeId` or filters.
 
 **Events:**
 
+- `lr-selection-change-request` (`detail: { selectedNodeId: string | null, previousSelectedNodeId: string | null }`)
+  — a user selection (graph node click, search result, neighbor row, path element or entity-card
+  focus action) is about to change `selectedNodeId`, which still holds the previous id. Cancelable:
+  `preventDefault()` keeps the current selection, opens no details and emits no
+  `lr-selection-change`. A listener may instead resolve it by assigning `selectedNodeId` itself,
+  which also suppresses the built-in commit. Closing the details popover and an invalidated
+  selection clear without asking.
 - `lr-selection-change` (`detail: { selectedNodeId: string | null, selectedNodeIds, selectedEdgeIds }`, the last two
   in `lr-graph`'s shape) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
@@ -61973,9 +62108,15 @@ filtered-out id). None change `selectedNodeId` or filters.
 - `lr-path-request` (`detail: { sourceNodeId: string; targetNodeId: string }`) — the "Find path" action was
   activated with exactly two nodes pinned. This component has no traversal algorithm; the host
   computes/fetches the path and assigns it back through `path`.
+- `lr-pin-change-request` (`detail: { pinnedNodeIds: string[], previousPinnedNodeIds: string[] }`)
+  — a pin toggle (details pin action or a pinned chip's remove button) is about to commit.
+  Cancelable: `preventDefault()` keeps the current pins, announces nothing and emits no
+  `lr-pin-change`. A listener may instead resolve it by assigning a new `pinnedNodeIds` array itself,
+  which also suppresses the built-in commit.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
-- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes }`. Call `preventDefault()` to veto the legend change.
+- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes, previousHiddenTypes }`. Call
+  `preventDefault()` to veto the legend change, or assign a new `hiddenTypes` array to resolve it.
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.

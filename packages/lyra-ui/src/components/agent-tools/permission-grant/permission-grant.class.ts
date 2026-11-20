@@ -41,7 +41,9 @@ const DECISION_LABEL_KEY: Record<PermissionGrantDecision, string> = {
  *
  * @customElement lr-permission-grant
  * @event lr-permission-decision - A permission decision was requested. `detail: { requestId,
- *   decision }`. The host owns authorization and the controlled `status` value.
+ *   decision }`. The host owns authorization and the controlled `status` value. Not cancelable,
+ *   because the event is itself the request: a click changes no state. A host refuses or defers a
+ *   decision by leaving `status` at `pending`, and settles it by assigning `status`.
  * @csspart base - The fieldset and overall request group.
  * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every
  *   fieldset panel of this family, so one declaration retunes them together.

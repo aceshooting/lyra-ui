@@ -108,7 +108,9 @@ The readonly `input: HTMLInputElement | null` exposes the filter, or null in com
 After directly editing its DOM value, dispatch a native `input` event to refilter. Keyboard
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 `lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
 be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
 `lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports

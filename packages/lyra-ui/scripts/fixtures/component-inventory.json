@@ -12268,13 +12268,13 @@
         "events": [
           {
             "name": "lr-run-activate",
-            "type": "CustomEvent<{ runId: string }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<BackgroundRun>>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-cancel",
-            "type": "CustomEvent<{ runId: string }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -31423,6 +31423,16 @@
             "default": ""
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "uppercase",
             "property": "uppercase",
             "type": "boolean",
@@ -31704,6 +31714,16 @@
             "default": ""
           },
           {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "uppercase",
             "attribute": "uppercase",
             "type": "boolean",
@@ -31839,6 +31859,12 @@
             "name": "lr-change",
             "type": "CustomEvent<{ value: string; previousValue?: string }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-color-picker-change-request",
+            "type": "CustomEvent<{ value: string; previousValue: string }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -37663,6 +37689,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -37713,6 +37749,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -39741,7 +39787,7 @@
             "name": "top-layer",
             "property": "topLayer",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -40020,7 +40066,7 @@
             "attribute": "top-layer",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -40127,6 +40173,12 @@
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -41177,7 +41229,7 @@
             "name": "top-layer",
             "property": "topLayer",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -41446,7 +41498,7 @@
             "attribute": "top-layer",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -41553,6 +41605,12 @@
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -45162,6 +45220,16 @@
             "default": ""
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -45771,6 +45839,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",
@@ -47354,6 +47432,12 @@
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-date-picker-select-request",
+            "type": "CustomEvent<LyraDatePickerSelectRequestDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -61100,6 +61184,12 @@
             "type": "CustomEvent<EvalToolRenderErrorDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<EvalExampleToggleDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -61398,6 +61488,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -61543,6 +61643,16 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -81331,7 +81441,7 @@
           },
           {
             "name": "lr-hidden-types-change-request",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ hiddenTypes: string[]; previousHiddenTypes: string[] }> >",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -81370,6 +81480,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-pin-change-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ pinnedNodeIds: string[]; previousPinnedNodeIds: string[] }> >",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-relation-activate",
             "type": "CustomEvent<{ relation: string; sourceNodeId?: string; targetNodeId?: string; occurrenceIndex: number; }>",
             "cancelable": "never",
@@ -81387,6 +81503,12 @@
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeId: string | null; selectedNodeIds: string[]; selectedEdgeIds: string[]; }> >",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-selection-change-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeId: string | null; previousSelectedNodeId: string | null }> >",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -91813,6 +91935,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -91927,6 +92059,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [],
@@ -92154,6 +92296,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -92185,6 +92337,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -94742,6 +94904,12 @@
             "name": "lr-toggle",
             "type": "CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -123752,6 +123920,12 @@
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-rating-change-request",
+            "type": "CustomEvent<LyraRatingChangeRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -130432,6 +130606,12 @@
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-segmented-select-request",
+            "type": "CustomEvent<LyraSegmentedSelectRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -136334,6 +136514,12 @@
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedSourceIds: string[] }> >",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-selection-change-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedSourceIds: string[]; previousSelectedSourceIds: string[] }> >",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -142300,6 +142486,12 @@
             "type": "CustomEvent<{ value: string; previousValue?: string | null }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-swatch-picker-select-request",
+            "type": "CustomEvent<LyraSwatchPickerSelectRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -143775,6 +143967,12 @@
             "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-tab-group-select-request",
+            "type": "CustomEvent<LyraTabGroupSelectRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-tab-hide",
@@ -151051,6 +151249,16 @@
             "default": 60
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -151350,6 +151558,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 60
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",
@@ -153090,7 +153308,7 @@
             "name": "top-layer",
             "property": "topLayer",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -153359,7 +153577,7 @@
             "attribute": "top-layer",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -153466,6 +153684,12 @@
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -157894,6 +158118,12 @@
             "type": "CustomEvent<ToolCallBlockToggleDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<ToolCallBlockToggleDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -158140,6 +158370,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -158230,6 +158470,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -161577,6 +161827,16 @@
             "default": 4
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-progress",
             "property": "withoutProgress",
             "type": "boolean",
@@ -161666,6 +161926,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "withoutProgress",
@@ -164467,7 +164737,7 @@
             "name": "top-layer",
             "property": "topLayer",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -164727,7 +164997,7 @@
             "attribute": "top-layer",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -164843,6 +165113,12 @@
             "name": "lr-change",
             "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -165220,6 +165496,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -165298,6 +165584,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [

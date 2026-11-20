@@ -26,7 +26,7 @@ export const styles = css`
      own [part='listbox']. */
   [part='listbox'] {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     /* Clamped against place()'s published available-space custom properties (same [part='listbox']
        treatment as menu.styles.ts/combobox.styles.ts) so the popup cannot overflow off-screen on a

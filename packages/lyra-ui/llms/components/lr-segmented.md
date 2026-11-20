@@ -65,6 +65,11 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
+- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+  key is about to select a segment whose value differs from `value`, which still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
+  and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning
+  `value` itself, which also suppresses the built-in commit. Re-picking the current value never asks.
 - `lr-change` (`detail: { value }`) — fired when the selected value changes via click or keyboard.
 - `lr-activate` (`detail: { value }`) — fired on **every** activation of a non-disabled
   segment (a click, or an Arrow/Home/End key that lands on one), whether or not the selection

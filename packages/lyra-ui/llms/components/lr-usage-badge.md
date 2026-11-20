@@ -38,7 +38,12 @@ algorithm (which has no minutes/hours tier) in both the visible strip and the to
 `lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
 shows full grouped figures. This badge has no density mode: use `abbreviate` for compact counts; a `compact` attribute is inert. `summary: string =
-''` supplies visible fallback text when no built-in segment is present.
+''` supplies visible fallback text when no built-in segment is present. `topLayer: boolean = false`
+(attribute `top-layer`, reflected) — shows the open breakdown tooltip in the browser top layer,
+placed `fixed`, so it paints above a sibling surface stacked higher than a `z-index`ed fixed or
+sticky header, toolbar or rail it sits in; no DOM node moves, it leaves the top layer once it
+closes, applies live while open, and without Popover API support keeps its ordinary `z-index`. The
+tooltip stacks at the badge's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the
 property); `details` — extra rows appended below the built-in tooltip breakdown (e.g. cache-read

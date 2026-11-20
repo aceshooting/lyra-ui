@@ -66,7 +66,7 @@ remains empty visually, but the fieldset keeps the localized accessible name whe
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 
 
-**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`.
+**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`. The event is itself the request: a click changes no connector state, so there is nothing to veto. To refuse an action, leave the row's `status` unchanged.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-connector-manager.js';
 import type { AgentConnector } from '@aceshooting/lyra-ui/components/agent-tools/connector-manager/connector-manager.class.js';

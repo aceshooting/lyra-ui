@@ -2278,6 +2278,12 @@ The menu content is exactly what `lr-dropdown` takes, so every row type composes
   press-and-hold is cancelled. Becoming disabled while open closes the menu through a cancelable
   `lr-hide`.
 - `size: LyraSize = 'm'` (reflected) — propagated to the directly owned rows.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-dropdown>`:
+  shows the open menu in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`.
 - `open: boolean` — **read-only**. `true` from the moment the menu opens until a close commits, so
   it still reads `true` inside `lr-hide` handlers. A context menu needs a point, so there is no
   `open` setter and no argument-less `show()`: open it with a gesture or `showAt()`.
@@ -3163,6 +3169,11 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
+- `lr-rating-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
+  click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
+  gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
+  suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
+  assigning `value` itself, which also suppresses the built-in commit. `lr-activate` still follows.
 - `lr-input` — `detail: { value }` after the native `input` event when an interactive commit
   changes the value. Programmatic writes and unchanged commits are silent.
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted

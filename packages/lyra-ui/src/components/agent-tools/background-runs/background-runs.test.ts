@@ -70,7 +70,7 @@ describe('lr-background-runs', () => {
     const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
     const open = oneEvent(el, 'lr-run-activate');
     el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="done"] [part="open"]')!.click();
-    expect((await open as CustomEvent).detail).to.deep.equal({ runId: 'done' });
+    expect((await open as CustomEvent).detail).to.deep.equal({ runId: 'done', run: runs[2] });
     const cancel = oneEvent(el, 'lr-run-cancel');
     el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="running"] [part="cancel"]')!.click();
     expect((await cancel as CustomEvent).detail).to.deep.equal({ runId: 'running' });
@@ -210,4 +210,20 @@ it('keeps focus on the remaining content when the final action disappears', asyn
   el.runs = [];
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('empty');
+});
+
+it('carries the host run record, original status spelling included, on lr-run-activate like lr-subagent-panel', async () => {
+  const aliased: BackgroundRun[] = [
+    { id: 'a', label: 'First', status: 'success' },
+    { id: 'a', label: 'Duplicate', status: 'running' },
+  ];
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${aliased}></lr-background-runs>`);
+  const open = oneEvent(el, 'lr-run-activate');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="a"] [part="open"]')!.click();
+  const { detail } = await open as CustomEvent<{ runId: string; run?: BackgroundRun }>;
+  expect(detail.runId).to.equal('a');
+  expect(detail.run).to.deep.equal({ id: 'a', label: 'First', status: 'success' });
+  expect(Object.isFrozen(detail)).to.equal(true);
+  expect(Object.isFrozen(detail.run)).to.equal(true);
+  expect(aliased[0]!.status).to.equal('success');
 });

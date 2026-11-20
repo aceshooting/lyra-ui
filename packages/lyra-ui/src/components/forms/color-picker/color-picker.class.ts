@@ -19,8 +19,12 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import {
   deferredPlaceReady as place,
   loadAnchoredOverlayRuntime,
+  syncTopLayerRelease,
+  topLayerPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
 import { declaredDefaultConverter, literalSetConverter } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
@@ -233,6 +237,8 @@ export interface LyraColorPickerEventMap {
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
+  /** Cancelable proposal before a swatch, text-entry or eyedropper pick commits. */
+  'lr-color-picker-change-request': CustomEvent<{ value: string; previousValue: string }>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
@@ -286,6 +292,13 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
  *   emitted alongside native `change`. `previousValue` is the value before the gesture.
  * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event with `detail: { value, previousValue }`.
+ * @event lr-color-picker-change-request - A swatch click, a text entry or an eyedropper result is
+ *   about to change the value; `detail: { value, previousValue }` carries the proposed serialized
+ *   colour while `value` still holds the current one. Cancelable: `preventDefault()` keeps the
+ *   current colour and none of `input`/`lr-input`/`change`/`lr-change` follow. A listener may
+ *   resolve it by assigning `value` itself, which supersedes the proposal (a same-value write
+ *   included). Re-picking the current colour, programmatic writes, and the continuous pointer and
+ *   keyboard gestures (which preview through `input` as they move) emit no request.
  * @event lr-show - The colour panel is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Initial markup, disconnect cleanup, and a close forced
  *   by disablement apply without emitting this request event.
@@ -555,6 +568,24 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.strategy.setHoist(next);
   }
 
+  /**
+   * Shows the open panel in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover: such an ancestor is only a stacking context, not a containing block, so
+   * the automatic top-layer escape never applies, and no `z-index` on the panel can lift it out of
+   * that ancestor's context. While set, the panel is placed with the `fixed` strategy whatever
+   * `positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement, focus and
+   * Escape are unchanged. It leaves the top layer once the panel closes. Stacking contexts are
+   * deliberately not detected automatically. Without native Popover API support the panel keeps
+   * its ordinary `z-index` stacking. Has no effect with `inline`. Same contract as
+   * `<lr-select>`'s `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
+
   /** Preferred panel placement; the resolved side still flips to stay in the viewport. */
   @property({ reflect: true, converter: declaredDefaultConverter('bottom-start') })
   placement: Placement = 'bottom-start';
@@ -701,6 +732,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.endDrag();
     this.cancelEyeDropper();
     super.value = next ?? '';
+    markVetoGuardWrite(this.changeGuard);
     this.valueNeedsParse = true;
   }
 
@@ -807,6 +839,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       this.open &&
       !this.inline &&
       (changed.has('placement') ||
+        changed.has('topLayer') ||
         changed.has('size') ||
         changed.has('positioningStrategy'))
     ) {
@@ -935,11 +968,29 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     emitValueEvents(this, 'change', { value: this.value, previousValue }, detail => this.emit('lr-change', detail));
   }
 
-  /** `applyColor()` plus the commit pair a discrete interaction ends with. */
+  // A listener that answers `lr-color-picker-change-request` by writing `value` finishes before
+  // the built-in commit runs; the guard records that it wrote at all.
+  private readonly changeGuard = new VetoWriteGuard();
+
+  /**
+   * `applyColor()` plus the commit pair a discrete interaction ends with, behind a cancelable
+   * request whenever the serialized value would move.
+   */
   private commitColor(next: LyraColorHsva): boolean {
     const previousValue = this.value;
-    const changed = this.applyColor(next);
-    if (changed) this.emitCommit(previousValue);
+    if (formatColor(next, this.activeFormat(), this.uppercase) === previousValue) return this.applyColor(next);
+    let changed = false;
+    requestThenCommit({
+      requestDetail: { value: formatColor(next, this.activeFormat(), this.uppercase), previousValue },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-color-picker-change-request', detail, init),
+      guard: this.changeGuard,
+      commit: () => {
+        if (isLiveDisabled(this) || this.readonly) return;
+        changed = this.applyColor(next);
+        if (changed) this.emitCommit(previousValue);
+      },
+    });
     return changed;
   }
 
@@ -973,9 +1024,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const anchor = this.triggerEl();
     const panel = this.panelEl();
     if (!anchor || !panel) return;
+    this.placedTopLayer = syncTopLayerRelease(panel, this.placedTopLayer, this.topLayer);
     const handle = place(anchor, panel, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: resolveEffectivePositioningStrategy(this, this.strategy.authored, 'absolute'),
+      ...topLayerPlacement(
+        this.topLayer,
+        resolveEffectivePositioningStrategy(this, this.strategy.authored, 'absolute'),
+      ),
     });
     this.cleanupPositioner = handle;
     void handle.ready.then((positioned) => {

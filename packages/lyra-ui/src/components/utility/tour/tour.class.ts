@@ -474,6 +474,24 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   /** Omits the built-in "Step X of Y" progress indicator (dots + text) from the footer. */
   @property({ type: Boolean, attribute: 'without-progress' }) withoutProgress = false;
 
+  /**
+   * Shows the tour in the browser top layer during `interactiveTarget` steps too, wherever the
+   * native Popover API exists, so its backdrop, spotlight and step popover paint above every page
+   * layer whatever the stacking contexts around the host. Default (modal) steps are always shown
+   * in the top layer; an interactive step otherwise is only when an ancestor traps the host or
+   * its target is itself in the top layer, so overlays the live target opens stay above the tour.
+   * Use it for a tour host inside a fixed or sticky header, toolbar or rail with its own `z-index`
+   * that a sibling surface stacked higher would otherwise cover: such an ancestor is only a
+   * stacking context, not a containing block, so the automatic escape never applies, and no
+   * `z-index` on the tour can lift it out of that ancestor's context. An overlay the live target
+   * opens then needs its own `top-layer` to stay above the tour. No DOM node moves, so anchoring,
+   * focus, Escape and the Tab route are unchanged. Stacking contexts are deliberately not detected
+   * automatically. Without native Popover API support the tour keeps its ordinary `z-index`
+   * stacking. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+
   /** Host-level `aria-label` override for every step popover's accessible name -- wins over each
    *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
    *  won't need this since each step already has a meaningful name via `heading`; setting it
@@ -601,6 +619,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         announceMissing: activationChanged,
       });
       if (shouldFocus) this.focusAfterPlacement(placement);
+    } else if (this.open && changed.has('topLayer') && this.steps[this.activeIndex]?.interactiveTarget) {
+      this.escapeContainingBlock();
     }
     const previousIndex: unknown = changed.get('activeIndex');
     const step = this.steps[this.activeIndex];
@@ -889,8 +909,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     backdrop?.style.removeProperty('clip-path');
   }
 
-  /** Promotes the host to the top layer until the tour ends; an interactive step only when it must
-   *  escape (trapped, or its target is in the top layer), so overlays its target opens stay above. */
+  /** Promotes the host to the top layer until the tour ends; an interactive step only when opted
+   *  in with `topLayer` or when it must escape (trapped, or its target is in the top layer), so
+   *  overlays its target opens stay above. */
   private escapeContainingBlock(): void {
     const target = this.activeTargetSnapshot;
     if (!this.steps[this.activeIndex]?.interactiveTarget) {
@@ -901,6 +922,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
     if (
       this.steps[this.activeIndex]?.interactiveTarget &&
+      !this.topLayer &&
       !needsTopLayerEscape(this) &&
       !(target && hasTopLayerAncestor(target))
     ) {

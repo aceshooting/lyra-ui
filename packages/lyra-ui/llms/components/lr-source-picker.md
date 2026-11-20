@@ -57,7 +57,12 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
   omitted state and removes the attribute
 
-**Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
+**Events:** `lr-selection-change-request` (`detail: { selectedSourceIds, previousSelectedSourceIds }`)
+is dispatched before a user toggle (row click, Space, or select-all) commits. Cancelable:
+`preventDefault()` keeps the current selection, select-all checkbox included, and emits no
+`lr-selection-change`; a listener may instead resolve it by assigning a new `selectedSourceIds`
+array itself, which also suppresses the built-in commit. A `sources` reassignment that prunes the
+selection does not ask. `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
 `selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's

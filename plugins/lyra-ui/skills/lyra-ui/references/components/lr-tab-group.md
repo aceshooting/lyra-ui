@@ -144,6 +144,13 @@ focus off the tab the user was on.
 
 **Events:**
 
+- `lr-tab-group-select-request` (`detail: { value: string, previousValue: string }`) — a user
+  activation (click, Arrow/Home/End under `activation="auto"`, Enter/Space under
+  `activation="manual"`) is about to switch to a tab that is not active; `active` still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current tab, and
+  none of `lr-tab-hide`/`lr-tab-show`/`lr-activate` fire. A listener may instead resolve it by
+  assigning `active` itself, which also suppresses the built-in switch. Re-picking the active tab
+  and `show()` never ask.
 - `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
   or because the active tab was removed, disabled or made inert and selection moved to its following
   (else preceding) tab. Not fired for the initial default or a direct `active` write.

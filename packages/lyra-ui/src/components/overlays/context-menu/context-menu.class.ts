@@ -228,6 +228,22 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   /** Density propagated to the directly owned rows. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
+  /**
+   * Shows the open menu in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it for a region
+   * inside a fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape never applies, and no `z-index` on the
+   * popup can lift it out of that ancestor's context. The popup is already placed with the `fixed`
+   * strategy; no DOM node moves, so anchoring, RTL placement, focus, Escape and the show/hide
+   * transition are unchanged. It stays promoted through its hide transition and leaves the top
+   * layer once it settles closed. Stacking contexts are deliberately not detected automatically.
+   * Without native Popover API support the popup keeps its ordinary `z-index` stacking. Same
+   * contract as `<lr-dropdown>`'s `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+
   @query('.shell') private shell?: LyraDropdown;
 
   private readonly contextMenuInternals = attachInternalsSafely(this);
@@ -786,6 +802,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
         trigger="manual"
         placement="right-start"
         positioning-strategy="fixed"
+        .topLayer=${this.topLayer}
         .distance=${POINTER_GAP_PX}
         .size=${this.size}
         .disabled=${this.disabled}

@@ -80,7 +80,10 @@ owner selected by `form`. `setCustomValidity(message)` sets or clears `customErr
 `resetValidity()` clears only that consumer error and recomputes the current required/catalog
 constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 
-`topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
+`topLayer` (attribute `top-layer`, reflected) defaults to `false`; enable it inside clipped or
+`z-index`ed sticky headers, toolbars and native dialogs. It follows the `lr-select` `top-layer`
+contract in all four catalog pickers, applies live while open, and the listbox otherwise stacks at
+`var(--lr-overlay-stack-index, var(--lr-layer-dropdown))`.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`; with neither, the list uses `absolute` in both
 modes.
@@ -102,8 +105,12 @@ If the filter fails to load, `lr-load-error` fires and the compact picker remain
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
 in both modes, following the country picker's event contract.
 
-**Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
-`input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
+**Events:** A user choice or clear first dispatches the cancelable `lr-change-request`
+(`detail: { value, previousValue }`, the proposed code while `value` still holds the current one).
+`preventDefault()` keeps the current value and suppresses the change sequence and `lr-clear`; a
+listener may instead resolve it by assigning `value` itself, which also suppresses the built-in
+commit. This veto is shared by all four catalog pickers. An accepted user choice or clear updates
+`value` synchronously, then emits exactly one `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and

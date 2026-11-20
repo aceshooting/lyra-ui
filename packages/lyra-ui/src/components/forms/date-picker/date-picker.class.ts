@@ -30,6 +30,8 @@ import {
   getOwnDataDescriptor,
 } from '../../../internal/data-descriptors.js';
 import { dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
@@ -129,7 +131,16 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
   toAttribute: normalizeView,
 };
 
+/** Detail of `lr-date-picker-select-request`. */
+export interface LyraDatePickerSelectRequestDetail {
+  /** The ISO value the pick proposes (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` for a range). */
+  readonly value: string;
+  /** The ISO value the picker holds while the request dispatches. */
+  readonly previousValue: string;
+}
+
 export interface LyraDatePickerEventMap {
+  'lr-date-picker-select-request': CustomEvent<LyraDatePickerSelectRequestDetail>;
   'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
@@ -252,6 +263,14 @@ function canonicalDateRangePresets(
  * navigation stay within the supported ISO years 0000–9999.
  *
  * @customElement lr-date-picker
+ * @event lr-date-picker-select-request - A user pick (a day click or Enter/Space on a day, or a
+ *   quick-range preset button) is about to write `value`; `detail: { value, previousValue }`
+ *   carries the proposed ISO value while `value` still holds the current one. In range mode the
+ *   first click of a new range proposes the lone start date. Cancelable: calling
+ *   `preventDefault()` keeps the current value and `appliedPreset`, and none of
+ *   `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
+ *   assigning `value` itself, which also suppresses the built-in commit. `clear()` and
+ *   programmatic writes request nothing.
  * @event lr-input - Calendar selection edit with `value` and `previousValue`.
  * @event lr-change - Calendar selection commit with `value` and `previousValue`.
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
@@ -377,8 +396,22 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['presets']);
   protected static override readonly identityCollectionProperties = Object.freeze(['presets']);
 
+  // A listener that answers `lr-date-picker-select-request` by writing `value` finishes before
+  // the built-in commit runs; the guard records that it wrote at all.
+  private readonly selectGuard = new VetoWriteGuard();
+  private _value = '';
   /** ISO value: `YYYY-MM-DD` or `YYYY-MM-DD/YYYY-MM-DD`. */
-  @property({ reflect: true }) value = '';
+  @property({ reflect: true })
+  get value(): string {
+    return this._value;
+  }
+  set value(next: string) {
+    // Unconditional, including the value already held: the guard records that a write happened.
+    markVetoGuardWrite(this.selectGuard);
+    const old = this._value;
+    this._value = next;
+    this.requestUpdate('value', old);
+  }
   /** Selection mode: `single` date or `range` of two dates; any other value becomes `single`. */
   @property({ converter: modeConverter, reflect: true }) mode: CalendarMode =
     'single';
@@ -931,17 +964,28 @@ const active = shadowFocusTarget(this);
     return (minimum === 0 || length >= minimum) && (maximum === 0 || length <= maximum);
   }
 
+  private serialize(from: Date | null, to: Date | null): string {
+    if (!from) return '';
+    return this.effectiveMode === 'range' && to ? `${formatISO(from)}/${formatISO(to)}` : formatISO(from);
+  }
+
+  /** Routes a user pick through the cancelable request; `before` runs only when it commits. */
+  private requestCommit(from: Date | null, to: Date | null, fire: boolean, before: () => void): void {
+    requestThenCommit({
+      requestDetail: { value: this.serialize(from, to), previousValue: this.value },
+      emitRequest: (request, init: { cancelable: true }) =>
+        this.emit('lr-date-picker-select-request', request, init),
+      guard: this.selectGuard,
+      commit: () => {
+        if (this.readonly) return;
+        before();
+        this.commit(from, to, fire);
+      },
+    });
+  }
+
   private commit(from: Date | null, to: Date | null, fire: boolean): void {
-    const next =
-      this.effectiveMode === 'range'
-        ? from && to
-          ? `${formatISO(from)}/${formatISO(to)}`
-          : from
-          ? formatISO(from)
-          : ''
-        : from
-        ? formatISO(from)
-        : '';
+    const next = this.serialize(from, to);
     // Only arm the suppression when `value` is actually about to change --
     // that's the only case `willUpdate` will see `changed.has('value')` and
     // get a chance to consume (and clear) the flag.
@@ -966,20 +1010,20 @@ const active = shadowFocusTarget(this);
       !this.admitsRange(pending.from, date, min, max, today)) return;
     // A hand-picked range did not come from a preset, even when it happens to land on the same
     // pair -- that coincidence is exactly why `appliedPreset` exists instead of value matching.
-    this._appliedPreset = undefined;
+    const forgetPreset = (): void => { this._appliedPreset = undefined; };
     this.setFocusedDate(date);
     if (this.effectiveMode === 'range') {
       const { from, to } = this.selection;
       if (!from || (from && to)) {
-        this.commit(date, null, false);
+        this.requestCommit(date, null, false, forgetPreset);
       } else {
         let a = from;
         let b = date;
         if (b < a) [a, b] = [b, a];
-        this.commit(a, b, true);
+        this.requestCommit(a, b, true, forgetPreset);
       }
     } else {
-      this.commit(date, null, true);
+      this.requestCommit(date, null, true, forgetPreset);
     }
   }
 
@@ -1914,11 +1958,13 @@ const active = shadowFocusTarget(this);
     // config-driven preset list must not look like the user picked "nothing".
     const resolved = this.resolvePresetRange(preset);
     if (!resolved) return;
-    // Set BEFORE commit(), so a consumer reading `appliedPreset` inside the change handler that
-    // commit() synchronously dispatches sees this preset rather than the previous one.
-    this._appliedPreset = preset.source;
     this.setFocusedDate(resolved.from);
-    this.commit(resolved.from, resolved.to, true);
+    // Set BEFORE commit(), so a consumer reading `appliedPreset` inside the change handler that
+    // commit() synchronously dispatches sees this preset rather than the previous one. A vetoed
+    // request leaves the previous preset in place.
+    this.requestCommit(resolved.from, resolved.to, true, () => {
+      this._appliedPreset = preset.source;
+    });
   }
 
   override render(): TemplateResult {

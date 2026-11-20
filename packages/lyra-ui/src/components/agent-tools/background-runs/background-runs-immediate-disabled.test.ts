@@ -18,7 +18,7 @@ for (const [part, eventName] of [['open', 'lr-run-activate'], ['cancel', 'lr-run
     host.disabled = false;
     await host.updateComplete;
     button.click();
-    expect(requests).to.deep.equal([{ runId: 'r1' }]);
+    expect(requests).to.deep.equal([part === 'open' ? { runId: 'r1', run: runs[0] } : { runId: 'r1' }]);
     expect(host.runs).to.deep.equal(runs);
   });
 }

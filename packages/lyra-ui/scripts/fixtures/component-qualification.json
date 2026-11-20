@@ -12326,7 +12326,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1211,
+              "line": 1266,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12372,11 +12372,13 @@
         "tests": [
           "src/components/forms/color-picker/color-core.property.test.ts",
           "src/components/forms/color-picker/color-core.test.ts",
+          "src/components/forms/color-picker/color-picker-change-request.test.ts",
           "src/components/forms/color-picker/color-picker-coverage.test.ts",
           "src/components/forms/color-picker/color-picker-percentage-boundaries.test.ts",
           "src/components/forms/color-picker/color-picker-placement-recovery.test.ts",
           "src/components/forms/color-picker/color-picker-remediation.test.ts",
-          "src/components/forms/color-picker/color-picker.test.ts"
+          "src/components/forms/color-picker/color-picker.test.ts",
+          "src/components/forms/color-picker/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -14526,6 +14528,7 @@
           "src/components/overlays/context-menu/context-menu-no-resize-observer.test.ts",
           "src/components/overlays/context-menu/context-menu-resize-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
+          "src/components/overlays/context-menu/context-menu-top-layer.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16800,11 +16803,13 @@
           "src/components/forms/date-picker/date-input-placement-recovery.test.ts",
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
+          "src/components/forms/date-picker/date-input-top-layer.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
+          "src/components/forms/date-picker/date-picker-select-request.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
           "src/components/forms/date-picker/positioning-strategy.test.ts"
         ],
@@ -17015,11 +17020,13 @@
           "src/components/forms/date-picker/date-input-placement-recovery.test.ts",
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
+          "src/components/forms/date-picker/date-input-top-layer.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
+          "src/components/forms/date-picker/date-picker-select-request.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
           "src/components/forms/date-picker/positioning-strategy.test.ts"
         ],
@@ -20355,6 +20362,7 @@
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
+          "src/components/layout/menu/menu-top-layer.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -22581,6 +22589,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/evaluation-run/evaluation-run-remediation.test.ts",
+          "src/components/agent-tools/evaluation-run/evaluation-run-toggle-request.test.ts",
           "src/components/agent-tools/evaluation-run/evaluation-run.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -22723,7 +22732,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.class.ts",
-              "line": 838,
+              "line": 870,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22762,6 +22771,7 @@
           "src/components/utility/export-button/export-button-closed-layout.test.ts",
           "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
           "src/components/utility/export-button/export-button-menu-toggling.test.ts",
+          "src/components/utility/export-button/export-button-top-layer.test.ts",
           "src/components/utility/export-button/export-button.test.ts",
           "src/components/utility/export-button/positioning-strategy.test.ts"
         ],
@@ -29434,6 +29444,7 @@
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
+          "src/components/forms/input/time-input-top-layer.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -30716,7 +30727,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 725,
+              "line": 781,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30755,6 +30766,7 @@
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-admission.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-aliases.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-boundaries.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-change-request.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-coverage.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-custom-nodes-glow.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-lazy.test.ts",
@@ -34317,7 +34329,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 1060,
+              "line": 1081,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34360,6 +34372,7 @@
           "src/components/utility/mention-popover/mention-popover-platform-fallback.test.ts",
           "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
           "src/components/utility/mention-popover/mention-popover-scale.test.ts",
+          "src/components/utility/mention-popover/mention-popover-top-layer.test.ts",
           "src/components/utility/mention-popover/mention-popover.test.ts",
           "src/components/utility/mention-popover/positioning-strategy.test.ts"
         ],
@@ -34674,6 +34687,7 @@
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
+          "src/components/layout/menu/menu-top-layer.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -34930,6 +34944,7 @@
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
+          "src/components/layout/menu/menu-top-layer.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -35130,6 +35145,7 @@
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
+          "src/components/layout/menu/menu-top-layer.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -37625,6 +37641,7 @@
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
+          "src/components/forms/input/time-input-top-layer.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38870,6 +38887,7 @@
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
+          "src/components/forms/input/time-input-top-layer.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45639,8 +45657,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/rating/rating-remediation.test.ts",
-              "test": "snaps a fractional precision without leaking floating-point noise",
+              "file": "src/components/overlays/rating/rating-change-request.test.ts",
+              "test": "lets a listener veto or resolve a rating before anything commits",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -45768,6 +45786,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/rating/rating-change-request.test.ts",
           "src/components/overlays/rating/rating-default-coercion.test.ts",
           "src/components/overlays/rating/rating-remediation.test.ts",
           "src/components/overlays/rating/rating.test.ts"
@@ -49149,6 +49168,7 @@
           "src/components/layout/segmented/segmented-checked-contrast.test.ts",
           "src/components/layout/segmented/segmented-field-label.test.ts",
           "src/components/layout/segmented/segmented-items-replacement.test.ts",
+          "src/components/layout/segmented/segmented-select-request.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -51132,7 +51152,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 563,
+              "line": 602,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51171,6 +51191,7 @@
           "src/components/retrieval/source-picker/source-picker-filter-cost.test.ts",
           "src/components/retrieval/source-picker/source-picker-remediation.test.ts",
           "src/components/retrieval/source-picker/source-picker-search-sizing.test.ts",
+          "src/components/retrieval/source-picker/source-picker-selection-request.test.ts",
           "src/components/retrieval/source-picker/source-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54094,6 +54115,7 @@
           "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-record-boundaries.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
+          "src/components/forms/swatch-picker/swatch-picker-select-request.test.ts",
           "src/components/forms/swatch-picker/swatch-picker.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54502,7 +54524,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 504,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54544,6 +54566,7 @@
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
+          "src/components/layout/tab-group/tab-group-select-request.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54761,7 +54784,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 504,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54803,6 +54826,7 @@
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
+          "src/components/layout/tab-group/tab-group-select-request.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -55015,7 +55039,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 504,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55057,6 +55081,7 @@
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
+          "src/components/layout/tab-group/tab-group-select-request.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -57046,6 +57071,7 @@
           "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-placement-recovery.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
+          "src/components/forms/input/time-input-top-layer.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -59206,6 +59232,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/tool-call-block/tool-call-block-coverage.test.ts",
+          "src/components/agent-tools/tool-call-block/tool-call-block-toggle-request.test.ts",
           "src/components/agent-tools/tool-call-block/tool-call-block.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -59384,6 +59411,7 @@
           "src/components/agent-tools/tool-call-chip/positioning-strategy.test.ts",
           "src/components/agent-tools/tool-call-chip/tool-call-chip-overlay-lifecycle.test.ts",
           "src/components/agent-tools/tool-call-chip/tool-call-chip-remediation.test.ts",
+          "src/components/agent-tools/tool-call-chip/tool-call-chip-top-layer.test.ts",
           "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -60758,6 +60786,7 @@
           "src/components/utility/tour/tour-admission-and-carrier-boundaries.test.ts",
           "src/components/utility/tour/tour-focus-routing.test.ts",
           "src/components/utility/tour/tour-reparent-layering.test.ts",
+          "src/components/utility/tour/tour-top-layer.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -62210,6 +62239,7 @@
           "src/components/conversation/usage-badge/usage-badge-overlay-lifecycle.test.ts",
           "src/components/conversation/usage-badge/usage-badge-overlay-loading.test.ts",
           "src/components/conversation/usage-badge/usage-badge-remediation.test.ts",
+          "src/components/conversation/usage-badge/usage-badge-top-layer.test.ts",
           "src/components/conversation/usage-badge/usage-badge.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

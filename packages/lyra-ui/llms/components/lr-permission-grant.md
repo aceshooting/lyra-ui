@@ -54,7 +54,7 @@ overrides the internal fieldset name.
 | `decision-label` | A decision button's label wrapper (forwarded from `<lr-button>`). |
 
 
-**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.
+**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation. The event is itself the request: a click changes no state, so there is nothing to veto. To refuse or defer a decision, leave `status` at `pending`; to settle it, assign `status`.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-grant.js';
 

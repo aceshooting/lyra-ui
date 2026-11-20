@@ -14,6 +14,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -462,6 +464,25 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** Whether the popover is shown. */
   @property({ type: Boolean, reflect: true }) open = false;
 
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it for a composer
+   * inside a fixed or sticky panel, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape never applies, and no `z-index` on the
+   * listbox can lift it out of that ancestor's context. While set, the listbox is placed with the
+   * `fixed` strategy whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so caret
+   * anchoring, RTL placement, focus, Escape and the show/hide transition are unchanged. It stays
+   * promoted through its hide transition and leaves the top layer once it settles closed. Stacking
+   * contexts are deliberately not detected automatically. Without native Popover API support the
+   * listbox keeps its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`.
+   * Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
+
   /** Overrides the built-in case-insensitive label/description substring match. */
   @property({ attribute: false }) filter: LyraMentionFilter | null = null;
 
@@ -607,7 +628,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         }
         this._silentClose = false;
       }
-    } else if (this.open && (changed.has('anchor') || changed.has('query'))) {
+    } else if (this.open && (changed.has('anchor') || changed.has('query') || changed.has('topLayer'))) {
       this.reposition();
     }
     // Keyed separately from the open/anchor/query branch above: a plain
@@ -1215,9 +1236,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const anchorEl = this.resolveAnchorElement();
     const popup = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
     if (anchorEl && popup) {
+      this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
       const placement = place(anchorEl, popup, {
         placement: 'bottom-start',
-        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
       });
       this.cleanup = placement;
       void placement.ready.then((positioned) => {

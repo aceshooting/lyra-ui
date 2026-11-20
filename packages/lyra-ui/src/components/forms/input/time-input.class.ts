@@ -25,6 +25,8 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady as place,
   waitForDeferredPlacement,
+  syncTopLayerRelease,
+  topLayerPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
@@ -412,6 +414,24 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Popup placement relative to the field (`top`, `right`, `bottom`, `left`, each with optional `-start`/`-end`); unknown values use `bottom-start`. */
   @property({ converter: placementConverter, reflect: true }) placement: LyraTimeInputPlacement = 'bottom-start';
+  /**
+   * Shows the open time popup in the browser top layer wherever the native Popover API exists, so
+   * it paints above every page layer whatever the stacking contexts around it. Use it inside a
+   * fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked
+   * higher would otherwise cover: such an ancestor is only a stacking context, not a containing
+   * block, so the automatic top-layer escape never applies, and no `z-index` on the popup can lift
+   * it out of that ancestor's context. While set, the popup is placed with the `fixed` strategy
+   * whatever `positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement,
+   * focus, Escape and the show/hide transition are unchanged. It stays promoted through its hide
+   * transition and leaves the top layer once it settles closed. Stacking contexts are deliberately
+   * not detected automatically. Without native Popover API support the popup keeps its ordinary
+   * `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply live while
+   * open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Visual size on the shared control ladder. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Shows the clear action while there is a value; same as `withClear`. */
@@ -1158,11 +1178,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const anchor = this.renderRoot.querySelector('[part~="time-input"]') as HTMLElement | null;
     const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
     if (!anchor || !popup) return;
+    this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
     this.cleanupPositioner = place(anchor, popup, {
       placement: rtlAwarePlacement(this.placement as Placement, this),
       offset: finiteNumber(this.distance, 0),
       sync: 'width',
-      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
     });
     const operation = this.cleanupPositioner;
     void operation.ready.then((positioned) => {
@@ -1380,7 +1401,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     if (changed.has('open')) {
       if (this.open) this.activatePopup();
       else this.teardownPopup();
-    } else if (this.open && (changed.has('placement') || changed.has('distance'))) {
+    } else if (this.open && (changed.has('placement') || changed.has('distance') || changed.has('topLayer'))) {
       this.positionPopup();
     }
     if (

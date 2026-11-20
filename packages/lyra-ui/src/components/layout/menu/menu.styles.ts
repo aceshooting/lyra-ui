@@ -58,7 +58,7 @@ export const styles = css`
   }
   .submenu-surface {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     display: flex;
     flex-direction: column;

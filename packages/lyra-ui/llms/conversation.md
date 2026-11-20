@@ -4020,7 +4020,12 @@ algorithm (which has no minutes/hours tier) in both the visible strip and the to
 `lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
 shows full grouped figures. This badge has no density mode: use `abbreviate` for compact counts; a `compact` attribute is inert. `summary: string =
-''` supplies visible fallback text when no built-in segment is present.
+''` supplies visible fallback text when no built-in segment is present. `topLayer: boolean = false`
+(attribute `top-layer`, reflected) — shows the open breakdown tooltip in the browser top layer,
+placed `fixed`, so it paints above a sibling surface stacked higher than a `z-index`ed fixed or
+sticky header, toolbar or rail it sits in; no DOM node moves, it leaves the top layer once it
+closes, applies live while open, and without Popover API support keeps its ordinary `z-index`. The
+tooltip stacks at the badge's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the
 property); `details` — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
@@ -4855,8 +4860,8 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
-`lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, the cancelable `lr-toggle-request` and committed `lr-toggle`
+(from reasoning panels and tool-call blocks), `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
@@ -4913,6 +4918,8 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-retry-request` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle-request` event — Cancelable passthrough from a rendered reasoning panel or tool-call
+  block, before its header activation commits.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.

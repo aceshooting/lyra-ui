@@ -129,6 +129,22 @@ export class LyraUsageBadge extends LyraElement {
    *  components in this library, and this one has no density mode at all. */
   @property({ type: Boolean, reflect: true }) abbreviate = false;
 
+  /**
+   * Shows the open breakdown tooltip in the browser top layer wherever the native Popover API
+   * exists, so it paints above every page layer whatever the stacking contexts around it. Use it
+   * for a badge inside a fixed or sticky header, toolbar or rail with its own `z-index` that a
+   * sibling surface stacked higher would otherwise cover: such an ancestor is only a stacking
+   * context, not a containing block, so the automatic top-layer escape never applies, and no
+   * `z-index` on the tooltip can lift it out of that ancestor's context. While set, the tooltip is
+   * placed with the `fixed` strategy whatever `--lr-positioning-strategy` resolves to; no DOM node
+   * moves, so anchoring, hover, focus and Escape are unchanged. It leaves the top layer once it
+   * closes. Stacking contexts are deliberately not detected automatically. Without native Popover
+   * API support the tooltip keeps its ordinary `z-index` stacking. Same contract as
+   * `<lr-popover>`'s `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+
   @state() private tooltipOpen = false;
   /** Any focus on the badge describes it, whether or not keyboard focus opened the tooltip. */
   @state() private focusDescribed = false;
@@ -186,10 +202,12 @@ export class LyraUsageBadge extends LyraElement {
       this.tooltipOverlay = undefined;
       if (this.tooltipOpen && this.isConnected) {
         this.tooltipOverlay = this.tooltipRuntime?.activateUsageBadgeOverlay(
-          this, () => this.hideTooltip(), this.tooltipOrder,
+          this, () => this.hideTooltip(), this.tooltipOrder, this.topLayer,
         );
         this.tooltipOrder = undefined;
       }
+    } else if (changed.has('topLayer') && this.tooltipOpen) {
+      this.tooltipOverlay?.setTopLayer(this.topLayer);
     }
   }
 

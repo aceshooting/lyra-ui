@@ -1,4 +1,6 @@
 import { emitValueEvents } from '../../../internal/value-events.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import {
   html,
@@ -82,7 +84,16 @@ export type LyraRatingSymbolRenderer = (
   selected: boolean
 ) => unknown;
 
+/** Detail of `lr-rating-change-request`. */
+export interface LyraRatingChangeRequestDetail {
+  /** The rating the gesture proposes, already clamped and stepped. */
+  readonly value: number;
+  /** The rating the control holds while the request dispatches. */
+  readonly previousValue: number;
+}
+
 export interface LyraRatingEventMap {
+  'lr-rating-change-request': CustomEvent<LyraRatingChangeRequestDetail>;
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ value: number }>;
@@ -142,6 +153,12 @@ function starSolid(): SVGTemplateResult {
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
+ * @event lr-rating-change-request - A user gesture (a click on a symbol, or an Arrow/Page/Home/End
+ *   key) is about to change the rating; `detail: { value, previousValue }` carries the proposed
+ *   rating while `value` still holds the current one. Cancelable: calling `preventDefault()` keeps
+ *   the current rating, and none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may
+ *   instead resolve the request by assigning `value` itself, which also suppresses the built-in
+ *   commit. `lr-activate` still follows. A gesture that would not move the value requests nothing.
  * @event lr-activate - Fired on every interactive commit of a rating -- a click on a symbol, or an
  *   Arrow/Page/Home/End key -- whether or not the value actually moved. `detail: { value }` carries the
  *   committed rating. Bubbling and composed, so a host outside the shadow tree receives it.
@@ -303,6 +320,9 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
+  // A listener that answers `lr-rating-change-request` by writing `value` finishes before the
+  // built-in commit runs; the guard records that it wrote at all.
+  private readonly changeGuard = new VetoWriteGuard();
   private _value = 0;
   private _max = DEFAULT_MAX;
   private _name = '';
@@ -425,6 +445,8 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     return this._value;
   }
   set value(next: number) {
+    // Unconditional, including the value already held: the guard records that a write happened.
+    markVetoGuardWrite(this.changeGuard);
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = typeof next === 'number' ? next : Number(next);
@@ -707,10 +729,19 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     this.markInteracted();
     const clamped = clampSteppedValue(next, 0, this.safeMax, this.safePrecision);
     if (clamped !== this.value) {
-      this.value = clamped;
-      const detail = { value: this.value };
-      emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
-      emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
+      requestThenCommit({
+        requestDetail: { value: clamped, previousValue: this.value },
+        emitRequest: (request, init: { cancelable: true }) =>
+          this.emit('lr-rating-change-request', request, init),
+        guard: this.changeGuard,
+        commit: () => {
+          if (!this.interactive) return;
+          this.value = clamped;
+          const detail = { value: this.value };
+          emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+          emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
+        },
+      });
     }
     // Every interactive commit reports, including the re-commit of the current rating that
     // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.

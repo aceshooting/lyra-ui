@@ -20,6 +20,8 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { swatchKeyTarget } from './swatch-keys.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 
 export interface SwatchPickerItem {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
@@ -49,7 +51,16 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
   'swatch'
 );
 
+/** Detail of `lr-swatch-picker-select-request`. */
+export interface LyraSwatchPickerSelectRequestDetail {
+  /** The value the activated swatch proposes. */
+  readonly value: string;
+  /** The value the picker holds while the request dispatches. */
+  readonly previousValue: string | null;
+}
+
 export interface LyraSwatchPickerEventMap {
+  'lr-swatch-picker-select-request': CustomEvent<LyraSwatchPickerSelectRequestDetail>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string | null }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
@@ -93,6 +104,12 @@ export interface LyraSwatchPickerEventMap {
  * blocked focus keeps outside focus in place.
  *
  * @customElement lr-swatch-picker
+ * @event lr-swatch-picker-select-request - A user activation (click or an Arrow/Home/End key) is
+ *   about to select a swatch other than the current selection; `detail: { value, previousValue }`
+ *   carries the proposed value while `value` still holds the current one. Cancelable: calling
+ *   `preventDefault()` keeps the current selection and `lr-change` does not fire. A listener may
+ *   instead resolve the request by assigning `value` itself, which also suppresses the built-in
+ *   commit. `lr-activate` still follows.
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value, previousValue }`.
  * @event lr-activate - Fired on every activation of a swatch -- a click, or an Arrow/Home/End key
@@ -246,8 +263,22 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this._items = Object.freeze(snapshots);
     this.requestUpdate('items', old);
   }
+  // A listener that answers `lr-swatch-picker-select-request` by writing `value` finishes before
+  // the built-in commit runs; the guard records that it wrote at all.
+  private readonly selectGuard = new VetoWriteGuard();
+  private _value: string | null = null;
   /** The currently selected option's `value`, or `null` when nothing is selected. */
-  @property() value: string | null = null;
+  @property()
+  get value(): string | null {
+    return this._value;
+  }
+  set value(next: string | null) {
+    // Unconditional, including the value already held: the guard records that a write happened.
+    markVetoGuardWrite(this.selectGuard);
+    const old = this._value;
+    this._value = next;
+    this.requestUpdate('value', old);
+  }
 
   /** Visual size — scales the swatch hit-area and fill diameter proportionally, hit-area
    *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
@@ -321,10 +352,19 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     const previousIndex = this.resolveSelectedIndex();
     if (index !== previousIndex || option.value !== this.value) {
       const previousValue = this.value;
-      this.selectedOption = option;
-      this.value = option.value;
-      if (previousValue === option.value) this.requestUpdate();
-      this.emit('lr-change', { value: option.value, previousValue });
+      requestThenCommit({
+        requestDetail: { value: option.value, previousValue },
+        emitRequest: (request, init: { cancelable: true }) =>
+          this.emit('lr-swatch-picker-select-request', request, init),
+        guard: this.selectGuard,
+        commit: () => {
+          if (this.disabled || option.disabled || !this.items.includes(option)) return;
+          this.selectedOption = option;
+          this.value = option.value;
+          if (previousValue === option.value) this.requestUpdate();
+          this.emit('lr-change', { value: option.value, previousValue });
+        },
+      });
     }
     // Every activation of an enabled swatch reports, including the re-pick of the current value
     // that `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.

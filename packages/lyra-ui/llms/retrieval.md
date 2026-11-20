@@ -1396,7 +1396,12 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
   omitted state and removes the attribute
 
-**Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
+**Events:** `lr-selection-change-request` (`detail: { selectedSourceIds, previousSelectedSourceIds }`)
+is dispatched before a user toggle (row click, Space, or select-all) commits. Cancelable:
+`preventDefault()` keeps the current selection, select-all checkbox included, and emits no
+`lr-selection-change`; a listener may instead resolve it by assigning a new `selectedSourceIds`
+array itself, which also suppresses the built-in commit. A `sources` reassignment that prunes the
+selection does not ask. `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
 `selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's
@@ -2821,6 +2826,13 @@ filtered-out id). None change `selectedNodeId` or filters.
 
 **Events:**
 
+- `lr-selection-change-request` (`detail: { selectedNodeId: string | null, previousSelectedNodeId: string | null }`)
+  — a user selection (graph node click, search result, neighbor row, path element or entity-card
+  focus action) is about to change `selectedNodeId`, which still holds the previous id. Cancelable:
+  `preventDefault()` keeps the current selection, opens no details and emits no
+  `lr-selection-change`. A listener may instead resolve it by assigning `selectedNodeId` itself,
+  which also suppresses the built-in commit. Closing the details popover and an invalidated
+  selection clear without asking.
 - `lr-selection-change` (`detail: { selectedNodeId: string | null, selectedNodeIds, selectedEdgeIds }`, the last two
   in `lr-graph`'s shape) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
@@ -2830,9 +2842,15 @@ filtered-out id). None change `selectedNodeId` or filters.
 - `lr-path-request` (`detail: { sourceNodeId: string; targetNodeId: string }`) — the "Find path" action was
   activated with exactly two nodes pinned. This component has no traversal algorithm; the host
   computes/fetches the path and assigns it back through `path`.
+- `lr-pin-change-request` (`detail: { pinnedNodeIds: string[], previousPinnedNodeIds: string[] }`)
+  — a pin toggle (details pin action or a pinned chip's remove button) is about to commit.
+  Cancelable: `preventDefault()` keeps the current pins, announces nothing and emits no
+  `lr-pin-change`. A listener may instead resolve it by assigning a new `pinnedNodeIds` array itself,
+  which also suppresses the built-in commit.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
-- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes }`. Call `preventDefault()` to veto the legend change.
+- `lr-hidden-types-change-request` carries the proposed `{ hiddenTypes, previousHiddenTypes }`. Call
+  `preventDefault()` to veto the legend change, or assign a new `hiddenTypes` array to resolve it.
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.

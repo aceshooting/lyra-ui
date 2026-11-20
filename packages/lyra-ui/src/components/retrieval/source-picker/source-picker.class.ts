@@ -6,6 +6,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { isRtl } from '../../../internal/rtl.js';
@@ -26,6 +27,8 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   AnnouncementSinkController,
 } from '../../../internal/announcer.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourcePickerLimit, LYRA_DEFAULT_sourcePickerMatches, LYRA_DEFAULT_sourcePickerSelection } from '../../../internal/default-strings/retrieval.generated.js';
@@ -44,6 +47,9 @@ export interface LyraSourceEntry {
 }
 
 export interface LyraSourcePickerEventMap {
+  'lr-selection-change-request': CustomEvent<
+    LyraEventDetailSnapshot<{ selectedSourceIds: string[]; previousSelectedSourceIds: string[] }>
+  >;
   'lr-selection-change': CustomEvent<
     LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
   >;
@@ -85,6 +91,12 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-source-picker
+ * @event lr-selection-change-request - A user toggle (a row click, Space, or select-all) is about
+ * to change the selection; `detail: { selectedSourceIds, previousSelectedSourceIds }` carries the
+ * proposed and current leaf-id arrays. Cancelable: calling `preventDefault()` keeps the current
+ * selection (select-all included) and emits no `lr-selection-change`. A listener may instead
+ * resolve the request by assigning a new `selectedSourceIds` array itself, which also suppresses
+ * the built-in commit. A `sources` reassignment that prunes the selection does not ask.
  * @event lr-selection-change - `detail: { selectedSourceIds }` — the complete updated leaf-id array,
  * fired after every toggle including select-all. Also fires when a `sources` reassignment prunes
  * a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
@@ -153,14 +165,25 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change-request',
     'lr-selection-change',
   ]);
 
   /** Flat (no `children`) or a tree. */
   @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
   /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
-   * its own copy on toggle *then* emits; reassign to control. */
-  @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
+   * its own copy on toggle *then* emits; reassign to control.
+   * @default [] */
+  @property({ attribute: false })
+  get selectedSourceIds(): readonly string[] { return this._selectedSourceIds; }
+  set selectedSourceIds(value: readonly string[]) {
+    markVetoGuardWrite(this.selectionGuard);
+    this._selectedSourceIds = value;
+  }
+  private _selectedSourceIds: readonly string[] = [];
+  // A listener that answers `lr-selection-change-request` by assigning `selectedSourceIds`
+  // finishes before the built-in commit runs; the guard records that it wrote at all.
+  private readonly selectionGuard = new VetoWriteGuard();
   /** Omits the header control that otherwise selects or clears every leaf source, or only the
    *  leaves matching the filter while one is active. */
   @property({ type: Boolean, attribute: 'without-select-all' })
@@ -513,20 +536,33 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     this.emit('lr-selection-change', { selectedSourceIds });
   }
 
-  private commitSelection(next: string[]): void {
-    this.selectedSourceIds = next;
-    this.reportSelection(next);
+  /** Asks through `lr-selection-change-request`, then commits; returns whether it committed. */
+  private commitSelection(next: string[], previous: readonly string[]): boolean {
+    let committed = false;
+    requestThenCommit({
+      requestDetail: { selectedSourceIds: next, previousSelectedSourceIds: [...previous] },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-selection-change-request', detail, init),
+      guard: this.selectionGuard,
+      commit: () => {
+        committed = true;
+        this.selectedSourceIds = next;
+        this.reportSelection(next);
+      },
+    });
+    return committed;
   }
 
   private toggleEntry(entry: LyraSourceEntry): void {
     const leaves = this.descendantLeafIds(entry);
-    const set = new Set(this.normalizedSelectedSourceIds());
+    const previous = this.normalizedSelectedSourceIds();
+    const set = new Set(previous);
     const willSelect = this.checkedState(entry, set) !== 'true';
     for (const id of leaves) {
       if (willSelect) set.add(id);
       else set.delete(id);
     }
-    this.commitSelection([...set]);
+    this.commitSelection([...set], previous);
   }
 
   /** The select-all checkbox and the filter field are internal chrome: their composed events stay
@@ -545,13 +581,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private toggleSelectAll(): void {
     const targets = this.selectAllTargets(this.visibleRows());
     if (!targets.length) return;
-    const selected = new Set(this.normalizedSelectedSourceIds());
+    const previous = this.normalizedSelectedSourceIds();
+    const selected = new Set(previous);
     const allSelected = targets.every((id) => selected.has(id));
     for (const id of targets) {
       if (allSelected) selected.delete(id);
       else selected.add(id);
     }
-    this.commitSelection([...selected]);
+    // The select-all box has already flipped itself by now; a refused or redirected request
+    // re-renders so `live()` puts it back on the selection that actually holds.
+    if (!this.commitSelection([...selected], previous)) this.requestUpdate();
   }
 
   private focusRowByIndex(index: number, rows: SourceRow[]): void {
@@ -750,8 +789,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               <lr-checkbox
                 part="select-all-control"
                 aria-label=${this.localize('selectAllSources')}
-                .checked=${selectAllState === 'true'}
-                .indeterminate=${selectAllState === 'mixed'}
+                .checked=${live(selectAllState === 'true')}
+                .indeterminate=${live(selectAllState === 'mixed')}
                 @lr-checkbox-toggle-request=${this.stopOwnedEvent}
                 @input=${this.stopOwnedEvent}
                 @lr-input=${this.stopOwnedEvent}

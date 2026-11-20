@@ -55,7 +55,7 @@ export const styles = css`
   }
   [part='tooltip'] {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem));
     min-inline-size: 0;

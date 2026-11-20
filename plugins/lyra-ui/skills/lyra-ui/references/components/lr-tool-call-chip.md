@@ -49,6 +49,13 @@ its content.
   ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open detail tooltip in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`.
+  The tooltip stacks at the chip's leased `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
 click or Enter/Space activation of the pill, exactly once per activation. `lr-tool-activate`

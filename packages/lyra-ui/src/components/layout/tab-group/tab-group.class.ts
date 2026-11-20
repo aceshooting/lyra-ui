@@ -24,6 +24,8 @@ import { styles } from './tab-group.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 import type { LyraTab } from './tab.class.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_tabCloseAction } from '../../../internal/default-strings/layout.generated.js';
@@ -106,7 +108,16 @@ const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
  *  `lr-scroller`'s own control step. */
 const SCROLL_STEP_RATIO = 0.8;
 
+/** Detail of `lr-tab-group-select-request`. */
+export interface LyraTabGroupSelectRequestDetail {
+  /** Panel name of the tab the user is switching to. */
+  readonly value: string;
+  /** Panel name `active` holds while the request dispatches. */
+  readonly previousValue: string;
+}
+
 export interface LyraTabGroupEventMap {
+  'lr-tab-group-select-request': CustomEvent<LyraTabGroupSelectRequestDetail>;
   'lr-tab-show': CustomEvent<{ name: string }>;
   'lr-tab-hide': CustomEvent<{ name: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
@@ -172,6 +183,13 @@ export interface LyraTabGroupEventMap {
  * @customElement lr-tab-group
  * @slot - Canonical `<lr-tab>`/`<lr-tab-panel>` pairs.
  * @slot nav - Upstream-compatible slot used by `<lr-tab>` descriptors.
+ * @event lr-tab-group-select-request - A user activation (click, an Arrow/Home/End key under
+ *   `activation="auto"`, or Enter/Space under `activation="manual"`) is about to switch to a tab
+ *   that is not active; `detail: { value, previousValue }` carries the proposed panel name while
+ *   `active` still holds the current one. Cancelable: calling `preventDefault()` keeps the current
+ *   tab, and none of `lr-tab-hide`/`lr-tab-show`/`lr-activate` fire. A listener may instead resolve
+ *   the request by assigning `active` itself, which also suppresses the built-in switch. Re-picking
+ *   the active tab and the programmatic `show()` method never ask.
  * @event lr-tab-show - `detail: { name }`, fired when a tab becomes active via click or keyboard, or when the active tab is removed, disabled or made inert and selection moves to the following (else preceding) tab.
  * @event lr-tab-hide - `detail: { name }`, fired for the outgoing tab immediately before `lr-tab-show`; also the only event when no tab remains to select.
  * @event lr-activate - Fired on every user activation of a navigable tab -- a click, or an
@@ -256,8 +274,19 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     () => this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]'),
   );
 
-  /** The active tab's panel name. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
-  @property({ reflect: true }) active = '';
+  // A listener that answers `lr-tab-group-select-request` by assigning `active` finishes before the
+  // built-in switch runs; the guard records that it wrote at all, even the value already held.
+  private readonly selectGuard = new VetoWriteGuard();
+  private _active = '';
+
+  /** The active tab's panel name. Falls back to the first enabled tab whenever the current value doesn't resolve to one.
+   * @default '' */
+  @property({ reflect: true })
+  get active(): string { return this._active; }
+  set active(value: string) {
+    markVetoGuardWrite(this.selectGuard);
+    this._active = value;
+  }
 
   /** Accessible name for the `role="tablist"` strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
@@ -1019,10 +1048,20 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  including the re-pick of the already-active tab that `lr-tab-show` is defined to stay silent
    *  for. See the class doc's `lr-activate` entry. Kept separate from `selectTab` so the public
    *  `show()` method stays a programmatic move rather than a synthesized user gesture. */
-  private activateTab(tab: TabDef): void {
-    if (!this.isNavigable(tab)) return;
-    this.selectTab(tab);
+  private activateTab(tab: TabDef): boolean {
+    if (!this.isNavigable(tab)) return false;
+    if (tab.slotName !== this.active) {
+      const request = requestThenCommit({
+        requestDetail: { value: tab.slotName, previousValue: this.active },
+        emitRequest: (detail, init: { cancelable: true }) =>
+          this.emit('lr-tab-group-select-request', detail, init),
+        guard: this.selectGuard,
+        commit: () => this.selectTab(tab),
+      });
+      if (request.defaultPrevented || this.active !== tab.slotName) return false;
+    }
     if (this.isCurrentTab(tab)) this.emit('lr-activate', { value: tab.slotName });
+    return true;
   }
 
   /** Show the panel named by an `<lr-tab panel>`. */
@@ -1192,8 +1231,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       this.focusOnly(target);
       return;
     }
-    this.activateTab(target);
-    this.focusTabButton(target.slotName);
+    if (this.activateTab(target)) this.focusTabButton(target.slotName);
   };
 
   private tabId(slotName: string): string {

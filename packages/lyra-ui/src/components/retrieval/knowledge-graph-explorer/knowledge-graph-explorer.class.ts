@@ -63,6 +63,8 @@ import '../../forms/input/input.class.js';
 import '../../forms/button/button.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExplorerAllTypesHidden, LYRA_DEFAULT_graphExplorerClearTypes, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_graphNodeLimit } from '../../../internal/default-strings/retrieval.generated.js';
@@ -96,6 +98,10 @@ export type LyraKnowledgeGraphEntityDetails = Pick<
 export type KnowledgeGraphHighlight = 'selection' | 'hover' | 'none';
 
 export interface LyraKnowledgeGraphExplorerEventMap {
+  /** A user selection is about to change `selectedNodeId`. Cancelable; see the class doc. */
+  'lr-selection-change-request': CustomEvent<
+    LyraEventDetailSnapshot<{ selectedNodeId: string | null; previousSelectedNodeId: string | null }>
+  >;
   /** The explorer changed its self-managed selection. Fires after `selectedNodeId` is updated for
    *  search, graph, neighbor, path, entity-card, invalidation, and popover-close paths. Direct
    *  host assignments remain silent. */
@@ -115,6 +121,10 @@ export interface LyraKnowledgeGraphExplorerEventMap {
     sourceNodeId: string;
     targetNodeId: string;
   }>;
+  /** A pin toggle is about to change `pinnedNodeIds`. Cancelable; see the class doc. */
+  'lr-pin-change-request': CustomEvent<
+    LyraEventDetailSnapshot<{ pinnedNodeIds: string[]; previousPinnedNodeIds: string[] }>
+  >;
   /** A node's pinned state changed by user interaction. `detail: { pinnedNodeIds }` -- the complete
    *  updated array. This component already toggles its own `pinnedNodeIds` copy before emitting
    *  (the same self-toggle-then-emit contract `lr-graph-legend`'s `hiddenTypes`/`lr-visibility-
@@ -134,8 +144,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it
    *  back is optional and a direct host assignment stays silent. */
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
-  /** Proposed hidden types. Cancel to keep the current visibility. */
-  'lr-hidden-types-change-request': CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>;
+  /** Proposed hidden types, with the current ones as `previousHiddenTypes`. Cancel to keep the
+   *  current visibility. */
+  'lr-hidden-types-change-request': CustomEvent<
+    LyraEventDetailSnapshot<{ hiddenTypes: string[]; previousHiddenTypes: string[] }>
+  >;
   /** A node type's visibility changed via the composed legend. `detail: { hiddenTypes }` -- the
    *  complete updated array. This component already applies it to its own `hiddenTypes` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
@@ -226,17 +239,33 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   alongside its `lr-neighbor-list`. No effect while `details` is overridden.
  * @slot detail-actions - Additive content appended into the default `lr-entity-card`'s `actions`
  *   slot, beside its built-in pin toggle. No effect while `details` is overridden.
+ * @event lr-selection-change-request - A user selection (a graph node click, a search result,
+ *   neighbor row, path element or entity-card focus action) is about to change `selectedNodeId`;
+ *   `detail: { selectedNodeId, previousSelectedNodeId }` carries the proposal while
+ *   `selectedNodeId` still holds the current id. Cancelable: calling `preventDefault()` keeps the
+ *   current selection, opens no details and emits no `lr-selection-change`. A listener may instead
+ *   resolve the request by assigning `selectedNodeId` itself, which also suppresses the built-in
+ *   commit. Closing the details popover and a selection invalidated by data or filter changes
+ *   clear the selection without asking.
  * @event lr-selection-change - The explorer changed its self-managed selection. `detail:
  *   { selectedNodeId, selectedNodeIds, selectedEdgeIds }`, the last two in `lr-graph`'s shape.
  *   Direct host assignments do not emit.
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
+ * @event lr-pin-change-request - A pin toggle (the details pin action or a pinned chip's remove
+ *   button) is about to change `pinnedNodeIds`; `detail: { pinnedNodeIds, previousPinnedNodeIds }`
+ *   carries the proposed and current arrays. Cancelable: calling `preventDefault()` keeps the
+ *   current pins, announces nothing and emits no `lr-pin-change`. A listener may instead resolve
+ *   the request by assigning a new `pinnedNodeIds` array itself, which also suppresses the
+ *   built-in commit.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
  *   { query, matchCount, matchCountExact, activeIndex }`. `query` is the canonical `LyraSearchChangeDetail`
  *   name; `matchCountExact` is always `true` since this component's node filter has no truncating
  *   ceiling. `activeIndex` is always `-1` because this is a live node filter.
  *   Direct host assignments do not emit.
- * @event lr-hidden-types-change-request - Cancelable legend proposal with `detail: { hiddenTypes }`.
+ * @event lr-hidden-types-change-request - Cancelable legend proposal with
+ *   `detail: { hiddenTypes, previousHiddenTypes }`. A listener may instead resolve it by assigning
+ *   a new `hiddenTypes` array itself, which also suppresses the legend's commit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-activate - Bubbles unchanged with `{ nodeId, x, y, z? }`; spatial activation
@@ -357,7 +386,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change-request',
     'lr-selection-change',
+    'lr-pin-change-request',
     'lr-pin-change',
     'lr-hidden-types-change-request',
     'lr-hidden-types-change',
@@ -518,9 +549,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (!current() || !result?.current()) return;
     const record = result.records.find(row => row.key === key);
     if (!record || record.value.kind !== 'node') return;
+    const previousEntity = this.sourceEntity;
+    const previousInspect = this.sourceInspect;
     this.sourceEntity = record.value.value;
     this.sourceInspect = [graph, this.graphSource, this.sourceEpoch, id];
-    this.setInternalSelectedNodeId(id);
+    if (!this.setInternalSelectedNodeId(id, true)) {
+      if (current() && this.sourceInspect?.[3] === id) {
+        this.sourceEntity = previousEntity;
+        this.sourceInspect = previousInspect;
+      }
+      return;
+    }
     if (!current() || this.selectedNodeId !== id) return;
     const focused = await focusGraphSourceComposition(graph, key);
     await graph.updateComplete;
@@ -549,8 +588,19 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** Currently-pinned node ids. Self-toggled by the pin action in the details popover and by a
    *  pinned chip's remove button (see the class doc's "controlled vs. self-managed" note); still
    *  presettable/overridable like any other property. Exactly two pinned nodes reveals the "Find
-   *  path" action. */
-  @property({ attribute: false }) pinnedNodeIds: readonly string[] = [];
+   *  path" action.
+   * @default [] */
+  @property({ attribute: false })
+  get pinnedNodeIds(): readonly string[] { return this._pinnedNodeIds; }
+  set pinnedNodeIds(value: readonly string[]) {
+    markVetoGuardWrite(this.pinGuard);
+    this._pinnedNodeIds = value;
+  }
+  private _pinnedNodeIds: readonly string[] = [];
+  // Listener writes during `lr-pin-change-request` / `lr-selection-change-request` suppress the
+  // built-in commit; each guard records that a write happened, not that the value differs.
+  private readonly pinGuard = new VetoWriteGuard();
+  private readonly selectionGuard = new VetoWriteGuard();
   /** Host-supplied path-finding result, rendered via `lr-path-strip`. Empty (the default) renders
    *  no path strip. See `lr-path-request`. */
   @property({ attribute: false }) path: readonly LyraPathElement[] = [];
@@ -560,9 +610,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** The currently-selected node id, driving both the details popover and `lr-graph`'s
    *  `selectedNodeIds` visual state. Presettable (e.g. to deep-link to a specific entity) as well
    *  as self-managed on every selection interaction. `null` (the default) shows no selection and
-   *  keeps the details popover closed. */
-  @property({ attribute: 'selected-node-id' }) selectedNodeId: string | null =
-    null;
+   *  keeps the details popover closed.
+   * @default null */
+  @property({ attribute: 'selected-node-id' })
+  get selectedNodeId(): string | null { return this._selectedNodeId; }
+  set selectedNodeId(value: string | null) {
+    markVetoGuardWrite(this.selectionGuard);
+    this._selectedNodeId = value;
+  }
+  private _selectedNodeId: string | null = null;
   /** Forwarded to `lr-graph.renderer`. `renderer="canvas"` has no per-node DOM element, which
    *  narrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the
    *  class doc's anchoring note. */
@@ -913,15 +969,33 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     void this.activatePresetWhenGraphReady(id, graph, generation);
   }
 
-  private setInternalSelectedNodeId(value: string | null): void {
-    if (Object.is(this.selectedNodeId, value)) return;
-    this.internalSelectionAssignment = { value };
-    this.sourceAssigned = true; this.selectedNodeId = value; this.sourceAssigned = false;
-    this.emit('lr-selection-change', {
-      selectedNodeId: value,
-      selectedNodeIds: value ? [value] : [],
-      selectedEdgeIds: [],
+  /** Commits a self-managed selection. A user selection (`request`) first asks through the
+   *  cancelable `lr-selection-change-request`; returns whether `value` is now selected by this call. */
+  private setInternalSelectedNodeId(value: string | null, request = false): boolean {
+    if (Object.is(this.selectedNodeId, value)) return true;
+    let committed = false;
+    const commit = (): void => {
+      committed = true;
+      this.internalSelectionAssignment = { value };
+      this.sourceAssigned = true; this.selectedNodeId = value; this.sourceAssigned = false;
+      this.emit('lr-selection-change', {
+        selectedNodeId: value,
+        selectedNodeIds: value ? [value] : [],
+        selectedEdgeIds: [],
+      });
+    };
+    if (!request) {
+      commit();
+      return true;
+    }
+    requestThenCommit({
+      requestDetail: { selectedNodeId: value, previousSelectedNodeId: this.selectedNodeId },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-selection-change-request', detail, init),
+      guard: this.selectionGuard,
+      commit,
     });
+    return committed;
   }
 
   override disconnectedCallback(): void {
@@ -1135,16 +1209,24 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const next = wasPinned
       ? pinnedNodeIds.filter((existing) => existing !== id)
       : [...pinnedNodeIds, id];
-    this.pinnedNodeIds = next;
-    this.pinLiveText = this.localize(
-      wasPinned ? 'graphExplorerUnpinned' : 'graphExplorerPinned',
-      undefined,
-      {
-        label: this.nodeLabel(id),
-      }
-    );
-    this.announcements.announcePolite(this.pinLiveText);
-    this.emit('lr-pin-change', { pinnedNodeIds: next });
+    requestThenCommit({
+      requestDetail: { pinnedNodeIds: next, previousPinnedNodeIds: [...pinnedNodeIds] },
+      emitRequest: (detail, init: { cancelable: true }) =>
+        this.emit('lr-pin-change-request', detail, init),
+      guard: this.pinGuard,
+      commit: () => {
+        this.pinnedNodeIds = next;
+        this.pinLiveText = this.localize(
+          wasPinned ? 'graphExplorerUnpinned' : 'graphExplorerPinned',
+          undefined,
+          {
+            label: this.nodeLabel(id),
+          }
+        );
+        this.announcements.announcePolite(this.pinLiveText);
+        this.emit('lr-pin-change', { pinnedNodeIds: next });
+      },
+    });
   }
 
   private requestPath(): void {
@@ -1166,7 +1248,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     event.stopPropagation();
     const previous = this.hiddenTypes;
     const types = this.nodeTypes;
-    if (this.emit('lr-hidden-types-change-request', { hiddenTypes: event.detail.hiddenTypes }, { cancelable: true }).defaultPrevented ||
+    if (this.emit('lr-hidden-types-change-request', { hiddenTypes: event.detail.hiddenTypes, previousHiddenTypes: [...previous] }, { cancelable: true }).defaultPrevented ||
         previous !== this.hiddenTypes || types !== this.nodeTypes || !this.isConnected) event.preventDefault();
   };
 
@@ -1224,7 +1306,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (this.graphSource !== undefined) return this.activateSourceEntity(id);
     if (!this.canActivateNode(id)) return;
     const generation = this.invalidateActivation();
-    this.setInternalSelectedNodeId(id);
+    if (!this.setInternalSelectedNodeId(id, true)) return;
     this.trackedNodeEl = undefined;
     const graph = this.graphEl;
     const focused = graph ? await graph.focusNode(id) : false;
@@ -1303,7 +1385,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (this.graphSource !== undefined) { void this.activateSourceEntity(id); return; }
     if (!this.canActivateNode(id)) return;
     const generation = this.invalidateActivation();
-    this.setInternalSelectedNodeId(id);
+    if (!this.setInternalSelectedNodeId(id, true)) return;
     if (this.view === '3d') {
       const graph = this.graphEl;
       const point = graph?.getNodeScreenPosition(id);

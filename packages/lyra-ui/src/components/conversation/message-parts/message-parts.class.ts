@@ -187,8 +187,8 @@ function normalizeMessagePartsContentMode(value: unknown): MessagePartsContentMo
 
 export interface LyraMessagePartsEventMap
   extends Omit<LyraMarkdownEventMap, 'lr-render-error'>,
-    Omit<LyraThinkingPanelEventMap, 'lr-toggle'>,
-    Omit<LyraToolCallBlockEventMap, 'lr-toggle' | 'lr-render-error'>,
+    Omit<LyraThinkingPanelEventMap, 'lr-toggle' | 'lr-toggle-request'>,
+    Omit<LyraToolCallBlockEventMap, 'lr-toggle' | 'lr-toggle-request' | 'lr-render-error'>,
     LyraToolCallChipEventMap,
     Omit<LyraToolResultViewEventMap, 'lr-render-error'>,
     LyraAttachmentChipEventMap,
@@ -198,6 +198,7 @@ export interface LyraMessagePartsEventMap
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
   'lr-part-resume': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
+  'lr-toggle-request': CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>;
   'lr-toggle': CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>;
   'lr-render-error': CustomEvent<
     { error: unknown } | { toolName: string; error: unknown } | ToolCallBlockRenderErrorDetail
@@ -256,6 +257,8 @@ export interface LyraMessagePartsEventMap
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-resume - Requests host-managed resume of an interrupted, resumable part. `detail: { part }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
+ * @event lr-toggle-request - Cancelable passthrough from a rendered reasoning panel or tool-call
+ * block, before its header activation commits.
  * @event lr-toggle - Passthrough from a rendered reasoning panel or tool-call block.
  * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
  * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.

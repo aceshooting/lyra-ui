@@ -71,6 +71,10 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `aria-label` names the group. An empty attribute clears the name. Whitespace alone falls back
   to the visible label or localized time name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
+  `topLayer = false` (`top-layer`, reflected) shows the open popup in the browser top layer where
+  the native Popover API exists (placed `fixed`, no DOM node moves), so it paints above a sibling
+  stacked over a fixed/sticky, `z-index`ed header; it leaves the top layer once it settles closed
+  and applies live while open. Same contract as `lr-popover`'s `top-layer`.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
 - `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
   (reflected), the spelling `lr-input`/`lr-select`/`lr-combobox` use, is equivalent. `withNow = false`

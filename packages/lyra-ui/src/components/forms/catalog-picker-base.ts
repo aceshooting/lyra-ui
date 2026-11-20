@@ -12,6 +12,8 @@ import { collectionSupport } from '../../internal/collection-snapshot.js';
 import { autocorrectConverter, spellcheckConverter } from '../../internal/converters.js';
 import { relayNativeEvent } from '../../internal/native-event-relay.js';
 import { emitValueEvents } from '../../internal/value-events.js';
+import { requestThenCommit } from '../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../internal/veto-write-guard.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../internal/active-element.js';
 import { submitOnEnter } from '../../internal/submit-on-enter.js';
 import { SlotPresenceController } from '../../internal/slot-presence-controller.js';
@@ -37,6 +39,8 @@ export interface LyraCatalogPickerEventMap extends Pick<
 > {
   'lr-input': CustomEvent<LyraCatalogPickerChangeDetail>;
   'lr-change': CustomEvent<LyraCatalogPickerChangeDetail>;
+  /** Cancelable proposal before a user selection or clear commits. */
+  'lr-change-request': CustomEvent<LyraCatalogPickerChangeDetail>;
   'lr-invalid': CustomEvent<null>;
   'lr-load-error': CustomEvent<null>;
   input: Event;
@@ -56,7 +60,7 @@ const pickerSpellcheckConverter = {
 export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPickerElement) {
   static override styles = [LyraElement.styles, styles];
   protected static override collectionSupport = collectionSupport;
-  protected static override readonly immutableEventDetails = Object.freeze(['lr-input', 'lr-change']);
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-input', 'lr-change', 'lr-change-request']);
   /** Visible field label; the label slot takes precedence. */
   @property() label = '';
   /** Whether the `label` renders on screen; `hidden` keeps it as the accessible name. */
@@ -75,8 +79,20 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   @property({ type: Boolean }) clearable = false;
   /** Enable an editable filter. If loading fails, the compact control stays usable and offers a retry. */
   @property({ type: Boolean }) searchable = false;
-  /** Place the popup in the browser top layer, including inside native dialogs. */
-  @property({ type: Boolean, attribute: 'top-layer' }) topLayer = false;
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it, including inside a
+   * native modal dialog. Use it inside a fixed or sticky header, toolbar or rail with its own
+   * `z-index` that a sibling surface stacked higher would otherwise cover. While set, the listbox
+   * is placed with the `fixed` strategy whatever `positioning-strategy` resolves to; no DOM node
+   * moves, so anchoring, RTL placement, focus and Escape are unchanged. It leaves the top layer
+   * once the listbox settles closed. Stacking contexts are deliberately not detected
+   * automatically. Without native Popover API support the listbox keeps its ordinary
+   * `var(--lr-overlay-stack-index, var(--lr-layer-dropdown))` stacking. Same contract as
+   * `<lr-select>`'s `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
   /** Explicit popup strategy; omission inherits --lr-positioning-strategy. */
   @property({ attribute: 'positioning-strategy' }) positioningStrategy?: PlaceStrategy;
   /** Native autocomplete guidance for the optional filter input. */
@@ -113,7 +129,10 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
 
   /** Committed catalog identifier. Programmatic writes are silent. */
   override get value(): string { return super.value; }
-  override set value(next: string) { super.value = this.normalizeValue(next); }
+  override set value(next: string) {
+    super.value = this.normalizeValue(next);
+    markVetoGuardWrite(this.changeGuard);
+  }
   /** Normalized reset default; null removes the value attribute without restoring stale content. */
   override get defaultValue(): string { return super.defaultValue; }
   override set defaultValue(next: string | null) { super.defaultValue = next === null ? null : this.normalizeValue(next); }
@@ -194,6 +213,32 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   /** Activate the visible trigger or optional filter when enabled. */
   override click(): void { if (!isLiveDisabled(this)) this.control?.click(); }
 
+  // A listener that answers `lr-change-request` by writing `value` finishes before the visible
+  // control commits; the guard records that it wrote at all.
+  private readonly changeGuard = new VetoWriteGuard();
+  /** Re-issues the visible control's selection proposal as this picker's own request. */
+  private readonly onControlRequest = (event: Event): void => {
+    const child = this.control;
+    if (!child || event.target !== child) return;
+    event.stopPropagation();
+    const raw = (event as CustomEvent<{ value: unknown }>).detail.value;
+    const next = raw === null ? '' : raw;
+    // An unavailable proposal is not offered to listeners: the control's own `lr-change` reaches
+    // `onControlEvent()`, which rejects it and restores the control's display.
+    if (isLiveDisabled(this) || typeof next !== 'string' || (next && !this.entries.some((row) => row.code === next && !row.disabled))) return;
+    if (next === this.value) return;
+    let accepted = false;
+    requestThenCommit({
+      requestDetail: { value: next, previousValue: this.value },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-change-request', detail, init),
+      guard: this.changeGuard,
+      // The visible control applies the write; its `lr-change` then commits it here.
+      commit: () => { accepted = true; },
+    });
+    if (accepted) return;
+    event.preventDefault();
+    this.requestUpdate();
+  };
   private readonly onControlEvent = (event: Event): void => {
     const child = this.control;
     if (!child || event.target !== child) return;
@@ -379,7 +424,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       .autocapitalize=${this.usingCombobox ? this.autocapitalize : noChange} .autocorrect=${this.usingCombobox ? this.autocorrect : noChange}
       autocorrect=${this.usingCombobox && this.hasAttribute('autocorrect') ? (this.autocorrect ? 'on' : 'off') : nothing}
       @input=${this.onControlEvent} @lr-input=${this.onControlEvent} @lr-filter=${this.onControlEvent}
-      @change=${this.onControlEvent} @lr-change=${this.onControlEvent}
+      @change=${this.onControlEvent} @lr-change=${this.onControlEvent} @lr-change-request=${this.onControlRequest}
       @focus=${this.onControlFocus} @blur=${this.onControlFocus} @focusout=${this.onControlFocusOut}
       @keydown=${this.onControlKeyDown} @lr-show=${this.onControlShow}
     >${guard([optionRows, this.rowPresentationEpoch], () => optionRows.map((row) => {

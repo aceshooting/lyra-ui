@@ -27,6 +27,8 @@ import {
 } from '../../../internal/anchored-validity.js';
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -684,6 +686,24 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Popover placement relative to the field (`top`, `right`, `bottom`, `left`, each with optional `-start`/`-end`). */
   @property({ converter: placementConverter, reflect: true })
   placement: LyraDateInputPlacement = 'bottom-start';
+  /**
+   * Shows the open calendar popover in the browser top layer wherever the native Popover API
+   * exists, so it paints above every page layer whatever the stacking contexts around it. Use it
+   * inside a fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape never applies, and no `z-index` on the
+   * popover can lift it out of that ancestor's context. While set, the popover is placed with the
+   * `fixed` strategy whatever `positioning-strategy` resolves to; no DOM node moves, so anchoring,
+   * RTL placement, focus, Escape and the show/hide transition are unchanged. It stays promoted
+   * through its hide transition and leaves the top layer once it settles closed. Stacking contexts
+   * are deliberately not detected automatically. Without native Popover API support the popover
+   * keeps its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes
+   * apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Event names that mark the control as user-interacted for `:state(user-*)` styling. */
   @property({ attribute: false }) assumeInteractionOn: string[] = ['input'];
   /** Additional JavaScript validators run after the intrinsic date constraints. Accepts a
@@ -1337,10 +1357,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       '[part="popup"]'
     ) as HTMLElement | null;
     if (!anchor || !popup) return;
+    this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
     this.cleanupFn = place(anchor, popup, {
       placement: rtlAwarePlacement(normalizeDateInputPlacement(this.placement), this),
       offset: finiteNumber(this.distance, 0),
-      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
     });
     this.watchPopupPlacement(this.cleanupFn);
     this.overlayHandle?.deactivate({ restoreFocus: false });
@@ -1548,7 +1569,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
     if (
       changed.has('open') ||
-      (this.open && (changed.has('placement') || changed.has('distance')))
+      (this.open && (changed.has('placement') || changed.has('distance') || changed.has('topLayer')))
     ) {
       this.cleanupFn?.();
       this.cleanupFn = undefined;
@@ -1560,10 +1581,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           '[part="popup"]'
         ) as HTMLElement | null;
         if (anchor && popup) {
+          this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
           this.cleanupFn = place(anchor, popup, {
             placement: rtlAwarePlacement(normalizeDateInputPlacement(this.placement), this),
             offset: finiteNumber(this.distance, 0),
-            strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+            ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
           });
           this.watchPopupPlacement(this.cleanupFn);
         }
@@ -2170,6 +2192,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
                 .presets=${this.presets}
                 exportparts="presets, preset-button"
+                @lr-date-picker-select-request=${(event: Event) => event.stopPropagation()}
                 @lr-input=${(event: Event) => event.stopPropagation()}
                 @lr-change=${(event: Event) => event.stopPropagation()}
                 @input=${this.onPickerInput}

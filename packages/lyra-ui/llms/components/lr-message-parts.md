@@ -152,8 +152,8 @@ are ignored so each rendered identity and announcement remains unambiguous.
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
 `lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
-`lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
-`lr-tool-call-chip-select`, `lr-widget-action`,
+`lr-search-change`, `lr-text-select`, the cancelable `lr-toggle-request` and committed `lr-toggle`
+(from reasoning panels and tool-call blocks), `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
@@ -210,6 +210,8 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-retry-request` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle-request` event — Cancelable passthrough from a rendered reasoning panel or tool-call
+  block, before its header activation commits.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
 - `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.

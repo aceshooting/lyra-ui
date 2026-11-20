@@ -59,8 +59,10 @@ and `waiting-approval` have their own localized sentence ("{label} started", "{l
 `queued`, `collecting` and application-defined statuses announce "{label}: {status}" using the status's
 localized name or its `label`; `idle` is silent.
 
-**Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
-boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
+**Events:** cancelable `lr-toggle-request` (`detail: EvalExampleToggleDetail`, the proposed state)
+before a summary activation expands or collapses an example — preventing it keeps the example as is
+and no `lr-example-toggle` fires; `lr-example-toggle` (`detail: EvalExampleToggleDetail` =
+`{ exampleId: string; expanded: boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-citation-open` (same
 detail, for a citation's full-preview request), `lr-example-tool-approval-decide-request`

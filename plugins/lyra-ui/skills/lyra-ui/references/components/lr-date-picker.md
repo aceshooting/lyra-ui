@@ -188,7 +188,14 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
+**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
+writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
+new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and
+suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
+assigning `value` itself, which also suppresses the built-in commit. `clear()` and programmatic
+writes request nothing, and a date input keeps its calendar's request inside its popup.
+All other events are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
 values. Their typed aliases `lr-input` and `lr-change` carry `{ value, previousValue }` after the corresponding
 native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
@@ -278,6 +285,12 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
+- `topLayer: boolean = false` (`top-layer`, reflected) — shows the open calendar popover in the
+  browser top layer where the native Popover API exists, so it paints above a sibling stacked over
+  a fixed/sticky, `z-index`ed header the field sits in. The popover is then placed `fixed`; no DOM
+  node moves, and anchoring, RTL, focus, Escape and transitions are unchanged. It leaves the top
+  layer once it settles closed; changes apply live while open. Same contract as `lr-popover`'s
+  `top-layer`; without Popover API support it keeps its ordinary `z-index`.
 - `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
   It defaults to the internal input after first render; assign another element to override it, or
   assign `undefined` to restore the internal input

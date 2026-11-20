@@ -82,6 +82,13 @@ preserving null readback; an explicitly empty query remains empty.
   for the platform's element-reference ARIA API.
 - `listboxId: string` — read-only getter; the internal `id` of the `role="listbox"` element. Like
   `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  shows the open listbox in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`. The listbox
+  stacks at an enclosing overlay's `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Methods:**
 

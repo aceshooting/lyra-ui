@@ -8,7 +8,11 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import {
+  deferredPlace as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -200,6 +204,24 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
    *  detail so a listener can correlate the click with the call it fired for. */
   @property({ attribute: 'call-id' }) callId = '';
 
+  /**
+   * Shows the open detail tooltip in the browser top layer wherever the native Popover API exists,
+   * so it paints above every page layer whatever the stacking contexts around it. Use it for a chip
+   * inside a fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape never applies, and no `z-index` on the
+   * tooltip can lift it out of that ancestor's context. While set, the tooltip is placed with the
+   * `fixed` strategy whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so
+   * anchoring, hover, focus and Escape are unchanged. It leaves the top layer once it closes.
+   * Stacking contexts are deliberately not detected automatically. Without native Popover API
+   * support the tooltip keeps its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s
+   * `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
+
   // Same fix lr-stat's hasIcon/lr-combobox's hasHintSlot etc. already
   // establish: a `[part]` always contains a literal `<slot>` child regardless
   // of assigned content, so `:empty` never matches -- real emptiness is
@@ -255,10 +277,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
           '[part="tooltip"]'
         ) as HTMLElement | null;
         if (anchor && tooltip) {
-          this.cleanupPositioner = place(anchor, tooltip, {
-            placement: 'top-start',
-            strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
-          });
+          this.placeTooltip(anchor, tooltip);
           this.tooltipOverlay = activateNonmodalOverlay({
             host: this,
             panel: () => tooltip,
@@ -267,7 +286,22 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
           });
         }
       }
+    } else if (changed.has('topLayer') && this.tooltipOpen && this.cleanupPositioner) {
+      const anchor = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      const tooltip = this.renderRoot.querySelector<HTMLElement>('[part="tooltip"]');
+      if (anchor && tooltip) {
+        this.cleanupPositioner();
+        this.placeTooltip(anchor, tooltip);
+      }
     }
+  }
+
+  private placeTooltip(anchor: HTMLElement, tooltip: HTMLElement): void {
+    this.placedTopLayer = syncTopLayerRelease(tooltip, this.placedTopLayer, this.topLayer);
+    this.cleanupPositioner = place(anchor, tooltip, {
+      placement: 'top-start',
+      ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
+    });
   }
 
   override disconnectedCallback(): void {

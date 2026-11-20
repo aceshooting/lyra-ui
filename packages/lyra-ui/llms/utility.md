@@ -72,6 +72,13 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
   a nonempty visible label or the localized fallback
 - `open: boolean = false` (reflected)
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-dropdown>`:
+  shows the open format menu in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`; re-placing it never moves focus. The menu
+  stacks at the button's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
@@ -1126,6 +1133,13 @@ preserving null readback; an explicitly empty query remains empty.
   for the platform's element-reference ARIA API.
 - `listboxId: string` — read-only getter; the internal `id` of the `role="listbox"` element. Like
   `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  shows the open listbox in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`. The listbox
+  stacks at an enclosing overlay's `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`.
 
 **Methods:**
 
@@ -2220,6 +2234,13 @@ When the tour ends, focus returns to the element that held it when the tour star
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
   dots.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — also shows `interactiveTarget`
+  steps in the browser top layer (default modal steps always are), so the backdrop, spotlight and
+  popover paint above a sibling surface stacked higher than a `z-index`ed fixed or sticky header,
+  toolbar or rail the host sits in. Unset, an interactive step is promoted only when an ancestor
+  traps the host or its target is itself in the top layer, so overlays the live target opens stay
+  above the tour; with it set, such an overlay needs its own `top-layer`. Applies live while open;
+  without Popover API support the tour keeps its ordinary `z-index`.
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 

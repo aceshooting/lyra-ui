@@ -88,6 +88,13 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
   a nonempty visible label or the localized fallback
 - `open: boolean = false` (reflected)
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-dropdown>`:
+  shows the open format menu in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`; re-placing it never moves focus. The menu
+  stacks at the button's leased `--lr-overlay-stack-index`, falling back to `--lr-layer-dropdown`
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 

@@ -1206,6 +1206,13 @@ focus off the tab the user was on.
 
 **Events:**
 
+- `lr-tab-group-select-request` (`detail: { value: string, previousValue: string }`) — a user
+  activation (click, Arrow/Home/End under `activation="auto"`, Enter/Space under
+  `activation="manual"`) is about to switch to a tab that is not active; `active` still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current tab, and
+  none of `lr-tab-hide`/`lr-tab-show`/`lr-activate` fire. A listener may instead resolve it by
+  assigning `active` itself, which also suppresses the built-in switch. Re-picking the active tab
+  and `show()` never ask.
 - `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
   or because the active tab was removed, disabled or made inert and selection moved to its following
   (else preceding) tab. Not fired for the initial default or a direct `active` write.
@@ -1916,6 +1923,11 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
+- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+  key is about to select a segment whose value differs from `value`, which still holds
+  `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
+  and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning
+  `value` itself, which also suppresses the built-in commit. Re-picking the current value never asks.
 - `lr-change` (`detail: { value }`) — fired when the selected value changes via click or keyboard.
 - `lr-activate` (`detail: { value }`) — fired on **every** activation of a non-disabled
   segment (a click, or an Arrow/Home/End key that lands on one), whether or not the selection
@@ -3568,6 +3580,15 @@ menu's fallback name; a `label` or `aria-label` on the menu itself takes precede
   not comparison with an English sentinel, is what selects localization.
 - `dropdownOpen: boolean = false` (attribute: false) — the containing dropdown's controlled open
   state, used to synchronize the menu interaction engine while it is rendered inside a popup.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every submenu this menu
+  opens, nested ones included, in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail the menu sits in. No DOM node moves; a submenu
+  leaves the top layer once it settles closed. Applies live while open; without Popover API support
+  submenus keep their ordinary `z-index`. An enclosing menu's or `<lr-menubar>`'s `top-layer`
+  applies too.
+  A submenu surface stacks at its enclosing overlay's `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`.
 
 **Events:**
 

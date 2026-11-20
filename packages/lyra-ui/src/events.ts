@@ -672,11 +672,13 @@ export type LyraChangeEvent =
 export type LyraChangeDecisionRequestEvent = LyraChangeReviewEventMap['lr-change-decision-request'];
 
 /**
- * `lr-change-request` — dispatched by 7 components: `<lr-combobox>`, `<lr-locale-picker>`,
- * `<lr-model-select>`, `<lr-prompt-studio>`, `<lr-select>`, `<lr-tool-select-dialog>`,
- * `<lr-voice-picker>`; detail union of 7, e.g. `LyraComboboxEventMap['lr-change-request']`.
+ * `lr-change-request` — dispatched by 11 components: `<lr-combobox>`, `<lr-country-picker>`,
+ * `<lr-currency-picker>`, `<lr-locale-picker>`, `<lr-model-select>`, `<lr-prompt-studio>`,
+ * `<lr-select>`, `<lr-time-zone-picker>`, `<lr-tool-select-dialog>`, `<lr-unit-picker>`,
+ * `<lr-voice-picker>`; detail union of 8, e.g. `LyraCatalogPickerEventMap['lr-change-request']`.
  */
 export type LyraChangeRequestEvent =
+  | LyraCatalogPickerEventMap['lr-change-request']
   | LyraComboboxEventMap['lr-change-request']
   | LyraLocalePickerEventMap['lr-change-request']
   | LyraModelSelectEventMap['lr-change-request']
@@ -846,6 +848,12 @@ export type LyraCollapseEvent =
 export type LyraCollisionEvent = LyraDashboardGridEventMap['lr-collision'];
 
 /**
+ * `lr-color-picker-change-request` — dispatched by `<lr-color-picker>`; detail
+ * `LyraColorPickerEventMap['lr-color-picker-change-request']`.
+ */
+export type LyraColorPickerChangeRequestEvent = LyraColorPickerEventMap['lr-color-picker-change-request'];
+
+/**
  * `lr-column-move` — dispatched by `<lr-data-grid>`; detail
  * `LyraDataGridEventMap['lr-column-move']`.
  */
@@ -995,6 +1003,12 @@ export type LyraCueChangeEvent = LyraAvPlayerEventMap['lr-cue-change'];
  * `LyraDataGridEventMap['lr-data-error']`.
  */
 export type LyraDataErrorEvent = LyraDataGridEventMap['lr-data-error'];
+
+/**
+ * `lr-date-picker-select-request` — dispatched by `<lr-date-picker>`; detail
+ * `LyraDatePickerEventMap['lr-date-picker-select-request']`.
+ */
+export type LyraDatePickerSelectRequestEvent = LyraDatePickerEventMap['lr-date-picker-select-request'];
 
 /**
  * `lr-date-select` — dispatched by `<lr-calendar>`; detail
@@ -2486,6 +2500,12 @@ export type LyraPermissionRuleChangeRequestEvent = LyraPermissionRulesEventMap['
 export type LyraPinChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-pin-change'];
 
 /**
+ * `lr-pin-change-request` — dispatched by `<lr-knowledge-graph-explorer>`; detail
+ * `LyraKnowledgeGraphExplorerEventMap['lr-pin-change-request']`.
+ */
+export type LyraPinChangeRequestEvent = LyraKnowledgeGraphExplorerEventMap['lr-pin-change-request'];
+
+/**
  * `lr-play` — dispatched by 3 components: `<lr-animated-image>`, `<lr-av-player>`,
  * `<lr-sequence-playback>`; detail union of 3, e.g. `LyraAnimatedImageEventMap['lr-play']`.
  */
@@ -2648,6 +2668,12 @@ export type LyraRailResizeRequestEvent = LyraAppRailEventMap['lr-rail-resize-req
  * `LyraAvPlayerEventMap['lr-rate-change']`.
  */
 export type LyraRateChangeEvent = LyraAvPlayerEventMap['lr-rate-change'];
+
+/**
+ * `lr-rating-change-request` — dispatched by `<lr-rating>`; detail
+ * `LyraRatingEventMap['lr-rating-change-request']`.
+ */
+export type LyraRatingChangeRequestEvent = LyraRatingEventMap['lr-rating-change-request'];
 
 /**
  * `lr-readonly-change` — dispatched by `<lr-flow-controls>`; detail
@@ -3103,6 +3129,12 @@ export type LyraSegmentActivateRequestEvent = LyraContextMeterEventMap['lr-segme
 export type LyraSegmentSelectionChangeEvent = LyraContextMeterEventMap['lr-segment-selection-change'];
 
 /**
+ * `lr-segmented-select-request` — dispatched by `<lr-segmented>`; detail
+ * `LyraSegmentedEventMap['lr-segmented-select-request']`.
+ */
+export type LyraSegmentedSelectRequestEvent = LyraSegmentedEventMap['lr-segmented-select-request'];
+
+/**
  * `lr-select` — dispatched by 8 components: `<lr-command-palette>`, `<lr-context-menu>`,
  * `<lr-conversation-item>`, `<lr-dropdown>`, `<lr-menu>`, `<lr-menubar>`, `<lr-node-palette>`,
  * `<lr-thread-list>`; detail union of 8, e.g. `LyraCommandPaletteEventMap['lr-select']`.
@@ -3140,6 +3172,15 @@ export type LyraSelectionChangeEvent =
   | LyraSourcePickerEventMap['lr-selection-change']
   | LyraTableEventMap['lr-selection-change']
   | LyraTreeEventMap['lr-selection-change'];
+
+/**
+ * `lr-selection-change-request` — dispatched by 2 components: `<lr-knowledge-graph-explorer>`,
+ * `<lr-source-picker>`; detail union of 2, e.g.
+ * `LyraKnowledgeGraphExplorerEventMap['lr-selection-change-request']`.
+ */
+export type LyraSelectionChangeRequestEvent =
+  | LyraKnowledgeGraphExplorerEventMap['lr-selection-change-request']
+  | LyraSourcePickerEventMap['lr-selection-change-request'];
 
 /**
  * `lr-selection-delete` — dispatched by `<lr-flow-canvas>`; detail
@@ -3446,6 +3487,12 @@ export type LyraSubmitEvent =
 export type LyraSuggestionSelectEvent = LyraSuggestionChipsEventMap['lr-suggestion-select'];
 
 /**
+ * `lr-swatch-picker-select-request` — dispatched by `<lr-swatch-picker>`; detail
+ * `LyraSwatchPickerEventMap['lr-swatch-picker-select-request']`.
+ */
+export type LyraSwatchPickerSelectRequestEvent = LyraSwatchPickerEventMap['lr-swatch-picker-select-request'];
+
+/**
  * `lr-switch-toggle-request` — dispatched by `<lr-switch>`; detail
  * `LyraSwitchEventMap['lr-switch-toggle-request']`.
  */
@@ -3456,6 +3503,12 @@ export type LyraSwitchToggleRequestEvent = LyraSwitchEventMap['lr-switch-toggle-
  * `LyraKnowledgeBaseAdminEventMap['lr-tab-change']`.
  */
 export type LyraTabChangeEvent = LyraKnowledgeBaseAdminEventMap['lr-tab-change'];
+
+/**
+ * `lr-tab-group-select-request` — dispatched by `<lr-tab-group>`; detail
+ * `LyraTabGroupEventMap['lr-tab-group-select-request']`.
+ */
+export type LyraTabGroupSelectRequestEvent = LyraTabGroupEventMap['lr-tab-group-select-request'];
 
 /**
  * `lr-tab-hide` — dispatched by 2 components: `<lr-entity-dossier>`, `<lr-tab-group>`; detail
@@ -3581,12 +3634,12 @@ export type LyraToggleEvent =
 export type LyraToggleGroupToggleRequestEvent = LyraToggleGroupEventMap['lr-toggle-group-toggle-request'];
 
 /**
- * `lr-toggle-request` — dispatched by 16 components: `<lr-accordion>`, `<lr-activity-feed>`,
+ * `lr-toggle-request` — dispatched by 19 components: `<lr-accordion>`, `<lr-activity-feed>`,
  * `<lr-app-rail-group>`, `<lr-app-rail-item>`, `<lr-app-rail>`, `<lr-chat-message>`,
  * `<lr-code-block-core>`, `<lr-code-block>`, `<lr-commit-card>`, `<lr-dock-panel>`,
- * `<lr-multi-split>`, `<lr-navigation-menu>`, `<lr-task-list>`, `<lr-test-results>`,
- * `<lr-thinking-panel>`, `<lr-widget>`; detail union of 15, e.g.
- * `LyraAccordionEventMap['lr-toggle-request']`.
+ * `<lr-eval-run>`, `<lr-message-parts>`, `<lr-multi-split>`, `<lr-navigation-menu>`,
+ * `<lr-task-list>`, `<lr-test-results>`, `<lr-thinking-panel>`, `<lr-tool-call-block>`,
+ * `<lr-widget>`; detail union of 18, e.g. `LyraAccordionEventMap['lr-toggle-request']`.
  */
 export type LyraToggleRequestEvent =
   | LyraAccordionEventMap['lr-toggle-request']
@@ -3598,11 +3651,14 @@ export type LyraToggleRequestEvent =
   | LyraCodeBlockBaseEventMap['lr-toggle-request']
   | LyraCommitCardEventMap['lr-toggle-request']
   | LyraDockPanelEventMap['lr-toggle-request']
+  | LyraEvalRunEventMap['lr-toggle-request']
+  | LyraMessagePartsEventMap['lr-toggle-request']
   | LyraMultiSplitEventMap['lr-toggle-request']
   | LyraNavigationMenuEventMap['lr-toggle-request']
   | LyraTaskListEventMap['lr-toggle-request']
   | LyraTestResultsEventMap['lr-toggle-request']
   | LyraThinkingPanelEventMap['lr-toggle-request']
+  | LyraToolCallBlockEventMap['lr-toggle-request']
   | LyraWidgetEventMap['lr-toggle-request'];
 
 /**
@@ -3967,6 +4023,7 @@ export interface LyraGlobalEventMap {
   'lr-cluster-activate': LyraClusterActivateEvent;
   'lr-collapse': LyraCollapseEvent;
   'lr-collision': LyraCollisionEvent;
+  'lr-color-picker-change-request': LyraColorPickerChangeRequestEvent;
   'lr-column-move': LyraColumnMoveEvent;
   'lr-column-pin': LyraColumnPinEvent;
   'lr-column-resize': LyraColumnResizeEvent;
@@ -3983,6 +4040,7 @@ export interface LyraGlobalEventMap {
   'lr-create': LyraCreateEvent;
   'lr-cue-change': LyraCueChangeEvent;
   'lr-data-error': LyraDataErrorEvent;
+  'lr-date-picker-select-request': LyraDatePickerSelectRequestEvent;
   'lr-date-select': LyraDateSelectEvent;
   'lr-datum-activate': LyraDatumActivateEvent;
   'lr-datum-visibility-change': LyraDatumVisibilityChangeEvent;
@@ -4181,6 +4239,7 @@ export interface LyraGlobalEventMap {
   'lr-permission-rule-change': LyraPermissionRuleChangeEvent;
   'lr-permission-rule-change-request': LyraPermissionRuleChangeRequestEvent;
   'lr-pin-change': LyraPinChangeEvent;
+  'lr-pin-change-request': LyraPinChangeRequestEvent;
   'lr-play': LyraPlayEvent;
   'lr-point-activate': LyraPointActivateEvent;
   'lr-point-select': LyraPointSelectEvent;
@@ -4206,6 +4265,7 @@ export interface LyraGlobalEventMap {
   'lr-rail-resize': LyraRailResizeEvent;
   'lr-rail-resize-request': LyraRailResizeRequestEvent;
   'lr-rate-change': LyraRateChangeEvent;
+  'lr-rating-change-request': LyraRatingChangeRequestEvent;
   'lr-readonly-change': LyraReadonlyChangeEvent;
   'lr-record-cancel': LyraRecordCancelEvent;
   'lr-record-chunk': LyraRecordChunkEvent;
@@ -4260,9 +4320,11 @@ export interface LyraGlobalEventMap {
   'lr-search-change': LyraSearchChangeEvent;
   'lr-segment-activate-request': LyraSegmentActivateRequestEvent;
   'lr-segment-selection-change': LyraSegmentSelectionChangeEvent;
+  'lr-segmented-select-request': LyraSegmentedSelectRequestEvent;
   'lr-select': LyraSelectEvent;
   'lr-selection-action': LyraSelectionActionEvent;
   'lr-selection-change': LyraSelectionChangeEvent;
+  'lr-selection-change-request': LyraSelectionChangeRequestEvent;
   'lr-selection-delete': LyraSelectionDeleteEvent;
   'lr-selection-request': LyraSelectionRequestEvent;
   'lr-send-now': LyraSendNowEvent;
@@ -4300,8 +4362,10 @@ export interface LyraGlobalEventMap {
   'lr-stop': LyraStopEvent;
   'lr-submit': LyraSubmitEvent;
   'lr-suggestion-select': LyraSuggestionSelectEvent;
+  'lr-swatch-picker-select-request': LyraSwatchPickerSelectRequestEvent;
   'lr-switch-toggle-request': LyraSwitchToggleRequestEvent;
   'lr-tab-change': LyraTabChangeEvent;
+  'lr-tab-group-select-request': LyraTabGroupSelectRequestEvent;
   'lr-tab-hide': LyraTabHideEvent;
   'lr-tab-show': LyraTabShowEvent;
   'lr-take-over': LyraTakeOverEvent;

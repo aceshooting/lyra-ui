@@ -70,6 +70,12 @@ export interface LyraCurrencyPickerEventMap extends LyraCatalogPickerEventMap {}
  * @event lr-input - User selection changed the committed value.
  * @event {Event} change - Fired once after an accepted user selection or clear.
  * @event lr-change - User selection changed the committed value.
+ * @event lr-change-request - A user selection or clear is about to change the value;
+ *   `detail: { value, previousValue }` carries the proposed code while `value` still holds the
+ *   current one. Cancelable: `preventDefault()` keeps the current value and none of
+ *   `input`/`lr-input`/`change`/`lr-change`/`lr-clear` follow. A listener may resolve it by
+ *   assigning `value` itself, which supersedes the proposal (a same-value write included).
+ *   Programmatic writes, reset/restoration and re-picking the current option emit no request.
  * @event lr-invalid - Native invalid alias. Cancelable: preventDefault() suppresses validation UI.
  * @event {FocusEvent} focus - Re-dispatched from the visible control as a bubbling, composed event.
  * @event {FocusEvent} blur - Re-dispatched from the visible control as a bubbling, composed event.

@@ -14,6 +14,8 @@ import {
 import { sizes } from '../../../internal/sizes.styles.js';
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { downloadIcon } from '../../../internal/icons.js';
@@ -377,6 +379,24 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Whether the format menu is open. Reflects to the `open` attribute; only opens when more than one format is available. */
   @property({ type: Boolean, reflect: true }) open = false;
+  /**
+   * Shows the open format menu in the browser top layer wherever the native Popover API exists, so
+   * it paints above every page layer whatever the stacking contexts around it. Use it for a button
+   * inside a fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape never applies, and no `z-index` on the
+   * menu can lift it out of that ancestor's context. While set, the menu is placed with the
+   * `fixed` strategy whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so
+   * anchoring, focus, Escape and the show/hide transition are unchanged. It stays promoted through
+   * its hide transition and leaves the top layer once it settles closed. Stacking contexts are
+   * deliberately not detected automatically. Without native Popover API support the menu keeps
+   * its ordinary `z-index` stacking. Same contract as `<lr-dropdown>`'s `top-layer`. Changes
+   * apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
 
   @query('[part~="trigger"]') private triggerEl?: HTMLButtonElement;
   @query('[part="menu"]') private menuEl?: HTMLElement;
@@ -546,12 +566,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     }
     this.activateMenuOverlay();
     this.bindDocumentPointer();
+    this.placeMenu(true);
+  };
+
+  /** Places the open menu; `focusOnPlaced` moves focus to the pending item once it is placed. */
+  private placeMenu(focusOnPlaced: boolean): void {
     const anchor = this.triggerEl;
     const menu = this.menuEl;
     const ownerDocument = this.ownerDocument;
     if (!anchor || !menu) return;
+    this.placedTopLayer = syncTopLayerRelease(menu, this.placedTopLayer, this.topLayer);
     const placement = place(anchor, menu, {
-      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      ...topLayerPlacement(this.topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
     });
     this.cleanup = placement;
     void placement.ready.then((positioned) => {
@@ -568,10 +594,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         return;
       }
       this.menuPositioned = true;
+      if (!focusOnPlaced) return;
       this.focusMenuItem(this.pendingMenuFocusIndex);
       this.pendingMenuFocusIndex = 0;
     });
-  };
+  }
 
   /** Removes the menu from layout only once its CSS opacity/transform exit transition has
    *  actually finished playing -- or immediately when there is none to wait for (reduced motion,
@@ -763,6 +790,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     } else if (this.openVetoed) {
       // A vetoed close remains a live menu and keeps its existing overlay handle/return target.
       this.restoreFocusOnMenuClose = false;
+    } else if (changed.has('topLayer') && this.open && this.cleanup) {
+      // Re-place the already open menu in or out of the top layer without moving focus.
+      this.cleanup();
+      this.cleanup = undefined;
+      this.placeMenu(false);
     }
     if (changed.has('formats') && this.formatsFocusSnapshot) {
       const { index, id } = this.formatsFocusSnapshot;

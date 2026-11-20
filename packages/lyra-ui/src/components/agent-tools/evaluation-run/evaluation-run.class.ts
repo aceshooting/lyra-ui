@@ -83,7 +83,7 @@ export interface EvalExampleResult {
   toolTrace?: readonly ToolTimelineEntry[];
 }
 
-/** `detail` for `lr-example-toggle`. */
+/** `detail` for `lr-example-toggle`, and for the cancelable `lr-toggle-request` before it. */
 export interface EvalExampleToggleDetail {
   exampleId: string;
   expanded: boolean;
@@ -118,6 +118,7 @@ export interface EvalClaimSelectDetail {
 }
 
 export interface LyraEvalRunEventMap {
+  'lr-toggle-request': CustomEvent<EvalExampleToggleDetail>;
   'lr-example-toggle': CustomEvent<EvalExampleToggleDetail>;
   'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
   'lr-example-citation-open': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
@@ -173,6 +174,9 @@ const exampleId = (example: EvalExampleResult): unknown => example.id;
  * is silent.
  *
  * @customElement lr-eval-run
+ * @event lr-toggle-request - A user activation of an example's summary is about to expand or
+ *   collapse it; `detail: { exampleId, expanded }` carries the proposed state. Cancelable: calling
+ *   `preventDefault()` keeps the example as is and no `lr-example-toggle` fires.
  * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { exampleId,
  *   expanded }`.
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
@@ -460,6 +464,19 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     this.exampleTimeline(exampleId)?.revertPendingApproval();
   }
 
+  /** Turns the row's own cancelable `lr-show`/`lr-hide` into this host's `lr-toggle-request`,
+   *  vetoing the row's transition when that request is vetoed. A transition that only re-syncs the
+   *  row to the already-recorded state (the `.open` binding) is not a user proposal. */
+  private onExampleToggleRequest(id: string, expanded: boolean, event: Event): void {
+    event.stopPropagation();
+    // A disclosure nested in the row's content shares the event names; only the row proposes.
+    if (event.target !== event.currentTarget || this.expandedIds.has(id) === expanded) return;
+    // The row itself is the commit: vetoing its own request keeps it, and `expandedIds`, as is.
+    if (this.emit('lr-toggle-request', { exampleId: id, expanded }, { cancelable: true }).defaultPrevented) {
+      event.preventDefault();
+    }
+  }
+
   private onExampleToggle(id: string, event: CustomEvent<LyraDetailsEventMap['lr-toggle']['detail']>): void {
     event.stopPropagation();
     const { expanded } = event.detail;
@@ -600,9 +617,9 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
         part="example"
         data-status=${kind}
         .open=${expanded}
-        @lr-show=${this.stopOwnedEvent}
+        @lr-show=${(e: LyraDetailsEventMap['lr-show']) => this.onExampleToggleRequest(example.id, true, e)}
         @lr-after-show=${this.stopOwnedEvent}
-        @lr-hide=${this.stopOwnedEvent}
+        @lr-hide=${(e: LyraDetailsEventMap['lr-hide']) => this.onExampleToggleRequest(example.id, false, e)}
         @lr-after-hide=${this.stopOwnedEvent}
         @lr-toggle=${(e: LyraDetailsEventMap['lr-toggle']) => this.onExampleToggle(example.id, e)}
       >

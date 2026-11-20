@@ -65,6 +65,10 @@ progress, and `No data` only for a terminal status.
 
 **Events:**
 
+- `lr-toggle-request` (`detail: ToolCallBlockToggleDetail`, the proposed `expanded`) — cancelable;
+  fires before a header activation changes `expanded`, never for programmatic writes.
+  `preventDefault()` keeps the block as is and no `lr-toggle` fires; a listener may instead resolve
+  it by assigning `expanded` itself, which also suppresses the built-in commit
 - `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
   after a header activation changes `expanded`; never for programmatic writes. Not cancelable
 - `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;

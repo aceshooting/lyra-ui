@@ -97,6 +97,8 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  *
  * @customElement lr-connector-manager
  * @event lr-connector-action - A connector action was requested. `detail: { connectorId, action }`.
+ *   Not cancelable, because the event is itself the request: a click changes no connector state. A
+ *   host refuses an action by leaving that row's `status` unchanged in `connectors`.
  *   The host owns the operation and the controlled `connectors` array.
  * @csspart base - The fieldset and group.
  * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every

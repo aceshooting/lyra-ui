@@ -179,7 +179,7 @@ export const styles = css`
      pointer/focus target should appear instantly, not chase a fade. */
   [part="tooltip"] {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     min-inline-size: 0;
     max-inline-size: min(

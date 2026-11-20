@@ -33,6 +33,13 @@ its content.
   ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open detail tooltip in the browser top layer, placed `fixed` whatever
+  `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in. No DOM node moves; it leaves the top
+  layer once it settles closed, applies live while open, and without Popover API support keeps its
+  ordinary `z-index`.
+  The tooltip stacks at the chip's leased `--lr-overlay-stack-index`, falling back to
+  `--lr-layer-dropdown`
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
 click or Enter/Space activation of the pill, exactly once per activation. `lr-tool-activate`
@@ -3626,8 +3633,10 @@ and `waiting-approval` have their own localized sentence ("{label} started", "{l
 `queued`, `collecting` and application-defined statuses announce "{label}: {status}" using the status's
 localized name or its `label`; `idle` is silent.
 
-**Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
-boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
+**Events:** cancelable `lr-toggle-request` (`detail: EvalExampleToggleDetail`, the proposed state)
+before a summary activation expands or collapses an example — preventing it keeps the example as is
+and no `lr-example-toggle` fires; `lr-example-toggle` (`detail: EvalExampleToggleDetail` =
+`{ exampleId: string; expanded: boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-citation-open` (same
 detail, for a citation's full-preview request), `lr-example-tool-approval-decide-request`
@@ -5041,6 +5050,10 @@ progress, and `No data` only for a terminal status.
 
 **Events:**
 
+- `lr-toggle-request` (`detail: ToolCallBlockToggleDetail`, the proposed `expanded`) — cancelable;
+  fires before a header activation changes `expanded`, never for programmatic writes.
+  `preventDefault()` keeps the block as is and no `lr-toggle` fires; a listener may instead resolve
+  it by assigning `expanded` itself, which also suppresses the built-in commit
 - `lr-toggle` (`detail: ToolCallBlockToggleDetail = { expanded: boolean; callId: string }`) —
   after a header activation changes `expanded`; never for programmatic writes. Not cancelable
 - `lr-render-error` (`detail: ToolCallBlockRenderErrorDetail = { toolName: string; error: unknown;
@@ -5324,7 +5337,7 @@ overrides the internal fieldset name.
 | `decision-label` | A decision button's label wrapper (forwarded from `<lr-button>`). |
 
 
-**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.
+**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation. The event is itself the request: a click changes no state, so there is nothing to veto. To refuse or defer a decision, leave `status` at `pending`; to settle it, assign `status`.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-permission-grant.js';
 
@@ -5386,7 +5399,7 @@ remains empty visually, but the fieldset keeps the localized accessible name whe
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 
 
-**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`.
+**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`. The event is itself the request: a click changes no connector state, so there is nothing to veto. To refuse an action, leave the row's `status` unchanged.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-connector-manager.js';
 import type { AgentConnector } from '@aceshooting/lyra-ui/components/agent-tools/connector-manager/connector-manager.class.js';
@@ -5413,7 +5426,7 @@ shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` a
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
 `collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
-buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+buttons emit `lr-run-activate` (`{ runId, run }`); active (queued, running, collecting and waiting)
 records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -5428,8 +5441,9 @@ and `waiting-approval` render with the agent-run labels and, like `queued` and `
 Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
 `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
-`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run.
+`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId, run }`) requests
+opening a run; `run` is a frozen snapshot of the assigned record for that id, original `status`
+spelling included, the same shape `lr-subagent-panel` emits.
 
 **CSS parts:**
 

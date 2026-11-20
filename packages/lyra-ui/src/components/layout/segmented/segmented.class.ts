@@ -18,6 +18,8 @@ import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styl
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './segmented.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 
 export interface LyraSegmentedItem {
   value: string;
@@ -30,7 +32,16 @@ export interface LyraSegmentedItem {
   disabled?: boolean;
 }
 
+/** Detail of `lr-segmented-select-request`. */
+export interface LyraSegmentedSelectRequestDetail {
+  /** Value of the segment the user is selecting. */
+  readonly value: string;
+  /** The value `value` holds while the request dispatches. */
+  readonly previousValue: string;
+}
+
 export interface LyraSegmentedEventMap {
+  'lr-segmented-select-request': CustomEvent<LyraSegmentedSelectRequestDetail>;
   'lr-change': CustomEvent<{ value: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
@@ -109,6 +120,12 @@ function snapshotSegmentedItems(
  * This composite is not form-associated; the caption does not add label-click behavior.
  *
  * @customElement lr-segmented
+ * @event lr-segmented-select-request - A user activation (click, or an Arrow/Home/End key) is
+ *   about to select a segment whose value differs from `value`; `detail: { value, previousValue }`
+ *   carries the proposed value while `value` still holds the current one. Cancelable: calling
+ *   `preventDefault()` keeps the current selection, and neither `lr-change` nor `lr-activate`
+ *   fires. A listener may instead resolve the request by assigning `value` itself, which also
+ *   suppresses the built-in commit. Re-picking the current value never asks.
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
  * @event lr-activate - Fired on every activation of a non-disabled segment -- a click, or
@@ -221,8 +238,19 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.itemsSnapshot.assign(this, 'items', value);
   }
 
-  /** The currently selected item's `value`. */
-  @property() value = '';
+  // A listener that answers `lr-segmented-select-request` by assigning `value` finishes before the
+  // built-in commit runs; the guard records that it wrote at all, even the value already held.
+  private readonly selectGuard = new VetoWriteGuard();
+  private _value = '';
+
+  /** The currently selected item's `value`.
+   * @default '' */
+  @property()
+  get value(): string { return this._value; }
+  set value(next: string) {
+    markVetoGuardWrite(this.selectGuard);
+    this._value = next;
+  }
 
   /** Field caption and accessible-name fallback. Hidden visually unless `labelDisplay` is
    *  `'visible'`. Assigned `label` slot content replaces this text and names the radiogroup in
@@ -284,19 +312,32 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.renderRoot.querySelector('[part="base"]')
   );
 
-  private select(item: Readonly<LyraSegmentedItem>): void {
-    if (item.disabled || this.disabled) return;
+  /** Returns false when a `lr-segmented-select-request` listener refused or redirected it. */
+  private select(item: Readonly<LyraSegmentedItem>): boolean {
+    if (item.disabled || this.disabled) return false;
     if (item !== this.selectedItem) {
-      const valueChanged = item.value !== this.value;
-      this.selectedItem = item;
-      if (valueChanged) {
-        this.value = item.value;
-        this.emit('lr-change', { value: item.value });
+      if (item.value === this.value) {
+        this.selectedItem = item;
+      } else {
+        const request = requestThenCommit({
+          requestDetail: { value: item.value, previousValue: this.value },
+          emitRequest: (detail, init: { cancelable: true }) =>
+            this.emit('lr-segmented-select-request', detail, init),
+          guard: this.selectGuard,
+          commit: () => {
+            if (item.disabled || this.disabled) return;
+            this.selectedItem = item;
+            this.value = item.value;
+            this.emit('lr-change', { value: item.value });
+          },
+        });
+        if (request.defaultPrevented || this.value !== item.value) return false;
       }
     }
     if (this.isConnected && !this.disabled && this.value === item.value && this.items.includes(item)) {
       this.emit('lr-activate', { value: item.value });
     }
+    return true;
   }
 
   private segmentButtonAt(index: number): HTMLElement | null {
@@ -432,8 +473,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     if (targetIndex === null) return;
     e.preventDefault();
     const target = navigable[targetIndex]!;
-    this.select(target.item);
-    this.focusItem(target.index);
+    if (this.select(target.item)) this.focusItem(target.index);
   };
 
   override adoptedCallback(): void {

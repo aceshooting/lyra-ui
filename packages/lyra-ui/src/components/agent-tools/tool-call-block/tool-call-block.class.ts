@@ -9,6 +9,8 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { tag } from '../../../internal/prefix.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import {
   observeScrollOverflow,
   SCROLL_OVERFLOW_ATTRIBUTE,
@@ -46,6 +48,7 @@ export interface ToolCallBlockRenderErrorDetail {
 }
 
 export interface LyraToolCallBlockEventMap extends LyraJsonViewerEventMap {
+  'lr-toggle-request': CustomEvent<ToolCallBlockToggleDetail>;
   'lr-toggle': CustomEvent<ToolCallBlockToggleDetail>;
   'lr-render-error': CustomEvent<ToolCallBlockRenderErrorDetail>;
 }
@@ -105,6 +108,11 @@ function argsPresent(args: unknown): boolean {
  * of these blocks.
  *
  * @customElement lr-tool-call-block
+ * @event lr-toggle-request - A header activation is about to change `expanded`;
+ * `detail: { expanded, callId, invocationId }` carries the proposed state while `expanded` still
+ * holds the current one. Cancelable: calling `preventDefault()` keeps the block as is and no
+ * `lr-toggle` fires. A listener may instead resolve the request by assigning `expanded` itself,
+ * which also suppresses the built-in commit. Not emitted for programmatic writes.
  * @event lr-toggle - A header activation changed `expanded`. Not emitted for programmatic writes.
  * `detail: { expanded, callId, invocationId }`.
  * @event lr-render-error - Re-emitted from the composed result view with `callId` added, whenever
@@ -210,7 +218,22 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   }
 
   /** Whether the details are shown. Starts collapsed. */
-  @property({ type: Boolean, reflect: true }) expanded = false;
+  @property({ type: Boolean, reflect: true })
+  get expanded(): boolean {
+    return this.expandedValue;
+  }
+  set expanded(next: boolean) {
+    const old = this.expandedValue;
+    this.expandedValue = next;
+    // Unconditional, even for an unchanged value: a `lr-toggle-request` listener that writes back
+    // the current state has resolved the request itself, and the guard must observe that.
+    markVetoGuardWrite(this.toggleGuard);
+    this.requestUpdate('expanded', old);
+  }
+  private expandedValue = false;
+  // Records a listener's own `expanded` write during `lr-toggle-request`, so that write wins over
+  // the built-in commit even when it assigns the value `expanded` already holds.
+  private readonly toggleGuard = new VetoWriteGuard();
 
   /** Header text override, used verbatim (including `''`). When set, the localized status text is
    *  shown beside it; unset renders the localized status verb with `name`. */
@@ -285,8 +308,17 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   }
 
   private readonly onHeaderClick = (): void => {
-    this.expanded = !this.expanded;
-    this.emit('lr-toggle', { expanded: this.expanded, callId: this.callId, invocationId: this.callId });
+    const expanded = !this.expanded;
+    const callId = this.callId;
+    requestThenCommit({
+      requestDetail: { expanded, callId, invocationId: callId },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+      guard: this.toggleGuard,
+      commit: () => {
+        this.expanded = expanded;
+        this.emit('lr-toggle', { expanded, callId, invocationId: callId });
+      },
+    });
   };
 
   private readonly onRenderError = (event: CustomEvent<{ toolName: string; error: unknown }>): void => {

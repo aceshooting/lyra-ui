@@ -26,7 +26,7 @@ shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` a
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
 `collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
-buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+buttons emit `lr-run-activate` (`{ runId, run }`); active (queued, running, collecting and waiting)
 records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -41,8 +41,9 @@ and `waiting-approval` render with the agent-run labels and, like `queued` and `
 Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
 `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
-`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run.
+`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId, run }`) requests
+opening a run; `run` is a frozen snapshot of the assigned record for that id, original `status`
+spelling included, the same shape `lr-subagent-panel` emits.
 
 **CSS parts:**
 

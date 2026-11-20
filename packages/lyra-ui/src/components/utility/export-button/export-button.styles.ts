@@ -155,7 +155,7 @@ export const styles = css`
        -- it only ever lands after the fade settles, never during it. */
     ${anchoredPopupReveal}
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     inline-size: max-content;
     min-inline-size: min(

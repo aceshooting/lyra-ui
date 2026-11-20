@@ -52,7 +52,9 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
 On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
 action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`

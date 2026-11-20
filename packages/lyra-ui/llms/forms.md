@@ -1710,7 +1710,14 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
+**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
+writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
+new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and
+suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
+assigning `value` itself, which also suppresses the built-in commit. `clear()` and programmatic
+writes request nothing, and a date input keeps its calendar's request inside its popup.
+All other events are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
 values. Their typed aliases `lr-input` and `lr-change` carry `{ value, previousValue }` after the corresponding
 native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
@@ -1800,6 +1807,12 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
+- `topLayer: boolean = false` (`top-layer`, reflected) — shows the open calendar popover in the
+  browser top layer where the native Popover API exists, so it paints above a sibling stacked over
+  a fixed/sticky, `z-index`ed header the field sits in. The popover is then placed `fixed`; no DOM
+  node moves, and anchoring, RTL, focus, Escape and transitions are unchanged. It leaves the top
+  layer once it settles closed; changes apply live while open. Same contract as `lr-popover`'s
+  `top-layer`; without Popover API support it keeps its ordinary `z-index`.
 - `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
   It defaults to the internal input after first render; assign another element to override it, or
   assign `undefined` to restore the internal input
@@ -3589,6 +3602,10 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `aria-label` names the group. An empty attribute clears the name. Whitespace alone falls back
   to the visible label or localized time name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
+  `topLayer = false` (`top-layer`, reflected) shows the open popup in the browser top layer where
+  the native Popover API exists (placed `fixed`, no DOM node moves), so it paints above a sibling
+  stacked over a fixed/sticky, `z-index`ed header; it leaves the top layer once it settles closed
+  and applies live while open. Same contract as `lr-popover`'s `top-layer`.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
 - `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
   (reflected), the spelling `lr-input`/`lr-select`/`lr-combobox` use, is equivalent. `withNow = false`
@@ -4445,7 +4462,12 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
+**Events:** `lr-swatch-picker-select-request` (`detail: { value, previousValue }`) — cancelable,
+dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
+`value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
+`lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
+suppresses the built-in commit. `lr-activate` still follows either way.
+`lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
 Arrow/Home/End key that lands on one), whether or not the selection actually moved. Bubbling,
@@ -6642,6 +6664,13 @@ and:
 - `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
   UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
   `left`/`right` component is swapped under RTL
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`:
+  shows the open panel in the browser top layer where the Popover API exists, placed `fixed`
+  whatever `positioning-strategy` resolves to, so it paints above a sticky or fixed `z-index`ed
+  header, toolbar or rail that a higher sibling would otherwise cover. It leaves the top layer when
+  the panel closes, changes apply live while open, and it has no effect with `inline`. Without
+  Popover API support the panel keeps its ordinary
+  `var(--lr-overlay-stack-index, var(--lr-layer-popover))` stacking
 - `open: boolean = false` (reflected) — whether the popup panel is open. Assigning `true` while the
   control is effectively disabled is ignored, and a `disabled` that flips on while the popup is
   already open closes it. Inline rendering remains visible at either value
@@ -6674,6 +6703,13 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 `detail: { value, previousValue }`. On commit, `previousValue` is the value at the start of the interaction. The commit pair occurs on pointer release, key release, swatch click, an
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
+Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
+cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
+keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
+may instead resolve the request by assigning `value` itself, which also suppresses the built-in
+commit. Re-picking the current colour, programmatic writes and the continuous pointer and
+keyboard gestures (which preview through `input` as they move) dispatch no request.
 Pointer drags are reversible previews: `pointercancel`, lost pointer capture, mid-gesture
 disablement, disconnection, or document adoption restores the pre-gesture colour and submitted
 form value without emitting another `input` or a commit pair. A direct consumer `value` assignment
@@ -8063,7 +8099,10 @@ owner selected by `form`. `setCustomValidity(message)` sets or clears `customErr
 `resetValidity()` clears only that consumer error and recomputes the current required/catalog
 constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 
-`topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
+`topLayer` (attribute `top-layer`, reflected) defaults to `false`; enable it inside clipped or
+`z-index`ed sticky headers, toolbars and native dialogs. It follows the `lr-select` `top-layer`
+contract in all four catalog pickers, applies live while open, and the listbox otherwise stacks at
+`var(--lr-overlay-stack-index, var(--lr-layer-dropdown))`.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`; with neither, the list uses `absolute` in both
 modes.
@@ -8085,8 +8124,12 @@ If the filter fails to load, `lr-load-error` fires and the compact picker remain
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
 in both modes, following the country picker's event contract.
 
-**Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
-`input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
+**Events:** A user choice or clear first dispatches the cancelable `lr-change-request`
+(`detail: { value, previousValue }`, the proposed code while `value` still holds the current one).
+`preventDefault()` keeps the current value and suppresses the change sequence and `lr-clear`; a
+listener may instead resolve it by assigning `value` itself, which also suppresses the built-in
+commit. This veto is shared by all four catalog pickers. An accepted user choice or clear updates
+`value` synchronously, then emits exactly one `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
@@ -8274,7 +8317,9 @@ The readonly `input: HTMLInputElement | null` exposes the filter, or null in com
 After directly editing its DOM value, dispatch a native `input` event to refilter. Keyboard
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 `lr-show` proposes opening the options and can be vetoed. `lr-hide` proposes closing them and can
 be vetoed during an ordinary close. `lr-after-show` and `lr-after-hide` report completion.
 `lr-activate` reports activation of an enabled option, including reselection. `lr-clear` reports
@@ -8340,7 +8385,9 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
 On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
 action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
@@ -8393,7 +8440,9 @@ Defaults and form/editing methods follow the
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
-**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
+**Events:** `lr-change-request` (cancelable, `detail: { value, previousValue }`; vetoes or lets a
+listener resolve a user choice or clear by assigning `value`, as in `lr-currency-picker`), `input`,
+`lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`, `lr-load-error`.
 On filter-load failure, `search-error` and `search-retry` expose the localized notice and retry
 action. `--lr-form-control-invalid-border-color` themes the resting invalid border.
 The popup emits `lr-show`, `lr-hide`, `lr-after-show`, `lr-after-hide`, `lr-activate`, and `lr-clear`
