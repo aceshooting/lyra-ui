@@ -81,7 +81,7 @@ test('currency picker selected catalog renders its real display before hydration
   assert.match(markup, /<lr-currency-picker[^>]*\bvalue="USD"[^>]*\bname="currency"/);
   const selectedDisplay = markup.match(/<span[^>]*part="display-input"[^>]*>([\s\S]*?)<\/span\s*>/);
   assert.ok(selectedDisplay, 'the nested select must render its selected display');
-  assert.equal(selectedDisplay[1].trim(), 'USD', 'the valid selected code must not render unavailable feedback');
+  assert.equal(selectedDisplay[1].trim(), '<bdi dir="auto">USD</bdi>', 'the valid selected code renders bidi-isolated, without unavailable feedback');
   assert.match(markup, /<lr-option[^>]*value="USD"/);
   assert.doesNotMatch(markup, /<lr-option[^>]*value="EUR"/);
   assert.equal((markup.match(/<lr-option\s/g) ?? []).length, 1, 'only the selected option mounts before interaction');
@@ -213,7 +213,7 @@ for (const fixture of catalogPickerFixtures) {
       if (!searchable) {
         const display = markup.match(/<span[^>]*part="display-input"[^>]*>([\s\S]*?)<\/span\s*>/);
         assert.ok(display, 'the selected identifier is visible before slot observation');
-        assert.equal(display[1].trim(), fixture.value);
+        assert.equal(display[1].trim(), `<bdi dir="auto">${fixture.value}</bdi>`, 'the selected identifier renders bidi-isolated');
       } else {
         const input = markup.match(/<input\b[^>]*role="combobox"[^>]*>/)?.[0];
         assert.ok(input, 'the searchable field renders a native input');

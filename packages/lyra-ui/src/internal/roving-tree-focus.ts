@@ -30,9 +30,16 @@ export class RovingTreeFocus {
   sync(): void {
     const tree = this.options.tree();
     if (!tree) { this.stop = undefined; return; }
-    const controls = Array.from(tree.querySelectorAll<HTMLElement>(this.options.control));
+    // Walk the query result in place: a long tree re-syncs after every render, and copying
+    // the matches into an array each time is avoidable allocation.
+    const controls = tree.querySelectorAll<HTMLElement>(this.options.control);
     const kept = this.stop && this.stop.isConnected && tree.contains(this.stop) && this.available(this.stop, tree);
-    const stop = kept ? this.stop : controls.find(control => this.available(control, tree));
+    let stop = kept ? this.stop : undefined;
+    if (!stop) {
+      for (const control of controls) {
+        if (this.available(control, tree)) { stop = control; break; }
+      }
+    }
     this.stop = stop;
     for (const control of controls) control.tabIndex = control === stop ? 0 : -1;
   }

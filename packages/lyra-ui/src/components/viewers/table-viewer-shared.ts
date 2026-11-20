@@ -536,6 +536,10 @@ export class TableViewerSourceController implements ReactiveController {
   private paint = 0;
   private firstRow = 0;
   private visibleRows = 0;
+  /** A reveal's target row while the list has not yet scrolled to it, plus the latest range the
+   *  list reported in the meantime. A list mounted for a newly selected sheet first reports its
+   *  initial rows; honoring that would drop the reveal's window and read it again afterwards. */
+  private revealWindow: { row: number; range?: { row: number; visible: number } } | undefined;
   private windowIntent = 0;
   private activeRow: number | '' = '';
   private windowColumns: readonly number[] = [];
@@ -579,7 +583,7 @@ export class TableViewerSourceController implements ReactiveController {
     this.labelUnits = 0;
     this.failure = undefined;
     this.loaded = false;
-    this.firstRow = 0; this.visibleRows = 0;
+    this.firstRow = 0; this.visibleRows = 0; this.revealWindow = undefined;
     this.paint++;
     this.queuedSearch = undefined;
     this.notify();
@@ -606,7 +610,7 @@ export class TableViewerSourceController implements ReactiveController {
       if (source === this.bound && revision === this.revision && (locale !== this.locale || limit !== this.limit)) this.authority.refresh();
       const epoch = this.epoch;
       this.bound = source; this.revision = revision; this.locale = locale; this.limit = limit;
-      this.dirty = false; this.failure = undefined; this.sheetIndex = 0; this.firstRow = 0; this.activeRow = '';
+      this.dirty = false; this.failure = undefined; this.sheetIndex = 0; this.firstRow = 0; this.revealWindow = undefined; this.activeRow = '';
       if (this.searchState.dirty) this.searchState.clear();
       if (source === undefined) {
         if (this.theme) { this.theme.hostDisconnected(); this.host.removeController(this.theme); this.theme = undefined; }
@@ -651,7 +655,7 @@ export class TableViewerSourceController implements ReactiveController {
     }
     for (const slot of this.slots) slot.settle(false);
     this.slots = []; this.windowColumns = []; this.labels = []; this.labelUnits = 0;
-    this.firstRow = 0; this.visibleRows = 0; this.activeRow = ''; this.sheetIndex = index;
+    this.firstRow = 0; this.visibleRows = 0; this.revealWindow = undefined; this.activeRow = ''; this.sheetIndex = index;
     this.sheet = this.sheets[index]; this.paint++;
     if (!this.sheet) { this.rows = this.columns = 0; this.sourceRows = this.makeRows(); return true; }
     const data = this.sheet.data;
@@ -780,6 +784,11 @@ export class TableViewerSourceController implements ReactiveController {
     const start = Math.min(this.rows, event.detail.start);
     const row = Math.max(0, start - 6);
     const visible = Math.max(0, Math.min(this.rows, event.detail.end) - start);
+    const reveal = this.revealWindow;
+    if (reveal) {
+      if (reveal.row < start || reveal.row >= Math.max(start + 1, event.detail.end)) { reveal.range = { row, visible }; return; }
+      this.revealWindow = undefined;
+    }
     if (row === this.firstRow && visible === this.visibleRows) return;
     this.visibleRows = visible; this.firstRow = row; this.requestWindow(); this.notify();
   };
@@ -858,11 +867,18 @@ export class TableViewerSourceController implements ReactiveController {
     if (!lease.isCurrent()) return false;
     if (row < 0) return this.chrome.revealCell(this.host.shadowRoot?.querySelector(`[part="header-row"] [aria-colindex="${column + 1}"]`) as HTMLElement | undefined);
     const previousRow = this.firstRow, sheet = this.sheet, epoch = this.epoch;
+    const pending: { row: number; range?: { row: number; visible: number } } = { row };
+    this.revealWindow = pending;
     this.firstRow = row; this.activeRow = row; this.requestWindow(); this.notify();
     // Until the list scrolls, its range events still describe the old rows; a reveal retired in
     // between must hand the window back to them or the visible rows stay blank.
     const abandon = (): false => {
-      if (this.firstRow === row && this.sheet === sheet && this.current(epoch)) { this.firstRow = previousRow; this.requestWindow(); this.notify(); }
+      const deferred = pending.range;
+      if (this.revealWindow === pending) this.revealWindow = undefined;
+      if (this.firstRow === row && this.sheet === sheet && this.current(epoch)) {
+        if (deferred) { this.firstRow = deferred.row; this.visibleRows = deferred.visible; } else this.firstRow = previousRow;
+        this.requestWindow(); this.notify();
+      }
       return false;
     };
     await this.host.updateComplete;
@@ -871,6 +887,8 @@ export class TableViewerSourceController implements ReactiveController {
     if (!list) return abandon();
     list.scrollToIndex(row, { align: 'start', behavior: 'auto' });
     await list.updateComplete;
+    // The list has scrolled; from here its range events describe the revealed rows.
+    if (this.revealWindow === pending) this.revealWindow = undefined;
     if (!lease.isCurrent()) return false;
     const slot = this.slots.find(value => row >= value.row && row < value.row + value.rows && column >= value.column && column < value.column + value.columns);
     if (!slot || !(await slot.promise) || !lease.isCurrent()) return false;

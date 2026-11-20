@@ -1070,14 +1070,14 @@ const { entries, inventory, loader } = await renderSsrMatrix();
 // unmeasured coordinate. Its owning map reveals it only after browser placement can run.
 const mapAnchorHtml = replaceHtmlComments(await collectResult(render(html`<lr-map-anchor
   open closable label="Place details" .lngLat=${[6.13, 49.61]}
-  .strings=${{ close: 'Close place details' }}
+  .strings=${{ mapCloseWithLabel: 'Dismiss {label}' }}
 ><button data-anchor-content>Inspect &amp; compare</button></lr-map-anchor>`, {
   elementRenderers: animatedImageContext.elementRenderers,
 })), () => '');
 assert.match(mapAnchorHtml, /<template[^>]*shadowrootmode="open"/, 'map anchors must retain declarative shadow DOM');
 assert.match(mapAnchorHtml, /part="base" hidden/, 'open SSR anchors must stay hidden before placement');
 assert.match(mapAnchorHtml, /role="group"[^>]*aria-label="Place details"/, 'SSR anchors retain their accessible group name');
-assert.match(mapAnchorHtml, /part="close-button"[^>]*aria-label="Close place details"/, 'SSR anchor controls honor caller strings');
+assert.match(mapAnchorHtml, /part="close-button"[^>]*aria-label="Dismiss Place details"/, 'SSR anchor controls honor caller strings');
 assert.equal((mapAnchorHtml.match(/data-anchor-content/g) ?? []).length, 1, 'SSR anchors preserve caller content exactly once');
 assert.ok(mapAnchorHtml.includes('Inspect &amp; compare'), 'SSR anchors preserve escaped caller content');
 assert.equal(globalThis.window, undefined, 'open anchor SSR must not create a window shim');
@@ -1087,7 +1087,7 @@ const selectedCurrencyHtml = replaceHtmlComments(await collectResult(render(curr
 })), () => '');
 const selectedCurrencyDisplay = selectedCurrencyHtml.match(/<span[^>]*part="display-input"[^>]*>([\s\S]*?)<\/span\s*>/);
 assert.ok(selectedCurrencyDisplay, 'selected currency SSR must render the nested display');
-assert.equal(selectedCurrencyDisplay[1].trim(), 'USD', 'selected currency SSR must not mislabel a catalog value as unavailable');
+assert.equal(selectedCurrencyDisplay[1].trim(), '<bdi dir="auto">USD</bdi>', 'selected currency SSR renders its catalog value bidi-isolated, never as unavailable');
 assert.match(selectedCurrencyHtml, /<lr-option[^>]*value="USD"/, 'selected currency SSR must retain its selected catalog entry');
 assert.doesNotMatch(selectedCurrencyHtml, /<lr-option[^>]*value="EUR"/, 'closed currency SSR must defer unselected catalog entries');
 assert.equal((selectedCurrencyHtml.match(/<lr-option\s/g) ?? []).length, 1, 'closed currency SSR must retain only its selected catalog entry');

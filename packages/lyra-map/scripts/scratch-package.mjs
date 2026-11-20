@@ -12,7 +12,7 @@ export const STAGED_RECORD_EXTENSION = '.staged';
  * A disposable copy of the package's build inputs. The build and the checks locate the package
  * through their own file location, so running them from a copy keeps the real `dist` untouched.
  * Dependencies are linked from the real installation. `browser: true` adds the browser fixtures
- * and the files the archive carries.
+ * and the remaining files the archive carries.
  *
  * The copy lives inside the package: the bundler writes module paths relative to its working
  * directory, and a copy outside the workspace would embed machine paths that the package check
@@ -26,8 +26,9 @@ export async function createScratchPackage({ browser = false, coverageDirectory 
   const parent = resolve(packageRoot, 'coverage/scratch');
   await mkdir(parent, { recursive: true });
   const directory = await mkdtemp(join(parent, 'lyra-map-scratch-'));
-  const entries = ['scripts', 'src', 'types', 'UPSTREAM.json', 'package.json'];
-  if (browser) entries.push('test/browser', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md');
+  // The package check reads the shipped notices, so every copy carries them.
+  const entries = ['scripts', 'src', 'types', 'UPSTREAM.json', 'package.json', 'THIRD_PARTY_NOTICES.md'];
+  if (browser) entries.push('test/browser', 'README.md', 'CHANGELOG.md', 'LICENSE');
   for (const entry of entries) await cp(resolve(packageRoot, entry), resolve(directory, entry), { recursive: true });
   await symlink(resolve(packageRoot, 'node_modules'), resolve(directory, 'node_modules'), 'dir');
   if (coverageDirectory) {
