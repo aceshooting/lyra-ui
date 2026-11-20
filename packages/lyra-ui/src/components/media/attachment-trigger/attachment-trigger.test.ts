@@ -1053,3 +1053,24 @@ describe('camera-capture', () => {
     });
   });
 });
+
+it('fits a 320px RTL allocation and opens its capability menu from the mirrored start edge', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px; display: flex">
+      <lr-attachment-trigger .capabilities=${['files', 'image', 'camera', 'audio']}></lr-attachment-trigger>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-attachment-trigger') as LyraAttachmentTrigger;
+  await el.updateComplete;
+  const dropdown = dropdownEl(el);
+  await dropdown.show();
+  const panel = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  await waitUntil(() => panel.getBoundingClientRect().width > 0 && getComputedStyle(panel).visibility === 'visible', 'the capability menu never opened');
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  const bounds = wrapper.getBoundingClientRect();
+  const control = menuTriggerButton(el).getBoundingClientRect();
+  expect(bounds.right - control.right).to.be.lessThan(1);
+  await waitUntil(() => Math.abs(panel.getBoundingClientRect().right - control.right) <= 1, 'the RTL menu is not aligned with the trigger end edge');
+  expect(panel.getBoundingClientRect().left).to.be.at.least(bounds.left - 1);
+  await dropdown.hide();
+});

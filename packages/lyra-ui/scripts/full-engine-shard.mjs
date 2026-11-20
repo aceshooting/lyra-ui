@@ -239,7 +239,9 @@ export function runShard(
   for (const file of selectedFiles) console.log(`  ${file}`);
 
   const executable = platform === 'win32' ? 'wtr.cmd' : 'wtr';
-  // Linux Firefox needs a headed display for software WebGL2, including native map peers.
+  // Linux Firefox needs a headed display for software WebGL2, including native map peers. That
+  // display is what provides WebGL2, so the run also requires it: a missing context fails the
+  // WebGL2-dependent cases (test/webgl2.ts) instead of letting them skip.
   const platformSuite = String(environment.WTR_TEST_SUITE ?? '').trim().toLowerCase() === 'platform';
   const headedFirefox = platform === 'linux' && !platformSuite &&
     String(environment.WTR_BROWSER ?? 'chromium').toLowerCase() === 'firefox';
@@ -248,7 +250,9 @@ export function runShard(
     : { command: executable, args: selectedFiles };
   const result = spawn(command, args, {
     cwd: packageDirectory,
-    env: headedFirefox ? { ...environment, WTR_HEADED: '1' } : environment,
+    env: headedFirefox
+      ? { ...environment, WTR_HEADED: '1', WTR_REQUIRE_WEBGL2: environment.WTR_REQUIRE_WEBGL2 ?? '1' }
+      : environment,
     stdio: 'inherit',
   });
   if (result.error) {

@@ -387,6 +387,9 @@ if (process.env.WTR_HEADED === '1') {
 }
 
 const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';
+// Runs whose engine is known to provide WebGL2 set this, so WebGL2-dependent cases
+// (test/webgl2.ts) fail instead of skipping when the context is missing.
+const requireWebgl2 = process.env.WTR_REQUIRE_WEBGL2 === '1';
 // Persist violations until the launcher closes the session: Mocha can swallow an async
 // rejection or pass a retry after the one-shot throw has already disarmed itself.
 export function enforceStrictConsole(launcher) {
@@ -437,8 +440,13 @@ const testRunnerHtml = (testRunnerImport) => `
       // this page load is the regression detector: reintroducing the override makes the warning
       // real again, which src/internal/lyra-element.test.ts asserts against.
       globalThis.litIssuedWarnings = new Set(['dev-mode']);
+      // Record every module fetch: the default 250-entry resource-timing buffer silently drops
+      // later fetches, which would let a "module was not fetched" check (test/resource-entries.ts)
+      // pass without examining anything. Set before the test module graph starts loading.
+      globalThis.performance?.setResourceTimingBufferSize?.(10000);
       globalThis.__LYRA_WTR_COVERAGE__ = ${collectCoverage};
       globalThis.__LYRA_WTR_STRICT_CONSOLE__ = ${strictConsole};
+      globalThis.__LYRA_WTR_REQUIRE_WEBGL2__ = ${requireWebgl2};
       globalThis.__LYRA_WTR_NATIVE_SCROLLBAR__ = ${nativeScrollbarVerification};
       ${strictConsole ? `
       // Trip once, then fall back to the real console methods for the rest of this page's life.

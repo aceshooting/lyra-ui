@@ -5,7 +5,6 @@ import "../../lr-markdown.js";
 import { looksLikeMarkdown } from "../../lr-streaming-text.js";
 import type { LyraStreamingText } from "../../lr-streaming-text.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // The browser runner has no compatible fake-timer harness; use short real timers with generous
 // margins, matching lr-stream-status's timer-driven tests.
@@ -1115,14 +1114,12 @@ describe('canonical code-block-header spelling', () => {
   const headerCount = (el: LyraStreamingText): number =>
     innerMarkdown(el)?.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0;
 
-  it('never warns for code-block-header', async () => {
-    const warnings = await captureDeprecationWarnings([], async () => {
-      const el = await fixture<LyraStreamingText>(
-        html`<lr-streaming-text content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text>`
-      );
-      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
-    });
-    expect(warnings).to.have.length(0);
+  it('renders the code-block header with code-block-header', async () => {
+    const el = await fixture<LyraStreamingText>(
+      html`<lr-streaming-text content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text>`
+    );
+    await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+    expect(headerCount(el)).to.equal(1);
   });
 
 });

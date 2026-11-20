@@ -808,6 +808,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
           .maxNodes=${this.effectiveMaxNodes}
           .size=${this.size}
           .data=${this.treeItems}
+          .strings=${this.strings}
           label=${this.treeLabel()}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}

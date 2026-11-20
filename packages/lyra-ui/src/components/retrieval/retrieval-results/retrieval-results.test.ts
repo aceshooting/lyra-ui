@@ -14,10 +14,6 @@ import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
   type AnnouncementPoliteness,
 } from '../../../internal/announcer.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
@@ -1716,7 +1712,6 @@ it('can shrink to a 320px allocation without overflowing its host box', async ()
 });
 
 describe('selected-row cssprop escape hatch', () => {
-
   // Default LTR fixture: the `[part='row-body']` selected indicator is a `border-inline-start-color`,
   // which resolves to the physical left border here.
   async function selected(
@@ -1776,7 +1771,6 @@ describe('selected-row cssprop escape hatch', () => {
 // below lives one shadow boundary deeper than this component's own shadow root. The flat path
 // renders the identical template directly into this component's shadow root; both are asserted.
 describe('row styling across both rendering paths', () => {
-
   async function render(
     path: 'flat' | 'virtualized'
   ): Promise<{ el: LyraRetrievalResults; root: ParentNode }> {
@@ -2141,24 +2135,19 @@ describe('row checkbox containment', () => {
 });
 
 describe('lr-retrieval-results retired selectable alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-retrieval-results', kind: 'property', name: 'selectable' }];
   const observe = (el: LyraRetrievalResults): string => String(el.shadowRoot!.querySelectorAll('lr-checkbox').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRetrievalResults>(markup);
 
-  it('applies without-selection with canonical defaults and no deprecation warning', async () => {
+  it('applies without-selection with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${chunks} without-selection></lr-retrieval-results>`));
-      plain = observe(await mount(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`));
-    });
+    canonical = observe(await mount(html`<lr-retrieval-results .chunks=${chunks} without-selection></lr-retrieval-results>`));
+    plain = observe(await mount(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 
 describe('lr-retrieval-results retired dedupe alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-retrieval-results', kind: 'property', name: 'dedupe' }];
   const duplicates: RetrievalChunk[] = [
     { id: 'dup', text: 'a', score: 0.3, source: { id: 's1', name: 'a.pdf' } },
     { id: 'dup', text: 'b', score: 0.8, source: { id: 's1', name: 'a.pdf' } },
@@ -2176,15 +2165,12 @@ describe('lr-retrieval-results retired dedupe alias', () => {
     ]);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRetrievalResults>(markup);
 
-  it('applies without-dedupe with canonical defaults and no deprecation warning', async () => {
+  it('applies without-dedupe with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates} without-dedupe></lr-retrieval-results>`));
-      plain = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates}></lr-retrieval-results>`));
-    });
+    canonical = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates} without-dedupe></lr-retrieval-results>`));
+    plain = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates}></lr-retrieval-results>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

@@ -5,6 +5,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 function button(element: LyraMap, kind: string): HTMLButtonElement {
@@ -29,7 +30,7 @@ async function idle(element: LyraMap) { await element.updateComplete; await elem
 describe('lr-map component-owned scene controls with native engines', function () {
   this.timeout(45000);
   let workerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { workerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(() => { fixtureCleanup(); setWorkerUrl(workerUrl); });
   for (const engine of ['modular', 'maplibre'] as const) {

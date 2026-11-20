@@ -1,7 +1,8 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state, query } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, retryIcon } from '../../../internal/icons.js';
@@ -276,15 +277,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   @property({ type: Boolean, reflect: true, attribute: 'announce-status', converter: trueDefaultBooleanConverter })
   announceStatus = true;
 
-  @state() private hasAvatarSlot = false;
-  @state() private hasBadgesSlot = false;
-  @state() private hasAttachmentsSlot = false;
-  @state() private hasActionsSlot = false;
-  /** Whether the `failure` slot currently has assigned content. Only meaningful while
-   *  `status === "failed"` -- that's the only time the slot itself is even in the render (see
-   *  `render()`), mirroring `lr-flow-node`'s identical `hasHeaderSlot` flag for its own
-   *  entirely-replaces-the-built-in-UI `header` slot. */
-  @state() private hasFailureSlot = false;
+  /** Avatar, badges, attachments, actions and failure presence. The `failure` slot renders only
+   *  while `status === "failed"`; its presence is still read from the light DOM before then. */
+  private readonly slots = new SlotPresenceController(this);
 
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   @query('[part="bubble"]') private bubbleEl?: HTMLElement;
@@ -331,26 +326,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasAvatarSlot = this.hasSlotted('avatar');
-      this.hasBadgesSlot = this.hasSlotted('badges');
-      this.hasAttachmentsSlot = this.hasSlotted('attachments');
-      this.hasActionsSlot = this.hasSlotted('actions');
-      // Mounting directly into status="failed" with failure-slot content already present in the
-      // initial markup -- the <slot name="failure"> element is about to exist for the very first
-      // time this render, so there's no prior slotchange to have fired yet. Same "detected on first
-      // paint, not just via slotchange" need the avatar/badges flags above already have.
-      if (this.status === 'failed') {
-        this.hasFailureSlot = this.hasSlotted('failure');
-      }
-    } else if (changed.has('status')) {
-      if (this.status === 'failed') {
-        // Entering "failed" *after* mount -- the <slot name="failure"> element didn't exist in the
-        // previous render (see render()), so any slot="failure" content the host already had sitting
-        // in its light DOM has never had a slotchange fire for it either. Recheck directly, same
-        // reasoning as the mount-time check above.
-        this.hasFailureSlot = this.hasSlotted('failure');
-      } else if (this.previousStatus === 'failed' && this.hasFailureSlot && this.isFocusWithinFailureSlot()) {
+    if (this.hasUpdated && changed.has('status') && this.status !== 'failed') {
+      if (this.previousStatus === 'failed' && this.slots.has('failure') && this.isFocusWithinFailureSlot()) {
         // Leaving "failed" while the host's own failure content held focus (e.g. the host's own
         // retry button, whose click listener is documented to flip status away from "failed") --
         // the <slot name="failure"> this content was rendering through is about to disappear from
@@ -388,14 +365,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     super.disconnectedCallback();
   }
 
-  private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
-  }
-
   /** Whether focus is in one of the host's `slot="failure"` children. Slotting doesn't move an
-   *  element out of the light DOM, so this walks the host's real children, same as `hasSlotted`
-   *  above. Focus is read from the tree the message itself lives in (the document, or a consumer's
-   *  shadow root), which reports the failure child even when focus sits inside that child's own
+   *  element out of the light DOM, so this walks the host's real children. Focus is read from the
+   *  tree the message itself lives in (the document, or a consumer's shadow root), which reports the failure child even when focus sits inside that child's own
    *  shadow root; the owner document alone would report only the outermost consumer host. */
   private isFocusWithinFailureSlot(): boolean {
     const root = this.getRootNode() as Document | ShadowRoot;
@@ -422,37 +394,12 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
       // The `failure` slot's own content is expected to carry `role="alert"` and announce itself --
       // see the class doc's "Accessibility of `status`" paragraph. Firing this generic announcement
       // on top of that would double-announce the same failure.
-      if (this.hasFailureSlot) return;
+      if (this.slots.has('failure')) return;
       this.announcements.announceAssertive(this.localize('chatFailedAnnounce'));
     } else if (previous === 'streaming' && this.status === 'sent') {
       this.announcements.announcePolite(this.localize('chatCompleteAnnounce'));
     }
   }
-
-  // Each reads the light-DOM `slot` attribute directly (via `hasSlotted`, already the trusted
-  // computation above) rather than the live `assignedElements()` snapshot: WebKit has been
-  // observed reporting the latter transiently empty for an unrelated forwarding-slot chain nested
-  // inside the assigned element (see `<lr-switch>`'s equivalent fix), even though the assigned
-  // child's own `slot` attribute never changed.
-  private onAvatarSlotChange = (): void => {
-    this.hasAvatarSlot = this.hasSlotted('avatar');
-  };
-
-  private onBadgesSlotChange = (): void => {
-    this.hasBadgesSlot = this.hasSlotted('badges');
-  };
-
-  private onAttachmentsSlotChange = (): void => {
-    this.hasAttachmentsSlot = this.hasSlotted('attachments');
-  };
-
-  private onActionsSlotChange = (): void => {
-    this.hasActionsSlot = this.hasSlotted('actions');
-  };
-
-  private onFailureSlotChange = (): void => {
-    this.hasFailureSlot = this.hasSlotted('failure');
-  };
 
   private toggleCollapsed = (): void => {
     const detail = { expanded: this.collapsed } as const;
@@ -502,33 +449,33 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     // Once the `failure` slot is populated it takes over full responsibility for presenting the
     // failed state -- suppress the built-in status text and retry button so a consumer is never
     // shown both at once (see the class doc's `failure` slot entry).
-    const suppressBuiltInFailedUi = this.status === 'failed' && this.hasFailureSlot;
+    const suppressBuiltInFailedUi = this.status === 'failed' && this.slots.has('failure');
     const statusText = suppressBuiltInFailedUi ? undefined : this.statusText;
     const avatarBeside = this.avatarPlacement === 'start' || this.avatarPlacement === 'end';
-    const showHeader = (!avatarBeside && this.hasAvatarSlot) || this.hasBadgesSlot || this.collapsible;
+    const showHeader = (!avatarBeside && this.slots.has('avatar')) || this.slots.has('badges') || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'` and the built-in UI isn't
     // suppressed, so it alone covers that case here too.
     const actionsOutside = this.actionsPlacement === 'outside';
-    const showFooter = Boolean(statusText) || Boolean(ts) || (!actionsOutside && this.hasActionsSlot);
+    const showFooter = Boolean(statusText) || Boolean(ts) || (!actionsOutside && this.slots.has('actions'));
     const authorLabel = this.authorLabel();
     const hostLabel = this.getAttribute('aria-label');
     const articleLabel = hostLabel === '' ? '' : normalizeLabel(hostLabel) ?? authorLabel;
-    const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
-      ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
+    const actionsBlock = html`<span part="actions" ?hidden=${!this.slots.has('actions')}
+      ><slot name="actions"></slot
     ></span>`;
-    const attachmentsBlock = html`<div part="attachments" ?hidden=${!this.hasAttachmentsSlot}>
-      <slot name="attachments" @slotchange=${this.onAttachmentsSlotChange}></slot>
+    const attachmentsBlock = html`<div part="attachments" ?hidden=${!this.slots.has('attachments')}>
+      <slot name="attachments"></slot>
     </div>`;
 
-    const avatarBlock = html`<span part="avatar" ?hidden=${!this.hasAvatarSlot}
-      ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
+    const avatarBlock = html`<span part="avatar" ?hidden=${!this.slots.has('avatar')}
+      ><slot name="avatar"></slot
     ></span>`;
 
     const header = html`
         <div part="header" ?hidden=${!showHeader}>
           ${avatarBeside ? nothing : avatarBlock}
-          <span part="badges" ?hidden=${!this.hasBadgesSlot}
-            ><slot name="badges" @slotchange=${this.onBadgesSlotChange}></slot
+          <span part="badges" ?hidden=${!this.slots.has('badges')}
+            ><slot name="badges"></slot
           ></span>
           ${this.collapsible
             ? html`<button
@@ -551,7 +498,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
         </div>
         ${this.attachmentsPlacement === 'before' ? nothing : attachmentsBlock}
         ${this.status === 'failed'
-          ? html`<slot part="failure" name="failure" @slotchange=${this.onFailureSlotChange}></slot>`
+          ? html`<slot part="failure" name="failure"></slot>`
           : nothing}
         <div part="footer" ?hidden=${!showFooter}>
           ${statusText
@@ -567,8 +514,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
         </div>
     `;
 
-    const alignHeader = avatarBeside && showHeader && this.hasAvatarSlot;
-    const showDetails = !this.collapsed || this.hasAttachmentsSlot || suppressBuiltInFailedUi || showFooter;
+    const alignHeader = avatarBeside && showHeader && this.slots.has('avatar');
+    const showDetails = !this.collapsed || this.slots.has('attachments') || suppressBuiltInFailedUi || showFooter;
     return html`
       <div
         part="bubble"

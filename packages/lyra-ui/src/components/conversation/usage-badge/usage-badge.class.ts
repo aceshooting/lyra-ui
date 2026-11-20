@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { reserveOverlayOrder, type OverlayOrderReservation } from '../../../internal/overlay-order.js';
@@ -145,9 +146,8 @@ export class LyraUsageBadge extends LyraElement {
     // A server render sees no light-DOM children at all, so a hydrating badge reproduces the
     // server's slot-less rendering first and picks the slotted content up one update later.
     this.seedFirstRenderState(() => {
-      const children = Array.from(this.children);
-      this.hasDetailsSlot = children.some((child) => child.getAttribute('slot') === 'details');
-      this.hasSummarySlot = children.some((child) => child.getAttribute('slot') === 'summary');
+      this.hasDetailsSlot = hasSlotContent(this, 'details');
+      this.hasSummarySlot = hasSlotContent(this, 'summary');
     });
     if (
       this.hasUpdated &&
@@ -202,13 +202,9 @@ export class LyraUsageBadge extends LyraElement {
 
   private onDetailsSlotChange = (e: Event): void => {
     const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
-    // `hasDetailsSlot` reads the light-DOM `slot` attribute directly rather than `assigned.length`:
-    // WebKit has been observed reporting `assignedElements()` transiently empty for an unrelated
-    // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-    // fix), even though the assigned child's own `slot` attribute never changed. `detailsText`
-    // below still derives from the live `assigned` snapshot -- it needs the actual rendered
-    // elements' text, which a light-DOM attribute check cannot provide.
-    this.hasDetailsSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'details');
+    // Presence comes from the light DOM (stable across WebKit's transiently empty assignment
+    // snapshots); `detailsText` needs the rendered elements' text, so it reads `assigned`.
+    this.hasDetailsSlot = hasSlotContent(this, 'details');
     // `innerText` mirrors the rendered detail rows (omitting display:none descendants) even though
     // their wrapper is deliberately inert. Bound both breadth and output so arbitrary light-DOM
     // content cannot turn a compact badge update into unbounded accessibility work.
@@ -225,12 +221,8 @@ export class LyraUsageBadge extends LyraElement {
     if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
   };
 
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
-  // even though the assigned child's own `slot` attribute never changed.
   private onSummarySlotChange = (): void => {
-    this.hasSummarySlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'summary');
+    this.hasSummarySlot = hasSlotContent(this, 'summary');
     if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
   };
 

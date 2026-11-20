@@ -23,7 +23,7 @@ import type {
 } from '../../viewers/document-viewer/anchors.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { clamp, finiteNumber } from '../../../internal/numbers.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { normalizeImageZoom } from '../../../internal/image-zoom.js';
@@ -92,10 +92,6 @@ function normalizeHighlightTone(value: unknown): 'accent' | 'success' | 'warning
 interface NormalizedRegionHighlight {
   highlight: LyraHighlight;
   rect: SafePercentRect;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /** Maps a percent-of-on-screen-box pointer position back to the image's natural (unrotated)

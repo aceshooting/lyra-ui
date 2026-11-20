@@ -9,10 +9,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // Registers the real 'ar' catalog so the lang="ar-EG" counter/live-region digit-formatting test
 // below resolves every key it incidentally touches (lightboxImagePosition, lightboxLabel, close,
@@ -1228,27 +1224,19 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
   }
 });
 
-// `without-counter` hides only the visible counter. `show-counter` is its deprecated inverted
-// alias; it keeps working, including the plain-HTML `show-counter="false"` spelling that Lit's
-// presence-based boolean converter could never express, until its removal.
+// `without-counter` hides only the visible counter.
 describe('withoutCounter visibility', () => {
-  const SHOW_COUNTER: readonly DeprecatedUsage[] = [
-    { tag: 'lr-lightbox', kind: 'property', name: 'showCounter' },
-  ];
   const twoImages = [image, { ...image, caption: 'Second' }];
   const counters = (el: LyraLightbox): number =>
     el.shadowRoot!.querySelectorAll('[part="counter"]').length;
   const liveText = (el: LyraLightbox): string | null =>
     el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
 
-  it('renders the counter by default, without a warning', async () => {
-    const warnings = await captureDeprecationWarnings(SHOW_COUNTER, async () => {
-      const el = (await fixture(html`<lr-lightbox .images=${twoImages} open></lr-lightbox>`)) as LyraLightbox;
-      expect(el.withoutCounter).to.be.false;
-      expect(counters(el)).to.equal(1);
-      el.open = false;
-    });
-    expect(warnings).to.have.length(0);
+  it('renders the counter by default', async () => {
+    const el = (await fixture(html`<lr-lightbox .images=${twoImages} open></lr-lightbox>`)) as LyraLightbox;
+    expect(el.withoutCounter).to.be.false;
+    expect(counters(el)).to.equal(1);
+    el.open = false;
   });
 
   it('without-counter hides only the visible counter', async () => {
@@ -1261,9 +1249,6 @@ describe('withoutCounter visibility', () => {
     expect(liveText(el)).to.equal('Image 1 of 2');
     el.open = false;
   });
-
-  // Neither spelling reflects: nothing styles or queries them, so no attribute is ever written
-  // back from a property assignment.
 
 });
 

@@ -9,7 +9,6 @@ import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from '
 import { FLOW_PALETTE_MIME_TYPE } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { fitTransform } from '../../../internal/fit-transform.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import {
@@ -4734,20 +4733,6 @@ describe('node overlays escape the canvas', () => {
   });
 });
 
-describe('deprecated locked alias', () => {
-  const LOCKED: readonly DeprecatedUsage[] = [{ tag: 'lr-flow-canvas', kind: 'property', name: 'locked' }];
-  it('never warns for readonly or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(LOCKED, async () => {
-      const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas></lr-flow-canvas>`);
-      el.readonly = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
-
 it('defers companion notifications from detached updates and delivers latest state on reconnect', async () => {
   const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`);
   const snapshots: FlowStructureSnapshot[] = [];
@@ -4810,4 +4795,263 @@ it('rejects a retired companion frame without clearing the adopted owner frame',
     el.remove();
     state.requestOwnerAnimationFrame = original;
   }
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key lr-flow-canvas passes to this.localize() gets a distinctive marker (never the
+  // production English) and is proven to reach a rendered attribute, text node or the shared
+  // polite sink. flowCanvasInputLimit and flowCanvasLayoutLimit are omitted here: they need inputs
+  // past the node/edge input and layout work limits, and their own tests above override them.
+  const text = (el: LyraFlowCanvas, selector: string): string =>
+    el.shadowRoot!.querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  const attr = (el: LyraFlowCanvas, selector: string, name: string): string =>
+    el.shadowRoot!.querySelector(selector)?.getAttribute(name) ?? '';
+  const live = (el: LyraFlowCanvas): string => text(el, '[part="live-region"]');
+  const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}): void => {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
+  };
+
+  it('routes editable-canvas labels, item text and every interaction announcement', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas
+        connectable
+        nodes-draggable
+        .strings=${{
+          flowCanvasLabel: 'CANVAS-MARKER',
+          flowCanvasSummary: 'SUMMARY {nodeCount}/{edgeCount}',
+          flowNode: 'NODE<{label}>',
+          flowEdge: 'EDGE {source}>{target}',
+          flowEdgeWithLabel: 'LEDGE {label} {source}>{target}',
+          flowEdgeList: 'EDGE-LIST-MARKER',
+          flowItemAnnouncement: 'ITEM {index}/{total} {item}',
+          flowNodeSelected: 'SELECTED {label}',
+          flowNodeDeselected: 'DESELECTED {label}',
+          flowSelectionCleared: 'CLEARED-MARKER',
+          flowNodeMoved: 'MOVED {label}',
+          flowConnectStarted: 'STARTED {label}',
+          flowConnectTarget: 'TARGET {source}>{target}',
+          flowConnectCommitted: 'COMMITTED {source}>{target}',
+          flowConnectCancelled: 'CANCELLED-MARKER',
+        }}
+      ></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', data: { label: 'Alpha' }, position: { x: 0, y: 0 } },
+      { id: 'b', data: { label: 'Beta' }, position: { x: 200, y: 0 } },
+      { id: 'c', data: { label: 'Gamma' }, position: { x: 400, y: 0 } },
+    ];
+    el.edges = [
+      { id: 'a-b', source: 'a', target: 'b', label: 'wire' },
+      { id: 'b-ghost', source: 'b', target: 'ghost' },
+    ];
+    await el.updateComplete;
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+
+    expect(attr(el, '[part="base"]', 'aria-label')).to.equal('CANVAS-MARKER');
+    expect(attr(el, '[part="viewport"]', 'aria-label')).to.equal('SUMMARY 3/2');
+    expect(nodeControl(el, 'a').getAttribute('aria-label')).to.equal('NODE<Alpha>');
+    expect(attr(el, '[part="edge"]', 'aria-label')).to.equal('LEDGE wire NODE<Alpha>>NODE<Beta>');
+    expect(attr(el, '[part="edge-list"]', 'aria-label')).to.equal('EDGE-LIST-MARKER');
+    expect(text(el, '[part="edge-list"]')).to.equal('EDGE NODE<Beta>>ghost');
+
+    const announced = async (expected: string | RegExp, label: string): Promise<void> => {
+      await waitUntil(() => (typeof expected === 'string' ? live(el) === expected : expected.test(live(el))), label)
+        .catch(() => expect(live(el), label).to.equal(String(expected)));
+      expect(sinkTexts().some((entry) => (typeof expected === 'string' ? entry === expected : expected.test(entry))), label)
+        .to.equal(true);
+    };
+    // A draggable node claims the pointerdown for a move, so the handle gesture runs undraggable.
+    el.nodesDraggable = false;
+    await el.updateComplete;
+    const outputHandle = document.createElement('div');
+    outputHandle.dataset['handleKind'] = 'output';
+    outputHandle.dataset['handleId'] = 'out';
+    el.shadowRoot!.querySelector('[data-node-id="a"]')!.appendChild(outputHandle);
+    outputHandle.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 7, clientX: 0, clientY: 0, bubbles: true, composed: true }),
+    );
+    await announced('STARTED NODE<Alpha>', 'flowConnectStarted');
+    document.body.dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: 7, clientX: 0, clientY: 0, bubbles: true, composed: true }),
+    );
+    await announced('CANCELLED-MARKER', 'flowConnectCancelled after a pointer release off any node');
+    el.nodesDraggable = true;
+    await el.updateComplete;
+    const control = nodeControl(el, 'a');
+    await focusByKeyboard(control);
+    await announced(/^ITEM \S+\/\S+ NODE<Alpha>$/, 'flowItemAnnouncement');
+    press(control, 'Enter');
+    await announced('SELECTED NODE<Alpha>', 'flowNodeSelected');
+    press(control, 'Enter', { ctrlKey: true });
+    await announced('DESELECTED NODE<Alpha>', 'flowNodeDeselected');
+    press(control, 'Enter');
+    await announced('SELECTED NODE<Alpha>', 'flowNodeSelected again');
+    press(control, 'Escape');
+    await announced('CLEARED-MARKER', 'flowSelectionCleared');
+    press(control, 'ArrowDown', { ctrlKey: true });
+    await announced('MOVED NODE<Alpha>', 'flowNodeMoved');
+    press(control, 'c');
+    await announced('TARGET NODE<Alpha>>NODE<Gamma>', 'flowConnectTarget');
+    press(control, 'Escape');
+    await announced('CANCELLED-MARKER', 'flowConnectCancelled');
+    press(control, 'c');
+    await announced('TARGET NODE<Alpha>>NODE<Gamma>', 'flowConnectTarget again');
+    press(control, 'Enter');
+    await announced('COMMITTED NODE<Alpha>>NODE<Gamma>', 'flowConnectCommitted');
+
+  });
+
+  it('routes the empty-canvas heading', async () => {
+    const el = (await fixture(html`<lr-flow-canvas .strings=${{ noData: 'EMPTY-MARKER' }}></lr-flow-canvas>`)) as LyraFlowCanvas;
+    await el.updateComplete;
+    expect(attr(el, '[part="empty"]', 'heading')).to.equal('EMPTY-MARKER');
+  });
+
+  it('routes every source-navigator, coverage and source-status key', async () => {
+    type Source = NonNullable<LyraFlowCanvas['graphSource']>;
+    type Records = Source['records'];
+    let coverage: 'complete' | 'aggregate' | 'neighborhood' = 'complete';
+    let failScene = false;
+    const nodeRow = (index: number) => ({
+      key: `node:${index}`,
+      order: index,
+      value: { kind: 'node' as const, value: { id: String(index), data: { label: `n${index}` } } },
+    });
+    const edgeRow = {
+      key: 'edge:e1',
+      order: 0,
+      value: { kind: 'edge' as const, value: { id: 'e1', source: '0', target: '1', label: 'wire' } },
+    };
+    const query: Records['query'] = async (request) => {
+      if (request.query.search === 'none') return { rows: [], total: 0, summary: { nodes: 3, edges: 1 } };
+      const rows = request.query.kind === 'edges' ? [edgeRow] : [0, 1, 2].map(nodeRow);
+      return { rows, total: rows.length, summary: { nodes: 3, edges: 1 } };
+    };
+    const source: Source = {
+      revision: 1,
+      records: {
+        revision: 1,
+        query,
+        lookup: async (keys) => keys.map((key) => (key.startsWith('edge:') ? edgeRow : nodeRow(Number(key.slice(5))))),
+        locate: async (key) => (key === 'edge:e1' ? 0 : Number(key.slice(5))),
+      },
+      scene: async () => {
+        if (failScene) throw new Error('scene unavailable');
+        return {
+          nodes: [0, 1, 2].map((index) => ({
+            key: `node:${index}`,
+            value: { id: String(index), data: { label: `n${index}` } },
+            position: { x: index * 100, y: 0 },
+          })),
+          edges: coverage === 'complete'
+            ? [{ key: 'edge:e1', source: 'node:0', target: 'node:1', value: { id: 'e1', source: '0', target: '1', label: 'wire' } }]
+            : [],
+          coverage,
+          total: { nodes: 3, edges: 1 },
+          worldBounds: { x: 0, y: 0, width: 300, height: 100 },
+        };
+      },
+    };
+    const el = (await fixture(html`
+      <lr-flow-canvas
+        style="width:640px;height:480px"
+        .graphSource=${source}
+        .strings=${{
+          flowNode: 'NODE<{label}>',
+          flowEdgeWithLabel: 'LEDGE {label} {source}>{target}',
+          graphSourceRecords: 'RECORDS-MARKER',
+          graphSourceNodes: 'NODES-MARKER',
+          graphSourceEdges: 'EDGES-MARKER',
+          search: 'SEARCH-MARKER',
+          graphSourceTotals: 'TOTALS {nodes}/{edges}',
+          graphSourceCoverageComplete: 'COMPLETE {nodes}/{edges}',
+          graphSourceCoverageAggregate: 'AGGREGATE {shownNodes}/{nodes} {shownEdges}/{edges}',
+          graphSourceCoverageNeighborhood: 'NEIGHBORHOOD {shownNodes}/{nodes} {shownEdges}/{edges}',
+          graphSourceIncidentEdges: 'INCIDENT {label}',
+          graphSourceAllRecords: 'ALL-MARKER',
+          graphSourceDirection: 'DIRECTION-MARKER',
+          graphSourceBothDirections: 'BOTH-MARKER',
+          neighborDirectionIn: 'IN-MARKER',
+          neighborDirectionOut: 'OUT-MARKER',
+          flowSourceRecordMatches: 'MATCHES {count}',
+          flowSourceRevealSourceNode: 'REVEAL-SOURCE {node}',
+          flowSourceRevealTargetNode: 'REVEAL-TARGET {node}',
+          previous: 'PREVIOUS-MARKER',
+          next: 'NEXT-MARKER',
+          paginationPage: 'PAGE-MARKER',
+          loading: 'LOADING-MARKER',
+          noData: 'NO-RECORDS-MARKER',
+          graphSourceRecordsError: 'RECORDS-ERROR-MARKER',
+          graphSourceRecordMissing: 'MISSING-MARKER',
+          graphSourceSceneError: 'SCENE-ERROR-MARKER',
+          retry: 'RETRY-MARKER',
+        }}
+      ></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    const navigator = () => text(el, '[part="source-navigator"]');
+    const status = () => text(el, '[part="source-navigator"] [part="source-status"]');
+    await waitUntil(() => status() === 'TOTALS 3/1', 'graphSourceTotals');
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'COMPLETE 3/1', 'graphSourceCoverageComplete');
+    expect(attr(el, '[part="source-navigator"]', 'aria-label')).to.equal('RECORDS-MARKER');
+    for (const marker of ['RECORDS-MARKER', 'NODES-MARKER', 'EDGES-MARKER', 'SEARCH-MARKER', 'PREVIOUS-MARKER', 'NEXT-MARKER', 'PAGE-MARKER']) {
+      expect(navigator(), marker).to.include(marker);
+    }
+    expect(text(el, '[data-source-key="node:0"]')).to.equal('NODE<n0>');
+    expect(navigator()).to.include('INCIDENT NODE<n0>');
+
+    coverage = 'aggregate';
+    el.setViewport({ x: 10, y: 0, zoom: 1 });
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'AGGREGATE 3/3 0/1', 'graphSourceCoverageAggregate');
+    coverage = 'neighborhood';
+    el.setViewport({ x: 20, y: 0, zoom: 1 });
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'NEIGHBORHOOD 3/3 0/1', 'graphSourceCoverageNeighborhood');
+
+    const incident = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="source-record"] button')]
+      .find((button) => button.textContent?.trim() === 'INCIDENT NODE<n0>')!;
+    incident.click();
+    await waitUntil(() => status() === 'MATCHES 1', 'flowSourceRecordMatches');
+    await waitUntil(() => sinkTexts().includes('MATCHES 1'), 'record status change is announced');
+    for (const marker of ['ALL-MARKER', 'DIRECTION-MARKER', 'BOTH-MARKER', 'IN-MARKER', 'OUT-MARKER']) {
+      expect(navigator(), marker).to.include(marker);
+    }
+    expect(text(el, '[data-source-key="edge:e1"]')).to.match(/^LEDGE wire \S+>\S+$/);
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="source-record"] button[aria-label]')]
+      .map((button) => button.getAttribute('aria-label'));
+    expect(labels).to.deep.equal(['REVEAL-SOURCE 0', 'REVEAL-TARGET 1']);
+
+    const search = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+    search.value = 'none';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await waitUntil(() => status() === 'NO-RECORDS-MARKER', 'noData record status');
+
+    const held: (() => void)[] = [];
+    source.records.query = async (request) => {
+      await new Promise<void>((resolve) => { held.push(resolve); });
+      return query(request);
+    };
+    el.requestUpdate();
+    await waitUntil(() => status() === 'LOADING-MARKER', 'loading record status');
+    source.records.query = query;
+    held.forEach((resolve) => resolve());
+    // An explicit refresh resets the source query, so the released page reports the totals again.
+    await waitUntil(() => status() === 'TOTALS 3/1', 'held page resolves')
+      .catch(() => expect(status(), 'held page resolves').to.equal('TOTALS 3/1'));
+
+    source.records.query = async () => { throw new Error('records unavailable'); };
+    el.requestUpdate();
+    await waitUntil(() => status() === 'RECORDS-ERROR-MARKER RETRY-MARKER', 'graphSourceRecordsError and retry');
+
+    source.records.query = query;
+    source.records.locate = async () => null;
+    el.requestUpdate();
+    await waitUntil(() => status() === 'TOTALS 3/1', 'records recover');
+    expect(await el.revealSourceKey('node:9')).to.equal(false);
+    await el.updateComplete;
+    expect(status()).to.equal('MISSING-MARKER');
+
+    failScene = true;
+    el.requestUpdate();
+    await waitUntil(() => text(el, '.source-scene-status').startsWith('SCENE-ERROR-MARKER'), 'graphSourceSceneError');
+    expect(text(el, '.source-scene-status button')).to.equal('RETRY-MARKER');
+  });
 });

@@ -12,7 +12,7 @@ Sequence-strip tooltips wrap, fit inside the strip, stay opaque over disabled ce
 Gauges ignore malformed thresholds, fit narrow containers, and keep linear captions proportional as the track resizes.
 The sparkline no longer clips its first and last points.
 Linked stats deliver one click to host listeners.
-Calendars announce month navigation and preserve hover feedback on selected days. Use the new `lr-month-change` event in place of the deprecated `lr-view-change` event.
+Calendars announce month navigation and preserve hover feedback on selected days, and report month navigation with `lr-month-change`.
 The context meter uses its summary as a fallback name and emits `lr-segment-selection-change` after a default selection toggle.
 Stats and context meters show when a collection exceeds the input limit.
 Sparkline marks, stat exact-value hover color, and calendar event hover tint have component theme tokens.

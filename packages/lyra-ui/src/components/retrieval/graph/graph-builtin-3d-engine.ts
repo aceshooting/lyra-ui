@@ -5,7 +5,8 @@ import { SpatialHitIndex, SpatialProjectionWorkspace, projectSpatialScene, type 
 const EMPTY_DASH = { values: [] as number[], key: '' };
 const DANGLING_DASH = { values: [4, 4], key: '4,4' };
 const selectionSets = new WeakMap<readonly string[], ReadonlySet<string>>();
-function selectedIds(ids: readonly string[]): ReadonlySet<string> {
+/** A frozen id list as a Set, built once per list; an unfrozen list may still change, so it is never cached. */
+export function selectedIds(ids: readonly string[]): ReadonlySet<string> {
   if (!Object.isFrozen(ids)) return new Set(ids);
   let result = selectionSets.get(ids);
   if (!result) { result = new Set(ids); selectionSets.set(ids, result); }

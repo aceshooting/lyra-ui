@@ -25,7 +25,6 @@ import { styles } from "./code-block.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 type Internals = {
   highlighter?: ShikiHighlighter | null;
@@ -147,17 +146,6 @@ it("reflects without-copy-button and hides the copy control", async () => {
   await el.updateComplete;
   expect(el.withoutCopyButton).to.be.false;
   expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
-});
-
-describe("deprecated copyable alias", () => {
-  const usage = { tag: "lr-code-block", kind: "property", name: "copyable" } as const;
-
-  it("never warns for the canonical attribute", async () => {
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      await fixture(html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`);
-    });
-    expect(warnings).to.have.lengthOf(0);
-  });
 });
 
 it("renders optional line numbers for plain code without changing the copied source", async () => {
@@ -2212,7 +2200,6 @@ it("does not write highlighted state from the default per-language load once the
 });
 
 describe("gutter line-button pointer feedback", () => {
-
   async function gutterFixture(): Promise<LyraCodeBlock> {
     const el = (await fixture(
       html`<lr-code-block data-lr-theme-scope

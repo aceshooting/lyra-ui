@@ -99,6 +99,20 @@ describe('lr-chat-viewport layout tokens', () => {
     expect(style.boxShadow).to.equal('none');
   });
 
+  it('gives the labelled jump pill the shared minimum hit area', async () => {
+    const host = await fixture<HTMLElement>(html`
+      <div style="block-size:200px">
+        <lr-chat-viewport follow="false"><div style="block-size:400px">Message</div></lr-chat-viewport>
+      </div>
+    `);
+    const viewport = host.querySelector<LyraChatViewport>('lr-chat-viewport')!;
+    await viewport.updateComplete;
+    const rect = viewport.shadowRoot!.querySelector('[part="jump-pill"]')!.getBoundingClientRect();
+    // --lr-icon-button-size defaults to 2.25rem (36px).
+    expect(Math.round(rect.height)).to.be.at.least(36);
+    expect(Math.round(rect.width)).to.be.at.least(36);
+  });
+
   it('centres a constrained content column under RTL too', async () => {
     const host = await fixture<HTMLElement>(html`<div dir="rtl" style="block-size:300px;inline-size:600px">
       <lr-chat-viewport style="--lr-chat-viewport-content-max-inline-size:240px">

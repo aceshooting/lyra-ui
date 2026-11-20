@@ -4,10 +4,6 @@ import type { LyraRagAnswer } from './rag-answer.class.js';
 import type { LyraSourceCard } from '../source-card/source-card.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 function assertiveSink(): HTMLElement {
   return document.querySelector<HTMLElement>(
@@ -883,19 +879,15 @@ describe('lr-rag-answer', () => {
 
 describe('lr-rag-answer retired show-sources alias', () => {
   const ALIAS_SOURCES = [{ id: 'd1', name: 'guide.md' }];
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-answer', kind: 'property', name: 'showSources' }];
   const observe = (el: LyraRagAnswer): string => String(el.shadowRoot!.querySelector('[part="sources"]') !== null);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagAnswer>(markup);
 
-  it('applies without-sources with canonical defaults and no deprecation warning', async () => {
+  it('applies without-sources with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources></lr-rag-answer>`));
-      plain = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES}></lr-rag-answer>`));
-    });
+    canonical = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources></lr-rag-answer>`));
+    plain = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES}></lr-rag-answer>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 
@@ -906,19 +898,15 @@ describe('lr-rag-answer retired show-claims alias', () => {
     coverage: 1,
     claims: [{ id: 'claim-1', text: 'Claim', status: 'supported' as const, citationIds: [] }],
   };
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-answer', kind: 'property', name: 'showClaims' }];
   const observe = (el: LyraRagAnswer): string => String((el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { withoutClaims: boolean }).withoutClaims);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagAnswer>(markup);
 
-  it('applies without-claims with canonical defaults and no deprecation warning', async () => {
+  it('applies without-claims with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims></lr-rag-answer>`));
-      plain = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT}></lr-rag-answer>`));
-    });
+    canonical = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims></lr-rag-answer>`));
+    plain = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT}></lr-rag-answer>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

@@ -6,10 +6,6 @@ import '../../lr-source-list.js';
 import '../../lr-source-card.js';
 import '../../lr-copy-button.js';
 import { LyraSourceList } from '../../lr-source-list.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 it('defaults to collapsed with an omitted label and an empty label-plural', async () => {
   const el = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
@@ -631,7 +627,6 @@ describe('header text contrast at rest, hover and press', () => {
 });
 
 describe('lr-source-list size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-list', kind: 'property', name: 'compact' }];
   const observe = (el: LyraSourceList): string => {
     const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]')!);
     const list = getComputedStyle(el.shadowRoot!.querySelector('[part="list"]')!);
@@ -639,15 +634,12 @@ describe('lr-source-list size and the retired compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceList>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-source-list size="s" expanded></lr-source-list>`));
-      regular = observe(await mount(html`<lr-source-list expanded></lr-source-list>`));
-    });
+    dense = observe(await mount(html`<lr-source-list size="s" expanded></lr-source-list>`));
+    regular = observe(await mount(html`<lr-source-list expanded></lr-source-list>`));
     expect(dense).to.not.equal(regular);
-    expect(warnings).to.have.length(0);
   });
 });
 

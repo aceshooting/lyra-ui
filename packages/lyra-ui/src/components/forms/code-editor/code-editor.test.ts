@@ -12,18 +12,9 @@ import {
   sendWheel,
 } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-code-editor', 'line-numbers');
-
-// The compatibility tests below deliberately use the deprecated line-numbers alias, which keeps
-// working until its removal.
-expectDeprecatedUsage('lr-code-editor', 'property', 'lineNumbers');
 
 it('lets a consumer retint hover and invalid editor borders independently', async () => {
   const el = (await fixture(html`
@@ -946,24 +937,18 @@ describe('lineNumbers', () => {
   });
 });
 
-describe('deprecated line-numbers alias', () => {
-  const usage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-code-editor', kind: 'property', name: 'lineNumbers' },
-  ];
+describe('retired line-numbers alias', () => {
   const gutters = (el: LyraCodeEditor) => el.shadowRoot!.querySelectorAll('[part="gutter"]').length;
 
-  it('does not warn for the canonical without-line-numbers or an unset alias', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      await fixture(html`<lr-code-editor value="one" without-line-numbers></lr-code-editor>`);
-      const unset = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
-      expect(unset.withoutLineNumbers).to.equal(false);
-      expect(unset.hasAttribute('without-line-numbers')).to.equal(false);
-      expect(gutters(unset)).to.equal(1);
-      unset.withoutLineNumbers = true;
-      await unset.updateComplete;
-      expect(unset.hasAttribute('without-line-numbers'), 'the canonical property reflects').to.equal(true);
-    });
-    expect(warnings).to.have.length(0);
+  it('renders the canonical without-line-numbers and reflects it', async () => {
+    await fixture(html`<lr-code-editor value="one" without-line-numbers></lr-code-editor>`);
+    const unset = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
+    expect(unset.withoutLineNumbers).to.equal(false);
+    expect(unset.hasAttribute('without-line-numbers')).to.equal(false);
+    expect(gutters(unset)).to.equal(1);
+    unset.withoutLineNumbers = true;
+    await unset.updateComplete;
+    expect(unset.hasAttribute('without-line-numbers'), 'the canonical property reflects').to.equal(true);
   });
 
   it('ignores the removed spelling after the authored canonical attribute is removed', async () => {
@@ -972,10 +957,8 @@ describe('deprecated line-numbers alias', () => {
     )) as LyraCodeEditor;
     el.removeAttribute('without-line-numbers');
     await el.updateComplete;
-    await captureDeprecationWarnings(usage, async () => {
-      el.setAttribute('line-numbers', 'false');
-      await el.updateComplete;
-    });
+    el.setAttribute('line-numbers', 'false');
+    await el.updateComplete;
     expect(el.withoutLineNumbers).to.equal(false);
     expect(gutters(el)).to.equal(1);
     el.removeAttribute('line-numbers');
@@ -987,15 +970,13 @@ describe('deprecated line-numbers alias', () => {
 
   it('keeps the gutter when a line-numbers="false" attribute is set back to true', async () => {
     let el: LyraCodeEditor | undefined;
-    await captureDeprecationWarnings(usage, async () => {
-      el = (await fixture(
-        html`<lr-code-editor value="one" line-numbers="false"></lr-code-editor>`,
-      )) as LyraCodeEditor;
-      // An unknown attribute stays author-owned and does not reflect into component state.
-      expect(el.hasAttribute('line-numbers')).to.equal(true);
-      el.setAttribute('line-numbers', '');
-      await el.updateComplete;
-    });
+    el = (await fixture(
+      html`<lr-code-editor value="one" line-numbers="false"></lr-code-editor>`,
+    )) as LyraCodeEditor;
+    // An unknown attribute stays author-owned and does not reflect into component state.
+    expect(el.hasAttribute('line-numbers')).to.equal(true);
+    el.setAttribute('line-numbers', '');
+    await el.updateComplete;
     expect(el!.withoutLineNumbers).to.equal(false);
     expect(el!.hasAttribute('without-line-numbers')).to.equal(false);
     expect(gutters(el!)).to.equal(1);

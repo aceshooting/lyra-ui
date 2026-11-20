@@ -1,6 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import type { LyraFunnel, LyraFunnelStage } from './funnel.class.js';
 import '../../lr-funnel.js';
 
@@ -432,23 +431,46 @@ describe('<lr-funnel> grid/flex stretch', () => {
   });
 });
 
-describe('<lr-funnel> dropoff visibility', () => {
-  const DROPOFF: readonly DeprecatedUsage[] = [{ tag: 'lr-funnel', kind: 'property', name: 'dropoff' }];
-
-  it('never warns for without-dropoff or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(DROPOFF, async () => {
-      const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
-      el.withoutDropoff = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
 it('uses the localized default name for a whitespace-only label', async () => {
   const el = await fixture<LyraFunnel>(html`<lr-funnel label="   " .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
   const reference = await fixture<LyraFunnel>(html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
   expect(part(el, 'stages')!.getAttribute('aria-label')!.trim()).to.not.equal('');
   expect(part(el, 'stages')!.getAttribute('aria-label')).to.equal(part(reference, 'stages')!.getAttribute('aria-label'));
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key `<lr-funnel>` localizes, each proven to reach the rendered DOM through a `.strings`
+  // override. Markers are distinctive (not the production English) so a dropped override fails.
+  const strings = {
+    chart: 'CHART-MARKER',
+    comparePanel: 'COMPARE-MARKER',
+    funnelComparisonShare: 'SHARE-MARKER {label} {value}',
+    noData: 'EMPTY-MARKER',
+    trendUnchanged: 'UNCHANGED-MARKER',
+    funnelDropoffIncreased: 'UP-MARKER {value}',
+    funnelDropoffDecreased: 'DOWN-MARKER {value}',
+    funnelStagesLimit: 'CAP-MARKER {count}',
+    funnelStagesInputLimit: 'ADMIT-MARKER {count}/{total}',
+  };
+  const stages = [100, 50, 50, 80].map((value, index) => ({ label: `S${index}`, value }));
+
+  it('routes the list name, drop-off and comparison keys to the DOM', async () => {
+    const el = await fixture<LyraFunnel>(html`<lr-funnel .strings=${strings} .stages=${stages} .comparison=${stages}></lr-funnel>`);
+    expect(part(el, 'stages')!.getAttribute('aria-label')).to.equal('CHART-MARKER');
+    expect(parts(el, 'dropoff').map(text)).to.deep.equal(['DOWN-MARKER 50%', 'UNCHANGED-MARKER', 'UP-MARKER 60%']);
+    expect(text(part(el, 'comparison-value'))).to.equal('SHARE-MARKER COMPARE-MARKER 100%');
+  });
+
+  it('routes noData, funnelStagesLimit and funnelStagesInputLimit to the DOM', async () => {
+    const el = await fixture<LyraFunnel>(html`<lr-funnel .strings=${strings}></lr-funnel>`);
+    expect(text(part(el, 'empty'))).to.equal('EMPTY-MARKER');
+    el.stages = Array.from({ length: 501 }, (_unused, index) => ({ label: `S${index}`, value: 501 - index }));
+    await el.updateComplete;
+    expect(text(part(el, 'limit'))).to.match(/^CAP-MARKER \S+$/);
+    const { expectDevWarning } = await import('../../../../test/expected-dev-warnings.js');
+    expectDevWarning('lyra-collection-truncated:lr-funnel:stages');
+    el.stages = Array.from({ length: 10_001 }, (_unused, index) => (index === 0 ? { label: 'Head', value: 1 } : null)) as never;
+    await el.updateComplete;
+    expect(text(part(el, 'limit'))).to.match(/^ADMIT-MARKER \S+\/\S+$/);
+  });
 });

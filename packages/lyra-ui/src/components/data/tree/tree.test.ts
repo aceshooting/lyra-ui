@@ -1,8 +1,10 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import '../../lr-tree.js';
 import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
 import type { LyraTreeItem } from '../../lr-tree-item.js';
+import type { LyraHierarchyQuery, LyraHierarchySource } from '../../../data-sources.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 expectDevWarning('lyra-tree-missing-accessible-name');
 
@@ -938,4 +940,87 @@ it('resolves a synthetic node event by detail nodeId and ignores a dangling id',
   await change;
   expect(b!.selected).to.equal(true);
   expect(a!.selected).to.equal(false);
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-tree>` localizes 10 keys (`<lr-tree-item>` none); each marker must reach the rendered DOM in
+  // the object-data mode or the `treeSource` mode that surfaces it.
+  const markers = {
+    noData: 'TR-EMPTY',
+    treeDefaultLabel: 'TR-DEFAULT-NAME',
+    treeLimit: 'TR-LIMIT {count}',
+    treeNodeMoved: 'TR-MOVED {label} {index}/{total}',
+    treeSourceError: 'TR-SOURCE-ERROR',
+    retry: 'TR-RETRY',
+    loading: 'TR-LOADING',
+    treeSourceSummary: 'TR-SUMMARY {visible}/{total}',
+    expand: 'TR-EXPAND',
+    collapse: 'TR-COLLAPSE',
+  };
+  const text = (el: LyraTree, selector: string) =>
+    Array.from(el.shadowRoot!.querySelectorAll(selector), (node) => node.textContent!.trim());
+
+  function branchSource(count = 1): LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery> {
+    let expanded = false;
+    return { revision: 1, async project(request) {
+      if (request.action.type === 'toggle') expanded = request.action.expanded;
+      const item = (index: number) => ({ key: `n${index}`, value: { id: `n${index}`, label: `N${index}` }, parentKey: null,
+        level: 1, position: index + 1, setSize: count, childCount: 1, expanded, selected: false });
+      return { state: 'rows', total: count, rows: { count, keyAt: (index: number) => `n${index}`,
+        indexOfKey: (key: string | number) => Number(String(key).slice(1)), itemAt: item } };
+    } };
+  }
+
+  it('routes noData, treeDefaultLabel, treeLimit and treeNodeMoved through the object-data mode', async () => {
+    // treeDefaultLabel names a tree whose authored label is blank.
+    const el = await fixture<LyraTree>(html`<lr-tree label=" " reorderable max-nodes="2" .strings=${markers} .data=${[]}></lr-tree>`);
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('TR-EMPTY');
+    expect(el.shadowRoot!.querySelector('[part~="tree"]')!.getAttribute('aria-label')).to.equal('TR-DEFAULT-NAME');
+    el.data = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }, { id: 'c', label: 'Gamma' }];
+    await el.updateComplete;
+    expect(text(el, '[part="limit"]')).to.deep.equal(['TR-LIMIT 2']);
+    el.addEventListener('lr-reorder', (event) => {
+      const { fromIndex, toIndex } = (event as CustomEvent<{ fromIndex: number; toIndex: number }>).detail;
+      const next = [...el.data];
+      next.splice(toIndex, 0, ...next.splice(fromIndex, 1));
+      el.data = next;
+    });
+    const first = el.querySelector('lr-tree-item') as unknown as HTMLElement;
+    await focusByKeyboard(first);
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, bubbles: true, composed: true, cancelable: true }));
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region')!;
+    await waitUntil(() => region.shadowRoot!.textContent!.includes('TR-MOVED'), 'move announcement never rendered');
+    expect(region.shadowRoot!.querySelector('[part="region"]')!.textContent!.trim()).to.equal('TR-MOVED Alpha 2/2');
+  });
+
+  it('routes the source summary, expand and collapse names into a treeSource row', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Source" .strings=${markers} .treeSource=${branchSource()}></lr-tree>`);
+    const toggle = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="source-row"] [part="source-toggle"]');
+    await waitUntil(() => toggle() !== null, 'source row never rendered');
+    expect(text(el, '[part="source-status"]')).to.include('TR-SUMMARY 1/1');
+    expect(toggle()!.getAttribute('aria-label')).to.equal('TR-EXPAND');
+    toggle()!.click();
+    await waitUntil(() => toggle()?.getAttribute('aria-label') === 'TR-COLLAPSE', 'collapse name never rendered');
+  });
+
+  it('routes noData into an empty treeSource and loading into a pending one', async () => {
+    const empty = await fixture<LyraTree>(html`<lr-tree label="Empty" .strings=${markers} .treeSource=${branchSource(0)}></lr-tree>`);
+    await waitUntil(() => text(empty, '[part="source-status"]').includes('TR-EMPTY'), 'empty source text never rendered');
+    const pending: LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery> = {
+      revision: 1, project: () => new Promise(() => undefined),
+    };
+    const loading = await fixture<LyraTree>(html`<lr-tree label="Pending" .strings=${markers} .treeSource=${pending}></lr-tree>`);
+    await waitUntil(() => text(loading, '[part="source-status"]').includes('TR-LOADING'), 'loading text never rendered');
+  });
+
+  it('routes treeSourceError and retry into a failed treeSource', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Failed" .strings=${markers}></lr-tree>`);
+    el.treeSource = {} as unknown as NonNullable<LyraTree['treeSource']>;
+    await el.updateComplete;
+    const error = el.shadowRoot!.querySelector('[part~="source-error"]')!;
+    const retry = error.querySelector('button')!.textContent!;
+    expect(retry.trim()).to.equal('TR-RETRY');
+    expect(error.textContent!.replace(retry, '').trim()).to.equal('TR-SOURCE-ERROR');
+  });
 });

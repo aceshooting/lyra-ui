@@ -1,6 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 function query(root: ParentNode, selector: string): HTMLElement {
@@ -29,7 +30,7 @@ async function mount(engine: 'modular' | 'maplibre') {
 describe('canvas targets with native map engines', function () {
   this.timeout(45000);
   let previousWorkerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { previousWorkerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(() => { fixtureCleanup(); setWorkerUrl(previousWorkerUrl); });
 

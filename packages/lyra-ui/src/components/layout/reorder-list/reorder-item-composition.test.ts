@@ -6,10 +6,6 @@ import '../../lr-reorder-list.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-reorder-item', 'accessible-label');
@@ -216,10 +212,7 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
   });
 });
 
-describe('lr-reorder-item: host aria-label and the deprecated accessible-label attribute', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-reorder-item', kind: 'attribute', name: 'accessible-label' },
-  ];
+describe('lr-reorder-item: host aria-label and the retired accessible-label attribute', () => {
   const labelledText = (el: LyraReorderItem, part: string): string =>
     (movePart(el, part).getAttribute('aria-labelledby') ?? '')
       .split(/\s+/)
@@ -227,15 +220,12 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
       .join(' ')
       .trim();
 
-  it('names the row and both move actions from the host aria-label, without a warning', async () => {
+  it('names the row and both move actions from the host aria-label', async () => {
     let el!: LyraReorderItem;
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      el = (await fixture(
-        html`<div role="list"><lr-reorder-item value="a" aria-label="Invoices">Row</lr-reorder-item></div>`
-      )).querySelector<LyraReorderItem>('lr-reorder-item')!;
-      await el.updateComplete;
-    });
-    expect(warnings).to.have.length(0);
+    el = (await fixture(
+      html`<div role="list"><lr-reorder-item value="a" aria-label="Invoices">Row</lr-reorder-item></div>`
+    )).querySelector<LyraReorderItem>('lr-reorder-item')!;
+    await el.updateComplete;
     expect(labelledText(el, 'move-up-button')).to.equal('Move up Invoices');
     expect(labelledText(el, 'move-down-button')).to.equal('Move down Invoices');
     expect(el.getAttribute('aria-label')).to.equal('Invoices');
@@ -244,27 +234,22 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
 
   it('ignores accessible-label and names both move actions from content', async () => {
     const labels: string[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = (await fixture(
-          html`<lr-reorder-item value="a" accessible-label="Invoices">Row</lr-reorder-item>`
-        )) as LyraReorderItem;
-        await el.updateComplete;
-        labels.push(labelledText(el, 'move-up-button'));
-      }
-    });
-    expect(labels).to.deep.equal(['Move up Row', 'Move up Row']);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('lets the host aria-label win over the accessible-label alias', async () => {
-    let el!: LyraReorderItem;
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      el = (await fixture(
-        html`<lr-reorder-item value="a" accessible-label="Old" aria-label="New">Row</lr-reorder-item>`
+    for (let index = 0; index < 2; index += 1) {
+      const el = (await fixture(
+        html`<lr-reorder-item value="a" accessible-label="Invoices">Row</lr-reorder-item>`
       )) as LyraReorderItem;
       await el.updateComplete;
-    });
+      labels.push(labelledText(el, 'move-up-button'));
+    }
+    expect(labels).to.deep.equal(['Move up Row', 'Move up Row']);
+  });
+
+  it('ignores accessible-label next to the host aria-label', async () => {
+    let el!: LyraReorderItem;
+    el = (await fixture(
+      html`<lr-reorder-item value="a" accessible-label="Old" aria-label="New">Row</lr-reorder-item>`
+    )) as LyraReorderItem;
+    await el.updateComplete;
     expect(labelledText(el, 'move-up-button')).to.equal('Move up New');
     el.removeAttribute('aria-label');
     await el.updateComplete;

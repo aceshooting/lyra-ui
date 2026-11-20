@@ -18,10 +18,6 @@ import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import { sendKeys } from '@web/test-runner-commands';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-widget', 'compact');
@@ -2612,39 +2608,31 @@ it('applies tighter header/body padding at size="s" and smaller', async () => {
   }
 });
 
-describe("the deprecated compact alias of size", () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: "lr-widget", kind: "property", name: "compact" },
-  ];
-
+describe("the retired compact attribute and size", () => {
   it("uses size in either attribute order with the removed compact spelling", async () => {
     const sizes: string[] = [];
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      for (const markup of [
-        html`<lr-widget compact size="l"><p>Body</p></lr-widget>`,
-        html`<lr-widget size="l" compact><p>Body</p></lr-widget>`,
-      ]) {
-        const el = (await fixture(markup)) as LyraWidget;
-        sizes.push(el.size);
-      }
-    });
+    for (const markup of [
+      html`<lr-widget compact size="l"><p>Body</p></lr-widget>`,
+      html`<lr-widget size="l" compact><p>Body</p></lr-widget>`,
+    ]) {
+      const el = (await fixture(markup)) as LyraWidget;
+      sizes.push(el.size);
+    }
     expect(sizes).to.deep.equal(["l", "l"]);
   });
 
   it("ignores compact attribute changes after the first render", async () => {
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = (await fixture(
-        html`<lr-widget compact><p>Body</p></lr-widget>`
-      )) as LyraWidget;
-      expect(el.size).to.equal("m");
-      el.removeAttribute("compact");
-      await el.updateComplete;
-      expect(el.size).to.equal("m");
-      expect(el.getAttribute("size")).to.not.equal("s");
-      el.setAttribute("compact", "");
-      await el.updateComplete;
-      expect(el.size).to.equal("m");
-    });
+    const el = (await fixture(
+      html`<lr-widget compact><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    expect(el.size).to.equal("m");
+    el.removeAttribute("compact");
+    await el.updateComplete;
+    expect(el.size).to.equal("m");
+    expect(el.getAttribute("size")).to.not.equal("s");
+    el.setAttribute("compact", "");
+    await el.updateComplete;
+    expect(el.size).to.equal("m");
   });
 });
 
@@ -2821,7 +2809,6 @@ describe("storage-key persistence", () => {
 });
 
 describe("view-toggle active-state cssprops", () => {
-
   const overrides =
     "--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-active-color: rgb(255, 255, 255); --lr-widget-view-toggle-active-border-color: rgb(10, 20, 30);";
 
@@ -3127,7 +3114,6 @@ it("actually renders no mask under forced colors, in both LTR and RTL, while onl
 });
 
 describe("view-toggle pressed feedback", () => {
-
   async function moveMouseTo(target: HTMLElement): Promise<void> {
     target.scrollIntoView({ block: "center", inline: "center" });
     await nextFrames();

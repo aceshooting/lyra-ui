@@ -2,7 +2,6 @@ import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/
 import '../../lr-chip.js';
 import type { LyraChip } from '../../lr-chip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 class ChipLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -1628,8 +1627,6 @@ describe('chip control-guard hardening', () => {
 });
 
 describe('retired lr-chip-select alias', () => {
-  const CHIP_SELECT: readonly DeprecatedUsage[] = [{ tag: 'lr-chip', kind: 'event', name: 'lr-chip-select' }];
-
   it('fires only lr-chip-toggle-request with the proposed detail', async () => {
     const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
@@ -1642,26 +1639,22 @@ describe('retired lr-chip-select alias', () => {
         expect(event.cancelable, name).to.be.true;
       });
     }
-    const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
+    button.click();
     expect(order).to.deep.equal(['lr-chip-toggle-request']);
     expect(details[0]).to.deep.equal({ value: 'v1', selected: true });
     expect(details).to.have.length(1);
     expect(el.selected).to.be.true;
-    expect(warnings).to.have.length(0);
   });
 
   it('ignores the retired listener while toggling twice', async () => {
     const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     el.addEventListener('lr-chip-select', (event) => event.preventDefault());
-    const warnings = await captureDeprecationWarnings(CHIP_SELECT, async () => {
-      button.click();
-      button.click();
-      await el.updateComplete;
-    });
+    button.click();
+    button.click();
+    await el.updateComplete;
     expect(el.selected).to.be.false;
     expect(button.getAttribute('aria-pressed')).to.equal('false');
-    expect(warnings).to.have.length(0);
   });
 
   it('vetoes through the canonical event without a retired notification', async () => {
@@ -1672,10 +1665,9 @@ describe('retired lr-chip-select alias', () => {
     el.addEventListener('lr-chip-select', (event) => {
       aliasDetail = (event as CustomEvent).detail;
     });
-    const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
+    button.click();
     expect(aliasDetail).to.equal(undefined);
     expect(el.selected).to.be.true;
-    expect(warnings).to.have.length(0);
   });
 });
 

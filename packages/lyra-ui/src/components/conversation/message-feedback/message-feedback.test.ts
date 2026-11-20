@@ -1107,7 +1107,7 @@ it("disables reason chips and ignores their events while the whole control is di
   expect(chip.selected).to.be.false;
 });
 
-it("stops the internal chip events (lr-chip-toggle-request and its lr-chip-select alias) from leaking past the host", async () => {
+it("stops the internal lr-chip-toggle-request from leaking past the host", async () => {
   const el = (await fixture(
     html`<lr-message-feedback .detail=${{ reasons }}></lr-message-feedback>`
   )) as LyraMessageFeedback;
@@ -1118,7 +1118,6 @@ it("stops the internal chip events (lr-chip-toggle-request and its lr-chip-selec
   await el.updateComplete;
 
   const leaked: string[] = [];
-  el.addEventListener("lr-chip-select", () => leaked.push("lr-chip-select"));
   el.addEventListener("lr-chip-toggle-request", () => leaked.push("lr-chip-toggle-request"));
   const chip = el.shadowRoot!.querySelector(
     '[part="reasons"] lr-chip'

@@ -14,10 +14,6 @@ import {
   resetMouse,
   sendMouse,
 } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const loopErrors: string[] = [];
 window.addEventListener(
@@ -391,10 +387,6 @@ it('emits a non-cancelable lr-nav-open-change after navOpen commits, and not for
 });
 
 describe('lr-nav-toggle-request and its retired lr-nav-toggle alias', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-page', kind: 'event', name: 'lr-nav-toggle' },
-  ];
-
   it('fires only the canonical request with its cancelable detail', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     const seen: CustomEvent<{ open: boolean }>[] = [];
@@ -414,41 +406,36 @@ describe('lr-nav-toggle-request and its retired lr-nav-toggle alias', () => {
     expect(page.navOpen).to.be.true;
   });
 
-  it('vetoes through the canonical request without a warning or retired notification', async () => {
+  it('vetoes through the canonical request without a retired notification', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     let aliasPrevented: boolean | undefined;
     page.addEventListener('lr-nav-toggle-request', (event) => event.preventDefault());
     page.addEventListener('lr-nav-toggle', (event) => {
       aliasPrevented = event.defaultPrevented;
     });
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => page.showNavigation());
+    page.showNavigation();
     expect(page.navOpen).to.be.false;
     expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
-    expect(warnings).to.have.length(0);
   });
 
   it('ignores the retired listener when opening navigation', async () => {
     const results: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
-        page.addEventListener('lr-nav-toggle', (event) => event.preventDefault());
-        page.showNavigation();
-        results.push(page.navOpen);
-      }
-    });
+    for (let index = 0; index < 2; index += 1) {
+      const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+      page.addEventListener('lr-nav-toggle', (event) => event.preventDefault());
+      page.showNavigation();
+      results.push(page.navOpen);
+    }
     expect(results).to.deep.equal([true, true]);
-    expect(warnings).to.have.length(0);
   });
 
   it('does not notify a retired event listener', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     let observed = 0;
     page.addEventListener('lr-nav-toggle', () => (observed += 1));
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => page.toggleNavigation());
+    page.toggleNavigation();
     expect(observed).to.equal(0);
     expect(page.navOpen).to.be.true;
-    expect(warnings).to.have.length(0);
   });
 });
 
@@ -2561,4 +2548,27 @@ it('retires an allocation frame queued before adoption and measures the new owne
     window.ResizeObserver = OriginalObserver;
     window.requestAnimationFrame = originalFrame;
   }
+});
+
+it('slides a closed start or end drawer off its own logical edge, mirrored under RTL', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px"><button slot="navigation">Inside</button></lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const drawer = byPart(page, 'drawer');
+  const offEdge = async (edge: 'left' | 'right', label: string): Promise<void> => {
+    await page.updateComplete;
+    await waitUntil(() => {
+      const rect = drawer.getBoundingClientRect();
+      return rect.width > 0 && (edge === 'left' ? rect.right <= 1 : rect.left >= window.innerWidth - 1);
+    }, `${label}: the closed drawer is not parked beyond the ${edge} edge`);
+  };
+  await offEdge('left', 'ltr start');
+  page.navigationPlacement = 'end';
+  await offEdge('right', 'ltr end');
+  page.dir = 'rtl';
+  await offEdge('left', 'rtl end');
+  page.navigationPlacement = 'start';
+  await offEdge('right', 'rtl start');
 });

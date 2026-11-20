@@ -3,17 +3,14 @@ import { render } from 'lit';
 import './xml-viewer-register.js';
 import { XML_VIEWER_TAG } from './xml-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
-
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const xml: LyraDocumentFile = { name: 'data.xml', mimeType: 'application/xml', src: 'https://example.test/data.xml' };
 const rss: LyraDocumentFile = { name: 'feed.rss', mimeType: 'application/octet-stream', src: 'https://example.test/feed.rss' };
 
 describe('xml-viewer-register laziness', () => {
   it('never fetches the xml-viewer class module merely by importing the register-only entry', () => {
-    expect(fetchedModuleEnding('/xml-viewer.class.ts')).to.equal(false);
+    expect(fetchedModule('/xml-viewer.class.ts', { control: '/xml-viewer-register.ts' })).to.equal(false);
     expect(customElements.get(XML_VIEWER_TAG)).to.equal(undefined);
   });
 
@@ -36,7 +33,7 @@ describe('xml registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(xml)!);
-    expect(fetchedModuleEnding('/xml-viewer.class.ts')).to.equal(true);
+    expect(fetchedModule('/xml-viewer.class.ts')).to.equal(true);
     expect(customElements.get(XML_VIEWER_TAG)).to.not.equal(undefined);
 
     const anchor = { kind: 'node-path' as const, path: ['root', 0, 'child'] };

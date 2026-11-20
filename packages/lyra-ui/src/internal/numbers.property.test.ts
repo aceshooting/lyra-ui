@@ -3,6 +3,8 @@ import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
 import {
   MAX_TIMEOUT_MS,
+  clamp,
+  clampIndex,
   decimalPlaces,
   extent,
   finiteAdd,
@@ -15,6 +17,7 @@ import {
   finiteRange,
   finiteRatio,
   minMax,
+  nearestEnabledIndex,
 } from './numbers.js';
 
 // Comparisons use `===`, `<=` and chai's strict `equal`, never an `Object.is` check: 0 and -0 are the
@@ -296,5 +299,49 @@ describe('numbers properties', () => {
     );
     expect(minMax([])).to.equal(null);
     expect(extent([], (value: number) => value, (value: number) => value)).to.equal(null);
+  });
+
+  it('clamp stays inside finite ordered bounds for every value, sending NaN to the lower bound', () => {
+    fc.assert(
+      fc.property(anyDouble, finite, finite, (value, first, second) => {
+        const min = Math.min(first, second), max = Math.max(first, second);
+        const result = clamp(value, min, max);
+        expect(result >= min && result <= max, `clamp(${value}, ${min}, ${max}) = ${result}`).to.equal(true);
+        if (Number.isNaN(value)) expect(result).to.equal(min);
+        else expect(result).to.equal(Math.min(max, Math.max(min, value)));
+      }),
+      { ...propertyRuns(), examples: [[NaN, 0, 1], [Infinity, 0, 1], [-Infinity, 0, 1]] as [number, number, number][] },
+    );
+  });
+
+  it('clampIndex returns an in-range integer index, or -1 when there is nothing to index', () => {
+    fc.assert(
+      fc.property(anyDouble, fc.integer({ min: -2, max: 50 }), (index, count) => {
+        const result = clampIndex(index, count);
+        if (count <= 0) expect(result, `clampIndex(${index}, ${count})`).to.equal(-1);
+        else {
+          expect(Number.isInteger(result) && result >= 0 && result < count, `clampIndex(${index}, ${count}) = ${result}`).to.equal(true);
+          if (Number.isInteger(index) && index >= 0 && index < count) expect(result).to.equal(index);
+        }
+      }),
+      { ...propertyRuns(), examples: [[NaN, 3], [Infinity, 3], [-Infinity, 3], [1.5, 3]] as [number, number][] },
+    );
+    expect(clampIndex(NaN, NaN)).to.equal(-1);
+    expect(clamp(NaN, -1, 1)).to.equal(-1);
+  });
+
+  it('nearestEnabledIndex picks the closest enabled index forward first, then backward', () => {
+    fc.assert(
+      fc.property(anyDouble, fc.array(fc.boolean(), { maxLength: 20 }), (index, disabled) => {
+        const result = nearestEnabledIndex(index, disabled.length, (at) => disabled[at]!);
+        const start = clampIndex(index, disabled.length);
+        const forward = disabled.findIndex((off, at) => at >= start && !off);
+        let backward = -1;
+        for (let at = start - 1; at >= 0 && backward < 0; at -= 1) if (!disabled[at]) backward = at;
+        const expected = start < 0 ? -1 : forward >= 0 ? forward : backward;
+        expect(result, `nearestEnabledIndex(${index}, [${disabled.join(',')}])`).to.equal(expected);
+      }),
+      propertyRuns(),
+    );
   });
 });

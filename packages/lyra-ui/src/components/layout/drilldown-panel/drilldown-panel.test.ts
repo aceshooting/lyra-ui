@@ -16,10 +16,6 @@ import type { LyraDocumentPreview } from "../../lr-document-preview.js";
 import type { LyraEntityCard } from "../../lr-entity-card.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-drilldown-panel', 'show-focus-button');
@@ -994,11 +990,7 @@ it('honors the plain without-focus-button attribute form, not just a property bi
   expect(card.withoutFocusButton).to.be.true;
 });
 
-describe("lr-drilldown-panel: without-focus-button and the deprecated inverted show-focus-button alias", () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: "lr-drilldown-panel", kind: "property", name: "showFocusButton" },
-  ];
-
+describe("lr-drilldown-panel: without-focus-button and the retired show-focus-button attribute", () => {
   async function entitiesCard(el: LyraDrilldownPanel): Promise<LyraEntityCard> {
     el.path = [nodeWithAllCategories];
     el.activeCategory = "entities";
@@ -1011,44 +1003,37 @@ describe("lr-drilldown-panel: without-focus-button and the deprecated inverted s
       (await fixture(html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`)) as LyraDrilldownPanel
     );
     const cards: LyraEntityCard[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = (await fixture(
-          html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
-        )) as LyraDrilldownPanel;
-        expect(el.withoutFocusButton).to.be.false;
-        cards.push(await entitiesCard(el));
-      }
-    });
-    for (const card of cards) expect(card.withoutFocusButton).to.not.equal(canonical.withoutFocusButton);
-    expect(warnings).to.have.length(0);
-  });
-
-  it("uses the canonical state regardless of attribute order between without-focus-button and show-focus-button", async () => {
-    const results: boolean[] = [];
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      for (const markup of [
-        html`<lr-drilldown-panel show-focus-button without-focus-button></lr-drilldown-panel>`,
-        html`<lr-drilldown-panel without-focus-button show-focus-button></lr-drilldown-panel>`,
-      ]) {
-        const el = (await fixture(markup)) as LyraDrilldownPanel;
-        results.push(el.withoutFocusButton);
-      }
-    });
-    expect(results).to.deep.equal([true, true]);
-  });
-
-  it("ignores show-focus-button changes after the first render", async () => {
-    await captureDeprecationWarnings(aliasUsage, async () => {
+    for (let index = 0; index < 2; index += 1) {
       const el = (await fixture(
         html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
       )) as LyraDrilldownPanel;
       expect(el.withoutFocusButton).to.be.false;
-      el.removeAttribute("show-focus-button");
-      await el.updateComplete;
-      expect(el.withoutFocusButton).to.be.false;
-      expect((await entitiesCard(el)).withoutFocusButton).to.be.false;
-    });
+      cards.push(await entitiesCard(el));
+    }
+    for (const card of cards) expect(card.withoutFocusButton).to.not.equal(canonical.withoutFocusButton);
+  });
+
+  it("uses the canonical state regardless of attribute order between without-focus-button and show-focus-button", async () => {
+    const results: boolean[] = [];
+    for (const markup of [
+      html`<lr-drilldown-panel show-focus-button without-focus-button></lr-drilldown-panel>`,
+      html`<lr-drilldown-panel without-focus-button show-focus-button></lr-drilldown-panel>`,
+    ]) {
+      const el = (await fixture(markup)) as LyraDrilldownPanel;
+      results.push(el.withoutFocusButton);
+    }
+    expect(results).to.deep.equal([true, true]);
+  });
+
+  it("ignores show-focus-button changes after the first render", async () => {
+    const el = (await fixture(
+      html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
+    )) as LyraDrilldownPanel;
+    expect(el.withoutFocusButton).to.be.false;
+    el.removeAttribute("show-focus-button");
+    await el.updateComplete;
+    expect(el.withoutFocusButton).to.be.false;
+    expect((await entitiesCard(el)).withoutFocusButton).to.be.false;
   });
 });
 

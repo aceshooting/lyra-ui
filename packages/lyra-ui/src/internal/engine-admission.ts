@@ -57,10 +57,11 @@ export interface EngineAdmissionOptions {
  * Waits until `surface` intersects the viewport and `host` is exposed (not hidden, inert or
  * aria-hidden through any composed ancestor), then calls `onAdmit` once. A fence lifted from an
  * ancestor changes no geometry, so the fences are observed too, only while admission is pending.
- * A window without `IntersectionObserver` never withholds admission. Returns the disposer; a report
- * queued before disposal is ignored.
+ * A window without `IntersectionObserver` never withholds admission. Returns the disposer while
+ * admission is pending (a report queued before disposal is ignored), or `undefined` when it already
+ * admitted during this call, so a caller can store the result as its pending-admission handle.
  */
-export function observeAdmission(host: Element, surface: Element, options: EngineAdmissionOptions): () => void {
+export function observeAdmission(host: Element, surface: Element, options: EngineAdmissionOptions): (() => void) | undefined {
   let settled = false;
   let intersection: IntersectionObserver | undefined;
   let releaseFences: (() => void) | undefined;
@@ -91,5 +92,5 @@ export function observeAdmission(host: Element, surface: Element, options: Engin
   intersecting = host.isConnected && !intersection;
   releaseFences = observeAncestorFences(host, admit);
   admit();
-  return release;
+  return settled ? undefined : release;
 }

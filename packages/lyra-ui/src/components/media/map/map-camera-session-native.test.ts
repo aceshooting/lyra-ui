@@ -7,6 +7,7 @@ import { createMapCameraSessionController } from '../../../internal/map-camera-s
 import { createSimulationClock, type ClockScheduler } from '../../../simulation-clock.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 interface NativeCamera {
@@ -68,7 +69,7 @@ function zoomIn(element: LyraMap): HTMLButtonElement {
 describe('camera sessions with native map engines', function () {
   this.timeout(45000);
   let workerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { workerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(async () => {
     await resetMouse();

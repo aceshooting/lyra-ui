@@ -194,17 +194,11 @@ export class Chart3dEngineController {
    */
   private awaitAdmission(container: HTMLElement): void {
     const generation = this.generation;
-    let admitted = false;
-    const admission = observeAdmission(this.host, container, {
+    this.admission = observeAdmission(this.host, container, {
       isReady: () => generation === this.generation && !this.attempted,
       isExposed: () => chart3dEngineEnvironment.visible(this.host),
-      onAdmit: () => {
-        admitted = true;
-        this.admission = undefined;
-        void this.start();
-      },
+      onAdmit: () => { this.admission = undefined; void this.start(); },
     });
-    if (!admitted) this.admission = admission;
   }
 
   /**

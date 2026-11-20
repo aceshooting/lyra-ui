@@ -5,9 +5,6 @@ import '../../lr-markdown.js';
 import '../../lr-markdown-core.js';
 import type { MarkdownStreamingRenderMode } from './markdown-base.class.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
-import {
-  captureDeprecationWarnings,
-} from '../../../../test/expected-deprecations.js';
 
 const tags = ['lr-markdown', 'lr-markdown-core'] as const;
 const fencedSource = 'const message = "<b> & café 🚀";\n';
@@ -192,18 +189,14 @@ for (const tagName of tags) {
 
 for (const tagName of tags) {
   describe(`${tagName} canonical code-block-header spelling`, () => {
-
-    it('never warns for code-block-header', async () => {
+    it('renders the code-block header with codeBlockHeader', async () => {
       let headerCount = 0;
-      const warnings = await captureDeprecationWarnings([], async () => {
-        const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
-        await waitForMarkdown(el, '[part="code-block-header"]');
-        headerCount = headers(el).length;
-        el.codeBlockHeader = true;
-        await el.updateComplete;
-      });
+      const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
+      await waitForMarkdown(el, '[part="code-block-header"]');
+      headerCount = headers(el).length;
+      el.codeBlockHeader = true;
+      await el.updateComplete;
       expect(headerCount).to.equal(1);
-      expect(warnings).to.have.length(0);
     });
 
   });

@@ -1,6 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import '../../lr-sparkline.js';
 import type { LyraSparkline } from '../../lr-sparkline.js';
+import type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
@@ -579,4 +581,58 @@ it('uses the generated name for a whitespace-only label or accessibleLabel', asy
   const name = el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label') ?? '';
   expect(name.trim()).to.not.equal('');
   expect(name).to.contain('4');
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key `<lr-sparkline>` localizes, each proven to reach the rendered DOM through a `.strings`
+  // override. Markers are distinctive (not the production English) so a dropped override fails.
+  const strings = {
+    noData: 'EMPTY-MARKER',
+    trendOf: 'TREND-MARKER {count} {value}',
+    chartPreparedSummary: 'PREPARED-MARKER {validCount}/{invalidCount}/{displayedCount}',
+    chartSummary: 'DOMAIN-MARKER {label} {count} {min} {max} {trend}',
+    chartSummarySeparator: ' SEP-MARKER ',
+    chartTrendIncreasing: 'UP-MARKER',
+    chartTrendDecreasing: 'DOWN-MARKER',
+    chartTrendFlat: 'FLAT-MARKER',
+    chartPreparedUnavailable: 'UNAVAILABLE-MARKER',
+  };
+  const prepared = (ys: readonly number[]): LyraPreparedSeriesData => ({
+    kind: 'series', revision: `r${ys.join()}`, getPoint: () => undefined, series: [{
+      id: 's', label: 'Signal', counts: { sourceCount: ys.length + 1, validCount: ys.length, invalidCount: 1 },
+      xDomain: ys.length ? { min: 0, max: 1 } : null, yDomain: ys.length ? { min: 0, max: 9 } : null,
+      samples: ys.map((y, x) => ({ x, y, sourceIndex: x, breakBefore: x === 0 })),
+    }],
+  } as unknown as LyraPreparedSeriesData);
+  const name = (el: LyraSparkline) => el.shadowRoot!.querySelector('svg')?.getAttribute('aria-label') ?? '';
+
+  it('routes noData and trendOf to the accessible name', async () => {
+    const el = await fixture<LyraSparkline>(html`<lr-sparkline .strings=${strings}></lr-sparkline>`);
+    expect(name(el)).to.equal('EMPTY-MARKER');
+    el.data = '1 2 3';
+    await el.updateComplete;
+    expect(name(el)).to.equal('TREND-MARKER 3 3');
+  });
+
+  it('routes the prepared summary, domain, separator and every trend word to the accessible name', async () => {
+    const el = await fixture<LyraSparkline>(html`<lr-sparkline .strings=${strings}></lr-sparkline>`);
+    for (const [ys, trend] of [[[0, 9], 'UP-MARKER'], [[9, 0], 'DOWN-MARKER'], [[4, 4], 'FLAT-MARKER']] as const) {
+      el.preparedData = prepared(ys);
+      await el.updateComplete;
+      expect(name(el)).to.equal(`DOMAIN-MARKER Signal 2 0 9 ${trend} SEP-MARKER PREPARED-MARKER 2/1/2`);
+    }
+    el.preparedData = prepared([]);
+    await el.updateComplete;
+    expect(name(el)).to.equal('PREPARED-MARKER 0/1/0');
+  });
+
+  it('routes chartPreparedUnavailable to the status part and the assertive announcement', async () => {
+    const el = await fixture<LyraSparkline>(html`<lr-sparkline .strings=${strings}></lr-sparkline>`);
+    const valid = prepared([1, 2]);
+    el.preparedData = { ...valid, series: [valid.series[0]!, { ...valid.series[0]!, id: 'other' }] };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('UNAVAILABLE-MARKER');
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(sinkTexts('assertive')).to.include('UNAVAILABLE-MARKER');
+  });
 });

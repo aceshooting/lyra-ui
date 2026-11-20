@@ -3,7 +3,6 @@ import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import "../../lr-drawer.js";
 import type { LyraDrawer } from "../../lr-drawer.js";
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
 import { toRgba } from '../../../../test/color-contrast.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -921,10 +920,6 @@ it('returns focus to an opener the host hides while open and re-shows after lr-h
 });
 
 describe('lr-drawer renamed members', () => {
-  const CLOSABLE: readonly DeprecatedUsage[] = [{ tag: 'lr-drawer', kind: 'property', name: 'closable' }];
-  const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
-    { tag: 'lr-drawer', kind: 'attribute', name: 'accessible-label' },
-  ];
   const mount = async (markup: string): Promise<LyraDrawer> => {
     const host = await fixture<HTMLDivElement>(html`<div></div>`);
     host.innerHTML = markup;
@@ -937,20 +932,17 @@ describe('lr-drawer renamed members', () => {
   const panelName = (el: LyraDrawer): string | null =>
     el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label');
 
-  it('removes the close button with without-close-button and keeps it by default, without warning', async () => {
-    const warnings = await captureDeprecationWarnings(CLOSABLE, async () => {
-      const bare = await mount('<lr-drawer open label="Title">Body</lr-drawer>');
-      expect(bare.withoutCloseButton).to.be.false;
-      expect(closeButtons(bare)).to.equal(1);
-      expect(bare.hasAttribute('without-close-button')).to.be.false;
-      await bare.close('api');
-      const without = await mount('<lr-drawer open label="Title" without-close-button>Body</lr-drawer>');
-      expect(closeButtons(without)).to.equal(0);
-      expect('closable' in without).to.equal(false);
-      await expect(without).to.be.accessible();
-      await without.close('api');
-    });
-    expect(warnings).to.have.length(0);
+  it('removes the close button with without-close-button and keeps it by default', async () => {
+    const bare = await mount('<lr-drawer open label="Title">Body</lr-drawer>');
+    expect(bare.withoutCloseButton).to.be.false;
+    expect(closeButtons(bare)).to.equal(1);
+    expect(bare.hasAttribute('without-close-button')).to.be.false;
+    await bare.close('api');
+    const without = await mount('<lr-drawer open label="Title" without-close-button>Body</lr-drawer>');
+    expect(closeButtons(without)).to.equal(0);
+    expect('closable' in without).to.equal(false);
+    await expect(without).to.be.accessible();
+    await without.close('api');
   });
 
   it('names the panel through host aria-label while ignoring accessible-label', async () => {
@@ -959,24 +951,19 @@ describe('lr-drawer renamed members', () => {
     await expect(canonical).to.be.accessible();
     canonical.close('api');
     let aliased!: LyraDrawer;
-    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-      aliased = await mount('<lr-drawer open accessible-label="Announced">Body</lr-drawer>');
-      await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
-    });
+    aliased = await mount('<lr-drawer open accessible-label="Announced">Body</lr-drawer>');
+    await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
     expect(panelName(aliased)).to.equal(null);
-    expect(warnings).to.have.length(0);
     aliased.close('api');
   });
 
-  it('lets the host aria-label win over the deprecated accessible-label', async () => {
-    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-      const el = await mount('<lr-drawer open accessible-label="Alias" aria-label="Host">Body</lr-drawer>');
-      expect(panelName(el)).to.equal('Host');
-      el.removeAttribute('aria-label');
-      await el.updateComplete;
-      expect(panelName(el)).to.equal(null);
-      el.close('api');
-    });
+  it('lets the host aria-label win over the retired accessible-label', async () => {
+    const el = await mount('<lr-drawer open accessible-label="Alias" aria-label="Host">Body</lr-drawer>');
+    expect(panelName(el)).to.equal('Host');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(panelName(el)).to.equal(null);
+    el.close('api');
   });
 
   it('forwards the close control under close-button-control without its removed close-button__control alias', async () => {

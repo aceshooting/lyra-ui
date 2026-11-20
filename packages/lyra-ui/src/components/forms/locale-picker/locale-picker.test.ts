@@ -13,18 +13,9 @@ import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLoc
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import { setForcedColors } from "../../../../test/wtr-media.js";
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-locale-picker', 'show-flags');
-
-// The compatibility tests below deliberately use the deprecated show-flags alias, which keeps
-// working until its removal.
-expectDeprecatedUsage('lr-locale-picker', 'property', 'showFlags');
 
 // These selection/formatting fixtures intentionally omit a translated catalog. Declare only
 // their expected English fallbacks; warnings for any other key or locale stay visible.
@@ -980,10 +971,7 @@ it('unset (only locales, or nothing) renders deterministically with no other new
 //    setter edge cases, form-state restoration, type-ahead edge cases, keyboard
 //    edge cases, and aria/describedby wiring. -------------------------------
 
-describe('deprecated show-flags alias', () => {
-  const usage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-locale-picker', kind: 'property', name: 'showFlags' },
-  ];
+describe('retired show-flags alias', () => {
   const flagCount = async (el: LyraLocalePicker): Promise<number> => {
     el.open = true;
     await el.updateComplete;
@@ -991,24 +979,21 @@ describe('deprecated show-flags alias', () => {
   };
 
   it('keeps the flags for a bare or true show-flags attribute', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      for (const el of [
-        (await fixture(html`<lr-locale-picker show-flags value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker,
-        (await fixture(html`<lr-locale-picker show-flags="true" value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker,
-      ]) {
-        expect(el.withoutFlags).to.equal(false);
-        expect(await flagCount(el)).to.equal(2);
-      }
-    });
-    expect(warnings, 'an alias write that leaves the default unchanged is not a change').to.have.length(0);
+    for (const el of [
+      (await fixture(html`<lr-locale-picker show-flags value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker,
+      (await fixture(html`<lr-locale-picker show-flags="true" value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker,
+    ]) {
+      expect(el.withoutFlags).to.equal(false);
+      expect(await flagCount(el)).to.equal(2);
+    }
   });
 
-  it('does not warn for the canonical without-flags or an unset alias', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      await fixture(html`<lr-locale-picker without-flags .locales=${['fr']}></lr-locale-picker>`);
-      await fixture(html`<lr-locale-picker .locales=${['fr']}></lr-locale-picker>`);
-    });
-    expect(warnings).to.have.length(0);
+  it('renders the canonical without-flags and the default flags', async () => {
+    const without = (await fixture(html`<lr-locale-picker without-flags value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker;
+    const plain = (await fixture(html`<lr-locale-picker value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker;
+    expect(without.withoutFlags).to.equal(true);
+    expect(await flagCount(without)).to.equal(0);
+    expect(await flagCount(plain)).to.equal(2);
   });
 
 });

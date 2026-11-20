@@ -4,20 +4,14 @@ import './pdf-viewer-register.js';
 import { PDF_VIEWER_TAG } from './pdf-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
-
-/** True once the browser has actually fetched a module whose URL ends with `suffix` -- the
- *  reliable proxy for "reached by the static import graph" under `@web/test-runner`'s unbundled
- *  ESM serving (mirrors `toaster.test.ts`'s identical helper). */
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const pdf: LyraDocumentFile = { name: 'report.pdf', mimeType: 'application/pdf', src: 'https://example.test/report.pdf' };
 
 describe('pdf-viewer-register laziness', () => {
   it('never fetches the pdf-viewer class module merely by importing the register-only entry', () => {
     expect(
-      fetchedModuleEnding('/pdf-viewer.class.ts'),
+      fetchedModule('/pdf-viewer.class.ts', { control: '/pdf-viewer-register.ts' }),
       'importing pdf-viewer-register.js alone must not pull in pdf-viewer.class.ts',
     ).to.equal(false);
     expect(customElements.get(PDF_VIEWER_TAG), 'the element must stay unregistered').to.equal(undefined);
@@ -40,7 +34,7 @@ describe('pdf registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(pdf)!);
-    expect(fetchedModuleEnding('/pdf-viewer.class.ts'), 'loading must now fetch the class module').to.equal(
+    expect(fetchedModule('/pdf-viewer.class.ts'), 'loading must now fetch the class module').to.equal(
       true,
     );
     expect(customElements.get(PDF_VIEWER_TAG)).to.not.equal(undefined);

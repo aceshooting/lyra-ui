@@ -4,10 +4,6 @@ import '../../lr-claim-evidence.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraClaimEvidence } from '../../lr-claim-evidence.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const claims: GroundedClaim[] = [
   {
@@ -562,22 +558,18 @@ describe('lr-claim-evidence render cap', () => {
 });
 
 describe('lr-claim-evidence size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-claim-evidence', kind: 'property', name: 'compact' }];
   const observe = (el: LyraClaimEvidence): string => {
     const trigger = getComputedStyle(el.shadowRoot!.querySelector('[part="claim-trigger"]')!);
     return `${trigger.paddingInlineStart}|${trigger.columnGap}`;
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraClaimEvidence>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-claim-evidence size="s" .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
-      regular = observe(await mount(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
-    });
+    dense = observe(await mount(html`<lr-claim-evidence size="s" .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+    regular = observe(await mount(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
     expect(dense).to.not.equal(regular);
-    expect(warnings).to.have.length(0);
   });
 });
 

@@ -2,25 +2,17 @@ import { assertStreamingTextWhitespace } from '../../../../test/contracts/stream
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-streaming-text-core.js';
 import type { LyraStreamingTextCore } from '../../lr-streaming-text-core.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
-
-/** True once the browser has actually fetched a module whose URL ends with `suffix` -- the
- *  reliable proxy for "reached by the static import graph" under `@web/test-runner`'s unbundled
- *  ESM serving, where every distinct specifier is its own HTTP resource (mirrors
- *  `toaster.test.ts`'s identical helper). */
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 describe('lr-streaming-text-core registration', () => {
   it('registers lr-streaming-text-core and lr-markdown-core, and never fetches the full lr-markdown class module', () => {
     expect(customElements.get('lr-streaming-text-core')).to.exist;
     expect(customElements.get('lr-markdown-core')).to.exist;
     expect(
-      fetchedModuleEnding('/markdown/markdown.class.ts'),
+      fetchedModule('/markdown/markdown.class.ts', { control: '/lr-streaming-text-core.ts' }),
       'the core entry must never pull in the full lr-markdown class module',
     ).to.equal(false);
-    expect(fetchedModuleEnding('/markdown/markdown-core.class.ts')).to.equal(true);
+    expect(fetchedModule('/markdown/markdown-core.class.ts')).to.equal(true);
   });
 });
 
@@ -421,14 +413,12 @@ describe('canonical code-block-header spelling', () => {
   const headerCount = (el: LyraStreamingTextCore): number =>
     innerMarkdown(el)?.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0;
 
-  it('never warns for code-block-header', async () => {
-    const warnings = await captureDeprecationWarnings([], async () => {
-      const el = await fixture<LyraStreamingTextCore>(
-        html`<lr-streaming-text-core content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text-core>`
-      );
-      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
-    });
-    expect(warnings).to.have.length(0);
+  it('renders the code-block header with code-block-header', async () => {
+    const el = await fixture<LyraStreamingTextCore>(
+      html`<lr-streaming-text-core content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text-core>`
+    );
+    await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+    expect(headerCount(el)).to.equal(1);
   });
 
 });

@@ -1,5 +1,6 @@
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { readCanvasRgba } from '../../../internal/canvas-color.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { renderNativeSearch } from '../../../internal/native-search.js';
@@ -73,6 +74,7 @@ import type { GraphSpatialController } from './graph-spatial-controller.js';
 import { normalizeGraphCamera, spatialNodePosition } from './graph-spatial-model.js';
 import type { layeredLayout } from '../../../internal/layered-layout.js';
 import {
+  clampIndex,
   finiteNumber,
   finiteRange,
   finiteInteger,
@@ -361,7 +363,7 @@ export interface LyraGraphEventMap {
   /** A hull was activated by pointer or keyboard. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;
   /** Frame-coalesced pan/zoom/layout signal — see the class doc's `lr-viewport-change` event entry. */
-  'lr-viewport-change': CustomEvent<{ zoom: number; x: number; y: number; k: number }>;
+  'lr-viewport-change': CustomEvent<{ zoom: number; x: number; y: number }>;
 }
 /**
  * `<lr-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -470,8 +472,8 @@ export interface LyraGraphEventMap {
  *   `selectedNodeIds`/`selectedEdgeIds` itself -- controlled, mirroring `lr-heatmap.selectedCell`.
  * @event lr-community-activate - A hull was activated by pointer or keyboard.
  *   `detail: { communityId }`.
- * @event lr-viewport-change - `detail: { zoom, x, y }` (as on `lr-flow-canvas`; `k` is a deprecated
- *   alias of `zoom`), the live d3-zoom camera transform. Fires at
+ * @event lr-viewport-change - `detail: { zoom, x, y }` (as on `lr-flow-canvas`), the live d3-zoom
+ *   camera transform. Fires at
  *   most once per animation frame regardless of how many pan/zoom/simulation-tick updates land
  *   within it, coalescing every source that can move a rendered node's screen position -- a user
  *   pan/zoom gesture, `focusNode()`/`fit()`'s camera tween, and every d3-force simulation tick
@@ -721,8 +723,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.compositionPublished = signature;
     const currentSource = this.sourceAuthority();
     const current = () => currentSource() && this.sourceComposition.profile === profile && this.sourcePages.state === state;
-    if (current()) profile.accepted(Object.freeze({ query: this.sourceQuery, page: finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER),
-      pageSize: normalizeSourcePageSize(this.sourcePageSize), total: this.sourceTotal, current }));
+    const pageSize = normalizeSourcePageSize(this.sourcePageSize);
+    if (current()) profile.accepted(Object.freeze({ query: this.sourceQuery, page: normalizeSourcePage(this.sourcePage, pageSize),
+      pageSize, total: this.sourceTotal, current }));
   }
 
   /** Full host-owned graph. Node keys are node:<id>; edge keys are edge:<id> with explicit edge IDs.
@@ -1456,7 +1459,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private danglingLinkEls: SVGLineElement[] = [];
   private edgeLabelMeasureCanvas?: HTMLCanvasElement;
   private edgeLabelMeasureCtx?: CanvasRenderingContext2D | null;
-  private linkPaintProbe?: HTMLCanvasElement;
   private readonly linkPaintVisibilityCache = new Map<string, boolean>();
   private readonly resolvedCssColorCache = new Map<string, string>();
   private reducedMotion = false;
@@ -1853,7 +1855,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         zoom: transform.k,
         x: transform.x,
         y: transform.y,
-        k: transform.k,
       });
     });
   }
@@ -1904,25 +1905,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (cached !== undefined) return cached;
     // Canvas parsing supplies the effective alpha for modern CSS colors such as color(),
     // color-mix(), lab()/oklab() and translucent system colors without duplicating their grammar.
-    // A parser/readback failure stays operable (the opaque sentinel), avoiding a false claim that
-    // an unfamiliar but visible color is transparent.
-    this.linkPaintProbe ??= this.ownerDocument.createElement('canvas');
-    this.linkPaintProbe.width = 1;
-    this.linkPaintProbe.height = 1;
-    const context = this.linkPaintProbe.getContext('2d', {
-      willReadFrequently: true,
-    });
-    if (!context) return true;
-    let visible = true;
-    try {
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = 'rgb(1 2 3)';
-      context.fillStyle = color;
-      context.fillRect(0, 0, 1, 1);
-      visible = context.getImageData(0, 0, 1, 1).data[3] !== 0;
-    } catch {
-      visible = true;
-    }
+    // A parser/readback failure stays operable, avoiding a false claim that an unfamiliar but
+    // visible color is transparent.
+    const visible = readCanvasRgba(this.ownerDocument, color)?.[3] !== 0;
     this.linkPaintVisibilityCache.set(color, visible);
     return visible;
   }
@@ -4805,7 +4790,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private normalizedGraphItem(index = this.activeGraphItem): number {
     const count = this.graphItemCount();
-    return count ? Math.min(Math.max(index, 0), count - 1) : -1;
+    return clampIndex(index, count);
   }
 
   private graphItemIdentity(index: number): GraphItemIdentity | undefined {

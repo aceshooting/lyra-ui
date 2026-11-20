@@ -15,7 +15,7 @@ import { AllocationObserverController } from '../../../internal/owned-observer.j
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { isElementNode } from '../../../internal/dom-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { finiteCount, finiteInteger, nearestEnabledIndex } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
@@ -486,17 +486,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   /** Returns the nearest enabled cell, preferring forward then backward; `-1` means none exists. */
   private nearestEnabledCellIndex(cells: readonly SequenceStripCell[], index: number): number {
-    const count = cells.length;
-    if (!count) return -1;
-    const clamped = Math.min(Math.max(index, 0), count - 1);
-    if (!this.cellDisabled(cells[clamped]!)) return clamped;
-    for (let forward = clamped + 1; forward < count; forward += 1) {
-      if (!this.cellDisabled(cells[forward]!)) return forward;
-    }
-    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
-      if (!this.cellDisabled(cells[backward]!)) return backward;
-    }
-    return -1;
+    return nearestEnabledIndex(index, cells.length, (at) => this.cellDisabled(cells[at]!));
   }
 
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the

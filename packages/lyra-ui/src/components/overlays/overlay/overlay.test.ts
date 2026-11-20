@@ -11,7 +11,6 @@ import '../../lr-button.js';
 import '../../lr-icon-button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 type PositionedOverlay = LyraPopover | LyraTooltip;
 
@@ -3366,8 +3365,7 @@ describe('top-layer escape specifics', () => {
 });
 
 for (const tag of ['lr-popover', 'lr-tooltip'] as const) {
-  describe(`${tag} deprecated arrow alias`, () => {
-    const ARROW: readonly DeprecatedUsage[] = [{ tag, kind: 'property', name: 'arrow' }];
+  describe(`${tag} retired arrow alias`, () => {
     const body = tag === 'lr-popover'
       ? '<button slot="trigger">Open</button><p>Details</p>'
       : '<button slot="trigger">Help</button>Explanation';
@@ -3380,39 +3378,29 @@ for (const tag of ['lr-popover', 'lr-tooltip'] as const) {
     };
     const arrows = (el: Element): number => el.shadowRoot!.querySelectorAll('[part~="arrow"]').length;
 
-    it('renders the arrow by default and drops it for without-arrow, without warning', async () => {
-      const warnings = await captureDeprecationWarnings(ARROW, async () => {
-        const bare = await mount('');
-        expect(arrows(bare)).to.equal(1);
-        expect(bare.withoutArrow).to.be.false;
-        expect(bare.hasAttribute('arrow')).to.be.false;
-        const without = await mount('without-arrow');
-        expect(arrows(without)).to.equal(0);
-        expect('arrow' in without).to.equal(false);
-      });
-      expect(warnings).to.have.length(0);
+    it('renders the arrow by default and drops it for without-arrow', async () => {
+      const bare = await mount('');
+      expect(arrows(bare)).to.equal(1);
+      expect(bare.withoutArrow).to.be.false;
+      expect(bare.hasAttribute('arrow')).to.be.false;
+      const without = await mount('without-arrow');
+      expect(arrows(without)).to.equal(0);
+      expect('arrow' in without).to.equal(false);
     });
 
   });
 }
 
 describe('lr-dropdown arrow and hyphenated popup parts', () => {
-  const ARROW: readonly DeprecatedUsage[] = [
-    { tag: 'lr-popover', kind: 'property', name: 'arrow' },
-  ];
-
-  it('shows its arrow by default and hides it with without-arrow without warnings', async () => {
+  it('shows its arrow by default and hides it with without-arrow', async () => {
     let bare!: LyraDropdown;
     let opted!: LyraDropdown;
-    const warnings = await captureDeprecationWarnings(ARROW, async () => {
-      bare = await fixture<LyraDropdown>(
-        html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
-      );
-      opted = await fixture<LyraDropdown>(
-        html`<lr-dropdown open without-arrow><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
-      );
-    });
-    expect(warnings).to.have.length(0);
+    bare = await fixture<LyraDropdown>(
+      html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+    );
+    opted = await fixture<LyraDropdown>(
+      html`<lr-dropdown open without-arrow><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+    );
     expect(bare.withoutArrow).to.equal(false);
     expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
     expect(opted.withoutArrow).to.equal(true);
@@ -3445,8 +3433,8 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
 describe('lr-tooltip background custom property', () => {
   for (const [name, style] of [
     ['canonical --lr-tooltip-bg', '--lr-tooltip-bg: rgb(1, 2, 3);'],
-    ['deprecated --lr-tooltip-background', '--lr-tooltip-background: rgb(1, 2, 3);'],
-    ['canonical over deprecated', '--lr-tooltip-bg: rgb(1, 2, 3); --lr-tooltip-background: rgb(9, 9, 9);'],
+    ['retired --lr-tooltip-background', '--lr-tooltip-background: rgb(1, 2, 3);'],
+    ['canonical over retired', '--lr-tooltip-bg: rgb(1, 2, 3); --lr-tooltip-background: rgb(9, 9, 9);'],
   ] as const) {
     it(`paints the bubble and its arrow from ${name}`, async () => {
       const el = await fixture<LyraTooltip>(
@@ -3454,8 +3442,8 @@ describe('lr-tooltip background custom property', () => {
       );
       const popup = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
       const arrow = el.shadowRoot!.querySelector<HTMLElement>('[part~="arrow"]')!;
-      expect(getComputedStyle(popup).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
-      expect(getComputedStyle(arrow).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
+      expect(getComputedStyle(popup).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('retired'));
+      expect(getComputedStyle(arrow).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('retired'));
     });
   }
 });

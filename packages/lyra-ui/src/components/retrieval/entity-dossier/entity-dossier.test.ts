@@ -12,10 +12,6 @@ import type { LyraChunkInspector } from '../../lr-chunk-inspector.js';
 import type { LyraProvenancePanel } from '../../lr-provenance-panel.js';
 import type { LyraStat } from '../../lr-stat.js';
 import type { LyraEntityCard } from '../../lr-entity-card.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const entity: LyraEntity = {
   id: 'e1',
@@ -383,19 +379,15 @@ it("contains the composed lr-tab-group's lr-activate on a real repeat pick of th
 });
 
 describe('lr-entity-dossier retired show-focus-button alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-dossier', kind: 'property', name: 'showFocusButton' }];
   const observe = (el: LyraEntityDossier): string => String((el.shadowRoot!.querySelector('lr-entity-card') as LyraEntityCard).withoutFocusButton);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityDossier>(markup);
 
-  it('applies without-focus-button with canonical defaults and no deprecation warning', async () => {
+  it('applies without-focus-button with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-entity-dossier .entity=${entity} without-focus-button></lr-entity-dossier>`));
-      plain = observe(await mount(html`<lr-entity-dossier .entity=${entity}></lr-entity-dossier>`));
-    });
+    canonical = observe(await mount(html`<lr-entity-dossier .entity=${entity} without-focus-button></lr-entity-dossier>`));
+    plain = observe(await mount(html`<lr-entity-dossier .entity=${entity}></lr-entity-dossier>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

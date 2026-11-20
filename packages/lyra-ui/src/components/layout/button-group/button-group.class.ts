@@ -1,10 +1,8 @@
-import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import type { TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { labeledGroupDescription, renderLabeledGroup } from '../../../internal/labeled-group.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './button-group.styles.js';
 
@@ -25,10 +23,7 @@ import { styles } from './button-group.styles.js';
  */
 export class LyraButtonGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  private readonly hostDescription = new HostDescriptionController(
-    this,
-    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
-  );
+  private readonly hostDescription = labeledGroupDescription(this);
 
   /** Logical control axis, using the shared `LyraOrientation` vocabulary. */
   @property({ reflect: true,
@@ -46,11 +41,7 @@ export class LyraButtonGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const accessibleLabel =
-      hostAriaLabel(this) === '' || this.accessibleLabel === ''
-        ? ''
-        : resolveAccessibleName(this, this.label) ?? nothing;
-    return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
+    return renderLabeledGroup(this);
   }
 }
 

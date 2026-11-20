@@ -3,10 +3,6 @@ import '../../lr-source-card.js';
 import { LyraSourceCard } from '../../lr-source-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-source-card', 'appearance');
@@ -693,42 +689,34 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 });
 
 describe('lr-source-card heading and the retired title alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'title' }];
   const text = (el: LyraSourceCard): string =>
     el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
 
-  it('renders heading with canonical defaults and no deprecation warning or a host title attribute', async () => {
+  it('renders heading with canonical defaults or a host title attribute', async () => {
     let rendered = '';
     let hostTitle: string | null = 'unset';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      const el = await fixture<LyraSourceCard>(html`<lr-source-card heading="annual_report.pdf" page="12"></lr-source-card>`);
-      rendered = text(el);
-      hostTitle = el.getAttribute('title');
-    });
+    const el = await fixture<LyraSourceCard>(html`<lr-source-card heading="annual_report.pdf" page="12"></lr-source-card>`);
+    rendered = text(el);
+    hostTitle = el.getAttribute('title');
     expect(rendered).to.equal('annual_report.pdf — p. 12');
     expect(hostTitle).to.equal(null);
-    expect(warnings).to.have.length(0);
   });
 });
 
 describe('lr-source-card size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraSourceCard): string => {
     const chrome = baseChrome(el);
     return `${chrome.paddingTop}|${chrome.rowGap}`;
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceCard>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
-      regular = observe(await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
-    });
+    dense = observe(await mount(html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+    regular = observe(await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
     expect(dense).to.equal('4px|2px');
     expect(regular).to.equal('8px|4px');
-    expect(warnings).to.have.length(0);
   });
 });
 

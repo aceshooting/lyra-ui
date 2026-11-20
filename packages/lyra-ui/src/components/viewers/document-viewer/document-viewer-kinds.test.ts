@@ -19,6 +19,7 @@ import {
   GEOJSON_VIEWER_TAG,
 } from './document-viewer-kinds.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from './registry.js';
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const files: readonly [tag: string, file: LyraDocumentFile][] = [
   [ARCHIVE_VIEWER_TAG, { name: 'a.zip', mimeType: 'application/zip', src: 'https://example.test/a.zip' }],
@@ -59,10 +60,6 @@ const files: readonly [tag: string, file: LyraDocumentFile][] = [
   [SVG_VIEWER_TAG, { name: 'a.svg', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' }],
 ];
 
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
-
 describe('document-viewer-kinds bundle entry', () => {
   it('registers every built-in kind, with a stable tag alias for each, none registered as an element yet', () => {
     for (const [tag, file] of files) {
@@ -95,7 +92,7 @@ describe('document-viewer-kinds bundle entry', () => {
       '/svg-viewer.class.ts',
       '/geojson-viewer.class.ts',
     ]) {
-      expect(fetchedModuleEnding(suffix), `the bundle must not eagerly fetch ${suffix}`).to.equal(false);
+      expect(fetchedModule(suffix, { control: '/document-viewer-kinds.ts' }), `the bundle must not eagerly fetch ${suffix}`).to.equal(false);
     }
   });
 

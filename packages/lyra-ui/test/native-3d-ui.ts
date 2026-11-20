@@ -1,11 +1,8 @@
 import { aTimeout, expect, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendMouse } from './wtr-mouse.js';
-import { webgl2Available } from '../src/internal/engine-3d.js';
 
 /** Native cases need a real WebGL2 context; without one the element shows its fallback instead. */
-export function requireWebgl2(this: Mocha.Context): void {
-  if (!webgl2Available()) this.skip();
-}
+export { requireWebgl2 } from './webgl2.js';
 
 export interface UpdatingHost extends HTMLElement { readonly updateComplete: Promise<boolean>; }
 export async function nativeCanvas(host: HTMLElement, part: string): Promise<HTMLCanvasElement> {

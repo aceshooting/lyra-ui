@@ -1,6 +1,7 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraMap, LyraMapInstance } from './map.class.js';
 import '../../lr-map.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 const style = { version: 8 as const, sources: {}, layers: [] };
 type StylePeer = LyraMapInstance & { setStyle(style: unknown): unknown };
@@ -17,7 +18,7 @@ async function liveMap(): Promise<LyraMap> {
 }
 
 it('keeps the current peer style failure visible and permits a later retry', async function () {
-  if (!webglAvailable()) this.skip();
+  requireWebgl2.call(this);
   const element = await liveMap();
   const peer = element.map as StylePeer;
   const setStyle = peer.setStyle;
@@ -47,15 +48,9 @@ it('keeps the current peer style failure visible and permits a later retry', asy
   }
 });
 
-function webglAvailable(): boolean {
-  const context = document.createElement('canvas').getContext('webgl2');
-  context?.getExtension('WEBGL_lose_context')?.loseContext();
-  return context !== null;
-}
-
 for (const reconnect of [false, true]) {
   it(`ignores a superseded peer style failure ${reconnect ? 'after reconnect' : 'on the current map'}`, async function () {
-    if (!webglAvailable()) this.skip();
+    requireWebgl2.call(this);
     const element = await liveMap();
     const peer = element.map as StylePeer;
     const setStyle = peer.setStyle;

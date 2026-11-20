@@ -15,10 +15,6 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 import '../../../translations/ar.js';
 // The shipped 'ar' catalog does not yet translate the per-chunk toggle name.
 for (const locale of ['ar-u-nu-arab', 'ar-EG']) expectLocaleFallback(locale, ['retrievalShowMoreWithContext']);
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -463,7 +459,6 @@ it('renders explicit true and false aria-current values for the stateful chunk s
 });
 
 describe('current-chunk cssprop escape hatch', () => {
-
   async function current(style = ''): Promise<{ el: LyraChunkInspector; chunk: HTMLElement }> {
     const wrapper = (await fixture(
       html`<div style=${style}><lr-chunk-inspector active-chunk-id="c1"></lr-chunk-inspector></div>`,
@@ -520,7 +515,6 @@ describe('current-chunk cssprop escape hatch', () => {
 // `<lr-virtual-list>`'s `renderItem` and is committed inside *that* component's shadow root, one
 // boundary further in. Every assertion below runs against both.
 describe('row styling across both rendering paths', () => {
-
   // v0 scores 0.2 (low -> danger tone) and is the current chunk; the rest score 0.9 (high ->
   // success). `sort="none"` keeps v0 first so the current row is always the rendered one.
   function manyChunks(n: number): LyraChunk[] {
@@ -778,23 +772,19 @@ describe('lr-chunk-inspector disclosure events', () => {
 });
 
 describe('lr-chunk-inspector size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-chunk-inspector', kind: 'property', name: 'compact' }];
   const observe = (el: LyraChunkInspector): string =>
     ['text', 'toggle', 'open-button']
       .map((part) => el.shadowRoot!.querySelectorAll(`[part~="${part}"]`).length)
       .join('|');
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraChunkInspector>(markup);
 
-  it('renders dense rows for size="s" with canonical defaults and no deprecation warning', async () => {
+  it('renders dense rows for size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-chunk-inspector size="s" .chunks=${chunks}></lr-chunk-inspector>`));
-      regular = observe(await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`));
-    });
+    dense = observe(await mount(html`<lr-chunk-inspector size="s" .chunks=${chunks}></lr-chunk-inspector>`));
+    regular = observe(await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`));
     expect(dense).to.equal('0|0|3');
     expect(regular).to.equal('3|3|3');
-    expect(warnings).to.have.length(0);
   });
 });
 

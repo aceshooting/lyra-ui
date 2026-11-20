@@ -5,6 +5,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import '../../lr-map-anchor.js';
 import type { LyraMapAnchor } from '../../lr-map-anchor.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 const localStyle = () => ({ ...LYRA_MAP_EMPTY_STYLE, layers: [{ id: 'plain-background', type: 'background', paint: { 'background-color': '#ffffff' } }] });
@@ -19,7 +20,7 @@ describe('lr-map-anchor with the real modular engine', function () {
   this.timeout(45000);
   let previousWorkerUrl: string;
   // A real engine needs WebGL2, which some headless browsers do not provide.
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { previousWorkerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(() => { try { fixtureCleanup(); } finally { setWorkerUrl(previousWorkerUrl); } });
 

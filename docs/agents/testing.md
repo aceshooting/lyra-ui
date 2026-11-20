@@ -65,6 +65,13 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   and compare identity. The same reasoning applies to any spy on a shared global — `Intl`,
   `matchMedia`, `ResizeObserver`, `DOMParser`, `fetch`: attribute each call to a caller before
   asserting on the count.
+- **WebGL2-dependent cases gate through `requireWebgl2` (`test/webgl2.ts`).** Use
+  `before(requireWebgl2)` or `requireWebgl2.call(this)`, never an inline `getContext('webgl2')`
+  probe: it probes once per page, skips where WebGL2 is missing, and fails instead under
+  `WTR_REQUIRE_WEBGL2=1`, which the headed Linux Firefox full-engine shards set.
+- **"Module not fetched" checks use `fetchedModule()` (`test/resource-entries.ts`) with a
+  `control`.** Resource timing silently stops recording once its buffer fills, so an absence check
+  names a module the file certainly loaded and throws when that control is missing.
 - **Prove every regression test discriminates.** A test written against an already-fixed defect is
   worth nothing, and the failure mode is silent. Temporarily revert the source change, re-run, watch
   it go red *for the stated reason*, then restore — and prefer reverting via the real source rather

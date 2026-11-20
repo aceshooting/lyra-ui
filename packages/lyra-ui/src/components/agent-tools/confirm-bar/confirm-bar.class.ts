@@ -4,9 +4,10 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { statusErrorIcon, statusSuccessIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { renderApproveAction, renderDenyAction } from '../approval-action-buttons.js';
 import type { LyraFrame, LyraVariant, LyraSize } from '../../../internal/variants.js';
-import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   deferComposedFocusRepair,
@@ -388,10 +389,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      const defaultSlotNodes = Array.from(this.childNodes).filter(
-        (node) => node.nodeType !== Node.ELEMENT_NODE || !(node as Element).getAttribute('slot'),
-      );
-      this.hasBodySlot = hasRealContent(defaultSlotNodes);
+      this.hasBodySlot = hasSlotContent(this);
     }
     if (
       changed.has('decision') &&
@@ -418,10 +416,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     if (this.autofocus) this.focusInitial();
   }
 
-  private onBodySlotChange = (e: Event): void => {
-    this.hasBodySlot = hasRealContent(
-      (e.target as HTMLSlotElement).assignedNodes({ flatten: true }),
-    );
+  private onBodySlotChange = (): void => {
+    this.hasBodySlot = hasSlotContent(this);
   };
 
   /**

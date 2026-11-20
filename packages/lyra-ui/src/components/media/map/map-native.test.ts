@@ -7,6 +7,7 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
 import type { LyraMapGeoJsonDataLayer, LyraMapImage, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail, LyraMapStyleSpecification } from './map.class.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 /** Only real native methods, reached through the documented map getter. */
@@ -126,7 +127,7 @@ describe('lr-map actual modular companion integration', function () {
   this.timeout(45000);
   let previousWorkerUrl: string;
   // These cases need a real WebGL2 context; a browser without one shows the map's fallback instead.
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
   before(() => Promise.all([loadMapDrawingRuntime(), loadMapFeatureStateRuntime(), loadMapHashRuntime(), loadMapOwnedFeatureRuntime(), loadMapControlRuntime()]));
   beforeEach(() => {

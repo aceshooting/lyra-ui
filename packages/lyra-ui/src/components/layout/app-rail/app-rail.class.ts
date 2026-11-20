@@ -19,6 +19,7 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { lengthOrNumberConverter, optionalLiteralSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
@@ -1226,8 +1227,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.endResizerGesture();
     }
     if (!this.hasUpdated) {
-      this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
-      this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
+      this.hasHeaderSlot = hasSlotContent(this, 'header');
+      this.hasFooterSlot = hasSlotContent(this, 'footer');
       const restored = this.loadPersisted();
       if (restored.preferredMode && !this.forced) {
         // Fold the restored preference into the first render directly (bypassing
@@ -1964,15 +1965,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.setOpen(false);
   };
 
-  // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-  // fix), even though the assigned child's own `slot` attribute never changed.
+  // Presence reads the light DOM, never a live `assignedElements()` snapshot WebKit can report
+  // transiently empty; a forwarded empty slot is not content.
   private onHeaderSlotChange = (): void => {
-    this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
+    this.hasHeaderSlot = hasSlotContent(this, 'header');
   };
   private onFooterSlotChange = (): void => {
-    this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
+    this.hasFooterSlot = hasSlotContent(this, 'footer');
   };
   private onNavSlotChange = (): void => {
     this.syncSlottedItems();

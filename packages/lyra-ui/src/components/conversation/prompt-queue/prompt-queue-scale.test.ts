@@ -156,3 +156,28 @@ it('moves endpoint pager focus to an enabled control in both directions', async 
     expect(focused?.disabled).to.equal(false);
   }
 });
+
+async function settleNested(el: LyraPromptQueue): Promise<void> {
+  const nested = [...el.shadowRoot!.querySelectorAll('lr-textarea, lr-button')] as unknown as { updateComplete: Promise<unknown> }[];
+  await Promise.all(nested.map((node) => node.updateComplete));
+}
+
+it('is accessible on a later page of a paginated queue', async () => {
+  const items = Array.from({ length: 23 }, (_, index) => ({ id: `q${index}`, value: `Prompt ${index}` }));
+  const el = await fixture<LyraPromptQueue>(html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`);
+  el.shadowRoot!.querySelector<HTMLElement>('[data-page-action="next"]')!.click();
+  await el.updateComplete;
+  await settleNested(el);
+  expect(el.shadowRoot!.querySelector('[part="page-status"]')?.textContent).to.include('2 of 2');
+  expect(el.shadowRoot!.querySelectorAll('[part~="item"]')).to.have.lengthOf(3);
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible while disclosing an input limit', async () => {
+  const attachments = Array.from({ length: 10_001 }, (_, index) => ({ id: `d${index}`, name: `Document ${index}` }));
+  const el = await fixture<LyraPromptQueue>(html`<lr-prompt-queue .items=${[{ id: 'q', value: 'Prompt', attachments }]}></lr-prompt-queue>`);
+  await settleNested(el);
+  expect(el.shadowRoot!.querySelector('[part="input-limit"]') === null).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="attachment-limit"]') === null).to.equal(false);
+  await expect(el).to.be.accessible();
+});

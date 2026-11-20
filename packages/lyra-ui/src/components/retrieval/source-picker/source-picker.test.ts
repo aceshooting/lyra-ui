@@ -7,10 +7,6 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-source-picker.js';
 import type { LyraSourcePicker, LyraSourceEntry } from '../../lr-source-picker.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 type CheckboxElement = HTMLElement & {
   checked: boolean;
@@ -1080,7 +1076,6 @@ it('keyboard: a non-activation key on the select-all checkbox is a no-op', async
 });
 
 describe('checked-state cssprop escape hatch', () => {
-
   async function picker(
     selectedSourceIds: string[],
     style = ''
@@ -1726,36 +1721,28 @@ describe('select-all checkbox containment', () => {
 });
 
 describe('lr-source-picker retired show-select-all alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-picker', kind: 'property', name: 'showSelectAll' }];
   const observe = (el: LyraSourcePicker): string => String(el.shadowRoot!.querySelectorAll('[part="select-all"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourcePicker>(markup);
 
-  it('applies without-select-all with canonical defaults and no deprecation warning', async () => {
+  it('applies without-select-all with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-select-all></lr-source-picker>`));
-      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
-    });
+    canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-select-all></lr-source-picker>`));
+    plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 
 describe('lr-source-picker retired searchable alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-picker', kind: 'property', name: 'searchable' }];
   const observe = (el: LyraSourcePicker): string => String(el.shadowRoot!.querySelectorAll('[part="search"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourcePicker>(markup);
 
-  it('applies without-search with canonical defaults and no deprecation warning', async () => {
+  it('applies without-search with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-search></lr-source-picker>`));
-      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
-    });
+    canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-search></lr-source-picker>`));
+    plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

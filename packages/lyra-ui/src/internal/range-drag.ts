@@ -11,6 +11,23 @@ export interface RangeDragState<Handle> {
   rtl: boolean;
 }
 
+/** The value move a range key asks for: a signed multiple of one step, or a reachable bound.
+ *  ArrowLeft/ArrowRight swap under RTL (the track runs from inset-inline-start); ArrowUp/ArrowDown
+ *  never do. Other keys return `undefined`. */
+export function rangeKeyAction(key: string, rtl: boolean): number | 'min' | 'max' | undefined {
+  switch (key) {
+    case 'ArrowUp': return 1;
+    case 'ArrowDown': return -1;
+    case 'ArrowRight': return rtl ? -1 : 1;
+    case 'ArrowLeft': return rtl ? 1 : -1;
+    case 'PageUp': return RANGE_PAGE_STEP_MULTIPLIER;
+    case 'PageDown': return -RANGE_PAGE_STEP_MULTIPLIER;
+    case 'Home': return 'min';
+    case 'End': return 'max';
+    default: return undefined;
+  }
+}
+
 /** Pointer position along a range; the vertical axis increases bottom-to-top. */
 export function rangePointerRatio(clientX: number, clientY: number, rect: DOMRect, rtl: boolean, vertical = false): number {
   const raw = vertical

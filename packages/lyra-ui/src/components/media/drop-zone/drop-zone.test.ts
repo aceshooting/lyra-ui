@@ -766,3 +766,26 @@ describe('for / target', () => {
     expect(overlayOf(zone).getAttribute('style') ?? '').to.equal('');
   });
 });
+
+it('keeps a long rejected file name inside a 320px RTL allocation with its list mirrored', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px">
+      <lr-drop-zone accept="image/*"><div style="min-block-size: 4rem">Region</div></lr-drop-zone>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-drop-zone') as LyraDropZone;
+  const event = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile(`${'quarterly-installation-report-'.repeat(6)}final.txt`)]);
+  await event;
+  await el.updateComplete;
+  const rejection = el.shadowRoot!.querySelector<HTMLElement>('[part="rejection"]');
+  expect(rejection === null).to.equal(false);
+  const list = rejection!.querySelector('ul')!;
+  const item = rejection!.querySelector('li')!;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(rejection!.scrollWidth).to.be.at.most(rejection!.clientWidth);
+  const listRect = list.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  expect(listRect.right - itemRect.right).to.be.greaterThan(1);
+  expect(Math.abs(itemRect.left - listRect.left)).to.be.lessThan(1);
+});

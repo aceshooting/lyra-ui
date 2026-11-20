@@ -8,6 +8,7 @@
 declare global {
   var __LYRA_WTR_STRICT_CONSOLE__: boolean | undefined;
   var __LYRA_WTR_COVERAGE__: boolean | undefined;
+  var __LYRA_WTR_REQUIRE_WEBGL2__: boolean | undefined;
 
   interface Window {
     AbortController: typeof AbortController;

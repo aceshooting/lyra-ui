@@ -4,10 +4,6 @@ import "../../lr-grounding-summary.js";
 import type { LyraGroundingSummary } from "../../lr-grounding-summary.js";
 import type { Citation, GroundingAssessment } from "../../../ai/types.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 const ASSESSMENT: GroundingAssessment = {
   supportedClaims: 8,
@@ -916,19 +912,15 @@ describe('lr-grounding-summary retired show-claims alias', () => {
       { id: 'claim-1', text: 'A supported claim', status: 'supported', citationIds: ['cite-1'] },
     ],
   };
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-grounding-summary', kind: 'property', name: 'showClaims' }];
   const observe = (el: LyraGroundingSummary): string => String(el.shadowRoot!.querySelector('lr-claim-evidence') !== null);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraGroundingSummary>(markup);
 
-  it('applies without-claims with canonical defaults and no deprecation warning', async () => {
+  it('applies without-claims with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} without-claims></lr-grounding-summary>`));
-      plain = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`));
-    });
+    canonical = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} without-claims></lr-grounding-summary>`));
+    plain = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

@@ -1910,7 +1910,7 @@ it('forwards host .click() to the combobox input in free-text mode', async () =>
   el.click();
   await el.updateComplete;
   expect(el.open).to.be.true;
-  expect(relayedClicks, 'voice-picker retains its focus-only free-text host click').to.equal(0);
+  expect(relayedClicks, 'the inner input click reaches host listeners, as on lr-model-select').to.equal(1);
 });
 
 it('clicking an open trigger closes it (toggle)', async () => {

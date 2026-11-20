@@ -1,7 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import '../../lr-env-list.js';
 import type { LyraEnvList } from '../../lr-env-list.js';
 
@@ -628,24 +627,6 @@ it('reads its reveal/copy button border widths from --lr-border-width-thin, not 
   expect(getComputedStyle(copy).borderTopWidth).to.equal('11px');
 });
 
-describe('lr-env-list reveal and copy controls', () => {
-  const ALIASES: readonly DeprecatedUsage[] = [
-    { tag: 'lr-env-list', kind: 'property', name: 'revealable' },
-    { tag: 'lr-env-list', kind: 'property', name: 'copyable' },
-  ];
-  const entries = [{ name: 'API_KEY', value: 'secret', secret: true }];
-  it('never warns for the canonical attributes or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
-      el.withoutReveal = true;
-      el.withoutCopyButton = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
 it('treats re-assigning the same entries array as no change', async () => {
   const entries = [{ name: 'API_KEY', value: 'secret', secret: true }];
   const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
@@ -684,4 +665,72 @@ it('does not schedule an update when the same entries array is re-assigned', asy
   const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
   el.entries = entries;
   expect(el.isUpdatePending).to.equal(false);
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key <lr-env-list> passes to this.localize() gets a distinctive marker (placeholders kept),
+  // and each one is proven to reach the rendered DOM or the announcement sink.
+  const STRINGS = {
+    envListLabel: 'LIST-MARKER',
+    noData: 'EMPTY-MARKER',
+    envListValueHidden: 'HIDDEN-MARKER',
+    envListReveal: 'REVEAL[{name}]',
+    envListHide: 'HIDE[{name}]',
+    envListCopy: 'COPY-NAME[{name}]',
+    copy: 'COPY-MARKER',
+    copied: 'COPIED-MARKER',
+    copyFailed: 'COPY-FAILED-MARKER',
+    envListLimit: 'LIMIT[{count}|{omitted}]',
+  };
+  const politeText = () => document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '';
+
+  it('routes the label, empty, hidden, reveal/hide, copy and limit keys to the rendered DOM', async () => {
+    const empty = await fixture<LyraEnvList>(html`<lr-env-list .strings=${STRINGS}></lr-env-list>`);
+    expect(empty.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('EMPTY-MARKER');
+    expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('LIST-MARKER');
+
+    const el = await fixture<LyraEnvList>(
+      html`<lr-env-list .strings=${STRINGS} .entries=${[{ name: 'API_KEY', value: 'v' }]}></lr-env-list>`,
+    );
+    const root = el.shadowRoot!;
+    expect(root.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('LIST-MARKER');
+    expect(root.querySelector('[part="value"] .sr-only')!.textContent!.trim()).to.equal('HIDDEN-MARKER');
+    const reveal = root.querySelector<HTMLButtonElement>('[part="reveal-button"]')!;
+    expect(reveal.textContent!.trim()).to.equal('REVEAL[API_KEY]');
+    reveal.click();
+    await el.updateComplete;
+    expect(reveal.textContent!.trim()).to.equal('HIDE[API_KEY]');
+    const copy = root.querySelector('[part="copy-button"]')!;
+    expect(copy.getAttribute('aria-label')).to.equal('COPY-NAME[API_KEY]');
+    expect(copy.textContent!.trim()).to.equal('COPY-MARKER');
+
+    const many = Array.from({ length: 10_002 }, (_, i) => ({ name: `K${i}`, value: 'v' }));
+    const limited = await fixture<LyraEnvList>(html`<lr-env-list .strings=${STRINGS} .entries=${many}></lr-env-list>`);
+    expect(limited.shadowRoot!.querySelector('[part="limit"]')!.textContent!.trim()).to.equal('LIMIT[10,000|2]');
+  });
+
+  for (const ok of [true, false]) {
+    it(`routes the ${ok ? 'copied' : 'copyFailed'} key to the button and the announcement sink`, async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async () => { if (!ok) throw new Error('denied'); } },
+      });
+      try {
+        const el = await fixture<LyraEnvList>(
+          html`<lr-env-list .strings=${STRINGS} .entries=${[{ name: 'API_KEY', value: 'v' }]}></lr-env-list>`,
+        );
+        const marker = ok ? 'COPIED-MARKER' : 'COPY-FAILED-MARKER';
+        const settled = oneEvent(el, ok ? 'lr-copy' : 'lr-copy-error');
+        el.shadowRoot!.querySelector<HTMLButtonElement>('[part="copy-button"]')!.click();
+        await settled;
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal(marker);
+        await waitUntil(() => politeText().includes(marker), 'copy outcome never announced');
+      } finally {
+        if (descriptor) Object.defineProperty(navigator, 'clipboard', descriptor);
+        else Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    });
+  }
 });

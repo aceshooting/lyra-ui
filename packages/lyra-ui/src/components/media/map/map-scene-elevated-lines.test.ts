@@ -2,6 +2,7 @@ import { expect, waitUntil } from '@open-wc/testing';
 import type { LyraMapCustomLayerContext, LyraMapCustomLayerFrame, LyraMapGeographicShader,
   LyraMapResolvedPosition } from '../../../internal/map-custom-layer-types.js';
 import { createElevatedSceneLineLayer, type ElevatedSceneLine } from './map-scene-elevated-lines.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 const origin = { key: 'world', tile: { z: 0, x: 0, y: 0, wrap: 0 } };
 const shader: LyraMapGeographicShader = {
@@ -15,12 +16,8 @@ const line = (id: string, terrain: readonly number[] = [1, 0, 0.5]): ElevatedSce
   id, coordinates: [[-90, 0, 10], [0, 0, 20], [90, 0, 30]], terrain, rgba: [1, 0, 0, 1], width: 4,
 });
 
-before(function () {
-  // Headless Firefox can lack a WebGL driver even when WebGL is enabled in its preferences.
-  const gl = document.createElement('canvas').getContext('webgl2');
-  if (!gl) this.skip();
-  gl.getExtension('WEBGL_lose_context')?.loseContext();
-});
+// Headless Firefox can lack a WebGL driver even when WebGL is enabled in its preferences.
+before(requireWebgl2);
 
 function environment() {
   const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;

@@ -3,7 +3,6 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import '../../lr-context-meter.js';
 import type { LyraContextMeter, ContextMeterSegment } from '../../lr-context-meter.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SEGMENTS: ContextMeterSegment[] = [
   { label: 'System prompt', value: 2000, tone: 'neutral' },
@@ -940,21 +939,6 @@ describe('non-actionable and empty segments', () => {
       'no control is disabled when no entry asks for it',
     ).to.equal(0);
   });
-});
-
-describe('canonical with-legend behavior', () => {
-  const SHOW_LEGEND: readonly DeprecatedUsage[] = [
-    { tag: 'lr-context-meter', kind: 'property', name: 'showLegend' },
-  ];
-  it('never warns for with-legend or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const el = await fixture<LyraContextMeter>(html`<lr-context-meter total="10"></lr-context-meter>`);
-      el.withLegend = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
 });
 
 it('repairs a foreign shape token written on a mounted bar meter', async () => {

@@ -8,6 +8,7 @@ import type { LyraMap } from './map.class.js';
 import type { LyraSequencePlayback } from '../sequence-playback/sequence-playback.class.js';
 import '../../lr-map.js';
 import '../../lr-sequence-playback.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 // The story localizes its own copy only; composed controls keep their English defaults in Arabic.
 expectLocaleFallback('ar', ['mapScene', 'mapSceneShow', 'mapSceneHide', 'mapSceneUnavailable', 'mapScenePartial', 'loading',
@@ -23,7 +24,7 @@ const button = (root: HTMLElement, selector: string): HTMLButtonElement => {
 describe('network monitoring showcase story', function () {
   this.timeout(30000);
   let workerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { workerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(() => { fixtureCleanup(); setWorkerUrl(workerUrl); });
 

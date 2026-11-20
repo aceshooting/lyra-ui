@@ -110,13 +110,13 @@ export interface LyraKnownDateEventMap {
 
 class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
 
-function addCompatibilityDetail<T extends Event>(
+function addEventDetail<T extends Event>(
   event: T,
   detail: LyraKnownDateEventDetail
 ): T {
-  // v4-v7 exposed these two events as CustomEvents. v8 restores the upstream native constructor,
-  // but an own `detail` value keeps existing JavaScript consumers working during the major-version
-  // migration. The property is intentionally non-enumerable, matching platform event payloads.
+  // The native `input`/`change` events keep their platform constructors and carry the documented
+  // `{ value, day, month, year, field }` payload as an own `detail`. The property is
+  // non-enumerable, matching platform event payloads.
   Object.defineProperty(event, 'detail', { configurable: true, value: detail });
   return event;
 }
@@ -632,7 +632,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.lastCommittedValue = this.value;
     const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
     const detail = this.detailFor(this.lastEditedField);
-    const event = addCompatibilityDetail(
+    const event = addEventDetail(
       new EventConstructor('change', { bubbles: true, composed: true }),
       detail
     );
@@ -862,7 +862,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const InputEventConstructor =
       this.ownerDocument.defaultView?.InputEvent ?? InputEvent;
     const detail = this.detailFor(field);
-    const event = addCompatibilityDetail(
+    const event = addEventDetail(
       new InputEventConstructor('input', {
         bubbles: true,
         composed: true,

@@ -3,6 +3,7 @@ import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 void LyraMap;
 
 function part<T extends Element = HTMLElement>(element: LyraMap, name: string): T {
@@ -14,7 +15,7 @@ function part<T extends Element = HTMLElement>(element: LyraMap, name: string): 
 describe('lr-map native peer chrome hooks', function () {
   this.timeout(30000);
   let workerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => {
     workerUrl = getWorkerUrl();
     setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href);

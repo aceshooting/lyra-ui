@@ -2,8 +2,9 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { detectPlatform } from '../../../internal/platform.js';
-import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 import { parseShortcut } from './kbd-shortcut.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -146,12 +147,12 @@ export class LyraKbd extends LyraElement {
     // A server render sees no light-DOM children, so a hydrating chip reproduces the server's
     // keys rendering first and adopts slotted content on the very next update instead.
     this.seedFirstRenderState(() => {
-      this.hasCustomContent = hasRealContent(this.childNodes);
+      this.hasCustomContent = hasSlotContent(this);
     });
   }
 
-  private onSlotChange = (e: Event): void => {
-    this.hasCustomContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
+  private onSlotChange = (): void => {
+    this.hasCustomContent = hasSlotContent(this);
   };
 
   override render(): TemplateResult {

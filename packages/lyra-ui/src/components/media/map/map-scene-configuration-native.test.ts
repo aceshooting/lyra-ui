@@ -2,6 +2,7 @@ import { expect, fixture, fixtureCleanup, html } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import type { LyraMapInstance } from './map.class.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 interface SceneMapElement extends LyraMap {
   projection: 'mercator' | 'globe' | undefined;
@@ -23,7 +24,7 @@ async function idle(el: SceneMapElement) { await el.updateComplete; await el.whe
 for (const engine of ['modular', 'maplibre'] as const) describe(`lr-map scene configuration with the ${engine} engine`, function () {
   this.timeout(45000);
   let previousWorkerUrl: string;
-  before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  before(requireWebgl2);
   beforeEach(() => { previousWorkerUrl = getWorkerUrl(); setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href); });
   afterEach(() => { fixtureCleanup(); setWorkerUrl(previousWorkerUrl); });
 

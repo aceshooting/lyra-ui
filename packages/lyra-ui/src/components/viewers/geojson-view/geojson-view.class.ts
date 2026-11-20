@@ -7,7 +7,7 @@ import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewR
 
 
 /**
- * Compatibility constructor retained by the viewers family barrel.
+ * Subclass exported by the viewers family barrel only (not the root barrel).
  * It is a distinct subclass of `LyraGeoJsonViewer` and does not register a custom element.
  * Use `LyraGeoJsonViewer` and the `lr-geojson-viewer` registration for new elements.
  */

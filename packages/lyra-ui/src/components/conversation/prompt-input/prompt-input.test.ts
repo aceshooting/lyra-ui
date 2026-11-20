@@ -1665,6 +1665,37 @@ it("is accessible with its composed controls populated", async () => {
   await expect(el).to.be.accessible();
 });
 
+async function settleNestedElements(root: Element): Promise<void> {
+  for (let depth = 0; depth < 4; depth += 1) {
+    const pending: Promise<unknown>[] = [];
+    const visit = (node: Element): void => {
+      const update = (node as Partial<{ updateComplete: Promise<unknown> }>).updateComplete;
+      if (update) pending.push(update);
+      for (const child of node.shadowRoot?.querySelectorAll('*') ?? []) visit(child);
+    };
+    visit(root);
+    await Promise.all(pending);
+  }
+}
+
+it('is accessible with a populated queue, voice catalog and attachments', async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    .attachments=${[
+      { attachmentId: 'doc-1', name: 'report.pdf', mimeType: 'application/pdf' },
+      { attachmentId: 'img-1', name: 'diagram.png', mimeType: 'image/png' },
+    ]}
+    .voiceCatalog=${['calm', 'bright']}
+    voice="calm"
+    .queue=${[{ id: 'q1', value: 'Follow up' }, { id: 'q2', value: 'Then summarize' }]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  await settleNestedElements(el);
+  expect(el.shadowRoot!.querySelectorAll('lr-attachment-chip')).to.have.lengthOf(2);
+  expect(el.shadowRoot!.querySelectorAll('lr-voice-picker')).to.have.lengthOf(1);
+  const queue = el.shadowRoot!.querySelector('lr-prompt-queue');
+  expect(queue?.shadowRoot?.querySelectorAll('[part~="item"]').length).to.equal(2);
+  await expect(el).to.be.accessible();
+});
+
 // -- Focus/selection delegation to the embedded composer --------------------
 
 it("delegates focus(), blur() and select() to the embedded composer", async () => {

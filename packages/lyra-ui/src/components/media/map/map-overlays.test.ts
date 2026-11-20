@@ -13,29 +13,13 @@ import {
   choropleth,
   click,
 } from '../../../../test/map-scripted-engine.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 // Overlay and data contracts between the element and its engine (no-data choropleth paint and
 // clicks, derived legends, cluster zoom, declarative controls, the anchor slot, tolerant
 // `maxBounds`), driven through a scripted engine installed at the component's `loadLibrary` seam
 // so every assertion runs in all three browsers, where headless Firefox and WebKit do not reliably
 // provide the WebGL2 context a real engine needs.
-
-// A real engine needs a real WebGL2 context, which headless Firefox and WebKit do not reliably
-// provide; the probe runs before any test stubs `getContext`.
-const hasWebGL2 = (() => {
-  try {
-    const context = document.createElement('canvas').getContext('webgl2');
-    if (!context) return false;
-    try {
-      context.getExtension('WEBGL_lose_context')?.loseContext();
-    } catch {
-      // The probe succeeded; releasing the context is best-effort.
-    }
-    return true;
-  } catch {
-    return false;
-  }
-})();
 
 const OriginalIntersectionObserver = window.IntersectionObserver;
 
@@ -760,7 +744,7 @@ describe('map overlays and data', () => {
 });
 
 it('LYRA_MAP_EMPTY_STYLE loads in a real engine, the frozen style included', async function () {
-  if (!hasWebGL2) this.skip();
+  requireWebgl2.call(this);
   const wrapper = (await fixture(html`<div style="inline-size: 20rem; block-size: 12rem"></div>`)) as HTMLElement;
   const el = document.createElement('lr-map') as LyraMap;
   el.engine = 'maplibre';

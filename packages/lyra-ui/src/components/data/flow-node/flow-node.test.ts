@@ -849,3 +849,59 @@ describe('toolbar menu', () => {
     );
   });
 });
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key <lr-flow-node> passes to this.localize() gets a distinctive marker (placeholders kept),
+  // and each one is proven to reach the rendered status text, progressbar name or handle title.
+  const STRINGS = {
+    statusPending: 'PENDING-MARKER',
+    statusRunning: 'RUNNING-MARKER',
+    statusSuccess: 'SUCCESS-MARKER',
+    statusError: 'ERROR-MARKER',
+    statusDenied: 'DENIED-MARKER',
+    durationMilliseconds: 'MS[{value}]',
+    durationSeconds: 'S[{value}]',
+    flowStatusWithDuration: 'WITH-DURATION[{status}|{duration}]',
+    flowStatusWithDetail: 'WITH-DETAIL[{status}|{detail}]',
+    progress: 'PROGRESS-MARKER',
+    flowNodeProgressLabel: 'PROGRESS-OF[{label}]',
+    flowInputHandle: 'IN[{id}]',
+    flowOutputHandle: 'OUT[{id}]',
+  };
+  const statusOf = (el: LyraFlowNode) => el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim();
+
+  for (const [status, marker] of [
+    ['pending', 'PENDING-MARKER'],
+    ['running', 'RUNNING-MARKER'],
+    ['success', 'SUCCESS-MARKER'],
+    ['error', 'ERROR-MARKER'],
+    ['denied', 'DENIED-MARKER'],
+  ] as const) {
+    it(`routes the ${status} status label`, async () => {
+      const el = await fixture<LyraFlowNode>(html`<lr-flow-node status=${status} .strings=${STRINGS}></lr-flow-node>`);
+      expect(statusOf(el)).to.equal(marker);
+    });
+  }
+
+  it('routes the duration, detail, progress and handle keys with their placeholders', async () => {
+    const el = await fixture<LyraFlowNode>(html`<lr-flow-node
+      status="success"
+      duration-ms="812"
+      status-detail="cached"
+      progress="40"
+      .inputs=${[{ id: 'a' }]}
+      .outputs=${[{ id: 'b' }]}
+      .strings=${STRINGS}
+    ></lr-flow-node>`);
+    expect(statusOf(el)).to.equal('WITH-DETAIL[WITH-DURATION[SUCCESS-MARKER|MS[812]]|cached]');
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal('PROGRESS-MARKER');
+    expect(el.shadowRoot!.querySelector('[data-handle-kind="input"]')!.getAttribute('title')).to.equal('IN[a]');
+    expect(el.shadowRoot!.querySelector('[data-handle-kind="output"]')!.getAttribute('title')).to.equal('OUT[b]');
+    el.durationMs = 2500;
+    el.statusDetail = '';
+    el.heading = 'Fetch';
+    await el.updateComplete;
+    expect(statusOf(el)).to.equal('WITH-DURATION[SUCCESS-MARKER|S[2.5]]');
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal('PROGRESS-OF[Fetch]');
+  });
+});

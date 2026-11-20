@@ -9,10 +9,6 @@ import "../../lr-dashboard-grid.js";
 import type { LyraDashboardGrid } from "../../lr-dashboard-grid.js";
 import type { LyraDashboardCell } from "./layout.js";
 import { styles } from "./dashboard-grid.styles.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-dashboard-grid', 'locked');
@@ -2724,18 +2720,19 @@ describe("accessibility", () => {
     const renderers = Array.from(el.querySelectorAll("lr-widget-renderer"));
     expect(renderers.map((renderer) => (renderer as unknown as { hasUpdated: boolean }).hasUpdated), "updateComplete covers the widget bodies")
       .to.deep.equal([true, true]);
-    // The default cells render their stat after the grid's own update; a one-row cell clips it, so
-    // each body must have become a named keyboard scroll stop before axe runs.
+    // The default cells render their stat after the grid's own update. Two 160px rows fit the stat,
+    // so neither body is a scroll region (the clipped-body tab stop is covered by the populated
+    // accessibility block below).
     const bodies = () =>
       [...el.querySelectorAll<HTMLElement>("[data-dashboard-grid-default-cell]")].map(
         (cell) => cell.shadowRoot?.querySelector<HTMLElement>('[part="body"]') ?? null
       );
     await waitUntil(
-      () => bodies().length === 2 && bodies().every((body) => body?.getAttribute("tabindex") === "0"),
-      "each clipped stat body takes a tab stop"
+      () => bodies().length === 2 && bodies().every((body) => body !== null),
+      "each stat body renders"
     );
-    expect(bodies().map((body) => body!.scrollHeight > body!.clientHeight)).to.deep.equal([true, true]);
-    expect(bodies().map((body) => body!.getAttribute("aria-label"))).to.deep.equal(["Users", "Errors"]);
+    expect(bodies().map((body) => body!.scrollHeight > body!.clientHeight)).to.deep.equal([false, false]);
+    expect(bodies().map((body) => body!.hasAttribute("tabindex"))).to.deep.equal([false, false]);
     await expect(el).to.be.accessible();
   });
 
@@ -3680,10 +3677,7 @@ it('keeps an adopted cell child inside its grid cell, padding and all', async ()
   }
 });
 
-describe("readonly and the deprecated locked alias", () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: "lr-dashboard-grid", kind: "property", name: "locked" },
-  ];
+describe("readonly and the retired locked attribute", () => {
   /** Whether the single cell renders the pointer resize grip and its action floor. */
   const gestures = (el: LyraDashboardGrid): string => {
     const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
@@ -3699,16 +3693,13 @@ describe("readonly and the deprecated locked alias", () => {
     return el;
   }
 
-  it("disables every gesture grid-wide through readonly, reflecting it, without a warning", async () => {
+  it("disables every gesture grid-wide through readonly, reflecting it", async () => {
     let el!: LyraDashboardGrid;
     let open!: LyraDashboardGrid;
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      open = await grid(html`<lr-dashboard-grid cells-draggable cells-resizable></lr-dashboard-grid>`);
-      el = await grid(
-        html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
-      );
-    });
-    expect(warnings).to.have.length(0);
+    open = await grid(html`<lr-dashboard-grid cells-draggable cells-resizable></lr-dashboard-grid>`);
+    el = await grid(
+      html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
+    );
     expect(el.readonly).to.equal(true);
     expect('locked' in el).to.equal(false);
     expect(el.hasAttribute("readonly")).to.equal(true);
@@ -3721,34 +3712,29 @@ describe("readonly and the deprecated locked alias", () => {
       html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
     );
     const aliased: LyraDashboardGrid[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        aliased.push(
-          await grid(html`<lr-dashboard-grid cells-draggable cells-resizable locked></lr-dashboard-grid>`)
-        );
-      }
-    });
+    for (let index = 0; index < 2; index += 1) {
+      aliased.push(
+        await grid(html`<lr-dashboard-grid cells-draggable cells-resizable locked></lr-dashboard-grid>`)
+      );
+    }
     for (const el of aliased) {
       expect(el.readonly).to.equal(false);
       expect(el.hasAttribute("readonly")).to.equal(false);
       expect(gestures(el)).to.not.equal(gestures(canonical));
     }
-    expect(warnings).to.have.length(0);
   });
 
   it("ignores locked attribute changes after the first render", async () => {
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = await grid(html`<lr-dashboard-grid locked cells-resizable></lr-dashboard-grid>`);
-      expect(el.hasAttribute("readonly")).to.equal(false);
-      el.removeAttribute("locked");
-      await el.updateComplete;
-      expect(el.readonly).to.equal(false);
-      expect(el.hasAttribute("readonly")).to.equal(false);
-      expect(JSON.parse(gestures(el)).handle).to.equal(true);
-      el.setAttribute("locked", "");
-      await el.updateComplete;
-      expect(el.readonly).to.equal(false);
-    });
+    const el = await grid(html`<lr-dashboard-grid locked cells-resizable></lr-dashboard-grid>`);
+    expect(el.hasAttribute("readonly")).to.equal(false);
+    el.removeAttribute("locked");
+    await el.updateComplete;
+    expect(el.readonly).to.equal(false);
+    expect(el.hasAttribute("readonly")).to.equal(false);
+    expect(JSON.parse(gestures(el)).handle).to.equal(true);
+    el.setAttribute("locked", "");
+    await el.updateComplete;
+    expect(el.readonly).to.equal(false);
   });
 });
 
@@ -3801,5 +3787,41 @@ describe("row-height and gap accept CSS lengths", () => {
     const empty = await populated(html`<lr-dashboard-grid gap=""></lr-dashboard-grid>`);
     expect(empty.gap, "a blank value is unset, like a removed attribute").to.equal(null);
     expect(computed(empty)[1]).to.equal("8px");
+  });
+});
+
+describe('populated accessibility', () => {
+  it('is accessible with widget cells and during a colliding drag preview', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div style="inline-size: 640px">
+      <lr-dashboard-grid cells-draggable cells-resizable collision="reject" columns="4"></lr-dashboard-grid>
+    </div>`);
+    const el = host.querySelector('lr-dashboard-grid') as LyraDashboardGrid;
+    el.layout = [
+      { cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Users', widget: { type: 'stat', props: { label: 'Users', value: '12' } } },
+      { cellId: 'b', x: 1, y: 0, w: 1, h: 1, label: 'Revenue', widget: { type: 'stat', props: { label: 'Revenue', value: '40' } } },
+    ];
+    await settleChildReconciliation(el);
+    const renderers = [...el.querySelectorAll('lr-widget, lr-widget-renderer')] as unknown as { updateComplete: Promise<unknown> }[];
+    await Promise.all(renderers.map((node) => node.updateComplete));
+    expect(el.querySelectorAll('lr-widget')).to.have.lengthOf(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="resize-handle"]')).to.have.lengthOf(2);
+    // A one-row cell clips each stat, so each body becomes a keyboard scroll stop once measured.
+    const bodies = [...el.querySelectorAll('lr-widget')].map((widget) => widget.shadowRoot?.querySelector('[part="body"]') ?? null);
+    await waitUntil(() => bodies.every((body) => body?.getAttribute('tabindex') === '0'), 'each clipped widget body takes a tab stop');
+    await expect(el).to.be.accessible();
+
+    const cellA = el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="a"]')!;
+    const cellB = el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="b"]')!;
+    const offset = cellB.getBoundingClientRect().left - cellA.getBoundingClientRect().left;
+    cellA.setPointerCapture = () => {};
+    cellA.releasePointerCapture = () => {};
+    cellA.dispatchEvent(new PointerEvent('pointerdown', { isPrimary: true, pointerId: 7, clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: offset, clientY: 0 }));
+    await waitUntil(() => cellA.hasAttribute('data-collision'), 'the drag preview reports a collision');
+    expect(cellA.hasAttribute('data-dragging')).to.equal(true);
+    await expect(el).to.be.accessible();
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7 }));
+    await el.updateComplete;
+    expect(cellA.hasAttribute('data-dragging')).to.equal(false);
   });
 });

@@ -23,6 +23,7 @@ import { resolveEffectivePositioningStrategy } from '../../../internal/positioni
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './mention-popover.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { nearestEnabledIndex } from '../../../internal/numbers.js';
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -1175,17 +1176,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  with no disabled row, this is the same `clamp(activeIndex, 0, rows.length - 1)` it always
    *  computed. */
   private clampedIndex(rows: readonly Readonly<LyraMentionItem>[]): number {
-    const count = rows.length;
-    if (!count) return -1;
-    const clamped = Math.min(Math.max(this.activeIndex, 0), count - 1);
-    if (!rows[clamped]?.disabled) return clamped;
-    for (let forward = clamped + 1; forward < count; forward += 1) {
-      if (!rows[forward]?.disabled) return forward;
-    }
-    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
-      if (!rows[backward]?.disabled) return backward;
-    }
-    return -1;
+    return nearestEnabledIndex(this.activeIndex, rows.length, (at) => rows[at]?.disabled === true);
   }
 
   private rowId(index: number): string {

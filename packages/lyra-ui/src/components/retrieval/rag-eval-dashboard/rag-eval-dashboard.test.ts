@@ -8,10 +8,6 @@ import type {
 import type { LyraStat } from '../../data/stat/stat.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const metrics: LyraRagEvaluationMetric[] = [
   { id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' },
@@ -498,19 +494,15 @@ describe('lr-rag-eval-dashboard render cap', () => {
 });
 
 describe('lr-rag-eval-dashboard retired show-chart alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-eval-dashboard', kind: 'property', name: 'showChart' }];
   const observe = (el: LyraRagEvalDashboard): string => String(el.shadowRoot!.querySelector('[part="chart"]') !== null);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagEvalDashboard>(markup);
 
-  it('applies without-chart with canonical defaults and no deprecation warning', async () => {
+  it('applies without-chart with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" without-chart></lr-rag-eval-dashboard>`));
-      plain = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`));
-    });
+    canonical = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" without-chart></lr-rag-eval-dashboard>`));
+    plain = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

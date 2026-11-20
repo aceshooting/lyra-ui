@@ -4,10 +4,6 @@ import '../../lr-entity-card.js';
 import type { LyraEntityCard, LyraEntity } from '../../lr-entity-card.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const entity: LyraEntity = {
   id: 'e1',
@@ -477,40 +473,32 @@ it('routes forced-color badge paint back through the system-owned semantic token
 });
 
 describe('lr-entity-card retired show-focus-button alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'showFocusButton' }];
   const observe = (el: LyraEntityCard): string => String(el.shadowRoot!.querySelectorAll('[part="focus-button"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
 
-  it('applies without-focus-button with canonical defaults and no deprecation warning', async () => {
+  it('applies without-focus-button with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
-      plain = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
-    });
+    canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
+    plain = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 
 describe('lr-entity-card size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraEntityCard): string => {
     const chrome = baseChrome(el);
     return `${chrome.paddingTop}|${chrome.rowGap}`;
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`));
-      regular = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
-    });
+    dense = observe(await mount(html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`));
+    regular = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
     expect(dense).to.equal('8px|4px');
     expect(regular).to.equal('12px|8px');
-    expect(warnings).to.have.length(0);
   });
 });
 

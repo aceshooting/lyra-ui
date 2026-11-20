@@ -5,14 +5,6 @@ import type { LyraAnimatedImage } from '../../lr-animated-image.js';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
-
-const RESPECT_REDUCED_MOTION: readonly DeprecatedUsage[] = [
-  { tag: 'lr-animated-image', kind: 'property', name: 'respectReducedMotion' },
-];
 
 // A real, valid 1x1 pixel PNG -- loaded through a genuine <img> decode in the
 // Chromium `wtr` launches (not mocked), so `load`/`naturalWidth`/etc. are all
@@ -460,12 +452,10 @@ describe('play / playing / reduced-motion arbitration', () => {
   it('keeps ignore-reduced-motion authoritative with the retired attribute present', async () => {
     const stub = stubReducedMotion(true);
     try {
-      await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
-        const el = (await fixture(
-          html`<lr-animated-image alt="Pixel" respect-reduced-motion ignore-reduced-motion></lr-animated-image>`,
-        )) as LyraAnimatedImage;
-        expect(el.ignoreReducedMotion).to.be.true;
-      });
+      const el = (await fixture(
+        html`<lr-animated-image alt="Pixel" respect-reduced-motion ignore-reduced-motion></lr-animated-image>`,
+      )) as LyraAnimatedImage;
+      expect(el.ignoreReducedMotion).to.be.true;
     } finally {
       stub.restore();
     }

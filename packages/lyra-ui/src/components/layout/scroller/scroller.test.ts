@@ -508,6 +508,21 @@ describe("<lr-scroller>", () => {
     await expect(el).to.be.accessible();
   });
 
+  it('is accessible with controls enabled over overflowing content', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls label="Recent items" style="inline-size: 200px">
+        <div style="display: flex; gap: 8px">
+          ${Array.from({ length: 8 }, (_, index) => html`<a href="#item-${index}" style="flex: none; inline-size: 120px">Item ${index + 1}</a>`)}
+        </div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!;
+    await waitUntil(() => viewport.scrollWidth > viewport.clientWidth && !next.disabled, 'the controlled viewport never overflowed');
+    expect(el.shadowRoot!.querySelectorAll('[part~="control"]')).to.have.lengthOf(2);
+    await expect(el).to.be.accessible();
+  });
+
   // -- numeric guard regressions (scrollStep) --
 
   it("falls back to the viewport-percentage default instead of scrolling by NaN/Infinity when scrollStep is invalid", async () => {

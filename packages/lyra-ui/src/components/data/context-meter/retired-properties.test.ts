@@ -1,6 +1,5 @@
 import { fixture, expect } from '@open-wc/testing';
 import type { LyraElement } from '../../../internal/lyra-element.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import '../../lr-animated-image.js';
 import '../../lr-animation.js';
 import '../../lr-attachment-chip.js';
@@ -51,7 +50,6 @@ const cases = [
 ];
 
 for (const entry of cases) {
-  expectDeprecatedUsage(entry.tag, 'property', entry.old);
   it(`${entry.tag} ignores retired ${entry.old} writes without changing canonical rendering`, async () => {
     const el = await fixture<LyraElement>(`<${entry.tag} aria-label="Retirement control"></${entry.tag}>`);
     Reflect.set(el, entry.canonical, entry.value);

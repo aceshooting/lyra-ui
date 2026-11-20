@@ -10,10 +10,6 @@ import type { LyraVideo } from '../../lr-video.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 function childVideos(el: LyraVideoPlaylist): LyraVideo[] {
   return [...el.children].filter((child): child is LyraVideo => child.localName === 'lr-video');
@@ -1415,10 +1411,6 @@ describe('lr-video-playlist public contract', () => {
 });
 
 describe('lr-video-playlist automatic advance', () => {
-  const AUTO_ADVANCE: readonly DeprecatedUsage[] = [
-    { tag: 'lr-video-playlist', kind: 'property', name: 'autoAdvance' },
-  ];
-
   // Ends the first video and reports whether the playlist moved on to the second one.
   async function advancesOnEnded(el: LyraVideoPlaylist): Promise<boolean> {
     await settle(el);
@@ -1431,15 +1423,13 @@ describe('lr-video-playlist automatic advance', () => {
   }
 
   it('keeps without-auto-advance authoritative with the retired attribute present', async () => {
-    await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
-      const el = await fixture<LyraVideoPlaylist>(html`
-        <lr-video-playlist auto-advance without-auto-advance>
-          <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
-        </lr-video-playlist>
-      `);
-      expect(el.withoutAutoAdvance).to.be.true;
-      expect(await advancesOnEnded(el)).to.be.false;
-    });
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist auto-advance without-auto-advance>
+        <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+      </lr-video-playlist>
+    `);
+    expect(el.withoutAutoAdvance).to.be.true;
+    expect(await advancesOnEnded(el)).to.be.false;
   });
 });
 

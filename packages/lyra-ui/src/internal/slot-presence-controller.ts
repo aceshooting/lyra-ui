@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { hasRealContent } from './a11y.js';
+import { hasSlotContent, isSlotElement } from './slot-content.js';
 import { HostChildrenObserver } from './owned-observer.js';
 import { SEED_FIRST_RENDER_STATE, SLOT_PRESENCE_UNRESOLVED } from './lyra-element.js';
 
@@ -10,30 +11,6 @@ type SlotPresenceHost = ReactiveControllerHost &
     [SEED_FIRST_RENDER_STATE]?: (seed: () => void) => void;
     [SLOT_PRESENCE_UNRESOLVED]?: () => boolean;
   };
-
-/** Realm-neutral slot check: constructor identity is not shared across iframe documents. */
-function isSlotElement(node: Node): node is HTMLSlotElement {
-  return (
-    node.nodeType === 1 &&
-    (node as Element).localName === 'slot' &&
-    typeof (node as Partial<HTMLSlotElement>).assignedNodes === 'function'
-  );
-}
-
-/** Resolves only real assignments through forwarding slots. Native `flatten: true` substitutes an
- * unassigned nested slot's fallback, but that fallback is component chrome rather than consumer
- * content. The active-path set also makes malformed/crafted assignment cycles fail closed. */
-function assignedConsumerNodes(slot: HTMLSlotElement, active = new Set<Node>()): Node[] {
-  if (active.has(slot)) return [];
-  active.add(slot);
-  const resolved: Node[] = [];
-  for (const node of slot.assignedNodes()) {
-    if (isSlotElement(node)) resolved.push(...assignedConsumerNodes(node, active));
-    else resolved.push(node);
-  }
-  active.delete(slot);
-  return resolved;
-}
 
 /**
  * Tracks whether each light-DOM slot carries meaningful consumer content.
@@ -73,6 +50,13 @@ export class SlotPresenceController implements ReactiveController {
   has(name = ''): boolean {
     return (this.#presence.get(name) ?? false) ||
       (this.host[SLOT_PRESENCE_UNRESOLVED]?.() ?? false);
+  }
+
+  /** Presence without the server-render override of {@link has}: false until the browser has
+   *  resolved the slot. Use it where absence renders fallback content, which must stay in the
+   *  server markup rather than be hidden behind content that may not exist. */
+  hasResolved(name = ''): boolean {
+    return this.#presence.get(name) ?? false;
   }
 
   hostConnected(): void {
@@ -173,28 +157,15 @@ export class SlotPresenceController implements ReactiveController {
       const name = slot.name;
       seen.add(name);
       // Direct assignments remain stable during transient native slotchange snapshots.
-      const present = this.#lightDomPresence(name);
+      const present = hasSlotContent(this.host, name);
       this.#setPresence(name, present, requestUpdate);
     }
-    const names = new Set(this.#presence.keys());
+    // The default slot is always checked: text-only content has no `slot` attribute to list.
+    const names = new Set(['', ...this.#presence.keys()]);
     for (const child of Array.from(this.host.children ?? [])) names.add(child.getAttribute('slot') ?? '');
     for (const name of names) {
-      if (!seen.has(name)) this.#setPresence(name, this.#lightDomPresence(name), requestUpdate);
+      if (!seen.has(name)) this.#setPresence(name, hasSlotContent(this.host, name), requestUpdate);
     }
-  }
-
-  #lightDomPresence(name: string): boolean {
-    if (typeof Node === 'undefined' || !('childNodes' in this.host)) return false;
-    const nodes = Array.from(this.host.childNodes).filter((node) => {
-      const assignedName =
-        node.nodeType === Node.ELEMENT_NODE ? ((node as Element).getAttribute('slot') ?? '') : '';
-      return assignedName === name;
-    });
-    const resolved = nodes.flatMap((node) => {
-      if (isSlotElement(node)) return assignedConsumerNodes(node);
-      return [node];
-    });
-    return hasRealContent(resolved);
   }
 
   #seedAvailablePresence(requestUpdate: boolean): void {

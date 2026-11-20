@@ -2,6 +2,7 @@ import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
@@ -29,15 +30,6 @@ const STREAM_CONNECTION_STATE = literalSetConverter<StreamConnectionState>(
   ['idle', 'connecting', 'streaming', 'interrupted'],
   'idle'
 );
-
-// Native <slot> fallback is suppressed by any assigned node, including whitespace. Count only
-// visible default-slot content: unassigned elements or non-whitespace text.
-function isRealMessageNode(n: Node): boolean {
-  if (n.nodeType !== Node.ELEMENT_NODE)
-    return (n.textContent ?? '').trim().length > 0;
-  const slot = (n as Element).getAttribute('slot');
-  return slot === null || slot === '';
-}
 
 export interface LyraStreamStatusEventMap {
   'lr-stall': CustomEvent<null>;
@@ -207,13 +199,9 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // Only ever set while `phase === 'streaming'` — see armStallTimer()/disarmStallTimer().
   private readonly stallTimer = new OwnedTimeout(this);
 
-  @state() private hasActionsSlot = false;
-
-  // Seeded from light-DOM childNodes in willUpdate() (mirrors hasActionsSlot
-  // above), then kept current via onMessageSlotChange() -- see
-  // isRealMessageNode()'s doc comment for why native <slot> fallback content
-  // can't be relied on for the default stalled-message text.
-  @state() private hasMessageContent = false;
+  // Native <slot> fallback is suppressed by any assigned node, including whitespace, so the default
+  // stalled-message text renders from resolved default-slot presence instead.
+  private readonly slots = new SlotPresenceController(this);
 
   @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
@@ -229,12 +217,6 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.resumeFocused = shadowFocusTarget(this)?.getAttribute('part') === 'resume';
-    if (!this.hasUpdated) {
-      this.hasActionsSlot = this.hasSlotted('actions');
-      this.hasMessageContent = Array.from(this.childNodes).some(
-        isRealMessageNode
-      );
-    }
   }
 
   private childRegistration?: Promise<unknown>;
@@ -391,24 +373,6 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     region.announce(text, { force: true });
   }
 
-  private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some(
-      (el) => el.getAttribute('slot') === name
-    );
-  }
-
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onMessageSlotChange = (e: Event): void => {
-    this.hasMessageContent = (e.target as HTMLSlotElement)
-      .assignedNodes({ flatten: true })
-      .some(isRealMessageNode);
-  };
-
   private get phaseText(): string {
     switch (this.phase) {
       case 'connecting':
@@ -443,8 +407,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
         <span part="phase">${this.phaseText}</span>
         ${this.phase === 'stalled'
           ? html`<div part="message">
-              <slot @slotchange=${this.onMessageSlotChange}></slot>${this
-                .hasMessageContent
+              <slot></slot>${this.slots.hasResolved()
                 ? nothing
                 : this.localize('streamStalled')}
             </div>`
@@ -453,8 +416,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
           ? html`<lr-button part="resume" exportparts="base:resume" wrap size="s" variant="neutral" type="button" ?disabled=${this.disabled}
               @click=${this.requestResume}>${this.localize('streamResume')}</lr-button>`
           : nothing}
-        <div part="actions" ?hidden=${!this.hasActionsSlot}>
-          <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+        <div part="actions" ?hidden=${!this.slots.has('actions')}>
+          <slot name="actions"></slot>
         </div>
         <lr-live-region></lr-live-region>
       </div>

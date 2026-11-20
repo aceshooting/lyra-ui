@@ -57,8 +57,8 @@ describe('observeAdmission', () => {
       expect(admitted).to.equal(1);
       expect(fake.instances[0]!.disconnected).to.equal(true);
       fake.instances[0]!.deliver([{ target: surface, isIntersecting: true }]);
-      dispose();
-      dispose();
+      dispose!();
+      dispose!();
       expect(admitted).to.equal(1);
     } finally {
       fake.restore();
@@ -135,7 +135,7 @@ describe('observeAdmission', () => {
       let admitted = 0;
       const dispose = observeAdmission(host, surface, { isReady: () => true, onAdmit: () => admitted++ });
       const deliver = fake.instances[0]!.deliver;
-      dispose();
+      dispose!();
       host.removeAttribute('hidden');
       deliver([{ target: surface, isIntersecting: true }]);
       await settle();
@@ -269,13 +269,13 @@ describe('watchEngineStyle', () => {
       await waitUntil(() => calls === 3);
       sheet.remove();
       await waitUntil(() => calls === 4);
-      dispose();
-      dispose();
+      dispose!();
+      dispose!();
       outer.setAttribute('data-lr-theme', 'light');
       await new Promise((resolve) => setTimeout(resolve));
       expect(calls).to.equal(4);
     } finally {
-      dispose();
+      dispose!();
       outer.remove();
     }
   });

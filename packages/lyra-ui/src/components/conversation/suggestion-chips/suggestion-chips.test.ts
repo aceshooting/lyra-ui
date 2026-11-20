@@ -269,6 +269,20 @@ it('roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLe
   expect((el.shadowRoot!.activeElement) === (chips[1])).to.equal(true);
 });
 
+it('keeps exactly one tab stop when the roving index is not a finite number', async () => {
+  const el = (await fixture(
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  const roving = el as unknown as { activeIndex: number };
+  const stops = () => [...el.shadowRoot!.querySelectorAll('[part~="chip"]')]
+    .map((chip) => (chip as HTMLButtonElement).tabIndex);
+  for (const [index, expected] of [[NaN, 0], [Infinity, 2], [-Infinity, 0]] as const) {
+    roving.activeIndex = index;
+    await el.updateComplete;
+    expect(stops().join(','), `activeIndex ${index}`).to.equal(stops().map((_, at) => (at === expected ? 0 : -1)).join(','));
+  }
+});
+
 it('wraps around from the last chip to the first with ArrowRight, and swaps under RTL', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips dir="rtl" .suggestions=${suggestions}></lr-suggestion-chips>`,

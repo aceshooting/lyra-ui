@@ -1,8 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import '../../lr-file-tree.js';
 import type { LyraFileTree, FileTreeNode } from '../../lr-file-tree.js';
+import type { LyraHierarchyQuery, LyraHierarchySource } from '../../../data-sources.js';
 import type { LyraTree } from '../../lr-tree.js';
 import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
@@ -669,5 +670,85 @@ describe('lr-file-tree bulk and reveal boundaries', () => {
     } finally {
       el.remove();
     }
+  });
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-file-tree>` localizes 18 keys; each marker must reach the rendered DOM. treeLimit needs a
+  // 10,001-node listing and is proven by the localized-notice test above.
+  const statuses = ['added', 'modified', 'deleted', 'renamed', 'untracked', 'conflicted', 'ignored'] as const;
+  const statusKey = (status: string) => `gitStatus${status[0]!.toUpperCase()}${status.slice(1)}`;
+  const markers: Record<string, string> = {
+    fileTreeLabel: 'FT-NAME',
+    fileTreeDiffSummary: 'FT-DIFF +{additions}/-{deletions}',
+    treeSourceError: 'FT-SOURCE-ERROR',
+    retry: 'FT-RETRY',
+    loading: 'FT-LOADING',
+    noData: 'FT-EMPTY',
+    treeSourceSummary: 'FT-SUMMARY {visible}/{total}',
+    expand: 'FT-EXPAND',
+    collapse: 'FT-COLLAPSE',
+    ...Object.fromEntries(statuses.map((status) => [statusKey(status), `FT-${status.toUpperCase()}`])),
+  };
+  const text = (el: LyraFileTree, selector: string) =>
+    Array.from(el.shadowRoot!.querySelectorAll(selector), (node) => node.textContent!.trim());
+
+  function listing(values: readonly FileTreeNode[]): LyraHierarchySource<FileTreeNode, LyraHierarchyQuery> {
+    let expanded = false;
+    return { revision: 1, async project(request) {
+      if (request.action.type === 'toggle') expanded = request.action.expanded;
+      const item = (index: number) => {
+        const value = values[index]!;
+        const childCount = value.kind === 'directory' ? 1 : 0;
+        return { key: value.path, value, parentKey: null, level: 1, position: index + 1, setSize: values.length,
+          childCount, expanded: childCount > 0 && expanded, selected: false };
+      };
+      return { state: 'files', total: values.length, rows: { count: values.length, keyAt: (index: number) => values[index]!.path,
+        indexOfKey: (key: string | number) => values.findIndex((value) => value.path === key), itemAt: item } };
+    } };
+  }
+
+  it('routes the tree name, diff summary and every git status into source rows', async () => {
+    const files: FileTreeNode[] = [
+      { path: 'dir', kind: 'directory' },
+      ...statuses.map((gitStatus, index) => ({ path: `f${index}.ts`, gitStatus, additions: index, deletions: 1 })),
+    ];
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .strings=${markers} .treeSource=${listing(files)}></lr-file-tree>`);
+    const rowName = (key: string) =>
+      el.shadowRoot!.querySelector(`[part~="source-row"][data-source-key="${key}"]`)?.getAttribute('aria-label') ?? '';
+    await waitUntil(() => rowName('f6.ts') !== '', 'source rows never rendered');
+    expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('FT-NAME');
+    expect(text(el, '[part="source-status"]')).to.include('FT-SUMMARY 8/8');
+    statuses.forEach((status, index) => {
+      expect(rowName(`f${index}.ts`), status).to.contain(`FT-DIFF +${index}/-1`).and.contain(`FT-${status.toUpperCase()}`);
+    });
+    const toggle = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="dir"] [part="source-toggle"]')!;
+    expect(toggle().getAttribute('aria-label')).to.equal('FT-EXPAND');
+    toggle().click();
+    await waitUntil(() => toggle().getAttribute('aria-label') === 'FT-COLLAPSE', 'collapse name never rendered');
+  });
+
+  it('routes noData, loading, treeSourceError and retry into the matching source states', async () => {
+    const empty = await fixture<LyraFileTree>(html`<lr-file-tree .strings=${markers} .treeSource=${listing([])}></lr-file-tree>`);
+    await waitUntil(() => text(empty, '[part="source-status"]').includes('FT-EMPTY'), 'empty text never rendered');
+    const pending: LyraHierarchySource<FileTreeNode, LyraHierarchyQuery> = { revision: 1, project: () => new Promise(() => undefined) };
+    const loading = await fixture<LyraFileTree>(html`<lr-file-tree .strings=${markers} .treeSource=${pending}></lr-file-tree>`);
+    await waitUntil(() => text(loading, '[part="source-status"]').includes('FT-LOADING'), 'loading text never rendered');
+    const failed = await fixture<LyraFileTree>(html`<lr-file-tree .strings=${markers}></lr-file-tree>`);
+    failed.treeSource = {} as unknown as NonNullable<LyraFileTree['treeSource']>;
+    await failed.updateComplete;
+    const error = failed.shadowRoot!.querySelector('[part~="source-error"]')!;
+    const retry = error.querySelector('button')!.textContent!;
+    expect(retry.trim()).to.equal('FT-RETRY');
+    expect(error.textContent!.replace(retry, '').trim()).to.equal('FT-SOURCE-ERROR');
+  });
+
+  it('routes fileTreeLabel and noData into the object-data mode', async () => {
+    // The object-data mode renders an inner <lr-tree>, so its empty state proves the overrides are forwarded.
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .strings=${markers}></lr-file-tree>`);
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+    await tree.updateComplete;
+    expect(tree.shadowRoot!.querySelector('[part~="tree"]')!.getAttribute('aria-label')).to.equal('FT-NAME');
+    expect(tree.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('FT-EMPTY');
   });
 });

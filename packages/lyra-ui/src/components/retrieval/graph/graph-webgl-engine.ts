@@ -1,15 +1,11 @@
 import { finiteRange } from '../../../internal/numbers.js';
-import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { normalizeGraphCurvature } from './graph-curvature.js';
+import { ownGraphValue as own } from './graph-spatial-model.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphEdge } from './graph-model.js';
 import type { SpatialWorldNode } from './graph-spatial.js';
 import type { GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
 
 const CAMERA_LIMIT = 3.4028234663852886e38 / 8;
-function own(value: unknown, key: string): unknown {
-  if (!value || typeof value !== 'object') return undefined;
-  const descriptor = getOwnDataDescriptor(value, key); return typeof descriptor === 'object' ? descriptor.value : undefined;
-}
 /** Camera distance is independent of the largest renderable world coordinate. */
 export function graphWebglCamera(value: unknown, fallback: LyraGraphCamera): LyraGraphCamera {
   const number = (input: unknown, otherwise: number, min: number, max: number) => finiteRange(typeof input === 'number' ? input : NaN, otherwise, min, max);

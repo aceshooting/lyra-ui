@@ -1,12 +1,12 @@
 import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifecycle.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import '../../lr-stat.js';
 import type { LyraStat } from '../../lr-stat.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 expectLocaleFallback('de-DE', ['statTrendAnnouncement', 'statTrendGood', 'statTrendIncreased']);
 
@@ -1467,7 +1467,6 @@ it('rests a passive tile on the subtle tier and a linked tile on the control tie
 
 
 describe('size density', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-stat', kind: 'property', name: 'compact' }];
   const chrome = (el: LyraStat): string[] => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
     return [base.paddingTop, base.paddingLeft, base.rowGap];
@@ -1493,14 +1492,11 @@ describe('size density', () => {
     expect(columnGap(row)).to.equal('8px');
   });
 
-  it('never warns for size or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraStat>(html`<lr-stat size="xs" value="1"></lr-stat>`);
-      el.size = 'l';
-      await el.updateComplete;
-      expect(el.hasAttribute('compact')).to.be.false;
-    });
-    expect(warnings).to.deep.equal([]);
+  it('writes no compact attribute when size changes', async () => {
+    const el = await fixture<LyraStat>(html`<lr-stat size="xs" value="1"></lr-stat>`);
+    el.size = 'l';
+    await el.updateComplete;
+    expect(el.hasAttribute('compact')).to.be.false;
   });
 });
 
@@ -1529,4 +1525,39 @@ it('keeps number-first value and row values in reading order under dir="rtl"', a
   await stat.updateComplete;
   expect(paintsHeadFirst(stat.shadowRoot!.querySelector('[part="value"]')!, '2.4 MiB/s', 3)).to.equal(true);
   expect(paintsHeadFirst(stat.shadowRoot!.querySelector('[part="row-value"]')!, '-12', 1)).to.equal(true);
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-stat>` localizes 7 keys; each marker must reach the trend announcement or the limit notice.
+  const markers = {
+    statTrendAnnouncement: 'ST-ANNOUNCE {trend} / {polarity}',
+    statTrendIncreased: 'ST-UP {value}',
+    statTrendDecreased: 'ST-DOWN {value}',
+    statTrendGood: 'ST-GOOD',
+    statTrendBad: 'ST-BAD',
+    trendUnchanged: 'ST-FLAT',
+    statRowsInputLimit: 'ST-LIMIT {count}/{total}',
+  };
+  const announced = (el: LyraStat) => el.shadowRoot!.querySelector('[part="trend"] .sr-only')!.textContent!.trim();
+
+  it('routes every trend key, with its placeholders, into the announced trend text', async () => {
+    const el = await fixture<LyraStat>(
+      html`<lr-stat label="x" value="1" delta-percent="12" .strings=${markers}></lr-stat>`,
+    );
+    expect(announced(el)).to.equal('ST-ANNOUNCE ST-UP 12% / ST-GOOD');
+    el.deltaPercent = -12;
+    await el.updateComplete;
+    expect(announced(el)).to.equal('ST-ANNOUNCE ST-DOWN 12% / ST-BAD');
+    el.deltaPercent = 0;
+    await el.updateComplete;
+    expect(announced(el)).to.equal('ST-FLAT');
+  });
+
+  it('routes statRowsInputLimit, with {count}/{total}, into the limit notice', async () => {
+    expectDevWarning('lyra-collection-truncated:lr-stat:rows');
+    const el = await fixture<LyraStat>(html`<lr-stat value="1" .strings=${markers}></lr-stat>`);
+    el.rows = Array.from({ length: 10_001 }, (_, index) => ({ label: String(index), value: '1' }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent!.trim()).to.equal('ST-LIMIT 10,000/10,001');
+  });
 });

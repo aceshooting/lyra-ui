@@ -750,7 +750,6 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
               .selected=${this.activeTags.has(tag)}
               .disabled=${this.disabled}
               @lr-chip-toggle-request=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipToggle(tag, e)}
-              @lr-chip-select=${this.stopOwnedEvent}
               @lr-chip-change=${this.stopOwnedEvent}
               @lr-remove=${this.stopOwnedEvent}
               >${this.sourceMode ? this.sourceFacetLabels.get(tag) ?? tag : tag}</lr-chip

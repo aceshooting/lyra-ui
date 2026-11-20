@@ -7,17 +7,6 @@ import type { LyraAttachmentChip } from '../../lr-attachment-chip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
-
-const PREVIEWABLE: readonly DeprecatedUsage[] = [
-  { tag: 'lr-attachment-chip', kind: 'property', name: 'previewable' },
-];
-const COMPACT: readonly DeprecatedUsage[] = [
-  { tag: 'lr-attachment-chip', kind: 'property', name: 'compact' },
-];
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -141,7 +130,7 @@ describe('event-owned preview requests', () => {
   });
 });
 
-describe('withoutPreview and the deprecated previewable alias', () => {
+describe('withoutPreview and the retired previewable attribute', () => {
   const previewButtons = (el: LyraAttachmentChip): number =>
     el.shadowRoot!.querySelectorAll('[part="preview-button"]').length;
 
@@ -171,18 +160,16 @@ describe('withoutPreview and the deprecated previewable alias', () => {
   });
 
   it('keeps without-preview authoritative with the retired attribute present', async () => {
-    await captureDeprecationWarnings(PREVIEWABLE, async () => {
-      const el = (await fixture(html`
-        <lr-attachment-chip
-          name="report.pdf"
-          preview-src="https://example.test/report.pdf"
-          previewable
-          without-preview
-        ></lr-attachment-chip>
-      `)) as LyraAttachmentChip;
-      expect(el.withoutPreview).to.be.true;
-      expect(previewButtons(el)).to.equal(0);
-    });
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        name="report.pdf"
+        preview-src="https://example.test/report.pdf"
+        previewable
+        without-preview
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.withoutPreview).to.be.true;
+    expect(previewButtons(el)).to.equal(0);
   });
 });
 
@@ -1249,15 +1236,13 @@ describe('thumbnailOnly', () => {
   });
 
   it('shows [part=meta] again when size changes from small to medium', async () => {
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const el = (await fixture(
-        html`<lr-attachment-chip size="s" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
-      )) as LyraAttachmentChip;
-      el.size = 'm';
-      await el.updateComplete;
-      const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
-      expect(getComputedStyle(meta).display).to.not.equal('none');
-    });
+    const el = (await fixture(
+      html`<lr-attachment-chip size="s" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    el.size = 'm';
+    await el.updateComplete;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.not.equal('none');
   });
 });
 

@@ -14,6 +14,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { RovingToolbarController } from '../../../internal/roving-toolbar.js';
+import { nearestEnabledIndex } from '../../../internal/numbers.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -268,17 +269,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
    *  no disabled suggestion, this is the same `clamp(activeIndex, 0, count - 1)` the tabindex
    *  comparison always used. */
   private effectiveActiveIndex(suggestions: readonly LyraChatSuggestion[]): number {
-    const count = suggestions.length;
-    if (!count) return -1;
-    const clamped = Math.min(Math.max(this.activeIndex, 0), count - 1);
-    if (!this.isSuggestionDisabled(suggestions[clamped])) return clamped;
-    for (let forward = clamped + 1; forward < count; forward += 1) {
-      if (!this.isSuggestionDisabled(suggestions[forward])) return forward;
-    }
-    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
-      if (!this.isSuggestionDisabled(suggestions[backward])) return backward;
-    }
-    return -1;
+    return nearestEnabledIndex(this.activeIndex, suggestions.length, (at) => this.isSuggestionDisabled(suggestions[at]));
   }
 
   private stopEvent = (e: Event): void => e.stopPropagation();

@@ -11,10 +11,6 @@ import {
   type LyraAppRailToggleDetail,
 } from "../../lr-app-rail.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 import { sendKeys } from '@web/test-runner-commands';
 
 // These fixtures deliberately verify that retired attributes remain inert.
@@ -3731,8 +3727,7 @@ it('re-acquires the external trigger ARIA when a reconnect is followed by a brea
   external.remove();
 });
 
-describe("app-rail canonical names and their deprecated aliases", () => {
-  const usage = (name: string): DeprecatedUsage => ({ tag: "lr-app-rail", kind: "property", name });
+describe("app-rail canonical names and the retired hide-toggle attribute", () => {
   const resizer = (el: LyraAppRail) =>
     el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
   const base = (el: LyraAppRail) =>
@@ -3740,19 +3735,16 @@ describe("app-rail canonical names and their deprecated aliases", () => {
 
   it("keeps the mobile toggle visible when only hide-toggle is set", async () => {
     const hidden: string[] = [];
-    const warnings = await captureDeprecationWarnings([usage("hideToggle")], async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
-        fireMobileChange(el, true);
-        await el.updateComplete;
-        await el.updateComplete;
-        expect(el.withoutToggle).to.equal(false);
-        expect(el.hasAttribute("without-toggle")).to.equal(false);
-        hidden.push(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).display);
-      }
-    });
+    for (let index = 0; index < 2; index += 1) {
+      const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
+      fireMobileChange(el, true);
+      await el.updateComplete;
+      await el.updateComplete;
+      expect(el.withoutToggle).to.equal(false);
+      expect(el.hasAttribute("without-toggle")).to.equal(false);
+      hidden.push(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).display);
+    }
     expect(hidden.every(display => display !== "none")).to.equal(true);
-    expect(warnings).to.have.length(0);
   });
 
   it("accepts CSS lengths on rail-width, min-rail-width and max-rail-width, resolved live", async () => {
@@ -3784,21 +3776,19 @@ describe("app-rail canonical names and their deprecated aliases", () => {
   });
 
   it("ignores hide-toggle attribute changes after the first render", async () => {
-    await captureDeprecationWarnings([usage("hideToggle")], async () => {
-      const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
-      await el.updateComplete;
-      expect(el.hasAttribute("without-toggle")).to.equal(false);
-      el.removeAttribute("hide-toggle");
-      await el.updateComplete;
-      expect(el.withoutToggle).to.equal(false);
-      expect(el.hasAttribute("without-toggle")).to.equal(false);
-      el.setAttribute("hide-toggle", "");
-      await el.updateComplete;
-      expect(el.withoutToggle).to.equal(false);
-    });
+    const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.hasAttribute("without-toggle")).to.equal(false);
+    el.removeAttribute("hide-toggle");
+    await el.updateComplete;
+    expect(el.withoutToggle).to.equal(false);
+    expect(el.hasAttribute("without-toggle")).to.equal(false);
+    el.setAttribute("hide-toggle", "");
+    await el.updateComplete;
+    expect(el.withoutToggle).to.equal(false);
   });
 
-  it("does not recolor the base and panel through the deprecated -background custom properties", async () => {
+  it("does not recolor the base and panel through the retired -background custom properties", async () => {
     const el = (await fixture(
       html`<lr-app-rail data-lr-surface="solid"
         open

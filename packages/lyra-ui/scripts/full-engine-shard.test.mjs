@@ -178,9 +178,10 @@ test('runs Linux Firefox shards headed under Xvfb without native-scrollbar mode'
   assert.equal(calls.length, 1);
   assert.equal(calls[0].command, 'xvfb-run');
   assert.deepEqual(calls[0].args, ['-a', 'wtr', ...files]);
-  assert.deepEqual(calls[0].options.env, { ...environment, WTR_HEADED: '1' });
+  assert.deepEqual(calls[0].options.env, { ...environment, WTR_HEADED: '1', WTR_REQUIRE_WEBGL2: '1' });
   assert.equal('WTR_NATIVE_SCROLLBAR' in calls[0].options.env, false);
   assert.equal('WTR_HEADED' in environment, false);
+  assert.equal('WTR_REQUIRE_WEBGL2' in environment, false);
 });
 
 test('preserves ordinary launches outside Linux Firefox', () => {

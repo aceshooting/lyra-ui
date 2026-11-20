@@ -10,7 +10,7 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+import type { LyraSequenceRangeSummary, LyraSequenceSource } from './sequence-strip-source.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sequence-strip', 'orientation');
@@ -1695,19 +1695,6 @@ it('tiles awkward totals exactly and maps every selectable item into its own ran
   }
 });
 
-describe('lr-sequence-strip legend visibility', () => {
-  const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-sequence-strip', kind: 'property', name: 'showLegend' }];
-  it('never warns for with-legend or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip></lr-sequence-strip>`);
-      el.withLegend = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
 it('lets host aria-label presence override the generated name, including empty', async () => {
   const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip aria-label="Host name" .items=${items} .categories=${categories}></lr-sequence-strip>`);
   const owner = () => el.shadowRoot!.querySelector('[part="base"]')!;
@@ -1733,4 +1720,78 @@ it('ignores a local cell click if capture replaces its items before activation',
   await el.updateComplete;
   cell().click();
   expect(ids).to.deep.equal(['replacement']);
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key `<lr-sequence-strip>` localizes, in both the `items` and the `source` modes, each
+  // proven to reach the rendered DOM through a `.strings` override. Markers are distinctive (not
+  // the production English) so a dropped override fails.
+  const strings = {
+    sequenceStripEmpty: 'EMPTY-MARKER',
+    sequenceStripUnnamedCategory: 'UNNAMED-MARKER',
+    sequenceStripCategoryCount: 'COUNT-MARKER {label}={count}',
+    sequenceStripBucketSummary: 'BUCKETS-MARKER {items}/{ranges}',
+    sequenceStripBucketLabel: 'BUCKET-MARKER {label} {start}-{end}',
+    sequenceStripCellKeyboardHelp: 'CELL-HELP-MARKER',
+    sequenceStripSourceKeyboardHelp: 'SOURCE-HELP-MARKER',
+    sequenceStripSourceRangeDetails: 'RANGE-MARKER {label} {start}-{end} {enabled}/{total} {markers}',
+    sequenceStripSourceItemLabel: 'ITEM-MARKER {label} {index}/{total}',
+    sequenceStripSourceItemUnavailable: 'UNAVAILABLE-MARKER',
+    sequenceStripSourceError: 'ERROR-MARKER',
+    loading: 'LOADING-MARKER',
+    retry: 'RETRY-MARKER',
+  };
+  const root = (el: LyraSequenceStrip) => el.shadowRoot!;
+  const text = (el: LyraSequenceStrip, selector: string) => root(el).querySelector(selector)?.textContent?.trim() ?? '';
+  const attr = (el: LyraSequenceStrip, selector: string, name: string) => root(el).querySelector(selector)?.getAttribute(name) ?? '';
+  const summaries: LyraSequenceRangeSummary[] = [{ startIndex: 0, endIndex: 3, categoryCounts: { a: 3 }, markerCount: 1, enabledCount: 2 }];
+  const source = (overrides: Partial<LyraSequenceSource<SequenceStripItem>> = {}): LyraSequenceSource<SequenceStripItem> => ({
+    revision: 1, length: 3, getItem: (index) => ({ id: `id-${index}`, categoryId: 'a', label: `Exact ${index}` }),
+    findIndex: (id) => Number(id.slice(3)), summarize: () => summaries, ...overrides,
+  });
+
+  it('routes the items-mode summary, bucket, unnamed-category, help and empty keys to the DOM', async () => {
+    const items = Array.from({ length: 250 }, (_, index): SequenceStripItem => ({ id: `i${index}`, categoryId: 'x', marker: index === 0 }));
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip marker-label="M" .strings=${strings} .items=${items}></lr-sequence-strip>`);
+    const label = attr(el, '[part="base"]', 'aria-label');
+    for (const clause of ['COUNT-MARKER UNNAMED-MARKER=250', 'COUNT-MARKER M=1', 'BUCKETS-MARKER 250/']) expect(label).to.contain(clause);
+    expect(text(el, '[part="bucket-summary"]')).to.match(/^BUCKETS-MARKER 250\/\d+$/);
+    const cellLabels = [...root(el).querySelectorAll('[part="cell"]')].map((cell) => cell.getAttribute('aria-label') ?? '');
+    expect(cellLabels.some((name) => /^BUCKET-MARKER UNNAMED-MARKER \d+-\d+$/.test(name))).to.equal(true);
+    expect(text(el, '#sequence-strip-help')).to.equal('CELL-HELP-MARKER');
+    el.items = [];
+    await el.updateComplete;
+    expect(text(el, '[part="empty"]')).to.equal('EMPTY-MARKER');
+    expect(attr(el, '[part="base"]', 'aria-label')).to.equal('EMPTY-MARKER');
+  });
+
+  it('routes the source-mode range, exact-item, help and unavailable keys to the DOM', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .strings=${strings}
+      .source=${source({ getItem: (index) => (index === 2 ? null : { id: `id-${index}`, categoryId: 'a', label: `Exact ${index}` }) })}></lr-sequence-strip>`);
+    await waitUntil(() => !!root(el).querySelector('[part="source-exact"]'), 'source never resolved');
+    expect(attr(el, '[part="cell"]', 'aria-label')).to.equal('RANGE-MARKER UNNAMED-MARKER 1-3 2/3 1');
+    expect(attr(el, '[part="source-exact"]', 'title')).to.equal('SOURCE-HELP-MARKER');
+    expect(text(el, '#sequence-strip-help')).to.equal('CELL-HELP-MARKER');
+    expect(await el.revealSourceItem(0)).to.equal(true);
+    await el.updateComplete;
+    expect(text(el, '[part="source-exact"]')).to.equal('ITEM-MARKER Exact 0 1/3');
+    expect(await el.revealSourceItem(2)).to.equal(false);
+    await el.updateComplete;
+    expect(text(el, '[part="source-exact"]')).to.contain('UNAVAILABLE-MARKER');
+  });
+
+  it('routes the source-mode loading, error and retry keys to the DOM', async () => {
+    let release!: (value: readonly LyraSequenceRangeSummary[]) => void;
+    const pending = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .strings=${strings}
+      .source=${source({ summarize: () => new Promise((resolve) => { release = resolve; }) })}></lr-sequence-strip>`);
+    await waitUntil(() => !!release, 'summary never requested');
+    await pending.updateComplete;
+    expect(text(pending, '[part="source-status"]')).to.equal('LOADING-MARKER');
+    release(summaries);
+    const failed = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .strings=${strings}
+      .source=${source({ summarize: () => { throw new Error('unavailable'); } })}></lr-sequence-strip>`);
+    await waitUntil(() => !!root(failed).querySelector('[part="source-retry"]'), 'error state never rendered');
+    expect(text(failed, '[part="source-status"]')).to.equal('ERROR-MARKER');
+    expect(text(failed, '[part="source-retry"]')).to.equal('RETRY-MARKER');
+  });
 });

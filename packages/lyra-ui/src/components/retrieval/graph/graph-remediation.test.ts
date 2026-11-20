@@ -115,7 +115,7 @@ describe('graph rendered interaction contracts', () => {
       )!;
       const scales: number[] = [];
       graph.addEventListener('lr-viewport-change', (event) =>
-        scales.push(event.detail.k)
+        scales.push(event.detail.zoom)
       );
       graph.minZoom = 1;
       graph.maxZoom = 2;

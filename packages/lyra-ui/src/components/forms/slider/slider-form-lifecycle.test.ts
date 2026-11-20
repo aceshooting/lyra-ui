@@ -3,10 +3,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { fixture, expect, html, elementUpdated } from "@open-wc/testing";
 import "../../lr-slider.js";
 import type { LyraSlider } from "../../lr-slider.js";
-import { expectDeprecatedUsage } from "../../../../test/expected-deprecations.js";
 import "../../../translations/ar/forms.js";
-
-expectDeprecatedUsage("lr-slider", "property", "showValue");
 
 expectStaleAttribute('lr-slider', 'show-value');
 

@@ -1,8 +1,8 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './handoff-divider.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -60,22 +60,7 @@ export class LyraHandoffDivider extends LyraElement {
    *  fallback renders. */
   @property() label = '';
 
-  @state() private hasAvatarSlot = false;
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasAvatarSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'avatar');
-    }
-  }
-
-  // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent fix),
-  // even though the assigned child's own `slot` attribute never changed.
-  private onAvatarSlotChange = (): void => {
-    this.hasAvatarSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'avatar');
-  };
+  private readonly slots = new SlotPresenceController(this);
 
   private get computedLabel(): string {
     const custom = normalizeLabel(this.label);
@@ -97,8 +82,8 @@ export class LyraHandoffDivider extends LyraElement {
       <div part="base" role="separator" aria-orientation="horizontal" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>
         <span part="chip" aria-hidden="true" title=${label}>
-          <span part="avatar" ?hidden=${!this.hasAvatarSlot}>
-            <slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot>
+          <span part="avatar" ?hidden=${!this.slots.has('avatar')}>
+            <slot name="avatar"></slot>
           </span>
           <span part="label">${label}</span>
         </span>

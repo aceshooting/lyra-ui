@@ -1938,3 +1938,23 @@ it('bars constraint validation while disabled or fieldset-disabled', async () =>
   expect(nested.validity.valueMissing, 'fieldset-disabled + required').to.be.false;
   expect(nested.matches(':state(invalid)')).to.be.false;
 });
+
+it('keeps the number left-to-right and the country selector at the inline start under RTL', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="inline-size: 320px">
+      <lr-phone-input label="Phone" default-country="LU" .adapter=${adapter} value="+352621123456"></lr-phone-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-phone-input') as LyraPhoneInput;
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
+  const country = el.shadowRoot!.querySelector<HTMLElement>('[part="country"]')!;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  expect(getComputedStyle(row).direction).to.equal('rtl');
+  expect(getComputedStyle(input).direction).to.equal('ltr');
+  const rowRect = row.getBoundingClientRect();
+  const countryRect = country.getBoundingClientRect();
+  const inputRect = input.getBoundingClientRect();
+  expect(rowRect.right - countryRect.right).to.be.lessThan(4);
+  expect(countryRect.left).to.be.at.least(inputRect.right - 1);
+});

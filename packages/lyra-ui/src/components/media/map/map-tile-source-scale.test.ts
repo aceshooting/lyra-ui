@@ -5,10 +5,11 @@ import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scal
 import '../../lr-map.js';
 import type { LyraMap } from './map.class.js';
 import type { Feature, Point } from 'geojson';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 it('reaches first middle and final million-catalog features through real modular vector tiles and bounded overlays', async function () {
   // The real engine needs a WebGL2 context; a browser without one shows the map's fallback instead.
-  if (!document.createElement('canvas').getContext('webgl2')) this.skip();
+  requireWebgl2.call(this);
   this.timeout(30000);
   const previousWorkerUrl = getWorkerUrl();
   setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href);

@@ -830,6 +830,17 @@ it("honors readonly and is accessible while populated", async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible while editable and populated', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`
+  )) as LyraPromptQueue;
+  const nested = [...el.shadowRoot!.querySelectorAll('lr-textarea, lr-button')] as unknown as { updateComplete: Promise<unknown> }[];
+  await Promise.all(nested.map((node) => node.updateComplete));
+  expect(el.shadowRoot!.querySelectorAll('[part="editor"]')).to.have.lengthOf(2);
+  expect(el.shadowRoot!.querySelectorAll('[part~="action"]').length).to.be.greaterThan(2);
+  await expect(el).to.be.accessible();
+});
+
 it("applies per-instance localized strings", async () => {
   const el = (await fixture(html`<lr-prompt-queue
     .strings=${{ promptQueueLabel: "Localized prompt backlog" }}

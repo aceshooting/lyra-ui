@@ -1,9 +1,7 @@
-import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import type { TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { labeledGroupDescription, renderLabeledGroup } from '../../../internal/labeled-group.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { styles } from './control-group.styles.js';
 
 /**
@@ -34,10 +32,7 @@ import { styles } from './control-group.styles.js';
  */
 export class LyraControlGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  private readonly hostDescription = new HostDescriptionController(
-    this,
-    () => this.renderRoot.querySelector<HTMLElement>('[part~="base"]'),
-  );
+  private readonly hostDescription = labeledGroupDescription(this);
 
   /** Accessible-name fallback for the internal `role="group"` element when the host has no
    *  `aria-label`; a present host attribute wins, including an explicitly empty value. */
@@ -65,11 +60,7 @@ export class LyraControlGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const accessibleLabel =
-      hostAriaLabel(this) === '' || this.accessibleLabel === ''
-        ? ''
-        : resolveAccessibleName(this, this.label) ?? nothing;
-    return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
+    return renderLabeledGroup(this);
   }
 }
 

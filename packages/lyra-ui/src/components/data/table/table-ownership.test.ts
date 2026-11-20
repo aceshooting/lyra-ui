@@ -2,7 +2,6 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-table.js';
 import '../../lr-select.js';
 import type { LyraTable, TableColumn } from '../../lr-table.js';
-import { captureDeprecationWarnings, } from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
@@ -842,7 +841,7 @@ describe('a column missing its cell renderer', () => {
   });
 });
 
-describe('deprecated lr-table aliases', () => {
+describe('retired lr-table row events', () => {
   const populated = async (el: LyraTable<Row>): Promise<LyraTable<Row>> => {
     el.columns = columns;
     el.rows = rows;
@@ -855,15 +854,12 @@ describe('deprecated lr-table aliases', () => {
     for (const type of ['lr-row-activate', 'lr-row-click']) {
       el.addEventListener(type, (event) => events.push([type, event as CustomEvent]));
     }
-    const warnings = await captureDeprecationWarnings([], async () => {
-      (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
-    });
+    (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
     expect(events.map(([type]) => type)).to.deep.equal(['lr-row-activate']);
     expect(events[0]![1].detail.row).to.deep.equal(rows[0]);
     expect(events.map(([, event]) => [event.bubbles, event.composed, event.cancelable])).to.deep.equal([
       [true, true, false],
     ]);
-    expect(warnings).to.deep.equal([]);
   });
 
 });

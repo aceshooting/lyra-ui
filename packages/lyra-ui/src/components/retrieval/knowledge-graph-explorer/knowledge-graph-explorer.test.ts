@@ -1467,14 +1467,14 @@ describe('lr-knowledge-graph-explorer', () => {
     // requestAnimationFrame loop of its own (see onGraphViewportChange's doc comment).
     const before = showAtCalls.length;
     graphEl(el).dispatchEvent(
-      new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } })
+      new CustomEvent('lr-viewport-change', { detail: { zoom: 1, x: 0, y: 0 } })
     );
     expect(showAtCalls.length).to.equal(before + 1);
 
     popover.open = false;
     const afterClose = showAtCalls.length;
     graphEl(el).dispatchEvent(
-      new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } })
+      new CustomEvent('lr-viewport-change', { detail: { zoom: 1, x: 0, y: 0 } })
     );
     expect(showAtCalls.length).to.equal(afterClose); // no re-anchor once the popover is closed
   });

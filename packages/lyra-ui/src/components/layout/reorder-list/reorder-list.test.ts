@@ -4,10 +4,6 @@ import "../../lr-reorder-list.js";
 import "../../lr-reorder-item.js";
 import type { LyraReorderList } from "./reorder-list.class.js";
 import type { LyraReorderItem } from "./reorder-item.class.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 expectLocaleFallback('ar-EG', ['iconButtonLabel', 'moveDown', 'moveUp', 'reorderItemMoved']);
 
@@ -1179,9 +1175,6 @@ describe('<lr-reorder-list> revertPendingMove({ silent })', () => {
 });
 
 describe('lr-reorder-request and its retired lr-reorder alias', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-reorder-list', kind: 'event', name: 'lr-reorder' },
-  ];
   const threeItems = html`
     <lr-reorder-list>
       <lr-reorder-item value="a">Row A</lr-reorder-item>
@@ -1211,54 +1204,46 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
     expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
   });
 
-  it('holds the move through the canonical request without a warning', async () => {
+  it('holds the move through the canonical request', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     let aliasPrevented: boolean | undefined;
     el.addEventListener('lr-reorder-request', (event) => event.preventDefault());
     el.addEventListener('lr-reorder', (event) => {
       aliasPrevented = event.defaultPrevented;
     });
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
+    moveMiddleUp(el);
     expect(itemsOf(el)[1]!.pending).to.equal(true);
     expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
-    expect(warnings).to.have.length(0);
   });
 
   it('ignores the retired listener when committing a move', async () => {
     const held: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = await fixture<LyraReorderList>(threeItems);
-        el.addEventListener('lr-reorder', (event) => event.preventDefault());
-        moveMiddleUp(el);
-        held.push(itemsOf(el)[1]!.pending && itemsOf(el)[1]!.value === 'b');
-      }
-    });
+    for (let index = 0; index < 2; index += 1) {
+      const el = await fixture<LyraReorderList>(threeItems);
+      el.addEventListener('lr-reorder', (event) => event.preventDefault());
+      moveMiddleUp(el);
+      held.push(itemsOf(el)[1]!.pending && itemsOf(el)[1]!.value === 'b');
+    }
     expect(held).to.deep.equal([false, false]);
-    expect(warnings).to.have.length(0);
   });
 
   it('does not call a retired listener that would resolve a move', async () => {
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = await fixture<LyraReorderList>(threeItems);
-      el.addEventListener('lr-reorder', (event) => {
-        event.preventDefault();
-        el.finalizePendingMove();
-      }, { once: true });
-      moveMiddleUp(el);
-      expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
-    });
-    expect(warnings).to.have.length(0);
+    const el = await fixture<LyraReorderList>(threeItems);
+    el.addEventListener('lr-reorder', (event) => {
+      event.preventDefault();
+      el.finalizePendingMove();
+    }, { once: true });
+    moveMiddleUp(el);
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
   });
 
   it('does not notify a retired event listener', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     let observed = 0;
     el.addEventListener('lr-reorder', () => (observed += 1));
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
+    moveMiddleUp(el);
     expect(observed).to.equal(0);
     expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
-    expect(warnings).to.have.length(0);
   });
 
   for (const resolve of ['finalize', 'revert'] as const) {

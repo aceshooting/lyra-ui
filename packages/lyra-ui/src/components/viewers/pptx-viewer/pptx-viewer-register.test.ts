@@ -4,10 +4,7 @@ import './pptx-viewer-register.js';
 import { PPTX_VIEWER_TAG } from './pptx-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
-
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const pptx: LyraDocumentFile = {
   name: 'deck.pptx',
@@ -17,7 +14,7 @@ const pptx: LyraDocumentFile = {
 
 describe('pptx-viewer-register laziness', () => {
   it('never fetches the pptx-viewer class module merely by importing the register-only entry', () => {
-    expect(fetchedModuleEnding('/pptx-viewer.class.ts')).to.equal(false);
+    expect(fetchedModule('/pptx-viewer.class.ts', { control: '/pptx-viewer-register.ts' })).to.equal(false);
     expect(customElements.get(PPTX_VIEWER_TAG)).to.equal(undefined);
   });
 
@@ -38,7 +35,7 @@ describe('pptx registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(pptx)!);
-    expect(fetchedModuleEnding('/pptx-viewer.class.ts')).to.equal(true);
+    expect(fetchedModule('/pptx-viewer.class.ts')).to.equal(true);
     expect(customElements.get(PPTX_VIEWER_TAG)).to.not.equal(undefined);
 
     const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];

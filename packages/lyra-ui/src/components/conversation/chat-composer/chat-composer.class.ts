@@ -12,6 +12,7 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { sendIcon, stopIcon } from '../../../internal/icons.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type {
@@ -524,7 +525,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.seedFirstRenderState(() => {
       this.syncToolbarSlot();
       this.syncStartSlot();
-      this.hasChipsSlot = this.hasSlotted('chips');
+      this.hasChipsSlot = hasSlotContent(this, 'chips');
       this.syncEndSlot();
     });
   }
@@ -618,12 +619,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.touched = false;
   }
 
-  private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some(
-      (el) => el.getAttribute('slot') === name
-    );
-  }
-
   /**
    * Grows/shrinks the textarea between `min-rows` and `max-rows`, reading
    * the *computed* line-height/padding/border back out of the element at
@@ -713,21 +708,19 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   }
 
   private syncToolbarSlot = (): void => {
-    this.hasToolbarSlot = this.hasSlotted('toolbar');
+    this.hasToolbarSlot = hasSlotContent(this, 'toolbar');
   };
 
   private syncStartSlot = (): void => {
-    this.hasStartSlot = this.hasSlotted('start');
+    this.hasStartSlot = hasSlotContent(this, 'start');
   };
 
-  private onChipsSlotChange = (e: Event): void => {
-    this.hasChipsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+  private onChipsSlotChange = (): void => {
+    this.hasChipsSlot = hasSlotContent(this, 'chips');
   };
 
   private syncEndSlot = (): void => {
-    this.hasEndSlot = this.hasSlotted('end');
+    this.hasEndSlot = hasSlotContent(this, 'end');
   };
 
   private onTextareaBlur = (event: FocusEvent): void => {

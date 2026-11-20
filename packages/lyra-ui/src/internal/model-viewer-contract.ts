@@ -1,3 +1,5 @@
+import { clamp } from './numbers.js';
+
 export type LyraModelFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd';
 export type LyraModelFormatPreference = 'auto' | LyraModelFormat;
 export interface LyraModelCamera {
@@ -14,7 +16,6 @@ export const MODEL_MIME_FORMATS: Readonly<Record<string, LyraModelFormat>> = Obj
   'model/obj': 'obj', 'application/x-ply': 'ply', 'application/ply': 'ply',
   'application/x-pcd': 'pcd', 'application/pcd': 'pcd',
 });
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 function own(value: unknown, key: string): unknown {
   return typeof value === 'object' && value !== null ? Object.getOwnPropertyDescriptor(value, key)?.value : undefined;
 }

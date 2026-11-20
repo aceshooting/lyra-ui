@@ -3,6 +3,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { containShadowChildEvent } from '../../../internal/child-event-containment.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
@@ -330,8 +331,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.seedFirstRenderState(() => {
-      this.hasHeaderSlot = this.hasSlotted('header');
-      this.hasSummarySlot = this.hasSlotted('summary');
+      this.hasHeaderSlot = hasSlotContent(this, 'header');
+      this.hasSummarySlot = hasSlotContent(this, 'summary');
     });
     if (changed.has('run')) {
       if (this.run?.id !== this.previousRunId) this.retryAttempt = 0;
@@ -342,21 +343,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   private focusWasInside = false;
 
-  private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
-  }
-
-  // `hasSlotted()` reads the light-DOM `slot` attribute directly rather than the live
-  // `assignedElements()` snapshot: WebKit has been observed reporting the latter transiently
-  // empty for an unrelated forwarding-slot chain nested inside the assigned element (see
-  // `<lr-switch>`'s equivalent fix), even though the assigned child's own `slot` attribute never
-  // changed.
   private onHeaderSlotChange = (): void => {
-    this.hasHeaderSlot = this.hasSlotted('header');
+    this.hasHeaderSlot = hasSlotContent(this, 'header');
   };
 
   private onSummarySlotChange = (): void => {
-    this.hasSummarySlot = this.hasSlotted('summary');
+    this.hasSummarySlot = hasSlotContent(this, 'summary');
   };
 
   protected override updated(changed: PropertyValues): void {

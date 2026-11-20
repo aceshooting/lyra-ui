@@ -3,7 +3,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hasRealContent } from '../../../internal/a11y.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { styles } from './result-field.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -53,16 +53,13 @@ export class LyraResultField extends LyraElement {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.seedFirstRenderState(() => {
-        this.hasValueSlot = hasRealContent(Array.from(this.childNodes).filter((node) =>
-          node.nodeType === Node.TEXT_NODE ||
-          (node.nodeType === Node.ELEMENT_NODE && !(node as Element).getAttribute('slot')),
-        ));
+        this.hasValueSlot = hasSlotContent(this);
       });
     }
   }
 
-  private onSlotChange = (e: Event): void => {
-    this.hasValueSlot = hasRealContent((e.target as HTMLSlotElement).assignedNodes());
+  private onSlotChange = (): void => {
+    this.hasValueSlot = hasSlotContent(this);
   };
 
   override render(): TemplateResult {

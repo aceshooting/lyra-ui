@@ -19,8 +19,8 @@
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
 `dataLayers`. The canonical class is `LyraGeoJsonViewer`, with `LyraGeoJsonViewerEventMap`.
 The old `lr-geojson-view` tag and `LyraGeojsonViewEventMap` type were removed in 23.0.0.
-The root and viewers family barrels still expose the same distinct `LyraGeojsonView` subclass
-for compatibility; importing it does not register the removed tag. Prefer the canonical class.
+The viewers family barrel (not the root barrel) still exposes a distinct `LyraGeojsonView`
+subclass; importing it does not register the removed tag. Prefer the canonical class.
 The document registry renders `lr-geojson-viewer` for `application/geo+json` and `.geojson` filenames.
 
 Responses are limited to 4 MiB (4,194,304 bytes) before `JSON.parse`. The parsed JSON must be a

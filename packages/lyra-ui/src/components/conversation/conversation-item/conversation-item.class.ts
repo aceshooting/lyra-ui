@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { pencilIcon } from '../../../internal/icons.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -277,11 +278,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   @state() private renaming = false;
   @state() private draftLabel = '';
-  @state() private hasActionsSlot = false;
-  @state() private hasStartSlot = false;
-  @state() private hasContentSlot = false;
-  @state() private hasMetaSlot = false;
-  @state() private hasExcerptSlot = false;
+  /** `content` and `excerpt` replace built-in text, so they read resolved presence and keep that
+   *  text in server markup; the other slots only toggle their wrapper chrome. */
+  private readonly slots = new SlotPresenceController(this);
 
   @query('[part="label-input"]') private labelInput?: HTMLInputElement;
   private blurCommitGeneration = 0;
@@ -298,21 +297,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'actions'
-      );
-      this.syncStartSlot();
-      this.hasContentSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'content'
-      );
-      this.hasMetaSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'meta'
-      );
-      this.hasExcerptSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'excerpt'
-      );
-    }
     if (this.renaming && (this.withoutRename || this.disabled || (changed.has('conversationId') && this.hasUpdated))) {
       this.cancelRename();
     }
@@ -456,36 +440,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     });
   };
 
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private syncStartSlot = (): void => {
-    this.hasStartSlot = Array.from(this.children).some(
-      (el) => el.getAttribute('slot') === 'start'
-    );
-  };
-
-  private onContentSlotChange = (e: Event): void => {
-    this.hasContentSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onMetaSlotChange = (e: Event): void => {
-    this.hasMetaSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onExcerptSlotChange = (e: Event): void => {
-    this.hasExcerptSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
   override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter =
@@ -534,14 +488,14 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}
         >
-          <span part="start" ?hidden=${!this.hasStartSlot}>
-            <slot name="start" @slotchange=${this.syncStartSlot}></slot>
+          <span part="start" ?hidden=${!this.slots.has('start')}>
+            <slot name="start"></slot>
           </span>
           <div part="content">
             <slot
               name="content"
               ?hidden=${this.renaming}
-              @slotchange=${this.onContentSlotChange}
+             
             ></slot>
             ${this.renaming
               ? html`<input
@@ -558,26 +512,26 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                   @focus=${this.onLabelInputFocus}
                   @blur=${this.onLabelInputBlur}
                 />`
-              : !this.hasContentSlot
+              : !this.slots.hasResolved('content')
               ? html`
                   <span part="label" dir="auto">${displayLabel}</span>
                   <span
                     part="excerpt"
                     dir="auto"
-                    ?hidden=${!(this.hasExcerptSlot || this.excerpt)}
+                    ?hidden=${!(this.slots.has('excerpt') || this.excerpt)}
                   >
-                    ${!this.hasExcerptSlot && this.excerpt
+                    ${!this.slots.hasResolved('excerpt') && this.excerpt
                       ? this.excerpt
                       : nothing}
                     <slot
                       name="excerpt"
-                      @slotchange=${this.onExcerptSlotChange}
+                     
                     ></slot>
                   </span>
-                  <span part="meta" ?hidden=${!this.hasMetaSlot}>
+                  <span part="meta" ?hidden=${!this.slots.has('meta')}>
                     <slot
                       name="meta"
-                      @slotchange=${this.onMetaSlotChange}
+                     
                     ></slot>
                   </span>
                 `
@@ -603,8 +557,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
               ${pencilIcon()}
             </button>`
           : nothing}
-        <span part="actions" ?hidden=${!this.hasActionsSlot}>
-          <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+        <span part="actions" ?hidden=${!this.slots.has('actions')}>
+          <slot name="actions"></slot>
         </span>
       </div>
     `;

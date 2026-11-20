@@ -4,10 +4,6 @@ import '../../lr-knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 import type { LyraGraph, LyraGraphEdge, LyraGraphNode } from '../graph/graph.class.js';
 import { loadD3 } from '../graph/graph-loader.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const TIMEOUT = 5000;
 before(async function () {
@@ -22,12 +18,6 @@ const nodes: LyraGraphNode[] = [
 ];
 const edges: LyraGraphEdge[] = [{ source: 'marie', target: 'pierre', label: 'married_to' }];
 
-const ALIASES: readonly DeprecatedUsage[] = [
-  { tag: 'lr-knowledge-graph-explorer', kind: 'property', name: 'links' },
-  { tag: 'lr-knowledge-graph-explorer', kind: 'property', name: 'searchQuery' },
-  { tag: 'lr-knowledge-graph-explorer', kind: 'event', name: 'lr-community-click' },
-  { tag: 'lr-graph', kind: 'event', name: 'lr-community-click' },
-];
 
 function graphOf(el: LyraKnowledgeGraphExplorer): LyraGraph {
   return el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
@@ -43,22 +33,19 @@ function searchState(el: LyraKnowledgeGraphExplorer): string {
 }
 
 describe('lr-knowledge-graph-explorer canonical names after alias retirement', () => {
-  it('forwards edges and applies query without a deprecation warning', async () => {
+  it('forwards edges and applies query', async () => {
     let forwarded: readonly LyraGraphEdge[] = [];
     let state = '';
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
-        query="polonium"
-        .nodes=${nodes}
-        .edges=${edges}
-      ></lr-knowledge-graph-explorer>`);
-      await el.updateComplete;
-      forwarded = graphOf(el).edges;
-      state = searchState(el);
-    });
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+      query="polonium"
+      .nodes=${nodes}
+      .edges=${edges}
+    ></lr-knowledge-graph-explorer>`);
+    await el.updateComplete;
+    forwarded = graphOf(el).edges;
+    state = searchState(el);
     expect(forwarded).to.deep.equal(edges);
     expect(state).to.include('Polonium');
-    expect(warnings).to.have.length(0);
   });
 
   it('ignores search-query in either order and keeps canonical edges clone-owned', async () => {
@@ -78,32 +65,29 @@ describe('lr-knowledge-graph-explorer canonical names after alias retirement', (
 
   it('bubbles lr-community-activate without the retired alias from the composed graph', async () => {
     const seen: string[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
-        .nodes=${nodes}
-        .edges=${edges}
-        .communities=${[{ id: 'lab', label: 'Lab', memberIds: [] }]}
-      ></lr-knowledge-graph-explorer>`);
-      for (const type of ['lr-community-activate', 'lr-community-click']) {
-        el.addEventListener(type, (event) =>
-          seen.push(`${type}:${JSON.stringify((event as CustomEvent).detail)}`)
-        );
-      }
-      const graph = graphOf(el);
-      await waitUntil(
-        () => graph.shadowRoot!.querySelector('[part="hull"]') != null,
-        'composed graph never drew its community hull',
-        { timeout: TIMEOUT }
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+      .nodes=${nodes}
+      .edges=${edges}
+      .communities=${[{ id: 'lab', label: 'Lab', memberIds: [] }]}
+    ></lr-knowledge-graph-explorer>`);
+    for (const type of ['lr-community-activate', 'lr-community-click']) {
+      el.addEventListener(type, (event) =>
+        seen.push(`${type}:${JSON.stringify((event as CustomEvent).detail)}`)
       );
-      graph.shadowRoot!.querySelector('[part="hull"]')!.dispatchEvent(
-        new MouseEvent('click', { bubbles: true })
-      );
-    });
+    }
+    const graph = graphOf(el);
+    await waitUntil(
+      () => graph.shadowRoot!.querySelector('[part="hull"]') != null,
+      'composed graph never drew its community hull',
+      { timeout: TIMEOUT }
+    );
+    graph.shadowRoot!.querySelector('[part="hull"]')!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    );
     const detail = JSON.stringify({ communityId: 'lab' });
     expect(seen).to.deep.equal([
       `lr-community-activate:${detail}`,
     ]);
-    expect(warnings).to.have.length(0);
   });
 });
 

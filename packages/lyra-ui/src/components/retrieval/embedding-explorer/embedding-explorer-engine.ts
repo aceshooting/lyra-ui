@@ -113,12 +113,10 @@ export class EmbeddingEngineController {
     if (this.admission) return;
     const generation = this.generation;
     // Only pending admission observes author fences; no polling or subtree/document observer.
-    let admitted = false;
-    const admission = observeAdmission(this.host, container, {
+    this.admission = observeAdmission(this.host, container, {
       isReady: () => generation === this.generation && !this.pending && !this.attempted,
-      onAdmit: () => { admitted = true; this.admission = undefined; void this.start(); },
+      onAdmit: () => { this.admission = undefined; void this.start(); },
     });
-    if (!admitted) this.admission = admission;
   }
 
   private fail(reason: Engine3dFallbackReason): void {

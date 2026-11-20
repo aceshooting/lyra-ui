@@ -7,10 +7,7 @@ import type { LyraSlider } from "../../lr-slider.js";
 import { styles } from "./slider.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
-import { expectDeprecatedUsage } from "../../../../test/expected-deprecations.js";
 import "../../../translations/ar/forms.js";
-
-expectDeprecatedUsage("lr-slider", "property", "showValue");
 
 expectStaleAttribute('lr-slider', 'show-value');
 

@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -150,13 +151,6 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     return safeMediaSrc(this.image, this.ownerDocument?.defaultView?.URL ?? URL);
   }
 
-  private hasIconSlotContent(nodes: Iterable<Node>): boolean {
-    return Array.from(nodes).some(
-      (node) =>
-        node.nodeType === 1 && (node as Element).getAttribute('slot') === 'icon'
-    );
-  }
-
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     const mayEmitConnectionTransition =
@@ -192,7 +186,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     // A server render sees no children at all, so hydration seeds one update later instead.
     this.seedFirstRenderState(() => {
-      this.hasIconSlot = this.hasIconSlotContent(this.childNodes);
+      this.hasIconSlot = hasSlotContent(this, 'icon');
     });
   }
 
@@ -213,11 +207,9 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     this.emit('lr-error', { image: failedSrc });
   };
 
-  // A named slot only ever receives elements carrying the matching `slot` attribute, so any
-  // assigned node at all is real content -- no whitespace filtering needed here.
-  private onNamedIconSlotChange = (e: Event): void => {
-    this.hasIconSlot =
-      (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+  // A forwarded empty `icon` slot is not content: the initials fallback keeps rendering.
+  private onNamedIconSlotChange = (): void => {
+    this.hasIconSlot = hasSlotContent(this, 'icon');
   };
 
   override connectedCallback(): void {

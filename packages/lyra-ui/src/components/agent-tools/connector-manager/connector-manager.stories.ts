@@ -61,3 +61,24 @@ export const PlainFrame: Story = {
     <lr-connector-manager frame="plain" .connectors=${connectors}></lr-connector-manager>
   </div>`,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-connector-manager
+        .connectors=${[
+          ...connectors,
+          {
+            id: 'customer-support-knowledge-base',
+            name: 'Customer support knowledge base and escalation history',
+            description: 'Search resolved escalations, internal runbooks and the long-form troubleshooting guides of every product line.',
+            kind: 'mcp',
+            status: 'error',
+            error: 'The host needs to renew its authorization before the connector can reconnect to the knowledge base.',
+          },
+        ]}
+      ></lr-connector-manager>
+    </div>
+  `,
+};

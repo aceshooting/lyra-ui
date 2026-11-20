@@ -8,7 +8,6 @@ import '../../lr-flow-run-status.js';
 import type { LyraFlowRunStatus } from '../../lr-flow-run-status.js';
 import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -671,21 +670,6 @@ describe('explicitly empty host aria-label', () => {
   });
 });
 
-describe('summary visibility', () => {
-  const HIDE_SUMMARY: readonly DeprecatedUsage[] = [
-    { tag: 'lr-flow-run-status', kind: 'property', name: 'hideSummary' },
-  ];
-  it('never warns for without-summary or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(HIDE_SUMMARY, async () => {
-      const el = await fixture<LyraFlowRunStatus>(html`<lr-flow-run-status></lr-flow-run-status>`);
-      el.withoutSummary = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
 it('stays silent for the default-to-first assignment and announces the first change after a reconnect', async () => {
   const canvas = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
   canvas.nodes = nodes;
@@ -703,4 +687,52 @@ it('stays silent for the default-to-first assignment and announces the first cha
   overlay.decorations = { fetch: { status: 'success' } };
   await overlay.updateComplete;
   expect(region()).to.equal('Fetch data: Success');
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key <lr-flow-run-status> passes to this.localize() gets a distinctive marker (placeholders
+  // kept), and each one is proven to reach the summary strip, its counts or the announcement sink.
+  const STRINGS = {
+    statusPending: 'PENDING-MARKER',
+    statusRunning: 'RUNNING-MARKER',
+    statusSuccess: 'SUCCESS-MARKER',
+    statusError: 'ERROR-MARKER',
+    statusDenied: 'DENIED-MARKER',
+    flowRunStatusLabel: 'GROUP-MARKER',
+    flowRunSummary: 'SUMMARY[{done}/{total}]',
+    flowRunStatusCount: 'COUNT[{status}|{count}]',
+    flowRunStepStatus: 'STEP[{label}|{status}]',
+  };
+  const ALL: FlowRunDecorations = {
+    a: { status: 'pending' },
+    b: { status: 'running' },
+    c: { status: 'success' },
+    d: { status: 'error' },
+    e: { status: 'denied' },
+  };
+
+  it('routes the group label, summary and every status count', async () => {
+    const el = await fixture<LyraFlowRunStatus>(html`<lr-flow-run-status .decorations=${ALL} .strings=${STRINGS}></lr-flow-run-status>`);
+    const root = el.shadowRoot!;
+    expect(root.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('GROUP-MARKER');
+    expect(root.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('SUMMARY[3/5]');
+    expect(Array.from(root.querySelectorAll('[part="count"]'), (count) => count.textContent!.trim())).to.deep.equal([
+      'COUNT[PENDING-MARKER|1]',
+      'COUNT[RUNNING-MARKER|1]',
+      'COUNT[SUCCESS-MARKER|1]',
+      'COUNT[ERROR-MARKER|1]',
+      'COUNT[DENIED-MARKER|1]',
+    ]);
+  });
+
+  it('routes flowRunStepStatus and the overflow flowRunSummary into the announcement sink', async () => {
+    const el = await fixture<LyraFlowRunStatus>(html`<lr-flow-run-status .decorations=${{ a: { status: 'running' } }} .strings=${STRINGS}></lr-flow-run-status>`);
+    el.decorations = { a: { status: 'success' } };
+    await el.updateComplete;
+    expect(sinkTexts().some((text) => text.includes('STEP[a|SUCCESS-MARKER]'))).to.equal(true);
+    const many = Object.fromEntries(Array.from({ length: 6 }, (_, i) => [`n${i}`, { status: 'error' as const }]));
+    el.decorations = many;
+    await el.updateComplete;
+    expect(sinkTexts().some((text) => text.includes('SUMMARY[6/6]'))).to.equal(true);
+  });
 });

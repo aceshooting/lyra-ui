@@ -3568,7 +3568,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1409,
+              "line": 1394,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3697,9 +3697,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -3764,9 +3762,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
+              "test": "fits a 320px RTL allocation and opens its capability menu from the mirrored start edge",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -3776,9 +3779,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
+              "test": "fits a 320px RTL allocation and opens its capability menu from the mirrored start edge",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -3862,9 +3870,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -15070,7 +15076,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 447,
+              "line": 431,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15943,6 +15949,18 @@
               "test": "is accessible with populated, draggable, and resizable cells",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
+              "test": "is accessible with widget cells and during a colliding drag preview",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
+              "test": "is accessible with widget cells and during a colliding drag preview",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -15981,7 +15999,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 2572,
+              "line": 2568,
               "kind": "320px allocation test signal"
             }
           ]
@@ -17314,7 +17332,7 @@
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "test": "removes the close button with without-close-button and keeps it by default, without warning",
+              "test": "removes the close button with without-close-button and keeps it by default",
               "target": "without",
               "state": "open"
             },
@@ -18578,7 +18596,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.class.ts",
-              "line": 9,
+              "line": 10,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19340,7 +19358,7 @@
             },
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "test": "removes the close button with without-close-button and keeps it by default, without warning",
+              "test": "removes the close button with without-close-button and keeps it by default",
               "target": "without",
               "state": "open"
             }
@@ -19682,9 +19700,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -19738,9 +19754,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/drop-zone/drop-zone.test.ts",
+              "test": "keeps a long rejected file name inside a 320px RTL allocation with its list mirrored",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -19750,9 +19771,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/drop-zone/drop-zone.test.ts",
+              "test": "keeps a long rejected file name inside a 320px RTL allocation with its list mirrored",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -19831,9 +19857,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -34290,7 +34314,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 1056,
+              "line": 1057,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37829,7 +37853,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
           "narrowAllocation",
           "assistiveTechnology"
@@ -37876,9 +37899,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts",
+              "test": "mirrors an item-anchored panel to the trigger end edge under RTL",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -37989,7 +38017,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -40823,8 +40850,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "rtl",
-          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -40865,9 +40890,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/phone-input/phone-input.test.ts",
+              "test": "keeps the number left-to-right and the country selector at the inline start under RTL",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -40877,9 +40907,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/phone-input/phone-input.test.ts",
+              "test": "keeps the number left-to-right and the country selector at the inline start under RTL",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -40969,9 +41004,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -43015,6 +43048,12 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
+              "test": "is accessible with a populated queue, voice catalog and attachments",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
               "test": "is accessible with its composed controls populated",
               "target": "el",
               "state": "populated"
@@ -43204,8 +43243,26 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/conversation/prompt-queue/prompt-queue-scale.test.ts",
+              "test": "is accessible on a later page of a paginated queue",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/prompt-queue/prompt-queue-scale.test.ts",
+              "test": "is accessible while disclosing an input limit",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/conversation/prompt-queue/prompt-queue.test.ts",
               "test": "honors readonly and is accessible while populated",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/prompt-queue/prompt-queue.test.ts",
+              "test": "is accessible while editable and populated",
               "target": "el",
               "state": "populated"
             }
@@ -46106,7 +46163,7 @@
             },
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "test": "names the row and both move actions from the host aria-label, without a warning",
+              "test": "names the row and both move actions from the host aria-label",
               "target": "inline fixture",
               "state": "populated"
             },
@@ -48693,6 +48750,12 @@
               "test": "is accessible",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/layout/scroller/scroller.test.ts",
+              "test": "is accessible with controls enabled over overflowing content",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -49920,7 +49983,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 591,
+              "line": 581,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50506,7 +50569,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 818,
+              "line": 817,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53582,7 +53645,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 230,
+              "line": 231,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56710,7 +56773,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 869,
+              "line": 868,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62521,7 +62584,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 416,
+              "line": 408,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63139,7 +63202,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 580,
+              "line": 581,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

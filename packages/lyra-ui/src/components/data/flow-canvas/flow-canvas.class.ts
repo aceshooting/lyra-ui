@@ -26,7 +26,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
-import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
+import { clamp, finiteNumber, finiteRange, nearestEnabledIndex } from '../../../internal/numbers.js';
 import { normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord } from '../../../internal/source-paging.js';
 import { isActionableElement, repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
@@ -240,7 +240,6 @@ interface OwnedAnimationFrame {
  * @slot bottom-end - Floating end-side content in the wrapping bottom overlay rail (e.g. `lr-flow-minimap`).
  * @event lr-node-activate - `detail: { nodeId }`.
  * @event lr-edge-activate - `detail: { edgeId, sourceNodeId, targetNodeId }`.
- *   `sourceNodeId` and `targetNodeId` are canonical; `source` and `target` remain deprecated aliases.
  * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`. Fired only when the
  *   selection changes: re-activating the sole selected item emits only its activate event.
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
@@ -563,9 +562,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
   private sourceViewportBounds(): LyraSourceBounds {
     const rect = this.viewportEl?.getBoundingClientRect() ?? this.getBoundingClientRect();
-    const clamp = (value: number) => Math.max(-1_000_000, Math.min(1_000_000, value));
-    const x = clamp(-this.panX / this.zoomLevel), y = clamp(-this.panY / this.zoomLevel);
-    return Object.freeze({ x, y, width: Math.max(0, clamp((rect.width - this.panX) / this.zoomLevel) - x), height: Math.max(0, clamp((rect.height - this.panY) / this.zoomLevel) - y) });
+    const bound = (value: number) => clamp(value, -1_000_000, 1_000_000);
+    const x = bound(-this.panX / this.zoomLevel), y = bound(-this.panY / this.zoomLevel);
+    return Object.freeze({ x, y, width: Math.max(0, bound((rect.width - this.panX) / this.zoomLevel) - x), height: Math.max(0, bound((rect.height - this.panY) / this.zoomLevel) - y) });
   }
   private requestSourceScene(): Promise<boolean> {
     if (!this.sourceMode || !this.sourceInputs || this.sourceError) return Promise.resolve(false);
@@ -706,7 +705,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private renderSourceNavigator(): TemplateResult {
     const state = this.sourcePages.state, query = this.sourceQuery, authority = this.sourceAuthority(), error = this.sourceError;
     const current = () => authority() && this.sourcePages.state === state && this.sourceQuery === query && this.sourceError === error;
-    const size = normalizeSourcePageSize(this.sourcePageSize), page = finiteInteger(this.sourcePage, 0, 0), total = this.sourceTotal;
+    const size = normalizeSourcePageSize(this.sourcePageSize), page = normalizeSourcePage(this.sourcePage, size), total = this.sourceTotal;
     const changePage = (next: number) => { if (current()) this.sourcePage = next; };
     return html`<section part="source-navigator" aria-label=${this.localize('graphSourceRecords')} aria-busy=${String(state.pending)}>
       <div part="source-controls"><label>${this.localize('graphSourceRecords')}<select data-source-kind .value=${query.kind} @change=${(event: Event) => { if (current()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: (event.target as HTMLSelectElement).value === 'edges' ? 'edges' : 'nodes' }); }}>
@@ -738,7 +737,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
           ${value.kind === 'node' ? html`<button type="button" @click=${() => { if (rowCurrent()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: 'edges', centerKey: row.key }); }}>${this.localize('graphSourceIncidentEdges', undefined, { label: this.nodeAccessibleText(value.value as FlowNode) })}</button>` : html`<button type="button" aria-label=${this.localize('flowSourceRevealSourceNode', undefined, { node: value.value.source, edge: this.edgeAccessibleText(value.value) })} @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.source}`); }}>${value.value.source}</button><button type="button" aria-label=${this.localize('flowSourceRevealTargetNode', undefined, { node: value.value.target, edge: this.edgeAccessibleText(value.value) })} @click=${() => { if (rowCurrent()) void this.revealSourceKey(`node:${value.value.target}`); }}>${value.value.target}</button>`}</div>`;
       })}</div>
       <div part="source-controls"><button type="button" data-source-page-button ?disabled=${state.pending || page === 0} @click=${(event: Event) => { if (current()) void this.activateSourcePager(event, page - 1); }}>${this.localize('previous')}</button>
-        <label>${this.localize('paginationPage')}<input data-source-page type="number" min="1" .value=${String(page + 1)} @change=${(event: Event) => changePage(finiteInteger(Number((event.target as HTMLInputElement).value) - 1, 0, 0))}></label>
+        <label>${this.localize('paginationPage')}<input data-source-page type="number" min="1" .value=${String(page + 1)} @change=${(event: Event) => changePage(normalizeSourcePage(Number((event.target as HTMLInputElement).value) - 1, size))}></label>
         <button type="button" data-source-page-button ?disabled=${state.pending || total === null || (page + 1) * size >= total} @click=${(event: Event) => { if (current()) void this.activateSourcePager(event, page + 1); }}>${this.localize('next')}</button></div>
     </section>`;
   }
@@ -2292,17 +2291,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   /** Clamps to the nearest enabled roving stop, preferring forward then backward. */
   private normalizedItemIndex(index = this.activeItemIndex): number {
     const items = this.rovingItems();
-    const count = items.length;
-    if (!count) return -1;
-    const clamped = Math.min(Math.max(index, 0), count - 1);
-    if (!this.isRovingItemDisabled(items[clamped]!)) return clamped;
-    for (let forward = clamped + 1; forward < count; forward += 1) {
-      if (!this.isRovingItemDisabled(items[forward]!)) return forward;
-    }
-    for (let backward = clamped - 1; backward >= 0; backward -= 1) {
-      if (!this.isRovingItemDisabled(items[backward]!)) return backward;
-    }
-    return -1;
+    return nearestEnabledIndex(index, items.length, (at) => this.isRovingItemDisabled(items[at]!));
   }
 
   private itemAccessibleText(item: { kind: 'node' | 'edge'; id: string }): string {

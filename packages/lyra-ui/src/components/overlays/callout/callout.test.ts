@@ -5,7 +5,6 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-callout.js';
 import type { LyraCallout } from '../../lr-callout.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-callout', 'accessible-label');
@@ -1323,10 +1322,6 @@ it('composes the initial announcement through the localized context template, un
 });
 
 describe('renamed callout members', () => {
-  const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
-    { tag: 'lr-callout', kind: 'attribute', name: 'accessible-label' },
-  ];
-
   it('names the grouped panel through the host aria-label', async () => {
     const el = (await fixture(html`<lr-callout aria-label="Storage">Message</lr-callout>`)) as LyraCallout;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
@@ -1337,29 +1332,24 @@ describe('renamed callout members', () => {
 
   it('ignores the removed accessible-label attribute', async () => {
     let el!: LyraCallout;
-    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-      el = (await fixture(html`<lr-callout accessible-label="Storage">Message</lr-callout>`)) as LyraCallout;
-      await fixture(html`<lr-callout accessible-label="Other">Message</lr-callout>`);
-    });
+    el = (await fixture(html`<lr-callout accessible-label="Storage">Message</lr-callout>`)) as LyraCallout;
+    await fixture(html`<lr-callout accessible-label="Other">Message</lr-callout>`);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.hasAttribute('aria-label')).to.equal(false);
-    expect(warnings).to.have.length(0);
   });
 
-  it('lets the host aria-label win over the deprecated attribute, without giving the removed spelling a fallback', async () => {
-    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-      const el = (await fixture(
-        html`<lr-callout accessible-label="Alias" aria-label="Host">Message</lr-callout>`,
-      )) as LyraCallout;
-      const base = el.shadowRoot!.querySelector('[part="base"]')!;
-      expect(base.getAttribute('aria-label')).to.equal('Host');
-      el.removeAttribute('aria-label');
-      await el.updateComplete;
-      expect(base.getAttribute('aria-label')).to.equal(null);
-      el.removeAttribute('accessible-label');
-      await el.updateComplete;
-      expect(base.hasAttribute('aria-label')).to.be.false;
-    });
+  it('lets the host aria-label win over the retired attribute, without giving the removed spelling a fallback', async () => {
+    const el = (await fixture(
+      html`<lr-callout accessible-label="Alias" aria-label="Host">Message</lr-callout>`,
+    )) as LyraCallout;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-label')).to.equal('Host');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    el.removeAttribute('accessible-label');
+    await el.updateComplete;
+    expect(base.hasAttribute('aria-label')).to.be.false;
   });
 
   it('paints the host from --lr-callout-bg, ignoring --lr-callout-background', async () => {

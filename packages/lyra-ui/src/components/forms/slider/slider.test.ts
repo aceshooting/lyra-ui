@@ -5,10 +5,7 @@ import { aTimeout, fixture, expect, html, elementUpdated, oneEvent } from "@open
 import "../../lr-slider.js";
 import type { LyraSlider } from "../../lr-slider.js";
 import { styles } from "./slider.styles.js";
-import { captureDeprecationWarnings, expectDeprecatedUsage, type DeprecatedUsage } from "../../../../test/expected-deprecations.js";
 import "../../../translations/ar/forms.js";
-
-expectDeprecatedUsage("lr-slider", "property", "showValue");
 
 expectStaleAttribute('lr-slider', 'show-value');
 
@@ -2362,36 +2359,30 @@ it('preserves a domain batch snapshot and controlled range endpoints without emi
   expect(changes).to.equal(0);
 });
 
-describe("deprecated show-value alias", () => {
-  const usage: readonly DeprecatedUsage[] = [
-    { tag: "lr-slider", kind: "property", name: "showValue" },
-  ];
+describe("retired show-value alias", () => {
   const readout = (el: LyraSlider) =>
     el.shadowRoot!.querySelector<HTMLElement>('[part="value"]');
 
-  it("does not warn for the canonical with-value or an unset alias", async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      await fixture<LyraSlider>(html`<lr-slider value="42" with-value></lr-slider>`);
-      await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
-    });
-    expect(warnings).to.have.length(0);
+  it("shows the readout for the canonical with-value and hides it by default", async () => {
+    const shown = await fixture<LyraSlider>(html`<lr-slider value="42" with-value></lr-slider>`);
+    const plain = await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
+    expect(readout(shown) !== null).to.equal(true);
+    expect(readout(plain) === null).to.equal(true);
   });
 
   it("uses only with-value in either attribute order", async () => {
     let shown: LyraSlider | undefined;
     let hidden: LyraSlider | undefined;
     let aliasLast: LyraSlider | undefined;
-    await captureDeprecationWarnings(usage, async () => {
-      shown = await fixture<LyraSlider>(
-        html`<lr-slider value="42" show-value="false" with-value></lr-slider>`
-      );
-      hidden = await fixture<LyraSlider>(
-        html`<lr-slider value="42" show-value with-value="false"></lr-slider>`
-      );
-      aliasLast = await fixture<LyraSlider>(
-        html`<lr-slider value="42" with-value show-value="false"></lr-slider>`
-      );
-    });
+    shown = await fixture<LyraSlider>(
+      html`<lr-slider value="42" show-value="false" with-value></lr-slider>`
+    );
+    hidden = await fixture<LyraSlider>(
+      html`<lr-slider value="42" show-value with-value="false"></lr-slider>`
+    );
+    aliasLast = await fixture<LyraSlider>(
+      html`<lr-slider value="42" with-value show-value="false"></lr-slider>`
+    );
     expect(readout(shown!) !== null).to.equal(true);
     expect(readout(hidden!) === null).to.equal(true);
     expect(aliasLast!.withValue).to.equal(true);

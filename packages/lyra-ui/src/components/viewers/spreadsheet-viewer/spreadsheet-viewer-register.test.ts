@@ -3,10 +3,7 @@ import { render } from 'lit';
 import './spreadsheet-viewer-register.js';
 import { SPREADSHEET_VIEWER_TAG } from './spreadsheet-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
-
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const xlsx: LyraDocumentFile = {
   name: 'budget.xlsx',
@@ -17,7 +14,7 @@ const xls: LyraDocumentFile = { ...xlsx, name: 'legacy.xls', mimeType: 'applicat
 
 describe('spreadsheet-viewer-register laziness', () => {
   it('never fetches the spreadsheet-viewer class module merely by importing the register-only entry', () => {
-    expect(fetchedModuleEnding('/spreadsheet-viewer.class.ts')).to.equal(false);
+    expect(fetchedModule('/spreadsheet-viewer.class.ts', { control: '/spreadsheet-viewer-register.ts' })).to.equal(false);
     expect(customElements.get(SPREADSHEET_VIEWER_TAG)).to.equal(undefined);
   });
 
@@ -40,7 +37,7 @@ describe('spreadsheet registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(xlsx)!);
-    expect(fetchedModuleEnding('/spreadsheet-viewer.class.ts')).to.equal(true);
+    expect(fetchedModule('/spreadsheet-viewer.class.ts')).to.equal(true);
     expect(customElements.get(SPREADSHEET_VIEWER_TAG)).to.not.equal(undefined);
 
     const anchor = { kind: 'cell-range' as const, sheet: 'Sheet1', range: 'A1:B2' };

@@ -8,10 +8,6 @@ import type { LyraAppRail } from '../../lr-app-rail.js';
 import type { LyraAppRailItem } from '../../lr-app-rail-item.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAppRailGroup } from './app-rail-group.class.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-app-rail-group', 'open');
@@ -572,44 +568,24 @@ describe('collecting already-slotted heading/header-actions content without rely
   });
 });
 
-describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-app-rail-group', kind: 'property', name: 'open' },
-  ];
+describe('lr-app-rail-group: the retired open attribute is inert', () => {
   const contentHidden = (el: LyraAppRailGroup): boolean =>
     (el.shadowRoot!.querySelector('[part="content"]') as HTMLElement).hasAttribute('hidden');
 
-  it('uses the canonical state regardless of attribute order between collapsed and the open alias', async () => {
-    const results: boolean[] = [];
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      for (const markup of [
-        html`<lr-app-rail-group heading="A" open collapsed></lr-app-rail-group>`,
-        html`<lr-app-rail-group heading="A" collapsed open></lr-app-rail-group>`,
-      ]) {
-        const el = await fixture<LyraAppRailGroup>(markup);
-        await el.updateComplete;
-        results.push(el.collapsed);
-      }
-    });
-    expect(results).to.deep.equal([true, true]);
-  });
-
   it('ignores open attribute changes after the first render', async () => {
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = await fixture<LyraAppRailGroup>(
-        html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
-      );
-      await el.updateComplete;
-      expect(el.hasAttribute('collapsed')).to.equal(false);
-      el.setAttribute('open', 'true');
-      await el.updateComplete;
-      expect(el.collapsed).to.equal(false);
-      expect(el.hasAttribute('collapsed')).to.equal(false);
-      expect(contentHidden(el)).to.equal(false);
-      el.setAttribute('open', 'false');
-      await el.updateComplete;
-      expect(el.collapsed).to.equal(false);
-    });
+    const el = await fixture<LyraAppRailGroup>(
+      html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
+    );
+    await el.updateComplete;
+    expect(el.hasAttribute('collapsed')).to.equal(false);
+    el.setAttribute('open', 'true');
+    await el.updateComplete;
+    expect(el.collapsed).to.equal(false);
+    expect(el.hasAttribute('collapsed')).to.equal(false);
+    expect(contentHidden(el)).to.equal(false);
+    el.setAttribute('open', 'false');
+    await el.updateComplete;
+    expect(el.collapsed).to.equal(false);
   });
 
   it('reports the proposed and settled state as expanded', async () => {

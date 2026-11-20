@@ -536,6 +536,8 @@ it("shows/hides the badges wrapper as badges content is added/removed via slotch
   badge.slot = "badges";
   el.appendChild(badge);
   badgesSlot.dispatchEvent(new Event("slotchange"));
+  // Presence reconciles after the event, so wait for the corrective update.
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
 
   expect(badgesWrapper.hasAttribute("hidden")).to.be.false;
@@ -563,6 +565,8 @@ it("shows/hides the footer actions wrapper as actions content is added/removed v
   button.slot = "actions";
   el.appendChild(button);
   actionsSlot.dispatchEvent(new Event("slotchange"));
+  // Presence reconciles after the event, so wait for the corrective update.
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
 
   expect(actionsWrapper.hasAttribute("hidden")).to.be.false;
@@ -1193,6 +1197,8 @@ describe("failure slot", () => {
       'slot[name="failure"]'
     ) as HTMLSlotElement;
     slot.dispatchEvent(new Event("slotchange"));
+    // Presence reconciles after the event, so wait for the corrective update.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
 
     expect(

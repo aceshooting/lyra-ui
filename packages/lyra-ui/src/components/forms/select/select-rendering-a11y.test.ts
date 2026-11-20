@@ -1770,3 +1770,21 @@ it("names a chip, the trigger and the listbox row by the raw value when the opti
   await single.updateComplete;
   expect(trigger(single).textContent).to.contain("x");
 });
+
+describe('shared listbox row geometry', () => {
+  it('aligns lr-select end adornments to the row end, like lr-combobox', async () => {
+    const el = await fixture<LyraSelect>(html`
+      <lr-select open>
+        <lr-option value="a">A<span slot="end">1</span></lr-option>
+        <lr-option value="b">A much longer option label<span slot="end">2</span></lr-option>
+      </lr-select>
+    `);
+    await el.updateComplete;
+    await aTimeout(0);
+    const ends = [...el.shadowRoot!.querySelectorAll('[part~="option-end"]')].map((end) =>
+      Math.round(end.getBoundingClientRect().right)
+    );
+    expect(ends.length).to.equal(2);
+    expect(Math.abs(ends[0]! - ends[1]!)).to.be.at.most(1);
+  });
+});

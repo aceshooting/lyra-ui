@@ -130,3 +130,31 @@ export const MultipleFiles: Story = {
     <p>Drop several files or a folder here.</p>
   </lr-drop-zone><output id="multiple-log"></output>`,
 };
+
+export const NarrowRTL: Story = {
+  name: 'Narrow 320px (LTR and RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Exact 320px drop regions in both directions. Drop a non-image file to see the rejection list: a long file name wraps inside the allocation, and under RTL the list indents from the right edge.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l);">
+      ${(['ltr', 'rtl'] as const).map(
+        (dir) => html`
+          <div dir=${dir} lang=${dir === 'rtl' ? 'ar' : 'en'} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-drop-zone accept="image/*" @lr-files=${logFiles(`narrow-${dir}-log`)}>
+              <div style="border: 1px solid var(--lr-color-border); border-radius: var(--lr-radius); padding: var(--lr-space-m); min-block-size: 6rem;">
+                ${dir === 'rtl' ? 'أفلت الصور هنا.' : 'Drop images here.'}
+              </div>
+            </lr-drop-zone>
+            <p id=${`narrow-${dir}-log`} style="margin-top:0.5rem; font: 0.8125rem monospace; overflow-wrap: anywhere;">accepted=[] rejected=[]</p>
+          </div>
+        `
+      )}
+    </div>
+  `,
+};

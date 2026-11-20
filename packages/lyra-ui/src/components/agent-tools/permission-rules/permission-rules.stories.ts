@@ -58,3 +58,23 @@ export const PlainFrame: Story = {
     <lr-permission-rules frame="plain" .rules=${rules}></lr-permission-rules>
   </div>`,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-permission-rules
+        .rules=${[
+          ...rules,
+          {
+            id: 'network-production',
+            label: 'Call production deployment and monitoring services',
+            description: 'Send authenticated requests to the deployment pipeline and the monitoring dashboards of the production environment.',
+            scope: 'network:https://deployments.example.com/production-environment/pipelines',
+            decision: 'allow',
+          },
+        ]}
+      ></lr-permission-rules>
+    </div>
+  `,
+};

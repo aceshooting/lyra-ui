@@ -1118,3 +1118,27 @@ fi
     });
   }
 }
+
+test('tells the page whether the run requires WebGL2', () => {
+  const marker = (value) => {
+    const environment = { ...process.env };
+    if (value === undefined) delete environment.WTR_REQUIRE_WEBGL2;
+    else environment.WTR_REQUIRE_WEBGL2 = value;
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import config from ${JSON.stringify(configUrl)};
+         const page = config.testRunnerHtml('/runner.js');
+         process.stdout.write(JSON.stringify(page.match(/__LYRA_WTR_REQUIRE_WEBGL2__ = (\\w+);/)?.[1] ?? null));`,
+      ],
+      { cwd: packageDirectory, env: environment, encoding: 'utf8' },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return JSON.parse(result.stdout);
+  };
+  assert.equal(marker(undefined), 'false');
+  assert.equal(marker('0'), 'false');
+  assert.equal(marker('1'), 'true');
+});

@@ -603,6 +603,7 @@ export const styles = css`
   [part="option-label"] {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     min-inline-size: 0;
   }
   [part="option-sub"] {

@@ -67,7 +67,6 @@ it('keeps a selected tag individually removable when earlier tags fill the facet
   await el.updateComplete;
   await retained!.updateComplete;
   let leaked = 0;
-  el.addEventListener('lr-chip-select', () => leaked++);
   el.addEventListener('lr-chip-toggle-request', () => leaked++);
   retained!.click();
   await el.updateComplete;

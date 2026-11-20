@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraMap, LyraMapInstance } from './map.class.js';
 import '../../lr-map.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 const blankStyle = { version: 8 as const, sources: {}, layers: [] };
 
@@ -37,9 +38,7 @@ it('renders duplicate logarithmic gradient positions and recovers after a revoke
 });
 
 it('contains a public peer fit failure and recovers after the required style is restored', async function () {
-  const probe = document.createElement('canvas').getContext('webgl2');
-  if (!probe) this.skip();
-  probe.getExtension('WEBGL_lose_context')?.loseContext();
+  requireWebgl2.call(this);
   const element = document.createElement('lr-map') as LyraMap;
   element.engine = 'maplibre';
   element.style.cssText = 'width:320px;height:200px';

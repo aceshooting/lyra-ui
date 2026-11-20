@@ -9,7 +9,6 @@ import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-la
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -1440,20 +1439,6 @@ it('requests an update for a redundant scale/wordRotation assignment that still 
   }
 });
 
-describe('lr-word-cloud legend visibility', () => {
-  const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-word-cloud', kind: 'property', name: 'showLegend' }];
-
-  it('never warns for with-legend or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
-      el.withLegend = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
-});
-
 describe('lr-word-cloud parent re-render with unchanged bindings', () => {
   const PALETTE = ['rgb(1, 2, 3)', 'rgb(4, 5, 6)'];
   const LEGEND = [{ label: 'Key', color: 'rgb(1, 2, 3)' }];
@@ -1720,5 +1705,55 @@ describe('legibility floor in a narrow host', () => {
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
     expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+  });
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key `<lr-word-cloud>` localizes, each proven to reach the rendered DOM through a
+  // `.strings` override. Markers are distinctive (not the production English) so a dropped
+  // override fails.
+  const strings = {
+    wordCloud: 'CLOUD-MARKER {count} {word}',
+    wordCloudWord: 'WORD-MARKER',
+    wordCloudWords: 'WORDS-MARKER',
+    wordCloudLegend: 'LEGEND-MARKER',
+    wordCloudWordAnnouncement: 'ANNOUNCE-MARKER {text} {weight}',
+    paginationSummary: 'PAGE-MARKER {start}-{end}/{total} {itemLabel}',
+    items: 'ITEMS-MARKER',
+    noData: 'EMPTY-MARKER',
+    wordCloudPreparedSummary: 'PREPARED-MARKER {retainedCount} {validCount} {invalidCount} {retainedWeight} {totalWeight}',
+    wordCloudPreparedUnavailable: 'UNAVAILABLE-MARKER',
+  };
+  const text = (el: LyraWordCloud, selector: string) => el.shadowRoot!.querySelector(selector)?.textContent?.trim() ?? '';
+
+  it('routes the cloud name, legend, legend limit and focused-word announcement to the DOM', async () => {
+    const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend .strings=${strings}
+      .words=${[{ text: 'solo', weight: 1 }]} .legend=${[{ label: 'L', color: '#123456' }, { label: 123 }] as never}></lr-word-cloud>`);
+    expect(svgEl(el).getAttribute('aria-label')).to.equal('CLOUD-MARKER 1 WORD-MARKER');
+    expect(el.shadowRoot!.querySelector('[part="legend"]')?.getAttribute('aria-label')).to.equal('LEGEND-MARKER');
+    expect(text(el, '[part="legend-limit"]')).to.equal('PAGE-MARKER 1-1/2 ITEMS-MARKER');
+    keydown(el, 'ArrowRight');
+    await el.updateComplete;
+    expect(text(el, '[part="live-region"]')).to.equal('ANNOUNCE-MARKER solo 1');
+    expect(sinkTexts()).to.include('ANNOUNCE-MARKER solo 1');
+  });
+
+  it('routes noData and the word-limit summary to the DOM', async () => {
+    let el!: LyraWordCloud;
+    await captureWarnings(async () => {
+      el = await fixture<LyraWordCloud>(html`<lr-word-cloud .strings=${strings} .words=${[{ text: '   ', weight: 1 }]}></lr-word-cloud>`);
+    });
+    expect(text(el, '[part="empty"]')).to.equal('EMPTY-MARKER');
+    expect(text(el, '[part="limit"]')).to.equal('PAGE-MARKER 0-0/1 WORDS-MARKER');
+  });
+
+  it('routes the prepared summary and the prepared-unavailable error to the DOM', async () => {
+    const prepared = { revision: 'one', counts: { sourceCount: 100, validCount: 99, invalidCount: 1 }, totalWeight: 200,
+      retainedWeight: 12, words: [{ id: 'first', text: 'same', weight: 9 }, { id: 'second', text: 'other', weight: 3 }] };
+    const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .strings=${strings} .preparedWords=${prepared}></lr-word-cloud>`);
+    expect(text(el, '[part="summary"]')).to.equal('PREPARED-MARKER 2 99 1 12 200');
+    el.preparedWords = { ...prepared, totalWeight: 9 };
+    await el.updateComplete;
+    expect(text(el, '[part="error"]')).to.equal('UNAVAILABLE-MARKER');
   });
 });

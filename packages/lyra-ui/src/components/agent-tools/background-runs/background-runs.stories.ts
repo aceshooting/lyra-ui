@@ -44,3 +44,22 @@ export const PlainFrame: Story = {
     <lr-background-runs frame="plain" .runs=${runs}></lr-background-runs>
   </div>`,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-background-runs
+        .runs=${[
+          ...runs,
+          {
+            id: 'migrate',
+            label: 'Migrate the customer analytics warehouse to the partitioned schema',
+            description: 'Copying historical event tables, rebuilding secondary indexes and validating row counts against the source snapshot.',
+            status: 'running',
+          },
+        ]}
+      ></lr-background-runs>
+    </div>
+  `,
+};

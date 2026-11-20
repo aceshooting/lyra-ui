@@ -157,7 +157,7 @@ export const InChatComposer: Story = {
         style="max-width: 32rem; display: block;"
       >
         <lr-attachment-trigger
-          slot="leading"
+          slot="start"
           .capabilities=${['files', 'image', 'camera']}
           @lr-files=${onPick}
           @lr-camera-request=${logCameraRequest('composer-log')}
@@ -225,5 +225,33 @@ export const LimitedImagePicker: Story = {
       }}
     ></lr-attachment-trigger>
     <p role="status">Choose up to two PNG or JPEG files, each at most 2 MB.</p>
+  `,
+};
+
+export const NarrowRTL: Story = {
+  name: 'Narrow 320px (LTR and RTL)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Exact 320px composer allocations in both directions. The multi-capability trigger sits at the inline-start edge, so under RTL it moves to the right and its menu opens from that mirrored edge without widening the row.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l);">
+      ${(['ltr', 'rtl'] as const).map(
+        (dir) => html`
+          <div dir=${dir} lang=${dir === 'rtl' ? 'ar' : 'en'} style="inline-size: 320px; max-inline-size: 100%;">
+            <lr-chat-composer placeholder=${dir === 'rtl' ? 'اكتب رسالة…' : 'Message the assistant…'}>
+              <lr-attachment-trigger
+                slot="start"
+                .capabilities=${['files', 'image', 'camera', 'audio']}
+              ></lr-attachment-trigger>
+            </lr-chat-composer>
+          </div>
+        `
+      )}
+    </div>
   `,
 };

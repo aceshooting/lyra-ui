@@ -3,25 +3,19 @@ import { sendKeys } from '@web/test-runner-commands';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { toast } from './toaster.js';
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const TOAST_TAG = 'lr-toast';
 const TOAST_ITEM_TAG = 'lr-toast-item';
 
-/** True once the browser has actually fetched a module whose URL ends with `suffix` -- the
- *  reliable proxy for "reached by the static import graph" under `@web/test-runner`'s unbundled
- *  ESM serving, where every distinct specifier is its own HTTP resource. */
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
-
 describe('toaster() lazy element loading', () => {
   it('never fetches the toast/toast-item class modules merely by importing the helper', () => {
     expect(
-      fetchedModuleEnding('/toast.class.ts'),
+      fetchedModule('/toast.class.ts', { control: '/toaster.ts' }),
       'importing toaster.js alone must not pull in toast.class.ts',
     ).to.equal(false);
     expect(
-      fetchedModuleEnding('/toast-item.class.ts'),
+      fetchedModule('/toast-item.class.ts', { control: '/toaster.ts' }),
       'importing toaster.js alone must not pull in toast-item.class.ts',
     ).to.equal(false);
     expect(customElements.get(TOAST_TAG), 'lr-toast must stay unregistered').to.equal(undefined);
@@ -31,8 +25,8 @@ describe('toaster() lazy element loading', () => {
   it('fetches and registers both elements once toast() actually runs, and dismiss() still resolves', async () => {
     const handle = toast('hello');
     const item = await handle.item;
-    expect(fetchedModuleEnding('/toast.class.ts'), 'toast() must load toast.class.ts').to.equal(true);
-    expect(fetchedModuleEnding('/toast-item.class.ts'), 'toast() must load toast-item.class.ts').to.equal(
+    expect(fetchedModule('/toast.class.ts'), 'toast() must load toast.class.ts').to.equal(true);
+    expect(fetchedModule('/toast-item.class.ts'), 'toast() must load toast-item.class.ts').to.equal(
       true,
     );
     expect(customElements.get(TOAST_TAG)).to.not.equal(undefined);

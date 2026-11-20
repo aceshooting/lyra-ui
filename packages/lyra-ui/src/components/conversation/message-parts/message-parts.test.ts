@@ -26,7 +26,6 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
 import type { LyraToolCallChip } from "../../agent-tools/tool-call-chip/tool-call-chip.class.js";
 import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import type { ToolInvocation } from "../../../ai/types.js";
 
 
@@ -1446,14 +1445,12 @@ describe('lr-message-parts canonical code-block-header spelling', () => {
   const headerCounts = (el: Parts): number[] =>
     markdownIn(el).map((node) => node.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0);
 
-  it('never warns for code-block-header', async () => {
-    const warnings = await captureDeprecationWarnings([], async () => {
-      const el = await fixture<Parts>(
-        html`<lr-message-parts code-block-header .parts=${fencedParts}></lr-message-parts>`
-      );
-      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
-    });
-    expect(warnings).to.have.length(0);
+  it('renders a header on every fenced block with code-block-header', async () => {
+    const el = await fixture<Parts>(
+      html`<lr-message-parts code-block-header .parts=${fencedParts}></lr-message-parts>`
+    );
+    await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
+    expect(headerCounts(el)).to.deep.equal([1, 1]);
   });
 
 });

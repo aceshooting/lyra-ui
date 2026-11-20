@@ -1,7 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import '../../lr-chart.js';
 import '../../lr-bar-chart.js';
 import '../../lr-bubble-chart.js';
@@ -77,47 +76,44 @@ async function smallChartWith(tag: 'lr-box-plot' | 'lr-lite-chart'): Promise<Lyr
 for (const tag of chartTags) {
   describe(`${tag}: retired aliases`, () => {
     it('ignores old attributes and property writes while canonical controls still render', async () => {
-      const warnings = await captureDeprecationWarnings([], async () => {
-        const el = await chartWith(tag);
-        for (const name of ['beginAtZero', 'compact', 'showDataTable', 'zoom']) {
-          expect(name in el, name).to.equal(false);
-        }
-        el.setAttribute('begin-at-zero', 'false');
-        el.setAttribute('show-data-table', '');
-        el.setAttribute('compact', '');
-        el.setAttribute('zoom', '');
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size, el.withoutLegend])
-          .to.deep.equal([false, false, false, 'm', false]);
-        expect(tableHidden(el)).to.equal(true);
-        expect(hasLegend(el)).to.equal(true);
-        expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
-        expect(configOf(el).options.plugins.zoom).to.equal(undefined);
-        expect(configOf(el).options.scales['x']!.display).to.equal(true);
+      const el = await chartWith(tag);
+      for (const name of ['beginAtZero', 'compact', 'showDataTable', 'zoom']) {
+        expect(name in el, name).to.equal(false);
+      }
+      el.setAttribute('begin-at-zero', 'false');
+      el.setAttribute('show-data-table', '');
+      el.setAttribute('compact', '');
+      el.setAttribute('zoom', '');
+      await el.updateComplete;
+      expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size, el.withoutLegend])
+        .to.deep.equal([false, false, false, 'm', false]);
+      expect(tableHidden(el)).to.equal(true);
+      expect(hasLegend(el)).to.equal(true);
+      expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
+      expect(configOf(el).options.plugins.zoom).to.equal(undefined);
+      expect(configOf(el).options.scales['x']!.display).to.equal(true);
 
-        Object.assign(el, { beginAtZero: false, showDataTable: true, compact: true, zoom: true });
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
-          .to.deep.equal([false, false, false, 'm']);
-        el.withoutZeroBaseline = true;
-        el.withDataTable = true;
-        el.zoomable = true;
-        el.size = 's';
-        await el.updateComplete;
-        expect(tableHidden(el)).to.equal(false);
-        expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
-        expect(configOf(el).options.plugins.zoom !== undefined).to.equal(true);
-        expect(configOf(el).options.layout).to.deep.equal({ padding: 0, autoPadding: false });
-        expect(configOf(el).options.scales['x']!.display).to.equal(false);
+      Object.assign(el, { beginAtZero: false, showDataTable: true, compact: true, zoom: true });
+      await el.updateComplete;
+      expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
+        .to.deep.equal([false, false, false, 'm']);
+      el.withoutZeroBaseline = true;
+      el.withDataTable = true;
+      el.zoomable = true;
+      el.size = 's';
+      await el.updateComplete;
+      expect(tableHidden(el)).to.equal(false);
+      expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
+      expect(configOf(el).options.plugins.zoom !== undefined).to.equal(true);
+      expect(configOf(el).options.layout).to.deep.equal({ padding: 0, autoPadding: false });
+      expect(configOf(el).options.scales['x']!.display).to.equal(false);
 
-        Object.assign(el, { beginAtZero: true, showDataTable: false, compact: false, zoom: false });
-        for (const name of ['begin-at-zero', 'show-data-table', 'compact', 'zoom']) el.removeAttribute(name);
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
-          .to.deep.equal([true, true, true, 's']);
-        expect(tableHidden(el)).to.equal(false);
-      });
-      expect(warnings).to.have.length(0);
+      Object.assign(el, { beginAtZero: true, showDataTable: false, compact: false, zoom: false });
+      for (const name of ['begin-at-zero', 'show-data-table', 'compact', 'zoom']) el.removeAttribute(name);
+      await el.updateComplete;
+      expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
+        .to.deep.equal([true, true, true, 's']);
+      expect(tableHidden(el)).to.equal(false);
     });
 
     it('uses only the canonical tooltip token in painter-facing options', async () => {
@@ -164,35 +160,32 @@ async function assertActivation(el: LyraChart | LyraBoxPlot | LyraLiteChart): Pr
 for (const tag of ['lr-box-plot', 'lr-lite-chart'] as const) {
   describe(`${tag}: retired aliases`, () => {
     it('keeps the opt-in legend, table and zero-baseline defaults and canonical controls', async () => {
-      const warnings = await captureDeprecationWarnings([], async () => {
-        const el = await smallChartWith(tag);
-        for (const name of ['beginAtZero', 'legend', 'showDataTable']) expect(name in el, name).to.equal(false);
-        el.setAttribute('begin-at-zero', 'false');
-        el.setAttribute('legend', '');
-        el.setAttribute('show-data-table', '');
-        Object.assign(el, { beginAtZero: false, legend: true, showDataTable: true });
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([false, false, false]);
-        expect(tableHidden(el)).to.equal(true);
-        expect(hasLegend(el)).to.equal(false);
-        if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.include('0');
-        else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
-        el.withoutZeroBaseline = true;
-        el.withLegend = true;
-        el.withDataTable = true;
-        await el.updateComplete;
-        expect(tableHidden(el)).to.equal(false);
-        expect(hasLegend(el)).to.equal(true);
-        if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.not.include('0');
-        else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
-        Object.assign(el, { beginAtZero: true, legend: false, showDataTable: false });
-        for (const name of ['begin-at-zero', 'legend', 'show-data-table']) el.removeAttribute(name);
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([true, true, true]);
-        expect(tableHidden(el)).to.equal(false);
-        expect(hasLegend(el)).to.equal(true);
-      });
-      expect(warnings).to.have.length(0);
+      const el = await smallChartWith(tag);
+      for (const name of ['beginAtZero', 'legend', 'showDataTable']) expect(name in el, name).to.equal(false);
+      el.setAttribute('begin-at-zero', 'false');
+      el.setAttribute('legend', '');
+      el.setAttribute('show-data-table', '');
+      Object.assign(el, { beginAtZero: false, legend: true, showDataTable: true });
+      await el.updateComplete;
+      expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([false, false, false]);
+      expect(tableHidden(el)).to.equal(true);
+      expect(hasLegend(el)).to.equal(false);
+      if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.include('0');
+      else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
+      el.withoutZeroBaseline = true;
+      el.withLegend = true;
+      el.withDataTable = true;
+      await el.updateComplete;
+      expect(tableHidden(el)).to.equal(false);
+      expect(hasLegend(el)).to.equal(true);
+      if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.not.include('0');
+      else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
+      Object.assign(el, { beginAtZero: true, legend: false, showDataTable: false });
+      for (const name of ['begin-at-zero', 'legend', 'show-data-table']) el.removeAttribute(name);
+      await el.updateComplete;
+      expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([true, true, true]);
+      expect(tableHidden(el)).to.equal(false);
+      expect(hasLegend(el)).to.equal(true);
     });
     it('activates populated data through the keyboard without the retired notification', async () => {
       await assertActivation(await smallChartWith(tag));
@@ -217,21 +210,15 @@ it('box plot uses only the canonical canvas-tooltip color', async () => {
 
 it('lite chart ignores retired naming aliases and follows host aria-label', async () => {
   let el!: LyraLiteChart;
-  const attributeWarnings = await captureDeprecationWarnings([], async () => {
-    el = await smallChartWith('lr-lite-chart') as LyraLiteChart;
-    el.setAttribute('accessible-label', 'Old attribute');
-    await el.updateComplete;
-    expect('accessibleLabel' in el).to.equal(false);
-    expect(svgName(el)).to.equal('Revenue');
-  });
-  expect(attributeWarnings).to.have.length(0);
-  const propertyWarnings = await captureDeprecationWarnings([], async () => {
-    Reflect.set(el, 'accessibleLabel', 'Retired property');
-    el.requestUpdate();
-    await el.updateComplete;
-    expect(svgName(el)).to.equal('Revenue');
-  });
-  expect(propertyWarnings).to.have.length(0);
+  el = await smallChartWith('lr-lite-chart') as LyraLiteChart;
+  el.setAttribute('accessible-label', 'Old attribute');
+  await el.updateComplete;
+  expect('accessibleLabel' in el).to.equal(false);
+  expect(svgName(el)).to.equal('Revenue');
+  Reflect.set(el, 'accessibleLabel', 'Retired property');
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(svgName(el)).to.equal('Revenue');
   expect(svgName(el)).to.equal('Revenue');
   el.setAttribute('accessible-label', 'Changed old attribute');
   await el.updateComplete;

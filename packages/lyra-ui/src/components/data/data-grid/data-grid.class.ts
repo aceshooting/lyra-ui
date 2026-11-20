@@ -4828,7 +4828,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             value=${id}
             ?checked=${visible}
             ?disabled=${column.hideable === false}
-            @lr-menu-item-change=${(event: Event) => event.stopPropagation()}
             @lr-menu-item-change-request=${(event: Event) => {
               event.stopPropagation();
               event.preventDefault();

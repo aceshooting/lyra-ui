@@ -13,10 +13,6 @@ import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const sources: KnowledgeSource[] = [
   {
@@ -961,34 +957,27 @@ describe('error state', () => {
 });
 
 describe('lr-knowledge-base retired hide-summary and hide-create aliases', () => {
-  const ALIASES: DeprecatedUsage[] = [
-    { tag: 'lr-knowledge-base', kind: 'property', name: 'hideSummary' },
-    { tag: 'lr-knowledge-base', kind: 'property', name: 'hideCreate' },
-  ];
   const chrome = (el: LyraKnowledgeBase): string =>
     JSON.stringify({
       create: el.shadowRoot!.querySelector('[part="create-button"]') !== null,
       summary: el.shadowRoot!.querySelector('[part="summary"]') !== null,
     });
 
-  it('renders the canonical without-summary and without-create with canonical defaults and no deprecation warning', async () => {
+  it('renders the canonical without-summary and without-create with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      canonical = chrome(
-        await fixture<LyraKnowledgeBase>(
-          html`<lr-knowledge-base .sources=${sources} without-summary without-create></lr-knowledge-base>`
-        )
-      );
-      plain = chrome(
-        await fixture<LyraKnowledgeBase>(
-          html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
-        )
-      );
-    });
+    canonical = chrome(
+      await fixture<LyraKnowledgeBase>(
+        html`<lr-knowledge-base .sources=${sources} without-summary without-create></lr-knowledge-base>`
+      )
+    );
+    plain = chrome(
+      await fixture<LyraKnowledgeBase>(
+        html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
+      )
+    );
     expect(JSON.parse(canonical)).to.deep.equal({ create: false, summary: false });
     expect(JSON.parse(plain)).to.deep.equal({ create: true, summary: true });
-    expect(warnings).to.have.length(0);
   });
 });
 

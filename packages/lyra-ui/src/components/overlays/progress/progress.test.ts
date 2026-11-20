@@ -6,7 +6,6 @@ import '../../lr-progress-ring.js';
 import type { LyraProgressBar, LyraProgressVariant } from '../../lr-progress-bar.js';
 import type { LyraProgressRing } from '../../lr-progress-ring.js';
 import { formatProgressPercent } from './progress-shared.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-progress-bar', 'accessible-label');
@@ -1193,8 +1192,7 @@ it('still lets a --lr-theme-progress-ring-track-width ancestor override retune t
 });
 
 for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
-  describe(`${tag} deprecated show-value alias`, () => {
-    const SHOW_VALUE: readonly DeprecatedUsage[] = [{ tag, kind: 'property', name: 'showValue' }];
+  describe(`${tag} retired show-value alias`, () => {
     const mount = async (markup: string): Promise<LyraProgressBar | LyraProgressRing> => {
       const host = await fixture<HTMLDivElement>(html`<div></div>`);
       host.innerHTML = markup;
@@ -1203,20 +1201,16 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
       return el;
     };
 
-    it('does not warn for the canonical spelling or the default', async () => {
-      const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
-        const el = await mount(`<${tag} value="40" with-value></${tag}>`);
-        expect(el.withValue).to.be.true;
-        const bare = await mount(`<${tag} value="40"></${tag}>`);
-        expect(bare.withValue).to.be.false;
-      });
-      expect(warnings).to.have.length(0);
+    it('renders the canonical with-value and defaults to hidden', async () => {
+      const el = await mount(`<${tag} value="40" with-value></${tag}>`);
+      expect(el.withValue).to.be.true;
+      const bare = await mount(`<${tag} value="40"></${tag}>`);
+      expect(bare.withValue).to.be.false;
     });
 
   });
 
-  describe(`${tag} deprecated accessible-label attribute`, () => {
-    const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [{ tag, kind: 'attribute', name: 'accessible-label' }];
+  describe(`${tag} retired accessible-label attribute`, () => {
     const mount = async (markup: string): Promise<LyraProgressBar | LyraProgressRing> => {
       const host = await fixture<HTMLDivElement>(html`<div></div>`);
       host.innerHTML = markup;
@@ -1238,25 +1232,20 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
 
     it('ignores accessible-label and keeps the localized progress name', async () => {
       let el!: LyraProgressBar | LyraProgressRing;
-      const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-        el = await mount(`<${tag} value="25" accessible-label="Sync progress"></${tag}>`);
-        await mount(`<${tag} value="25" accessible-label="Other"></${tag}>`);
-      });
+      el = await mount(`<${tag} value="25" accessible-label="Sync progress"></${tag}>`);
+      await mount(`<${tag} value="25" accessible-label="Other"></${tag}>`);
       expect(name(el)).to.equal('Progress');
-      expect(warnings).to.have.length(0);
     });
 
     it('lets the host aria-label win over accessible-label, with the localized fallback after removal', async () => {
-      await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-        const el = await mount(`<${tag} value="25" accessible-label="Alias" aria-label="Host"></${tag}>`);
-        expect(name(el)).to.equal('Host');
-        el.removeAttribute('aria-label');
-        await el.updateComplete;
-        expect(name(el)).to.equal('Progress');
-        el.removeAttribute('accessible-label');
-        await el.updateComplete;
-        expect(name(el)).to.equal('Progress');
-      });
+      const el = await mount(`<${tag} value="25" accessible-label="Alias" aria-label="Host"></${tag}>`);
+      expect(name(el)).to.equal('Host');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(name(el)).to.equal('Progress');
+      el.removeAttribute('accessible-label');
+      await el.updateComplete;
+      expect(name(el)).to.equal('Progress');
     });
 
   });

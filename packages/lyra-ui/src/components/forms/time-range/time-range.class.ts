@@ -1,7 +1,7 @@
 import { isElementNode } from '../../../internal/dom-guards.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
+import { RangeDragController, rangePointerRatio, nearestRangeEnd, rangeKeyAction } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -19,7 +19,6 @@ import {
   finiteNumber,
   finiteRange,
   finiteRatio,
-  isSliderKey,
 } from '../../../internal/numbers.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -782,44 +781,24 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     // onPointerDown, and disabled handles carry `tabindex="-1"`, but a
     // pre-existing focus can bypass both of those).
     if (this.liveDisabled || shouldIgnoreNavigationKey(e)) return;
-    const current =
-      handle === 'start'
-        ? finiteRange(this.start, this.domain().lo)
-        : finiteRange(this.end, this.domain().hi);
-    const step = finiteRange(this.step, 0, 0);
-    const move = (direction: -1 | 1, multiplier = 1): void => {
-      const delta = finiteRange(step * multiplier, Number.MAX_VALUE, 0, Number.MAX_VALUE);
+    // The same RTL left/right swap as onPointerMove: physical ArrowRight moves toward
+    // inset-inline-start, i.e. a lower value.
+    const action = rangeKeyAction(e.key, this.effectiveDirection === 'rtl');
+    if (action === undefined) return;
+    e.preventDefault();
+    let next: number;
+    if (action === 'min' || action === 'max') {
+      next = this.reachableBounds(handle)[action];
+    } else {
+      const current =
+        handle === 'start'
+          ? finiteRange(this.start, this.domain().lo)
+          : finiteRange(this.end, this.domain().hi);
+      const delta = finiteRange(finiteRange(this.step, 0, 0) * Math.abs(action), Number.MAX_VALUE, 0, Number.MAX_VALUE);
       if (delta === 0) return;
-      this.keyboardChanged =
-        this.setValue(handle, finiteAdd(current, direction * delta, current), false) ||
-        this.keyboardChanged;
-    };
-    // Mirror the same left/right swap as onPointerMove: under RTL, physical
-    // ArrowRight moves toward inset-inline-start, i.e. a lower value.
-    const rtl = this.effectiveDirection === 'rtl';
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
-    if (e.key === forwardKey || e.key === 'ArrowUp') {
-      e.preventDefault();
-      move(1);
-    } else if (e.key === backwardKey || e.key === 'ArrowDown') {
-      e.preventDefault();
-      move(-1);
-    } else if (e.key === 'PageUp') {
-      e.preventDefault();
-      move(1, RANGE_PAGE_STEP_MULTIPLIER);
-    } else if (e.key === 'PageDown') {
-      e.preventDefault();
-      move(-1, RANGE_PAGE_STEP_MULTIPLIER);
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      this.keyboardChanged =
-        this.setValue(handle, this.reachableBounds(handle).min, false) || this.keyboardChanged;
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      this.keyboardChanged =
-        this.setValue(handle, this.reachableBounds(handle).max, false) || this.keyboardChanged;
+      next = finiteAdd(current, Math.sign(action) * delta, current);
     }
+    this.keyboardChanged = this.setValue(handle, next, false) || this.keyboardChanged;
   };
 
   /** Commit and retire the component-wide keyboard gesture latch. A handle can lose focus before
@@ -834,7 +813,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     // Only commit on release of the keys that onKeyDown acts on — releasing
     // an unrelated key (Tab, Shift, ...) while a handle happens to be
     // focused must not emit a spurious lr-change.
-    if (!isSliderKey(e.key)) return;
+    if (rangeKeyAction(e.key, false) === undefined) return;
     this.finishKeyboardGesture();
   };
 

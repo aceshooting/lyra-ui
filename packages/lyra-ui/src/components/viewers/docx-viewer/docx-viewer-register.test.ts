@@ -4,10 +4,7 @@ import './docx-viewer-register.js';
 import { DOCX_VIEWER_TAG } from './docx-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
-
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const docx: LyraDocumentFile = {
   name: 'memo.docx',
@@ -17,7 +14,7 @@ const docx: LyraDocumentFile = {
 
 describe('docx-viewer-register laziness', () => {
   it('never fetches the docx-viewer class module merely by importing the register-only entry', () => {
-    expect(fetchedModuleEnding('/docx-viewer.class.ts')).to.equal(false);
+    expect(fetchedModule('/docx-viewer.class.ts', { control: '/docx-viewer-register.ts' })).to.equal(false);
     expect(customElements.get(DOCX_VIEWER_TAG)).to.equal(undefined);
   });
 
@@ -38,7 +35,7 @@ describe('docx registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(docx)!);
-    expect(fetchedModuleEnding('/docx-viewer.class.ts')).to.equal(true);
+    expect(fetchedModule('/docx-viewer.class.ts')).to.equal(true);
     expect(customElements.get(DOCX_VIEWER_TAG)).to.not.equal(undefined);
 
     const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];

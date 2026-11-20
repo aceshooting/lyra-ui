@@ -8,14 +8,6 @@ import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
-
-const LOOP: readonly DeprecatedUsage[] = [
-  { tag: 'lr-sequence-playback', kind: 'property', name: 'loop' },
-];
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sequence-playback', 'index');
@@ -142,17 +134,15 @@ it('stops at the last index when the without-loop attribute is set', async () =>
 
 describe('canonical loop control', () => {
   it('keeps without-loop authoritative with the retired attribute present', async () => {
-    await captureDeprecationWarnings(LOOP, async () => {
-      const el = (await fixture(
-        html`<lr-sequence-playback item-count="2" interval-ms="20" loop without-loop></lr-sequence-playback>`,
-      )) as LyraSequencePlayback;
-      expect(el.withoutLoop).to.be.true;
-      const stopped = oneEvent(el, 'lr-pause');
-      el.play();
-      await stopped;
-      expect(el.currentIndex).to.equal(1);
-      expect(el.playing).to.be.false;
-    });
+    const el = (await fixture(
+      html`<lr-sequence-playback item-count="2" interval-ms="20" loop without-loop></lr-sequence-playback>`,
+    )) as LyraSequencePlayback;
+    expect(el.withoutLoop).to.be.true;
+    const stopped = oneEvent(el, 'lr-pause');
+    el.play();
+    await stopped;
+    expect(el.currentIndex).to.equal(1);
+    expect(el.playing).to.be.false;
   });
 });
 

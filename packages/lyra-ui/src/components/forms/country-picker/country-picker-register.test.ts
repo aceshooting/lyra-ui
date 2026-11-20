@@ -7,6 +7,7 @@ import './country-picker-register.js';
 import '../currency-picker/currency-picker-register.js';
 import '../time-zone-picker/time-zone-picker-register.js';
 import '../unit-picker/unit-picker-register.js';
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 describe('lean catalog registration', function () {
   this.retries(0);
@@ -30,9 +31,9 @@ describe('lean catalog registration', function () {
     await customElements.whenDefined('lr-combobox');
     await picker.updateComplete;
     await waitUntil(() => Boolean(picker.shadowRoot?.querySelector('lr-combobox')));
-    const fetchedModules = performance.getEntriesByType('resource').map(entry => new URL(entry.name).pathname);
-    expect(fetchedModules.some(name => /\/combobox-catalog\.(?:ts|js)$/u.test(name)), `specialized module loaded: ${fetchedModules.filter(name => name.includes('combobox')).join(', ')}`).to.equal(true);
-    expect(fetchedModules.some(name => /\/combobox\.(?:ts|js)$/u.test(name)), 'full combobox stays unloaded').to.equal(false);
+    const catalog = /\/combobox-catalog\.(?:ts|js)$/u;
+    expect(fetchedModule(catalog), 'specialized module loaded').to.equal(true);
+    expect(fetchedModule(/\/combobox\.(?:ts|js)$/u, { control: catalog }), 'full combobox stays unloaded').to.equal(false);
     const combo = picker.shadowRoot!.querySelector<LyraCombobox<false>>('lr-combobox')!;
     await combo.updateComplete;
     await focusByKeyboard(combo.input!);

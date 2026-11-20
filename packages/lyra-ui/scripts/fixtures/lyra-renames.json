@@ -7970,6 +7970,11 @@
           "tag": "lr-flow-canvas",
           "event": "lr-edge-activate",
           "summary": "The detail no longer carries source and target; read sourceNodeId and targetNodeId."
+        },
+        {
+          "tag": "lr-graph",
+          "event": "lr-viewport-change",
+          "summary": "The detail no longer carries k; read zoom, which holds the same scale."
         }
       ],
       "reviews": [],

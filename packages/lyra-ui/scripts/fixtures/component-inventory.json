@@ -68924,7 +68924,7 @@
           },
           {
             "name": "lr-viewport-change",
-            "type": "CustomEvent<{ zoom: number; x: number; y: number; k: number }>",
+            "type": "CustomEvent<{ zoom: number; x: number; y: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }

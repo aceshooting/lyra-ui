@@ -16,10 +16,6 @@ import {
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `layout` slice (a side effect, like every
 // translation module) so the "formats generated slide indices with the effective locale" test
 // below can render `locale="ar-EG"` without tripping the dev-mode locale-fallback warning that
@@ -2143,45 +2139,34 @@ it("keeps an explicitly empty host aria-label distinct from an omitted one", asy
   ).to.equal("");
 });
 
-describe('lr-carousel: host aria-label and the deprecated accessible-label attribute', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-carousel', kind: 'attribute', name: 'accessible-label' },
-  ];
+describe('lr-carousel: host aria-label and the retired accessible-label attribute', () => {
   const regionName = (el: LyraCarousel): string | null =>
     el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label');
 
-  it('names the carousel from the host aria-label without a warning', async () => {
+  it('names the carousel from the host aria-label', async () => {
     let el!: LyraCarousel;
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      el = await carousel(html`
-        <lr-carousel aria-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
-      `);
-    });
-    expect(warnings).to.have.length(0);
+    el = await carousel(html`
+      <lr-carousel aria-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
+    `);
     expect(regionName(el)).to.equal('Product screenshots');
   });
 
   it('ignores accessible-label and keeps the localized carousel name', async () => {
     const names: (string | null)[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = await carousel(html`
-          <lr-carousel accessible-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
-        `);
-        names.push(regionName(el));
-      }
-    });
+    for (let index = 0; index < 2; index += 1) {
+      const el = await carousel(html`
+        <lr-carousel accessible-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
+      `);
+      names.push(regionName(el));
+    }
     expect(names).to.deep.equal(['Carousel', 'Carousel']);
-    expect(warnings).to.have.length(0);
   });
 
-  it('lets the host aria-label win over the accessible-label alias', async () => {
+  it('ignores accessible-label next to the host aria-label', async () => {
     let el!: LyraCarousel;
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      el = await carousel(html`
-        <lr-carousel accessible-label="Old" aria-label="New"><div>One</div><div>Two</div></lr-carousel>
-      `);
-    });
+    el = await carousel(html`
+      <lr-carousel accessible-label="Old" aria-label="New"><div>One</div><div>Two</div></lr-carousel>
+    `);
     expect(regionName(el)).to.equal('New');
     el.removeAttribute('aria-label');
     await el.updateComplete;
@@ -2246,7 +2231,6 @@ it("gives the keyboard-focusable viewport matching hover feedback", () => {
 });
 
 describe("indicator current-state cssprops", () => {
-
   const overrides =
     "--lr-carousel-indicator-current-bg: rgb(0, 51, 102); --lr-carousel-indicator-current-border-color: rgb(0, 102, 51);";
 

@@ -1,5 +1,6 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import '../../lr-condition-builder.js';
 import type { LyraConditionBuilder, ConditionBuilderField, ConditionBuilderValue } from '../../lr-condition-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
@@ -1303,4 +1304,82 @@ it('normalizes an unknown public operator to the empty choice and accepts a late
   await el.updateComplete;
   expect(el.value.conditions[0]?.operator).to.equal('eq');
   expect(el.checkValidity()).to.equal(true);
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key <lr-condition-builder> passes to this.localize() gets a distinctive marker, and each
+  // marker is proven to reach the rendered DOM (text, attribute or the announcement sink), so a
+  // hard-wired or concatenated string cannot ship green.
+  const PLAIN_KEYS = [
+    'queryBuilderLabel', 'queryBuilderNoFields', 'queryBuilderEmpty', 'queryBuilderAddCondition',
+    'queryBuilderCombinatorLabel', 'queryBuilderCombinatorAnd', 'queryBuilderCombinatorOr',
+    'queryBuilderFieldLabel', 'queryBuilderFieldPlaceholder', 'queryBuilderOperatorLabel',
+    'queryBuilderOperatorPlaceholder', 'queryBuilderValueLabel', 'queryBuilderValuePlaceholder',
+    'queryBuilderBooleanTrue', 'queryBuilderBooleanFalse',
+    'queryBuilderOperatorEquals', 'queryBuilderOperatorNotEquals', 'queryBuilderOperatorContains',
+    'queryBuilderOperatorStartsWith', 'queryBuilderOperatorEndsWith', 'queryBuilderOperatorIsEmpty',
+    'queryBuilderOperatorIsNotEmpty', 'queryBuilderOperatorGreaterThan',
+    'queryBuilderOperatorGreaterThanOrEqual', 'queryBuilderOperatorLessThan',
+    'queryBuilderOperatorLessThanOrEqual', 'queryBuilderOperatorAfter', 'queryBuilderOperatorOnOrAfter',
+    'queryBuilderOperatorBefore', 'queryBuilderOperatorOnOrBefore', 'queryBuilderOperatorIn',
+    'queryBuilderOperatorNotIn',
+  ] as const;
+  const STRINGS: Record<string, string> = {
+    ...Object.fromEntries(PLAIN_KEYS.map((key) => [key, `<${key}>`])),
+    queryBuilderRowControlName: 'ROW[{name}|{index}]',
+    queryBuilderRemoveCondition: 'REMOVE[{index}]',
+    queryBuilderConditionInvalid: 'INVALID[{index}]',
+    queryBuilderConditionAdded: 'ADDED[{index}]',
+    queryBuilderConditionRemoved: 'REMOVED[{count}]',
+  };
+
+  /** Rendered text plus every attribute value in the shadow root, as one string. */
+  function surface(el: LyraConditionBuilder): string {
+    const root = el.shadowRoot!;
+    const attributes = Array.from(root.querySelectorAll('*')).flatMap((node) =>
+      Array.from(node.attributes, (attribute) => attribute.value));
+    return [root.textContent ?? '', ...attributes].join('\n');
+  }
+
+  it('routes the empty-state, no-field and group labels', async () => {
+    const bare = await fixture<LyraConditionBuilder>(html`<lr-condition-builder .strings=${STRINGS}></lr-condition-builder>`);
+    expect(bare.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('<queryBuilderLabel>');
+    expect(bare.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('<queryBuilderNoFields>');
+    const empty = await fixture<LyraConditionBuilder>(html`<lr-condition-builder .fields=${FIELDS} .strings=${STRINGS}></lr-condition-builder>`);
+    expect(empty.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('<queryBuilderEmpty>');
+  });
+
+  it('routes every row, operator, value, combinator and validation key into the rendered rows', async () => {
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 's', field: 'name', operator: 'eq', value: 'x' },
+        { id: 'n', field: 'age', operator: 'gt', value: 5 },
+        { id: 'd', field: 'createdAt', operator: 'gt', value: '2024-01-01' },
+        { id: 'e', field: 'status', operator: 'in', value: ['open'] },
+        { id: 'b', field: 'active', operator: 'eq', value: 'not a boolean' as unknown as boolean },
+      ],
+    };
+    const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder .fields=${FIELDS} .value=${value} .strings=${STRINGS}></lr-condition-builder>`);
+    await el.updateComplete;
+    const text = surface(el);
+    const missing = PLAIN_KEYS.filter((key) => key !== 'queryBuilderNoFields' && key !== 'queryBuilderEmpty' && !text.includes(`<${key}>`));
+    expect(missing).to.deep.equal([]);
+    const first = el.shadowRoot!.querySelector('[part="condition"]')!;
+    expect(first.querySelector('[part="field-select"]')!.getAttribute('aria-label')).to.equal('ROW[<queryBuilderFieldLabel>|1]');
+    expect(first.querySelector('[part="operator-select"]')!.getAttribute('aria-label')).to.equal('ROW[<queryBuilderOperatorLabel>|1]');
+    expect(first.querySelector('[part="value"]')!.getAttribute('aria-label')).to.equal('ROW[<queryBuilderValueLabel>|1]');
+    expect(first.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal('REMOVE[1]');
+    const boolean = el.shadowRoot!.querySelector('[part="condition"][data-id="b"] [part="value"]')!;
+    expect(boolean.getAttribute('error-text')).to.equal('INVALID[5]');
+  });
+
+  it('routes the added and removed announcements with their {index}/{count} values', async () => {
+    const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder .fields=${FIELDS} .strings=${STRINGS}></lr-condition-builder>`);
+    (el.shadowRoot!.querySelector('[part="add-button"]') as HTMLElement).click();
+    await waitUntil(() => sinkTexts().includes('ADDED[1]'), 'add announcement never reached the sink');
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement).click();
+    await waitUntil(() => sinkTexts().includes('REMOVED[0]'), 'remove announcement never reached the sink');
+  });
 });

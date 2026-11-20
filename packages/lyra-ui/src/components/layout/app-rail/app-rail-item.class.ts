@@ -1,6 +1,6 @@
 import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import {
   activateNonmodalOverlay,
   composedContains,
@@ -18,9 +18,9 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { tag } from '../../../internal/prefix.js';
@@ -304,15 +304,9 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   private readonly toggleGuard = new VetoWriteGuard();
 
   @state() private showTooltip = false;
-  /** `:empty` cannot see slotted light-DOM content (the wrapper always holds a `<slot>` element),
-   *  so emptiness is tracked from `slotchange` the same way `<lr-details>` tracks its own
-   *  `header-actions` wrapper. */
-  @state() private hasEndSlot = false;
-  @state() private hasMetaSlot = false;
-  // happy-dom never fires a slot's INITIAL `slotchange` (only a later mutation), so these two
-  // are also collected once from `firstUpdated()` -- see `collectInitialSlotAssignment`'s doc.
-  @query('slot[name="meta"]') private metaSlot?: HTMLSlotElement;
-  @query('slot[name="end"]') private endSlot?: HTMLSlotElement;
+  /** `meta`/`end` wrapper presence. `:empty` cannot see slotted light-DOM content (the wrapper
+   *  always holds a `<slot>` element), and a forwarded empty slot is not content. */
+  private readonly slots = new SlotPresenceController(this);
   private stopPositioning?: () => void;
   private tooltipOverlay?: OverlayHandle;
   private readonly labelTextObserver = new AccessibleTextController(
@@ -417,26 +411,6 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     this.showTooltip = false;
   };
 
-  private onEndSlotChange = (event: Event): void => {
-    this.applyEndSlotPresence(event.target as HTMLSlotElement);
-  };
-
-  private applyEndSlotPresence(slot: HTMLSlotElement): void {
-    this.hasEndSlot = slot.assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
-    );
-  }
-
-  private onMetaSlotChange = (event: Event): void => {
-    this.applyMetaSlotPresence(event.target as HTMLSlotElement);
-  };
-
-  private applyMetaSlotPresence(slot: HTMLSlotElement): void {
-    this.hasMetaSlot = slot.assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType !== 3 || (node.textContent ?? '').trim() !== ''
-    );
-  }
-
   override attributeChangedCallback(
     name: string,
     oldValue: string | null,
@@ -453,26 +427,6 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     }
     this.syncOwnedChildren();
     this.requestUpdate();
-  }
-
-  protected override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- only a
-    // later mutation to an already-connected slot -- so `hasEndSlot`/`hasMetaSlot` would otherwise
-    // stay `false` forever for an item whose `meta`/`end` children already exist at connect (the
-    // ordinary "render once data is ready" Lit pattern). Collect once here too, from each slot's
-    // current assignment; `applyEndSlotPresence()`/`applyMetaSlotPresence()` recompute the same
-    // boolean from scratch every time, so a real browser also firing the initial event contributes
-    // no duplicate side effect. Deferred a microtask for the same reason `select.class.ts`'s own
-    // `firstUpdated()` defers: `hasEndSlot`/`hasMetaSlot` are reactive `@state()`, and writing one
-    // synchronously here -- after this same update has already been marked complete -- would trip
-    // Lit's "scheduled an update after an update completed" dev warning.
-    const metaSlot = this.metaSlot;
-    const endSlot = this.endSlot;
-    queueMicrotask(() => {
-      collectInitialSlotAssignment(metaSlot, (s) => this.applyMetaSlotPresence(s));
-      collectInitialSlotAssignment(endSlot, (s) => this.applyEndSlotPresence(s));
-    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -621,10 +575,10 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     // Siblings of the activation target, never children of it: a control slotted here keeps its
     // own click/keyboard activation and focus order, and its text never joins the item's own
     // accessible name. Mirrors <lr-details>'s header-actions placement beside its native summary.
-    const adornments = html`<span part="meta" ?hidden=${!this.hasMetaSlot}
-        ><slot name="meta" @slotchange=${this.onMetaSlotChange}></slot></span
-      ><span part="end" ?hidden=${!this.hasEndSlot}
-        ><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span
+    const adornments = html`<span part="meta" ?hidden=${!this.slots.has('meta')}
+        ><slot name="meta"></slot></span
+      ><span part="end" ?hidden=${!this.slots.has('end')}
+        ><slot name="end"></slot></span
       >`;
     const hasChildren = this.hasChildrenSlotted;
     // A sibling of [part="base"], never nested inside it -- the link keeps navigating on its own

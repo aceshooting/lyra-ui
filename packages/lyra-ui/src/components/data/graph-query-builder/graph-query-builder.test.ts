@@ -2079,3 +2079,66 @@ describe('collecting already-slotted hint/error content without relying on the i
     }
   });
 });
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-graph-query-builder>` localizes 19 keys; each marker must reach the rendered DOM.
+  const markers = {
+    graphQueryBuilderLabel: 'GQ-NAME',
+    graphQueryStartLabel: 'GQ-START',
+    graphQueryEndLabel: 'GQ-END',
+    graphQueryMinHopsLabel: 'GQ-MIN',
+    graphQueryMaxHopsLabel: 'GQ-MAX',
+    graphQueryRelationshipTypeLabel: 'GQ-REL',
+    graphQueryNodeTypeLabel: 'GQ-TYPE',
+    select: 'GQ-SELECT',
+    graphQueryDirectionLabel: 'GQ-DIRECTION',
+    neighborDirectionOut: 'GQ-OUT',
+    neighborDirectionIn: 'GQ-IN',
+    neighborDirectionBoth: 'GQ-BOTH',
+    graphQueryRun: 'GQ-RUN',
+    graphQuerySavedQueriesLabel: 'GQ-SAVED',
+    graphQuerySaveNameLabel: 'GQ-SAVE-NAME',
+    graphQuerySaveButton: 'GQ-SAVE',
+    noData: 'GQ-EMPTY',
+    graphQueryLoadWithContext: 'GQ-LOAD {name}',
+    graphQueryDeleteWithContext: 'GQ-DELETE {name}',
+    fieldRequired: 'GQ-REQUIRED',
+    graphQueryHopRangeInvalid: 'GQ-HOP-RANGE',
+  };
+
+  it('routes every label, option, button and validation key to the rendered DOM', async () => {
+    const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder
+      .strings=${markers}
+      .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
+      .nodeTypeOptions=${NODE_TYPE_OPTIONS}
+    ></lr-graph-query-builder>`);
+    const root = el.shadowRoot!;
+    const textOf = (selector: string) => root.querySelector(selector)!.textContent!.trim();
+    const attrOf = (selector: string, name: string) => root.querySelector(selector)!.getAttribute(name);
+    expect(textOf('[part~="label"]')).to.equal('GQ-NAME');
+    const labels: Array<[string, string]> = [
+      ['start-input', 'GQ-START'], ['end-input', 'GQ-END'], ['min-hops', 'GQ-MIN'], ['max-hops', 'GQ-MAX'],
+      ['relationship-picker', 'GQ-REL'], ['node-type-picker', 'GQ-TYPE'], ['direction', 'GQ-DIRECTION'],
+      ['save-name-input', 'GQ-SAVE-NAME'],
+    ];
+    for (const [part, marker] of labels) expect(attrOf(`[part="${part}"]`, 'label'), part).to.equal(marker);
+    expect(attrOf('[part="relationship-picker"]', 'placeholder')).to.equal('GQ-SELECT');
+    expect(attrOf('[part="node-type-picker"]', 'placeholder')).to.equal('GQ-SELECT');
+    expect(Array.from(root.querySelectorAll('[part="direction"] lr-option'), (option) => option.textContent!.trim()))
+      .to.deep.equal(['GQ-OUT', 'GQ-IN', 'GQ-BOTH']);
+    expect(textOf('[part="run-button"]')).to.equal('GQ-RUN');
+    expect(textOf('[part="saved-queries-label"]')).to.equal('GQ-SAVED');
+    expect(textOf('[part="save-button"]')).to.equal('GQ-SAVE');
+    expect(textOf('[part="saved-empty"]')).to.equal('GQ-EMPTY');
+
+    el.savedQueries = [{ id: 's1', name: 'Coworkers', query: query() }];
+    el.value = query({ minHops: 3, maxHops: 1 });
+    await el.updateComplete;
+    expect(attrOf('[part="saved-load-button"]', 'aria-label')).to.equal('GQ-LOAD Coworkers');
+    expect(attrOf('[part="saved-delete-button"]', 'aria-label')).to.equal('GQ-DELETE Coworkers');
+    el.reportValidity();
+    await el.updateComplete;
+    expect(attrOf('[part="start-input"]', 'error-text')).to.equal('GQ-REQUIRED');
+    expect(attrOf('[part="max-hops"]', 'error-text')).to.equal('GQ-HOP-RANGE');
+  });
+});

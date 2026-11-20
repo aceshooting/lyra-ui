@@ -601,13 +601,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.closePanel();
   };
 
-  /** A reason chip also fires its deprecated `lr-chip-select` alias right after the
-   *  `lr-chip-toggle-request` that drives the toggle; it is contained here too so neither internal
-   *  chip event leaks past this host. */
-  private stopChipAliasEvent = (event: Event): void => {
-    event.stopPropagation();
-  };
-
   private toggleReason(id: string, event: Event, detail: MessageFeedbackDetailConfiguration | undefined): void {
     if (this.disabled || this.pending || event.defaultPrevented || detail !== this.detail || !this.panelOpen ||
       !this.detailReasons.some(reason => reason.id === id)) {
@@ -901,7 +894,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                                   event.stopPropagation();
                                   this.toggleReason(reason.id, event, renderedDetail);
                                 }}
-                                @lr-chip-select=${this.stopChipAliasEvent}
                                 >${reason.label}</lr-chip
                               >
                             `

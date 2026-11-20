@@ -13,10 +13,6 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 const RULE = "Bash(git status:*)";
 
@@ -3262,10 +3258,6 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
   ] as const;
 
   for (const { alias, canonical, mount, act, detail, unchanged, changed } of cases) {
-    const usage: readonly DeprecatedUsage[] = [
-      { tag: "lr-token-input", kind: "event", name: alias },
-    ];
-
     it(`fires only ${canonical}, with a cancelable detail`, async () => {
       const el = (await fixture(mount())) as LyraTokenInput;
       const seen: CustomEvent[] = [];
@@ -3285,40 +3277,35 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
       expect(el.value).to.deep.equal(changed);
     });
 
-    it(`vetoes through ${canonical} without a deprecation warning`, async () => {
+    it(`vetoes through ${canonical}`, async () => {
       const el = (await fixture(mount())) as LyraTokenInput;
       let aliasPrevented: boolean | undefined;
       el.addEventListener(canonical, (event) => event.preventDefault());
       el.addEventListener(alias, (event) => {
         aliasPrevented = event.defaultPrevented;
       });
-      const warnings = await captureDeprecationWarnings(usage, () => act(el));
+      await act(el);
       expect(el.value).to.deep.equal(unchanged);
       expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
-      expect(warnings).to.have.length(0);
     });
 
     it(`ignores a listener bound only to ${alias}`, async () => {
       const values: string[][] = [];
-      const warnings = await captureDeprecationWarnings(usage, async () => {
-        for (let round = 0; round < 2; round += 1) {
-          const el = (await fixture(mount())) as LyraTokenInput;
-          el.addEventListener(alias, (event) => event.preventDefault());
-          await act(el);
-          values.push([...el.value]);
-        }
-      });
+      for (let round = 0; round < 2; round += 1) {
+        const el = (await fixture(mount())) as LyraTokenInput;
+        el.addEventListener(alias, (event) => event.preventDefault());
+        await act(el);
+        values.push([...el.value]);
+      }
       expect(values).to.deep.equal([[...changed], [...changed]]);
-      expect(warnings).to.have.length(0);
     });
 
     it(`does not notify a ${alias} listener`, async () => {
       const el = (await fixture(mount())) as LyraTokenInput;
       let observed = 0;
       el.addEventListener(alias, () => (observed += 1));
-      const warnings = await captureDeprecationWarnings(usage, () => act(el));
+      await act(el);
       expect(observed).to.equal(0);
-      expect(warnings).to.have.length(0);
       expect(el.value).to.deep.equal(changed);
     });
   }

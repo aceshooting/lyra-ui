@@ -7,10 +7,6 @@ import type { LyraGraphLegend } from '../../lr-graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -650,19 +646,15 @@ it('reads no computed style to paint palette swatches', async () => {
 });
 
 describe('lr-graph-legend retired interactive alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-graph-legend', kind: 'property', name: 'interactive' }];
   const observe = (el: LyraGraphLegend): string => String(el.shadowRoot!.querySelectorAll('button[part~="item"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraGraphLegend>(markup);
 
-  it('applies without-interaction with canonical defaults and no deprecation warning', async () => {
+  it('applies without-interaction with canonical defaults', async () => {
     let canonical = '';
     let plain = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
-      plain = observe(await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`));
-    });
+    canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
+    plain = observe(await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`));
     expect(canonical).to.not.equal(plain);
-    expect(warnings).to.have.length(0);
   });
 });
 

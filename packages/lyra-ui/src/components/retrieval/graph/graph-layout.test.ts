@@ -960,14 +960,9 @@ describe('focus and camera fit', () => {
       const el = await mountWide();
       const changed = oneEvent(el, 'lr-viewport-change');
       await el.focusNode('a', { zoom: 2 });
-      const detail = (await changed).detail as {
-        k: number;
-        x: number;
-        y: number;
-        zoom: number;
-      };
-      expect(detail.k).to.be.closeTo(2, 0.01);
-      expect(detail.zoom).to.equal(detail.k);
+      const detail = (await changed).detail as Record<string, number>;
+      expect(detail.zoom).to.be.closeTo(2, 0.01);
+      expect(Object.keys(detail).sort()).to.deep.equal(['x', 'y', 'zoom']);
     } finally {
       window.matchMedia = originalMatchMedia;
     }

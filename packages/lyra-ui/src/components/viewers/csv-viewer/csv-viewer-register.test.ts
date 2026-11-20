@@ -3,16 +3,13 @@ import { render } from 'lit';
 import './csv-viewer-register.js';
 import { CSV_VIEWER_TAG } from './csv-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
-
-function fetchedModuleEnding(suffix: string): boolean {
-  return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
-}
+import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const csv: LyraDocumentFile = { name: 'rows.csv', mimeType: 'text/csv', src: 'https://example.test/rows.csv' };
 
 describe('csv-viewer-register laziness', () => {
   it('never fetches the csv-viewer class module merely by importing the register-only entry', () => {
-    expect(fetchedModuleEnding('/csv-viewer.class.ts')).to.equal(false);
+    expect(fetchedModule('/csv-viewer.class.ts', { control: '/csv-viewer-register.ts' })).to.equal(false);
     expect(customElements.get(CSV_VIEWER_TAG)).to.equal(undefined);
   });
 
@@ -33,7 +30,7 @@ describe('csv registry', () => {
 
   it('loads (fetching the class module lazily) and renders the tag, registering it', async () => {
     const definition = await loadDocumentRenderer(findDocumentRenderer(csv)!);
-    expect(fetchedModuleEnding('/csv-viewer.class.ts')).to.equal(true);
+    expect(fetchedModule('/csv-viewer.class.ts')).to.equal(true);
     expect(customElements.get(CSV_VIEWER_TAG)).to.not.equal(undefined);
 
     const anchor = { kind: 'cell-range' as const, range: 'A1:B2' };

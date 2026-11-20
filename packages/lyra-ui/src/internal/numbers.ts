@@ -22,6 +22,38 @@ export function finiteRange(
   return Math.min(upper, Math.max(lower, safeValue));
 }
 
+/**
+ * Clamps `value` into `[min, max]` (bounds in order). `NaN` yields `min`, and an infinite value
+ * yields the bound on its side, so finite bounds always give a finite result.
+ */
+export function clamp(value: number, min: number, max: number): number {
+  return value > min ? (value < max ? value : max) : min;
+}
+
+/**
+ * Clamps an index into `[0, count - 1]` for an item count such as an array length, truncating a
+ * fractional index; `-1` when there is no item. `NaN` yields `0` and an infinite index the nearer end.
+ */
+export function clampIndex(index: number, count: number): number {
+  return count > 0 ? clamp(Math.trunc(index), 0, count - 1) : -1;
+}
+
+/**
+ * Clamps `index` with {@link clampIndex}, then moves to the nearest index for which `disabled`
+ * is false, searching forward first and then backward. `-1` when every index is disabled.
+ */
+export function nearestEnabledIndex(
+  index: number,
+  count: number,
+  disabled: (index: number) => boolean,
+): number {
+  // clampIndex() inlined: this is often a bundle's only index helper.
+  const start = index > 0 && count > 1 ? (index < count ? Math.trunc(index) : count - 1) : 0;
+  for (let next = start; next < count; next += 1) if (!disabled(next)) return next;
+  for (let next = start - 1; next >= 0; next -= 1) if (!disabled(next)) return next;
+  return -1;
+}
+
 /** Returns a finite integer, truncating fractional input and clamping it. */
 export function finiteInteger(
   value: number,

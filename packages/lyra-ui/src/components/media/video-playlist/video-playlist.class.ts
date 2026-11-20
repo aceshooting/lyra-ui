@@ -12,7 +12,7 @@ import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import type { NativeMediaPreferences } from '../../../internal/media-controller.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteRange, nearestEnabledIndex } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { tag } from '../../../internal/prefix.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -295,15 +295,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   }
 
   private nearestEnabledIndex(videos: readonly LyraVideo[], preferred: number): number {
-    if (!videos.length) return -1;
-    const start = Math.min(Math.max(preferred, 0), videos.length - 1);
-    for (let index = start; index < videos.length; index += 1) {
-      if (this.isEnabled(videos[index]!)) return index;
-    }
-    for (let index = start - 1; index >= 0; index -= 1) {
-      if (this.isEnabled(videos[index]!)) return index;
-    }
-    return -1;
+    return nearestEnabledIndex(preferred, videos.length, (at) => !this.isEnabled(videos[at]!));
   }
 
   private reconcileChildren(): void {

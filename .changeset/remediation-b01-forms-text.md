@@ -19,7 +19,6 @@ Form fields render error descriptions before hints, match the shared field radiu
 Text inputs follow the entered text direction. Numeric and code entry keep a left-to-right base direction in RTL layouts.
 Time input emits one change pair when the last visible segment of a previously complete time is cleared. A partial draft emits input only. Time segments and input actions follow the shared interaction transition.
 Signature pad announces when a drawing reaches its stroke or point limit.
-Token input deprecates its implicit unlimited window. Set `max-tokens-visible="200"` for a paged window or `max-tokens-visible="0"` to keep every token mounted. The notice release keeps the unlimited default and submits the full list in either mode.
 Signature pad supports `readonly` and emits `lr-clear` after the Clear button empties it.
 Token input forwards autocomplete, keyboard mode, and Enter hints to both text fields.
 Textarea, phone input, token input, and OTP input expose theme tokens for placeholder colors.

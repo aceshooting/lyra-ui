@@ -77,3 +77,18 @@ export const PlainFrame: Story = {
     ></lr-permission-grant>
   </div>`,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-permission-grant
+        .requestId=${request.requestId}
+        .label=${'Read and summarize every file in the selected production project'}
+        .description=${'The assistant requests read access to inspect the selected project, including generated build output and its long nested configuration directories.'}
+        .scope=${'filesystem:workspace/production-project/configuration/deeply-nested-directory/read'}
+        status="pending"
+      ></lr-permission-grant>
+    </div>
+  `,
+};

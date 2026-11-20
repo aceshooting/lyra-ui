@@ -763,3 +763,31 @@ it('names the control group from its label with host aria-label taking precedenc
   await el.updateComplete;
   expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
 });
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-flow-controls>` localizes 5 keys; each marker must reach the rendered button or group name.
+  const markers = {
+    flowControlsLabel: 'FC-GROUP-MARKER',
+    zoomIn: 'FC-ZOOM-IN-MARKER',
+    zoomOut: 'FC-ZOOM-OUT-MARKER',
+    zoomToFit: 'FC-FIT-MARKER',
+    flowLockCanvas: 'FC-LOCK-MARKER',
+  };
+
+  it('routes every key to the aria-label and title of the part that surfaces it', async () => {
+    const el = await fixture<LyraFlowControls>(html`<lr-flow-controls .strings=${markers}></lr-flow-controls>`);
+    const attr = (part: string, name: string) =>
+      el.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute(name);
+    expect(attr('base', 'aria-label')).to.equal(markers.flowControlsLabel);
+    const buttons: Array<[string, string]> = [
+      ['zoom-in', markers.zoomIn],
+      ['zoom-out', markers.zoomOut],
+      ['fit', markers.zoomToFit],
+      ['lock', markers.flowLockCanvas],
+    ];
+    for (const [part, marker] of buttons) {
+      expect(attr(part, 'aria-label'), `${part} aria-label`).to.equal(marker);
+      expect(attr(part, 'title'), `${part} title`).to.equal(marker);
+    }
+  });
+});

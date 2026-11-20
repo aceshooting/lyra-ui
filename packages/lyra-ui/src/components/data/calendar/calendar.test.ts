@@ -1177,3 +1177,38 @@ it('keeps localized month, accessible dates, agenda dates and selected ISO value
   await el.updateComplete;
   expect(root.querySelector('[part="agenda-event"] strong')?.textContent).to.equal(medium.format(date));
 });
+
+describe('.strings overrides (every localize() key)', () => {
+  // Every key `<lr-calendar>` localizes, each proven to reach the rendered DOM through a `.strings`
+  // override. Markers are distinctive (not the production English) so a dropped override fails.
+  const strings = {
+    calendarLabel: 'LABEL-MARKER',
+    calendarPreviousMonth: 'PREV-MARKER',
+    calendarNextMonth: 'NEXT-MARKER',
+    calendarEmpty: 'EMPTY-MARKER',
+    calendarEventsOverflow: 'OVERFLOW-MARKER n={n}',
+    calendarInputLimit: 'LIMIT-MARKER {count}/{total}',
+  };
+  const text = (root: ShadowRoot, selector: string) => root.querySelector(selector)?.textContent?.trim() ?? '';
+
+  it('routes the grid chrome, day overflow and input limit keys to the DOM', async () => {
+    const { expectDevWarning } = await import('../../../../test/expected-dev-warnings.js');
+    expectDevWarning('lyra-collection-truncated:lr-calendar:events');
+    const events = Array.from({ length: 10_001 }, (_, i) => ({ date: '2026-07-15', title: `E${i}` }));
+    const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-07-01" .strings=${strings} .events=${events}></lr-calendar>`);
+    const root = el.shadowRoot!;
+    expect(root.querySelector('section')?.getAttribute('aria-label')).to.equal('LABEL-MARKER');
+    expect(root.querySelector('[part~="previous-button"]')?.getAttribute('aria-label')).to.equal('PREV-MARKER');
+    expect(root.querySelector('[part~="next-button"]')?.getAttribute('aria-label')).to.equal('NEXT-MARKER');
+    expect(text(root, '[part="limit"]')).to.match(/^LIMIT-MARKER \S+\/\S+$/);
+    expect(text(root, '[data-date="2026-07-15"] [part="event-limit"]')).to.match(/^OVERFLOW-MARKER n=\S+$/);
+    el.view = 'agenda';
+    await el.updateComplete;
+    expect(text(root, '[part="agenda-limit"]')).to.match(/^OVERFLOW-MARKER n=\S+$/);
+  });
+
+  it('routes calendarEmpty to the empty agenda', async () => {
+    const el = await fixture<LyraCalendar>(html`<lr-calendar view="agenda" view-date="2026-07-01" .strings=${strings}></lr-calendar>`);
+    expect(text(el.shadowRoot!, '[part="empty"]')).to.equal('EMPTY-MARKER');
+  });
+});

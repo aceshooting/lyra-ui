@@ -1,5 +1,4 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import type { LyraElement } from '../../../internal/lyra-element.js';
 import '../../lr-agent-workspace.js';
 import '../../lr-message-actions.js';
@@ -65,28 +64,25 @@ const cases: readonly AliasCase[] = [
 
 for (const [tag, alias, attribute, canonical, defaultValue, activeValue, aliasValue] of cases) {
   it(`${tag} ignores retired ${attribute} input in both write orders`, async () => {
-    const warnings = await captureDeprecationWarnings([], async () => {
-      const el = await fixture<LyraElement>(`<${tag}></${tag}>`);
-      expect(Reflect.get(el, canonical)).to.equal(defaultValue);
-      el.setAttribute(attribute, String(aliasValue));
-      await el.updateComplete;
-      expect(Reflect.get(el, canonical), 'old attribute cannot change the default').to.equal(defaultValue);
-      expect(alias in el, 'old reactive property is absent').to.equal(false);
-      Reflect.set(el, alias, aliasValue);
-      await el.updateComplete;
-      expect(Reflect.get(el, canonical), 'old property write is inert').to.equal(defaultValue);
-      Reflect.set(el, canonical, activeValue);
-      await el.updateComplete;
-      expect(Reflect.get(el, canonical)).to.equal(activeValue);
-      Reflect.set(el, alias, typeof aliasValue === 'boolean' ? !aliasValue : defaultValue);
-      el.removeAttribute(attribute);
-      await el.updateComplete;
-      expect(Reflect.get(el, canonical), 'late legacy writes cannot undo canonical control').to.equal(activeValue);
-      Reflect.set(el, canonical, defaultValue);
-      await el.updateComplete;
-      expect(Reflect.get(el, canonical)).to.equal(defaultValue);
-    });
-    expect(warnings).to.have.length(0);
+    const el = await fixture<LyraElement>(`<${tag}></${tag}>`);
+    expect(Reflect.get(el, canonical)).to.equal(defaultValue);
+    el.setAttribute(attribute, String(aliasValue));
+    await el.updateComplete;
+    expect(Reflect.get(el, canonical), 'old attribute cannot change the default').to.equal(defaultValue);
+    expect(alias in el, 'old reactive property is absent').to.equal(false);
+    Reflect.set(el, alias, aliasValue);
+    await el.updateComplete;
+    expect(Reflect.get(el, canonical), 'old property write is inert').to.equal(defaultValue);
+    Reflect.set(el, canonical, activeValue);
+    await el.updateComplete;
+    expect(Reflect.get(el, canonical)).to.equal(activeValue);
+    Reflect.set(el, alias, typeof aliasValue === 'boolean' ? !aliasValue : defaultValue);
+    el.removeAttribute(attribute);
+    await el.updateComplete;
+    expect(Reflect.get(el, canonical), 'late legacy writes cannot undo canonical control').to.equal(activeValue);
+    Reflect.set(el, canonical, defaultValue);
+    await el.updateComplete;
+    expect(Reflect.get(el, canonical)).to.equal(defaultValue);
   });
 }
 

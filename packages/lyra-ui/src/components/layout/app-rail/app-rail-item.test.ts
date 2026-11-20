@@ -1741,7 +1741,7 @@ describe('collecting already-slotted meta/end content without relying on the ini
     return { el, meta, end };
   }
 
-  it('populates hasMetaSlot/hasEndSlot when the initial slotchange is suppressed (simulating happy-dom)', async () => {
+  it('renders meta/end chrome when the initial slotchange is suppressed (simulating happy-dom)', async () => {
     // happy-dom (through at least 20.14.5) never fires `slotchange` for a slot's INITIAL
     // assignment. This suite runs in a real browser, which DOES fire it -- so to reproduce the
     // happy-dom condition deterministically here, swallow every such event with a capture-phase
@@ -1767,19 +1767,19 @@ describe('collecting already-slotted meta/end content without relying on the ini
       ).to.equal(2);
       expect(
         el.shadowRoot!.querySelector('[part="meta"]')!.hasAttribute('hidden'),
-        "firstUpdated() collected the already-slotted meta content, with no slotchange ever reaching the component's own listener"
+        "the already-slotted meta content is present with no slotchange ever reaching the component's own listener"
       ).to.equal(false);
       expect(
         el.shadowRoot!.querySelector('[part="end"]')!.hasAttribute('hidden'),
-        "firstUpdated() collected the already-slotted end content, with no slotchange ever reaching the component's own listener"
+        "the already-slotted end content is present with no slotchange ever reaching the component's own listener"
       ).to.equal(false);
     } finally {
       el.remove();
     }
   });
 
-  it('is idempotent: a real slotchange landing on top of the firstUpdated() collection does not change the result', async () => {
-    // No interception here -- both firstUpdated()'s own call and the real, un-suppressed initial
+  it('is idempotent: a real slotchange landing on top of the seeded presence does not change the result', async () => {
+    // No interception here -- both the seeded presence and the real, un-suppressed initial
     // slotchange events fire for the same batch. The diagnostic listener below proves the real
     // firing actually happened, so this test exercises the double-invocation path it claims to.
     const { el } = slotted();

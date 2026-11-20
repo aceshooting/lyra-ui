@@ -1,13 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LyraGraph } from '../../lr-graph.js';
+import { fetchedModule } from '../../../../test/resource-entries.js';
 void LyraGraph;
 
 it('does not instantiate spatial machinery for the default 2D view', async () => {
   const graph = await fixture<LyraGraph>(html`<lr-graph></lr-graph>`);
   expect((graph as unknown as { spatial?: unknown }).spatial === undefined).to.equal(true);
-  const optionalResources = performance.getEntriesByType('resource').filter(entry =>
-    /\/(?:graph-spatial-controller|graph-spatial|layered-layout)\.js(?:\?|$)/.test(entry.name));
-  expect(optionalResources.map(entry => entry.name)).to.deep.equal([]);
+  expect(fetchedModule(/\/(?:graph-spatial-controller|graph-spatial|layered-layout)\.(?:ts|js)$/, { control: '/lr-graph.ts' })).to.equal(false);
 });
 
 it('settles the spatial view through updateComplete and preserves synchronous world positions', async () => {

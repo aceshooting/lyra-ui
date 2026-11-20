@@ -2,14 +2,13 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { webgl2Available } from '../../../internal/engine-3d.js';
 import '../../lr-model-viewer.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
+import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 // These cases drive the real companion engine, so they need a WebGL2 context. Engines without one
 // (headless Firefox on a host with no GPU) skip them cleanly instead of waiting on a canvas that
 // can never render. The stubbed-engine suites cover the same lifecycle on every engine.
-const hasWebgl2 = (): boolean => webgl2Available();
 const dataUrl = (text: string): string => `data:text/plain,${encodeURIComponent(text)}`;
 const triangle = dataUrl('v -1 -1 0\nv 1 -1 0\nv 0 1 0\nf 1 2 3\n');
 const cloud = dataUrl('-1 -1 0 255 0 0\n1 -1 0 0 255 0\n0 1 0 0 0 255\n');
@@ -40,7 +39,7 @@ async function mount(source: string, format: string): Promise<{ viewer: LyraMode
 
 describe('<lr-model-viewer> with the companion engine', () => {
   it('parses an OBJ model into a decorative WebGL canvas and adopts the engine fit', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const { viewer, loaded } = await mount(triangle, 'obj');
     const event = await loaded; await waitUntil(() => isReady(viewer), 'the model did not become ready', READY); await viewer.updateComplete;
     expect((event.detail as { format: string }).format).to.equal('obj');
@@ -56,7 +55,7 @@ describe('<lr-model-viewer> with the companion engine', () => {
   });
 
   it('orbits and refits with real key presses and reports each user camera change once', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const { viewer } = await mount(triangle, 'obj'); await waitUntil(() => isReady(viewer), 'the model did not become ready', READY);
     const changes: Array<{ yaw: number }> = []; viewer.addEventListener('lr-camera-change', event => changes.push((event as CustomEvent<{ camera: { yaw: number } }>).detail.camera));
     const fitted = viewer.camera!.yaw; await focusByKeyboard(viewportOf(viewer));
@@ -67,7 +66,7 @@ describe('<lr-model-viewer> with the companion engine', () => {
   });
 
   it('keeps keyboard control after a pointer press on the canvas', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const { viewer } = await mount(triangle, 'obj'); await waitUntil(() => isReady(viewer), 'the model did not become ready', READY);
     let changes = 0; viewer.addEventListener('lr-camera-change', () => { changes++; });
     const canvas = viewportOf(viewer).querySelector('canvas')!; const box = canvas.getBoundingClientRect();
@@ -81,7 +80,7 @@ describe('<lr-model-viewer> with the companion engine', () => {
   });
 
   it('reports a pointer drag as a user camera change', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const { viewer } = await mount(triangle, 'obj'); await waitUntil(() => isReady(viewer), 'the model did not become ready', READY);
     const cameras: Array<{ yaw: number }> = []; viewer.addEventListener('lr-camera-change', event => cameras.push((event as CustomEvent<{ camera: { yaw: number } }>).detail.camera));
     const fitted = viewer.camera!.yaw; const box = viewportOf(viewer).querySelector('canvas')!.getBoundingClientRect();
@@ -95,7 +94,7 @@ describe('<lr-model-viewer> with the companion engine', () => {
   });
 
   it('renders a point cloud through the shared engine without a separate element', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const { viewer, loaded } = await mount(cloud, 'xyz');
     expect(((await loaded).detail as { format: string }).format).to.equal('xyz');
     await waitUntil(() => isReady(viewer), 'the point cloud did not become ready', READY);
@@ -104,7 +103,7 @@ describe('<lr-model-viewer> with the companion engine', () => {
   });
 
   it('renders an embedded glTF but rejects the same model with an external buffer, without requesting it', async function () {
-    if (!hasWebgl2()) this.skip();
+    requireWebgl2.call(this);
     const requested: string[] = []; const original = window.fetch;
     window.fetch = (input, init) => { requested.push(input instanceof Request ? input.url : String(input)); return original.call(window, input, init); };
     try {

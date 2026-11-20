@@ -384,6 +384,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
       if (!this.effectiveDisabled) this.touched = true;
       this.retireModeFocusAfterBlur(event);
     },
+    forwardFreeInputClick: true,
   });
 
   /** @internal */

@@ -4,20 +4,10 @@ import '../../lr-select.js';
 import '../../lr-combobox.js';
 import type { LyraSelect } from '../../lr-select.js';
 import type { LyraCombobox } from '../../lr-combobox.js';
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-combobox', 'show-unknown-option');
 expectStaleAttribute('lr-select', 'show-unknown-option');
-
-// The compatibility tests below deliberately use the deprecated show-unknown-option alias, which
-// keeps working until its removal.
-expectDeprecatedUsage('lr-select', 'property', 'showUnknownOption');
-expectDeprecatedUsage('lr-combobox', 'property', 'showUnknownOption');
 
 const rows = (el: LyraSelect | LyraCombobox): HTMLElement[] =>
   Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="option"]'));
@@ -259,8 +249,7 @@ describe('lr-combobox out-of-list value', () => {
 });
 
 for (const tag of ['lr-select', 'lr-combobox'] as const) {
-  describe(`${tag} deprecated show-unknown-option alias`, () => {
-    const usage: readonly DeprecatedUsage[] = [{ tag, kind: 'property', name: 'showUnknownOption' }];
+  describe(`${tag} retired show-unknown-option alias`, () => {
     const build = (attrs: string): Promise<LyraSelect | LyraCombobox> =>
       tag === 'lr-select'
         ? buildSelect(attrs)
@@ -271,43 +260,36 @@ for (const tag of ['lr-select', 'lr-combobox'] as const) {
 
     it('keeps the row absent when the removed spelling is added or removed', async () => {
       let el: LyraSelect | LyraCombobox | undefined;
-      await captureDeprecationWarnings(usage, async () => {
-        el = await build('value="ghost" open show-unknown-option');
-        await el.updateComplete;
-        expect(unknownRows(el).length).to.equal(0);
-        el.removeAttribute('show-unknown-option');
-        await el.updateComplete;
-      });
+      el = await build('value="ghost" open show-unknown-option');
+      await el.updateComplete;
+      expect(unknownRows(el).length).to.equal(0);
+      el.removeAttribute('show-unknown-option');
+      await el.updateComplete;
       expect(el!.withUnknownOption).to.equal(false);
       expect(el!.hasAttribute('with-unknown-option')).to.equal(false);
       expect(unknownRows(el!).length).to.equal(0);
     });
 
-    it('does not warn for the canonical with-unknown-option, which reflects like the old name did', async () => {
-      const warnings = await captureDeprecationWarnings(usage, async () => {
-        const el = await build('value="ghost" open with-unknown-option');
-        await el.updateComplete;
-        expect(unknownRows(el).length).to.equal(1);
-        const unset = await build('value="ghost" open');
-        expect(unset.withUnknownOption).to.equal(false);
-        expect(unset.hasAttribute('with-unknown-option')).to.equal(false);
-        unset.withUnknownOption = true;
-        await unset.updateComplete;
-        expect(unset.hasAttribute('with-unknown-option')).to.equal(true);
-        expect('showUnknownOption' in unset).to.equal(false);
-        expect(unset.hasAttribute('show-unknown-option')).to.equal(false);
-        expect(unknownRows(unset).length).to.equal(1);
-      });
-      expect(warnings).to.have.length(0);
+    it('renders the canonical with-unknown-option, which reflects like the old name did', async () => {
+      const el = await build('value="ghost" open with-unknown-option');
+      await el.updateComplete;
+      expect(unknownRows(el).length).to.equal(1);
+      const unset = await build('value="ghost" open');
+      expect(unset.withUnknownOption).to.equal(false);
+      expect(unset.hasAttribute('with-unknown-option')).to.equal(false);
+      unset.withUnknownOption = true;
+      await unset.updateComplete;
+      expect(unset.hasAttribute('with-unknown-option')).to.equal(true);
+      expect('showUnknownOption' in unset).to.equal(false);
+      expect(unset.hasAttribute('show-unknown-option')).to.equal(false);
+      expect(unknownRows(unset).length).to.equal(1);
     });
 
     it('preserves the canonical value when the removed spelling changes', async () => {
       let el: LyraSelect | LyraCombobox | undefined;
-      await captureDeprecationWarnings(usage, async () => {
-        el = await build('value="ghost" open with-unknown-option show-unknown-option');
-        el.removeAttribute('show-unknown-option');
-        await el.updateComplete;
-      });
+      el = await build('value="ghost" open with-unknown-option show-unknown-option');
+      el.removeAttribute('show-unknown-option');
+      await el.updateComplete;
       expect(el!.withUnknownOption).to.equal(true);
       expect(el!.hasAttribute('with-unknown-option')).to.equal(true);
       expect(unknownRows(el!).length).to.equal(1);
@@ -317,10 +299,8 @@ for (const tag of ['lr-select', 'lr-combobox'] as const) {
       const el = await build('value="ghost" open with-unknown-option');
       el.removeAttribute('with-unknown-option');
       await el.updateComplete;
-      await captureDeprecationWarnings(usage, async () => {
-        el.setAttribute('show-unknown-option', '');
-        await el.updateComplete;
-      });
+      el.setAttribute('show-unknown-option', '');
+      await el.updateComplete;
       expect(el.withUnknownOption).to.equal(false);
       expect(unknownRows(el).length).to.equal(0);
       el.removeAttribute('show-unknown-option');

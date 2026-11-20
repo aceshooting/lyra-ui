@@ -19,20 +19,12 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition, type LyraGraphView, type NormalizedGraphModel } from './graph-model.js';
 import { fittedGraphCamera, graphCurvePoint, normalizeGraphCurvature, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, spatialNodePosition,
   type SpatialHit, type SpatialViewport, type SpatialWorldNode } from './graph-spatial.js';
-import { GraphBuiltin3dEngine, type GraphBuiltin3dFrame, type GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
+import { GraphBuiltin3dEngine, selectedIds, type GraphBuiltin3dFrame, type GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
 import { wheelZoomDelta, wheelZoomFactor } from '../../../internal/wheel-zoom.js';
 
 /** The scheduler's pending promise retains only cancellation authority, never a graph scene. */
 function yieldGraphNodeRendererTask(view: Window | null, signal: AbortSignal): Promise<void> {
   return yieldViewerTask(view, () => !signal.aborted);
-}
-
-const selectionSets = new WeakMap<readonly string[], ReadonlySet<string>>();
-function selectedIds(ids: readonly string[]): ReadonlySet<string> {
-  if (!Object.isFrozen(ids)) return new Set(ids);
-  let result = selectionSets.get(ids);
-  if (!result) { result = new Set(ids); selectionSets.set(ids, result); }
-  return result;
 }
 
 interface GraphSpatialHost extends HTMLElement {

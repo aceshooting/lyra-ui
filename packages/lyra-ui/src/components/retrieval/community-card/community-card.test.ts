@@ -5,10 +5,6 @@ import '../../lr-community-card.js';
 import type { LyraCommunityCard, LyraCommunity } from '../../lr-community-card.js';
 import type { LyraEntity } from '../../lr-entity-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 const community: LyraCommunity = {
   id: 'c1',
@@ -423,7 +419,6 @@ it('formats member and overflow counts with the effective locale', async () => {
 });
 
 describe('lr-community-card size and the retired compact alias', () => {
-  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-community-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraCommunityCard): string => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
     return [
@@ -435,16 +430,13 @@ describe('lr-community-card size and the retired compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraCommunityCard>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" with canonical defaults', async () => {
     let dense = '';
     let regular = '';
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      dense = observe(await mount(html`<lr-community-card size="s" .community=${community} .members=${members}></lr-community-card>`));
-      regular = observe(await mount(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`));
-    });
+    dense = observe(await mount(html`<lr-community-card size="s" .community=${community} .members=${members}></lr-community-card>`));
+    regular = observe(await mount(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`));
     expect(dense).to.equal('0|0|8px|4px');
     expect(regular).to.not.equal(dense);
-    expect(warnings).to.have.length(0);
   });
 });
 

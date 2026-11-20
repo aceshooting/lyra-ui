@@ -3,17 +3,7 @@ import type { LyraNumberInput } from './number-input.class.js';
 import '../../lr-number-input.js';
 import '../../lr-native-time-input.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 import type { LyraNativeTimeInput } from './native-time-input.class.js';
-
-// The compatibility tests below deliberately use these deprecated aliases, which keep working
-// until their removal.
-expectDeprecatedUsage('lr-number-input', 'property', 'steppers');
-expectDeprecatedUsage('lr-native-time-input', 'property', 'noSpinButtons');
 
 type DescribedNativeInput = HTMLInputElement & {
   ariaDescribedByElements?: readonly Element[] | null;
@@ -429,32 +419,13 @@ it('rotates the shared chevron into a real up/down pair rather than shipping an 
   expect(getComputedStyle(down).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
 });
 
-describe('lr-number-input deprecated steppers alias', () => {
-  const usage: readonly DeprecatedUsage[] = [{ tag: 'lr-number-input', kind: 'property', name: 'steppers' }];
-
-  it('does not warn for the canonical without-steppers or an unset alias', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      await fixture(html`<lr-number-input without-steppers label="Qty"></lr-number-input>`);
-      await fixture(html`<lr-number-input label="Qty"></lr-number-input>`);
-    });
-    expect(warnings).to.have.length(0);
-  });
-
-});
-
-describe('lr-native-time-input deprecated no-spin-buttons alias', () => {
-  const usage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-native-time-input', kind: 'property', name: 'noSpinButtons' },
-  ];
+describe('lr-native-time-input retired no-spin-buttons alias', () => {
   const nativeFlag = (el: LyraNativeTimeInput) =>
     el.shadowRoot!.querySelector('input')!.hasAttribute('data-without-spin-buttons');
 
-  it('stays silent while the alias is unset', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      const el = await fixture<LyraNativeTimeInput>(html`<lr-native-time-input></lr-native-time-input>`);
-      expect('noSpinButtons' in el).to.equal(false);
-      expect(nativeFlag(el)).to.equal(false);
-    });
-    expect(warnings).to.have.length(0);
+  it('leaves the spin buttons on while the retired property is unset', async () => {
+    const el = await fixture<LyraNativeTimeInput>(html`<lr-native-time-input></lr-native-time-input>`);
+    expect('noSpinButtons' in el).to.equal(false);
+    expect(nativeFlag(el)).to.equal(false);
   });
 });

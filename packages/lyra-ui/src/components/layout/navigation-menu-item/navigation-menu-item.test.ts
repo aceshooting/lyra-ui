@@ -354,3 +354,19 @@ it('reports only the latest rendered toggle and drops pending toggles on detach'
   await settle(el);
   expect(events).to.have.length(1);
 });
+
+it('mirrors an item-anchored panel to the trigger end edge under RTL', async () => {
+  await import('../../lr-navigation-menu.js');
+  const menu = await fixture<HTMLElement>(html`<lr-navigation-menu dir="rtl" panel-anchor="item">
+    <lr-navigation-menu-item>Products<div slot="panel" style="inline-size: 240px"><a href="/a">Analytics</a></div></lr-navigation-menu-item>
+    <lr-navigation-menu-item>Resources<div slot="panel" style="inline-size: 240px"><a href="/b">Guides</a></div></lr-navigation-menu-item>
+  </lr-navigation-menu>`);
+  const item = menu.querySelectorAll<LyraNavigationMenuItem>('lr-navigation-menu-item')[1]!;
+  await settle(item);
+  item.open = true;
+  const surface = panel(item);
+  await waitUntil(() => !surface.hidden && surface.style.position !== '' && getComputedStyle(surface).visibility === 'visible', 'the RTL panel never placed');
+  const trigger = base(item).getBoundingClientRect();
+  await waitUntil(() => Math.abs(surface.getBoundingClientRect().right - trigger.right) <= 1, 'the RTL panel is not aligned with the trigger end edge');
+  expect(surface.getBoundingClientRect().left).to.be.lessThan(trigger.left - 1);
+});

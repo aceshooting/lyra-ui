@@ -112,6 +112,8 @@ export const styles = css`
     max-inline-size: calc(100% - 2 * var(--lr-space-m));
     padding-inline: var(--lr-space-m);
     padding-block: var(--lr-space-xs);
+    /* The labelled pill keeps the shared minimum hit area too, like lr-transcript-feed's jump button. */
+    ${iconHitTarget}
     border: var(--lr-chat-viewport-jump-border, var(--lr-border-width-thin) solid var(--lr-color-border));
     border-radius: var(--lr-chat-viewport-jump-radius, var(--lr-radius-pill));
     background: var(--lr-chat-viewport-jump-bg, var(--lr-color-surface));

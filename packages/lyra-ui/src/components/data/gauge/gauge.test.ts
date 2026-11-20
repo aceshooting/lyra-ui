@@ -3,7 +3,6 @@ import '../../lr-gauge.js';
 import type { LyraGauge, LyraGaugeThreshold } from '../../lr-gauge.js';
 import type { LyraProgressVariant } from '../../lr-progress-bar.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function fillStroke(el: LyraGauge): Promise<string> {
   await el.updateComplete;
@@ -979,19 +978,6 @@ describe('withoutValue', () => {
     expect(el.withoutValue).to.equal(true);
     await expect(el).to.be.accessible();
   });
-});
-
-describe('canonical value visibility', () => {
-  const SHOW_VALUE: readonly DeprecatedUsage[] = [{ tag: 'lr-gauge', kind: 'property', name: 'showValue' }];
-  it('never warns for without-value or an untouched default', async () => {
-    const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
-      const el = await fixture<LyraGauge>(html`<lr-gauge value="1" max="2"></lr-gauge>`);
-      el.withoutValue = true;
-      await el.updateComplete;
-    });
-    expect(warnings).to.deep.equal([]);
-  });
-
 });
 
 describe('bidi isolation of formatted captions', () => {

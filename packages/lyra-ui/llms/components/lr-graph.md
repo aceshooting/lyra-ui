@@ -392,7 +392,7 @@ Other events include
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), `lr-viewport-change`
-(`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced 2D camera/layout signal),
+(`detail: { zoom, x, y }`, as on `lr-flow-canvas`; a frame-coalesced 2D camera/layout signal),
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
 coalesced to one event per frame), and `lr-graph-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
@@ -592,7 +592,7 @@ matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node
 focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
 to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
-(`detail: { zoom, x, y }` plus the deprecated alias `k`, the live d3-zoom camera transform) fires at most once per animation frame,
+(`detail: { zoom, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,
 coalescing every source that can move a rendered node's screen position — a pan/zoom gesture, a
 `focusNode()`/`fit()` tween, and every simulation tick — so a consumer anchoring its own UI (e.g. a
 details popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of

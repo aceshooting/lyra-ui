@@ -1,7 +1,6 @@
 import { LyraInput } from '../../forms/input/input.class.js';
 import '../../lr-input.js';
 import { expect, fixture, elementUpdated } from '@open-wc/testing';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import '../../lr-code-editor.js';
 import '../../lr-combobox.js';
@@ -153,23 +152,21 @@ const cases = [
 
 for (const [tagName, retired, canonical] of cases) {
   it(`${tagName} exposes ${canonical} without the retired ${retired} property`, async () => {
-    await captureDeprecationWarnings([], async () => {
-      const el = await fixture(document.createElement(tagName));
-      expect(canonical in el, 'canonical property').to.equal(true);
-      expect(retired in el, 'retired property').to.equal(false);
-      expect(el.shadowRoot !== null, 'renders its supported surface').to.equal(true);
-      const state = el as unknown as Record<string, unknown>;
-      const initial = state[canonical];
-      const attribute = retired.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
-      for (const value of ['', 'false', '999', 'end']) {
-        el.setAttribute(attribute, value);
-        await elementUpdated(el);
-        expect(state[canonical], `removed ${attribute}=${value} does not change ${canonical}`).to.equal(initial);
-      }
-      el.removeAttribute(attribute);
+    const el = await fixture(document.createElement(tagName));
+    expect(canonical in el, 'canonical property').to.equal(true);
+    expect(retired in el, 'retired property').to.equal(false);
+    expect(el.shadowRoot !== null, 'renders its supported surface').to.equal(true);
+    const state = el as unknown as Record<string, unknown>;
+    const initial = state[canonical];
+    const attribute = retired.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+    for (const value of ['', 'false', '999', 'end']) {
+      el.setAttribute(attribute, value);
       await elementUpdated(el);
-      expect(state[canonical]).to.equal(initial);
-    });
+      expect(state[canonical], `removed ${attribute}=${value} does not change ${canonical}`).to.equal(initial);
+    }
+    el.removeAttribute(attribute);
+    await elementUpdated(el);
+    expect(state[canonical]).to.equal(initial);
   });
 }
 

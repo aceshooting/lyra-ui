@@ -8,6 +8,7 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { cancelDeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import {
@@ -17,7 +18,7 @@ import {
   deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
-import { nextId, hasRealContent } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
 import {
   deferredPlaceReady as place,
   deferredTrackRect as trackRect,
@@ -521,7 +522,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       if (normalizedIndex !== this.activeIndex) this.activeIndex = normalizedIndex;
     }
     if (!this.hasUpdated) {
-      this.hasSlotContent = hasRealContent(this.childNodes);
+      this.hasSlotContent = hasSlotContent(this);
     }
     if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
       const interactive = !!this.steps[this.activeIndex]?.interactiveTarget;
@@ -987,8 +988,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.overlay?.dismissBackdrop();
   };
 
-  private onDefaultSlotChange = (e: Event): void => {
-    this.hasSlotContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
+  private onDefaultSlotChange = (): void => {
+    this.hasSlotContent = hasSlotContent(this);
   };
 
   private ownsDirectionalKeys(event: KeyboardEvent): boolean {

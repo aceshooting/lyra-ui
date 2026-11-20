@@ -2,7 +2,7 @@ import { formControlSupportingState, renderFormControlHintError } from '../../..
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
-import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
+import { RangeDragController, rangePointerRatio, nearestRangeEnd, rangeKeyAction } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -29,7 +29,6 @@ import {
   finiteNumber,
   finiteRange,
   finiteRatio,
-  isSliderKey,
 } from '../../../internal/numbers.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import { styles } from './slider.styles.js';
@@ -1276,32 +1275,20 @@ export class LyraSlider extends LyraSliderBase {
 
   private onKeyDown = (handle: SliderHandle, e: KeyboardEvent): void => {
     if (!this.interactive || e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
-    const current = this.valueForHandle(handle);
-    // Under RTL, physical ArrowRight moves toward inset-inline-start, i.e. a
-    // lower value — swap which physical key counts as "forward", matching
-    // lr-multi-split/lr-time-range's onKeyDown/onPointerMove convention.
-    // ArrowUp/ArrowDown are never swapped (direction only affects the
-    // horizontal inline axis), which also makes them the stable primary keys
-    // for orientation="vertical".
-    const rtl = this.effectiveDirection === 'rtl';
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    // ArrowLeft/ArrowRight swap under RTL; ArrowUp/ArrowDown never do, which also makes them the
+    // stable primary keys for orientation="vertical".
+    const action = rangeKeyAction(e.key, this.effectiveDirection === 'rtl');
+    if (action === undefined) return;
+    e.preventDefault();
     const bounds = this.reachableBounds(handle);
-    const move = (next: number): void => {
-      e.preventDefault();
-      if (this.assignValueFor(handle, next)) {
-        // Input listeners may synchronously disable or make the slider readonly. Record the
-        // gesture before notifying them so their cancellation cannot be overwritten afterward.
-        this.pendingKeyHandle = handle;
-        this.emitInput(handle);
-      }
-    };
-    if (e.key === forwardKey || e.key === 'ArrowUp') move(this.directionalStep(current, 1));
-    else if (e.key === backwardKey || e.key === 'ArrowDown') move(this.directionalStep(current, -1));
-    else if (e.key === 'PageUp') move(this.directionalStep(current, RANGE_PAGE_STEP_MULTIPLIER));
-    else if (e.key === 'PageDown') move(this.directionalStep(current, -RANGE_PAGE_STEP_MULTIPLIER));
-    else if (e.key === 'Home') move(bounds.min);
-    else if (e.key === 'End') move(bounds.max);
+    const next = action === 'min' ? bounds.min : action === 'max' ? bounds.max
+      : this.directionalStep(this.valueForHandle(handle), action);
+    if (this.assignValueFor(handle, next)) {
+      // Input listeners may synchronously disable or make the slider readonly. Record the
+      // gesture before notifying them so their cancellation cannot be overwritten afterward.
+      this.pendingKeyHandle = handle;
+      this.emitInput(handle);
+    }
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
@@ -1313,7 +1300,7 @@ export class LyraSlider extends LyraSliderBase {
     // lr-input) repeatedly but still commits only once, on the eventual
     // keyup — the same drag-like "continuous input, single final change"
     // shape a pointer drag has.
-    if (!this.interactive || !isSliderKey(e.key)) return;
+    if (!this.interactive || rangeKeyAction(e.key, false) === undefined) return;
     const handle = this.pendingKeyHandle;
     if (handle === null) return;
     this.pendingKeyHandle = null;

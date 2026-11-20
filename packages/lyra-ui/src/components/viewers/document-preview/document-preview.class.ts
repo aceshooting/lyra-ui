@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { fileIcon, iconFrame } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
@@ -435,7 +436,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
+      this.hasUnsupportedSlot = hasSlotContent(this, 'unsupported');
     }
     if (
       this.textFetch.kind !== 'idle' &&
@@ -548,9 +549,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     return this.textSource.begin(url);
   }
 
-  // Read slot names directly because WebKit assignedElements() can be transiently empty.
+  // Light-DOM presence: WebKit assignedElements() can be transiently empty.
   private onUnsupportedSlotChange = (): void => {
-    this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
+    this.hasUnsupportedSlot = hasSlotContent(this, 'unsupported');
   };
 
   private onDownloadClick = (): void => {

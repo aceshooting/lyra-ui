@@ -5,7 +5,6 @@ import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraToolTimeline, ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import type { LyraProgressBar } from '../../overlays/progress/progress-bar.class.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 // The locale-formatting fixture deliberately retains the unregistered English messages.
@@ -119,17 +118,7 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
 });
 
 it('composes the batch progress bar through its canonical value and naming API only', async () => {
-  let el!: LyraEvalRun;
-  const warnings = await captureDeprecationWarnings(
-    [
-      { tag: 'lr-progress-bar', kind: 'property', name: 'showValue' },
-      { tag: 'lr-progress-bar', kind: 'attribute', name: 'accessible-label' },
-    ],
-    async () => {
-      el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`);
-    },
-  );
-  expect(warnings.map((warning) => warning.key)).to.deep.equal([]);
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`);
   const progress = el.shadowRoot!.querySelector('[part="progress"]') as LyraProgressBar;
   await progress.updateComplete;
   expect(progress.withValue).to.be.true;

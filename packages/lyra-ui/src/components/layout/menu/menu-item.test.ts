@@ -19,10 +19,6 @@ import {
   sendMouse,
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -2573,9 +2569,6 @@ it('keeps empty forwarding slots and whitespace-only details hidden', async () =
 
 describe('lr-menu-item-change-request and its retired lr-menu-item-change alias', () => {
   for (const tagName of ['lr-menu-item', 'lr-dropdown-item'] as const) {
-    const aliasUsage: readonly DeprecatedUsage[] = [
-      { tag: tagName, kind: 'event', name: 'lr-menu-item-change' },
-    ];
 
     async function checkboxItem(): Promise<{ menu: LyraMenu; item: LyraMenuItem }> {
       const menu = document.createElement('lr-menu') as LyraMenu;
@@ -2610,43 +2603,38 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
       expect(item.checked).to.equal(true);
     });
 
-    it(`${tagName}: vetoes through the canonical request without a warning`, async () => {
+    it(`${tagName}: vetoes through the canonical request`, async () => {
       const { item } = await checkboxItem();
       let aliasPrevented: boolean | undefined;
       item.addEventListener('lr-menu-item-change-request', (event) => event.preventDefault());
       item.addEventListener('lr-menu-item-change', (event) => {
         aliasPrevented = event.defaultPrevented;
       });
-      const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
+      item.select();
       expect(item.checked).to.equal(false);
       expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
-      expect(warnings).to.have.length(0);
     });
 
     it(`${tagName}: ignores the retired listener during a radio proposal`, async () => {
       const results: boolean[] = [];
-      const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-        for (let index = 0; index < 2; index += 1) {
-          const { item } = await checkboxItem();
-          item.type = 'radio';
-          await item.updateComplete;
-          item.addEventListener('lr-menu-item-change', (event) => event.preventDefault());
-          item.select();
-          results.push(item.checked);
-        }
-      });
+      for (let index = 0; index < 2; index += 1) {
+        const { item } = await checkboxItem();
+        item.type = 'radio';
+        await item.updateComplete;
+        item.addEventListener('lr-menu-item-change', (event) => event.preventDefault());
+        item.select();
+        results.push(item.checked);
+      }
       expect(results).to.deep.equal([true, true]);
-      expect(warnings).to.have.length(0);
     });
 
     it(`${tagName}: does not notify a retired event listener`, async () => {
       const { item } = await checkboxItem();
       let observed = 0;
       item.addEventListener('lr-menu-item-change', () => (observed += 1));
-      const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
+      item.select();
       expect(observed).to.equal(0);
       expect(item.checked).to.equal(true);
-      expect(warnings).to.have.length(0);
     });
   }
 });

@@ -1735,6 +1735,7 @@ hydration compares template strings.
 | Component | Event | Detail change in Lyra 32 (reported, never rewritten) |
 |---|---|---|
 | `<lr-flow-canvas>` | `lr-edge-activate` | The detail no longer carries source and target; read sourceNodeId and targetNodeId. |
+| `<lr-graph>` | `lr-viewport-change` | The detail no longer carries k; read zoom, which holds the same scale. |
 
 The following aliases were still published in Lyra 31 and are removed in Lyra 32. They are
 reported without rewriting: move listeners and matching removals together, preserve unrelated

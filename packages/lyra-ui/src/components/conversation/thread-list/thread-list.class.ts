@@ -19,6 +19,7 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hasSlotContent } from '../../../internal/slot-content.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import {
   archiveIcon,
@@ -827,9 +828,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       // `threads` branch below -- the initial property values reach it as changes too, and a
       // single live read there is enough to contradict the markup being hydrated.
       this.seedFirstRenderState(() => {
-        this.hasEmptySlot = Array.from(this.children).some(
-          (el) => el.getAttribute('slot') === 'empty'
-        );
+        this.hasEmptySlot = hasSlotContent(this, 'empty');
         syncSlottedContent();
       });
     } else if (changed.has('threads') || changed.has('dataSource')) {
@@ -1668,10 +1667,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (e.bubbles) e.stopPropagation();
   };
 
-  private onEmptySlotChange = (e: Event): void => {
-    this.hasEmptySlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
+  private onEmptySlotChange = (): void => {
+    this.hasEmptySlot = hasSlotContent(this, 'empty');
   };
 
   private renderSearch(): TemplateResult {

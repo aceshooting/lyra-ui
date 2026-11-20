@@ -1,5 +1,4 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import '../../lr-chip.js';
 import '../../lr-page.js';
 import type { LyraChip } from '../chip/chip.class.js';
@@ -16,18 +15,16 @@ it('chip proposes the canonical detail before mutation and retains veto without 
     event.preventDefault();
   };
   el.addEventListener('lr-chip-toggle-request', veto);
-  await captureDeprecationWarnings([], async () => {
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.click();
-    await el.updateComplete;
-    expect(proposed).to.deep.equal({ value: 'one', selected: true });
-    expect(el.selected).to.equal(false);
-    expect(oldEvents).to.equal(0);
-    el.removeEventListener('lr-chip-toggle-request', veto);
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.click();
-    await el.updateComplete;
-    expect(el.selected).to.equal(true);
-    expect(oldEvents).to.equal(0);
-  });
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.click();
+  await el.updateComplete;
+  expect(proposed).to.deep.equal({ value: 'one', selected: true });
+  expect(el.selected).to.equal(false);
+  expect(oldEvents).to.equal(0);
+  el.removeEventListener('lr-chip-toggle-request', veto);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!.click();
+  await el.updateComplete;
+  expect(el.selected).to.equal(true);
+  expect(oldEvents).to.equal(0);
 });
 
 it('page canonical navigation request remains cancellable without the old notification', async () => {

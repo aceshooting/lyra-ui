@@ -2,10 +2,6 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import "../../lr-knowledge-base-admin.js";
 import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
-import {
-  captureDeprecationWarnings,
-  type DeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 describe("lr-knowledge-base-admin", () => {
   it("keeps an explicitly empty label distinct from an omitted one", async () => {
@@ -542,23 +538,17 @@ describe("lr-knowledge-base-admin activation event", () => {
 });
 
 describe("lr-knowledge-base-admin retired hide-ingestion alias", () => {
-  const ALIAS: DeprecatedUsage[] = [
-    { tag: "lr-knowledge-base-admin", kind: "property", name: "hideIngestion" },
-  ];
   const tabs = (el: LyraKnowledgeBaseAdmin): string[] =>
     [...el.shadowRoot!.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent!.trim());
 
-  it("hides the ingestion tab through without-ingestion with canonical defaults and no deprecation warning", async () => {
+  it("hides the ingestion tab through without-ingestion with canonical defaults", async () => {
     let canonical: string[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = tabs(
-        await fixture<LyraKnowledgeBaseAdmin>(
-          html`<lr-knowledge-base-admin without-ingestion></lr-knowledge-base-admin>`
-        )
-      );
-    });
+    canonical = tabs(
+      await fixture<LyraKnowledgeBaseAdmin>(
+        html`<lr-knowledge-base-admin without-ingestion></lr-knowledge-base-admin>`
+      )
+    );
     expect(canonical).to.have.length(1);
-    expect(warnings).to.have.length(0);
   });
 });
 
