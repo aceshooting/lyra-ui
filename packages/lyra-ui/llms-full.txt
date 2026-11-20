@@ -38,7 +38,7 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 36 tags in `components/forms/`
-- **Data display, dashboards & flow canvas** — 28 tags in `components/data/`
+- **Data display, dashboards & flow canvas** — 29 tags in `components/data/`
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
@@ -5536,6 +5536,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-checkpoint': LyraCheckpointReactProps;
   'lr-chip': LyraChipReactProps;
   'lr-chip-group': LyraChipGroupReactProps;
+  'lr-chord': LyraChordReactProps;
   'lr-chunk-inspector': LyraChunkInspectorReactProps;
   'lr-citation-badge': LyraCitationBadgeReactProps;
   'lr-claim-evidence': LyraClaimEvidenceReactProps;
@@ -5980,6 +5981,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-checkpoint': LyraComponentTypeMap['lr-checkpoint']['element'];
   'lr-chip': LyraComponentTypeMap['lr-chip']['element'];
   'lr-chip-group': LyraComponentTypeMap['lr-chip-group']['element'];
+  'lr-chord': LyraComponentTypeMap['lr-chord']['element'];
   'lr-chunk-inspector': LyraComponentTypeMap['lr-chunk-inspector']['element'];
   'lr-citation-badge': LyraComponentTypeMap['lr-citation-badge']['element'];
   'lr-claim-evidence': LyraComponentTypeMap['lr-claim-evidence']['element'];
@@ -6295,6 +6297,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-checkpoint': LyraCheckpointSvelteProps;
   'lr-chip': LyraChipSvelteProps;
   'lr-chip-group': LyraChipGroupSvelteProps;
+  'lr-chord': LyraChordSvelteProps;
   'lr-chunk-inspector': LyraChunkInspectorSvelteProps;
   'lr-citation-badge': LyraCitationBadgeSvelteProps;
   'lr-claim-evidence': LyraClaimEvidenceSvelteProps;
@@ -6757,6 +6760,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-checkpoint': LyraCheckpointVueProps;
   'lr-chip': LyraChipVueProps;
   'lr-chip-group': LyraChipGroupVueProps;
+  'lr-chord': LyraChordVueProps;
   'lr-chunk-inspector': LyraChunkInspectorVueProps;
   'lr-citation-badge': LyraCitationBadgeVueProps;
   'lr-claim-evidence': LyraClaimEvidenceVueProps;
@@ -22505,6 +22509,75 @@ Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-
     readonly source: string;
     readonly target: string;
     readonly value: number;
+  }`
+
+## `lr-chord`
+
+Compare weighted relationships between entities. The SVG places entity arcs around a circle in
+input order and joins them with ribbons. Arc length represents the entity's total weight.
+Ribbon width represents the relationship's weight. The legend lists entities with positive totals.
+Hover or keyboard focus on an entity highlights its ribbons and dims the others.
+
+| Property | Attribute | Purpose |
+| --- | --- | --- |
+| `entities` | — | Readonly array of up to 32 `LyraChordEntity` values. Assign a new array when entities change. |
+| `matrix` | — | Readonly square matrix of relationship weights. Assign a new outer array when weights change. |
+| `label` | `label` | Accessible chart name. A host `aria-label` takes precedence. |
+| `description` | `description` | Optional accessible chart description. |
+| `loading` | `loading` | Shows the loading state. Defaults to `false`. |
+| `withDataTable` | `with-data-table` | Shows the data table visually. Defaults to `false`. |
+| `dataTableToggle` | `data-table-toggle` | Adds a button to show or hide the table. Defaults to `false`. |
+| `valueFormatter` | — | Optional `(value: number) => string` for displayed and accessible values. Formatting follows the effective locale by default. |
+
+Each row and column follows the order of `entities`. Give each entity a unique, nonempty string
+ID and a string label. Use finite nonnegative weights, with exactly equal values at `matrix[i][j]`
+and `matrix[j][i]`. A positive off-diagonal pair makes one ribbon. A positive diagonal entry
+makes a self-ribbon and counts once toward its entity's total. Rows containing only zeros
+produce no arcs. Invalid input or more than 32 entities shows an error. Totals that exceed the
+numeric range are reported as `Number.MAX_VALUE`. The chart shows a notice if geometry is too
+small to represent.
+
+Tab enters the first visible entity. Left, Right, Home, and End move within entities or within
+the current entity's ribbons. Left and Right follow the reading direction. Down enters an
+entity's ribbons and Up returns to that entity. Click, Enter, or Space emits the bubbling,
+composed `lr-datum-activate` event with `LyraChordDatum` detail. Entity detail is
+`{ kind: 'entity', id, label, value }`. Ribbon detail is
+`{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
+Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists each
+plotted pair once, including self-relationships, with From, To, and Value columns. It remains
+available to assistive technology while visually collapsed.
+
+Arc labels appear where space permits, and the full names are available through the tooltip
+and accessible names. The diagram mirrors in right-to-left layouts.
+The diagram and legend use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+**CSS parts:** `base`, `plot`, `description`, `entity`, `entity-label`, `ribbon`, `tooltip`,
+`legend`, `legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`,
+`empty`, `loading`, `error`, and `limit`.
+
+```html
+<lr-chord id="collaboration" label="Team collaborations" data-table-toggle></lr-chord>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-chord.js';
+
+  const chart = document.querySelector('#collaboration');
+  chart.entities = [
+    { id: 'design', label: 'Design' },
+    { id: 'engineering', label: 'Engineering' },
+    { id: 'research', label: 'Research' },
+  ];
+  chart.matrix = [
+    [2, 10, 5],
+    [10, 0, 7],
+    [5, 7, 0],
+  ];
+</script>
+```
+
+- **`components-data-chord-chord-contracts`** — Entity type for a weighted relationship matrix.
+  Import `@aceshooting/lyra-ui/components/lr-chord.js`.
+  `LyraChordEntity {
+    readonly id: string;
+    readonly label: string;
   }`
 
 # Layout, navigation & structure (`components/layout/`)

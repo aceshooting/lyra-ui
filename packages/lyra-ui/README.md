@@ -27,7 +27,7 @@
 library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 313 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 314 custom elements, native custom-element APIs,
 tree-shakeable, granular per-component imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -318,7 +318,7 @@ A per-tag entry can register several elements (`components/lr-table.js` also def
 
 ## Components
 
-All 313 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
+All 314 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
 original ones. Purpose and import path: [`llms/index.md`](./llms/index.md); full APIs: `llms/components/<tag>.md`
 and the [live docs](https://aceshooting.github.io/lyra-ui/).
 
@@ -398,7 +398,7 @@ and the [live docs](https://aceshooting.github.io/lyra-ui/).
 - **Form controls, toasts, sparkline, and flags:** `<lr-currency-picker>`, `<lr-country-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`, `<lr-signature-pad>`, `<lr-phone-input>`, `<lr-native-time-input>`, `<lr-token-input>`, `<lr-toggle>`, `<lr-toggle-group>`, `<lr-flag>`, `<lr-locale-picker>`.
 - **Additional media and interaction primitives:** `<lr-avatar-group>`, `<lr-lightbox>`, `<lr-timeline>`, `<lr-timeline-item>`, `<lr-tour>`.
 - **Dashboard atoms:** `<lr-empty>`, `<lr-stat>`, `<lr-table>`, `<lr-gauge>`, `<lr-export-button>`, `<lr-multi-split>`, `<lr-widget>`, `<lr-word-cloud>`.
-- **Part-to-whole and flow charts:** `<lr-treemap>`, `<lr-sankey>`.
+- **Part-to-whole and flow charts:** `<lr-treemap>`, `<lr-sankey>`, `<lr-chord>`.
 - **Temporal & graph:** `<lr-time-range>`, `<lr-sequence-playback>`, `<lr-heatmap>`, `<lr-funnel>`, `<lr-sequence-strip>`, `<lr-graph>`.
 - **Flow canvas:** `<lr-flow-canvas>`, `<lr-flow-node>`, `<lr-flow-minimap>`, `<lr-flow-controls>`, `<lr-node-palette>`, `<lr-flow-run-status>`.
 - **Knowledge graph & RAG exploration:** `<lr-graph-legend>`, `<lr-entity-card>`, `<lr-entity-chip>`, `<lr-neighbor-list>`, `<lr-path-strip>`, `<lr-community-card>`, `<lr-chunk-inspector>`, `<lr-source-picker>`, `<lr-provenance-panel>`, `<lr-mind-map>`, `<lr-knowledge-graph-explorer>`, `<lr-graph-query-builder>`, `<lr-entity-dossier>`, `<lr-embedding-explorer>`.

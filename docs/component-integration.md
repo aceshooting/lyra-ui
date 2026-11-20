@@ -9,7 +9,7 @@ is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registra
 Raw byte counts and bundle SHA-256 digests are in
 `packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.
 
-Coverage: **313 tags**, **313 measured gzip entries**, **0 not measured**.
+Coverage: **314 tags**, **314 measured gzip entries**, **0 not measured**.
 
 Dependency meaning: direct edges are tags rendered by this component or registration entries it
 imports directly. Transitive edges are other registrations reachable through those direct edges.
@@ -68,6 +68,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-checkpoint"></a>`lr-checkpoint` | conversation | `import '@aceshooting/lyra-ui/components/lr-checkpoint.js';` | none | none | none | 26.6 KiB |
 | <a id="lr-chip"></a>`lr-chip` | overlays | `import '@aceshooting/lyra-ui/components/lr-chip.js';` | none | none | none | 37.8 KiB |
 | <a id="lr-chip-group"></a>`lr-chip-group` | overlays | `import '@aceshooting/lyra-ui/components/lr-chip-group.js';` | none | none | none | 29.7 KiB |
+| <a id="lr-chord"></a>`lr-chord` | data | `import '@aceshooting/lyra-ui/components/lr-chord.js';` | none | none | none | 43.7 KiB |
 | <a id="lr-chunk-inspector"></a>`lr-chunk-inspector` | retrieval | `import '@aceshooting/lyra-ui/components/lr-chunk-inspector.js';` | none | `lr-empty`, `lr-virtual-list` | none | 59.4 KiB |
 | <a id="lr-citation-badge"></a>`lr-citation-badge` | retrieval | `import '@aceshooting/lyra-ui/components/lr-citation-badge.js';` | none | none | none | 48.8 KiB |
 | <a id="lr-claim-evidence"></a>`lr-claim-evidence` | retrieval | `import '@aceshooting/lyra-ui/components/lr-claim-evidence.js';` | none | `lr-badge`, `lr-citation-badge`, `lr-empty` | none | 66.9 KiB |

@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **313**
-- Exact same-test/same-instance populated or open axe evidence: **312**
+- Public tags: **314**
+- Exact same-test/same-instance populated or open axe evidence: **313**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -112,6 +112,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-checkpoint`](component-integration.md#lr-checkpoint) | stable | automated | source signal | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified | unmeasured |
 | [`lr-chip`](component-integration.md#lr-chip) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-chip-group`](component-integration.md#lr-chip-group) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
+| [`lr-chord`](component-integration.md#lr-chord) | experimental | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-chunk-inspector`](component-integration.md#lr-chunk-inspector) | stable | automated | source signal | source signal | N/A | not recorded | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-citation-badge`](component-integration.md#lr-citation-badge) | stable | automated | source signal | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-claim-evidence`](component-integration.md#lr-claim-evidence) | stable | automated | source signal | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |

@@ -56,6 +56,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-checkpoint': () => import('../components/conversation/checkpoint/checkpoint.class.js').then((module) => module.LyraCheckpoint),
   'lr-chip': () => import('../components/overlays/chip/chip.class.js').then((module) => module.LyraChip),
   'lr-chip-group': () => import('../components/overlays/chip/chip-group.class.js').then((module) => module.LyraChipGroup),
+  'lr-chord': () => import('../components/data/chord/chord.class.js').then((module) => module.LyraChord),
   'lr-chunk-inspector': () => import('../components/retrieval/chunk-inspector/chunk-inspector.class.js').then((module) => module.LyraChunkInspector),
   'lr-citation-badge': () => import('../components/retrieval/citation-badge/citation-badge.class.js').then((module) => module.LyraCitationBadge),
   'lr-claim-evidence': () => import('../components/retrieval/claim-evidence/claim-evidence.class.js').then((module) => module.LyraClaimEvidence),

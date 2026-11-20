@@ -93,6 +93,7 @@ import type { LyraUsageBadge } from './components/conversation/usage-badge/usage
 import type { LyraVoicePicker, LyraVoicePickerEventMap } from './components/conversation/voice-picker/voice-picker.class.js';
 import type { LyraWidgetRenderer, LyraWidgetRendererEventMap } from './components/conversation/widget-renderer/widget-renderer.class.js';
 import type { LyraCalendar, LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
+import type { LyraChord, LyraChordEventMap } from './components/data/chord/chord.class.js';
 import type { LyraConditionBuilder, LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
 import type { LyraContextMeter, LyraContextMeterEventMap } from './components/data/context-meter/context-meter.class.js';
 import type { LyraDataGrid, LyraDataGridEventMap } from './components/data/data-grid/data-grid.class.js';
@@ -2813,6 +2814,30 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'aria-label'?: LyraChipGroup['accessibleLabel'];
       'max-visible'?: LyraChipGroup['maxVisible'];
+    };
+  };
+  'lr-chord': {
+    element: LyraChord;
+    properties: LyraElementProperties<
+      LyraChord,
+      | 'dataTableToggle'
+      | 'description'
+      | 'entities'
+      | 'label'
+      | 'loading'
+      | 'locale'
+      | 'matrix'
+      | 'strings'
+      | 'valueFormatter'
+      | 'withDataTable',
+      {}
+    >;
+    events: LyraChordEventMap;
+    eventNames:       | 'lr-datum-activate';
+    cssNames: never;
+    attributeAliases: {
+      'data-table-toggle'?: LyraChord['dataTableToggle'];
+      'with-data-table'?: LyraChord['withDataTable'];
     };
   };
   'lr-chunk-inspector': {

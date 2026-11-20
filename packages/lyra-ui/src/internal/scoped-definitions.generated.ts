@@ -53,6 +53,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-checkpoint': ['lr-checkpoint'],
   'lr-chip': ['lr-chip'],
   'lr-chip-group': ['lr-chip-group'],
+  'lr-chord': ['lr-chord'],
   'lr-chunk-inspector': ['lr-chunk-inspector', 'lr-empty', 'lr-virtual-list'],
   'lr-citation-badge': ['lr-citation-badge'],
   'lr-claim-evidence': ['lr-badge', 'lr-citation-badge', 'lr-claim-evidence', 'lr-empty'],

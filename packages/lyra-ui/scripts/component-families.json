@@ -313,6 +313,7 @@
     "chart-3d": "charts",
     "model-viewer": "viewers",
     "treemap": "data",
-    "sankey": "data"
+    "sankey": "data",
+    "chord": "data"
   }
 }

@@ -3515,6 +3515,24 @@
       }
     },
     {
+      "module": "src/components/data/chord/chord-layout.ts",
+      "exportName": "LyraChordEntity",
+      "kind": "interface",
+      "fingerprint": "76b6adb485c8322e14a4",
+      "routes": [
+        "src/components/data/chord/chord.class.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-chord.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-chord-chord-contracts",
+        "declaration": "LyraChordEntity"
+      }
+    },
+    {
       "module": "src/components/data/sankey/sankey-layout.ts",
       "exportName": "LyraSankeyLink",
       "kind": "interface",

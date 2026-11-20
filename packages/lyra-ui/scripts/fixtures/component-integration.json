@@ -6,10 +6,10 @@
     "gzip": "esbuild bundle=true format=esm minify=true, then gzip level 9; optional peer packages and subpaths externalized. A byte-identical bundle SHA-256 retains its canonical gzip count across zlib patch versions."
   },
   "summary": {
-    "componentCount": 313,
-    "measuredGzipCount": 313,
+    "componentCount": 314,
+    "measuredGzipCount": 314,
     "missingGzipCount": 0,
-    "averageGzipKib": 62.5
+    "averageGzipKib": 62.4
   },
   "components": [
     {
@@ -1195,6 +1195,26 @@
         "bytes": 30408,
         "kib": 29.7,
         "bundleSha256": "445f195bb1c71bf020f770d6e206dd56e3e3563d51918b6c8bfd33008cd04216",
+        "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
+      }
+    },
+    {
+      "tag": "lr-chord",
+      "family": "data",
+      "imports": {
+        "registration": "@aceshooting/lyra-ui/components/lr-chord.js",
+        "class": "@aceshooting/lyra-ui/components/data/chord/chord.class.js"
+      },
+      "peers": [],
+      "dependencies": {
+        "direct": [],
+        "transitive": []
+      },
+      "gzip": {
+        "status": "measured",
+        "bytes": 44787,
+        "kib": 43.7,
+        "bundleSha256": "f80c00b7af068ab1da7e2d26dfd8be320de55d9a0f40cb8614c5b6e938789f12",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

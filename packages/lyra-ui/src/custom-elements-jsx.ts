@@ -142,6 +142,8 @@ export type LyraChipReactProps = LyraReactElementProps<'lr-chip'>;
 
 export type LyraChipGroupReactProps = LyraReactElementProps<'lr-chip-group'>;
 
+export type LyraChordReactProps = LyraReactElementProps<'lr-chord'>;
+
 export type LyraChunkInspectorReactProps = LyraReactElementProps<'lr-chunk-inspector'>;
 
 export type LyraCitationBadgeReactProps = LyraReactElementProps<'lr-citation-badge'>;
@@ -717,6 +719,7 @@ export interface LyraReactIntrinsicElements {
   'lr-checkpoint': LyraCheckpointReactProps;
   'lr-chip': LyraChipReactProps;
   'lr-chip-group': LyraChipGroupReactProps;
+  'lr-chord': LyraChordReactProps;
   'lr-chunk-inspector': LyraChunkInspectorReactProps;
   'lr-citation-badge': LyraCitationBadgeReactProps;
   'lr-claim-evidence': LyraClaimEvidenceReactProps;

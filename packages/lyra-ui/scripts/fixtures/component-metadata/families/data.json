@@ -2,6 +2,7 @@
   "family": "data",
   "assignments": {
     "new-component-experimental": [
+      "lr-chord",
       "lr-sankey",
       "lr-treemap"
     ],

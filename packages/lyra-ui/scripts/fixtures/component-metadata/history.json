@@ -36855,7 +36855,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "bcfd37a05a1d469a06c87498360daef2bc36cd1f8dddc95f3f53e34e3ffe7725",
+      "manifestSha256": "545251dd510bb471926dc98d7c0aa6f9e2def85ca5ae73a31b69ea226d2122cc",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -36909,6 +36909,7 @@
         "lr-checkpoint",
         "lr-chip",
         "lr-chip-group",
+        "lr-chord",
         "lr-chunk-inspector",
         "lr-citation-badge",
         "lr-claim-evidence",
