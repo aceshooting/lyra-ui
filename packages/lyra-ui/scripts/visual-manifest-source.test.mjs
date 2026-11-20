@@ -102,7 +102,7 @@ test('writer validates semantics, explicit new owners, and unchanged human evide
   const original = bytes(root);
   for (const mutate of [
     manifest => { manifest.stories[0].profile = 'unknown'; },
-    manifest => { manifest.provenance.humanVisualReview = true; },
+    manifest => { manifest.provenance.humanVisualReview = !manifest.provenance.humanVisualReview; },
     manifest => { manifest.baselineReview.reviewer = 'Invented'; },
   ]) {
     const next = assembleVisualManifest(sources); mutate(next);

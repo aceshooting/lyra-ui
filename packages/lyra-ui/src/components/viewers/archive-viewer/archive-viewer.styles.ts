@@ -34,7 +34,7 @@ export const styles = css`
     block-size: auto;
     max-block-size: var(--lr-archive-viewer-max-height, var(--lr-virtual-list-height, var(--lr-size-24rem)));
   }
-  lr-virtual-list::part(entry) { display: flex; align-items: center; gap: var(--lr-space-s); box-sizing: border-box; block-size: 100%; padding: var(--lr-space-xs) var(--lr-space-m); border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); font-size: var(--lr-font-size-sm); }
+  lr-virtual-list::part(entry) { display: flex; align-items: center; gap: var(--lr-space-s); box-sizing: border-box; block-size: 100%; padding: var(--lr-space-xs) var(--lr-space-m); border-block-end: var(--_lr-archive-viewer-entry-divider, var(--lr-border-width-thin)) solid var(--lr-color-border-subtle); font-size: var(--lr-font-size-sm); }
   lr-virtual-list::part(entry-icon) { display: inline-flex; flex: 0 0 auto; inline-size: var(--lr-size-1em); block-size: var(--lr-size-1em); color: var(--lr-color-text-quiet); }
   lr-virtual-list::part(entry-kind) { ${visuallyHidden} }
   lr-virtual-list::part(entry-name) { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; color: var(--lr-color-text); text-overflow: ellipsis; white-space: nowrap; }

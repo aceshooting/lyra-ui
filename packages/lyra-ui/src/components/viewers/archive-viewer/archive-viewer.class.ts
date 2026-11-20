@@ -372,14 +372,17 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (this.archiveSearchQuery) this.recomputeArchiveSearch();
   }
 
-  private renderEntry = (item: unknown): TemplateResult => {
+  private renderEntry = (item: unknown, index: number): TemplateResult => {
     const entry = item as ArchiveEntry;
+    // The list shrinks to its content, so the last row sits on the frame's own bottom border; its
+    // divider would double that edge.
+    const last = this.fetchState.kind === 'loaded' && index === this.fetchState.entries.length - 1;
     const kind = this.localize(entry.dir ? 'archiveViewerFolder' : 'archiveViewerFile');
     // entry.name is an attacker-controlled ZIP central-directory filename -- never bind it as a
     // DOM id (the canonical DOM-clobbering primitive). applyAnchor() resolves a fragment anchor
     // by matching entry.name against the loaded DATA and then, for the exact scroll target,
     // against rendered text content -- never against a DOM id -- so no id was ever needed here.
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(entry.size, this.effectiveLocale)}</span>`}</div>`;
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'} style=${last ? '--_lr-archive-viewer-entry-divider:0' : nothing}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(entry.size, this.effectiveLocale)}</span>`}</div>`;
   };
 
   private stopVirtualListEvent(event: Event): void {

@@ -96,7 +96,9 @@ test('generator rejects semantic failure before replacing aggregate or human rev
   const original = fs.readFileSync(output, 'utf8');
   const globalFile = path.join(root, 'visual-baselines/manifest-sources/global.json');
   const global = JSON.parse(fs.readFileSync(globalFile, 'utf8'));
-  global.baselineReview.reviewer = 'Not reviewed';
+  // A pending review must not name a reviewer, whatever review state the live sources record.
+  global.baselineReview = { ...global.baselineReview, status: 'pending-human-review', reviewer: 'Not reviewed', reviewedAt: null };
+  global.provenance.humanVisualReview = false;
   fs.writeFileSync(globalFile, JSON.stringify(global));
   assert.throws(() => generateVisualManifest({ packageDir: root }), /reviewer|review/i);
   assert.equal(fs.readFileSync(output, 'utf8'), original);

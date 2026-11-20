@@ -29,13 +29,13 @@
   },
   "cases": {
     "idle": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e",
-    "complete": "dc2228ea71a0002c289986738ce47de78d6029966fdfa312cdb90d793db7f30b",
-    "edited-rejected-tail": "260c14e1b44f94baff6e42e0f01b65b980ad2f0170fddc3639ede1624d789212",
-    "interrupted": "3cd61d5d9425e9fe21725bcfd45ba65fa774519711113b0bd09a9e2c3567fff3",
+    "complete": "b84e57ed17ba5c011cf8c2cf749d42c6de3228fef1dea97b29525b7266f5663b",
+    "edited-rejected-tail": "0a1a96c6e4f38646ee706ec3f295d661e8f5cd7acbb6cee2ae826acdb2fd7afb",
+    "interrupted": "51ac686aed3feafeafa2632aa7cc8493d01b554fa44fd9ea805f09866d7ab386",
     "reset": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e"
   },
   "review": {
     "kind": "agent-visual-inspection",
-    "scope": "Five authored synthetic fixture states with pinned Arial family resolving to LiberationSans-Bold for semibold chrome. Visually reinspected with Playwright 1.65.1 and Chromium 159.0.8154.6; all five PNGs are byte-identical to the previous baseline on the Linux host and the matching CI container. Completed transcript follows its scroll anchor. This is a regression baseline, not a design or accessibility qualification."
+    "scope": "Five authored synthetic fixture states with pinned Arial family resolving to LiberationSans-Bold for semibold chrome, captured with Playwright 1.65.1 and Chromium 159.0.8154.6 in the CI container image. Generated headings and paragraphs now use the themed generated-view typography (large semibold heading, medium paragraph, no user-agent margins), so the complete, edited-rejected-tail and interrupted states are shorter; the completed transcript no longer overflows its scroll anchor, which leaves its leading prose visible. Idle and reset are byte-identical to the previous baseline. Each PNG was inspected against the previous baseline before retention. This is a regression baseline, not a design or accessibility qualification."
   }
 }

@@ -66,3 +66,19 @@ it('gives a capped, overflowing self-scrolling body a named tab stop only while 
   await viewer.updateComplete;
   expect(body.hasAttribute('tabindex')).to.equal(false);
 });
+
+it('leaves the frame as the only edge below the last row while earlier rows keep their divider', async () => {
+  const short = `data:text/csv,${encodeURIComponent('name,status\nAda,Active\nGrace,Active')}`;
+  const viewer = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src=${short}></lr-dataset-viewer>`);
+  const rowsOf = () => [...viewer.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll<HTMLElement>('[part~="data-row"]') ?? []];
+  await waitUntil(() => rowsOf().length === 2, 'data rows did not render');
+  const cellEdge = (row: HTMLElement) => parseFloat(getComputedStyle(row.querySelector<HTMLElement>('[part~="cell"]')!).borderBottomWidth);
+  const [first, last] = rowsOf();
+  expect(cellEdge(first!)).to.be.greaterThan(0);
+  expect(cellEdge(last!)).to.equal(0);
+  const base = viewer.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(parseFloat(getComputedStyle(base).borderBottomWidth)).to.be.greaterThan(0);
+  // Rows settle after their first measurement; the frame then hugs the last row.
+  const frame = parseFloat(getComputedStyle(base).borderBottomWidth);
+  await waitUntil(() => base.getBoundingClientRect().bottom - last!.getBoundingClientRect().bottom <= frame + 0.5, 'the frame did not close on the last row');
+});

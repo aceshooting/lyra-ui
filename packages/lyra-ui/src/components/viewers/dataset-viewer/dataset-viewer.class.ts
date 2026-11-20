@@ -467,7 +467,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     const window = this.tableController.columnWindow(this.fetchState, fields.length);
     const rawRow = index + 2; // +1 for the always-present header row, +1 to become 1-based
     const rowHighlights = this.tableController.highlightsForRow(rawRow);
-    return html`<div part="data-row" role="presentation" style=${window.style}>
+    // The body shrinks to its content, so the last row sits on the frame's own bottom border; its
+    // cell dividers would double that edge.
+    const last = this.fetchState.kind === 'loaded' && index === this.fetchState.table.rows.length - 1;
+    return html`<div part="data-row" role="presentation" style=${last ? `${window.style};--_lr-dataset-viewer-row-divider:0` : window.style}>
       ${window.columns.map((col) =>
         this.renderCell(row[fields[col]!] ?? '', col, rowHighlights)
       )}
