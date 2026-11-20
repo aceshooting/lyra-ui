@@ -2449,9 +2449,9 @@
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "shiki": "^4.6.0",
-    "svelte": "^5.58.0",
+    "svelte": "^5.59.1",
     "typescript": "^7.0.2",
-    "vue": "^3.5.45",
+    "vue": "^3.5.46",
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz",
     "zod": "4.6.7"
   },
