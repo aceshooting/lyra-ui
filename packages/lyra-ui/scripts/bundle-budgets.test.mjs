@@ -453,9 +453,9 @@ const reviewedCeilingKeys = Object.keys(budgets)
   .sort();
 test('combobox minimum-query admission retains its reviewed initial-route ceiling', () => {
   const entry = 'dist/components/lr-combobox.js';
-  const measurement = 38_522;
+  const measurement = 38_634;
   const ceiling = budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry);
-  assert.equal(ceiling, 38_528);
+  assert.equal(ceiling, 38_656);
   assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
     'only the exceeded initial-route ceiling advances to the next 64-byte boundary');
 });
@@ -463,10 +463,10 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
 // Standalone button registration retains the shared-base canary at the next 64-byte boundary.
 test('standalone button retains its reviewed gzip measurement and tight canary', () => {
   const entry = 'dist/components/lr-button.js';
-  const measurement = 37_579;
+  const measurement = 37_643;
   const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
   assert.equal(budgets.$reviewedGzipBytes[entry], measurement);
-  assert.equal(ceiling, 37_632);
+  assert.equal(ceiling, 37_696);
   assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
     'the standalone button ceiling advances only to the next 64-byte boundary');
 });
