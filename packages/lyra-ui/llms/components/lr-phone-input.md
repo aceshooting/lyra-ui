@@ -223,7 +223,7 @@ content, like every sibling field. Style
 the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
 invalid after interaction, including after a failed submit or `reportValidity()`), or
 `--lr-phone-input-invalid-border-color`. Its fallback is `--lr-form-control-invalid-border-color`,
-then the resting border. Focus shows the
+then `--lr-color-danger`; the invalid edge yields to the focus edge. Focus shows the
 brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
 `'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
 exactly like `lr-input`. Native invalid/focus feedback therefore has one

@@ -4,9 +4,10 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
-  formControlTextWrap,
   formControlFocusHalo,
+  formControlInvalidBorder,
   formControlRequiredMarker,
+  formControlTextWrap,
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
@@ -331,6 +332,11 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
+  /* A failed load is an error, not a neutral notice, so it takes the danger foreground -- as
+     lr-emoji-picker's load-error does. The retry button keeps its own text colour. */
+  [part='load-status'][data-failed] {
+    color: var(--lr-color-danger);
+  }
   [part='load-retry'] {
     ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -366,4 +372,5 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
+  ${formControlInvalidBorder(css`[part='trigger']`)}
 `;

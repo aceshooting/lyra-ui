@@ -544,6 +544,32 @@ it('ignores malformed keyword collections without dropping valid commands or sea
   expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(['Valid keywords']);
 });
 
+it('matches commands regardless of accents and Unicode normalization form', async () => {
+  const el = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.commands = [
+    { commandId: 'cafe', label: 'Caf\u00e9 menu' },
+    { commandId: 'uber', label: 'Plain', keywords: ['\u00dcber'] },
+    { commandId: 'nfd', label: 'Re\u0301sume\u0301 export' },
+    { commandId: 'other', label: 'Other' },
+  ];
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  const search = async (query: string) => {
+    input.value = query;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')]
+      .map((row) => row.getAttribute('data-command-id') ?? row.textContent?.trim());
+  };
+  expect((await search('cafe')).length, 'cafe').to.equal(1);
+  expect((await search('uber')).length, 'uber').to.equal(1);
+  expect((await search('r\u00e9sum\u00e9')).length, 'NFC query against NFD label').to.equal(1);
+  expect((await search('CAF\u00c9')).length, 'accented upper-case query').to.equal(1);
+});
+
 it("case-folds command search with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-command-palette

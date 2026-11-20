@@ -91,7 +91,9 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;

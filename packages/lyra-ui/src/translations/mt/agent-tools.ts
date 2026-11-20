@@ -283,7 +283,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Għodda',
   schemaViewerLabel: 'Werrej tal-iskema',
   schemaViewerEmpty: 'M’hemm l-ebda skema disponibbli',
-  schemaViewerRequired: 'Meħtieġ',
   schemaViewerCircular: 'Referenza ċirkolari tal-iskema',
   schemaViewerType: 'Tip: {type}',
   subagentPanelLabel: 'Sottoaġenti',

@@ -165,7 +165,7 @@ it('makes every epub.js chapter document network-silent before it reaches the ch
   expect(await requestedBeacons(new XMLSerializer().serializeToString(chapter), beacon)).to.deep.equal([]);
 });
 
-it('leaves a late response body unread after source removal', async () => {
+it('cancels a late response body unread after source removal', async () => {
   let resolveFetch!: (response: Response) => void;
   let signal: AbortSignal | null | undefined;
   window.fetch = (_url, init) => {
@@ -179,11 +179,13 @@ it('leaves a late response body unread after source removal', async () => {
   await waitUntil(() => Boolean(signal));
   el.src = '';
   await waitUntil(() => signal?.aborted === true);
-  const response = new Response('retired');
-  resolveFetch(response);
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(response.bodyUsed).to.equal(false);
-  expect(failures).to.equal(0);
+  const body = { pulls: 0, cancelled: false };
+  resolveFetch(new Response(new ReadableStream<Uint8Array>({
+    pull(controller) { body.pulls++; controller.enqueue(new TextEncoder().encode('retired')); controller.close(); },
+    cancel() { body.cancelled = true; },
+  }, { highWaterMark: 0 })));
+  await waitUntil(() => body.cancelled, 'retired body stayed open');
+  expect([body.pulls, failures]).to.deep.equal([0, 0]);
 });
 
 it('reports an independent transport abort on the current source', async () => {

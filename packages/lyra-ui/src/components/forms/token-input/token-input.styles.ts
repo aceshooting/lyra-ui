@@ -1,7 +1,7 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { activeFill, focusRing, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlFocusHalo, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlInvalidBorder, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -299,12 +299,6 @@ export const styles = css`
     color: var(--lr-token-input-placeholder-color, var(--lr-color-text-quiet));
   }
   ${formControlSupportingTone}
-  :host([data-invalid]) [part="input-wrapper"] {
-    border-color: var(
-      --lr-token-input-invalid-border-color,
-      var(--lr-form-control-invalid-border-color, var(--lr-color-danger))
-    );
-  }
   /* :host(:disabled), not :host([disabled]) -- only the pseudo-class matches an ancestor
      <fieldset disabled> cascade (see effectiveDisabled in token-input.class.ts), which the
      attribute selector misses. Mirrors lr-select/lr-combobox. */
@@ -316,4 +310,5 @@ export const styles = css`
   [part="error"] {
     ${formControlTextWrap}
   }
+  ${formControlInvalidBorder(css`[part="input-wrapper"]`, css`--lr-token-input-invalid-border-color`)}
 `;

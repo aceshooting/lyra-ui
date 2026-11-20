@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Ithuluzi',
   schemaViewerLabel: 'Isibukeli se-schema',
   schemaViewerEmpty: 'Ayikho i-schema etholakalayo',
-  schemaViewerRequired: 'Kudingeka',
   schemaViewerCircular: 'Ireferensi ye-schema eyindilinga',
   schemaViewerType: 'Uhlobo: {type}',
   subagentPanelLabel: 'Ama-subagent',

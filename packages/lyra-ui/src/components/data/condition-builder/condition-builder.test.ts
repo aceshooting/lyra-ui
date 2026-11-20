@@ -511,9 +511,11 @@ describe('lr-condition-builder v9 contract', () => {
     expect(Object.isFrozen(el.invalidConditionIds)).to.equal(true);
     expect(el.checkValidity()).to.equal(false);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-invalid')).to.equal('true');
-    expect(conditionRow(el, 0).getAttribute('aria-invalid')).to.equal('true');
+    // A listitem row is not a widget; the failing control owns the invalid state.
+    expect(conditionRow(el, 0).hasAttribute('aria-invalid')).to.equal(false);
     expect(conditionRow(el, 0).getAttribute('data-validation-code')).to.equal('operator-not-allowed');
-    expect(conditionRow(el, 6).getAttribute('aria-invalid')).to.equal('false');
+    expect(conditionRow(el, 0).querySelector('[part="operator-select"]')!.getAttribute('error-text')).to.be.a('string').and.not.equal('');
+    expect(conditionRow(el, 6).hasAttribute('aria-invalid')).to.equal(false);
 
     expect(el.reportValidity()).to.equal(false);
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('operator-select');
@@ -1202,7 +1204,7 @@ describe('lr-condition-builder v9 contract', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="condition"]').length).to.equal(6);
     expect(el.shadowRoot!.querySelector('[part="combinator"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-invalid')).to.equal('false');
-    expect(conditionRow(el, 0).getAttribute('aria-invalid')).to.equal('false');
+    expect(conditionRow(el, 0).hasAttribute('aria-invalid')).to.equal(false);
     expect(el.checkValidity()).to.equal(true);
     expect(el.reportValidity()).to.equal(true);
     await expect(el).to.be.accessible();

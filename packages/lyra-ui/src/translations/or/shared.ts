@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'ସିଷ୍ଟମ୍',
   promptStudioRoleUser: 'ବ୍ୟବହାରକାରୀ',
   promptStudioRoleAssistant: 'ସହାୟକ',
+  schemaViewerRequired: 'ଆବଶ୍ୟକ',
   statusUnknown: 'ଅଜ୍ଞାତ',
   moveUp: 'ଉପରକୁ ଘୁଞ୍ଚାନ୍ତୁ',
   moveDown: 'ତଳକୁ ଘୁଞ୍ଚାନ୍ତୁ',

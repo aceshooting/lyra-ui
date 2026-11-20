@@ -537,7 +537,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   cells and search retains at most one match per cell. Search accepts at most 4,096 query code
  *   units and scans at most 4,000,000 source/output code units; a false `matchCountExact` makes the
  *   returned count a lower bound after either ceiling is reached.
- * @event lr-viewer-diagnostic - Reports a recoverable dompurify failure while the fallback remains visible.
+ * @event lr-viewer-diagnostic - Reports a recoverable dompurify failure or an over-limit rich output
+ *   (`notebook-sanitizer-unavailable`, `notebook-output-too-large`) while the fallback remains visible.
  * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -730,6 +731,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   private lastSearchLocale = '';
   private sanitizerGeneration = 0;
   private sanitizerFailureReported = false;
+  private oversizedOutputReported = false;
   private sourceLoadScheduled = false;
   private readonly announcements = new ViewerAnnouncementController(this);
 
@@ -800,6 +802,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.sanitizedOutputCache = new WeakMap();
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
+    this.oversizedOutputReported = false;
     this.sourceLoadScheduled = false;
     if (this._notebook === undefined) this.loadState = { kind: 'idle' };
   }
@@ -834,6 +837,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.sanitizedOutputCache = new WeakMap();
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
+    this.oversizedOutputReported = false;
     this.expandedOutputs = new Set();
     this.clearSearchState();
     this.activeCellIndex = null;
@@ -1157,7 +1161,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   private sanitizationTasks = new Map<NotebookOutput, Promise<void>>();
 
-  private reportSanitizerFailure(generation: number, failure?: { error: unknown }): void {
+  private reportSanitizerFailure(failure?: { error: unknown }): void {
     if (this.sanitizerFailureReported) return;
     this.sanitizerFailureReported = true;
     const message = this.localize('documentViewerMissingSanitizer');
@@ -1166,7 +1170,16 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.emit('lr-viewer-diagnostic', {
       diagnostic: { code: 'notebook-sanitizer-unavailable', severity: 'warning', fatal: false, source: 'dompurify', cause: error },
     });
-    if (this.isConnected && generation === this.sanitizerGeneration) this.emit('lr-render-error', { error });
+  }
+
+  /** One recoverable diagnostic per load for rich outputs refused by the passive-markup limits;
+   *  every other output keeps rendering. */
+  private reportOversizedOutput(error: unknown): void {
+    if (this.oversizedOutputReported) return;
+    this.oversizedOutputReported = true;
+    this.emit('lr-viewer-diagnostic', {
+      diagnostic: { code: 'notebook-output-too-large', severity: 'warning', fatal: false, source: 'dompurify', cause: error },
+    });
   }
 
   private async ensureSanitized(output: NotebookOutput, raw: unknown, profile: SanitizeProfile): Promise<void> {
@@ -1186,13 +1199,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         this.sanitizedOutputCache.set(output, clean);
         this.requestUpdate();
-        if (!sanitizer) this.reportSanitizerFailure(generation);
+        if (!sanitizer) this.reportSanitizerFailure();
       } catch (error) {
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         this.sanitizedOutputCache.set(output, null);
         this.requestUpdate();
-        if (isResourceLimitError(error)) this.emit('lr-render-error', { error });
-        else this.reportSanitizerFailure(generation, { error });
+        if (isResourceLimitError(error)) this.reportOversizedOutput(error);
+        else this.reportSanitizerFailure({ error });
       } finally {
         if (generation === this.sanitizerGeneration) this.sanitizationTasks.delete(output);
       }

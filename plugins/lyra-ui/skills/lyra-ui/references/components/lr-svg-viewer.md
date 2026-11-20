@@ -78,9 +78,11 @@ latest anchor-jump message; the spoken copy is appended to the shared document-l
 only while the viewer and its composed ancestors are exposed to the accessibility tree),
 `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
-`region-highlight-target` (transparent activation geometry with an independent minimum hit area),
+`region-highlight-target` (transparent activation geometry with an independent minimum hit area;
+`aria-current="true"` on the `activeHighlightId` match, `"false"` otherwise),
 `highlight-actions` (non-overlapping actions used instead of on-image targets when the minimum hit
-areas of two or more highlights would overlap), `region-highlight-action` (one action in that list),
+areas of two or more highlights would overlap), `region-highlight-action` (one action in that list,
+carrying the same `aria-current`),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
 Passive loaded SVG content owns `role="img"`. Idle, loading, and error states instead use a named

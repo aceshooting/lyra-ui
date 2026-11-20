@@ -931,3 +931,17 @@ it('keeps a tab stop in the visible virtual rows after scrolling in either direc
   button(end)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   await waitUntil(() => active() === 0 && virtual.shadowRoot!.activeElement === button(0), 'Home focuses the newly mounted first row');
 });
+
+it('mirrors the direction glyph under RTL so an outgoing arrow points toward the neighbour', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list dir=${direction}
+      .rows=${[{ relation: 'cites', direction: 'out', node: { id: 'n', label: 'Node' } }]}></lr-neighbor-list>`);
+    const find = () => el.shadowRoot!.querySelector<HTMLElement>('[part="direction"]')
+      ?? el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector<HTMLElement>('[part="direction"]')
+      ?? null;
+    await waitUntil(() => find() !== null, `${direction}: direction glyph renders`);
+    const transform = getComputedStyle(find()!).transform;
+    const a = transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
+    expect(a, direction).to.equal(direction === 'rtl' ? -1 : 1);
+  }
+});

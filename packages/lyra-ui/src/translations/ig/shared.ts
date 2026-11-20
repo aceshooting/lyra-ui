@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistemụ',
   promptStudioRoleUser: 'Onye ọrụ',
   promptStudioRoleAssistant: 'Onye inyeaka',
+  schemaViewerRequired: 'Achọrọ',
   statusUnknown: 'Amaghị',
   moveUp: 'Bugharịa elu',
   moveDown: 'Bugharịa ala',

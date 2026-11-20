@@ -887,9 +887,10 @@ Lyra retains the localized native-button names, actions, and minimum hit areas.
 **CSS parts:** `base carousel` (same region node), `scroll-container` (focusable scroll port),
 `navigation`, `navigation-button`, `navigation-button-previous` /
 `navigation-button-next`, Shoelace aliases `navigation-button--previous` /
-`navigation-button--next`, plus `previous-glyph` / `next-glyph`; `pagination`, `pagination-item`,
+`navigation-button--next`, plus `previous-glyph` / `next-glyph` (wrap the icon slots, whose default
+is an SVG chevron; both mirror under RTL); `pagination`, `pagination-item`,
 active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track`,
-`controls`, and `autoplay-button` (pauses or resumes automatic rotation) are Lyra extensions.
+`controls`, and `autoplay-button` (pauses or resumes automatic rotation) are Lyra extensions. A host `aria-describedby` is projected onto the region.
 
 **Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions
@@ -1034,8 +1035,9 @@ scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
 **Slots:** default scrollable content.
 
 **CSS parts:** `base`, `viewport`, `content`, `start-shadow`, `end-shadow`, `previous`, `next`,
-`control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the chevron inside
-each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
+`control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the SVG chevron
+inside each, pointed by the part: toward the inline start/end, mirrored under RTL, and up/down in a
+vertical scroller). A host `aria-describedby` is projected onto the focusable `viewport` region. Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
 vertical scroller. Before the first client measurement, both cues are hidden and both optional
 controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
@@ -1764,7 +1766,7 @@ communicate the outcome itself. Both methods no-op when nothing is pending.
 
 **Slots:** default — `<lr-reorder-item>` elements.
 
-**CSS parts:** `base` — the internal `role="list"` wrapper.
+**CSS parts:** `base` — the internal `role="list"` wrapper. A host `aria-describedby` is projected onto that list.
 
 **Themeable custom properties:** `--lr-reorder-list-gap` (default `var(--lr-space-2xs)`) — gap
 between rows.
@@ -3316,7 +3318,7 @@ collapse control so activating one never toggles the group (and, in the rail's m
 closes it). Collapsing a group that holds focus moves focus to the collapse control.
 
 **CSS parts:** `base`, `header`, `heading`, `heading-text`, `toggle`, `toggle-icon`,
-`header-actions`, `content`.
+`header-actions`, `content`. A host `aria-describedby` is projected onto the `base` group.
 
 **Themeable custom properties:** `--lr-app-rail-group-gap` (default `var(--lr-space-xs)`),
 `--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),
@@ -4369,7 +4371,8 @@ remain authoritative. Existing palette behavior in editable content and for alre
 is unchanged.
 
 Valid string keywords still participate in search alongside the command's label, description, and
-group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
+group. Matching is case-, accent- and Unicode-normalization-insensitive in the effective locale
+(`cafe` finds "Café"). Unsafe keyword entries are skipped without invoking accessors, and selection returns the
 original command object.
 
 `commands` admits the first 10,000 input positions; invalid or duplicate records inside that prefix
@@ -4964,7 +4967,7 @@ contains the requested target geometry; ignoring a request never announces a cha
 happen. All feedback remains silent while the grid or a composed ancestor is excluded from the
 accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
-`aria-hidden` shadow mirror of the latest spoken message).
+`aria-hidden` shadow mirror of the latest spoken message). A host `aria-describedby` is projected onto the `base` region.
 
 `layout` is normalized into an immutable snapshot before rendering; assigning the same array again is
 ignored (assign a new array after changes), and a new array with unchanged cell geometry keeps a drag

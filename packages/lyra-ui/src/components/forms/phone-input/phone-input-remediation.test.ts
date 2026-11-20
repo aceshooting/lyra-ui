@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import type { LyraPhoneInput, LyraPhoneNumberAdapter } from '../../lr-phone-input.js';
 import '../../lr-phone-input.js';
+import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 
 const adapter: LyraPhoneNumberAdapter = {
   countries: [{ code: 'LU', callingCode: '352' }, { code: 'FR', callingCode: '33' }],
@@ -177,18 +178,22 @@ it('phone-input honors the with-label and with-hint SSR presence hints', async (
   expect(el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden')).to.equal(false);
 });
 
-it('phone-input leaves validation text to error-text, keeps the resting border, and never writes host aria-invalid', async () => {
-  const el = await fixture<LyraPhoneInput>(html`<lr-phone-input required label="Phone" .adapter=${adapter}></lr-phone-input>`);
+it('phone-input leaves validation text to error-text, paints the danger edge once unfocused, and never writes host aria-invalid', async () => {
+  const root = await fixture<HTMLElement>(html`<div><lr-phone-input required label="Phone" .adapter=${adapter}></lr-phone-input>
+    <button type="button">Away</button><span style="color: var(--lr-color-danger)">probe</span></div>`);
+  const el = root.querySelector<LyraPhoneInput>('lr-phone-input')!;
   await settle(el);
   const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
-  const resting = getComputedStyle(wrapper).borderTopColor;
+  const danger = getComputedStyle(root.querySelector('span')!).color;
   el.reportValidity();
   await settle(el);
   expect(el.hasAttribute('data-invalid')).to.equal(true);
   expect(el.hasAttribute('aria-invalid'), 'the telephone input owns aria-invalid').to.equal(false);
   expect(el.input!.getAttribute('aria-invalid')).to.equal('true');
   expect(el.shadowRoot!.querySelector('[part="error"]')!.hasAttribute('hidden'), 'no automatic message').to.equal(true);
-  expect(getComputedStyle(wrapper).borderTopColor, 'no default danger edge').to.equal(resting);
+  await focusAfterPointer(root.querySelector('button')!);
+  await settle(el);
+  expect(getComputedStyle(wrapper).borderTopColor, 'default danger edge').to.equal(danger);
 });
 
 for (const blocked of ['disabled', 'readonly'] as const) {

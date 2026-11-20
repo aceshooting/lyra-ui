@@ -110,7 +110,7 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 **CSS parts:** `base` (`role="list"`), `group-header` (only when `groupByRelation`; above
 `virtualizeAt` this is the internal virtual-list's own group label, re-exported under the same
 name), `row` (`role="listitem"`; above `virtualizeAt` this is the internal virtual-list's own row
-wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `relation`,
+wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph; mirrors under RTL so an outgoing arrow points toward the neighbour), `relation`,
 `node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
 `expandable`), `limit` (input-admission notice), `empty` (shown when `rows` is empty). Every part presents identically either side of
 `virtualizeAt`.

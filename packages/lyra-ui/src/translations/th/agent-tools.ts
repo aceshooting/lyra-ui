@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'เครื่องมือ',
   schemaViewerLabel: 'โปรแกรมดูสคีมา',
   schemaViewerEmpty: 'ไม่มีสคีมา',
-  schemaViewerRequired: 'จำเป็น',
   schemaViewerCircular: 'การอ้างอิงสคีมาแบบวนซ้ำ',
   schemaViewerType: 'ชนิด: {type}',
   subagentPanelLabel: 'ซับเอเจนต์',

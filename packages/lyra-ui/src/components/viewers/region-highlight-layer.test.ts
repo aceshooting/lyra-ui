@@ -37,11 +37,29 @@ it('renders a localized ordinal on both controls for a whitespace-only region la
   const activate = () => undefined;
   const controls = await fixture<HTMLDivElement>(html`<div>
     ${renderRegionHighlightLayer(highlights, null, true, name, activate)}
-    ${renderRegionHighlightActions(highlights, name, root, false, activate)}
+    ${renderRegionHighlightActions(highlights, null, name, root, false, activate)}
   </div>`);
   const names = (part: string) => Array.from(controls.querySelectorAll(`[part="${part}"]`), button => button.getAttribute('aria-label'));
   expect(names('region-highlight-target')).to.deep.equal(['Area: Named area', 'Area 2 of 2']);
   expect(names('region-highlight-action')).to.deep.equal(['Area: Named area', 'Area 2 of 2']);
   expect(Array.from(controls.querySelectorAll('[part="region-highlight-action"]'), button => button.textContent?.trim()))
     .to.deep.equal(['Named area', 'Area 2 of 2']);
+});
+
+it('exposes the active region as aria-current on every target and action', async () => {
+  const root = await fixture<HTMLDivElement>(html`<div></div>`);
+  const highlights = [
+    { id: 'first', anchor: { rect: { x: 1, y: 2, width: 3, height: 4 } } },
+    { id: 'second', anchor: { rect: { x: 10, y: 20, width: 30, height: 40 } } },
+  ];
+  const name = (_highlight: unknown, index: number) => `Area ${index + 1}`;
+  const activate = () => undefined;
+  const controls = await fixture<HTMLDivElement>(html`<div>
+    ${renderRegionHighlightLayer(highlights, 'second', true, name, activate)}
+    ${renderRegionHighlightActions(highlights, 'second', name, root, false, activate)}
+  </div>`);
+  const current = (part: string) => Array.from(controls.querySelectorAll(`[part="${part}"]`), button => button.getAttribute('aria-current'));
+  expect(current('region-highlight-target')).to.deep.equal(['false', 'true']);
+  expect(current('region-highlight-action')).to.deep.equal(['false', 'true']);
+  expect(controls.querySelector('[part="region-highlight-target"]')!.hasAttribute('role')).to.equal(false);
 });

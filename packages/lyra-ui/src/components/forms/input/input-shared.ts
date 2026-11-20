@@ -153,6 +153,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @slot show-password-icon - Replaces the glyph shown while the password is hidden.
  * @slot hide-password-icon - Replaces the glyph shown while the password is visible.
  * @csspart form-control - The outer wrapper around label, input, error and hint.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -353,7 +356,9 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   * boolean. Writes accept Web Awesome's boolean IDL and Shoelace's `'on'`/`'off'` vocabulary. */
+   * boolean. Writes accept Web Awesome's boolean IDL and Shoelace's `'on'`/`'off'` vocabulary.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -752,12 +757,12 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
       if (this.required && this.value === '') {
         this[SET_ANCHORED_VALIDITY](
           { valueMissing: true },
-          this.localize('fieldRequired')
+          () => this.localize('fieldRequired')
         );
       } else if (this.matchMismatches()) {
         this[SET_ANCHORED_VALIDITY](
           { customError: true },
-          this.localize('matchMismatch')
+          () => this.localize('matchMismatch')
         );
       } else {
         this[SET_ANCHORED_VALIDITY]({});
@@ -776,14 +781,14 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
       if (sanitizedAway) {
         this[SET_ANCHORED_VALIDITY](
           { badInput: true },
-          this.localize('valueInvalid')
+          () => this.localize('valueInvalid')
         );
         return;
       }
       if (this.matchMismatches()) {
         this[SET_ANCHORED_VALIDITY](
           { customError: true },
-          this.localize('matchMismatch')
+          () => this.localize('matchMismatch')
         );
         return;
       }
@@ -805,7 +810,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
       // Empty exactly when the native input itself sees nothing wrong, i.e. when only the
       // dirty-value supplement above fired — the browser has no message for a value it considers
       // valid, so fall back to the localized generic one.
-      native.validationMessage || this.localize('valueInvalid')
+      () => native.validationMessage || this.localize('valueInvalid')
     );
   }
 
@@ -879,8 +884,11 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     // nothing left pending to cancel.
     this.settledDebounce.flush();
     this.value = this.valueFromNativeText(this.inputEl.value);
+    // Snapshot before relaying: a synchronous native `change` listener that rewrites `value` must
+    // not change what this gesture's `lr-change` reports.
+    const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-change', { value: this.value });
+    this.emit('lr-change', { value });
   };
 
   private onFocus = (event: FocusEvent): void => {
@@ -924,10 +932,11 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     if (isLiveDisabled(this) || this.readonly || this.value === '') return;
     this.value = '';
     if (this.inputEl) this.inputEl.value = '';
+    const value = this.value;
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+    this.emit('lr-change', { value });
     this.emit('lr-clear');
     this.inputEl?.focus();
   };

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderRuntimeLook, renderLook, renderDensity, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, renderNativeChrome } from './style-axes-model.mjs';
+import { readStyleModel, renderRuntimeLook, renderLook, renderDensity, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, renderNativeChrome } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -382,4 +382,17 @@ test('root-only reference lint bounds deeply nested and backtracking-shaped sele
   `], { encoding: 'utf8', timeout: 5_000 });
   assert.equal(result.error?.code, undefined, 'selector classification must finish within the child-process deadline');
   assert.equal(result.status, 0, result.stderr);
+});
+
+test('style model block replacement fails closed on missing, repeated or authored content', () => {
+  const block = '// GENERATED STYLE MODEL: START\nconst STYLE_DENSITY: readonly string[] = [\n  \'compact\',\n];\n// GENERATED STYLE MODEL: END';
+  const source = `const before = 1;\n${block}\nconst after = 2;\n`;
+  const next = block.replace('compact', 'spacious');
+  assert.equal(replaceStyleModelBlock(source, next), source.replace('compact', 'spacious'));
+  assert.throws(() => replaceStyleModelBlock(source.replace('// GENERATED STYLE MODEL: END', ''), next), /marker pair missing/);
+  assert.throws(() => replaceStyleModelBlock(`${source}${block}\n`, next), /duplicate style model markers/);
+  const authored = source.replace('];\n', '];\nexport const STYLE_EXTRA = true;\n');
+  assert.doesNotThrow(() => replaceStyleModelBlock(source, next));
+  assert.throws(() => replaceStyleModelBlock(source.replace('];\n', '];\nexport function helper() {}\n'), next), /authored code inside the generated style model block.*helper/);
+  assert.throws(() => replaceStyleModelBlock(authored, next), /authored code.*STYLE_EXTRA/);
 });

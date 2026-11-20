@@ -14,10 +14,6 @@ Style composed controls through `copy-button-control`, `edit-button-control`, an
 Use `size` for thread-list density, native host `aria-label` for message-parts naming, and the
 canonical request and activation events described in each component section.
 
-## Breaking changes and fixes in 9.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
 ## `lr-markdown`
 
 Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.

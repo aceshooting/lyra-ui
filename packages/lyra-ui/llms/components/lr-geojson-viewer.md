@@ -81,8 +81,9 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 - `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
-- `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
-  failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
+- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure. A missing
+  optional MapLibre peer is recoverable: it keeps the serialized metadata fallback visible and fires
+  only `lr-viewer-diagnostic`.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or

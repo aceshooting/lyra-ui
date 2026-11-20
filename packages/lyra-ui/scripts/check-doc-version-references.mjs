@@ -83,6 +83,28 @@ function addArchivedVersions(released, repoRoot, findings) {
 }
 
 /**
+ * The README upgrade table promises one row per major since its oldest row. A release that bumps
+ * the package major (or an archived major) without its row fails here instead of shipping a table
+ * that silently stops early.
+ */
+function checkUpgradeTable(packageDir, released, findings) {
+  const readme = path.join(packageDir, 'README.md');
+  if (!existsSync(readme)) return;
+  const rows = [...readFileSync(readme, 'utf8').matchAll(/^\| \*\*v(\d+)\*\* \|/gm)].map((match) => Number(match[1]));
+  if (rows.length === 0) return;
+  const majors = [...released].map((version) => Number(version.split('.')[0]));
+  const manifest = path.join(packageDir, 'package.json');
+  if (existsSync(manifest)) {
+    const version = String(JSON.parse(readFileSync(manifest, 'utf8')).version ?? '');
+    if (/^\d+\.\d+\.\d+/.test(version)) majors.push(Number(version.split('.')[0]));
+  }
+  const listed = new Set(rows);
+  for (let major = Math.min(...rows); major <= Math.max(...majors, ...rows); major += 1) {
+    if (!listed.has(major)) findings.push(`README.md upgrade table has no v${major} row`);
+  }
+}
+
+/**
  * Finds release-version annotations that promise an API was "new in" a version with no matching
  * changelog release heading.
  */
@@ -94,6 +116,7 @@ export function checkDocVersionReferences(
   const released = changelogVersions(readFileSync(changelogFile, 'utf8'));
   const findings = [];
   addArchivedVersions(released, repoRoot, findings);
+  checkUpgradeTable(packageDir, new Set(released), findings);
   const files = scannedDocumentation(packageDir, repoRoot);
   let referencesChecked = 0;
   const versionReference = /\bnew\s+in\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\b/gi;

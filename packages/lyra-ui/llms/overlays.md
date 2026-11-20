@@ -1,11 +1,3 @@
-## Breaking changes in 10.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
-## Breaking changes in 9.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
 ## The shared overlay lifecycle
 
 `lr-dialog`, `lr-drawer`, `lr-popover`, `lr-dropdown` and `lr-tooltip` all open and close over the

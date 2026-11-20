@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { formatMediaTime, withCurrentRate } from './media-time.js';
+import { formatMediaTime, formatPlaybackRate, withCurrentRate } from './media-time.js';
 
 it('formats whole media seconds, rounded down', () => {
   for (const [seconds, expected] of [
@@ -40,4 +40,10 @@ it('inserts an off-list playback rate in order and keeps the list identity other
     expect(withCurrentRate(rates, bad) === rates).to.equal(true);
   }
   expect(rates).to.deep.equal([0.5, 1, 2]);
+});
+
+it('formats playback rates with two fraction digits, widening so a slow rate never reads as zero', () => {
+  expect(formatPlaybackRate(1.5, 'en-US')).to.equal('1.5');
+  expect(formatPlaybackRate(0.0625, 'en-US')).to.equal('0.0625');
+  expect(formatPlaybackRate(0.004, 'en-US')).to.equal('0.004');
 });

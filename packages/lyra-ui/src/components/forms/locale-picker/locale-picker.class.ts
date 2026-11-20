@@ -259,6 +259,9 @@ export interface LyraLocalePickerEventMap {
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -1611,7 +1614,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
           ` : this.listboxHidden ? nothing : guard([rows, this.value, this.withoutFlags, this.optionDisplay, this.effectiveLocale, this.strings], () => this.renderRows(rows, activeId))}
         </div>
         ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
-          <div id="locale-picker-load-status" part="load-status">
+          <div id="locale-picker-load-status" part="load-status" ?data-failed=${this.loadingTag === undefined}>
             ${this.loadingTag !== undefined ? this.localize('loading') : this.localize('statusError')}
             ${this.loadFailureTag !== undefined ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLocaleLoad}
               @focus=${this.searchable ? this.onTriggerFocus : nothing}

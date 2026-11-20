@@ -95,8 +95,8 @@ export const EveryFieldType: Story = {
     ></lr-condition-builder>`,
 };
 
-/** A non-finite persisted number is retained instead of silently rewritten. The row and root expose
- * `aria-invalid="true"`, and `validationIssues` reports `value-type` so an Apply action can stop. */
+/** A non-finite persisted number is retained instead of silently rewritten. The value control and
+ * root expose `aria-invalid="true"`, and `validationIssues` reports `value-type` so an Apply action can stop. */
 export const NonFiniteNumberModel: Story = {
   render: () => html`
     <lr-condition-builder

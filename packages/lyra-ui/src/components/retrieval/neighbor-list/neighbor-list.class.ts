@@ -117,7 +117,7 @@ export interface LyraNeighborListEventMap {
  *   name so both paths present identically.
  * @csspart row - One relationship row (`role="listitem"`). Above `virtualizeAt` this is the
  *   internal virtual-list's own row wrapper, re-exported under the same name.
- * @csspart direction - The `aria-hidden` direction glyph.
+ * @csspart direction - The `aria-hidden` direction glyph, logical (mirrors under RTL).
  * @csspart relation - The relation text.
  * @csspart node-label - The row's node `<button>`.
  * @csspart node-meta - Secondary node text (type/degree), when present.
@@ -455,7 +455,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return groups;
   }
 
-  /** The arrow represents the edge's graph direction independently of reading direction. */
+  /** An outgoing arrow points toward the neighbour in reading order; the part mirrors under RTL. */
   private directionGlyph(direction: LyraNeighborRow['direction']): string {
     if (direction === 'both') return '↔';
     return direction === 'out' ? '→' : '←';

@@ -327,7 +327,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native autocorrect state forwarded through the composer. Reads are boolean; writes accept
-   * boolean or the legacy `'off'`/`'false'` strings. */
+   * boolean or the legacy `'off'`/`'false'` strings.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;

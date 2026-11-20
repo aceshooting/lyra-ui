@@ -392,7 +392,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native autocorrect state. Reads are boolean; writes accept boolean or the legacy
-   * `'off'`/`'false'` string vocabulary and reflect canonical `on`/`off`. */
+   * `'off'`/`'false'` string vocabulary and reflect canonical `on`/`off`.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -605,7 +607,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     }
     this[SET_ANCHORED_VALIDITY](
       { tooShort, tooLong },
-      textarea?.validationMessage || this.localize('valueInvalid')
+      () => textarea?.validationMessage || this.localize('valueInvalid')
     );
   }
 

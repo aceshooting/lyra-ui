@@ -1,6 +1,7 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import '../../lr-input.js';
+import '../../lr-otp-input.js';
 import '../../../translations/de/forms.js';
 import type { LyraInput } from './input.class.js';
 
@@ -48,5 +49,23 @@ describe('lr-input with the German forms catalog', () => {
     confirm.value = 'first';
     await confirm.updateComplete;
     expect(confirm.checkValidity()).to.equal(true);
+  });
+  it('re-resolves an intrinsic validation message when the locale changes after it was raised', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form lang="en">
+        <lr-input id="late-password" aria-label="Password" value="first"></lr-input>
+        <lr-input id="late-confirm" aria-label="Confirm" match="late-password" value="second"></lr-input>
+        <lr-otp-input id="late-otp" length="4" value="12"></lr-otp-input>
+      </form>
+    `);
+    const confirm = form.querySelector<LyraInput>('#late-confirm')!;
+    const otp = form.querySelector<LyraInput>('#late-otp')!;
+    expect(confirm.validationMessage).to.equal('The values do not match.');
+    expect(otp.validationMessage).to.equal('Enter all 4 characters.');
+    form.lang = 'de';
+    await waitUntil(() => confirm.validationMessage !== 'The values do not match.', 'confirm message re-resolved', { timeout: 2000 }).catch(() => undefined);
+    await waitUntil(() => otp.validationMessage !== 'Enter all 4 characters.', 'otp message re-resolved', { timeout: 2000 }).catch(() => undefined);
+    expect(confirm.validationMessage).to.equal('Die Werte stimmen nicht überein.');
+    expect(otp.validationMessage).to.equal('Bitte geben Sie alle 4 Zeichen ein.');
   });
 });

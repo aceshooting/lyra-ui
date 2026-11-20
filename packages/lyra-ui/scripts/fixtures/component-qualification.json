@@ -4237,7 +4237,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 549,
+              "line": 548,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12592,7 +12592,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2699,
+              "line": 2702,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15070,7 +15070,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 445,
+              "line": 447,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16299,7 +16299,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2440,
+              "line": 2442,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16574,6 +16574,7 @@
         "tests": [
           "src/components/viewers/dataset-viewer/dataset-peer-boundary.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-load-lifecycle.test.ts",
+          "src/components/viewers/dataset-viewer/dataset-viewer-max-height.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-public-admission.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-remediation.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-scale.test.ts",
@@ -18171,7 +18172,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 496,
+              "line": 494,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18750,7 +18751,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 415,
+              "line": 413,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29340,7 +29341,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 866,
+              "line": 871,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29376,7 +29377,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/event-detail-snapshot.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
+          "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
@@ -32158,7 +32161,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 997,
+              "line": 1000,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37530,7 +37533,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 866,
+              "line": 871,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37566,7 +37569,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/event-detail-snapshot.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
+          "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
@@ -38769,7 +38774,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 866,
+              "line": 871,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38805,7 +38810,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/event-detail-snapshot.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
+          "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
@@ -38997,7 +39004,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2699,
+              "line": 2702,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39222,7 +39229,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 363,
+              "line": 368,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39258,6 +39265,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/otp-input/native-submit-interaction.test.ts",
           "src/components/forms/otp-input/otp-input-completion-lifecycle.test.ts",
           "src/components/forms/otp-input/otp-input-host-delegation.test.ts",
           "src/components/forms/otp-input/otp-input-rejected-edit-boundaries.test.ts",
@@ -40408,7 +40416,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 1672,
+              "line": 1669,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43100,7 +43108,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 605,
+              "line": 607,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46226,7 +46234,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 349,
+              "line": 361,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46424,7 +46432,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 349,
+              "line": 361,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53758,7 +53766,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-              "line": 48,
+              "line": 49,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54216,6 +54224,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/switch/focus-ring-target.test.ts",
           "src/components/forms/switch/switch-remediation.test.ts",
           "src/components/forms/switch/switch.test.ts"
         ],
@@ -56251,7 +56260,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 699,
+              "line": 702,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56906,7 +56915,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 866,
+              "line": 871,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56942,7 +56951,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/event-detail-snapshot.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
+          "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
@@ -63122,7 +63133,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 579,
+              "line": 581,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

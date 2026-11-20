@@ -1,11 +1,3 @@
-## Breaking changes in 10.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
-## Breaking changes in 9.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
 ## `lr-flag`
 
 Country/language flag image. Flag artwork ships in a **separate, optional peer package**

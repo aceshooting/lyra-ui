@@ -11,7 +11,8 @@ import { LyraMap } from '../../media/map/map.class.js';
 import { LyraGeoJsonViewer } from './geojson-viewer.class.js';
 import { LyraGeojsonView } from './geojson-view.class.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
-import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
+import { nothing } from 'lit';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { viewerHostRole } from '../viewer-semantic-owner.js';
@@ -63,7 +64,7 @@ describe('GeoJSON viewer identity', () => {
         html`<test-retained-geojson-view max-height="12rem"></test-retained-geojson-view>`
       );
       (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
-      const missingPeer = oneEvent(el, 'lr-render-error');
+      const missingPeer = oneEvent(el, 'lr-viewer-diagnostic');
       el.src = GEOJSON_URL;
       await missingPeer;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
@@ -462,7 +463,7 @@ describe('fetching and parsing', () => {
 });
 
 describe('missing maplibre-gl peer', () => {
-  it('falls back to lr-json-viewer and emits exactly one render error when loadMaplibre resolves null', async () => {
+  it('falls back to lr-json-viewer and reports only a recoverable diagnostic when loadMaplibre resolves null', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
       html`<lr-geojson-viewer></lr-geojson-viewer>`
@@ -475,9 +476,8 @@ describe('missing maplibre-gl peer', () => {
       count++;
     });
     const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
-    const event = oneEvent(el, 'lr-render-error');
     el.src = GEOJSON_URL;
-    await event;
+    await diagnostic;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-json-viewer') !== null
     );
@@ -486,7 +486,7 @@ describe('missing maplibre-gl peer', () => {
     expect(warning.severity).to.equal('warning');
     expect(warning.fatal).to.equal(false);
     expect(warning.source).to.equal('maplibre-gl');
-    expect(count).to.equal(1);
+    expect(count).to.equal(0);
     expect(el.shadowRoot!.querySelector('lr-json-viewer')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="missing-library"]')).to.exist;
   });
@@ -645,10 +645,11 @@ describe('document renderer contract', () => {
     expect((await resultEvent).detail).to.deep.equal({ found: false });
   });
 
-  it('forwards anchor/highlights and advertises the implemented text capabilities', () => {
+  it('forwards anchor/highlights and advertises the implemented text capabilities', async () => {
     const definition = getDefaultDocumentRendererRegistry().get(
       'application/geo+json'
     )!;
+    const loaded = await loadDocumentRenderer(definition);
     const highlights: LyraHighlight[] = [
       {
         id: 'feature',
@@ -656,13 +657,14 @@ describe('document renderer contract', () => {
       },
     ];
     const anchor = { kind: 'fragment' as const, id: 'feature' };
-    const rendered = definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${'render' in loaded ? loaded.render({
       name: 'zones.geojson',
       mimeType: 'application/geo+json',
       src: GEOJSON_URL,
       anchor,
       highlights,
-    }) as LyraGeoJsonViewer;
+    }) : nothing}</div>`);
+    const rendered = host.querySelector('lr-geojson-viewer') as LyraGeoJsonViewer;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;
@@ -1344,7 +1346,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
-    const missingPeer = oneEvent(el, 'lr-render-error');
+    const missingPeer = oneEvent(el, 'lr-viewer-diagnostic');
     el.src = GEOJSON_URL;
     await missingPeer;
     await waitUntil(
@@ -1367,7 +1369,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
-    const missingPeer = oneEvent(el, 'lr-render-error');
+    const missingPeer = oneEvent(el, 'lr-viewer-diagnostic');
     el.src = GEOJSON_URL;
     await missingPeer;
     await waitUntil(
@@ -1390,7 +1392,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
-    const missingPeer = oneEvent(el, 'lr-render-error');
+    const missingPeer = oneEvent(el, 'lr-viewer-diagnostic');
     el.src = GEOJSON_URL;
     await missingPeer; // only the missing-maplibre-peer error is expected, not a shape-validation one
     await waitUntil(
@@ -1638,7 +1640,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     stubFetch(astral);
     const loaded = (await fixture(html`<lr-geojson-viewer></lr-geojson-viewer>`)) as LyraGeoJsonViewer;
     (loaded as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
-    const missingPeer = oneEvent(loaded, 'lr-render-error');
+    const missingPeer = oneEvent(loaded, 'lr-viewer-diagnostic');
     loaded.src = GEOJSON_URL;
     await missingPeer;
     await waitUntil(() => loaded.shadowRoot!.querySelector('lr-json-viewer') !== null);
@@ -2293,7 +2295,7 @@ describe('failure-state styling', () => {
 // -- Document-renderer registry entry ---------------------------------------
 
 it('registers a application/geo+json renderer whose matches() and render() behave as declared', async () => {
-  const { getDefaultDocumentRendererRegistry } = await import(
+  const { getDefaultDocumentRendererRegistry, loadDocumentRenderer: load } = await import(
     '../document-viewer/registry.js'
   );
   const def = getDefaultDocumentRendererRegistry().get('application/geo+json');
@@ -2319,13 +2321,14 @@ it('registers a application/geo+json renderer whose matches() and render() behav
     'capabilities are declared for host feature-detection'
   ).to.exist;
 
+  const loaded = await load(def!);
   const host = (await fixture(
     html`<div>
-      ${def!.render!({
+      ${'render' in loaded ? loaded.render({
         name: 'Region.GEOJSON',
         mimeType: 'application/geo+json',
         src: 'https://example.test/f',
-      })}
+      }) : nothing}
     </div>`
   )) as HTMLElement;
   expect(
@@ -2363,18 +2366,19 @@ for (const stage of ['peer load', 'fallback import'] as const) {
         }
         return true;
       } });
-      const errors: unknown[] = [];
-      el.addEventListener('lr-render-error', event => errors.push(event.detail.error));
+      const reports: string[] = [];
+      el.addEventListener('lr-render-error', () => reports.push('error'));
+      el.addEventListener('lr-viewer-diagnostic', () => reports.push('diagnostic'));
       el.src = GEOJSON_URL;
       await waitUntil(() => detached && !el.isConnected, 'the load reached its peer probe');
       await aTimeout(20);
-      expect(errors.length).to.equal(0);
+      expect(reports).to.deep.equal([]);
       expect(el.shadowRoot!.querySelector('lr-json-viewer') === null).to.equal(true);
-      const event = oneEvent(el, 'lr-render-error');
+      const event = oneEvent(el, 'lr-viewer-diagnostic');
       parent.appendChild(el);
       await event;
       await waitUntil(() => el.shadowRoot!.querySelector('lr-json-viewer') !== null);
-      expect(errors.length).to.equal(1);
+      expect(reports).to.deep.equal(['diagnostic']);
     } finally {
       globalThis.fetch = originalFetch;
     }

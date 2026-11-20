@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'ടൂൾ',
   schemaViewerLabel: 'സ്കീമ വ്യൂവർ',
   schemaViewerEmpty: 'സ്കീമ ലഭ്യമല്ല',
-  schemaViewerRequired: 'നിർബന്ധമാണ്',
   schemaViewerCircular: 'ചാക്രിക സ്കീമ റഫറൻസ്',
   schemaViewerType: 'തരം: {type}',
   subagentPanelLabel: 'സബ്-ഏജന്റുകൾ',

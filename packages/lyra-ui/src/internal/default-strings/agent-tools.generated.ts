@@ -220,7 +220,6 @@ export const LYRA_DEFAULT_schemaViewerIssueLimit: LyraMessage = 'Only the first 
 export const LYRA_DEFAULT_schemaViewerIssueWarning: LyraMessage = 'Warning:';
 export const LYRA_DEFAULT_schemaViewerLabel: LyraMessage = 'Schema viewer';
 export const LYRA_DEFAULT_schemaViewerLimit: LyraMessage = 'Only the first {count} schema nodes are shown.';
-export const LYRA_DEFAULT_schemaViewerRequired: LyraMessage = 'Required';
 export const LYRA_DEFAULT_schemaViewerType: LyraMessage = 'Type: {type}';
 export const LYRA_DEFAULT_searchToolsPlaceholder: LyraMessage = 'Search tools…';
 export const LYRA_DEFAULT_selectTools: LyraMessage = 'Select tools';

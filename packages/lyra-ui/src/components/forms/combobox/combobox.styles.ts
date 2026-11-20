@@ -5,9 +5,10 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
-  formControlTextWrap,
   formControlFocusHalo,
+  formControlInvalidBorder,
   formControlRequiredMarker,
+  formControlTextWrap,
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
@@ -619,4 +620,5 @@ export const styles = css`
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
   ${forcedColorsSelected}
+  ${formControlInvalidBorder(css`[part="combobox"]`)}
 `;

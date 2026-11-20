@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'ٹول',
   schemaViewerLabel: 'اسکیمہ ناظر',
   schemaViewerEmpty: 'کوئی اسکیمہ دستیاب نہیں',
-  schemaViewerRequired: 'لازمی',
   schemaViewerCircular: 'اسکیمہ کا چکری حوالہ',
   schemaViewerType: 'قسم: {type}',
   subagentPanelLabel: 'ذیلی ایجنٹس',

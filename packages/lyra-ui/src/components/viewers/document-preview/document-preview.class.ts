@@ -235,7 +235,8 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart highlight-layer - The wrapper around every rendered region highlight (image format only).
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`) (image format only).
  * @csspart region-highlight-target - Transparent activation geometry around a region highlight,
- *   with a minimum pointer/focus area independent of the visual rectangle (image format only).
+ *   with a minimum pointer/focus area independent of the visual rectangle (image format only);
+ *   `aria-current` is `"true"` on the `activeHighlightId` match, as on `region-highlight-action`.
  * @csspart highlight-actions - Non-overlapping actions used when multiple region highlights would
  *   otherwise create overlapping minimum hit areas (image format only).
  * @csspart region-highlight-action - One action in the non-overlapping highlight action list.
@@ -661,7 +662,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
       @lr-zoom-change=${this.stopPanZoomEvent}
     >${inner}</lr-pan-zoom>` : inner;
-    return html`${frame}${renderRegionHighlightActions(highlights, this.highlightActionLabel,
+    return html`${frame}${renderRegionHighlightActions(highlights, this.activeHighlightId, this.highlightActionLabel,
       this.renderRoot, this.effectiveDirection === 'rtl', this.activateHighlight, showActions)}`;
   }
 

@@ -76,9 +76,10 @@ matches.
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
 canonical source reset and effective-locale re-evaluation. When an HTML or SVG output cannot be sanitized,
-`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`. Other notebook
-output stays readable. The existing `lr-render-error` event carries `detail: { error }` for sanitizer,
-fetch, parse and validation failures. `lr-anchor-result` —
+`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`; an HTML or SVG
+output over the passive-markup limits reports `notebook-output-too-large` with `fatal: false`. Each
+code fires at most once per load, and other notebook output stays readable. `lr-render-error`
+(`detail: { error }`) is terminal only: fetch, parse and validation failures. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 

@@ -190,14 +190,14 @@ every sibling field.
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
 `--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
-`--lr-otp-input-invalid-border-color`, with the shared focus color and resting segment border as
-fallbacks.
+`--lr-otp-input-invalid-border-color`, with the shared focus color and the shared invalid border
+(`--lr-form-control-invalid-border-color`, then `--lr-color-danger`) as fallbacks.
 
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
 after interaction. `--lr-otp-input-invalid-border-color` takes precedence over
-`--lr-form-control-invalid-border-color`. With both unset, the segment keeps its resting border.
+`--lr-form-control-invalid-border-color`. With both unset, the segment border is `--lr-color-danger`.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the

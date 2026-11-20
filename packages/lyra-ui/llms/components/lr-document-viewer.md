@@ -171,7 +171,8 @@ Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-regis
 `csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
 `dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
 `contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`,
-`model-viewer-register.js`), which installs
+`model-viewer-register.js`, and `geojson-view/geojson-viewer-register.js` for `.geojson` /
+`application/geo+json`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually

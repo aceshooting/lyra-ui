@@ -133,10 +133,11 @@ rendered when `src` is set _and_ passes the link-safe scheme allowlist — see t
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
 `data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
-geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
+geometry with a minimum hit area independent of the visual rectangle; `aria-current="true"` on the
+`activeHighlightId` match, `"false"` otherwise), `highlight-actions`
 (non-overlapping actions used when multiple minimum hit areas would overlap),
-`region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
-`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
+`region-highlight-action` (one action in that list, carrying the same `aria-current`),
+`frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
 while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lr-document-preview-max-height` (default `none`) — the

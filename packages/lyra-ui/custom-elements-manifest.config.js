@@ -733,6 +733,155 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
   ['lr-zoomable-frame', { error: 'Event', load: 'Event' }],
 ]);
 
+// `@property` accessors keep their initial value in a backing field (or behind a JSDoc
+// `@default`), which CEM's syntax-only field pass cannot see. Collect both from the class AST,
+// keyed by declaring class, so the link phase can project them and the gate below can refuse an
+// attribute-backed accessor that still has no documented default.
+const SIMPLE_DEFAULT =
+  /^(?:'[^'\n]*'|"[^"\n]*"|-?\d+(?:\.\d+)?|true|false|null|undefined|Infinity|\[\])$/u;
+
+const classKey = (path, name) => `${normalizeSourcePath(path)}#${name}`;
+const ownerKey = (module, declaration, member) =>
+  member.inheritedFrom
+    ? classKey(member.inheritedFrom.module ?? module.path, member.inheritedFrom.name)
+    : classKey(module.path, declaration.name);
+
+export function accessorBackingDefaultsPlugins() {
+  const defaultsByClass = new Map();
+  const accessorsByClass = new Map();
+  const unwrap = (ts, expression) => {
+    let current = expression;
+    while (
+      current &&
+      (ts.isAsExpression(current) ||
+        ts.isParenthesizedExpression(current) ||
+        ts.isNonNullExpression(current) ||
+        (ts.isSatisfiesExpression?.(current) ?? false))
+    )
+      current = current.expression;
+    return current;
+  };
+  const isPropertyDecorated = (ts, member) =>
+    (ts.getDecorators?.(member) ?? member.decorators ?? []).some((decorator) => {
+      const call = decorator.expression;
+      return ts.isCallExpression(call) && call.expression.getText() === 'property';
+    });
+  const derive = {
+    name: 'lr-accessor-backing-defaults',
+    analyzePhase({ ts, node, moduleDoc }) {
+      if (!ts.isClassDeclaration(node) || !node.name) return;
+      const key = classKey(moduleDoc.path, node.name.text);
+      // Same-file literal constants resolve here; an imported constant needs an `@default` tag.
+      const constants = new Map();
+      for (const statement of node.getSourceFile().statements) {
+        if (!ts.isVariableStatement(statement)) continue;
+        for (const variable of statement.declarationList.declarations) {
+          if (ts.isIdentifier(variable.name) && variable.initializer) {
+            constants.set(variable.name.text, unwrap(ts, variable.initializer).getText().trim());
+          }
+        }
+      }
+      const fields = new Map();
+      for (const member of node.members) {
+        if (!ts.isPropertyDeclaration(member)) continue;
+        const text = member.initializer ? unwrap(ts, member.initializer).getText().trim() : undefined;
+        fields.set(member.name.getText(), text !== undefined && constants.has(text) ? constants.get(text) : text);
+      }
+      const defaults = new Map();
+      const accessors = new Set();
+      const uninitialized = new Set();
+      for (const member of node.members) {
+        if (!ts.isGetAccessorDeclaration(member) || !isPropertyDecorated(ts, member)) continue;
+        const name = member.name.getText();
+        accessors.add(name);
+        const tagged = ts
+          .getJSDocTags(member)
+          .find((tag) => tag.tagName.text === 'default');
+        const taggedText = typeof tagged?.comment === 'string' ? tagged.comment.trim() : undefined;
+        if (taggedText) {
+          defaults.set(name, taggedText.replace(/^`(.*)`$/u, '$1'));
+          continue;
+        }
+        const statements = member.body?.statements ?? [];
+        if (statements.length !== 1 || !ts.isReturnStatement(statements[0])) continue;
+        const returned = unwrap(ts, statements[0].expression);
+        if (
+          !returned ||
+          !ts.isPropertyAccessExpression(returned) ||
+          returned.expression.kind !== ts.SyntaxKind.ThisKeyword
+        )
+          continue;
+        const backing = returned.name.getText();
+        if (!fields.has(backing)) continue;
+        const initializer = fields.get(backing);
+        // An uninitialized backing field is the accessor form of an optional `@property` field:
+        // it has no default, exactly like its plain-field siblings.
+        if (initializer === undefined) uninitialized.add(name);
+        else if (SIMPLE_DEFAULT.test(initializer)) defaults.set(name, initializer);
+      }
+      if (defaults.size > 0) defaultsByClass.set(key, defaults);
+      for (const name of uninitialized) accessors.delete(name);
+      if (accessors.size > 0) accessorsByClass.set(key, accessors);
+    },
+    packageLinkPhase({ customElementsManifest }) {
+      for (const module of customElementsManifest.modules ?? []) {
+        for (const declaration of module.declarations ?? []) {
+          for (const member of declaration.members ?? []) {
+            if (member.kind !== 'field' || member.default !== undefined) continue;
+            const value = defaultsByClass.get(ownerKey(module, declaration, member))?.get(member.name);
+            if (value === undefined) continue;
+            member.default = value;
+            const attribute = (declaration.attributes ?? []).find(
+              (candidate) =>
+                candidate.fieldName === member.name ||
+                (member.attribute !== undefined && candidate.name === member.attribute)
+            );
+            if (attribute && attribute.default === undefined) attribute.default = value;
+          }
+        }
+      }
+    },
+  };
+  const gate = {
+    name: 'lr-accessor-default-gate',
+    packageLinkPhase({ customElementsManifest }) {
+      assertAccessorDefaults(customElementsManifest, accessorsByClass);
+    },
+  };
+  return { derive, gate };
+}
+
+/**
+ * Fails the manifest when an attribute-backed public `@property` accessor of a custom element
+ * still has no default after every projection: editor data and the llms default gate would
+ * otherwise have nothing to show or compare. Give the accessor a simple backing-field
+ * initializer or a JSDoc `@default` tag.
+ */
+export function assertAccessorDefaults(customElementsManifest, accessorsByClass) {
+  const missing = [];
+  for (const module of customElementsManifest.modules ?? []) {
+    for (const declaration of module.declarations ?? []) {
+      if (!declaration.tagName) continue;
+      for (const attribute of declaration.attributes ?? []) {
+        const member = (declaration.members ?? []).find(
+          (candidate) => candidate.kind === 'field' && candidate.name === attribute.fieldName
+        );
+        if (!member || member.privacy === 'private' || member.privacy === 'protected') continue;
+        if (!accessorsByClass.get(ownerKey(module, declaration, member))?.has(member.name)) continue;
+        if (member.default === undefined && attribute.default === undefined) {
+          missing.push(`${declaration.tagName}.${member.name}`);
+        }
+      }
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `attribute-backed accessors without a manifest default (add a backing-field initializer or ` +
+        `a JSDoc @default tag): ${[...new Set(missing)].sort().join(', ')}`
+    );
+  }
+}
+
 function emptyNamedReexportsPlugin() {
   const exportCounts = new WeakMap();
   return {
@@ -756,6 +905,8 @@ function emptyNamedReexportsPlugin() {
     },
   };
 }
+
+const accessorDefaults = accessorBackingDefaultsPlugins();
 
 export default {
   // Programmatic analysis must stay read-only. The analyzer's package-json helper resolves from
@@ -1767,6 +1918,7 @@ export default {
         sortManifest(customElementsManifest);
       },
     },
+    accessorDefaults.derive,
     {
       name: 'lr-accessor-runtime-contracts',
       // CEM cannot infer the initial value of a hand-written accessor from its private backing
@@ -2065,6 +2217,7 @@ export default {
         sortManifest(customElementsManifest);
       },
     },
+    accessorDefaults.gate,
     {
       name: 'lr-event-runtime-contracts',
       packageLinkPhase({ customElementsManifest }) {

@@ -53,7 +53,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_MATCH_LIMIT, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
@@ -64,8 +64,6 @@ import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewR
 const MAX_NODES = 50_000;
 const MAX_RENDERED_ROWS = 5_000;
 const MAX_DEPTH = 256;
-const MAX_SEARCH_MATCHES = 10_000;
-const MAX_PAINTED_HIGHLIGHTS = 100;
 
 type PathSegment = number | string;
 
@@ -93,7 +91,7 @@ interface SearchState {
   paths: Set<string>;
   /** Match path keys in document order -- what `activeSearchIndex` indexes into. */
   ordered: string[];
-  /** False when more than `MAX_SEARCH_MATCHES` nodes match and `ordered.length` is a lower bound. */
+  /** False when more than `VIEWER_SEARCH_MATCH_LIMIT` nodes match and `ordered.length` is a lower bound. */
   matchCountExact: boolean;
 }
 
@@ -1011,7 +1009,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         }
         if (!budget.complete) matchCountExact = false;
         if (hit) {
-          if (ordered.length === MAX_SEARCH_MATCHES) {
+          if (ordered.length === VIEWER_SEARCH_MATCH_LIMIT) {
             matchCountExact = false;
             tagMatches.delete(pathKey);
             textMatches.delete(pathKey);
@@ -1110,7 +1108,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         seen.add(highlight.id);
         const key = highlight.anchor.kind === 'node-path' ? this.sourcePathKey(highlight.anchor.path) : undefined;
         if (key !== undefined) admitted.push({ highlight, key });
-        if (admitted.length >= MAX_PAINTED_HIGHLIGHTS) break;
+        if (admitted.length >= VIEWER_PAINTED_HIGHLIGHT_LIMIT) break;
       }
       admitted.forEach(({ highlight, key }, index) => { if (!byPath.has(key)) byPath.set(key, { highlight, index, total: admitted.length }); });
       return byPath;
@@ -1131,7 +1129,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         highlight,
         pathKey: JSON.stringify(highlight.anchor.path.filter((s): s is number => typeof s === 'number')),
       });
-      if (resolved.length >= MAX_PAINTED_HIGHLIGHTS) break;
+      if (resolved.length >= VIEWER_PAINTED_HIGHLIGHT_LIMIT) break;
     }
     resolved.forEach(({ highlight, pathKey }, index) => {
       if (!byPath.has(pathKey)) byPath.set(pathKey, { highlight, index, total: resolved.length });

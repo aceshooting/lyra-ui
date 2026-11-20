@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Алат',
   schemaViewerLabel: 'Прегледач шеме',
   schemaViewerEmpty: 'Нема доступне шеме',
-  schemaViewerRequired: 'Обавезно',
   schemaViewerCircular: 'Кружна референца у шеми',
   schemaViewerType: 'Тип: {type}',
   subagentPanelLabel: 'Подагенти',

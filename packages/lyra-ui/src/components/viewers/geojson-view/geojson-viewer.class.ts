@@ -529,7 +529,8 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * @customElement lr-geojson-viewer
  * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
  * @event lr-viewer-diagnostic - Reports a recoverable maplibre-gl failure while the fallback remains visible.
- * @event lr-render-error - Fetch, parse, shape-validation, or missing-map-capability failure.
+ * @event lr-render-error - Fetch, parse, or shape-validation failure. A missing map library is
+ *   recoverable and reported only through `lr-viewer-diagnostic`.
  *   `detail: { error }`. A missing optional MapLibre peer leaves the serialized metadata fallback
  *   visible while reporting the degraded map capability.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever searchable
@@ -805,7 +806,6 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     if (!maplibre) {
       const error = new LyraUserFacingError(this.localize('geojsonViewMissingMapLibrary'));
       this.emit('lr-viewer-diagnostic', { diagnostic: { code: 'geojson-map-unavailable', severity: 'warning', fatal: false, source: 'maplibre-gl', cause: error } });
-      if (!this.transport.isStale(token)) this.emit('lr-render-error', { error });
     }
   }
 

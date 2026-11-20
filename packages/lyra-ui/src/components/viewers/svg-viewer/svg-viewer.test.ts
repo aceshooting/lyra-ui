@@ -569,7 +569,7 @@ describe('region highlights', () => {
       const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
       const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
       expect((region) != null).to.equal(true);
-      expect(target.getAttribute('role')).to.equal('button');
+      expect([target.localName, target.getAttribute('aria-current')]).to.deep.equal(['button', 'false']);
       expect(region.style.left).to.equal('10%');
     } finally {
       restore();

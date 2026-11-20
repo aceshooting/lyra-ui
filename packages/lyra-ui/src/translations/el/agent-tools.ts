@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Εργαλείο',
   schemaViewerLabel: 'Προβολή σχήματος',
   schemaViewerEmpty: 'Δεν υπάρχει διαθέσιμο σχήμα',
-  schemaViewerRequired: 'Υποχρεωτικό',
   schemaViewerCircular: 'Κυκλική αναφορά σχήματος',
   schemaViewerType: 'Τύπος: {type}',
   subagentPanelLabel: 'Υποπράκτορες',

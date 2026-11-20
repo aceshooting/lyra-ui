@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderThemeCoreCss, renderThemeCss } from './theme-document-layer.mjs';
-import { readStyleModel, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, quote, STYLE_VERSION } from './style-axes-model.mjs';
+import { readStyleModel, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, quote, STYLE_VERSION } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const model = readStyleModel(packageDir);
@@ -109,8 +109,7 @@ const object = values => `{\n${Object.entries(values).map(([key, value]) => `  $
 const generated = `// GENERATED STYLE MODEL: START\nconst STYLE_DEFAULTS = Object.freeze(${object(model.defaults)} as const);\nconst STYLE_DENSITY: readonly string[] = ${array(model.density)};\nconst STYLE_FOLLOW: readonly string[] = ${array(model.follow)};\nconst STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: readonly string[]; dark: readonly string[] }>> = ${object(references)};\nconst STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {\n  light: ${array(contrastReferences.light)},\n  dark: ${array(contrastReferences.dark)},\n};\nconst STYLE_GEMSTONES: Readonly<Record<string, string>> = ${object(gemstones)};\n// GENERATED STYLE MODEL: END`;
 const runtimePath = 'src/theme/theme.ts';
 const runtime = readFileSync(join(packageDir, runtimePath), 'utf8');
-if (!runtime.includes('// GENERATED STYLE MODEL: START')) throw new Error('Style model marker missing');
-outputs.set(runtimePath, runtime.replace(/\/\/ GENERATED STYLE MODEL: START[\s\S]*?\/\/ GENERATED STYLE MODEL: END/, () => generated));
+outputs.set(runtimePath, replaceStyleModelBlock(runtime, generated, runtimePath));
 let stale = false;
 for (const [relative, content] of outputs) {
   const path = join(packageDir, relative);

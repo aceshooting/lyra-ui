@@ -6,6 +6,7 @@ export type LyraViewerDiagnosticCode =
   | 'delimited-parse-diagnostic'
   | 'geojson-map-unavailable'
   | 'notebook-sanitizer-unavailable'
+  | 'notebook-output-too-large'
   | 'docx-conversion-message'
   | 'pptx-slide-render-error'
   | 'pptx-node-render-error'
@@ -13,9 +14,9 @@ export type LyraViewerDiagnosticCode =
 
 /**
  * Structured detail for `lr-viewer-diagnostic`. Diagnostics are not user-facing strings.
- * Recoverable diagnostics set `fatal: false`. GeoJSON and notebook viewers also preserve their existing
- * `lr-render-error` notification for unavailable optional peers. A fatal
- * post-load peer diagnostic sets `fatal: true` and accompanies the terminal error state.
+ * Recoverable diagnostics set `fatal: false` and never accompany `lr-render-error`, which stays
+ * reserved for terminal failures. A fatal post-load peer diagnostic sets `fatal: true` and
+ * accompanies the terminal error state.
  */
 export interface LyraViewerDiagnostic {
   readonly code: LyraViewerDiagnosticCode;

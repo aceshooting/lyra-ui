@@ -338,8 +338,9 @@ function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
  * deliberately ships no `label`/`hint`/`errorText` chrome or native form association (the
  * `label`/`hint`/`error` triad those controls share doesn't fit a multi-row, multi-field
  * composite the way it fits one value). A host names the whole control via a plain `aria-label`
- * attribute, applied to the element that owns `role="group"`. The group and each condition expose
- * explicit `aria-invalid="true"|"false"` from the live validation result.
+ * attribute, applied to the element that owns `role="group"`. The group exposes explicit
+ * `aria-invalid="true"|"false"` from the live validation result; within a row, the control that
+ * failed validation carries the invalid state and its error text (a `listitem` row cannot).
  *
  * @customElement lr-condition-builder
  * @event lr-input - `detail: { value }` — the full current value, after any user-driven change.
@@ -872,7 +873,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         role="listitem"
         data-id=${condition.id}
         data-validation-code=${validationCode ?? nothing}
-        aria-invalid=${validationCode ? 'true' : 'false'}
       >
         <lr-select
           part="field-select"

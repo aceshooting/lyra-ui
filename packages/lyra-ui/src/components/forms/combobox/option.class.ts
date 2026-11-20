@@ -188,6 +188,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   /**
    * The option's effective plain-text label. An explicit non-empty property/attribute wins;
    * otherwise this resolves to {@link defaultLabel}. Property writes intentionally do not reflect.
+   * @default ''
    */
   @property()
   get label(): string {

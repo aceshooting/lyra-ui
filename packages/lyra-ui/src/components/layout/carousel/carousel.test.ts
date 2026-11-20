@@ -1242,6 +1242,29 @@ it("mirrors the previous/next chevron glyphs under RTL", async () => {
   expect(getComputedStyle(glyph).transform).to.contain("matrix(-1");
 });
 
+it("renders the default previous/next icons as one chevron pointing toward each control's side", async () => {
+  // [a] of the effective matrix is the x-axis: 1 keeps the right-pointing chevron, -1 points it left.
+  const pointsRight = (root: ShadowRoot, part: string) => {
+    let matrix = new DOMMatrix();
+    const wrapper = root.querySelector(`[part="${part}"]`) as HTMLElement;
+    for (const node of [wrapper, wrapper.querySelector<HTMLElement>('.start-chevron')]) {
+      const transform = node ? getComputedStyle(node).transform : 'none';
+      if (transform !== 'none') matrix = matrix.multiply(new DOMMatrix(transform));
+    }
+    expect(wrapper.querySelector('svg') !== null, part).to.equal(true);
+    expect(wrapper.textContent?.trim(), part).to.equal('');
+    return matrix.a > 0;
+  };
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = await carousel(html`
+      <lr-carousel dir=${direction} navigation><div>One</div><div>Two</div></lr-carousel>
+    `);
+    const root = el.shadowRoot!;
+    expect(pointsRight(root, 'previous-glyph'), `${direction} previous`).to.equal(direction === 'rtl');
+    expect(pointsRight(root, 'next-glyph'), `${direction} next`).to.equal(direction === 'ltr');
+  }
+});
+
 it("disables autoplay under prefers-reduced-motion", async () => {
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = ((query: string) => ({

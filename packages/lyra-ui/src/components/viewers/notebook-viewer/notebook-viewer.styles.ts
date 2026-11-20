@@ -174,8 +174,6 @@ export const styles = css`
     ${focusRingShorthand}
   }
   [part='error'] {
-    border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-danger);
-    padding-inline-start: var(--lr-space-xs);
     color: var(--lr-color-danger);
     padding: var(--lr-space-l);
     text-align: center;

@@ -135,6 +135,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistem',
   promptStudioRoleUser: 'Pamaké',
   promptStudioRoleAssistant: 'Asisten',
+  schemaViewerRequired: 'Wajib',
   statusUnknown: 'Teu dipikanyaho',
   moveUp: 'Pindah ka luhur',
   moveDown: 'Pindah ka handap',

@@ -40,8 +40,9 @@ scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
 **Slots:** default scrollable content.
 
 **CSS parts:** `base`, `viewport`, `content`, `start-shadow`, `end-shadow`, `previous`, `next`,
-`control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the chevron inside
-each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
+`control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the SVG chevron
+inside each, pointed by the part: toward the inline start/end, mirrored under RTL, and up/down in a
+vertical scroller). A host `aria-describedby` is projected onto the focusable `viewport` region. Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
 vertical scroller. Before the first client measurement, both cues are hidden and both optional
 controls are disabled, so server-rendered markup never advertises a false scroll direction. A control

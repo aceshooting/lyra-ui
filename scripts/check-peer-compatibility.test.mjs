@@ -108,9 +108,14 @@ function authorityFixture() {
     managedPeerRanges: { ...MANAGED_PEER_RANGES },
     currentVersions: { ...CURRENT_VERSIONS },
     toolchain: {
+      '@types/node': '22.20.5',
+      '@types/react': '19.3.0',
       playwright: '1.63.0',
+      react: '19.3.1',
+      svelte: '5.58.0',
       typescript: '7.0.2',
       vite: '8.2.2',
+      vue: '3.5.45',
     },
     packageManagers: {
       npm: '10.9.8',
@@ -3340,6 +3345,17 @@ test('embeds deterministic consumer-owned capability fixtures for both package m
   }
 });
 
+test('every fixture toolchain pin is a version the workspace lockfile resolves', async () => {
+  const { toolchain } = JSON.parse(
+    await readFile(new URL('./peer-compatibility-profiles.json', import.meta.url), 'utf8'),
+  );
+  const lockfile = await readFile(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8');
+  for (const [name, version] of Object.entries(toolchain)) {
+    const key = name.startsWith('@') ? `'${name}@${version}'` : `${name}@${version}`;
+    assert.ok(lockfile.includes(`\n  ${key}:`), `${name} ${version} is resolved by pnpm-lock.yaml`);
+  }
+});
+
 test('synchronizes the fixture toolchain from the workspace dev ranges', async () => {
   const { synchronizeAuthorityCurrentVersions } = await loadChecker();
   const authority = authorityFixture();
@@ -3351,6 +3367,6 @@ test('synchronizes the fixture toolchain from the workspace dev ranges', async (
     lockfileText: lockfileFixture(),
     rootManifest: { packageManager: 'pnpm@12.4.2', devDependencies: { playwright: '^1.70.0', vite: '~9.0.1' } },
   });
-  assert.deepEqual(synchronized.toolchain, { playwright: '1.70.0', typescript: '7.1.0', vite: '9.0.1' });
+  assert.deepEqual(synchronized.toolchain, { ...authorityFixture().toolchain, playwright: '1.70.0', typescript: '7.1.0', vite: '9.0.1' });
   assert.deepEqual(authority.toolchain, authorityFixture().toolchain, 'the input authority remains immutable');
 });

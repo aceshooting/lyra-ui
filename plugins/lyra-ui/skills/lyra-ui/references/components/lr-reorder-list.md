@@ -80,7 +80,7 @@ communicate the outcome itself. Both methods no-op when nothing is pending.
 
 **Slots:** default — `<lr-reorder-item>` elements.
 
-**CSS parts:** `base` — the internal `role="list"` wrapper.
+**CSS parts:** `base` — the internal `role="list"` wrapper. A host `aria-describedby` is projected onto that list.
 
 **Themeable custom properties:** `--lr-reorder-list-gap` (default `var(--lr-space-2xs)`) — gap
 between rows.

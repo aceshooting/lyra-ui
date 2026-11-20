@@ -1,11 +1,12 @@
 import { css } from 'lit';
 import {
+  formControlFocusHalo,
+  formControlInvalidBorder,
+  formControlLabelDisplay,
   formControlLabelTypography,
+  formControlRequiredMarker,
   formControlSupportingText,
   formControlTextWrap,
-  formControlFocusHalo,
-  formControlRequiredMarker,
-  formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { activeFill, disabledControl, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
@@ -112,13 +113,6 @@ export const styles = css`
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-phone-input-focus-border-color, var(--lr-color-brand));
     ${formControlFocusHalo}
-  }
-
-  :host([data-invalid]) [part='input-wrapper'] {
-    border-color: var(
-      --lr-phone-input-invalid-border-color,
-      var(--lr-form-control-invalid-border-color, var(--lr-phone-input-border-color, var(--_lr-phone-input-border-color-default)))
-    );
   }
 
   /* :host(:disabled), not :host([disabled]): a form-associated custom element (FormAssociated
@@ -294,4 +288,5 @@ export const styles = css`
   [part='error'] {
     ${formControlTextWrap}
   }
+  ${formControlInvalidBorder(css`[part='input-wrapper']`, css`--lr-phone-input-invalid-border-color`)}
 `;

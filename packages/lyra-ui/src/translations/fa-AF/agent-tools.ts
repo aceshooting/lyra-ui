@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'ابزار',
   schemaViewerLabel: 'نمایشگر طرح',
   schemaViewerEmpty: 'طرحی موجود نیست',
-  schemaViewerRequired: 'الزامی',
   schemaViewerCircular: 'ارجاع دورانی به طرح',
   schemaViewerType: 'نوع: {type}',
   subagentPanelLabel: 'زیرایجنت‌ها',

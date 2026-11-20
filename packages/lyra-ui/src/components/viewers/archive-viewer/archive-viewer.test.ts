@@ -368,12 +368,13 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
-  it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name, and batches to a single requestUpdate per gesture', async () => {
+  it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name, and stops re-rendering the host once the nested list is bound', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
     try {
       el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('style[data-lr-archive-highlight-styles]') != null);
+      await el.updateComplete;
       let leaked = 0;
       el.addEventListener('lr-visible-range-change', () => leaked++);
       let requestUpdateCalls = 0;
@@ -384,13 +385,12 @@ describe('lr-archive-viewer', () => {
       }) as typeof el.requestUpdate;
       const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const detail = { start: 0, end: 1 };
-      // Two rapid real dispatches (a fast scroll can retrigger this within the same microtask
-      // window) must still coalesce to one requestUpdate(), not one call per dispatch.
+      // Scroll-frequency windowing events cost no host render once the nested root is bound.
       list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }));
-      list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }));
+      list.dispatchEvent(new CustomEvent('lr-virtual-scroll', { detail, bubbles: true, composed: true }));
       await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(() => resolve())));
       expect(leaked).to.equal(0);
-      expect(requestUpdateCalls).to.equal(1);
+      expect(requestUpdateCalls).to.equal(0);
     } finally {
       restore();
     }

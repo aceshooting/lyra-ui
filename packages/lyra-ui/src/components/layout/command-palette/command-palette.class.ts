@@ -28,6 +28,7 @@ import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } f
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { closeIcon, searchIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteInputLimit, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResultCount, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings/layout.generated.js';
@@ -174,6 +175,12 @@ function projectCommands(value: unknown): readonly CanonicalCommand[] {
   return projectFrozenRows(value, projectCommand, MAX_COMMAND_PALETTE_COMMANDS,
     EMPTY_CANONICAL_COMMANDS, command => command.commandId);
 }
+
+/** Folded search corpus per canonical command view; the view is replaced, never mutated. */
+const commandHaystacks = createHaystackMemo<CanonicalCommand>((command, locale) => foldSearchText(
+  [command.label, command.description ?? '', command.group ?? '', ...command.keywords].join(' '),
+  locale
+));
 export type LyraCommandPaletteCloseReason = 'api' | 'escape' | 'backdrop' | 'select';
 
 /** The affordance that requested palette dismissal. */
@@ -361,12 +368,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private readonly listScrollFrame = new OwnedFrame(this);
   /** Window that owns listeners, observers, and animation frames for the current connection. */
   private runtimeWindow?: Window;
-  /** The canonical command view `haystacks` was built from -- reference-keyed memo, since `commands`
-   *  only ever changes by reassignment (it's `attribute: false`; in-place mutation wouldn't
-   *  trigger a re-render either). */
-  private haystacksFor?: readonly CanonicalCommand[];
-  private haystacksLocale = '';
-  private haystacks: string[] = [];
   private filteredForCommands?: readonly CanonicalCommand[];
   private filteredForQuery = '';
   private filteredForLocale = '';
@@ -402,28 +403,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     return this.normalizedRows;
   }
 
-  /** One lowercased searchable string per command, index-aligned with `commands`. `filtered`
-   *  runs on every keystroke (and every ArrowUp/ArrowDown/Enter), so re-joining and lowercasing
-   *  every row per call would scale with palette size for a result that only changes when the
-   *  command list itself does. */
-  private get searchHaystacks(): string[] {
-    const locale = this.effectiveLocale;
-    const commands = this.effectiveCommands;
-    if (this.haystacksFor !== commands || this.haystacksLocale !== locale) {
-      this.haystacksFor = commands;
-      this.haystacksLocale = locale;
-      this.haystacks = commands.map((command) =>
-        [
-          command.label,
-          command.description ?? '',
-          command.group ?? '',
-          ...command.keywords,
-        ]
-          .join(' ')
-          .toLocaleLowerCase(locale)
-      );
-    }
-    return this.haystacks;
+  /** One folded (case- and accent-insensitive) searchable string per command, index-aligned
+   *  with `commands`. `filtered` runs on every keystroke, so the corpus is memoized per command
+   *  view and locale rather than re-folded per call. */
+  private get searchHaystacks(): readonly string[] {
+    return commandHaystacks(this.effectiveCommands, this.effectiveLocale);
   }
 
   private activeLookup?: { rows: CanonicalCommand[]; indexes: Map<string, number> };
@@ -737,7 +721,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private get filtered(): CanonicalCommand[] {
     const locale = this.effectiveLocale;
-    const query = this.queryText.trim().toLocaleLowerCase(locale);
+    const query = prepareNeedle(this.queryText, locale);
     const commands = this.effectiveCommands;
     if (
       this.filteredForCommands !== commands ||

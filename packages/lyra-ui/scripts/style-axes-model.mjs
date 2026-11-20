@@ -27,6 +27,28 @@ const densityNames = [
   '--lr-theme-icon-button-size',
 ];
 
+const STYLE_MODEL_START = '// GENERATED STYLE MODEL: START';
+const STYLE_MODEL_END = '// GENERATED STYLE MODEL: END';
+// Column-0 lines the generator emits: a STYLE_* declaration or the bracket that closes one. Indented
+// lines are its data; any other top-level statement is authored code the rewrite would discard.
+const STYLE_MODEL_LINE = /^(?:const STYLE_[A-Z_]+\b.*|[}\]].*|\s.*|)$/u;
+
+/** Replace the single generated style-model block, failing closed on missing, repeated or foreign content. */
+export function replaceStyleModelBlock(source, generated, label = 'src/theme/theme.ts') {
+  const start = source.indexOf(STYLE_MODEL_START);
+  const end = source.indexOf(STYLE_MODEL_END);
+  if (start < 0 || end < start) throw new Error(`${label}: style model START/END marker pair missing`);
+  if (source.includes(STYLE_MODEL_START, start + 1) || source.includes(STYLE_MODEL_END, end + 1)) {
+    throw new Error(`${label}: duplicate style model markers`);
+  }
+  const inner = source.slice(start + STYLE_MODEL_START.length, end).split('\n').slice(1, -1);
+  const authored = inner.find((line) => !STYLE_MODEL_LINE.test(line));
+  if (authored !== undefined) {
+    throw new Error(`${label}: authored code inside the generated style model block would be discarded: ${authored}`);
+  }
+  return source.slice(0, start) + generated + source.slice(end + STYLE_MODEL_END.length);
+}
+
 export function validateLook(look) {
   if (!look || typeof look.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(look.id) || look.id.length > 64 || look.id === 'custom') throw new Error('Invalid look id');
   if (!look.tokens || typeof look.tokens !== 'object' || Array.isArray(look.tokens)) throw new Error(`${look.id}: invalid look tokens`);

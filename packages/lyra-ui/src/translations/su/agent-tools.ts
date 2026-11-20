@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Pakakas',
   schemaViewerLabel: 'Pintonan schema',
   schemaViewerEmpty: 'Schema teu sadia',
-  schemaViewerRequired: 'Wajib',
   schemaViewerCircular: 'Rujukan schema sirkular',
   schemaViewerType: 'Jenis: {type}',
   subagentPanelLabel: 'Subagent',

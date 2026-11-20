@@ -278,7 +278,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Įrankis',
   schemaViewerLabel: 'Schemos peržiūra',
   schemaViewerEmpty: 'Schemos nėra',
-  schemaViewerRequired: 'Privaloma',
   schemaViewerCircular: 'Ciklinė schemos nuoroda',
   schemaViewerType: 'Tipas: {type}',
   subagentPanelLabel: 'Subagentai',

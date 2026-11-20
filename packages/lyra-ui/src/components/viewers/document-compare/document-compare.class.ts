@@ -24,7 +24,7 @@ import type {
 import { styles } from './document-compare.styles.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
-import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
+import { EMPTY_HIGHLIGHTS, snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -53,8 +53,6 @@ const DOCUMENT_COMPARE_DIFF_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
   ['unified', 'split'],
   'unified',
 );
-
-const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
 
 export interface LyraDocumentCompareEventMap
   extends Pick<LyraAnchorTargetEventMap, 'lr-text-select' | 'lr-anchor-result'> {

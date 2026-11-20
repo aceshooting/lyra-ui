@@ -214,3 +214,15 @@ export const DescribedRequiredEditor: Story = {
     </form>
   `,
 };
+
+export const Appearance: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <lr-code-editor appearance="outlined" label="outlined"></lr-code-editor>
+      <lr-code-editor appearance="filled-outlined" label="filled-outlined"></lr-code-editor>
+      <lr-code-editor appearance="filled" label="filled"></lr-code-editor>
+      <lr-code-editor appearance="plain" label="plain"></lr-code-editor>
+      <lr-code-editor appearance="accent" label="accent"></lr-code-editor>
+    </div>
+  `,
+};

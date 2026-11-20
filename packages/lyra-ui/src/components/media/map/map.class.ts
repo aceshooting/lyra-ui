@@ -54,7 +54,7 @@ export type { LyraMapPosition, LyraMapQuaternion, LyraMapModelFormat, LyraMapMod
   LyraMapSceneObject, LyraMapScene, LyraMapSceneErrorCode, LyraMapSceneStateDetail,
   LyraMapSceneActivateDetail } from './map-scene-types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { chartValueFractionDigits, formatChartValue } from '../../../internal/chart-number-format.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -2826,7 +2826,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * Compared by value against the last value assigned: a new array holding the same two numbers
    * is not a new request, even after a gesture, fit or camera command, so a framework that
    * rebuilds an equal array on every render never pulls the map back over the user's pan. A
-   * different value still moves the camera; `jumpTo()` is the explicit way to re-centre. */
+   * different value still moves the camera; `jumpTo()` is the explicit way to re-centre.
+   * @default [0, 0]
+   */
   @property({ type: Array })
   get center(): readonly [number, number] {
     return this._center;
@@ -8873,17 +8875,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  /** A metric distance in the component locale: metres below 1 km, kilometres above. */
+  /** A metric distance in the component locale: metres below 1 km, kilometres above. Below one
+   *  metre, two significant digits keep a short non-zero segment from reading as `0 m`. */
   private formatDistance(metres: number): string {
     return metres < 1000
-      ? getNumberFormat(this.effectiveLocale, { style: 'unit', unit: 'meter', unitDisplay: 'short', maximumFractionDigits: 0 }).format(metres)
+      ? getNumberFormat(this.effectiveLocale, { style: 'unit', unit: 'meter', unitDisplay: 'short', maximumFractionDigits: chartValueFractionDigits(metres, 0, 2) }).format(metres)
       : getNumberFormat(this.effectiveLocale, { style: 'unit', unit: 'kilometer', unitDisplay: 'short', maximumFractionDigits: metres < 10_000 ? 2 : 1 }).format(metres / 1000);
   }
 
-  /** A metric area in the component locale: square metres below 1 km², square kilometres above. */
+  /** A metric area in the component locale: square metres below 1 km², square kilometres above;
+   *  below one square metre, two significant digits keep a small area from reading as `0`. */
   private formatArea(squareMetres: number): string {
     return squareMetres < 1_000_000
-      ? this.localize('mapSquareMeters', undefined, { value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(squareMetres) })
+      ? this.localize('mapSquareMeters', undefined, { value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: chartValueFractionDigits(squareMetres, 0, 2) }).format(squareMetres) })
       : this.localize('mapSquareKilometers', undefined, { value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(squareMetres / 1_000_000) });
   }
 

@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Công cụ',
   schemaViewerLabel: 'Trình xem lược đồ',
   schemaViewerEmpty: 'Không có lược đồ nào',
-  schemaViewerRequired: 'Bắt buộc',
   schemaViewerCircular: 'Tham chiếu vòng trong lược đồ',
   schemaViewerType: 'Loại: {type}',
   subagentPanelLabel: 'Các tác tử phụ',

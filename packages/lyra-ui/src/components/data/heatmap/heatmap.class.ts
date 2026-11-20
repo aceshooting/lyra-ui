@@ -845,6 +845,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * mode, `CAL_CELL` (11) in calendar mode — so an existing consumer who
    * never touches `cellSize` sees no change in either mode. Set explicitly
    * (attribute or property), the same value governs both modes alike.
+   * @default 22
    */
   @property({
     type: Number,
@@ -1090,7 +1091,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
   private _bucketCount = DEFAULT_BUCKET_COUNT;
 
-  /** Number of colour-ramp buckets, floored and clamped to 2-256 (default 5). Calendar mode only; matrix mode ignores it. */
+  /**
+   * Number of colour-ramp buckets, floored and clamped to 2-256 (default 5). Calendar mode only; matrix mode ignores it.
+   * @default 5
+   */
   @property({ attribute: 'bucket-count', converter: bucketCountConverter })
   get bucketCount(): number {
     return this._bucketCount;

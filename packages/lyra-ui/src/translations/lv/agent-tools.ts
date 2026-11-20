@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Rīks',
   schemaViewerLabel: 'Shēmas skatītājs',
   schemaViewerEmpty: 'Nav pieejamas shēmas',
-  schemaViewerRequired: 'Obligāts',
   schemaViewerCircular: 'Cikliska shēmas atsauce',
   schemaViewerType: 'Tips: {type}',
   subagentPanelLabel: 'Apakšaģenti',

@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'ကိရိယာ',
   schemaViewerLabel: 'Schema ကြည့်ကိရိယာ',
   schemaViewerEmpty: 'Schema မရှိပါ',
-  schemaViewerRequired: 'လိုအပ်သည်',
   schemaViewerCircular: 'စက်ဝိုင်းပုံ schema ကိုးကားချက်',
   schemaViewerType: 'အမျိုးအစား: {type}',
   subagentPanelLabel: 'အောက်ခံအေးဂျင့်များ',

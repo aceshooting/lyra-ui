@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: '도구',
   schemaViewerLabel: '스키마 뷰어',
   schemaViewerEmpty: '사용 가능한 스키마 없음',
-  schemaViewerRequired: '필수 항목입니다',
   schemaViewerCircular: '원형 스키마 참조',
   schemaViewerType: '유형: {type}',
   subagentPanelLabel: '하위 에이전트',

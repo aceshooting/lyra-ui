@@ -143,6 +143,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Córas',
   promptStudioRoleUser: 'Úsáideoir',
   promptStudioRoleAssistant: 'Cúntóir',
+  schemaViewerRequired: 'Riachtanach',
   statusUnknown: 'Anaithnid',
   moveUp: 'Bog suas',
   moveDown: 'Bog síos',

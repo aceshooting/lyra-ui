@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'መሣሪያ',
   schemaViewerLabel: 'የስኪማ መመልከቻ',
   schemaViewerEmpty: 'ስኪማ አይገኝም',
-  schemaViewerRequired: 'አስፈላጊ',
   schemaViewerCircular: 'ዑደታዊ የስኪማ ማጣቀሻ',
   schemaViewerType: 'ዓይነት: {type}',
   subagentPanelLabel: 'ንዑስ ወኪሎች',

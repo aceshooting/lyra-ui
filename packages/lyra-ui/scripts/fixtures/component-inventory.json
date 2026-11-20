@@ -2347,7 +2347,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "live"
           },
           {
             "name": "size",
@@ -2456,7 +2457,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "live"
           },
           {
             "name": "renderText",
@@ -3125,7 +3127,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           }
         ],
         "properties": [
@@ -3214,7 +3217,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           },
           {
             "name": "value",
@@ -4294,7 +4298,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "composer-submit-disabled",
@@ -4621,7 +4626,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "composerSubmitDisabled",
@@ -6275,7 +6281,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "timingPreset",
@@ -7819,7 +7826,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "href",
@@ -7918,7 +7926,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "href",
@@ -10516,7 +10525,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "bars"
           },
           {
             "name": "state",
@@ -10525,7 +10535,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           }
         ],
         "properties": [
@@ -10585,7 +10596,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "bars"
           },
           {
             "name": "state",
@@ -10594,7 +10606,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "stream",
@@ -10892,7 +10905,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "currentTime",
@@ -11054,7 +11068,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           }
         ],
         "slots": [],
@@ -15335,7 +15350,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "agent"
           },
           {
             "name": "frame-src",
@@ -15344,7 +15360,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -15363,7 +15380,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "url",
@@ -15394,7 +15412,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "agent"
           },
           {
             "name": "frameSrc",
@@ -15403,7 +15422,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -15422,7 +15442,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "pings",
@@ -18552,7 +18573,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "month"
           },
           {
             "name": "view-date",
@@ -18622,7 +18644,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "month"
           },
           {
             "name": "viewDate",
@@ -19295,7 +19318,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "inline",
@@ -19395,7 +19419,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "inline",
@@ -22648,7 +22673,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "engine",
@@ -22954,7 +22980,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "inline"
           },
           {
             "name": "aria-label",
@@ -22993,7 +23020,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "custom-error",
@@ -23160,7 +23188,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "submit-disabled",
@@ -23251,7 +23280,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "inline"
           },
           {
             "name": "autocapitalize",
@@ -23280,7 +23310,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "customError",
@@ -23502,7 +23533,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "submitDisabled",
@@ -27065,7 +27097,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "toggleable",
@@ -27093,7 +27126,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "neutral"
           },
           {
             "name": "with-remove",
@@ -27102,7 +27136,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "wrap",
@@ -27173,7 +27208,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "toggleable",
@@ -27201,7 +27237,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "neutral"
           },
           {
             "name": "withRemove",
@@ -27210,7 +27247,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "wrap",
@@ -27964,7 +28002,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "label",
@@ -28025,7 +28064,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "label",
@@ -29671,6 +29711,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string",
@@ -30001,6 +30051,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
           },
           {
             "name": "autocapitalize",
@@ -33838,6 +33898,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -34335,7 +34401,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -34385,7 +34452,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [],
@@ -35944,7 +36012,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "disabled",
@@ -36013,7 +36082,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "size",
@@ -36074,7 +36144,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "disabled",
@@ -36143,7 +36214,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "returnFocusTo",
@@ -37678,7 +37750,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "bar"
           },
           {
             "name": "total",
@@ -37769,7 +37842,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "bar"
           },
           {
             "name": "total",
@@ -38197,7 +38271,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "conversation-id",
@@ -38308,7 +38383,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "conversationId",
@@ -40226,7 +40302,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -40375,7 +40452,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -41609,7 +41687,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "reject"
           },
           {
             "name": "columns",
@@ -41700,7 +41779,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "reject"
           },
           {
             "name": "columns",
@@ -42204,7 +42284,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "server",
@@ -42764,7 +42845,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "server",
@@ -44002,7 +44084,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -44132,7 +44215,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -44452,7 +44536,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "clear-label",
@@ -44962,7 +45047,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "clearable",
@@ -45928,6 +46014,12 @@
             "name": "--lr-form-control-font-size",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-form-control-label-color",
@@ -48740,7 +48832,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "unified"
           },
           {
             "name": "locale",
@@ -48868,7 +48961,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "unified"
           },
           {
             "name": "locale",
@@ -49421,7 +49515,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "collapsible",
@@ -49450,7 +49545,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "280px"
           },
           {
             "name": "locale",
@@ -49511,7 +49607,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "collapsible",
@@ -49540,7 +49637,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "280px"
           },
           {
             "name": "locale",
@@ -50325,7 +50423,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 10000
           },
           {
             "name": "search-term",
@@ -50507,7 +50606,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 10000
           },
           {
             "name": "searchTerm",
@@ -54023,7 +54123,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "aria-label",
@@ -54084,7 +54185,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "communityLabel",
@@ -57030,7 +57132,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "height",
@@ -57101,7 +57204,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "height",
@@ -57150,7 +57254,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "points",
@@ -57178,7 +57283,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "viewport",
@@ -61468,7 +61574,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "icon"
           },
           {
             "name": "name",
@@ -61538,7 +61645,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "icon"
           },
           {
             "name": "name",
@@ -63023,7 +63131,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "selectedPath",
@@ -63672,7 +63781,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "standard"
           },
           {
             "name": "label",
@@ -63709,7 +63819,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "rect"
           },
           {
             "name": "src",
@@ -63747,7 +63858,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "standard"
           },
           {
             "name": "label",
@@ -63793,7 +63905,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "rect"
           },
           {
             "name": "src",
@@ -64060,7 +64173,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "readonly",
@@ -64079,7 +64193,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "source-page-size",
@@ -64088,7 +64203,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 100
           }
         ],
         "properties": [
@@ -64236,7 +64352,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "readonly",
@@ -64273,7 +64390,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "sourcePageSize",
@@ -64282,7 +64400,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 100
           },
           {
             "name": "sourceTotal",
@@ -64864,7 +64983,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "without-lock",
@@ -64925,7 +65045,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "withoutLock",
@@ -65410,7 +65531,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "progress",
@@ -65448,7 +65570,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "status-detail",
@@ -65538,7 +65661,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "outputs",
@@ -65585,7 +65709,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "statusDetail",
@@ -67528,7 +67653,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "token-count",
@@ -67586,7 +67712,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "tokenCount",
@@ -70786,7 +70913,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 5
           },
           {
             "name": "cell-gap-x",
@@ -70825,7 +70953,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 22
           },
           {
             "name": "col-label-height",
@@ -70967,7 +71096,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "value-label",
@@ -71017,7 +71147,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 5
           },
           {
             "name": "calendarGeometry",
@@ -71083,7 +71214,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 22
           },
           {
             "name": "cellText",
@@ -71205,7 +71337,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "matrixViewport",
@@ -71214,7 +71347,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "maxCells",
@@ -71318,7 +71452,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "valueLabel",
@@ -72447,7 +72582,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "grid",
@@ -74847,7 +74983,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "position",
@@ -74908,7 +75045,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "horizontal"
           },
           {
             "name": "position",
@@ -75201,7 +75339,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "fit",
@@ -75210,7 +75349,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "contain"
           },
           {
             "name": "locale",
@@ -75259,7 +75399,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flat"
           },
           {
             "name": "rotation",
@@ -75268,7 +75409,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "src",
@@ -75358,7 +75500,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "fit",
@@ -75367,7 +75510,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "contain"
           },
           {
             "name": "highlights",
@@ -75444,7 +75588,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flat"
           },
           {
             "name": "rotation",
@@ -75453,7 +75598,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "src",
@@ -77765,6 +77911,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -78554,7 +78706,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "selectedPath",
@@ -80335,7 +80488,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "fit-to",
@@ -80442,7 +80596,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "source-page-size",
@@ -80451,7 +80606,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 100
           },
           {
             "name": "view",
@@ -80511,7 +80667,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "entityDetails",
@@ -80697,7 +80854,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "sourcePageSize",
@@ -80706,7 +80864,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 100
           },
           {
             "name": "sourceTotal",
@@ -82068,7 +82227,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "actual"
           },
           {
             "name": "index",
@@ -82137,7 +82297,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "without-counter",
@@ -82178,7 +82339,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "actual"
           },
           {
             "name": "images",
@@ -82265,7 +82427,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "withoutCounter",
@@ -83846,7 +84009,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "fit"
           },
           {
             "name": "legend-position",
@@ -83923,7 +84087,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "skip-zero",
@@ -84167,7 +84332,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "fit"
           },
           {
             "name": "legendPosition",
@@ -84272,7 +84438,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "selectedIndices",
@@ -84841,7 +85008,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "polite"
           },
           {
             "name": "throttle-ms",
@@ -84872,7 +85040,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "polite"
           },
           {
             "name": "throttleMs",
@@ -85115,7 +85284,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "option-display",
@@ -85405,7 +85575,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "optionDisplay",
@@ -85696,6 +85867,12 @@
             "name": "--lr-form-control-font-size",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-form-control-label-color",
@@ -86113,7 +86290,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[0, 0]"
           },
           {
             "name": "choropleth-legend",
@@ -86220,7 +86398,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "button"
           },
           {
             "name": "legend-gradient-hi-label",
@@ -86383,7 +86562,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[0, 0]"
           },
           {
             "name": "choropleth",
@@ -86575,7 +86755,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "button"
           },
           {
             "name": "legendGradient",
@@ -91518,7 +91699,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "label",
@@ -93140,7 +93322,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "detail-for",
@@ -93231,7 +93414,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "detail",
@@ -93663,7 +93847,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "markdown"
           },
           {
             "name": "disabled",
@@ -93760,7 +93945,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "chip"
           },
           {
             "name": "without-images",
@@ -93801,7 +93987,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "markdown"
           },
           {
             "name": "disabled",
@@ -93917,7 +94104,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "chip"
           },
           {
             "name": "widgetBindingState",
@@ -94563,7 +94751,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "custom-error",
@@ -94679,7 +94868,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placeholder",
@@ -94798,7 +94988,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "catalog",
@@ -94941,7 +95132,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placeholder",
@@ -95816,7 +96008,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "locale",
@@ -95946,7 +96139,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "locale",
@@ -96700,7 +96894,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "collapseState",
@@ -97475,7 +97670,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -97909,7 +98105,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -98557,6 +98754,12 @@
             "name": "--lr-form-control-font-size",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-form-control-label-color",
@@ -101174,7 +101377,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -101639,7 +101843,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -102355,6 +102560,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -102878,7 +103089,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -103007,7 +103219,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -104047,7 +104260,7 @@
             "name": "--lr-otp-input-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-otp-input-segment-border-color,var(--lr-color-border))"
+            "default": "var(--lr-form-control-invalid-border-color,var(--lr-color-danger))"
           },
           {
             "name": "--lr-otp-input-mask-char",
@@ -106324,7 +106537,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "actual"
           },
           {
             "name": "locale",
@@ -106415,7 +106629,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "actual"
           },
           {
             "name": "locale",
@@ -107588,7 +107803,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           }
         ],
         "properties": [
@@ -107668,7 +107884,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           }
         ],
         "slots": [],
@@ -108125,7 +108342,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -108464,7 +108682,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "autofocus",
@@ -109112,7 +109331,7 @@
             "name": "--lr-phone-input-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-phone-input-border-color,var(--lr-color-border))"
+            "default": "var(--lr-form-control-invalid-border-color,var(--lr-color-danger))"
           },
           {
             "name": "--lr-phone-input-padding-block",
@@ -114811,7 +115030,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "disabled",
@@ -114957,7 +115177,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "submit-disabled",
@@ -114996,7 +115217,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "voice",
@@ -115107,7 +115329,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "commandItems",
@@ -115348,7 +115571,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "submitDisabled",
@@ -115387,7 +115611,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "voice",
@@ -116919,7 +117144,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "hold"
           },
           {
             "name": "stream-only",
@@ -117029,7 +117255,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "hold"
           },
           {
             "name": "state",
@@ -123303,7 +123530,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "disconnected"
           },
           {
             "name": "voice-state",
@@ -123312,7 +123540,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "without-capture",
@@ -123411,7 +123640,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "disconnected"
           },
           {
             "name": "stream",
@@ -123439,7 +123669,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "withoutCapture",
@@ -124738,7 +124969,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "open",
@@ -124818,7 +125050,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "open",
@@ -126461,7 +126694,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "hybrid"
           },
           {
             "name": "placeholder",
@@ -126579,7 +126813,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "hybrid"
           },
           {
             "name": "placeholder",
@@ -130929,6 +131164,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -131693,7 +131934,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 900
           },
           {
             "name": "current-index",
@@ -131774,7 +132016,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 900
           },
           {
             "name": "currentIndex",
@@ -132167,7 +132410,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "items",
@@ -132176,7 +132420,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "locale",
@@ -132214,7 +132459,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "withLegend",
@@ -132410,6 +132656,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -132508,6 +132764,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
           {
             "name": "disabled",
             "attribute": "disabled",
@@ -136023,7 +136289,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "line"
           },
           {
             "name": "max",
@@ -136121,7 +136388,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "line"
           },
           {
             "name": "max",
@@ -136545,7 +136813,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "primary",
@@ -136635,7 +136904,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "primary",
@@ -136974,7 +137244,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -137104,7 +137375,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "self"
           },
           {
             "name": "src",
@@ -137725,7 +137997,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "emphasis",
@@ -137912,7 +138185,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "emphasis",
@@ -138019,7 +138293,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "size",
@@ -138714,7 +138989,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "disabled",
@@ -138765,7 +139041,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "idle"
           },
           {
             "name": "disabled",
@@ -141170,7 +141447,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "swatch"
           },
           {
             "name": "size",
@@ -141240,7 +141518,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "swatch"
           },
           {
             "name": "size",
@@ -143407,7 +143686,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "loading",
@@ -143474,7 +143754,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 10000
           },
           {
             "name": "more-label",
@@ -143966,7 +144247,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "loading",
@@ -144033,7 +144315,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 10000
           },
           {
             "name": "moreLabel",
@@ -148011,6 +148294,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -148463,7 +148752,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "live"
           },
           {
             "name": "size",
@@ -148542,7 +148832,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "live"
           },
           {
             "name": "size",
@@ -150598,6 +150889,12 @@
             "name": "--lr-form-control-font-size",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-form-control-label-color",
@@ -152682,7 +152979,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "overlap"
           },
           {
             "name": "locale",
@@ -152711,7 +153009,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "scale",
@@ -152720,7 +153019,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flow"
           },
           {
             "name": "start",
@@ -152750,7 +153050,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "overlap"
           },
           {
             "name": "itemCount",
@@ -152788,7 +153089,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "vertical"
           },
           {
             "name": "rangeEnd",
@@ -152815,7 +153117,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flow"
           },
           {
             "name": "start",
@@ -152981,7 +153284,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "neutral"
           }
         ],
         "properties": [
@@ -153031,7 +153335,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "neutral"
           }
         ],
         "slots": [
@@ -154628,6 +154933,16 @@
             "default": false
           },
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string",
@@ -154664,7 +154979,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "custom-error",
@@ -154701,7 +155017,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "enterkeyhint",
@@ -154892,6 +155209,16 @@
             "default": false
           },
           {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "autocapitalize",
             "attribute": "autocapitalize",
             "type": "string",
@@ -154918,7 +155245,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "customError",
@@ -154964,7 +155292,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "effectiveDisabled",
@@ -155939,7 +156268,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "pending-action",
@@ -155948,7 +156278,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "proposal-key",
@@ -156119,7 +156450,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "pendingAction",
@@ -156128,7 +156460,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "proposalKey",
@@ -156561,7 +156894,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           }
         ],
         "properties": [
@@ -156676,7 +157010,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           }
         ],
         "slots": [],
@@ -156944,7 +157279,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           },
           {
             "name": "summary",
@@ -157033,7 +157369,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           },
           {
             "name": "summary",
@@ -157857,7 +158194,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           },
           {
             "name": "tool-name",
@@ -157937,7 +158275,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "pending"
           },
           {
             "name": "toolName",
@@ -160347,7 +160686,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placement",
@@ -160428,7 +160768,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placement",
@@ -164272,7 +164613,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "icon-library",
@@ -164351,7 +164693,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flat"
           },
           {
             "name": "src",
@@ -164462,7 +164805,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "builtin"
           },
           {
             "name": "hotspots",
@@ -164568,7 +164912,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "flat"
           },
           {
             "name": "src",
@@ -165533,7 +165878,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "shadow"
           }
         ],
         "properties": [
@@ -165688,7 +166034,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "shadow"
           },
           {
             "name": "scrollContainer",
@@ -166097,7 +166444,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "custom-error",
@@ -166213,7 +166561,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placeholder",
@@ -166342,7 +166691,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "catalog",
@@ -166485,7 +166835,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "placeholder",
@@ -168161,7 +168512,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "with-legend",
@@ -168180,7 +168532,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           }
         ],
         "properties": [
@@ -168200,7 +168553,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "locale",
@@ -168248,7 +168602,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "scale",
@@ -168257,7 +168612,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "withLegend",
@@ -168276,7 +168632,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "words",
@@ -168285,7 +168642,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           }
         ],
         "slots": [],

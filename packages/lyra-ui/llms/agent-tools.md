@@ -1,7 +1,3 @@
-## Breaking changes, fixes, and renames in 9.0.0
-
-Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
-
 ## `lr-tool-call-chip`
 
 Event details include `invocationId` alongside `callId` for correlation. Activation also emits `lr-tool-activate` with `{ invocationId }`.
@@ -4218,7 +4214,8 @@ It intentionally does not fetch remote references or validate values.
 `issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
 issue array after changes. `selectedPath: string | null = null` (attribute `selected-path`) —
 `null` means no selection, while the empty string is the valid JSON Pointer for the schema root;
-`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
+`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''` (the
+region's accessible name; no visible heading, so an empty value falls back to the localized default).
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
 readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/default while preserving unknown schema
@@ -4386,6 +4383,12 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
   public `lr-span-visibility-change` event reports the resulting `{ hiddenKinds }` state. If an
   integration exposes the nested `lr-graph-legend`, attach a veto listener to that legend rather
   than to the wrapper.
+- **Empty `label` overrides:** a `label` that only names a region or nested interactive grid
+  (`lr-eval-dataset`, `lr-eval-result`, `lr-json-schema-viewer`) falls back to its localized
+  default when empty, because that surface must stay named. Visible heading text (`label` on
+  `lr-eval-run`, `lr-agent-eval-dashboard` and `lr-change-review`; `heading` on `lr-prompt-studio`)
+  renders any supplied string verbatim, so an empty string removes it; omit the property to keep
+  the default.
 - **Schema viewer input:** `lr-json-schema-viewer` uses a bounded descriptor-safe own-data snapshot.
   It recurses through arrays, plain records, and null-prototype records only; unsupported or unsafe
   branches are omitted while valid siblings and the valid prefix remain available.

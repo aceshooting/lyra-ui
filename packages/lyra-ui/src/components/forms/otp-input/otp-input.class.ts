@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
@@ -12,6 +13,7 @@ import { FormAssociated, isBarredFromValidation, isLiveDisabled } from '../../..
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { submitFormImplicitly, submitOnEnter } from '../../../internal/submit-on-enter.js';
@@ -199,7 +201,7 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  *   Corner radius of each segment.
  * @cssprop [--lr-otp-input-active-border-color=var(--lr-focus-ring-color)] - Active segment border.
  * @cssprop [--lr-otp-input-active-ring-color=var(--lr-focus-ring-color)] - Active segment outer ring.
- * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-otp-input-segment-border-color,var(--lr-color-border))] -
+ * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-form-control-invalid-border-color,var(--lr-color-danger))] -
  *   Segment border while the field is user-invalid.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
@@ -333,6 +335,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   constructor() {
     super();
+    // A native submit fires `invalid` without the JS `reportValidity()`; mark the field
+    // interacted so its own invalid chrome and `aria-invalid` match `:state(user-invalid)`.
+    installInteractionOnInvalid(this, () => { this.touched = true; });
     // Toggles data-scroll-overflow/data-scroll-start/data-scroll-end on the segment row so
     // otp-input.styles.ts's measured edge-fade rule only paints while the row genuinely overflows
     // (an absurd `length`, or a narrow host) -- mirrors `<lr-stepper>`/`<lr-segmented>`.
@@ -754,7 +759,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       return;
     }
     if (filled > 0 && !complete) {
-      this[SET_ANCHORED_VALIDITY]({ tooShort: true }, this.localize('otpInputIncomplete', undefined, { total }));
+      this[SET_ANCHORED_VALIDITY]({ tooShort: true }, () =>
+        this.localize('otpInputIncomplete', undefined, { total: getNumberFormat(this.effectiveLocale).format(total) }));
       return;
     }
     this[SET_ANCHORED_VALIDITY]({});

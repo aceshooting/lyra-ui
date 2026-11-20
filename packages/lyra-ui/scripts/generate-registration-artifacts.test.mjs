@@ -154,6 +154,17 @@ assert.throws(
   'regeneration refuses to strand an unclassified side-effect import outside the block',
 );
 
+for (const [authored, description] of [
+  ["import './components/viewers/archive/archive-register.js';", 'a curated companion import'],
+  ['export const LATE = true;', 'an authored statement'],
+]) {
+  assert.throws(
+    () => updateAllBarrel(allBarrel.replace(ALL_REGISTRATION_END, `${authored}\n${ALL_REGISTRATION_END}`), artifacts),
+    /authored code inside the generated registration block/,
+    `regeneration refuses to discard ${description} placed between the markers`,
+  );
+}
+
 const ssrAllBarrel = [
   SSR_ALL_REGISTRATION_START,
   SSR_ALL_REGISTRATION_END,

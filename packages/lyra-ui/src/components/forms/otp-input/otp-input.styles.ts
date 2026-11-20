@@ -112,7 +112,7 @@ export const styles = css`
   [part~='invalid'] {
     border-color: var(
       --lr-otp-input-invalid-border-color,
-      var(--lr-form-control-invalid-border-color, var(--lr-otp-input-segment-border-color, var(--_lr-otp-input-segment-border-color-default)))
+      var(--lr-form-control-invalid-border-color, var(--lr-color-danger))
     );
   }
   :host(:disabled) [part~='segment'] {

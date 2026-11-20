@@ -142,9 +142,10 @@ Lyra retains the localized native-button names, actions, and minimum hit areas.
 **CSS parts:** `base carousel` (same region node), `scroll-container` (focusable scroll port),
 `navigation`, `navigation-button`, `navigation-button-previous` /
 `navigation-button-next`, Shoelace aliases `navigation-button--previous` /
-`navigation-button--next`, plus `previous-glyph` / `next-glyph`; `pagination`, `pagination-item`,
+`navigation-button--next`, plus `previous-glyph` / `next-glyph` (wrap the icon slots, whose default
+is an SVG chevron; both mirror under RTL); `pagination`, `pagination-item`,
 active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track`,
-`controls`, and `autoplay-button` (pauses or resumes automatic rotation) are Lyra extensions.
+`controls`, and `autoplay-button` (pauses or resumes automatic rotation) are Lyra extensions. A host `aria-describedby` is projected onto the region.
 
 **Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
 (logical scroll-area padding), and `--slide-gap` (default `var(--lr-space-m)`). Lyra extensions

@@ -200,6 +200,13 @@ describe('model + cost summary', () => {
     expect(usage.getAttribute('cost-text')).to.equal('12.5');
   });
 
+  it('keeps a tiny non-zero default cost from reading as zero', async () => {
+    const el = (await fixture(
+      html`<lr-agent-run locale="en-US" .run=${makeRun({ costEstimate: 0.00002 })}></lr-agent-run>`,
+    )) as LyraAgentRun;
+    expect(el.shadowRoot!.querySelector('lr-usage-badge')!.getAttribute('cost-text')).to.equal('0.00002');
+  });
+
   it('formats cost via a host-supplied formatCost function', async () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ costEstimate: 0.012 })} .formatCost=${(c: number) => `$${c.toFixed(3)}`}></lr-agent-run>`,

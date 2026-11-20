@@ -80,6 +80,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/viewers/docx-viewer/docx-viewer-register.ts',
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
   'src/components/viewers/email-viewer/email-viewer-register.ts',
+  'src/components/viewers/geojson-view/geojson-viewer-register.ts',
   'src/components/viewers/html-viewer/html-viewer-register.ts',
   'src/components/viewers/model-viewer/model-viewer-register.ts',
   'src/components/viewers/notebook-viewer/notebook-viewer-register.ts',

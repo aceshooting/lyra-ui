@@ -22,6 +22,15 @@ let previousLocale: string;
 beforeEach(() => { previousLocale = getLyraLocale(); setLyraLocale('en'); });
 afterEach(() => { setLyraLocale(previousLocale); });
 
+function dangerColor(): string {
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lr-color-danger)';
+  document.body.append(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 it('keeps unset loading synchronous and commits a notification after the value', async () => {
   const el = await create();
   expect(el.localeLoader).to.equal(undefined);
@@ -45,6 +54,7 @@ it('waits for an optional loader before selecting and exposes localized busy sta
   expect(getLyraLocale()).to.equal('en');
   expect(trigger(el).getAttribute('aria-busy')).to.equal('true');
   expect(el.shadowRoot!.querySelector('[part="load-status"]')?.textContent).to.contain('Please wait');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="load-status"]')!).color).not.to.equal(dangerColor());
   expect(notifications).to.equal(0);
   load.resolve();
   await waitUntil(() => el.value === 'fr');
@@ -126,6 +136,7 @@ it('catches synchronous callback failures and retries through a fresh request wi
   const status = el.shadowRoot!.querySelector('[part="load-status"]')!.textContent!;
   expect(el.shadowRoot!.querySelector('[part="load-status"]')?.textContent).to.contain('Cannot load');
   expect(status).not.to.contain('private network details');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="load-status"]')!).color).to.equal(dangerColor());
   expect(el.shadowRoot!.querySelector('[part="load-retry"]')?.textContent).to.contain('Try again');
   await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-retry"]')!);
   await sendKeys({ press: 'Enter' });

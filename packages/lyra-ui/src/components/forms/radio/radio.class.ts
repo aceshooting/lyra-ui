@@ -347,7 +347,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     const owned = Boolean(this.currentGroup());
     const violates =
       !this.isBarredFromValidation() && !owned && (this.standaloneRoot ? this.standaloneMissing : this.required && !this.checked);
-    this[SET_ANCHORED_VALIDITY](violates ? { valueMissing: true } : {}, this.requiredMessage());
+    this[SET_ANCHORED_VALIDITY](violates ? { valueMissing: true } : {}, () => this.requiredMessage());
   }
 
   override formResetCallback(): void {

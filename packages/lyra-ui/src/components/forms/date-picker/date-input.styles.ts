@@ -5,9 +5,10 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
-  formControlTextWrap,
   formControlFocusHalo,
+  formControlInvalidBorder,
   formControlRequiredMarker,
+  formControlTextWrap,
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
@@ -261,4 +262,5 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
+  ${formControlInvalidBorder(css`[part="input-wrapper"]`)}
 `;

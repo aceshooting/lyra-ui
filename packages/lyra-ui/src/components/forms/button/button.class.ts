@@ -988,7 +988,7 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
     if (this.required && !this.value) {
       this.validityController.setValidity(
         { valueMissing: true },
-        this.localize('fieldRequired')
+        () => this.localize('fieldRequired')
       );
     } else {
       this.validityController.setValidity({});

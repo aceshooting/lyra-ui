@@ -279,6 +279,15 @@ export const styles = css`
     );
   }
 
+  [part="previous-glyph"],
+  [part="next-glyph"],
+  .start-chevron {
+    display: inline-flex;
+  }
+
+  /* The default icon is one right-pointing chevron; the fallback wrapper points it back for
+     previous, and the part mirrors either icon (default or slotted) under RTL. */
+  .start-chevron,
   :host(:dir(rtl)) [part="previous-glyph"],
   :host(:dir(rtl)) [part="next-glyph"] {
     transform: scaleX(-1);

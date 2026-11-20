@@ -264,7 +264,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   private readonly autocorrectState = new AutocorrectState(this, true);
 
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. String
-   *  writes are normalized for framework and plain-DOM interoperability; reads are boolean. */
+   *  writes are normalized for framework and plain-DOM interoperability; reads are boolean.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;

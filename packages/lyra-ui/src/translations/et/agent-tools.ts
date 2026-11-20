@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Tööriist',
   schemaViewerLabel: 'Skeemivaatur',
   schemaViewerEmpty: 'Skeem pole saadaval',
-  schemaViewerRequired: 'Kohustuslik',
   schemaViewerCircular: 'Ringviide skeemis',
   schemaViewerType: 'Tüüp: {type}',
   subagentPanelLabel: 'Alamagendid',

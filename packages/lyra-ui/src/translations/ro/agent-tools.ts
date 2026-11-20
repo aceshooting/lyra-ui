@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Instrument',
   schemaViewerLabel: 'Vizualizator de schemă',
   schemaViewerEmpty: 'Nicio schemă disponibilă',
-  schemaViewerRequired: 'Obligatoriu',
   schemaViewerCircular: 'Referință circulară în schemă',
   schemaViewerType: 'Tip: {type}',
   subagentPanelLabel: 'Subagenți',

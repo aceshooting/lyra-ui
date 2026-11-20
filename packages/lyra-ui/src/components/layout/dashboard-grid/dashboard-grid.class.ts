@@ -1,3 +1,4 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
@@ -282,6 +283,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** Projects a host-authored `aria-describedby` onto the shadow element that owns the role. */
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+  );
+
   private authoredLayout: readonly DashboardAuthoredCellSnapshot[] =
     Object.freeze([]);
   private layoutInput?: unknown;
@@ -422,6 +429,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.announcementSink.adopted();
     this.childObserver.clear();
     this.clearSuppressedClick();

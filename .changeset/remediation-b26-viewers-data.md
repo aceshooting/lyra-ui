@@ -2,9 +2,7 @@
 '@aceshooting/lyra-ui': minor
 ---
 
-- `lr-archive-viewer` no longer shows the "File"/"Folder" text beside every entry; it stays available to assistive technology through the new `entry-kind` part.
-- `lr-notebook-viewer` hides the sanitized-output loading text, labels stderr streams for assistive technology, and no longer loads remote images from markdown cells.
-- `lr-notebook-viewer` keeps nested markdown link activations from reaching the host.
+- `lr-notebook-viewer` hides the sanitized-output loading text and labels stderr streams for assistive technology.
 - `lr-notebook-viewer`, `lr-archive-viewer` and `lr-xml-viewer` keep active and highlighted rows visible under forced colors.
 - `lr-csv-viewer`, `lr-dataset-viewer` and `lr-spreadsheet-viewer` resume loading when moved in the DOM while a request is in flight.
 - `lr-calendar-viewer`, `lr-email-viewer`, `lr-svg-viewer` and `lr-geojson-viewer` scroll bodies are keyboard focusable while they overflow.

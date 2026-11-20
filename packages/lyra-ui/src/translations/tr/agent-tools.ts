@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Araç',
   schemaViewerLabel: 'Şema görüntüleyici',
   schemaViewerEmpty: 'Kullanılabilir şema yok',
-  schemaViewerRequired: 'Zorunlu',
   schemaViewerCircular: 'Döngüsel şema başvurusu',
   schemaViewerType: 'Tür: {type}',
   subagentPanelLabel: 'Alt aracılar',

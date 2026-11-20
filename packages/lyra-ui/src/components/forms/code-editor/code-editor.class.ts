@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { AutocorrectState, installNativeInputModeAliases } from '../../../internal/native-text-control.js';
@@ -23,7 +24,7 @@ import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
 import { sanitizeCssResize, type LyraTextResize } from '../../../internal/safe-css.js';
-import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
@@ -258,6 +259,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  the gutter's and textarea's padding and font size, plus the editor frame's minimum block
    *  size. */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Visual treatment of the editor frame, from the library's shared vocabulary and with the same meanings as
+   *  `<lr-input>`'s `appearance`. Each value only swaps the private fill/border pair behind the
+   *  public fill and border hooks. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   private wrapValue: LyraCodeEditorWrap = 'off';
   /** @default 'off' */
   @property({ attribute: 'wrap', useDefault: true })
@@ -311,6 +316,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private textareaStyle?: CSSStyleDeclaration;
   private logicalLineCount?: { value: string; count: number };
   private wrappedLineStarts?: { value: string; offsets: number[] };
+
+  constructor() {
+    super();
+    // A native submit fires `invalid` without the JS `reportValidity()`; mark the field
+    // interacted so its own invalid chrome and `aria-invalid` match `:state(user-invalid)`.
+    installInteractionOnInvalid(this, () => { this.touched = true; });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -502,8 +514,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.value = (event.target as HTMLTextAreaElement).value;
     this.syncCaretOffset();
     this.fitToContent();
+    // Snapshot before relaying, so a native listener's rewrite never reaches the library event.
+    const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
   };
   private onChange = (event: Event): void => {
     if (isLiveDisabled(this)) {
@@ -511,8 +525,9 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       return;
     }
     this.value = (event.target as HTMLTextAreaElement).value;
+    const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-change', { value: this.value });
+    this.emit('lr-change', { value });
   };
   private onFocus = (event: FocusEvent): void => {
     if (isLiveDisabled(this)) {
@@ -693,7 +708,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this[SET_ANCHORED_VALIDITY](
       tooShort || tooLong ? { tooShort, tooLong } : {},
       tooShort || tooLong
-        ? native?.validationMessage || this.localize('valueInvalid')
+        ? () => native?.validationMessage || this.localize('valueInvalid')
         : '',
     );
   }

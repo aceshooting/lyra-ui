@@ -6,6 +6,9 @@ import { dirname, join, posix, relative } from 'node:path';
 import { attwCommandArguments } from './packed-attw.mjs';
 import { packedManifest } from './packed-tarball-input.mjs';
 
+// Upgrades keep the peer-compatibility toolchain on the workspace's own pins.
+const { toolchain } = JSON.parse(await readFile(new URL('./peer-compatibility-profiles.json', import.meta.url), 'utf8'));
+
 // These three public input examples are consumed by the documented CLI, not a test corpus.
 const PUBLIC_GEN_EXAMPLES = Object.freeze([
   'examples/fixtures/contact-form.json', 'examples/fixtures/inventory-data.json', 'examples/fixtures/support-chat.json',
@@ -118,7 +121,7 @@ export async function verifyPackedGenConsumer({ workspace, uiTarball, genTarball
   await writeFile(join(fixture, 'package.json'), JSON.stringify({
     name: 'lyra-packed-gen-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-gen': `file:${relative(fixture, genTarball)}`, '@aceshooting/lyra-ui': `file:${relative(fixture, uiTarball)}` },
-    devDependencies: { typescript: '7.0.2', lit: manifest.dependencies.lit },
+    devDependencies: { typescript: toolchain.typescript, lit: manifest.dependencies.lit },
   }));
   await writeFile(join(fixture, 'load.mjs'), `import assert from 'node:assert/strict';
 const definitions = new Map();

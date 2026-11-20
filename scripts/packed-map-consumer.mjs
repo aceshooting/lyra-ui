@@ -26,7 +26,7 @@ export async function verifyPackedMapConsumer({ workspace, mapTarball, run, pnpm
   await writeFile(join(fixture, 'package.json'), JSON.stringify({
     name: 'lr-packed-map-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-map': `file:${relative(fixture, mapTarball)}` },
-    devDependencies: { vite: toolchain.vite, typescript: toolchain.typescript, '@types/node': '26.6.5' },
+    devDependencies: { vite: toolchain.vite, typescript: toolchain.typescript, '@types/node': toolchain['@types/node'] },
   }));
   await writeFile(join(fixture, 'load.mjs'), `import { Map, prepareStyle } from '@aceshooting/lyra-map';
 import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';

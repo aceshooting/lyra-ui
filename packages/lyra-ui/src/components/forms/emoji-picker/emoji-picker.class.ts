@@ -1,3 +1,4 @@
+import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
@@ -495,6 +496,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  matching locale directory of the optional peer. */
   private loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | EmojiDataLoadFailure | null> =
     loadEmojiDataOutcomeCached;
+
+  constructor() {
+    super();
+    // A native submit fires `invalid` without the JS `reportValidity()`; mark the field
+    // interacted so its own invalid chrome and `aria-invalid` match `:state(user-invalid)`.
+    installInteractionOnInvalid(this, () => { this.touched = true; });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();

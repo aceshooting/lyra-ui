@@ -9,8 +9,12 @@ export const tableColumnDivider = css`
 `;
 import { activeFill, focusRingShorthandInward, iconHitTarget, interactiveTransition } from '../../internal/interactive-control.styles.js';
 
-/** Grid chrome shared by the csv and spreadsheet viewers; `maxHeight` is the viewer's own `var()` hook. */
-export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
+/**
+ * Grid chrome shared by the csv and spreadsheet viewers; `maxHeightToken` names the viewer's own
+ * max-height custom property. The body caps at that token (uncapped by default) and the composed
+ * row list shrinks to its content up to the same token (the default list cap when unset).
+ */
+export function delimitedGridStyles(maxHeightToken: CSSResult): CSSResult {
   return css`
   [part='base'],
   [part='body'],
@@ -23,7 +27,7 @@ export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
-    max-block-size: ${maxHeight};
+    max-block-size: var(${maxHeightToken}, none);
   }
   /* The body caps the vertical axis and the sheet owns horizontal overflow; both axes stay pinned
      non-visible because pinning only overflow-x forces overflow-y to auto (phantom scrollbar). */
@@ -55,6 +59,28 @@ export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
     display: grid;
     min-inline-size: max-content;
     align-items: center;
+  }
+  [part='header-row'] { flex-shrink: 0; }
+  [part='rows'] {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    min-inline-size: max-content;
+  }
+  [part='rows']::part(base) {
+    block-size: auto;
+    max-block-size: var(${maxHeightToken}, var(--lr-size-20rem));
+    min-block-size: 0;
+  }
+  :host([scroll-mode='page']) :is([part='body'], [part='sheet']),
+  :host([scroll-mode='page']) [part='rows']::part(base) {
+    max-block-size: none;
+    overflow: visible;
+  }
+  :host([scroll-mode='page']) [part='header-row'] {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--lr-layer-content);
   }
 `;
 }

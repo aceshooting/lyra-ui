@@ -35,7 +35,9 @@ export const styles = css`
     ${iconHitTarget}
   }
   .switch-owner:focus-visible {
-    ${focusRing}
+    /* The owner is sized up to the icon-button hit target, so a ring on it boxed the pill in dead
+       space. Ring the visible track instead, as lr-checkbox rings its box. */
+    outline: none;
   }
   /* Mouse-pointer parity with the :focus-visible ring above, plus a deeper press. Gated on
      :host(:not(:disabled)) like lr-checkbox's/lr-radio's [part~='base']:hover rules -- not a native
@@ -59,7 +61,11 @@ export const styles = css`
     ${disabledControl}
   }
   :host(:state(user-invalid)) [part~="track"] {
-    outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border, var(--lr-color-danger));
+    outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+  }
+  /* After the invalid outline and at the same specificity, so keyboard focus always shows the ring. */
+  .switch-owner:focus-visible [part~="track"] {
+    ${focusRing}
   }
 
   [part~="track"] {

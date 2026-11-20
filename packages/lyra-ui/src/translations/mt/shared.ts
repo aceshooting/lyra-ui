@@ -143,6 +143,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistema',
   promptStudioRoleUser: 'Utent',
   promptStudioRoleAssistant: 'Assistent',
+  schemaViewerRequired: 'Meħtieġ',
   statusUnknown: 'Mhux magħruf',
   moveUp: 'Ċaqlaq ’il fuq',
   moveDown: 'Ċaqlaq ’l isfel',

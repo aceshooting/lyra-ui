@@ -30,8 +30,7 @@ import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.js';
+import { formatMediaTime, formatPlaybackRate, withCurrentRate } from '../../../internal/media-time.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
@@ -1634,7 +1633,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const safePoster = this.poster ? safeMediaSrc(this.poster) : null;
     const kind = this.detectedKind();
     const baseOwnsAggregate = explicitHostLabel === null && Boolean(normalizeLabel(this.name) || (!safeSrc && this.src));
-    const rateFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
     if (!safeSrc && this.src) {
       return html`<div
         part="base"
@@ -1692,7 +1690,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
           >
             ${withCurrentRate(this.rates, this.playbackRate).map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
-                >${this.localize('avPlayerRateOption', undefined, { rate: rateFormat.format(rate) })}</option
+                >${this.localize('avPlayerRateOption', undefined, { rate: formatPlaybackRate(rate, this.effectiveLocale) })}</option
               >`)}
           </select>
           <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>

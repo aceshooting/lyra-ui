@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Инструмент',
   schemaViewerLabel: 'Преглед на схема',
   schemaViewerEmpty: 'Няма налична схема',
-  schemaViewerRequired: 'Задължително',
   schemaViewerCircular: 'Циклична препратка в схемата',
   schemaViewerType: 'Тип: {type}',
   subagentPanelLabel: 'Подагенти',

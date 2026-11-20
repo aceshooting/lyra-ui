@@ -387,7 +387,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private _maxRows = MAX_TABLE_COLLECTION_ENTRIES;
   /** Maximum admitted rows and controlled keys. Defaults to 10,000; bounded to 1..100,000.
    * Set before assigning rows. Raising after admission recovers the original input only while
-   * its caller still retains it; otherwise assign a new collection to supply additional rows. */
+   * its caller still retains it; otherwise assign a new collection to supply additional rows.
+   * @default 10000
+   */
   @property({ attribute: 'max-rows', type: Number })
   get maxRows(): number { return this._maxRows; }
   set maxRows(value: number) {

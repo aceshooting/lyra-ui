@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Құрал',
   schemaViewerLabel: 'Схеманы қарау құралы',
   schemaViewerEmpty: 'Схема жоқ',
-  schemaViewerRequired: 'Міндетті',
   schemaViewerCircular: 'Циклдік схема сілтемесі',
   schemaViewerType: 'Түрі: {type}',
   subagentPanelLabel: 'Қосалқы агенттер',

@@ -1,9 +1,10 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { css } from 'lit';
 import {
-  formControlTextWrap,
   formControlFocusHalo,
+  formControlInvalidBorder,
   formControlRequiredMarker,
+  formControlTextWrap,
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
@@ -141,4 +142,5 @@ export const styles = css`
   [part="footer"] {
     ${formControlTextWrap}
   }
+  ${formControlInvalidBorder(css`[part="textarea"]`)}
 `;

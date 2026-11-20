@@ -150,10 +150,11 @@ rendered when `src` is set _and_ passes the link-safe scheme allowlist — see t
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
 `data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
-geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
+geometry with a minimum hit area independent of the visual rectangle; `aria-current="true"` on the
+`activeHighlightId` match, `"false"` otherwise), `highlight-actions`
 (non-overlapping actions used when multiple minimum hit areas would overlap),
-`region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
-`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
+`region-highlight-action` (one action in that list, carrying the same `aria-current`),
+`frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-pan-zoom>`
 while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lr-document-preview-max-height` (default `none`) — the
@@ -415,7 +416,8 @@ Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-regis
 `csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
 `dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
 `contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`,
-`model-viewer-register.js`), which installs
+`model-viewer-register.js`, and `geojson-view/geojson-viewer-register.js` for `.geojson` /
+`application/geo+json`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
@@ -1134,9 +1136,11 @@ latest anchor-jump message; the spoken copy is appended to the shared document-l
 only while the viewer and its composed ancestors are exposed to the accessibility tree),
 `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
-`region-highlight-target` (transparent activation geometry with an independent minimum hit area),
+`region-highlight-target` (transparent activation geometry with an independent minimum hit area;
+`aria-current="true"` on the `activeHighlightId` match, `"false"` otherwise),
 `highlight-actions` (non-overlapping actions used instead of on-image targets when the minimum hit
-areas of two or more highlights would overlap), `region-highlight-action` (one action in that list),
+areas of two or more highlights would overlap), `region-highlight-action` (one action in that list,
+carrying the same `aria-current`),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
 Passive loaded SVG content owns `role="img"`. Idle, loading, and error states instead use a named
@@ -2306,9 +2310,10 @@ matches.
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
 `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
 canonical source reset and effective-locale re-evaluation. When an HTML or SVG output cannot be sanitized,
-`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`. Other notebook
-output stays readable. The existing `lr-render-error` event carries `detail: { error }` for sanitizer,
-fetch, parse and validation failures. `lr-anchor-result` —
+`lr-viewer-diagnostic` reports `notebook-sanitizer-unavailable` with `fatal: false`; an HTML or SVG
+output over the passive-markup limits reports `notebook-output-too-large` with `fatal: false`. Each
+code fires at most once per load, and other notebook output stays readable. `lr-render-error`
+(`detail: { error }`) is terminal only: fetch, parse and validation failures. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
 
@@ -2783,8 +2788,9 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 - `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
 - `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
-- `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
-  failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
+- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure. A missing
+  optional MapLibre peer is recoverable: it keeps the serialized metadata fallback visible and fires
+  only `lr-viewer-diagnostic`.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or

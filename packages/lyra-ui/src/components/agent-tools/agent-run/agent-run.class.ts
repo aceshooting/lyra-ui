@@ -9,6 +9,7 @@ import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -429,7 +430,10 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     const cost = this.run?.costEstimate;
     if (cost == null || !Number.isFinite(cost)) return '';
     const value = finiteRange(cost, cost, 0);
-    const formatter = this.formatCost ?? ((c: number) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 4 }).format(c));
+    const locale = this.effectiveLocale;
+    // Widens below 0.0001 so a real but tiny cost never reads as `0`.
+    const formatter = this.formatCost ?? ((c: number) =>
+      formatChartValue(c, locale, getNumberFormat(locale, { maximumFractionDigits: 4 }), 4));
     return formatter(value);
   }
 

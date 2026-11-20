@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css, type CSSResult } from 'lit';
 import { visuallyHidden } from './a11y.js';
 
 /**
@@ -91,6 +91,37 @@ export const formControlRequiredMarker = css`
 export const formControlFocusHalo = css`
   box-shadow: var(--_lr-form-control-focus-shadow, none);
 `;
+
+/**
+ * The one resting invalid border every field-shaped form control paints.
+ *
+ * Matches `:state(user-invalid)` — invalid after the user has interacted with the control, after
+ * `reportValidity()` or after a failed submit — so a pristine required field never paints red. The
+ * colour resolves the optional component-specific token first, then the shared
+ * `--lr-form-control-invalid-border-color`, then `--lr-color-danger`, so one declaration on `:root`
+ * retunes every field at once.
+ *
+ * The rule yields while the surface holds focus or the host is `[open]`: the brand focus edge is
+ * the control's focus indicator (WCAG 2.4.7), and an invalid edge that out-ranked it would leave a
+ * focused invalid field with no visible focus change. A barred control (disabled, readonly)
+ * publishes no `user-invalid` and therefore never matches.
+ *
+ * Interpolate it after every resting, appearance and hover rule for the surface, so the invalid
+ * edge wins the cascade tie on source order.
+ *
+ * @param surface - Selector of the bordered element, written as a `css` literal.
+ * @param componentToken - Optional component-specific custom property name that outranks the shared
+ *   token, written as a `css` literal.
+ */
+export function formControlInvalidBorder(surface: CSSResult, componentToken?: CSSResult): CSSResult {
+  const shared = css`var(--lr-form-control-invalid-border-color, var(--lr-color-danger))`;
+  const color = componentToken ? css`var(${componentToken}, ${shared})` : shared;
+  return css`
+    :host(:state(user-invalid):where(:not([open]))) ${surface}:where(:not(:focus-within)) {
+      border-color: ${color};
+    }
+  `;
+}
 
 /** The hint and error text colours (muted hint, danger error) that every form control shares. */
 export const formControlSupportingColor = css`

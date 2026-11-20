@@ -283,7 +283,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Uirlis',
   schemaViewerLabel: 'Amharcán scéimre',
   schemaViewerEmpty: 'Níl aon scéimre ar fáil',
-  schemaViewerRequired: 'Riachtanach',
   schemaViewerCircular: 'Tagairt chiorclach scéimre',
   schemaViewerType: 'Cineál: {type}',
   subagentPanelLabel: 'Fo-ghníomhairí',

@@ -695,7 +695,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    *  writing `selectionMode` reads and writes `selectable` directly through the same underlying
    *  state -- there is no separate value to fall out of sync. The bare `''` attribute shorthand
    *  for `'multiple'` (`selectable`'s own convenience form) normalizes to `'multiple'` when read
-   *  back through this alias. */
+   *  back through this alias.
+   * @default 'none'
+   */
   @property({ attribute: 'selection-mode' })
   get selectionMode(): 'none' | 'single' | 'multiple' {
     return this.selectable === '' ? 'multiple' : this.selectable;

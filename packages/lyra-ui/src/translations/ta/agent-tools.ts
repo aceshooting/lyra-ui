@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'கருவி',
   schemaViewerLabel: 'ஸ்கீமா பார்வையாளர்',
   schemaViewerEmpty: 'ஸ்கீமா கிடைக்கவில்லை',
-  schemaViewerRequired: 'கட்டாயம்',
   schemaViewerCircular: 'சுழற்சி ஸ்கீமா குறிப்பு',
   schemaViewerType: 'வகை: {type}',
   subagentPanelLabel: 'துணைமுகவர்கள்',

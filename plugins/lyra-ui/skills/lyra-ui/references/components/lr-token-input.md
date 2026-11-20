@@ -41,6 +41,10 @@ retaining narrow-content ellipsis, wrapping and alignment with the remove action
 noneditable token layout remains the default. Reassigning the same committed token sequence
 preserves the inline editor, its draft, and its focus. A changed sequence ends the edit.
 
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the token row exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the token row.
+
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,

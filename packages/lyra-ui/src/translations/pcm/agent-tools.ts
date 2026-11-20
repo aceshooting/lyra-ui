@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Tool',
   schemaViewerLabel: 'Viewer for schema',
   schemaViewerEmpty: 'No schema dey available',
-  schemaViewerRequired: 'You suppose provide am',
   schemaViewerCircular: 'Schema reference dey go round',
   schemaViewerType: 'Which kind: {type}',
   subagentPanelLabel: 'Subagents',

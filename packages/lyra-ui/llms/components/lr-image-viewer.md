@@ -6,7 +6,7 @@
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
 - **Themeable via** 24 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below

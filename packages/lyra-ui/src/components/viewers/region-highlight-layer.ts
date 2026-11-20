@@ -32,7 +32,7 @@ export function renderRegionHighlightLayer<T extends RegionHighlightItem>(
           height: `max(${highlight.anchor.rect.height}%, var(--lr-icon-button-size))`,
         })}
         type="button"
-        role="button"
+        aria-current=${highlight.id === activeHighlightId ? 'true' : 'false'}
         aria-label=${label(highlight, index, highlights.length)}
         @click=${() => activate(highlight.id)}
       ></button>` : nothing}
@@ -100,6 +100,7 @@ function moveHighlightActionFocus(root: ParentNode, rtl: boolean, e: KeyboardEve
 /** The keyboard-reachable list of region-highlight actions shown beside two or more regions. */
 export function renderRegionHighlightActions<T extends RegionHighlightItem & { readonly label?: string }>(
   highlights: readonly T[],
+  activeHighlightId: string | null,
   label: (highlight: T, index: number, total: number) => string,
   root: ParentNode,
   rtl: boolean,
@@ -115,6 +116,7 @@ export function renderRegionHighlightActions<T extends RegionHighlightItem & { r
         part="region-highlight-action"
         type="button"
         data-highlight-id=${highlight.id}
+        aria-current=${highlight.id === activeHighlightId ? 'true' : 'false'}
         aria-label=${name}
         @click=${() => activate(highlight.id)}
         @keydown=${(e: KeyboardEvent) => moveHighlightActionFocus(root, rtl, e, index, highlights.length)}

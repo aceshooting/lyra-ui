@@ -6,7 +6,7 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
-  ${delimitedGridStyles(css`var(--lr-spreadsheet-viewer-max-height, none)`)}
+  ${delimitedGridStyles(css`--lr-spreadsheet-viewer-max-height`)}
   [part='base'] {
     background: var(--lr-spreadsheet-viewer-background, transparent);
     border: var(--lr-spreadsheet-viewer-border, none);
@@ -26,28 +26,6 @@ export const styles = css`
     outlineOffset: css`var(--lr-spreadsheet-viewer-highlight-outline-offset, calc(-1 * var(--lr-border-width-medium)))`,
     cellCursor: false,
   })}
-  [part='header-row'] { flex-shrink: 0; }
-  [part='rows'] {
-    display: flex;
-    flex-direction: column;
-    min-block-size: 0;
-    min-inline-size: max-content;
-  }
-  [part='rows']::part(base) {
-    block-size: auto;
-    max-block-size: var(--lr-spreadsheet-viewer-max-height, var(--lr-size-20rem));
-    min-block-size: 0;
-  }
-  :host([scroll-mode='page']) :is([part='body'], [part='sheet']),
-  :host([scroll-mode='page']) [part='rows']::part(base) {
-    max-block-size: none;
-    overflow: visible;
-  }
-  :host([scroll-mode='page']) [part='header-row'] {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: var(--lr-layer-content);
-  }
   .empty-note,
   [part='error'] {
     margin: 0;

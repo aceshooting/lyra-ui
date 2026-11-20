@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'টুল',
   schemaViewerLabel: 'স্কিমা ভিউয়ার',
   schemaViewerEmpty: 'কোনো স্কিমা নেই',
-  schemaViewerRequired: 'আবশ্যক',
   schemaViewerCircular: 'চক্রাকার স্কিমা রেফারেন্স',
   schemaViewerType: 'ধরন: {type}',
   subagentPanelLabel: 'সাবএজেন্ট',

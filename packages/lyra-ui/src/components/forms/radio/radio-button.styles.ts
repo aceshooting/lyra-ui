@@ -102,7 +102,7 @@ const buttonChromeStyles = css`
     );
   }
   :host(:state(user-invalid)) [part~="button"] {
-    border-color: var(--lr-radio-invalid-border-color, var(--lr-color-danger));
+    border-color: var(--lr-radio-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
   :host(:focus-visible) [part~="button"],
   [part~="button"]:focus-visible {

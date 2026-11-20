@@ -249,7 +249,7 @@ function validateAuthorityShape(authority) {
     throw new TypeError('Peer compatibility toolchain must be an object.');
   }
   const toolNames = Object.keys(authority.toolchain).sort();
-  const expectedTools = ['playwright', 'typescript', 'vite'];
+  const expectedTools = ['@types/node', '@types/react', 'playwright', 'react', 'svelte', 'typescript', 'vite', 'vue'];
   if (JSON.stringify(toolNames) !== JSON.stringify(expectedTools)) {
     throw new Error(
       `Peer compatibility toolchain keys drifted; expected ${expectedTools.join(', ')}, found ${toolNames.join(', ') || 'none'}.`,

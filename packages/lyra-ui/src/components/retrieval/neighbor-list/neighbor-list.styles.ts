@@ -75,8 +75,14 @@ export const styles = css`
   }
   [part='direction'],
   lr-virtual-list::part(direction) {
+    display: inline-block;
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
+  }
+  /* Outgoing points toward the neighbour, which follows the relation in reading order. */
+  :host(:dir(rtl)) [part='direction'],
+  :host(:dir(rtl)) lr-virtual-list::part(direction) {
+    transform: scaleX(-1);
   }
   [part='relation'],
   lr-virtual-list::part(relation) {

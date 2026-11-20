@@ -1,3 +1,4 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -123,6 +124,17 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  /** Projects a host-authored `aria-describedby` onto the shadow element that owns the role. */
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   static override get observedAttributes(): string[] {
     return [...super.observedAttributes, 'icon-only'];

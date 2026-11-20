@@ -23,7 +23,8 @@ ancestor `<fieldset disabled>` disables both handles and every preset button thr
 consumer-facing `disabled` property/attribute itself.
 The `base` part is an accessible `role="group"`: a non-empty host `aria-label` names the two-handle
 aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
-into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
+into the shadow-root group. A host `aria-labelledby` names that group, and a host `aria-describedby`
+describes both handles. `startLabel` and `endLabel` continue to name the individual sliders.
 
 Only the primary mouse button starts seeking or dragging. Right and middle presses leave the range
 and input/change events untouched. Touch and pen gestures keep their existing behavior, including

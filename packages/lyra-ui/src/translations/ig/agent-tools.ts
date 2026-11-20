@@ -264,7 +264,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Ngwa ọrụ',
   schemaViewerLabel: 'Ihe nlere atụmatụ',
   schemaViewerEmpty: 'Enweghị atụmatụ dị',
-  schemaViewerRequired: 'Achọrọ',
   schemaViewerCircular: 'Ntụaka atụmatụ na-alaghachi n’onwe ya',
   schemaViewerType: 'Ụdị: {type}',
   subagentPanelLabel: 'Ndị enyemaka',

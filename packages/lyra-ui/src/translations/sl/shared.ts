@@ -141,6 +141,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistem',
   promptStudioRoleUser: 'Uporabnik',
   promptStudioRoleAssistant: 'Pomočnik',
+  schemaViewerRequired: 'Obvezno',
   statusUnknown: 'Neznano',
   moveUp: 'Premakni gor',
   moveDown: 'Premakni dol',

@@ -6,11 +6,12 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
-  formControlLabelTypography,
-  formControlSupportingText,
   formControlFocusHalo,
-  formControlRequiredMarker,
+  formControlInvalidBorder,
   formControlLabelDisplay,
+  formControlLabelTypography,
+  formControlRequiredMarker,
+  formControlSupportingText,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -359,4 +360,5 @@ export const styles = css`
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--lr-color-surface-raised))`, undefined, true)}
+  ${formControlInvalidBorder(css`[part~='time-input']`)}
 `;

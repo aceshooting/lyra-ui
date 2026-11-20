@@ -15,6 +15,11 @@ import { fileURLToPath } from 'node:url';
 import { PACKED_TARBALL_ENVIRONMENT, suppliedPackedTarball } from './packed-tarball-input.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+// Framework runtimes and their typings follow the workspace pins that upgrades keep in the
+// peer-compatibility toolchain; only the framework-native checkers below are fixture-local.
+const { toolchain } = JSON.parse(
+  await readFile(join(root, 'scripts', 'peer-compatibility-profiles.json'), 'utf8'),
+);
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
@@ -66,12 +71,12 @@ async function writeFixture(fixtureDir, tarball) {
         type: 'module',
         dependencies: {
           '@aceshooting/lyra-ui': `file:${relative(fixtureDir, tarball)}`,
-          react: '19.2.8',
-          svelte: '5.56.8',
-          vue: '3.5.40',
+          react: toolchain.react,
+          svelte: toolchain.svelte,
+          vue: toolchain.vue,
         },
         devDependencies: {
-          '@types/react': '19.2.18',
+          '@types/react': toolchain['@types/react'],
           // svelte's esrap dependency ships declarations that import this package unconditionally
           // while declaring it only as an optional peer; with peer auto-install off and
           // skipLibCheck disabled, svelte-check cannot resolve it unless it is installed here.

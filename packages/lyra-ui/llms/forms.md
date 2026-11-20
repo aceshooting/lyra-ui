@@ -113,13 +113,33 @@ A visible `error-text` or populated `error` slot marks the control’s focus tar
 `aria-invalid="true"`. An authored error alone preserves the control’s native validity and
 allows submission. Use `setCustomValidity(message)` to block submission.
 
-Library-supplied required messages follow changes to the active message locale. A message set
+Library-supplied validation messages (required, mismatch, range, step, incomplete and invalid
+input) follow changes to the active message locale. A message set
 through `setCustomValidity()` takes precedence until cleared, at which point the current
 localized constraint message is available immediately.
 
 A direct `checkValidity()` on a pristine text-entry control returns its validity and fires
 `invalid` when a constraint fails. The control keeps its pristine presentation until user
-interaction, `reportValidity()`, or a submission attempt.
+interaction, `reportValidity()`, or a submission attempt. A native form submission counts as that
+attempt on every control, so its own invalid chrome and inner `aria-invalid` turn on together with
+`:state(user-invalid)`.
+
+## The invalid border
+
+Every field-shaped control paints its resting border in `--lr-form-control-invalid-border-color`
+(default `--lr-color-danger`) while it matches `:state(user-invalid)`: `lr-input`, `lr-number-input`,
+`lr-time-input`, `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-locale-picker`,
+`lr-phone-input`, `lr-token-input`, `lr-otp-input`, `lr-code-editor`, `lr-signature-pad` and the
+catalog pickers. The choice controls (`lr-checkbox`, `lr-radio`, `lr-switch` and their groups) read
+the same token for their invalid indicator. A component-specific invalid token, where one exists,
+takes precedence. One declaration on `:root` retunes every field:
+
+```css
+:root { --lr-form-control-invalid-border-color: var(--lr-color-danger-border-loud); }
+```
+
+The invalid edge yields while the field holds focus or its popup is open, so the focus edge stays
+visible. A pristine or barred field never paints it.
 
 ## Disabled and readonly controls publish no invalid state
 
@@ -130,7 +150,7 @@ violation from `checkValidity()`. That is the native rule: `<input required disa
 `<input required readonly>` both match neither `:valid` nor `:invalid`.
 
 It matters because the idiomatic stylesheet rule keys off the tag —
-`lr-input:state(user-invalid) { border-color: … }` — so a disabled required field that still
+`lr-input:state(user-invalid)::part(input-wrapper) { … }` — so a disabled required field that still
 published `invalid` painted every greyed-out control in the form red.
 
 `required`/`optional` are unaffected: they describe the attribute, not the outcome, so a disabled
@@ -1770,7 +1790,7 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `pageBy: 'months'|'single' = 'months'` (reflected)
 - `pill: boolean = false` (reflected)
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
-  placements are accepted)
+  placements are accepted; `left*`/`right*` are logical and swap under RTL, as in `lr-time-input`)
 - `presets: LyraDateRangePreset[] = []` (JS only, new in 11.1.0) — forwarded verbatim to the nested
   `lr-date-picker`, whose own `presets` documents the semantics (range mode only, open bounds
   resolving to `min`/`max`, unset renders nothing). Forwarded rather than reimplemented because the
@@ -4014,7 +4034,7 @@ content, like every sibling field. Style
 the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
 invalid after interaction, including after a failed submit or `reportValidity()`), or
 `--lr-phone-input-invalid-border-color`. Its fallback is `--lr-form-control-invalid-border-color`,
-then the resting border. Focus shows the
+then `--lr-color-danger`; the invalid edge yields to the focus edge. Focus shows the
 brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
 `'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
 exactly like `lr-input`. Native invalid/focus feedback therefore has one
@@ -4128,7 +4148,8 @@ ancestor `<fieldset disabled>` disables both handles and every preset button thr
 consumer-facing `disabled` property/attribute itself.
 The `base` part is an accessible `role="group"`: a non-empty host `aria-label` names the two-handle
 aggregate. A native external `<label for>` remains available through `labels`, but it does not cross
-into the shadow-root group. `startLabel` and `endLabel` continue to name the individual sliders.
+into the shadow-root group. A host `aria-labelledby` names that group, and a host `aria-describedby`
+describes both handles. `startLabel` and `endLabel` continue to name the individual sliders.
 
 Only the primary mouse button starts seeking or dragging. Right and middle presses leave the range
 and input/change events untouched. Touch and pen gestures keep their existing behavior, including
@@ -5827,14 +5848,14 @@ every sibling field.
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
 `--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
-`--lr-otp-input-invalid-border-color`, with the shared focus color and resting segment border as
-fallbacks.
+`--lr-otp-input-invalid-border-color`, with the shared focus color and the shared invalid border
+(`--lr-form-control-invalid-border-color`, then `--lr-color-danger`) as fallbacks.
 
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
 after interaction. `--lr-otp-input-invalid-border-color` takes precedence over
-`--lr-form-control-invalid-border-color`. With both unset, the segment keeps its resting border.
+`--lr-form-control-invalid-border-color`. With both unset, the segment border is `--lr-color-danger`.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the
@@ -6136,6 +6157,10 @@ retaining narrow-content ellipsis, wrapping and alignment with the remove action
 noneditable token layout remains the default. Reassigning the same committed token sequence
 preserves the inline editor, its draft, and its focus. A changed sequence ends the edit.
 
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the token row exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the token row.
+
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
@@ -6335,6 +6360,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 
 Code and its caret measurements use left-to-right base direction. The surrounding frame and
 gutter placement follow the application direction.
+
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the editor frame exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the editor frame.
 
 **Properties:**
 
@@ -8444,6 +8473,10 @@ Space or Enter lowers or lifts the pen, moves draw while it is down, and Escape 
 are announced through the shared polite live region. **The arrow keys keep their physical direction
 under `dir="rtl"`**: the deliberate exception to the ArrowLeft/ArrowRight swap, because a signature
 must never be mirrored.
+
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the drawing surface exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the drawing surface.
 
 **Properties:**
 

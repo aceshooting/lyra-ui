@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'وسیله',
   schemaViewerLabel: 'د سکیمې لیدونکی',
   schemaViewerEmpty: 'سکیمه نشته',
-  schemaViewerRequired: 'اړین',
   schemaViewerCircular: 'د سکیمې دوراني حواله',
   schemaViewerType: 'ډول: {type}',
   subagentPanelLabel: 'فرعي ایجنټان',

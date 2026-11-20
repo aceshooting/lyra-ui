@@ -42,6 +42,11 @@ describe('catalog picker filter loading', () => {
     const notice = picker.shadowRoot!.querySelector<HTMLElement>('[part="search-error"]');
     expect(notice?.textContent ?? '').to.include('Could not load the search field.');
     expect(notice!.getClientRects().length).to.be.greaterThan(0);
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--lr-color-danger)';
+    document.body.append(probe);
+    expect(getComputedStyle(notice!).color).to.equal(getComputedStyle(probe).color);
+    probe.remove();
     await waitUntil(() => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent?.includes('Could not load the search field.'));
     expect(errors).to.equal(1);
     expect(picker.value).to.equal('LU');

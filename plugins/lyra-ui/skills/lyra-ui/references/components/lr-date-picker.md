@@ -268,7 +268,7 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `pageBy: 'months'|'single' = 'months'` (reflected)
 - `pill: boolean = false` (reflected)
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
-  placements are accepted)
+  placements are accepted; `left*`/`right*` are logical and swap under RTL, as in `lr-time-input`)
 - `presets: LyraDateRangePreset[] = []` (JS only, new in 11.1.0) — forwarded verbatim to the nested
   `lr-date-picker`, whose own `presets` documents the semantics (range mode only, open bounds
   resolving to `min`/`max`, unset renders nothing). Forwarded rather than reimplemented because the

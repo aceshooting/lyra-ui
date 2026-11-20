@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'כלי',
   schemaViewerLabel: 'מציג סכימה',
   schemaViewerEmpty: 'אין סכימה זמינה',
-  schemaViewerRequired: 'דרוש',
   schemaViewerCircular: 'הפניה מעגלית בסכימה',
   schemaViewerType: 'סוג: {type}',
   subagentPanelLabel: 'סוכני משנה',

@@ -53,7 +53,7 @@ contains the requested target geometry; ignoring a request never announces a cha
 happen. All feedback remains silent while the grid or a composed ancestor is excluded from the
 accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
-`aria-hidden` shadow mirror of the latest spoken message).
+`aria-hidden` shadow mirror of the latest spoken message). A host `aria-describedby` is projected onto the `base` region.
 
 `layout` is normalized into an immutable snapshot before rendering; assigning the same array again is
 ignored (assign a new array after changes), and a new array with unchanged cell geometry keeps a drag

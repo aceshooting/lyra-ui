@@ -54,7 +54,11 @@ assert.equal(
 );
 const displaced = sample.replace('  }\n}', `  }
   // GENERATED DEFAULT-STRING SLICE: START
-  // old generated block
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    cancel: LYRA_DEFAULT_cancel,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static collectionSupport = true;
 }`);
@@ -80,6 +84,34 @@ assert.throws(
     ['cancel', 'itemCount'],
   ),
   /authored code inside the generated default-string import block.*SampleDetail/u,
+);
+
+// Authored members between the class markers, or an unbalanced marker pair, would be dropped or
+// duplicated by the next rewrite, so both fail closed and name the offending line.
+const rewriteSample = (source) => rewriteClassSource(
+  source,
+  '/repo/src/components/forms/sample/sample.class.ts',
+  '/repo/src/internal/default-strings.generated.ts',
+  ['cancel', 'itemCount'],
+);
+assert.throws(
+  () => rewriteSample(rewritten.replace(
+    '  // GENERATED DEFAULT-STRING SLICE: END',
+    '  static override shadowRootOptions = { ...LyraElement.shadowRootOptions };\n  // GENERATED DEFAULT-STRING SLICE: END',
+  )),
+  /authored code inside the generated default-string class block.*shadowRootOptions/u,
+);
+assert.throws(
+  () => rewriteSample(rewritten.replace('    cancel: LYRA_DEFAULT_cancel,', '    cancel: LYRA_DEFAULT_itemCount,')),
+  /authored code inside the generated default-string class block.*cancel: LYRA_DEFAULT_itemCount/u,
+);
+assert.throws(
+  () => rewriteSample(rewritten.replace('  // GENERATED DEFAULT-STRING SLICE: END\n', '')),
+  /has no matching .*GENERATED DEFAULT-STRING SLICE: END/u,
+);
+assert.throws(
+  () => rewriteSample(rewritten.replace('// GENERATED DEFAULT-STRING SLICE IMPORT: START\n', '')),
+  /IMPORT: END" has no preceding/u,
 );
 
 // Authored helpers and tests import fallback constants without a generated class block.

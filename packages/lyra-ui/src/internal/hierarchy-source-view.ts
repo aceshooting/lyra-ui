@@ -21,6 +21,11 @@ export interface HierarchySourceViewOptions<T> {
   readonly select: (row: LyraHierarchyRow<T>) => void;
 }
 
+// A row owns every keydown that starts inside it, so the tree-level handler skips those events
+// instead of the row stopping their propagation; unhandled keys (Escape, application shortcuts)
+// still reach overlays and document listeners.
+const rowKeyEvents = new WeakSet<Event>();
+
 const demandCallbacks = new WeakMap<object, (demand: Readonly<VirtualListRenderDemand>) => void>();
 function demandCallback<T>(control: HierarchySourceController<T>): (demand: Readonly<VirtualListRenderDemand>) => void {
   let callback = demandCallbacks.get(control);
@@ -62,7 +67,7 @@ export function hierarchySourceView<T>(control: HierarchySourceController<T>, op
       tabindex=${!row.disabled && !control.error && control.activeKey === row.key ? '0' : '-1'}
       @focusin=${(event: Event) => { if (currentRow(event)) control.focusRow(index, row); }}
       @click=${(event: Event) => { if (currentRow(event)) { control.focusRow(index, row); if (currentRow(event)) options.select(row); } }}
-      @keydown=${(event: KeyboardEvent) => { event.stopPropagation(); if (currentRow(event)) control.keydown(event, row, index, options.rtl, options.select); }}>
+      @keydown=${(event: KeyboardEvent) => { rowKeyEvents.add(event); if (currentRow(event)) control.keydown(event, row, index, options.rtl, options.select); }}>
       ${row.childCount ? html`<button part="source-toggle" type="button" tabindex="-1"
         aria-label=${row.expanded ? options.collapse : options.expand} ?disabled=${row.disabled || control.loading || control.error}
         @click=${(event: Event) => { event.stopPropagation(); if (currentRow(event)) void control.project({ type: 'toggle', key: row.key, expanded: !row.expanded }, true, row); }}
@@ -73,7 +78,7 @@ export function hierarchySourceView<T>(control: HierarchySourceController<T>, op
   return html`<div ${ref((element?: Element) => { tree = element; owner = element?.ownerDocument; })} part="base tree" class="source-tree" role="tree" aria-label=${options.label}
     aria-multiselectable=${String(options.multiple)} aria-busy=${String(control.loading)}
     tabindex=${control.mountedActive ? '-1' : '0'}
-    @keydown=${(event: KeyboardEvent) => { if (current(event)) control.keydown(event, undefined, control.firstMountedIndex - 1, options.rtl, options.select); }}>
+    @keydown=${(event: KeyboardEvent) => { if (!rowKeyEvents.has(event) && current(event)) control.keydown(event, undefined, control.firstMountedIndex - 1, options.rtl, options.select); }}>
     ${control.error ? html`<div part="source-error">${options.error}<button part="source-toggle" type="button" @click=${(event: Event) => { if (current(event) && control.error) control.retry(); }}>${options.retry}</button></div>` : nothing}
     ${control.loading ? html`<div part="source-status">${options.loading}</div>` : nothing}
     ${control.projection ? html`<div part="source-status">${options.summary}</div>

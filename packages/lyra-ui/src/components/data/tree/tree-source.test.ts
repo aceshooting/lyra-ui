@@ -201,6 +201,26 @@ it('swaps branch arrows in RTL and keeps leaf selection and disabled navigation 
   expect(reads).to.be.lessThan(32);
 });
 
+it('lets unhandled row keys reach document listeners and moves one row per handled arrow', async () => {
+  const el = await fixture<LyraTree>(html`<lr-tree label="Overlay tree" .treeSource=${source(10)}></lr-tree>`);
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[data-source-key="n0"]')));
+  const seen: string[] = [];
+  const listener = (event: KeyboardEvent) => { seen.push(`${event.key}:${event.defaultPrevented}`); };
+  document.addEventListener('keydown', listener);
+  try {
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[data-source-key="n0"]')!);
+    seen.length = 0;
+    await sendKeys({ press: 'Escape' });
+    await sendKeys({ press: 'ArrowDown' });
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-source-key="n1"]')?.getAttribute('tabindex') === '0', 'second row active');
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    expect(el.shadowRoot!.querySelector('[data-source-key="n1"]')!.getAttribute('tabindex')).to.equal('0');
+    expect(seen).to.deep.equal(['Escape:false', 'ArrowDown:true']);
+  } finally {
+    document.removeEventListener('keydown', listener);
+  }
+});
+
 it('keeps a reachable tree tab stop when unfocused scrolling removes the active row', async () => {
   const container = await fixture<HTMLDivElement>(html`<div><lr-tree label="Unfocused scroll" .treeSource=${source(1000)}></lr-tree><button>Outside</button></div>`);
   const el = container.querySelector<LyraTree>('lr-tree')!;

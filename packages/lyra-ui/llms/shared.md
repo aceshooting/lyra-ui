@@ -870,7 +870,9 @@ inert either way.
 
 Every value-carrying form-associated control publishes its validation state as CSS custom states, so
 a light-DOM stylesheet can react to validity without reaching into a shadow root or mirroring the
-state onto an attribute of your own:
+state onto an attribute of your own. Field-shaped controls already paint a danger border on
+`:state(user-invalid)` through `--lr-form-control-invalid-border-color`; a rule like this one only
+replaces that default:
 
 ```css
 lr-input:state(user-invalid)::part(input-wrapper) {

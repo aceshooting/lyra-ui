@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Piranti',
   schemaViewerLabel: 'Pamawas skema',
   schemaViewerEmpty: 'Ora ana skema',
-  schemaViewerRequired: 'Wajib',
   schemaViewerCircular: 'Referensi skema muter',
   schemaViewerType: 'Jinis: {type}',
   subagentPanelLabel: 'Subagen',

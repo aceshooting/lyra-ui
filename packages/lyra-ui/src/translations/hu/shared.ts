@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Rendszer',
   promptStudioRoleUser: 'Felhasználó',
   promptStudioRoleAssistant: 'Asszisztens',
+  schemaViewerRequired: 'Kötelező',
   statusUnknown: 'Ismeretlen',
   moveUp: 'Mozgatás felfelé',
   moveDown: 'Mozgatás lefelé',

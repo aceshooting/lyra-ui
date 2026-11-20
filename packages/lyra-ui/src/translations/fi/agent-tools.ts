@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Työkalu',
   schemaViewerLabel: 'Skeemakatselin',
   schemaViewerEmpty: 'Skeemaa ei ole saatavilla',
-  schemaViewerRequired: 'Pakollinen',
   schemaViewerCircular: 'Kehäviittaus skeemassa',
   schemaViewerType: 'Tyyppi: {type}',
   subagentPanelLabel: 'Aliagentit',

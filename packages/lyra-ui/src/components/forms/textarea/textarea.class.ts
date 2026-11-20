@@ -135,6 +135,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-textarea-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - The outer wrapper around label, textarea, error and hint.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
@@ -584,7 +587,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       // Empty exactly when the native textarea itself sees nothing wrong, i.e. when only the
       // dirty-value supplement above fired — the browser has no message for a value it considers
       // valid, so fall back to the localized generic one.
-      native?.validationMessage || this.localize('valueInvalid')
+      () => native?.validationMessage || this.localize('valueInvalid')
     );
   }
 
@@ -716,8 +719,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // after finds nothing left pending to cancel.
     this.settledDebounce.flush();
     this.value = this.textareaEl.value;
+    // Snapshot before relaying, so a native `change` listener's rewrite never reaches `lr-change`.
+    const value = this.value;
     relayNativeEvent(this, event);
-    this.emit('lr-change', { value: this.value });
+    this.emit('lr-change', { value });
   };
 
   private onFocus = (event: FocusEvent): void => {

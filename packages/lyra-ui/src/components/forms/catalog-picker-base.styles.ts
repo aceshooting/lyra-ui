@@ -22,6 +22,11 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
+  /* A failed search is an error, not a neutral limit notice: the danger foreground separates the
+     two states, as lr-emoji-picker's load-error does. */
+  [part='search-error'] {
+    color: var(--lr-color-danger);
+  }
   .search-failure {
     display: flex;
     align-items: center;

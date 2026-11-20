@@ -181,7 +181,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     if (!this.internals) return;
     if (isBarredFromValidation(this, this.internals)) this[SET_ANCHORED_VALIDITY]({});
     else if (this.value && !this.entries.some((row) => row.code === this.value && !row.disabled)) {
-      this[SET_ANCHORED_VALIDITY]({ customError: true }, this.localize('notInCatalog'));
+      this[SET_ANCHORED_VALIDITY]({ customError: true }, () => this.localize('notInCatalog'));
     } else if (this.required && !this.value) this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, () => this.localize('fieldRequired'));
     else this[SET_ANCHORED_VALIDITY]({});
   }

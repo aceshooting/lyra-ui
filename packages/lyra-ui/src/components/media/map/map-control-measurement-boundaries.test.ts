@@ -210,7 +210,7 @@ describe('lr-map rendered measurements and legend snapshots', () => {
     if (contextDescriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', contextDescriptor);
   });
 
-  for (const [longitude, expected] of [[0.001, /^Length: 111 m$/], [0.05, /^Length: 5\.56 km$/], [1, /^Length: 111\.2 km$/]] as const) {
+  for (const [longitude, expected] of [[0.000005, /^Length: 0\.56 m$/], [0.001, /^Length: 111 m$/], [0.05, /^Length: 5\.56 km$/], [1, /^Length: 111\.2 km$/]] as const) {
     it(`renders the localized distance unit and precision for a ${longitude}-degree line`, async () => {
       const { element, peer } = await mapFixture(el => {
         el.drawMode = 'line'; el.drawingMeasurements = true;

@@ -11,9 +11,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
-import { getDisplayNames, getNumberFormat } from '../../../internal/intl-cache.js';
+import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { resolveLocalizedSlots } from '../../../internal/localization-runtime.js';
-import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.js';
+import { formatMediaTime, formatPlaybackRate, withCurrentRate } from '../../../internal/media-time.js';
 import { formatProgressPercent } from '../../../internal/progress-value.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
@@ -250,11 +250,17 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       this.emit('lr-panorama-camera-change', { camera });
     },
   });
-  /** Flat media by default. Equirectangular rendering also requires engine="webgl". */
+  /**
+   * Flat media by default. Equirectangular rendering also requires engine="webgl".
+   * @default 'flat'
+   */
   @property({ converter: PANORAMA_PROJECTION, noAccessor: true })
   get projection(): LyraMediaProjection { return this.panoramaProps.projection; }
   set projection(value: LyraMediaProjection) { this.panoramaProps.setProjection(value); }
-  /** Preferred panorama renderer; the builtin flat view never downloads a companion. */
+  /**
+   * Preferred panorama renderer; the builtin flat view never downloads a companion.
+   * @default 'builtin'
+   */
   @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
   get engine(): Engine3dPreference { return this.panoramaProps.engine; }
   set engine(value: Engine3dPreference) { this.panoramaProps.setEngine(value); }
@@ -714,9 +720,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private renderRateOptions(): TemplateResult[] {
-    const format = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
     return withCurrentRate(PLAYBACK_RATES, this.playbackRate).map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${
-      this.localize('avPlayerRateOption', undefined, { rate: format.format(rate) })
+      this.localize('avPlayerRateOption', undefined, { rate: formatPlaybackRate(rate, this.effectiveLocale) })
     }</option>`);
   }
 

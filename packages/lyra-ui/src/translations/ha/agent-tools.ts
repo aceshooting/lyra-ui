@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Kayan aiki',
   schemaViewerLabel: 'Mai duba tsari',
   schemaViewerEmpty: 'Babu tsarin da ake da shi',
-  schemaViewerRequired: 'Ana buƙata',
   schemaViewerCircular: 'Nuni da tsarin da ya koma kansa',
   schemaViewerType: 'Nau’i: {type}',
   subagentPanelLabel: 'Mataimaka',

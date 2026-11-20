@@ -14,7 +14,8 @@ import { styles } from './schema-viewer.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueError, LYRA_DEFAULT_schemaViewerIssueInfo, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerIssueWarning, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueError, LYRA_DEFAULT_schemaViewerIssueInfo, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerIssueWarning, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_schemaViewerRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface JsonSchemaNode {
@@ -241,6 +242,9 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
   /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
   @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
+  /** Accessible name of the viewer region. It renders no visible heading, so an empty value
+   *  falls back to the localized `schemaViewerLabel` default rather than leaving the region
+   *  unnamed; a host `aria-label` remains authoritative. */
   @property() label = '';
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private previousNodeLimitText = '';

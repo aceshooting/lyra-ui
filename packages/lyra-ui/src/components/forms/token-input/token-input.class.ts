@@ -34,7 +34,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 import {
   createStringArrayFormDataState,
@@ -316,7 +316,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded to both text inputs. Reads are boolean; writes
-   * accept booleans and the native/Shoelace string vocabulary (`off`/`false` disable it). */
+   * accept booleans and the native/Shoelace string vocabulary (`off`/`false` disable it).
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -331,6 +333,10 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Visual treatment of the token row, from the library's shared vocabulary and with the same meanings as
+   *  `<lr-input>`'s `appearance`. Each value only swaps the private fill/border pair behind the
+   *  public fill and border hooks. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   /** Rounds the token row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
    *  single override of `--lr-token-input-radius`, which the tokens share with the row, so the
    *  chips round with it. */
@@ -787,12 +793,14 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     const previousValue = Object.freeze([...this.value]);
     this.value = next;
     this.syncValidity();
-    const detail = (): Readonly<{ value: readonly string[]; previousValue: readonly string[] }> =>
+    // One frozen snapshot for the gesture, so a listener rewriting `value` between the native and
+    // library events cannot make this commit's `lr-input` and `lr-change` disagree.
+    const detail: Readonly<{ value: readonly string[]; previousValue: readonly string[] }> =
       Object.freeze({ value: Object.freeze([...this.value]), previousValue });
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', detail());
+    this.emit('lr-input', detail);
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', detail());
+    this.emit('lr-change', detail);
   }
   private addDraft(): void {
     if (isLiveDisabled(this) || this.readonly) return;

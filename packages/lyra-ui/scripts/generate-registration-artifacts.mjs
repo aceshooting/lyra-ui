@@ -152,9 +152,30 @@ function assertCuratedOutsideImports(source, range, label) {
   );
 }
 
+/**
+ * The block is regenerated wholesale: only the generator's own comment lines and inventory
+ * side-effect imports may sit between the markers. A curated `*-register.js` import or any other
+ * authored statement inside it would vanish on the next run, so it fails closed instead.
+ */
+function assertOnlyGeneratedInside(source, range, label, startMarker, endMarker) {
+  const authored = source
+    .slice(range.start, range.end)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && line !== startMarker && line !== endMarker)
+    .find((line) =>
+      (!line.startsWith('// ') && !/^import '[^']+';$/.test(line)) || line.endsWith("-register.js';"));
+  invariant(
+    authored === undefined,
+    `${label} has authored code inside the generated registration block; move it below ` +
+      `\`${endMarker}\`: ${authored}`,
+  );
+}
+
 function updateBarrel(source, generated, label, startMarker, endMarker) {
   const range = markerRange(source, label, startMarker, endMarker);
   assertCuratedOutsideImports(source, range, label);
+  assertOnlyGeneratedInside(source, range, label, startMarker, endMarker);
   return source.slice(0, range.start) + generated + source.slice(range.end);
 }
 

@@ -1,6 +1,8 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { isElementNode } from '../../../internal/dom-guards.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { chevronIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
@@ -61,8 +63,8 @@ export interface LyraScrollerEventMap {
  * @csspart previous - The previous/start control.
  * @csspart next - The next/end control.
  * @csspart control - Shared part on both `previous` and `next`.
- * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
- * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
+ * @csspart previous-glyph - The chevron icon inside `previous`; points to the inline start (up when vertical).
+ * @csspart next-glyph - The chevron icon inside `next`; points to the inline end (down when vertical).
  * @cssprop [--lr-scroller-gap=var(--lr-space-s)] - Space between scrolled items.
  * @cssprop [--lr-scroller-controls-gap=var(--lr-space-xs)] - Space between the viewport and controls.
  * @cssprop [--lr-scroller-control-hover-bg=var(--lr-color-brand-quiet)] - Previous/next hover fill.
@@ -97,6 +99,12 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  /** Projects a host-authored `aria-describedby` onto the shadow element that owns the role. */
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot?.querySelector<HTMLElement>('[part="viewport"]') ?? null,
+  );
 
   @property({ reflect: true, converter: declaredDefaultConverter<LyraOrientation>('horizontal') })
   orientation: LyraOrientation = 'horizontal';
@@ -141,6 +149,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.resetOwnerRealmWork();
   }
 
@@ -297,7 +306,6 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
       (hostAriaLabel(this) === '' || this.accessibleLabel === '')
         ? ''
         : resolveAccessibleName(this, this.label, this.localize('scrollerLabel'));
-    const vertical = this.orientation === 'vertical';
     return html`<div part="base" @keydown=${this.onBaseKeyDown}>
       ${this.controls
         ? html`<button
@@ -308,9 +316,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             @click=${() => this.scrollByDirection(-1)}
             @dblclick=${() => this.scrollToEdge('start')}
           >
-            ${vertical
-              ? html`<span part="previous-glyph" aria-hidden="true">↑</span>`
-              : html`<span part="previous-glyph" aria-hidden="true">‹</span>`}
+            <span part="previous-glyph" aria-hidden="true">${chevronIcon()}</span>
           </button>`
         : nothing}
       <div class="viewport-wrap">
@@ -343,9 +349,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             @click=${() => this.scrollByDirection(1)}
             @dblclick=${() => this.scrollToEdge('end')}
           >
-            ${vertical
-              ? html`<span part="next-glyph" aria-hidden="true">↓</span>`
-              : html`<span part="next-glyph" aria-hidden="true">›</span>`}
+            <span part="next-glyph" aria-hidden="true">${chevronIcon()}</span>
           </button>`
         : nothing}
     </div>`;

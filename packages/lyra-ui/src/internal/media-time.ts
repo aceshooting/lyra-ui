@@ -1,3 +1,4 @@
+import { formatChartValue } from './chart-number-format.js';
 import { getNumberFormat } from './intl-cache.js';
 import { finiteRange } from './numbers.js';
 
@@ -16,6 +17,12 @@ export function formatMediaTime(seconds: number, locale: string): string {
   return hours > 0
     ? `${regular.format(hours)}:${padded.format(minutes)}:${padded.format(remaining)}`
     : `${regular.format(minutes)}:${padded.format(remaining)}`;
+}
+
+/** Formats a playback rate with two fraction digits, widening for slow rates below 0.01 so a
+ *  distinct rate never reads as `0`. */
+export function formatPlaybackRate(rate: number, locale: string): string {
+  return formatChartValue(rate, locale, getNumberFormat(locale, { maximumFractionDigits: 2 }), 2);
 }
 
 /** The playback-rate choices with `current` inserted in ascending order when the list lacks it, so

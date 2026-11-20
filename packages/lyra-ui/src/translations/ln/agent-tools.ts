@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Outil',
   schemaViewerLabel: 'Motali ya schéma',
   schemaViewerEmpty: 'Schéma ezali te',
-  schemaViewerRequired: 'Esengeli',
   schemaViewerCircular: 'Référence circulaire ya schéma',
   schemaViewerType: 'Lolenge: {type}',
   subagentPanelLabel: 'Ba sous-agent',

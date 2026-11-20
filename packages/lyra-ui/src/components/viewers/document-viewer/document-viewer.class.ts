@@ -37,7 +37,7 @@ import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
-import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
+import { EMPTY_HIGHLIGHTS, snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_download, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -73,8 +73,6 @@ export interface LyraDocumentViewerEventMap {
   'lr-location-change': LyraEbookViewerEventMap['lr-location-change'];
   'lr-viewer-diagnostic': LyraPptxViewerEventMap['lr-viewer-diagnostic'];
 }
-
-const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
 
 /**
  * A dialog-hosted document viewer with a pluggable MIME-type renderer registry.

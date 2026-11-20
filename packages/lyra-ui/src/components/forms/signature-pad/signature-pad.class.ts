@@ -1,9 +1,11 @@
 import type { LyraLabelDisplay } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import type { LyraAppearance } from '../../../internal/variants.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { projectFrozenRows, readOwnDataValue } from '../../../internal/data-descriptors.js';
@@ -179,6 +181,10 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   @property() hint = '';
   /** Error text, before the `error` slot. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Visual treatment of the drawing surface, from the library's shared vocabulary and with the same
+   *  meanings as `<lr-input>`'s `appearance`. Each value only swaps the private fill/border pair
+   *  behind `--lr-signature-pad-fill`/`--lr-signature-pad-border-color`. */
+  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
 
   @state() private penDown = false;
   @state() private cursor: Point = at(0.5, 0.5);
@@ -656,7 +662,10 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
         ${renderFormControlHintError({ ...supporting, hasHint, hasError })}
         <span id="instructions" hidden>${this.localize('signaturePadInstructions')}</span>
         <span id="status" hidden>${count
-          ? this.localize('signaturePadSigned', undefined, { count })
+          ? this.localize('signaturePadSigned', undefined, {
+              count: getNumberFormat(this.effectiveLocale).format(count),
+              pluralCount: count,
+            })
           : this.localize('signaturePadEmpty')}</span>
       </div>
     `;

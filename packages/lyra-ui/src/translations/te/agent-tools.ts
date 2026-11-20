@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'టూల్',
   schemaViewerLabel: 'స్కీమా వీక్షణ',
   schemaViewerEmpty: 'స్కీమా అందుబాటులో లేదు',
-  schemaViewerRequired: 'తప్పనిసరి',
   schemaViewerCircular: 'చక్రీయ స్కీమా సూచన',
   schemaViewerType: 'రకం: {type}',
   subagentPanelLabel: 'సబ్‌ఏజెంట్‌లు',

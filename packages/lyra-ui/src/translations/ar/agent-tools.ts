@@ -288,7 +288,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'الأداة',
   schemaViewerLabel: 'عارض المخطط',
   schemaViewerEmpty: 'لا يتوفر مخطط',
-  schemaViewerRequired: 'مطلوب',
   schemaViewerCircular: 'مرجع دائري في المخطط',
   schemaViewerType: 'النوع: {type}',
   subagentPanelLabel: 'الوكلاء الفرعيون',

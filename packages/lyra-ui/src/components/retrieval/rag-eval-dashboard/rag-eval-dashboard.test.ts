@@ -671,3 +671,14 @@ it('wraps a long unbroken run label inside the run button', async () => {
   expect(run.scrollWidth <= run.clientWidth + 1).to.equal(true);
   expect(label.getBoundingClientRect().width <= run.getBoundingClientRect().width).to.equal(true);
 });
+
+it('keeps a tiny non-zero number metric from reading as zero', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      locale="en-US"
+      .metrics=${[{ id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' }]}
+      .runs=${[{ id: 'run', label: 'Run', metrics: { mrr: 0.00004 } }]}
+    ></lr-rag-eval-dashboard>
+  `);
+  expect([...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => stat.value)).to.deep.equal(['0.00004']);
+});

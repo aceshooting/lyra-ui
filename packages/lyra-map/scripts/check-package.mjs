@@ -71,4 +71,12 @@ for (const name of ['createSceneBridge', 'withNativeTerrainHookScope', 'captureN
   assert.ok(!Object.hasOwn(actual, name), `Unexpected default map export ${name}`);
 for (const file of ['scene.d.ts', 'scene-entry.d.ts']) await readFile(resolve(root, 'dist/types', file));
 assert.ok((await readdir(resolve(root, 'dist'))).includes('map.css'));
+// The shipped notices name each exactly pinned runtime dependency by version; a dependency bump
+// that forgets the notice would misstate what the package installs.
+const notices = await readFile(resolve(root, 'THIRD_PARTY_NOTICES.md'), 'utf8');
+for (const [name, version] of Object.entries(manifest.dependencies)) {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
+  const heading = new RegExp(`^## ${name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')} (\\S+)$`, 'm').exec(notices);
+  assert.equal(heading?.[1], version, `THIRD_PARTY_NOTICES.md must name ${name} ${version}`);
+}
 console.log('Map package exports, provenance, and generated module checks passed.');

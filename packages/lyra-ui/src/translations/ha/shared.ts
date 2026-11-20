@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Tsari',
   promptStudioRoleUser: 'Mai amfani',
   promptStudioRoleAssistant: 'Mataimaki',
+  schemaViewerRequired: 'Ana buƙata',
   statusUnknown: 'Ba a sani ba',
   moveUp: 'Matsar sama',
   moveDown: 'Matsar ƙasa',

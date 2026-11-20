@@ -33,6 +33,7 @@ import {
 } from '../region-highlight-layer.js';
 import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
@@ -71,7 +72,6 @@ type ResolvedRegionHighlight = LyraHighlight & {
   anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
 };
 
-const MAX_PAINTED_HIGHLIGHTS = 100;
 
 export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-load': CustomEvent<Record<string, never>>;
@@ -117,7 +117,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart highlight-layer - The wrapper around every rendered region highlight.
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`).
  * @csspart region-highlight-target - Transparent activation geometry around a region highlight,
- *   with a minimum pointer/focus area independent of the visual rectangle.
+ *   with a minimum pointer/focus area independent of the visual rectangle; `aria-current` is
+ *   `"true"` on the `activeHighlightId` match, as on `region-highlight-action`.
  * @csspart highlight-actions - Non-overlapping actions used instead of on-image targets when the
  *   minimum hit areas of two or more region highlights would overlap.
  * @csspart region-highlight-action - One non-overlapping highlight action.
@@ -329,7 +330,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       const rect = sanitizePercentRect(highlight.anchor.rect);
       if (!rect) continue;
       resolved.push({ ...highlight, anchor: { ...highlight.anchor, rect } });
-      if (resolved.length >= MAX_PAINTED_HIGHLIGHTS) break;
+      if (resolved.length >= VIEWER_PAINTED_HIGHLIGHT_LIMIT) break;
     }
     return resolved;
   }
@@ -356,7 +357,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     regionHighlights: ResolvedRegionHighlight[],
     showActions: boolean,
   ): TemplateResult | typeof nothing {
-    return renderRegionHighlightActions(regionHighlights,
+    return renderRegionHighlightActions(regionHighlights, this.activeHighlightId,
       (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
       this.renderRoot, this.effectiveDirection === 'rtl',
       (highlightId) => this.emit('lr-highlight-activate', { highlightId }), showActions);

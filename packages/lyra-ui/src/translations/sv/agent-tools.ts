@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Verktyg',
   schemaViewerLabel: 'Schemavisare',
   schemaViewerEmpty: 'Inget schema tillgängligt',
-  schemaViewerRequired: 'Obligatorisk',
   schemaViewerCircular: 'Cirkulär schemareferens',
   schemaViewerType: 'Typ: {type}',
   subagentPanelLabel: 'Underagenter',

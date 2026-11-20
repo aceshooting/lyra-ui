@@ -31,7 +31,8 @@ remain authoritative. Existing palette behavior in editable content and for alre
 is unchanged.
 
 Valid string keywords still participate in search alongside the command's label, description, and
-group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
+group. Matching is case-, accent- and Unicode-normalization-insensitive in the effective locale
+(`cafe` finds "Café"). Unsafe keyword entries are skipped without invoking accessors, and selection returns the
 original command object.
 
 `commands` admits the first 10,000 input positions; invalid or duplicate records inside that prefix

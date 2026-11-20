@@ -2999,6 +2999,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraCodeEditor,
       | 'accessibleLabel'
+      | 'appearance'
       | 'autocapitalize'
       | 'autocomplete'
       | 'autocorrect'
@@ -3296,6 +3297,7 @@ export interface LyraComponentTypeMap {
       | '--lr-combobox-unknown-value-border-style'
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -4292,6 +4294,7 @@ export interface LyraComponentTypeMap {
       | '--lr-date-input-radius'
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -7214,6 +7217,7 @@ export interface LyraComponentTypeMap {
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -7943,6 +7947,7 @@ export interface LyraComponentTypeMap {
       | 'lr-show';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -9069,6 +9074,7 @@ export interface LyraComponentTypeMap {
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -9387,6 +9393,7 @@ export interface LyraComponentTypeMap {
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -11869,6 +11876,7 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--hide-duration'
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -12022,6 +12030,7 @@ export interface LyraComponentTypeMap {
     element: LyraSignaturePad;
     properties: LyraElementProperties<
       LyraSignaturePad,
+      | 'appearance'
       | 'disabled'
       | 'errorText'
       | 'hint'
@@ -13385,6 +13394,7 @@ export interface LyraComponentTypeMap {
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -13604,6 +13614,7 @@ export interface LyraComponentTypeMap {
       | '--hide-duration'
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
+      | '--lr-form-control-invalid-border-color'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
@@ -13979,6 +13990,7 @@ export interface LyraComponentTypeMap {
       LyraTokenInput,
       | 'accessibleLabel'
       | 'allowDuplicates'
+      | 'appearance'
       | 'autocapitalize'
       | 'autocomplete'
       | 'autocorrect'

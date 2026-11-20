@@ -7,6 +7,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -304,9 +305,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     if (metric.format === 'percent') {
       return formatAdaptiveShare(this.effectiveLocale, raw);
     }
-    return getNumberFormat(this.effectiveLocale, {
-      maximumFractionDigits: 3,
-    }).format(raw);
+    // Three fraction digits, widened for small non-zero values so they never read as `0`.
+    return formatChartValue(raw, this.effectiveLocale);
   }
 
   private latestValue(

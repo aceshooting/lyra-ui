@@ -361,6 +361,22 @@ describe("lr-rubric-form", () => {
     ).to.be.true;
   });
 
+  it("names the required state in a score control's accessible label (slider and segmented)", async () => {
+    const keys: RubricKey[] = [
+      { key: "wide", type: "score", label: "Quality", min: 0, max: 100, step: 1, required: true },
+      { key: "compact", type: "score", label: "Clarity", min: 1, max: 3, step: 1, required: true },
+      { key: "optional", type: "score", label: "Tone", min: 0, max: 100, step: 1 },
+    ];
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const slider = el.shadowRoot!.querySelector('[data-key="wide"] lr-slider')!;
+    const segmented = el.shadowRoot!.querySelector('[data-key="compact"] lr-segmented')!;
+    const optional = el.shadowRoot!.querySelector('[data-key="optional"] lr-slider')!;
+    expect(slider.getAttribute("aria-label")).to.equal("Quality. Required");
+    expect(segmented.getAttribute("label")).to.equal("Clarity. Required");
+    expect(optional.getAttribute("aria-label")).to.equal("Tone");
+  });
+
   it("records the synthesized midpoint shown by an unanswered wide slider score", async () => {
     const keys: RubricKey[] = [
       {

@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Hulpmiddel',
   schemaViewerLabel: 'Schemaviewer',
   schemaViewerEmpty: 'Geen schema beschikbaar',
-  schemaViewerRequired: 'Vereist',
   schemaViewerCircular: 'Cirkelverwijzing in schema',
   schemaViewerType: 'Type: {type}',
   subagentPanelLabel: 'Subagenten',

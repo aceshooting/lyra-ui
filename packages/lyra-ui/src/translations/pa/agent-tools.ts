@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'ਟੂਲ',
   schemaViewerLabel: 'ਸਕੀਮਾ ਦਰਸ਼ਕ',
   schemaViewerEmpty: 'ਕੋਈ ਸਕੀਮਾ ਉਪਲਬਧ ਨਹੀਂ',
-  schemaViewerRequired: 'ਲਾਜ਼ਮੀ',
   schemaViewerCircular: 'ਚੱਕਰੀ ਸਕੀਮਾ ਹਵਾਲਾ',
   schemaViewerType: 'ਕਿਸਮ: {type}',
   subagentPanelLabel: 'ਸਬ-ਏਜੰਟ',

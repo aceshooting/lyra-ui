@@ -40,6 +40,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 Code and its caret measurements use left-to-right base direction. The surrounding frame and
 gutter placement follow the application direction.
 
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the editor frame exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the editor frame.
+
 **Properties:**
 
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as

@@ -329,12 +329,18 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     },
   });
 
-  /** Flat media by default. Equirectangular rendering also requires engine="webgl". */
+  /**
+   * Flat media by default. Equirectangular rendering also requires engine="webgl".
+   * @default 'flat'
+   */
   @property({ converter: PANORAMA_PROJECTION, noAccessor: true })
   get projection(): LyraMediaProjection { return this.panoramaProps.projection; }
   set projection(value: LyraMediaProjection) { this.panoramaProps.setProjection(value); }
 
-  /** Preferred panorama renderer; the builtin flat view never downloads a companion. */
+  /**
+   * Preferred panorama renderer; the builtin flat view never downloads a companion.
+   * @default 'builtin'
+   */
   @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
   get engine(): Engine3dPreference { return this.panoramaProps.engine; }
   set engine(value: Engine3dPreference) { this.panoramaProps.setEngine(value); }

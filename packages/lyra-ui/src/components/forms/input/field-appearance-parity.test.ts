@@ -6,6 +6,9 @@ import '../../lr-textarea.js';
 import '../../lr-date-input.js';
 import '../../lr-phone-input.js';
 import '../../lr-otp-input.js';
+import '../../lr-token-input.js';
+import '../../lr-code-editor.js';
+import '../../lr-signature-pad.js';
 
 type Updating = HTMLElement & { updateComplete: Promise<unknown> };
 
@@ -67,5 +70,27 @@ describe('text and date field appearance parity', () => {
     const reference = cues[0]!.split(': ')[1];
     expect(cues).to.deep.equal(FIELDS.map((field) => `${field.tag}: ${reference}`));
     expect(reference!.endsWith(' none')).to.equal(true);
+  });
+  it('repaints token-input, code-editor and signature-pad from the appearance property', async () => {
+    const surfaces = [
+      { tag: 'lr-token-input', surface: '[part~="input-wrapper"]' },
+      { tag: 'lr-code-editor', surface: '[part="editor"]' },
+      { tag: 'lr-signature-pad', surface: '[part="surface"]' },
+    ] as const;
+    const fill = (el: HTMLElement, selector: string) => {
+      const cs = getComputedStyle(el.shadowRoot!.querySelector(selector)!);
+      return `${cs.backgroundColor} | ${cs.borderTopColor}`;
+    };
+    for (const appearance of ['filled', 'plain', 'accent'] as const) {
+      const reference = fill(await mount('lr-input', appearance), '[part~="input-wrapper"]');
+      const paints: string[] = [];
+      for (const { tag, surface } of surfaces) {
+        const el = await mount(tag, 'outlined');
+        (el as Updating & { appearance: string }).appearance = appearance;
+        await el.updateComplete;
+        paints.push(`${tag}: ${el.getAttribute('appearance')} ${fill(el, surface)}`);
+      }
+      expect(paints, appearance).to.deep.equal(surfaces.map(({ tag }) => `${tag}: ${appearance} ${reference}`));
+    }
   });
 });

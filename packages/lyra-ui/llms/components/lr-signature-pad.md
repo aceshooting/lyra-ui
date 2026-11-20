@@ -44,6 +44,10 @@ are announced through the shared polite live region. **The arrow keys keep their
 under `dir="rtl"`**: the deliberate exception to the ArrowLeft/ArrowRight swap, because a signature
 must never be mirrored.
 
+`appearance: LyraAppearance = 'outlined'` (reflected) — `'outlined'`, `'filled-outlined'`, `'filled'`,
+`'plain'` or `'accent'`, painting the drawing surface exactly like `lr-input`'s `appearance`. The
+property and the attribute are equivalent: `el.appearance = 'filled'` repaints the drawing surface.
+
 **Properties:**
 
 - `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing

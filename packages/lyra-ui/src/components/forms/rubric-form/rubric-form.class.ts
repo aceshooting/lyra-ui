@@ -45,7 +45,7 @@ import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_rubricKeysLimit, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 // Category criteria register their controls the first time a criterion of that kind renders.
@@ -512,6 +512,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     rubricSkip: LYRA_DEFAULT_rubricSkip,
     rubricSubmit: LYRA_DEFAULT_rubricSubmit,
     rubricSubmitAndNext: LYRA_DEFAULT_rubricSubmitAndNext,
+    schemaViewerRequired: LYRA_DEFAULT_schemaViewerRequired,
     unsupportedFieldType: LYRA_DEFAULT_unsupportedFieldType,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -1068,8 +1069,14 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     // Slider/segmented own their roles inside their own shadow roots, so the
     // rubric's outer sibling description/error cannot describe those roles
     // through an idref. Include that context in the composed control's own
-    // accessible label while retaining the visible outer field chrome.
-    const accessibleLabel = [k.label ?? k.key, k.description, hasError ? this._errors[k.key] : undefined]
+    // accessible label while retaining the visible outer field chrome. Neither control forwards
+    // `aria-required` (the slider role never supports it), so a required score names that state.
+    const accessibleLabel = [
+      k.label ?? k.key,
+      k.required ? this.localize('schemaViewerRequired') : undefined,
+      k.description,
+      hasError ? this._errors[k.key] : undefined,
+    ]
       .filter((value): value is string => Boolean(value))
       .join('. ');
     if (this.isSegmentedScore(k)) {

@@ -27,6 +27,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
   getFormOwner,
   isBarredFromValidation,
@@ -569,7 +570,43 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     if (hadAppliedPreset) this.requestUpdate();
   }
 
+  /** Host `aria-labelledby` names the shadow group; host `aria-describedby` describes both
+   *  focusable handles, since a two-handle range has no single control the description binds to. */
+  private hostRelationships: ResolvedAriaRelationshipLease[] = [];
+
+  private syncHostRelationships(): void {
+    const part = (name: string) =>
+      this.isConnected ? this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`) : null;
+    const targets = [
+      [part('base'), 'aria-labelledby'],
+      [part('handle-start'), 'aria-describedby'],
+      [part('handle-end'), 'aria-describedby'],
+    ] as const;
+    if (this.hostRelationships.length === 0) {
+      this.hostRelationships = targets.map(([target, relationship]) =>
+        acquireResolvedAriaRelationship(this, target, relationship));
+    } else {
+      targets.forEach(([target], index) => this.hostRelationships[index]!.update(target));
+    }
+  }
+
+  private releaseHostRelationships(): void {
+    for (const lease of this.hostRelationships) lease.release();
+    this.hostRelationships = [];
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncHostRelationships();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncHostRelationships();
+  }
+
   override disconnectedCallback(): void {
+    this.releaseHostRelationships();
     super.disconnectedCallback();
     // Mirror lr-multi-split's cleanup: if the element is removed mid-drag (or a
     // pointercancel/alt-tab means `pointerup` never reaches `window`), these
@@ -583,6 +620,8 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     // Adoption can happen while already disconnected, so defensively retire any previous-realm
     // drag state even when no new disconnected callback will run.
     this.abortActiveGestures();
+    this.releaseHostRelationships();
+    if (this.isConnected && this.hasUpdated) this.syncHostRelationships();
   }
 
   /** Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without

@@ -27,6 +27,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
+import { VIEWER_PAGE_COUNT_LIMIT } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings/viewers.generated.js';
@@ -35,7 +36,6 @@ import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pag
 export { PageViewerSnapshotController } from './page-viewer-snapshot.js';
 
 const DIGIT_BUFFER_MS = 500;
-const MAX_PAGE_COUNT = 100_000;
 const DEFAULT_ALLOCATION_WIDTH = 320;
 const DEFAULT_THUMB_WIDTH = 96;
 
@@ -203,7 +203,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.resolvedPageCount = finiteCount(
       (e as CustomEvent<{ pageCount: number }>).detail?.pageCount ?? 0,
       0,
-      MAX_PAGE_COUNT,
+      VIEWER_PAGE_COUNT_LIMIT,
     );
     // `lr-load` describes a fresh document even when the source object and page count are unchanged.
     // Replace each canvas so older peer work can finish only into detached render targets.
@@ -374,7 +374,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (!snapshot) return;
     const ready = snapshot.status === 'ready';
     const nextCount = ready
-      ? finiteCount(snapshot.pageCount, 0, MAX_PAGE_COUNT)
+      ? finiteCount(snapshot.pageCount, 0, VIEWER_PAGE_COUNT_LIMIT)
       : 0;
     const nextPage = finiteInteger(snapshot.page, 1, 1, Math.max(1, nextCount));
     const previousCount = this.resolvedPageCount;
@@ -400,7 +400,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   /** `pageCount` normalized to a finite, non-negative integer before `effectivePageCount()`'s
    *  mediated-mode fallback and every page-bounds/indexed-source calculation derived from it. */
   private get safePageCount(): number {
-    return finiteCount(this.pageCount, 0, MAX_PAGE_COUNT);
+    return finiteCount(this.pageCount, 0, VIEWER_PAGE_COUNT_LIMIT);
   }
 
   /** `page` normalized to a finite integer clamped into `[1, effectivePageCount()]` (or held at the

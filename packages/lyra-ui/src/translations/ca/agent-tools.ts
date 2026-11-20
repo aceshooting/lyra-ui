@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Eina',
   schemaViewerLabel: 'Visualitzador d’esquemes',
   schemaViewerEmpty: 'No hi ha cap esquema disponible',
-  schemaViewerRequired: 'Obligatori',
   schemaViewerCircular: 'Referència circular a l’esquema',
   schemaViewerType: 'Tipus: {type}',
   subagentPanelLabel: 'Subagents',

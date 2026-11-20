@@ -399,10 +399,14 @@ describe('field theme overrides', () => {
   ] as const) {
     it(`applies the shared invalid border to ${tag} after interaction`, async () => {
       const element = unsafeStatic(tag);
-      const el = await fixture<Updating & {reportValidity(): boolean}>(staticHtml`
-        <${element} required style="--lr-form-control-invalid-border-color: rgb(75, 20, 65)"></${element}>
+      const root = await fixture<HTMLElement>(staticHtml`
+        <div><${element} required style="--lr-form-control-invalid-border-color: rgb(75, 20, 65)"></${element}><button type="button">Away</button></div>
       `);
+      const el = root.firstElementChild as Updating & {reportValidity(): boolean};
       expect(el.reportValidity()).to.equal(false);
+      // The invalid edge yields to the focus edge, and reportValidity() may focus the field. Move
+      // focus by keyboard: a pointer press could land on the signature surface and draw a stroke.
+      await focusByKeyboard(root.querySelector('button')!);
       await el.updateComplete;
       await waitUntil(() => getComputedStyle(part(el, selector)).borderTopColor === 'rgb(75, 20, 65)');
     });

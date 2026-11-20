@@ -278,7 +278,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Orodje',
   schemaViewerLabel: 'Pregledovalnik sheme',
   schemaViewerEmpty: 'Shema ni na voljo',
-  schemaViewerRequired: 'Obvezno',
   schemaViewerCircular: 'Krožni sklic v shemi',
   schemaViewerType: 'Vrsta: {type}',
   subagentPanelLabel: 'Podagenti',

@@ -8,6 +8,9 @@ Migrate the project at `$1` (default: the current working directory) off Web Awe
 `@awesome.me/webawesome`) and/or Shoelace (`<sl-*>`, `@shoelace-style/shoelace`) onto
 `@aceshooting/lyra-ui`'s `lr-*` equivalents.
 
+Upgrading between Lyra majors is a separate task for `/lyra-ui:update`: run
+`npx lyra-ui-migrate --origin=lyra-v31 --check <path>` for Lyra 31 to 32 (`--help` lists every profile).
+
 Migration is best-effort for both ecosystems. Resolve each occurrence against the source prefix and
 the installed package version that supplied it (installing both libraries does not change an
 occurrence's source), then use its classification and warnings in

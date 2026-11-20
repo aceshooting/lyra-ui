@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: '工具',
   schemaViewerLabel: 'Schema 檢視器',
   schemaViewerEmpty: '暫無 schema',
-  schemaViewerRequired: '必填',
   schemaViewerCircular: 'schema 迴圈引用',
   schemaViewerType: '型別：{type}',
   subagentPanelLabel: '子智慧體',

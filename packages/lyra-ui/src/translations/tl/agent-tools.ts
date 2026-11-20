@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Kagamitan',
   schemaViewerLabel: 'Viewer ng schema',
   schemaViewerEmpty: 'Walang available na schema',
-  schemaViewerRequired: 'Kinakailangan',
   schemaViewerCircular: 'Pabilog na sanggunian ng schema',
   schemaViewerType: 'Uri: {type}',
   subagentPanelLabel: 'Mga subagent',

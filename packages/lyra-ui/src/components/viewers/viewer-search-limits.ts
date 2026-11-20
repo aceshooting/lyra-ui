@@ -4,6 +4,12 @@ import { resolveIntlLocale } from '../../internal/intl-cache.js';
 /** Resource ceilings for model-backed searches that cannot use a DOM `TextQuoteIndex` directly. */
 export const VIEWER_SEARCH_QUERY_LIMIT = TEXT_QUOTE_LIMITS.maxQueryCodeUnits;
 export const VIEWER_SEARCH_WORK_LIMIT = TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits;
+/** Matches a model-backed search retains (PDF, ebook, XML), the same ceiling as the DOM-text index. */
+export const VIEWER_SEARCH_MATCH_LIMIT = TEXT_QUOTE_LIMITS.maxMatches;
+/** Host highlights a capped renderer paints at once. */
+export const VIEWER_PAINTED_HIGHLIGHT_LIMIT = 100;
+/** Pages a paged viewer or page rail admits from a document. */
+export const VIEWER_PAGE_COUNT_LIMIT = 100_000;
 
 export interface BoundedViewerSearchQuery {
   needle: string;

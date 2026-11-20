@@ -45,7 +45,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
-import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
+import { boundedViewerSearchQuery, VIEWER_SEARCH_MATCH_LIMIT, VIEWER_PAINTED_HIGHLIGHT_LIMIT, VIEWER_PAGE_COUNT_LIMIT } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
   loadPdfJs,
@@ -87,11 +87,8 @@ const PAGE_TEXT_CACHE_LIMIT = 64;
 const PAGE_SEARCH_INDEX_CACHE_LIMIT = 8;
 const DEFAULT_THUMBNAIL_WIDTH = 96;
 const MAX_THUMBNAIL_WIDTH = 2048;
-const MAX_PAGE_COUNT = 100_000;
-const MAX_SEARCH_MATCHES = 10_000;
 const MAX_PAINTED_SEARCH_MATCHES = 200;
 const MAX_PAINTED_SEARCH_MARKS = 200;
-const MAX_PAINTED_HIGHLIGHTS = 100;
 const MAX_HIGHLIGHT_RESOLUTION_ATTEMPTS = 1_000;
 const MAX_HIGHLIGHT_RECTS = 1_000;
 const MAX_SEARCH_PAGES = 1_000;
@@ -834,7 +831,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     status: LyraPageViewerSnapshot['status'],
     pageCount: number,
   ): void {
-    const snapshot = this.pageViewerState.publish(status, this.clampPage(this.page), finiteCount(pageCount, 0, MAX_PAGE_COUNT));
+    const snapshot = this.pageViewerState.publish(status, this.clampPage(this.page), finiteCount(pageCount, 0, VIEWER_PAGE_COUNT_LIMIT));
     if (!snapshot) return;
     if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
   }
@@ -914,7 +911,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
       return;
     }
-    const pageCount = finiteCount(doc.numPages, 0, MAX_PAGE_COUNT);
+    const pageCount = finiteCount(doc.numPages, 0, VIEWER_PAGE_COUNT_LIMIT);
     if (pageCount < 1 || pageCount !== doc.numPages) {
       await doc.destroy?.();
       throw new LyraUserFacingError(this.localize('documentPreviewResourceTooLarge'), localize => localize('documentPreviewResourceTooLarge'));
@@ -1500,7 +1497,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.pdfTextScopeBuilds++;
     return {
       scope,
-      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: MAX_SEARCH_MATCHES }),
+      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: VIEWER_SEARCH_MATCH_LIMIT }),
       locale: this.effectiveLocale,
       sourceText: raw.length <= TEXT_QUOTE_LIMITS.maxNodeCodeUnits ? raw : undefined,
       sourceWorkCodeUnits: Math.min(
@@ -1615,7 +1612,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     const created: PdfPageTextIndex = {
       scope,
-      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: MAX_SEARCH_MATCHES }),
+      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: VIEWER_SEARCH_MATCH_LIMIT }),
       locale: this.effectiveLocale,
       sourceWorkCodeUnits: scope.text.length,
       container,
@@ -1711,13 +1708,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!pageMatches.matchCountExact) matchCountExact = false;
       const retainedBeforePage = matches.length;
       for (const match of pageMatches) {
-        if (matches.length >= MAX_SEARCH_MATCHES) {
+        if (matches.length >= VIEWER_SEARCH_MATCH_LIMIT) {
           matchCountExact = false;
           break;
         }
         matches.push({ page, start: match.start, length: match.end - match.start });
       }
-      if (matches.length >= MAX_SEARCH_MATCHES && pageMatches.length > 0) {
+      if (matches.length >= VIEWER_SEARCH_MATCH_LIMIT && pageMatches.length > 0) {
         // Keep scanning only while the exact boundary remains plausible. A retained match beyond
         // the global cap proves the public count is a lower bound immediately.
         const retainedOnPage = matches.length - retainedBeforePage;
@@ -1893,7 +1890,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const budget: PdfHighlightPaintBudget = {
       work: { remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits },
       remainingResolutionAttempts: MAX_HIGHLIGHT_RESOLUTION_ATTEMPTS,
-      remainingItems: MAX_PAINTED_HIGHLIGHTS,
+      remainingItems: VIEWER_PAINTED_HIGHLIGHT_LIMIT,
       remainingRects: MAX_HIGHLIGHT_RECTS,
     };
     interface ResolutionOption {

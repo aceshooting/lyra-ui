@@ -6,7 +6,7 @@
 - **Class** `LyraJsonSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -24,7 +24,8 @@ It intentionally does not fetch remote references or validate values.
 `issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
 issue array after changes. `selectedPath: string | null = null` (attribute `selected-path`) —
 `null` means no selection, while the empty string is the valid JSON Pointer for the schema root;
-`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
+`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''` (the
+region's accessible name; no visible heading, so an empty value falls back to the localized default).
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
 readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/default while preserving unknown schema

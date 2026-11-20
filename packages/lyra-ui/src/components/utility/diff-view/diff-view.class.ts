@@ -35,7 +35,7 @@ import type {
   LyraHighlight,
 } from '../../viewers/document-viewer/anchors.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../../viewers/viewer-search-limits.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../../viewers/viewer-search-limits.js';
 import { ViewerAnnouncementController } from '../../viewers/viewer-announcements.js';
 import { commonAffix, computeLineDiff, pairOpsForSplit, type LyraDiffOp, type LyraDiffSplitRow } from './diff-line-diff.js';
 import {
@@ -76,7 +76,6 @@ const MAX_DIFF_COMPARISONS = 4_000_000;
 const MAX_DIFF_LANGUAGES = 10_000;
 const MAX_DIFF_LANGUAGE_INSPECTIONS = MAX_DIFF_LANGUAGES * 2;
 /** Bounds `highlights` resolution work independent of how many entries a host supplies. */
-const MAX_PAINTED_HIGHLIGHTS = 100;
 
 /** One `search()` match: the 0-based index into `this.diffOps` of a line whose text contains the
  *  query. */
@@ -779,7 +778,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     if (ops.length === 0) return { perOp, owners, order, total: 0 };
     const seen = new Set<string>();
     for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
-      if (order.size >= MAX_PAINTED_HIGHLIGHTS) break;
+      if (order.size >= VIEWER_PAINTED_HIGHLIGHT_LIMIT) break;
       if (seen.has(highlight.id)) continue;
       seen.add(highlight.id);
       if (highlight.anchor.kind !== 'line-range') continue;

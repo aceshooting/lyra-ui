@@ -139,6 +139,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Sistem',
   promptStudioRoleUser: 'Utilizator',
   promptStudioRoleAssistant: 'Asistent',
+  schemaViewerRequired: 'Obligatoriu',
   statusUnknown: 'Necunoscut',
   moveUp: 'Deplasează mai sus',
   moveDown: 'Deplasează mai jos',

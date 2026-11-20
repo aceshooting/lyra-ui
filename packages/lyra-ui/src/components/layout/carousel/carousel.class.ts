@@ -1,8 +1,10 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
 import { nextId } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { chevronIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import {
   AnnouncementSinkController,
@@ -128,8 +130,8 @@ export interface LyraCarouselEventMap {
  * @csspart navigation-button-next - Next navigation button.
  * @csspart navigation-button--previous - Shoelace name for the previous navigation button.
  * @csspart navigation-button--next - Shoelace name for the next navigation button.
- * @csspart previous-glyph - Wrapper around the previous-icon slot.
- * @csspart next-glyph - Wrapper around the next-icon slot.
+ * @csspart previous-glyph - Wrapper around the previous-icon slot (default: a chevron icon); mirrored under RTL.
+ * @csspart next-glyph - Wrapper around the next-icon slot (default: a chevron icon); mirrored under RTL.
  * @csspart pagination - The pagination wrapper.
  * @csspart pagination-item - A pagination button.
  * @csspart pagination-item-active - The active pagination button.
@@ -188,6 +190,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  /** Projects a host-authored `aria-describedby` onto the shadow element that owns the role. */
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot?.querySelector<HTMLElement>('[part~="carousel"]') ?? null,
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   static override get observedAttributes(): string[] {
     // Web Awesome publishes the mixed-case `currentSlide` spelling. HTML normalizes that token to
@@ -1429,7 +1442,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     @click=${() => this.previous()}
                   >
                     ${renderInertPresentation(
-                      html`<slot name="previous-icon">‹</slot>`,
+                      html`<slot name="previous-icon"><span class="start-chevron">${chevronIcon()}</span></slot>`,
                       { part: 'previous-glyph' },
                     )}
                   </button>
@@ -1442,7 +1455,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     @click=${() => this.next()}
                   >
                     ${renderInertPresentation(
-                      html`<slot name="next-icon">›</slot>`,
+                      html`<slot name="next-icon">${chevronIcon()}</slot>`,
                       { part: 'next-glyph' },
                     )}
                   </button>

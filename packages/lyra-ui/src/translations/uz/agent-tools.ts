@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Vosita',
   schemaViewerLabel: 'Sxema koʻruvchisi',
   schemaViewerEmpty: 'Sxema mavjud emas',
-  schemaViewerRequired: 'Majburiy',
   schemaViewerCircular: 'Siklik sxema havolasi',
   schemaViewerType: 'Tur: {type}',
   subagentPanelLabel: 'Yordamchi agentlar',

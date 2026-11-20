@@ -16,6 +16,7 @@ import {
   CONTACT_VIEWER_TAG,
   HTML_VIEWER_TAG,
   SVG_VIEWER_TAG,
+  GEOJSON_VIEWER_TAG,
 } from './document-viewer-kinds.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from './registry.js';
 
@@ -92,6 +93,7 @@ describe('document-viewer-kinds bundle entry', () => {
       '/contact-viewer.class.ts',
       '/html-viewer.class.ts',
       '/svg-viewer.class.ts',
+      '/geojson-viewer.class.ts',
     ]) {
       expect(fetchedModuleEnding(suffix), `the bundle must not eagerly fetch ${suffix}`).to.equal(false);
     }
@@ -120,5 +122,17 @@ describe('document-viewer-kinds bundle entry', () => {
       expect(customElements.get(tag), `${tag} should upgrade after load`).to.exist;
       expect('render' in resolved && typeof resolved.render === 'function').to.equal(true);
     }
+  });
+
+  it('registers GeoJSON lazily with its declared capabilities', async () => {
+    const file: LyraDocumentFile = { name: 'a.geojson', mimeType: 'application/geo+json', src: 'https://example.test/a.geojson' };
+    const definition = findDocumentRenderer(file);
+    expect(definition !== undefined && 'load' in definition).to.equal(true);
+    expect(definition!.capabilities).to.deep.equal({ anchors: ['text-quote', 'fragment'], search: true, textSelect: true });
+    expect(findDocumentRenderer({ ...file, mimeType: 'application/octet-stream' })).to.equal(definition);
+    expect(customElements.get(GEOJSON_VIEWER_TAG)).to.equal(undefined);
+    const resolved = await loadDocumentRenderer(definition!);
+    expect(customElements.get(GEOJSON_VIEWER_TAG) !== undefined).to.equal(true);
+    expect('render' in resolved && typeof resolved.render === 'function').to.equal(true);
   });
 });

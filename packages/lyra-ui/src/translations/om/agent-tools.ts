@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Meeshaa',
   schemaViewerLabel: 'Ilaaltuu iskimaa',
   schemaViewerEmpty: 'Iskimaawwan hin jiran',
-  schemaViewerRequired: 'Dirqama',
   schemaViewerCircular: 'Wabii iskimaa marsaa',
   schemaViewerType: 'Gosa: {type}',
   subagentPanelLabel: 'Subagentota',

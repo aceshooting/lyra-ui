@@ -691,7 +691,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
         message = () => this.localize('fieldRequired');
       } else if (!blank) {
         flags.badInput = true;
-        message = this.localize('dateInputInvalid');
+        message = () => this.localize('dateInputInvalid');
       }
     } else {
       const date = parseISO(this.value)!;
@@ -699,13 +699,13 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       const max = this.parseStrictISO(this.max);
       if (min && date < min) {
         flags.rangeUnderflow = true;
-        message = this.localize('dateInputMinMessage', undefined, {
+        message = () => this.localize('dateInputMinMessage', undefined, {
           min: this.min,
         });
       }
       if (max && date > max) {
         flags.rangeOverflow = true;
-        message ||= this.localize('dateInputMaxMessage', undefined, {
+        message ||= () => this.localize('dateInputMaxMessage', undefined, {
           max: this.max,
         });
       }

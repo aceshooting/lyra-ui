@@ -606,7 +606,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private documentLimit = MAX_LIBRARY_COLLECTION_ENTRIES;
   private omittedDocuments = 0;
-  /** Maximum source positions inspected per assignment. Raising the limit re-admits the source. */
+  /**
+   * Maximum source positions inspected per assignment. Raising the limit re-admits the source.
+   * @default 10000
+   */
   @property({ type: Number, attribute: 'max-documents' })
   get maxDocuments(): number { return this.documentLimit; }
   set maxDocuments(value: number) {

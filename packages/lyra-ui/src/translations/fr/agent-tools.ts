@@ -273,7 +273,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Outil',
   schemaViewerLabel: 'Visionneuse de schéma',
   schemaViewerEmpty: 'Aucun schéma disponible',
-  schemaViewerRequired: 'Obligatoire',
   schemaViewerCircular: 'Référence circulaire dans le schéma',
   schemaViewerType: 'Type : {type}',
   subagentPanelLabel: 'Sous-agents',

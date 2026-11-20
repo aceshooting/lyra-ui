@@ -161,7 +161,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   }
 
   @state() private fetchState: ArchiveState = { kind: 'idle' };
-  @state() private archiveSearchMatches: ArchiveEntry[] = [];
+  /** Indexes into the loaded entries, so the active row needs no per-render lookup. */
+  @state() private archiveSearchMatches: number[] = [];
   @state() private archiveSearchActiveIndex = -1;
   private archiveSearchMatchCountExact = true;
   private readonly transport = new ViewerSourceController(this, {
@@ -179,6 +180,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private pendingSearchResetEvent = false;
   private styledVirtualListRoot: ShadowRoot | null = null;
   private archiveNestedUpdatePending = false;
+  private boundArchiveTextRoot: Element | null = null;
   // A ZIP central directory may legally repeat a filename across two distinct entries (the
   // component's own zip-resource-guard.ts performs no name-uniqueness check). The bare name alone
   // is therefore not a safe <lr-virtual-list> row identity: two rows sharing one `keyFunction`
@@ -215,6 +217,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     this.syncArchiveNestedRoot();
+    this.boundArchiveTextRoot = this.isConnected ? this.textContentRoot() : null;
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('src') && this.pendingSearchResetEvent) {
       this.pendingSearchResetEvent = false;
@@ -386,9 +389,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'} style=${last ? '--_lr-archive-viewer-entry-divider:0' : nothing}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(entry.size, this.effectiveLocale)}</span>`}</div>`;
   };
 
+  /** Windowing events only need a host update until the nested list's text root and highlight
+   *  stylesheet are bound; later row changes reach the text root's own content observer. */
   private stopVirtualListEvent(event: Event): void {
     event.stopPropagation();
-    if (this.archiveNestedUpdatePending) return;
+    const list = this.archiveVirtualList();
+    if (this.archiveNestedUpdatePending || (list?.shadowRoot === this.styledVirtualListRoot && this.textContentRoot() === this.boundArchiveTextRoot)) return;
     this.archiveNestedUpdatePending = true;
     queueMicrotask(() => {
       this.archiveNestedUpdatePending = false;
@@ -433,11 +439,11 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     const entries = this.fetchState.kind === 'loaded' ? this.fetchState.entries : [];
     const boundedQuery = boundedViewerSearchQuery(this.archiveSearchQuery, this.effectiveLocale);
     const query = boundedQuery.needle;
-    const matches: ArchiveEntry[] = [];
+    const matches: number[] = [];
     const budget = new ViewerSearchWorkBudget();
     if (boundedQuery.accepted && query) {
-      for (const entry of entries) {
-        if (budget.includes(entry.name, query, this.effectiveLocale)) matches.push(entry);
+      for (const [index, entry] of entries.entries()) {
+        if (budget.includes(entry.name, query, this.effectiveLocale)) matches.push(index);
         if (!budget.complete) break;
       }
     }
@@ -458,13 +464,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   private scrollActiveArchiveMatch(): void {
     if (this.fetchState.kind !== 'loaded') return;
-    const match = this.archiveSearchMatches[this.archiveSearchActiveIndex];
-    if (!match) return;
-    const index = this.fetchState.entries.indexOf(match);
+    const index = this.archiveSearchMatches[this.archiveSearchActiveIndex];
+    if (index === undefined) return;
     const list = this.renderRoot.querySelector(tag('virtual-list')) as
       | { scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void }
       | null;
-    if (index >= 0) list?.scrollToIndex(index, { behavior: 'auto' });
+    list?.scrollToIndex(index, { behavior: 'auto' });
   }
 
   /** The active search match's row identity, keyed the same occurrence-safe way as
@@ -472,10 +477,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
    *  entry's first occurrence -- for `<lr-virtual-list>`'s `activeItemId`/`aria-current`. */
   private activeArchiveMatchKey(): string {
     if (this.fetchState.kind !== 'loaded') return '';
-    const match = this.archiveSearchMatches[this.archiveSearchActiveIndex];
-    if (!match) return '';
-    const index = this.fetchState.entries.indexOf(match);
-    return index >= 0 ? this.archiveEntryKey(match, index) : '';
+    const index = this.archiveSearchMatches[this.archiveSearchActiveIndex];
+    if (index === undefined) return '';
+    const match = this.fetchState.entries[index];
+    return match ? this.archiveEntryKey(match, index) : '';
   }
 
   private renderBody(): TemplateResult {

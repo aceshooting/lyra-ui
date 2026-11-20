@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import cemConfig, {
   ACCESSOR_RUNTIME_CONTRACTS,
   ACCESSOR_WRITE_TYPE_CONTRACTS,
+  assertAccessorDefaults,
 } from '../custom-elements-manifest.config.js';
 import {
   expandTypeText,
@@ -385,6 +386,18 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
     (candidate) => candidate.name === name,
   );
 
+  // Accessor defaults come from the backing-field initializer or the accessor's `@default` tag.
+  for (const [tagName, name, attributeName, expected] of [
+    ['lr-chat-composer', 'actionsLayout', 'actions-layout', "'inline'"],
+    ['lr-chat-composer', 'autocorrect', 'autocorrect', 'true'],
+    ['lr-audio-visualizer', 'mode', 'mode', "'bars'"],
+    ['lr-realtime-session', 'state', 'state', "'disconnected'"],
+    ['lr-model-settings-panel', 'layout', 'layout', "'vertical'"],
+    ['lr-map', 'center', 'center', '[0, 0]'],
+  ]) {
+    assert.equal(member(tagName, name)?.default, expected, `${tagName}.${name} default`);
+    assert.equal(attribute(tagName, attributeName)?.default, expected, `${tagName}[${attributeName}] default`);
+  }
   for (const tagName of ['lr-checkbox', 'lr-radio-group', 'lr-select', 'lr-slider', 'lr-switch']) {
     assert.equal(member(tagName, 'form')?.reflects, true, `${tagName}.form reflects`);
   }
@@ -517,4 +530,31 @@ test('FormAssociated members back-fill through a superclass chain to a different
       assert.ok(attribute, `${tagName}[${name}] is a declared attribute`);
     }
   }
+});
+
+test('the accessor default gate names attribute-backed accessors left without a default', () => {
+  const manifest = {
+    modules: [{
+      path: 'src/components/synthetic.ts',
+      declarations: [{
+        kind: 'class',
+        name: 'SyntheticElement',
+        tagName: 'lr-synthetic',
+        members: [
+          { kind: 'field', name: 'mode', attribute: 'mode' },
+          { kind: 'field', name: 'size', attribute: 'size', default: "'m'" },
+          { kind: 'field', name: 'label', attribute: 'label' },
+        ],
+        attributes: [
+          { name: 'mode', fieldName: 'mode' },
+          { name: 'size', fieldName: 'size', default: "'m'" },
+          { name: 'label', fieldName: 'label' },
+        ],
+      }],
+    }],
+  };
+  const accessors = new Map([['src/components/synthetic.ts#SyntheticElement', new Set(['mode', 'size'])]]);
+  assert.throws(() => assertAccessorDefaults(manifest, accessors), /without a manifest default.*lr-synthetic\.mode$/u);
+  manifest.modules[0].declarations[0].members[0].default = "'auto'";
+  assert.doesNotThrow(() => assertAccessorDefaults(manifest, accessors), 'plain fields stay optional');
 });

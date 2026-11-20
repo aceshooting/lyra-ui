@@ -210,9 +210,28 @@ export const styles = css`
     ${focusRing}
   }
 
-  :host(:dir(rtl)) [part="previous-glyph"],
+  /* One right-pointing chevron; the wrapping part points it. Vertical rules come last so they
+     win over the equally specific direction rules. */
+  [part="previous-glyph"],
+  [part="next-glyph"] {
+    display: inline-flex;
+  }
+
+  [part="previous-glyph"],
   :host(:dir(rtl)) [part="next-glyph"] {
     transform: scaleX(-1);
+  }
+
+  :host(:dir(rtl)) [part="previous-glyph"] {
+    transform: none;
+  }
+
+  :host([orientation="vertical"]) [part="previous-glyph"] {
+    transform: rotate(-90deg);
+  }
+
+  :host([orientation="vertical"]) [part="next-glyph"] {
+    transform: rotate(90deg);
   }
 
   :host([orientation="vertical"]) [part~="previous"] {

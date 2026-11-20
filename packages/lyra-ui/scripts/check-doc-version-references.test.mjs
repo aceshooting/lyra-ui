@@ -103,3 +103,23 @@ test('fails closed when the documentation scan becomes vacuous', () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('requires a README upgrade row for every major from the oldest row to the package major', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-doc-versions-upgrade-'));
+  try {
+    mkdirSync(path.join(root, 'llms'));
+    writeFileSync(path.join(root, 'CHANGELOG.md'), '# Changelog\n\n## 12.0.0\n\nReleased.\n');
+    writeFileSync(path.join(root, 'llms', 'forms.md'), 'The `value` property is new in 12.0.0.\n');
+    writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '13.0.0' }));
+    const table = '| To | What breaks | Migration help |\n| --- | --- | --- |\n';
+    writeFileSync(path.join(root, 'README.md'), `${table}| **v12** | a | b |\n| **v10** | a | b |\n`);
+    assert.deepEqual(checkDocVersionReferences(root).findings, [
+      'README.md upgrade table has no v11 row',
+      'README.md upgrade table has no v13 row',
+    ]);
+    writeFileSync(path.join(root, 'README.md'), `${table}| **v13** | a | b |\n| **v12** | a | b |\n`);
+    assert.deepEqual(checkDocVersionReferences(root).findings, []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

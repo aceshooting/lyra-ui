@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Irinṣẹ́',
   schemaViewerLabel: 'Olùwò schema',
   schemaViewerEmpty: 'Kò sí schema tó wà',
-  schemaViewerRequired: 'Pọndandan',
   schemaViewerCircular: 'Ìtọ́kasí schema aláyípo',
   schemaViewerType: 'Irú: {type}',
   subagentPanelLabel: 'Àwọn aṣojú-abẹ́',

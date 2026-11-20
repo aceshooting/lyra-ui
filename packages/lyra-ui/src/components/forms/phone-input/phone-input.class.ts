@@ -175,7 +175,7 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  * @cssprop [--lr-phone-input-radius=var(--lr-radius)] - Input-wrapper corner radius, shared with
  *   the country trigger's leading corners. The `pill` attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-phone-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
- * @cssprop [--lr-phone-input-invalid-border-color=var(--lr-phone-input-border-color,var(--lr-color-border))] -
+ * @cssprop [--lr-phone-input-invalid-border-color=var(--lr-form-control-invalid-border-color,var(--lr-color-danger))] -
  *   Row border color while the field is user-invalid (`data-invalid`).
  * @cssprop [--lr-phone-input-country-hover-bg=var(--lr-color-brand-quiet)] - Country trigger hover background.
  * @cssprop [--lr-phone-input-control-min-height=var(--lr-form-control-height)] - Input-wrapper
@@ -346,7 +346,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   * boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+   * boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -588,10 +590,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       message = () => this.localize('fieldRequired');
     } else if (this.status === 'incomplete') {
       flags.badInput = true;
-      message = this.incompleteMessage;
+      message = () => this.incompleteMessage;
     } else if (this.status === 'invalid') {
       flags.typeMismatch = true;
-      message = this.invalidMessage;
+      message = () => this.invalidMessage;
     }
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
@@ -656,8 +658,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.compositionCommitted = false;
     this.compositionPending = false;
     if (!alreadyCommitted) this.commitTypedText(input);
+    // Snapshot before relaying, so a native `input` listener's rewrite never reaches `lr-input`.
+    const detail = this.eventDetail;
     relayNativeEvent(this, event);
-    if (!alreadyCommitted) this.emit('lr-input', this.eventDetail);
+    if (!alreadyCommitted) this.emit('lr-input', detail);
   };
 
   private onCompositionEnd = (event: CompositionEvent): void => {
@@ -682,8 +686,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       return;
     }
     this.touched = true;
+    const detail = this.eventDetail;
     relayNativeEvent(this, event);
-    this.emit('lr-change', this.eventDetail);
+    this.emit('lr-change', detail);
   };
 
   /** The native select's own `input` is composed and would reach the host before the country is
@@ -699,10 +704,12 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     }
     this.country = normalizeCountry((event.currentTarget as HTMLSelectElement).value);
     this.applyParsed(this.editableValue, this.parse(this.editableValue));
+    // One snapshot for the gesture, so `lr-input` and `lr-change` always agree.
+    const detail = this.eventDetail;
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', this.eventDetail);
+    this.emit('lr-input', detail);
     relayNativeEvent(this, event);
-    this.emit('lr-change', this.eventDetail);
+    this.emit('lr-change', detail);
   };
 
   /**

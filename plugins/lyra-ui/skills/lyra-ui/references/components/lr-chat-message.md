@@ -6,7 +6,7 @@
 - **Class** `LyraChatMessage`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 43 custom properties — see this component's own `@csspart`/`@cssprop` list below

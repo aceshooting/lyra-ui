@@ -263,7 +263,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Alat',
   schemaViewerLabel: 'Papar skema',
   schemaViewerEmpty: 'Skema tidak tersedia',
-  schemaViewerRequired: 'Wajib',
   schemaViewerCircular: 'Rujukan skema berpusing',
   schemaViewerType: 'Jenis: {type}',
   subagentPanelLabel: 'Subejen',

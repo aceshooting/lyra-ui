@@ -278,7 +278,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Nástroj',
   schemaViewerLabel: 'Prohlížeč schématu',
   schemaViewerEmpty: 'Schéma není k dispozici',
-  schemaViewerRequired: 'Povinné',
   schemaViewerCircular: 'Cyklický odkaz ve schématu',
   schemaViewerType: 'Typ: {type}',
   subagentPanelLabel: 'Podagenti',

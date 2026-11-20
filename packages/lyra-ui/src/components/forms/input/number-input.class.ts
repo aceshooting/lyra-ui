@@ -188,7 +188,7 @@ export class LyraNumberInput extends LyraInput {
 
   protected override updateValidity(): void {
     if (this.hasUnparsedDraft && !isBarredFromValidation(this, this.internals)) {
-      this[SET_ANCHORED_VALIDITY]({ badInput: true }, this.localize('valueInvalid'));
+      this[SET_ANCHORED_VALIDITY]({ badInput: true }, () => this.localize('valueInvalid'));
       return;
     }
     super.updateValidity();
@@ -262,10 +262,13 @@ export class LyraNumberInput extends LyraInput {
     if (direction === 'up') this.stepUp();
     else this.stepDown();
     if (this.value !== before) {
+      // One snapshot for the whole gesture: a listener rewriting `value` between the native and
+      // library events must not make this step's `lr-input` and `lr-change` disagree.
+      const value = this.value;
       dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
-      this.emit('lr-input', { value: this.value });
+      this.emit('lr-input', { value });
       dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: this.value });
+      this.emit('lr-change', { value });
     }
     // The buttons are not tab stops, so a click would otherwise leave focus nowhere useful --
     // hand it to the field the user is editing, matching the clear button's own behavior.

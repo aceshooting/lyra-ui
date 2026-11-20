@@ -62,3 +62,15 @@ export const SurfaceColors: StoryObj = {
     ></lr-signature-pad>
   `,
 };
+
+export const Appearance: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <lr-signature-pad appearance="outlined" label="outlined"></lr-signature-pad>
+      <lr-signature-pad appearance="filled-outlined" label="filled-outlined"></lr-signature-pad>
+      <lr-signature-pad appearance="filled" label="filled"></lr-signature-pad>
+      <lr-signature-pad appearance="plain" label="plain"></lr-signature-pad>
+      <lr-signature-pad appearance="accent" label="accent"></lr-signature-pad>
+    </div>
+  `,
+};

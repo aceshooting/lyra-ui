@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Zana',
   schemaViewerLabel: 'Kitazamaji cha schema',
   schemaViewerEmpty: 'Hakuna schema inayopatikana',
-  schemaViewerRequired: 'Inahitajika',
   schemaViewerCircular: 'Rejeleo la schema la mzunguko',
   schemaViewerType: 'Aina: {type}',
   subagentPanelLabel: 'Mawakala wadogo',

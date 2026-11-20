@@ -255,7 +255,9 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
    *  first wins. Reassign a new array after changes. */
   @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** Whether the model list is open. Effectively disabled controls reject direct reopen attempts,
-   * including a synchronous fieldset cascade. */
+   * including a synchronous fieldset cascade.
+   * @default false
+   */
   @property({ type: Boolean, reflect: true })
   get open(): boolean { return this.catalogPicker.open; }
   set open(next: boolean) {

@@ -314,7 +314,9 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   @property({ type: Boolean, attribute: 'without-preview', reflect: true }) withoutPreview = false;
 
   /** Whether the catalog popup is open. Effectively disabled controls reject direct reopen
-   * attempts, including a synchronous fieldset cascade. */
+   * attempts, including a synchronous fieldset cascade.
+   * @default false
+   */
   @property({ type: Boolean, reflect: true })
   get open(): boolean { return this.catalogPicker.open; }
   set open(next: boolean) {

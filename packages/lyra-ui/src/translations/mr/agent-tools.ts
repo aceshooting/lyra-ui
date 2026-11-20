@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'साधन',
   schemaViewerLabel: 'स्कीमा दर्शक',
   schemaViewerEmpty: 'स्कीमा उपलब्ध नाही',
-  schemaViewerRequired: 'आवश्यक',
   schemaViewerCircular: 'चक्रीय स्कीमा संदर्भ',
   schemaViewerType: 'प्रकार: {type}',
   subagentPanelLabel: 'उप-एजंट',

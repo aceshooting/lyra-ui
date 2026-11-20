@@ -1040,13 +1040,28 @@ describe('rendering non-text outputs', () => {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
         cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
-        outputs: [{ output_type: 'display_data', data: { 'image/svg+xml': bomb } }],
+        outputs: [
+          { output_type: 'display_data', data: { 'image/svg+xml': bomb } },
+          { output_type: 'display_data', data: { 'image/svg+xml': bomb } },
+          { output_type: 'stream', name: 'stdout', text: 'still readable' },
+        ],
       }],
     };
-    let refused = false;
-    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook} @lr-render-error=${() => { refused = true; }}></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => refused);
+    const codes: string[] = [];
+    let errors = 0;
+    const el = (await fixture(html`<lr-notebook-viewer
+      .notebook=${notebook}
+      @lr-render-error=${() => { errors++; }}
+      @lr-viewer-diagnostic=${(event: CustomEvent<{ diagnostic: { code: string; fatal: boolean } }>) => {
+        codes.push(`${event.detail.diagnostic.code}:${String(event.detail.diagnostic.fatal)}`);
+      }}
+    ></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => codes.length > 0 && rowRoot(el).querySelectorAll('[part~="output-loading"]').length === 0);
+    await el.updateComplete;
     expect(rowRoot(el).querySelectorAll('use').length).to.equal(0);
+    expect(rowRoot(el).textContent).to.include('still readable');
+    expect(codes).to.deep.equal(['notebook-output-too-large:false']);
+    expect(errors).to.equal(0);
   });
 
   it('lazily sanitizes and renders a text/html output, stripping unsafe markup', async () => {
@@ -1150,23 +1165,25 @@ describe('rendering non-text outputs', () => {
     };
     const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
     let errorCount = 0;
+    let diagnosticCount = 0;
     let lastErrorMessage: string | undefined;
-    el.addEventListener('lr-render-error', (event) => {
-      errorCount++;
-      lastErrorMessage = ((event as CustomEvent<{ error: unknown }>).detail.error as Error)?.message;
+    el.addEventListener('lr-render-error', () => { errorCount++; });
+    el.addEventListener('lr-viewer-diagnostic', (event) => {
+      diagnosticCount++;
+      lastErrorMessage = (event.detail.diagnostic.cause as Error)?.message;
     });
     el.notebook = notebook as never;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Chart fallback') ?? false,
     );
-    expect(errorCount).to.equal(1);
+    expect([errorCount, diagnosticCount]).to.deep.equal([0, 1]);
     expect(lastErrorMessage).to.equal('sanitizer exploded');
     expect(rowRoot(el).textContent).to.include('Chart fallback');
     const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
     expect(sink?.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
   });
 
-  it('falls back to text/plain and emits one render error when the sanitizer peer is missing', async () => {
+  it('falls back to text/plain without a terminal render error when the sanitizer peer is missing', async () => {
     expectDevWarning('lyra-dompurify-unavailable');
     __setDompurifyImporterForTesting(() => Promise.resolve(null));
     const notebook = {
@@ -1186,7 +1203,7 @@ describe('rendering non-text outputs', () => {
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Chart fallback') ?? false,
     );
-    expect(errorCount).to.equal(1);
+    expect(errorCount).to.equal(0);
     expect(rowRoot(el).textContent).to.include('Chart fallback');
   });
 
@@ -2617,4 +2634,14 @@ it('finds visible stream and traceback text across ANSI style changes', async ()
     expect(await el.search(query), query).to.equal(1);
   }
   expect(await el.search('[31m')).to.equal(0);
+});
+
+it('draws the load-failure block without an inline-start danger bar', async () => {
+  const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+  const errorPromise = oneEvent(el, 'lr-render-error');
+  el.notebook = { nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'heading' }] } as never;
+  await errorPromise;
+  await el.updateComplete;
+  const error = getComputedStyle(el.shadowRoot!.querySelector('[part="error"]')!);
+  expect([error.borderInlineStartWidth, error.paddingInlineStart, error.textAlign]).to.deep.equal(['0px', error.paddingInlineEnd, 'center']);
 });

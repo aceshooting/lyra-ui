@@ -49,6 +49,12 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
   }
   [part~="base"]:focus-visible {
+    /* The base is sized up to the icon-button hit target and spans the label, so a ring on it boxed
+       the indicator in dead space. Ring the visible circle instead, as lr-checkbox rings its box;
+       the button appearance restores its own ring on [part~="button"] in radio-button.styles.ts. */
+    outline: none;
+  }
+  :where([part~="base"]:focus-visible) [part~="circle"] {
     ${focusRing}
   }
   /* :host(:disabled), not :host([disabled]): a form-associated custom element
@@ -103,7 +109,7 @@ export const styles = css`
     );
   }
   :host(:state(user-invalid)) [part~="circle"] {
-    border-color: var(--lr-radio-invalid-border-color, var(--lr-color-danger));
+    border-color: var(--lr-radio-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
   [part~="circle"][part~="checked"] {
     /* Component-scoped indirection (mirrors lr-checkbox's --lr-checkbox-checked-bg/-border pair)

@@ -268,7 +268,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Eszköz',
   schemaViewerLabel: 'Sémamegjelenítő',
   schemaViewerEmpty: 'Nincs elérhető séma',
-  schemaViewerRequired: 'Kötelező',
   schemaViewerCircular: 'Körkörös sémahivatkozás',
   schemaViewerType: 'Típus: {type}',
   subagentPanelLabel: 'Alügynökök',

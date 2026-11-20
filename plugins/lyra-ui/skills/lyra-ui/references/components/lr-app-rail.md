@@ -836,7 +836,7 @@ collapse control so activating one never toggles the group (and, in the rail's m
 closes it). Collapsing a group that holds focus moves focus to the collapse control.
 
 **CSS parts:** `base`, `header`, `heading`, `heading-text`, `toggle`, `toggle-icon`,
-`header-actions`, `content`.
+`header-actions`, `content`. A host `aria-describedby` is projected onto the `base` group.
 
 **Themeable custom properties:** `--lr-app-rail-group-gap` (default `var(--lr-space-xs)`),
 `--lr-app-rail-group-padding-block` (default `var(--lr-space-xs)`),

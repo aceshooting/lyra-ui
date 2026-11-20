@@ -31,6 +31,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -377,6 +378,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart date-input - The date-input wrapper.
  * @csspart base - Permanent compatibility name for the nested base wrapper.
  * @csspart form-control - The outer form-control wrapper.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -573,7 +577,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary.
+   * @default true
+   */
   @property({ converter: autocorrectConverter })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -1059,8 +1065,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
 
     const flags: ValidityStateFlags = {};
-    let underflowMessage = '';
-    let overflowMessage = '';
+    let underflowMessage: IntrinsicValidityMessage = '';
+    let overflowMessage: IntrinsicValidityMessage = '';
     const incompleteRange = this.isIncompleteRangeValue(this.value);
     if (this.required && (this.value === '' || incompleteRange))
       flags.valueMissing = true;
@@ -1082,23 +1088,23 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         );
         if (min !== null && dates.some((date) => date < min)) {
           flags.rangeUnderflow = true;
-          underflowMessage = this.localize('dateInputMinMessage', undefined, {
+          underflowMessage = () => this.localize('dateInputMinMessage', undefined, {
             min: this.displayDate(min),
           });
         }
         if (this.disablePast && dates.some((date) => date < today)) {
           flags.rangeUnderflow = true;
-          underflowMessage ||= this.localize('dateInputPastDisabled');
+          underflowMessage ||= () => this.localize('dateInputPastDisabled');
         }
         if (max !== null && dates.some((date) => date > max)) {
           flags.rangeOverflow = true;
-          overflowMessage = this.localize('dateInputMaxMessage', undefined, {
+          overflowMessage = () => this.localize('dateInputMaxMessage', undefined, {
             max: this.displayDate(max),
           });
         }
         if (this.disableFuture && dates.some((date) => date > today)) {
           flags.rangeOverflow = true;
-          overflowMessage ||= this.localize('dateInputFutureDisabled');
+          overflowMessage ||= () => this.localize('dateInputFutureDisabled');
         }
         const disabledDates = this.disabledDateKeys;
         const disabledWeekdays = parseDisabledWeekdays(this.disabledDaysOfWeek);
@@ -1123,11 +1129,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           const maximum = finiteCount(this.maxRange, 0);
           if (minimum > 0 && length < minimum) {
             flags.rangeUnderflow = true;
-            underflowMessage ||= this.localize('dateInputInvalid');
+            underflowMessage ||= () => this.localize('dateInputInvalid');
           }
           if (maximum > 0 && length > maximum) {
             flags.rangeOverflow = true;
-            overflowMessage ||= this.localize('dateInputInvalid');
+            overflowMessage ||= () => this.localize('dateInputInvalid');
           }
         }
       }
@@ -1139,7 +1145,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     let message: IntrinsicValidityMessage = '';
     if (configured.message) message = configured.message;
     else if (flags.badInput || flags.customError)
-      message = this.localize('dateInputInvalid');
+      message = () => this.localize('dateInputInvalid');
     else if (flags.rangeUnderflow) message = underflowMessage;
     else if (flags.rangeOverflow) message = overflowMessage;
     else if (flags.valueMissing) message = () => this.localize('fieldRequired');
@@ -1311,7 +1317,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     ) as HTMLElement | null;
     if (!anchor || !popup) return;
     this.cleanupFn = place(anchor, popup, {
-      placement: normalizeDateInputPlacement(this.placement),
+      placement: rtlAwarePlacement(normalizeDateInputPlacement(this.placement), this),
       offset: finiteNumber(this.distance, 0),
       strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
@@ -1534,7 +1540,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         ) as HTMLElement | null;
         if (anchor && popup) {
           this.cleanupFn = place(anchor, popup, {
-            placement: normalizeDateInputPlacement(this.placement),
+            placement: rtlAwarePlacement(normalizeDateInputPlacement(this.placement), this),
             offset: finiteNumber(this.distance, 0),
             strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });

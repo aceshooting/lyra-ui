@@ -310,7 +310,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.requestSynchronizedUpdate(oldPosition, oldPixels);
   }
 
-  /** Divider position in pixels from the primary panel's edge. */
+  /**
+   * Divider position in pixels from the primary panel's edge.
+   * @default 0
+   */
   @property({ type: Number, attribute: 'position-in-pixels' })
   get positionInPixels(): number {
     if (this.pendingPositionInPixels != null) return this.pendingPositionInPixels;

@@ -1,3 +1,4 @@
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -123,6 +124,17 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  /** Projects a host-authored `aria-describedby` onto the shadow element that owns the role. */
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
   protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-reorder-request',

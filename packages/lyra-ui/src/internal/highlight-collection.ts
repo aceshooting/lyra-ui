@@ -9,7 +9,8 @@ import {
 export const HIGHLIGHT_SNAPSHOT_LIMIT = 10_000;
 
 const HIGHLIGHT_SNAPSHOT_OVERFLOW = 1;
-const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
+/** The shared frozen empty highlight list. */
+export const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
 /** Every highlight tone, in paint order. */
 export const HIGHLIGHT_TONES: readonly LyraHighlightTone[] = Object.freeze(['accent', 'success', 'warning', 'danger', 'neutral']);
 const SNAPSHOT_ANCHOR_KINDS = new WeakMap<LyraHighlight, string>();

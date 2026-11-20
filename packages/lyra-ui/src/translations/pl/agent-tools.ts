@@ -278,7 +278,6 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleTool: 'Narzędzie',
   schemaViewerLabel: 'Przeglądarka schematu',
   schemaViewerEmpty: 'Brak dostępnego schematu',
-  schemaViewerRequired: 'Wymagane',
   schemaViewerCircular: 'Cykliczne odwołanie w schemacie',
   schemaViewerType: 'Typ: {type}',
   subagentPanelLabel: 'Podagenci',

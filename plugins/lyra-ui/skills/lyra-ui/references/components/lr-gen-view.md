@@ -6,7 +6,7 @@
 - **Class** `LyraGenViewElement`, also available unregistered from `@aceshooting/lyra-gen/gen-view.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `0.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below

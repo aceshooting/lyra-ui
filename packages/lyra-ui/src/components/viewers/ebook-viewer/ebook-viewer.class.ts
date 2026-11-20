@@ -10,6 +10,7 @@ import {
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
+import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -47,7 +48,7 @@ import { viewerFrameStyles } from '../viewer-frame.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT, VIEWER_SEARCH_MATCH_LIMIT, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../viewer-search-limits.js';
 import { boundedSelectionRects, boundedSelectionText } from '../../../internal/text-quote.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -77,10 +78,8 @@ interface EbookSearchMatch {
 
 const MAX_TOC_ITEMS = 10_000;
 const MAX_TOC_DEPTH = 100;
-const MAX_SEARCH_MATCHES = 10_000;
 const MAX_SEARCH_SPINE_ITEMS = 1_000;
 const MAX_FIND_RESULTS = 10_000;
-const MAX_PAINTED_HIGHLIGHTS = 100;
 
 interface SafeEpubBook {
   readonly ready: Promise<void>;
@@ -798,8 +797,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     try {
       [data, factory] = await Promise.all([
         fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined).then((response) => {
-          if (!this.isCurrentLoad(generation, fetchTarget.view) || signal?.aborted) return undefined;
-          if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+          if (!this.isCurrentLoad(generation, fetchTarget.view) || signal?.aborted) {
+            discardBody(response);
+            return undefined;
+          }
+          if (!response.ok) {
+            discardBody(response);
+            throw new Error(`${response.status} ${response.statusText}`);
+          }
           return readResponseArrayBuffer(response);
         }),
         getEpubJs(),
@@ -1238,7 +1243,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     };
     for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
       if (highlight.anchor.kind !== 'cfi') continue;
-      if (painted >= MAX_PAINTED_HIGHLIGHTS) break;
+      if (painted >= VIEWER_PAINTED_HIGHLIGHT_LIMIT) break;
       const cfi = highlight.anchor.cfi.trim();
       if (!cfi || cfi.length > VIEWER_SEARCH_QUERY_LIMIT || !work.consume(cfi)) continue;
       const tone = highlight.tone ?? 'accent';
@@ -1373,7 +1378,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
             matchCeilingExceeded = true;
             break;
           }
-          if (matches.length === MAX_SEARCH_MATCHES) {
+          if (matches.length === VIEWER_SEARCH_MATCH_LIMIT) {
             matchCountExact = false;
             matchCeilingExceeded = true;
             break;

@@ -246,6 +246,9 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @slot footer - Replaces the default Now footer action.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-input - The row containing segments and actions.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
@@ -855,11 +858,14 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.genuineValue = next;
     super.value = next;
     this.syncComponentStates();
+    // One snapshot for the gesture: a listener rewriting `value` between the native and library
+    // events must not make this edit's `lr-input` and `lr-change` disagree.
+    const value = this.value;
     dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
     if (commit) {
       dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: this.value });
+      this.emit('lr-change', { value });
     }
     this.requestUpdate();
   }
@@ -867,11 +873,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private commitUserValue(value: string, inputType = 'insertReplacementText', forceChange = false): void {
     const before = this.value;
     this.value = value;
+    const committed = this.value;
     dispatchNativeInputEvent(this, { inputType });
-    this.emit('lr-input', { value: this.value });
-    if (forceChange || this.value !== before) {
+    this.emit('lr-input', { value: committed });
+    if (forceChange || committed !== before) {
       dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: this.value });
+      this.emit('lr-change', { value: committed });
     }
   }
 
@@ -1247,11 +1254,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
     if ((input.value !== '' && !normalized) || this.readonly || isLiveDisabled(this)) return;
     this.value = normalized;
+    const value = this.value;
     dispatchNativeInputEvent(this, {
       data: event.data,
       inputType: event.inputType || 'insertReplacementText',
     });
-    this.emit('lr-input', { value: this.value });
+    this.emit('lr-input', { value });
   };
 
   private onAutofillChange = (event: Event): void => {
@@ -1260,8 +1268,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const normalized = normalizeTimeValue(input.value);
     if ((input.value !== '' && !normalized) || this.readonly || isLiveDisabled(this)) return;
     this.value = normalized;
+    const value = this.value;
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+    this.emit('lr-change', { value });
   };
 
   protected updateValidity(): void {
@@ -1281,23 +1290,23 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       const parsedMax = parseTimeValue(this.max);
       if (parsedMin && parsedMax && parsedMin.milliseconds > parsedMax.milliseconds) {
         flags.rangeUnderflow = true;
-        message = this.localize('timeInputRangeMessage', undefined, {
+        message = () => this.localize('timeInputRangeMessage', undefined, {
           min: this.displayTime(this.min),
           max: this.displayTime(this.max),
         });
       } else if (parsedMin && parsed.milliseconds < parsedMin.milliseconds) {
         flags.rangeUnderflow = true;
-        message = this.localize('timeInputMinMessage', undefined, { min: this.displayTime(this.min) });
+        message = () => this.localize('timeInputMinMessage', undefined, { min: this.displayTime(this.min) });
       } else {
         flags.rangeOverflow = true;
-        message = this.localize('timeInputMaxMessage', undefined, { max: this.displayTime(this.max) });
+        message = () => this.localize('timeInputMaxMessage', undefined, { max: this.displayTime(this.max) });
       }
     }
     if (parsed && hasTimeStepMismatch(this.value, this.step, this.min, this.defaultValue)) {
       flags.stepMismatch = true;
-      message ||= this.localize('timeInputStepMessage');
+      message ||= () => this.localize('timeInputStepMessage');
     }
-    if (flags.badInput) message = this.localize('timeInputInvalid');
+    if (flags.badInput) message = () => this.localize('timeInputInvalid');
     else if (flags.valueMissing) message = () => this.localize('fieldRequired');
     this[SET_ANCHORED_VALIDITY](flags, message);
   }

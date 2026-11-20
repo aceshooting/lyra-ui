@@ -107,7 +107,7 @@ export const styles = css`
      lr-combobox/lr-select's data-invalid styling hook: the native validation bubble only shows
      momentarily around reportValidity()/form submission. */
   :host([data-invalid]) [part~="box"] {
-    border-color: var(--lr-checkbox-invalid-border, var(--lr-color-danger));
+    border-color: var(--lr-checkbox-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
 
   [part~="checkmark"] {

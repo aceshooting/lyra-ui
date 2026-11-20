@@ -303,3 +303,15 @@ export const BoundedTokens: Story = {
     hint="Use Previous and Next to reach every recipient."
     .value=${Array.from({ length: 1000 }, (_, index) => `recipient-${index}`)}></lr-token-input>`,
 };
+
+export const Appearance: Story = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-24rem)">
+      <lr-token-input appearance="outlined" label="outlined"></lr-token-input>
+      <lr-token-input appearance="filled-outlined" label="filled-outlined"></lr-token-input>
+      <lr-token-input appearance="filled" label="filled"></lr-token-input>
+      <lr-token-input appearance="plain" label="plain"></lr-token-input>
+      <lr-token-input appearance="accent" label="accent"></lr-token-input>
+    </div>
+  `,
+};

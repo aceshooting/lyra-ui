@@ -6,7 +6,7 @@
 - **Class** `LyraMap`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 92 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below

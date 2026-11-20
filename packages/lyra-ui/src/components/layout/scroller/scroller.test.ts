@@ -412,38 +412,33 @@ describe("<lr-scroller>", () => {
     expect(el.shadowRoot!.querySelector('[part~="next"]')).to.exist;
   });
 
-  it("wraps the horizontal chevrons in documented previous-glyph/next-glyph parts", async () => {
-    const el = await fixture<LyraScroller>(
-      html`<lr-scroller controls><span>Content</span></lr-scroller>`
-    );
-    const previousGlyph = el.shadowRoot!.querySelector(
-      '[part="previous-glyph"]'
-    )!;
-    const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
-    expect((previousGlyph) != null).to.equal(true);
-    expect(previousGlyph.getAttribute("aria-hidden")).to.equal("true");
-    expect(previousGlyph.textContent).to.equal("‹");
-    expect((nextGlyph) != null).to.equal(true);
-    expect(nextGlyph.getAttribute("aria-hidden")).to.equal("true");
-    expect(nextGlyph.textContent).to.equal("›");
-  });
-
-  it("wraps the vertical-orientation glyphs in the same previous-glyph/next-glyph parts as horizontal, not bare text", async () => {
-    const el = await fixture<LyraScroller>(
-      html`<lr-scroller controls orientation="vertical"
-        ><span>Content</span></lr-scroller
-      >`
-    );
-    const previousGlyph = el.shadowRoot!.querySelector(
-      '[part="previous-glyph"]'
-    )!;
-    const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
-    expect((previousGlyph) != null).to.equal(true);
-    expect(previousGlyph.getAttribute("aria-hidden")).to.equal("true");
-    expect(previousGlyph.textContent).to.equal("↑");
-    expect((nextGlyph) != null).to.equal(true);
-    expect(nextGlyph.getAttribute("aria-hidden")).to.equal("true");
-    expect(nextGlyph.textContent).to.equal("↓");
+  it("points one shared chevron icon through the previous-glyph/next-glyph parts in every direction and orientation", async () => {
+    // A right-pointing chevron rotated by its wrapper: [a, b] of the computed matrix is the
+    // wrapper's x-axis, so (1, 0) points right, (-1, 0) left, (0, 1) down and (0, -1) up.
+    const axis = (glyph: Element) => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(glyph).transform === 'none' ? undefined : getComputedStyle(glyph).transform);
+      return [Math.round(matrix.a), Math.round(matrix.b)].join(',');
+    };
+    for (const [direction, orientation, previous, next] of [
+      ['ltr', 'horizontal', '-1,0', '1,0'],
+      ['rtl', 'horizontal', '1,0', '-1,0'],
+      ['ltr', 'vertical', '0,-1', '0,1'],
+      ['rtl', 'vertical', '0,-1', '0,1'],
+    ] as const) {
+      const el = await fixture<LyraScroller>(
+        html`<lr-scroller controls dir=${direction} orientation=${orientation}><span>Content</span></lr-scroller>`
+      );
+      const previousGlyph = el.shadowRoot!.querySelector('[part="previous-glyph"]')!;
+      const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
+      const label = `${direction} ${orientation}`;
+      for (const glyph of [previousGlyph, nextGlyph]) {
+        expect(glyph.getAttribute("aria-hidden"), label).to.equal("true");
+        expect(glyph.querySelector("svg") !== null, label).to.equal(true);
+        expect(glyph.textContent?.trim(), label).to.equal("");
+      }
+      expect(axis(previousGlyph), `${label} previous`).to.equal(previous);
+      expect(axis(nextGlyph), `${label} next`).to.equal(next);
+    }
   });
 
   it("honors a strings override for scrollerLabel/scrollPrevious/scrollNext", async () => {

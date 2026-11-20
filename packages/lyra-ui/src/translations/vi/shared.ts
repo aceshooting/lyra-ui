@@ -135,6 +135,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Hệ thống',
   promptStudioRoleUser: 'Người dùng',
   promptStudioRoleAssistant: 'Trợ lý',
+  schemaViewerRequired: 'Bắt buộc',
   statusUnknown: 'Không xác định',
   moveUp: 'Di chuyển lên',
   moveDown: 'Di chuyển xuống',

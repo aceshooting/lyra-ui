@@ -137,6 +137,7 @@ const strings: LyraLocaleStrings = {
   promptStudioRoleSystem: 'Isistimu',
   promptStudioRoleUser: 'Umsebenzisi',
   promptStudioRoleAssistant: 'Umsizi',
+  schemaViewerRequired: 'Kudingeka',
   statusUnknown: 'Akwaziwa',
   moveUp: 'Yisa phezulu',
   moveDown: 'Yisa phansi',

@@ -820,7 +820,43 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
 const GENERATED_IMPORT_LINE =
   /^import (?:type \{ LyraLocaleStrings \}|\{ LYRA_DEFAULT_\w+(?:, LYRA_DEFAULT_\w+)* \}) from '[^']+';$/u;
 
+const GENERATED_CLASS_LINE =
+  /^(?:\/\*\* @internal \*\/|protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = \{|\.\.\.super\.defaultStrings,|(\w+): LYRA_DEFAULT_\1,|\};)$/u;
+
+/** Each START needs exactly one END before the next START, or the lazy match spans authored code. */
+function assertBalancedMarkers(source, start, end) {
+  const lines = source.split('\n').map((line) => line.trimEnd());
+  let open = false;
+  for (const line of lines) {
+    if (line === start) {
+      if (open) throw new Error(`"${start.trim()}" repeats before its "${end.trim()}" marker`);
+      open = true;
+    } else if (line === end) {
+      if (!open) throw new Error(`"${end.trim()}" has no preceding "${start.trim()}" marker`);
+      open = false;
+    }
+  }
+  if (open) throw new Error(`"${start.trim()}" has no matching "${end.trim()}" marker`);
+}
+
+/** The replaced block is regenerated wholesale, so any line the generator does not emit fails closed. */
+function assertOnlyGeneratedLines(block, start, end, generatedLine, label) {
+  const authored = block
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && line !== start.trim() && line !== end.trim())
+    .find((line) => !generatedLine.test(line));
+  if (authored !== undefined) {
+    throw new Error(
+      `authored code inside the generated default-string ${label} block would be discarded; ` +
+        `move it outside "${start.trim()}": ${authored}`,
+    );
+  }
+}
+
 function withoutGeneratedBlocks(source) {
+  assertBalancedMarkers(source, IMPORT_START, IMPORT_END);
+  assertBalancedMarkers(source, CLASS_START, CLASS_END);
   const importPattern = new RegExp(
     `\\n?${IMPORT_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?` +
       `${IMPORT_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n?`,
@@ -836,20 +872,11 @@ function withoutGeneratedBlocks(source) {
   // The import block is replaced wholesale, so an authored import or re-export placed between its
   // markers would vanish on the next run; refuse it instead of dropping it.
   const withoutImports = source.replace(importPattern, (block) => {
-    const authored = block
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '' && line !== IMPORT_START && line !== IMPORT_END)
-      .find((line) => !GENERATED_IMPORT_LINE.test(line));
-    if (authored !== undefined) {
-      throw new Error(
-        `authored code inside the generated default-string import block would be discarded; ` +
-          `move it above "${IMPORT_START}": ${authored}`,
-      );
-    }
+    assertOnlyGeneratedLines(block, IMPORT_START, IMPORT_END, GENERATED_IMPORT_LINE, 'import');
     return '';
   });
-  return withoutImports.replace(classPattern, (_block, offset) => {
+  return withoutImports.replace(classPattern, (block, offset) => {
+    assertOnlyGeneratedLines(block, CLASS_START, CLASS_END, GENERATED_CLASS_LINE, 'class');
     const previous = withoutImports[offset - 1];
     return previous === '{' || previous === '\n' || previous === undefined ? '' : '\n';
   });

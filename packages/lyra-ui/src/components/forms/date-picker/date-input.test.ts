@@ -2086,3 +2086,27 @@ it('forwards .strings to the nested calendar navigation labels', async () => {
   expect(picker.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal('Mois precedent');
   expect(picker.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Mois suivant');
 });
+
+it("resolves a logical left/right placement against the writing direction, like lr-time-input", async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const host = await fixture<HTMLDivElement>(html`
+      <div dir=${direction} style="inline-size: 120px; margin-inline: auto;">
+        <lr-date-input placement="right-start" style="inline-size: 120px"></lr-date-input>
+      </div>
+    `);
+    const el = host.querySelector('lr-date-input') as LyraDateInput;
+    el.show();
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const onEnd = () => {
+      const a = anchor.getBoundingClientRect();
+      const p = popup.getBoundingClientRect();
+      const popupCenter = p.left + p.width / 2;
+      const anchorCenter = a.left + a.width / 2;
+      return p.width > 0 && (direction === 'rtl' ? popupCenter < anchorCenter : popupCenter > anchorCenter);
+    };
+    await waitUntil(onEnd, `${direction}: right-start opens on the inline-end side`);
+    expect(onEnd(), direction).to.be.true;
+  }
+});

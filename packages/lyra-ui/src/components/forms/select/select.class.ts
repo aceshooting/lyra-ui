@@ -332,6 +332,9 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * before the user has done anything is hostile.
  * @cssstate blank - Matches while no option is selected.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
+ *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
+ *   invalid border where one exists.
  * @cssprop [--lr-form-control-font-size] - Size-tier font size for the control text.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.

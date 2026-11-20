@@ -2,7 +2,6 @@
 '@aceshooting/lyra-ui': minor
 ---
 
-Markdown routes unmodified primary link activations. Applications that handle modified or previously canceled clicks can listen for those clicks directly.
 Failed syntax and math imports can be retried. Custom grammar loaders should support a second call after rejection.
 Code blocks load bundled syntax support on demand and retain plain source when a highlighter fails.
 Code blocks and Markdown retain highlighting across moves and restore annotations after reconnection.
