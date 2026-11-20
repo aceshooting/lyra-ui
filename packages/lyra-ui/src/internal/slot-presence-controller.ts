@@ -1,6 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { hasRealContent } from './a11y.js';
-import { hasSlotContent, isSlotElement } from './slot-content.js';
+import { isSlotElement, slotContentKind, slotContentKindOf, type SlotContentKind } from './slot-content.js';
 import { HostChildrenObserver } from './owned-observer.js';
 import { SEED_FIRST_RENDER_STATE, SLOT_PRESENCE_UNRESOLVED } from './lyra-element.js';
 import { requestContextUpdate } from './context-update.js';
@@ -28,7 +27,7 @@ type SlotPresenceHost = ReactiveControllerHost &
  * light-DOM observation so new content is discovered before their internal slot is mounted.
  */
 export class SlotPresenceController implements ReactiveController {
-  readonly #presence = new Map<string, boolean>();
+  readonly #presence = new Map<string, SlotContentKind>();
   #listeningRoot?: EventTarget;
   #reconcileQueued = false;
   #connected = false;
@@ -49,7 +48,7 @@ export class SlotPresenceController implements ReactiveController {
 
   /** Whether the named slot has real content. Omit `name` for the default slot. */
   has(name = ''): boolean {
-    return (this.#presence.get(name) ?? false) ||
+    return (this.#presence.get(name) ?? 0) > 0 ||
       (this.host[SLOT_PRESENCE_UNRESOLVED]?.() ?? false);
   }
 
@@ -57,7 +56,16 @@ export class SlotPresenceController implements ReactiveController {
    *  resolved the slot. Use it where absence renders fallback content, which must stay in the
    *  server markup rather than be hidden behind content that may not exist. */
   hasResolved(name = ''): boolean {
-    return this.#presence.get(name) ?? false;
+    return (this.#presence.get(name) ?? 0) > 0;
+  }
+
+  /**
+   * Whether the named slot's content carries no text: absent, or only textless elements such as
+   * icons and images. A start/end adornment like that keeps its size instead of shrinking with a
+   * text one.
+   */
+  textless(name = ''): boolean {
+    return this.#presence.get(name) !== 1;
   }
 
   hostConnected(): void {
@@ -141,8 +149,7 @@ export class SlotPresenceController implements ReactiveController {
     // Retain old names in the pass so removing the final node from a slot flips it back to false.
     const names = new Set([...this.#presence.keys(), ...groups.keys()]);
     for (const name of names) {
-      const present = hasRealContent(groups.get(name) ?? []);
-      this.#setPresence(name, present, requestUpdate);
+      this.#setPresence(name, slotContentKindOf(groups.get(name) ?? []), requestUpdate);
     }
   }
 
@@ -158,14 +165,13 @@ export class SlotPresenceController implements ReactiveController {
       const name = slot.name;
       seen.add(name);
       // Direct assignments remain stable during transient native slotchange snapshots.
-      const present = hasSlotContent(this.host, name);
-      this.#setPresence(name, present, requestUpdate);
+      this.#setPresence(name, slotContentKind(this.host, name), requestUpdate);
     }
     // The default slot is always checked: text-only content has no `slot` attribute to list.
     const names = new Set(['', ...this.#presence.keys()]);
     for (const child of Array.from(this.host.children ?? [])) names.add(child.getAttribute('slot') ?? '');
     for (const name of names) {
-      if (!seen.has(name)) this.#setPresence(name, hasSlotContent(this.host, name), requestUpdate);
+      if (!seen.has(name)) this.#setPresence(name, slotContentKind(this.host, name), requestUpdate);
     }
   }
 
@@ -177,8 +183,8 @@ export class SlotPresenceController implements ReactiveController {
     else this.#seedLightDom(requestUpdate);
   }
 
-  #setPresence(name: string, present: boolean, requestUpdate: boolean): void {
-    if (present === (this.#presence.get(name) ?? false)) return;
+  #setPresence(name: string, present: SlotContentKind, requestUpdate: boolean): void {
+    if (present === (this.#presence.get(name) ?? 0)) return;
     this.#presence.set(name, present);
     if (requestUpdate) requestContextUpdate(this.host);
   }

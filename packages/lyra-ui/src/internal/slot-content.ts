@@ -32,7 +32,30 @@ function assignedConsumerNodes(slot: HTMLSlotElement, active = new Set<Node>()):
  * handler carries other side effects call it directly.
  */
 export function hasSlotContent(host: Element, name = ''): boolean {
-  if (typeof Node === 'undefined' || !('childNodes' in host)) return false;
+  return hasRealContent(slotConsumerNodes(host, name));
+}
+
+/** No content, content that carries text, or content made only of textless elements (icons, images). */
+export type SlotContentKind = 0 | 1 | 2;
+
+/** `hasRealContent` semantics, also telling text-bearing content apart from graphic-only content. */
+export function slotContentKindOf(nodes: Iterable<Node>): SlotContentKind {
+  let content: SlotContentKind = 0;
+  for (const node of nodes) {
+    if ((node.textContent ?? '').trim().length > 0) return 1;
+    if (node.nodeType === 1) content = 2;
+  }
+  return content;
+}
+
+/** {@link hasSlotContent}, also telling text-bearing content apart from graphic-only content. */
+export function slotContentKind(host: Element, name = ''): SlotContentKind {
+  return slotContentKindOf(slotConsumerNodes(host, name));
+}
+
+/** The consumer nodes assigned to `name`, resolved through forwarding slots. */
+function slotConsumerNodes(host: Element, name: string): Node[] {
+  if (typeof Node === 'undefined' || !('childNodes' in host)) return [];
   const resolved: Node[] = [];
   for (const node of Array.from(host.childNodes)) {
     const assignedName =
@@ -41,5 +64,5 @@ export function hasSlotContent(host: Element, name = ''): boolean {
     if (isSlotElement(node)) resolved.push(...assignedConsumerNodes(node));
     else resolved.push(node);
   }
-  return hasRealContent(resolved);
+  return resolved;
 }

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -93,5 +93,7 @@ Plus shared tokens.
   for the host to handle in one place.
 - The four sections are derived once per `provenance` assignment, so toggling a section header
   never rebuilds the chunk inspector's input.
+
+**Pointer-state tokens:** `--lr-provenance-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-provenance-panel-header-active-bg`.
 
 ---

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -121,5 +121,7 @@ its score bar). Plus shared tokens otherwise.
   cancels whichever confirmation was already open.
 - `remove` (one item, either list) and `forget` (the whole long-term list) are deliberately distinct
   actions; there is no per-item forget and no bulk remove.
+
+**Pointer-state tokens:** `--lr-memory-panel-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-memory-panel-button-active-bg` for the add, remove and forget-all buttons; `--lr-memory-panel-expand-toggle-hover-bg` (default `transparent`) and `--lr-memory-panel-expand-toggle-active-bg` for the expand toggle.
 
 ---

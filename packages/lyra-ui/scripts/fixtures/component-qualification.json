@@ -29412,6 +29412,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/input/event-detail-snapshot.test.ts",
+          "src/components/forms/input/field-adornment-shrink.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
@@ -37602,6 +37603,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/input/event-detail-snapshot.test.ts",
+          "src/components/forms/input/field-adornment-shrink.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
@@ -38846,6 +38848,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/input/event-detail-snapshot.test.ts",
+          "src/components/forms/input/field-adornment-shrink.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
@@ -57021,6 +57024,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/input/event-detail-snapshot.test.ts",
+          "src/components/forms/input/field-adornment-shrink.test.ts",
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/field-invalid-border.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",

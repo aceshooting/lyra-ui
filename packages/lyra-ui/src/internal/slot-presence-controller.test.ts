@@ -81,6 +81,31 @@ describe('SlotPresenceController', () => {
     expect(host.slots.has('label')).to.equal(false);
   });
 
+  it('tells textless content apart and re-renders when an icon is swapped for text', async () => {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('slot', 'label');
+    const host = createHost(icon);
+    await host.updateComplete;
+    expect(host.slots.has('label')).to.equal(true);
+    expect(host.slots.textless('label')).to.equal(true);
+    expect(host.slots.textless('hint'), 'an empty slot carries no text').to.equal(true);
+
+    const labelSlot = host.renderRoot.querySelector('slot[name="label"]') as HTMLSlotElement;
+    const text = document.createElement('span');
+    text.slot = 'label';
+    text.textContent = 'kWh';
+    const swapped = oneEvent(labelSlot, 'slotchange');
+    icon.replaceWith(text);
+    await swapped;
+    let rendered = false;
+    host.addController({ hostUpdated: () => { rendered = true; } } as ReactiveController);
+    await host.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(host.slots.has('label')).to.equal(true);
+    expect(host.slots.textless('label')).to.equal(false);
+    expect(rendered, 'presence stayed true, but the content kind changed, so the host re-rendered').to.equal(true);
+  });
+
   it('installs one delegated listener, removes it on disconnect, and reconnects cleanly', async () => {
     const originalAdd = ShadowRoot.prototype.addEventListener;
     const originalRemove = ShadowRoot.prototype.removeEventListener;

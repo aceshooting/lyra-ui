@@ -75,12 +75,12 @@ export const styles = css`
   [part~='slice']:hover,
   [part~='metric']:hover,
   [part='run']:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-rag-eval-dashboard-item-hover-bg, var(--lr-color-surface-raised));
   }
   [part~='slice']:active,
   [part~='metric']:active,
   [part='run']:active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-rag-eval-dashboard-item-active-bg, ${activeFill('var(--lr-rag-eval-dashboard-item-hover-bg, var(--lr-color-surface-raised))')});
   }
   [part~='slice']:focus-visible,
   [part~='metric']:focus-visible,

@@ -116,6 +116,8 @@ export const styles = css`
      whole row, so the pointer is over the field, never one segment: every idle segment steps
      together. The active and invalid segments keep their own edge, and the contained appearance
      has no segment border to step. */
+  /* no-pressed-state: a press focuses the overlaid native input, and the focused segment then
+     paints its own active ring, as on the sibling text fields. */
   :host(:where(:not(:disabled, [appearance='contained']))) [part~='field']:hover [part~='segment']:where(:not([part~='active'], [part~='invalid'])) {
     border-color: var(--lr-otp-input-hover-border-color, var(--lr-color-brand));
   }

@@ -161,21 +161,21 @@ export const styles = css`
      which therefore wins on source order while the button is held. */
   :where([part="previous-button"]):hover:where(:not(:disabled)),
   :where([part="skip-button"]):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-tour-button-hover-bg, var(--lr-color-brand-quiet));
   }
   :where([part="previous-button"]):active:where(:not(:disabled)),
   :where([part="skip-button"]):active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-tour-button-active-bg, ${activeFill('var(--lr-tour-button-hover-bg, var(--lr-color-brand-quiet))')});
   }
   /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
      dragging this button's own --lr-color-on-brand label along with the fill and moving neither
      once the brand token was themed pure white or pure black. Mixing toward
      --lr-color-mix-partner, which tracks the text color, always moves, and moves only the fill. */
   [part="next-button"]:hover {
-    background: ${hoverFill('var(--lr-color-brand)')};
+    background: var(--lr-tour-next-button-hover-bg, ${hoverFill('var(--lr-color-brand)')});
   }
   [part="next-button"]:active {
-    background: ${activeFill('var(--lr-color-brand)')};
+    background: var(--lr-tour-next-button-active-bg, ${activeFill('var(--lr-tour-next-button-hover-bg, var(--lr-color-brand))')});
   }
   [part="previous-button"]:focus-visible,
   [part="skip-button"]:focus-visible,

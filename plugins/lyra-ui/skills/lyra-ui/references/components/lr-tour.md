@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -156,3 +156,5 @@ Default modal steps opened outside an existing native `dialog.showModal()` use a
   `prefers-reduced-motion: reduce`.
 - Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
   the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.
+
+**Pointer-state tokens:** `--lr-tour-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-tour-button-active-bg` for previous and skip; `--lr-tour-next-button-hover-bg` and `--lr-tour-next-button-active-bg` for next/finish. Each press defaults to its hover fill mixed by the press step.

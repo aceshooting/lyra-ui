@@ -990,6 +990,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             part="start"
             ?hidden=${!this.slotPresence.has('start') &&
             !this.slotPresence.has('prefix')}
+            ?data-textless=${this.slotPresence.textless('start') && this.slotPresence.textless('prefix')}
           >
             <slot name="start"></slot>
             <slot part="prefix" name="prefix"></slot>
@@ -1072,6 +1073,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             part="end"
             ?hidden=${!this.slotPresence.has('end') &&
             !this.slotPresence.has('suffix')}
+            ?data-textless=${this.slotPresence.textless('end') && this.slotPresence.textless('suffix')}
           >
             <slot name="end"></slot>
             <slot part="suffix" name="suffix"></slot>

@@ -103,6 +103,7 @@ export const styles = css`
   lr-virtual-list::part(open-button):hover {
     color: var(--lr-color-brand);
     text-decoration: underline;
+    background: var(--lr-chunk-inspector-action-hover-bg, transparent);
   }
   /* Hover already owns the underline, so the press adds a surface. This is transparent-backed link
      chrome, so a wash mixed from that transparent base is the only thing that reads as "held down"
@@ -111,7 +112,7 @@ export const styles = css`
   lr-virtual-list::part(open-button):active {
     color: var(--lr-color-brand);
     text-decoration: underline;
-    background: ${activeFill('transparent')};
+    background: var(--lr-chunk-inspector-action-active-bg, ${activeFill('var(--lr-chunk-inspector-action-hover-bg, transparent)')});
   }
   [part~='open-button']:focus-visible,
   lr-virtual-list::part(open-button):focus-visible {
@@ -160,11 +161,12 @@ export const styles = css`
   [part~='toggle']:hover,
   lr-virtual-list::part(toggle):hover {
     text-decoration: underline;
+    background: var(--lr-chunk-inspector-action-hover-bg, transparent);
   }
   [part~='toggle']:active,
   lr-virtual-list::part(toggle):active {
     text-decoration: underline;
-    background: ${activeFill('transparent')};
+    background: var(--lr-chunk-inspector-action-active-bg, ${activeFill('var(--lr-chunk-inspector-action-hover-bg, transparent)')});
   }
   [part~='toggle']:focus-visible,
   lr-virtual-list::part(toggle):focus-visible {

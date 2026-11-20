@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,3 +60,5 @@ same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-se
 ```ts
 import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";
 ```
+
+**Pointer-state tokens:** `--lr-retrieval-compare-chunk-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-retrieval-compare-chunk-active-bg`.

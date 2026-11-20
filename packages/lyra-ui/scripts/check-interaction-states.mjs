@@ -168,10 +168,17 @@ export function expandInterpolations(source) {
       else if (source[cursor] === '}') { depth -= 1; if (depth === 0) { end = cursor; break; } }
     }
     if (end < 0) { out += source.slice(start); break; }
-    const expression = source.slice(start + 2, end).trim();
+    // A nested interpolation (a helper whose argument names `${hook}`) is expanded first, so the
+    // outer call still reads as the CSS it renders.
+    const raw = source.slice(start + 2, end).trim();
+    const expression = raw.includes('${') ? expandInterpolations(raw) : raw;
     const call = /^(\w+)\(\s*('[^'\n]*'(?:\s*,\s*'[^'\n]*')*)\s*\)$/.exec(expression);
+    // A bare identifier that is not a known fragment (a token-name prefix such as `${hook}`) becomes
+    // its own name: its braces would otherwise read as a nested rule and hide the whole enclosing
+    // rule, hover and transition included, from every pass below.
     const replacement = INTERPOLATION_FRAGMENTS.get(expression) ??
-      (call ? INTERPOLATION_FUNCTIONS.get(call[1])?.(...[...call[2].matchAll(/'([^'\n]*)'/g)].map((m) => m[1])) : undefined);
+      (call ? INTERPOLATION_FUNCTIONS.get(call[1])?.(...[...call[2].matchAll(/'([^'\n]*)'/g)].map((m) => m[1])) : undefined) ??
+      (/^[A-Za-z_$][\w$]*$/.test(expression) ? expression : undefined);
     const original = source.slice(start, end + 1);
     out += replacement !== undefined && !original.includes('\n') ? replacement : original;
     index = end + 1;
@@ -826,7 +833,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/agent-tools/trace-tree/trace-tree.styles.ts:row',
   'src/components/conversation/catalog-picker-trigger.styles.ts:trigger',
   'src/components/conversation/catalog-picker-trigger.styles.ts:option',
-  'src/components/conversation/thread-list/thread-list.styles.ts:group-toggle',
   'src/components/forms/color-picker/color-picker.styles.ts:slider',
   'src/components/forms/combobox/combobox.styles.ts:clear-button',
   'src/components/forms/combobox/combobox.styles.ts:option',
@@ -845,7 +851,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   // `@media (prefers-reduced-motion: reduce)`, where it is `none`. To the eye they are identical
   // to the block above: a fill that jumps in one frame. They are listed rather than repaired for
   // the same reason, and they discharge the same way.
-  'src/components/conversation/message-feedback/message-feedback.styles.ts:submit-button',
   'src/components/data/calendar/calendar.styles.ts:event',
   'src/components/forms/input/time-input.styles.ts:now-button',
 ]);

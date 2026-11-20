@@ -29,10 +29,10 @@ export const styles = css`
     ${interactiveTransition}
   }
   [part='header']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-provenance-panel-header-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='header']:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-provenance-panel-header-active-bg, ${activeFill('var(--lr-provenance-panel-header-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='header']:focus-visible {
     ${focusRingInset}

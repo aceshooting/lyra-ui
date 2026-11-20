@@ -161,6 +161,12 @@ export const styles = css`
     overflow: hidden;
     color: var(--lr-color-text-quiet);
   }
+  /* Icon or image adornments keep their size: only text content shrinks and ellipsizes, so an
+     icon is never clipped by a long neighbouring adornment. */
+  [part='start']:where([data-textless]),
+  [part='end']:where([data-textless]) {
+    flex-shrink: 0;
+  }
   [part='start'] slot,
   [part='end'] slot,
   [part='start'] slot::slotted(*),

@@ -46,11 +46,11 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='header']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-source-list-header-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
   }
   [part='header']:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-source-list-header-active-bg, ${activeFill('var(--lr-source-list-header-hover-bg, var(--lr-color-brand-quiet))')});
     color: var(--lr-color-text);
   }
   [part='header']:focus-visible {

@@ -2055,7 +2055,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               ></span>
             </label>
             <div part="input-wrapper">
-              <span part="start" ?hidden=${!this.hasStartSlot}>
+              <span part="start" ?hidden=${!this.hasStartSlot} ?data-textless=${this.slotPresence.textless('start')}>
                 <slot name="start"></slot>
               </span>
               <span part="form-control-input">
@@ -2110,7 +2110,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     >
                   </button>`
                 : nothing}
-              <span part="end" ?hidden=${!this.hasEndSlot}>
+              <span part="end" ?hidden=${!this.hasEndSlot} ?data-textless=${this.slotPresence.textless('end')}>
                 <slot name="end"></slot>
               </span>
               <button

@@ -83,6 +83,8 @@ export interface LyraRetrievalCompareEventMap {
  * @csspart empty - The empty state.
  * @cssprop [--lr-retrieval-compare-selected-border=var(--lr-color-brand)] - Border color marking
  *   a selected `[part~="chunk"]` row.
+ * @cssprop [--lr-retrieval-compare-chunk-hover-bg=var(--lr-color-surface-raised)] - Hover background of a `[part~="chunk"]` card.
+ * @cssprop --lr-retrieval-compare-chunk-active-bg - Pressed background of a chunk card. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 7.0.0
  */

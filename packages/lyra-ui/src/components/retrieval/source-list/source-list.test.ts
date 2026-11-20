@@ -626,6 +626,23 @@ describe('header text contrast at rest, hover and press', () => {
   }
 });
 
+it('paints the hovered and pressed header from its own pointer-state tokens', async () => {
+  const el = await fixture<LyraSourceList>(html`<lr-source-list
+    style="--lr-transition-interactive: none; --lr-source-list-header-hover-bg: rgb(1, 2, 3); --lr-source-list-header-active-bg: rgb(4, 5, 6)"
+  ></lr-source-list>`);
+  const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  await resetMouse();
+  try {
+    await hoverUntilMatched(header, 'source-list header under the pointer');
+    await waitUntil(() => getComputedStyle(header).backgroundColor === 'rgb(1, 2, 3)', 'the hover token paints the header');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(header).backgroundColor === 'rgb(4, 5, 6)', 'the press token paints the header');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 describe('lr-source-list size and the retired compact alias', () => {
   const observe = (el: LyraSourceList): string => {
     const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]')!);

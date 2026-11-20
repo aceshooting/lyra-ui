@@ -1622,7 +1622,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
           ${this.label}<slot name="label"></slot>
         </label>
         <div part="base time-input input-wrapper form-control-input">
-          <span part="start" ?hidden=${!this.hasStartSlot}>
+          <span part="start" ?hidden=${!this.hasStartSlot} ?data-textless=${this.slotPresence.textless('start')}>
             <slot name="start"></slot>
           </span>
           <div
@@ -1645,7 +1645,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
                 ><span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span></button>
               `
             : nothing}
-          <span part="end" ?hidden=${!this.hasEndSlot}>
+          <span part="end" ?hidden=${!this.hasEndSlot} ?data-textless=${this.slotPresence.textless('end')}>
             <slot name="end"></slot>
           </span>
           <button

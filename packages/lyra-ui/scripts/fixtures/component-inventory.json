@@ -28077,6 +28077,17 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-chunk-inspector-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chunk-inspector-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
             "name": "--lr-chunk-inspector-current-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -91665,6 +91676,17 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-memory-panel-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-memory-panel-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-memory-panel-confidence-danger-color",
             "deprecated": null,
             "hasDefault": true,
@@ -91681,6 +91703,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-memory-panel-expand-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-memory-panel-expand-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           }
         ],
         "cssStates": [],
@@ -117537,6 +117570,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "flex-start"
+          },
+          {
+            "name": "--lr-provenance-panel-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-provenance-panel-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -122850,6 +122894,17 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-rag-eval-dashboard-item-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-rag-eval-dashboard-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
             "name": "--lr-rag-eval-dashboard-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -126512,6 +126567,17 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-retrieval-compare-chunk-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-retrieval-compare-chunk-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
           {
             "name": "--lr-retrieval-compare-selected-border",
             "deprecated": null,
@@ -136055,6 +136121,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-source-list-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-source-list-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           }
         ],
         "cssStates": [],
@@ -161727,6 +161804,27 @@
           },
           {
             "name": "--lr-tour-backdrop-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-tour-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-tour-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-tour-next-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-tour-next-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },

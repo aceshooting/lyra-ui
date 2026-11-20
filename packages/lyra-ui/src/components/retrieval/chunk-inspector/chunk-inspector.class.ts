@@ -155,6 +155,8 @@ function isDenseSize(size: LyraSize): boolean {
  *   chunk's `[part="score"]` line. **Contrast-sensitive:** the quiet token it replaces only reaches
  *   ~4.24:1 against the current background, so override this together with
  *   `--lr-chunk-inspector-current-bg`, never alone.
+ * @cssprop [--lr-chunk-inspector-action-hover-bg=transparent] - Hover background of the `open-button` and `toggle` text actions, beside their underline.
+ * @cssprop --lr-chunk-inspector-action-active-bg - Pressed background of those actions. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

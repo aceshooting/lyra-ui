@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -154,5 +154,7 @@ Plus shared tokens otherwise.
 - `title` and `open-button` are split into two separate parts (rather than one dual-part-name
   element) because an exact-match `[part="..."]` CSS attribute selector cannot match a multi-token
   `part` attribute value.
+
+**Pointer-state tokens:** `--lr-chunk-inspector-action-hover-bg` (default `transparent`) and `--lr-chunk-inspector-action-active-bg` paint the `open-button` and `toggle` text actions.
 
 ---

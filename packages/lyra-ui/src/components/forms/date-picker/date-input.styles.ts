@@ -142,6 +142,12 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Icon or image adornments keep their size: only text content shrinks and ellipsizes, so an
+     icon is never clipped by a long neighbouring adornment. */
+  [part="start"]:where([data-textless]),
+  [part="end"]:where([data-textless]) {
+    flex-shrink: 0;
+  }
   /* The part is a flex container, so its own text-overflow never fires on slotted content: each
      slotted adornment carries its own shrinkable block, the lr-input pattern. */
   [part="start"] ::slotted(*),

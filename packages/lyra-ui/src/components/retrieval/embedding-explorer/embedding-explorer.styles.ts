@@ -32,6 +32,11 @@ export const styles = css`
   [part='point'] {
     cursor: pointer;
     outline: none;
+  }
+
+  /* The ring is drawn on the marker, not on the point group, and transition is not inherited, so
+     the easing sits on the element whose stroke the hover, focus and press rules change. */
+  .point-marker {
     transition: stroke var(--lr-transition-fast), stroke-width var(--lr-transition-fast);
   }
 

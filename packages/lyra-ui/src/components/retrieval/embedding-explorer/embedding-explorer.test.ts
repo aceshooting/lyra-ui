@@ -673,6 +673,20 @@ describe('selected point pointer/focus feedback', () => {
       `[part="point"][data-index="${index}"] .point-marker`
     ) as SVGElement;
 
+  // The ring eases between widths, so a width is compared only once its transition has run out.
+  const settled = async (marker: SVGElement): Promise<string> => {
+    await Promise.all(marker.getAnimations().map((animation) => animation.finished));
+    return getComputedStyle(marker).strokeWidth;
+  };
+
+  it('eases the ring on the marker whose stroke actually changes', async () => {
+    const { el } = await selectedFixture();
+    const marker = markerOf(el, 1);
+    const style = getComputedStyle(marker);
+    const eased = style.transitionProperty.split(',').map((name) => name.trim());
+    expect(eased).to.include.members(['stroke', 'stroke-width']);
+  });
+
   it("thickens a SELECTED point's ring once it is keyboard-focused", async () => {
     const { el, before } = await selectedFixture();
     const point = el.shadowRoot!.querySelector(
@@ -695,7 +709,7 @@ describe('selected point pointer/focus feedback', () => {
       'Tab must reach the selected point'
     ).to.equal(true);
     expect(
-      getComputedStyle(marker).strokeWidth,
+      await settled(marker),
       'a focused selected point must not look identical to a resting selected one'
     ).to.not.equal(resting);
     // The selection colour survives -- focus escalates the width channel, it does not repaint the
@@ -720,7 +734,7 @@ describe('selected point pointer/focus feedback', () => {
         () => getComputedStyle(marker).strokeWidth !== resting,
         'a hovered selected point kept its resting ring'
       );
-      const hovered = getComputedStyle(marker).strokeWidth;
+      const hovered = await settled(marker);
 
       await sendMouse({ type: 'down' });
       await waitUntil(
@@ -758,7 +772,7 @@ describe('selected point pointer/focus feedback', () => {
         () => getComputedStyle(marker).strokeWidth !== resting,
         'a hovered unselected point drew no ring'
       );
-      const hovered = getComputedStyle(marker).strokeWidth;
+      const hovered = await settled(marker);
       // The unselected hovered ring is the medium step -- the same width a SELECTED point carries
       // at rest, which is precisely why the selected point needed an escalation of its own.
       expect(getComputedStyle(markerOf(el, 0)).strokeWidth).to.equal(hovered);

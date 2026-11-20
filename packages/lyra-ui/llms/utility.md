@@ -2330,6 +2330,8 @@ Default modal steps opened outside an existing native `dialog.showModal()` use a
 - Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
   the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.
 
+**Pointer-state tokens:** `--lr-tour-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-tour-button-active-bg` for previous and skip; `--lr-tour-next-button-hover-bg` and `--lr-tour-next-button-active-bg` for next/finish. Each press defaults to its hover fill mixed by the press step.
+
 ## Exported TypeScript contracts
 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.

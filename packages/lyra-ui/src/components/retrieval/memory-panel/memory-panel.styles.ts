@@ -101,10 +101,11 @@ export const styles = css`
   }
   [part='expand-toggle']:hover {
     text-decoration: underline;
+    background: var(--lr-memory-panel-expand-toggle-hover-bg, transparent);
   }
   [part='expand-toggle']:active {
     text-decoration: underline;
-    background: ${activeFill('transparent')};
+    background: var(--lr-memory-panel-expand-toggle-active-bg, ${activeFill('var(--lr-memory-panel-expand-toggle-hover-bg, transparent)')});
   }
   [part='item-body'] {
     padding-block-start: var(--lr-space-xs);
@@ -146,12 +147,12 @@ export const styles = css`
   [part='add-button']:hover,
   [part='remove-button']:hover,
   [part='forget-all-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-memory-panel-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='add-button']:active,
   [part='remove-button']:active,
   [part='forget-all-button']:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-memory-panel-button-active-bg, ${activeFill('var(--lr-memory-panel-button-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='forget-all-button'] {
     color: var(--lr-color-danger);

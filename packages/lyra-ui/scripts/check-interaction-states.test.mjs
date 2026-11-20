@@ -624,6 +624,23 @@ test('shared fill, tint and focus helpers are read as the CSS they render', () =
   assert.deepEqual(readHoverRules(source).map((rule) => rule.selector), ["[part='a']:hover"]);
 });
 
+test('a token-prefix interpolation does not hide the rule that carries it', () => {
+  // Reduced from the catalog-picker trigger: the public hooks are written as `var(${hook}x)`, and
+  // the braces of an unexpanded `${hook}` used to read as a nested rule, dropping the hover and
+  // pressed rules (and with them the transition the part owed) from every pass.
+  const source = [
+    "[part='trigger'] { cursor: pointer; }",
+    "[part='trigger']:hover { background: var(${hook}trigger-hover-bg, var(--lr-color-brand-quiet)); }",
+    "[part='trigger']:active { background: ${activeFill('var(${hook}trigger-hover-bg, var(--x))')}; }",
+  ].join('\n');
+  const expanded = expandInterpolations(source);
+  assert.doesNotMatch(expanded, /\$\{/);
+  assert.match(expanded, /color-mix\(in oklab, var\(hooktrigger-hover-bg, var\(--x\)\)/);
+  const result = hoverContract(source);
+  assert.deepEqual(result.findings.map((finding) => finding.part), ['trigger']);
+  assert.match(result.findings[0].message, /nothing transitions it/);
+});
+
 if (failures > 0) {
   console.error(`check-interaction-states self-test FAILED: ${failures} of ${failures + passes} case(s).`);
   process.exitCode = 1;

@@ -66,6 +66,8 @@ export interface LyraSourceListEventMap {
  *   rows while `size` is `s` or smaller.
  * @cssprop [--lr-source-list-compact-list-padding=var(--lr-space-s)] - `[part="list"]` padding
  *   while `size` is `s` or smaller.
+ * @cssprop [--lr-source-list-header-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the disclosure `[part="header"]`.
+ * @cssprop --lr-source-list-header-active-bg - Pressed background of the header. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

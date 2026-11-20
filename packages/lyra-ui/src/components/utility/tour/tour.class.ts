@@ -367,6 +367,10 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the step panel.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius of the step panel.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Elevation of the step panel.
+ * @cssprop [--lr-tour-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the previous and skip buttons.
+ * @cssprop --lr-tour-button-active-bg - Pressed background of those buttons. Defaults to the hover background mixed by the press step.
+ * @cssprop --lr-tour-next-button-hover-bg - Hover background of the next/finish button. Defaults to the brand fill mixed by the hover step.
+ * @cssprop --lr-tour-next-button-active-bg - Pressed background of the next/finish button. Defaults to its hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

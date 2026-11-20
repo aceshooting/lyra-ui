@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -78,3 +78,5 @@ import "@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js";
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose
 `withoutClaims: boolean = false`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
 document-viewer-compatible `anchor` in `lr-chunk-open`.
+
+**Pointer-state tokens:** `--lr-rag-eval-dashboard-item-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-rag-eval-dashboard-item-active-bg` for the slice, metric and run buttons.

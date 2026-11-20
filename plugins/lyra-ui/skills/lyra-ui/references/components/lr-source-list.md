@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-source-card` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -197,5 +197,7 @@ time.
   all beyond DOM nesting.
 - `lr-source-card` uses `heading` for the rendered title. The native host `title` attribute remains
   an independent browser tooltip and does not update the heading.
+
+**Pointer-state tokens:** `--lr-source-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-source-list-header-active-bg`.
 
 ---

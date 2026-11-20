@@ -1349,6 +1349,8 @@ Plus shared tokens otherwise.
   element) because an exact-match `[part="..."]` CSS attribute selector cannot match a multi-token
   `part` attribute value.
 
+**Pointer-state tokens:** `--lr-chunk-inspector-action-hover-bg` (default `transparent`) and `--lr-chunk-inspector-action-active-bg` paint the `open-button` and `toggle` text actions.
+
 ---
 
 ## `lr-source-picker`
@@ -1547,6 +1549,8 @@ Plus shared tokens.
   for the host to handle in one place.
 - The four sections are derived once per `provenance` assignment, so toggling a section header
   never rebuilds the chunk inspector's input.
+
+**Pointer-state tokens:** `--lr-provenance-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-provenance-panel-header-active-bg`.
 
 ---
 
@@ -2016,6 +2020,8 @@ time.
   all beyond DOM nesting.
 - `lr-source-card` uses `heading` for the rendered title. The native host `title` attribute remains
   an independent browser tooltip and does not update the heading.
+
+**Pointer-state tokens:** `--lr-source-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-source-list-header-active-bg`.
 
 ---
 
@@ -3020,6 +3026,8 @@ its score bar). Plus shared tokens otherwise.
 - `remove` (one item, either list) and `forget` (the whole long-term list) are deliberately distinct
   actions; there is no per-item forget and no bulk remove.
 
+**Pointer-state tokens:** `--lr-memory-panel-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-memory-panel-button-active-bg` for the add, remove and forget-all buttons; `--lr-memory-panel-expand-toggle-hover-bg` (default `transparent`) and `--lr-memory-panel-expand-toggle-active-bg` for the expand toggle.
+
 ---
 
 ## `lr-retrieval-results`
@@ -3900,6 +3908,8 @@ same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-se
 import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";
 ```
 
+**Pointer-state tokens:** `--lr-retrieval-compare-chunk-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-retrieval-compare-chunk-active-bg`.
+
 ## `lr-rag-eval-dashboard`
 
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
@@ -3964,6 +3974,8 @@ import "@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js";
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose
 `withoutClaims: boolean = false`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
 document-viewer-compatible `anchor` in `lr-chunk-open`.
+
+**Pointer-state tokens:** `--lr-rag-eval-dashboard-item-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-rag-eval-dashboard-item-active-bg` for the slice, metric and run buttons.
 
 ## Consumer integration notes
 

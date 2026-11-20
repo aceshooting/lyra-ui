@@ -2834,7 +2834,9 @@ export interface LyraComponentTypeMap {
     events: LyraChunkInspectorEventMap;
     eventNames:       | 'lr-chunk-open'
       | 'lr-toggle';
-    cssNames:       | '--lr-chunk-inspector-current-bg'
+    cssNames:       | '--lr-chunk-inspector-action-active-bg'
+      | '--lr-chunk-inspector-action-hover-bg'
+      | '--lr-chunk-inspector-current-bg'
       | '--lr-chunk-inspector-current-color';
     attributeAliases: {
       'active-chunk-id'?: LyraChunkInspector['activeChunkId'];
@@ -8491,9 +8493,13 @@ export interface LyraComponentTypeMap {
       | 'lr-relation-activate'
       | 'lr-remove'
       | 'lr-retrieval-disclosure-change';
-    cssNames:       | '--lr-memory-panel-confidence-danger-color'
+    cssNames:       | '--lr-memory-panel-button-active-bg'
+      | '--lr-memory-panel-button-hover-bg'
+      | '--lr-memory-panel-confidence-danger-color'
       | '--lr-memory-panel-confidence-success-color'
-      | '--lr-memory-panel-confidence-warning-color';
+      | '--lr-memory-panel-confidence-warning-color'
+      | '--lr-memory-panel-expand-toggle-active-bg'
+      | '--lr-memory-panel-expand-toggle-hover-bg';
     attributeAliases: {
       'heading-level'?: LyraMemoryPanel['headingLevel'];
     };
@@ -10755,7 +10761,9 @@ export interface LyraComponentTypeMap {
       | 'lr-entity-select'
       | 'lr-relation-activate'
       | 'lr-retrieval-disclosure-change';
-    cssNames:       | '--lr-provenance-panel-entity-justify';
+    cssNames:       | '--lr-provenance-panel-entity-justify'
+      | '--lr-provenance-panel-header-active-bg'
+      | '--lr-provenance-panel-header-hover-bg';
     attributeAliases: {};
   };
   'lr-push-to-talk': {
@@ -11191,7 +11199,9 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-metric-change-request'
       | 'lr-run-activate'
       | 'lr-slice-change-request';
-    cssNames:       | '--lr-rag-eval-dashboard-selected-border-color';
+    cssNames:       | '--lr-rag-eval-dashboard-item-active-bg'
+      | '--lr-rag-eval-dashboard-item-hover-bg'
+      | '--lr-rag-eval-dashboard-selected-border-color';
     attributeAliases: {
       'chart-height'?: LyraRagEvalDashboard['chartHeight'];
       'heading-level'?: LyraRagEvalDashboard['headingLevel'];
@@ -11516,7 +11526,9 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraRetrievalCompareEventMap;
     eventNames:       | 'lr-chunk-select';
-    cssNames:       | '--lr-retrieval-compare-selected-border';
+    cssNames:       | '--lr-retrieval-compare-chunk-active-bg'
+      | '--lr-retrieval-compare-chunk-hover-bg'
+      | '--lr-retrieval-compare-selected-border';
     attributeAliases: {
       'heading-level'?: LyraRetrievalCompare['headingLevel'];
       'selected-chunk-id'?: LyraRetrievalCompare['selectedChunkId'];
@@ -12343,7 +12355,9 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-source-list-compact-gap'
       | '--lr-source-list-compact-header-gap'
       | '--lr-source-list-compact-header-padding'
-      | '--lr-source-list-compact-list-padding';
+      | '--lr-source-list-compact-list-padding'
+      | '--lr-source-list-header-active-bg'
+      | '--lr-source-list-header-hover-bg';
     attributeAliases: {
       'label-plural'?: LyraSourceList['labelPlural'];
     };
@@ -14632,6 +14646,10 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-surface'
       | '--lr-positioning-strategy'
       | '--lr-tour-backdrop-color'
+      | '--lr-tour-button-active-bg'
+      | '--lr-tour-button-hover-bg'
+      | '--lr-tour-next-button-active-bg'
+      | '--lr-tour-next-button-hover-bg'
       | '--lr-tour-popover-max-width'
       | '--lr-tour-progress-dot-current-bg'
       | '--lr-tour-spotlight-radius'

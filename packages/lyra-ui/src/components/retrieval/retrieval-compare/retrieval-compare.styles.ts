@@ -58,10 +58,10 @@ export const styles = css`
     ${interactiveTransition}
   }
   [part~='chunk']:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-retrieval-compare-chunk-hover-bg, var(--lr-color-surface-raised));
   }
   [part~='chunk']:active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-retrieval-compare-chunk-active-bg, ${activeFill('var(--lr-retrieval-compare-chunk-hover-bg, var(--lr-color-surface-raised))')});
   }
   [part~='chunk']:focus-visible {
     ${focusRingInsetOffset}
