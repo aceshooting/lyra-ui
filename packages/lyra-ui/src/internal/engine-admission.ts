@@ -2,7 +2,6 @@ import { composedParentElement, isAccessibilityVisible } from './accessibility-v
 import { THEME_ATTRIBUTES } from './theme-observation.js';
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import { finiteRange } from './numbers.js';
-import type { EngineStyle } from './engine-style.js';
 
 /**
  * Attributes whose change on an element or a composed ancestor can hide, inert or reveal it
@@ -107,6 +106,28 @@ export function watchEngineStyle(host: Element, onChange: () => void): () => voi
     releaseAncestors();
     for (const list of lists) list.removeEventListener('change', onChange);
   };
+}
+
+/**
+ * Plain style values an optional WebGL engine paints with: concrete CSS colour strings and CSS
+ * pixels. Owned structurally here so the optional companion's declarations stay out of this
+ * library's public type graph.
+ */
+export interface EngineStyle {
+  readonly background: string;
+  readonly foreground: string;
+  readonly muted: string;
+  readonly accent: string;
+  readonly focus: string;
+  /** Categorical colours, indexed by an item's category. */
+  readonly palette: readonly string[];
+  readonly fontFamily: string;
+  readonly fontSize: number;
+  readonly pointSize: number;
+  readonly lineWidth: number;
+  readonly devicePixelRatio: number;
+  readonly reducedMotion: boolean;
+  readonly forcedColors: boolean;
 }
 
 /** The categorical chart tokens, in palette order. */

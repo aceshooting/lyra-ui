@@ -2,7 +2,7 @@ import { admitMapTerrain, type LyraMapTerrain } from './map-scene-configuration.
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { escapeHtml } from '../../../internal/escape-html.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { isPlainDataRecord, readOwnDataValueOr } from '../../../internal/data-descriptors.js';
 
 export type MapOwnedControlKind = 'navigation' | 'scale' | 'geolocate' | 'globe' | 'terrain' | 'attribution';
 /** Corner a declarative control is added to. The corners follow text direction under RTL. */
@@ -79,9 +79,7 @@ export interface MapControlOptionsResult {
 const positions = new Set<LyraMapControlPosition>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 function runtimeRecord(input: unknown): input is object { try { return input !== null && typeof input === 'object' && !Array.isArray(input); } catch { return false; } }
 function own(input: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(input, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Unsafe control option');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(input, key, () => { throw new TypeError('Unsafe control option'); });
 }
 function optionalLegacy(input: object, key: string): unknown { try { return own(input, key); } catch { return undefined; } }
 function plain(input: unknown): object { if (!isPlainDataRecord(input)) throw new TypeError('Expected plain control options'); return input; }

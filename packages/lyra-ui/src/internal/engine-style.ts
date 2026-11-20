@@ -1,28 +1,8 @@
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import { finiteRange } from './numbers.js';
-import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
+import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, type EngineStyle } from './engine-admission.js';
 
-/**
- * Plain style values an optional WebGL engine paints with: concrete CSS colour strings and CSS
- * pixels. Owned structurally here so the optional companion's declarations stay out of this
- * library's public type graph.
- */
-export interface EngineStyle {
-  readonly background: string;
-  readonly foreground: string;
-  readonly muted: string;
-  readonly accent: string;
-  readonly focus: string;
-  /** Categorical colours, indexed by an item's category. */
-  readonly palette: readonly string[];
-  readonly fontFamily: string;
-  readonly fontSize: number;
-  readonly pointSize: number;
-  readonly lineWidth: number;
-  readonly devicePixelRatio: number;
-  readonly reducedMotion: boolean;
-  readonly forcedColors: boolean;
-}
+export type { EngineStyle } from './engine-admission.js';
 
 export interface EngineStyleOptions {
   /** Custom properties resolved into `palette`, in order. Defaults to {@link ENGINE_CHART_PALETTE}. */

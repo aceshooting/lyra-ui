@@ -1,9 +1,4 @@
-import {
-  getOwnDataDescriptor,
-  isPlainDataRecord,
-  MISSING_OWN_DATA_DESCRIPTOR,
-  UNSAFE_OWN_DATA_DESCRIPTOR,
-} from '../../../internal/data-descriptors.js';
+import { isPlainDataRecord, readOwnDataValueOr } from '../../../internal/data-descriptors.js';
 import type { LyraMapFeatureRequirements } from './map-loader.js';
 import { safeValue, type LyraMapStyleValue } from './map-style-value.js';
 
@@ -26,9 +21,7 @@ export function normalizeMapProjection(value: unknown): LyraMapProjection | unde
 }
 
 function own(record: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(record, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Invalid map scene descriptor');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(record, key, () => { throw new TypeError('Invalid map scene descriptor'); });
 }
 
 /** Admit a detached bounded terrain value without executing caller accessors. */

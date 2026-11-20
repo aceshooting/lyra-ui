@@ -819,8 +819,8 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
       .map(([, name]) => `${name}.ts`),
   );
   assert.deepEqual(runtimes.sort(), [
-    'map-anchor-controller.ts', 'map-controls-lifecycle.ts', 'map-drawing-controller.ts', 'map-feature-state-routes.ts', 'map-hash-owner.ts',
-    'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-scene-render-controller.ts', 'map-style-overrides.ts',
+    'map-anchor-controller.ts', 'map-controls-lifecycle.ts', 'map-data-layer-runtime.ts', 'map-drawing-controller.ts', 'map-feature-state-routes.ts',
+    'map-hash-owner.ts', 'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-scene-render-controller.ts', 'map-style-overrides.ts',
   ], 'the shared loaders must import each optional runtime through a literal specifier bundlers can split');
   // Implementation modules only those runtimes need; the class may still import their types.
   const onDemand = [
@@ -828,6 +828,7 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
     'map-export-attribution.ts', 'map-external-layer-builder.ts', 'map-feature-state.ts', 'map-hash.ts', 'map-image-admission.ts', 'map-image-export.ts',
     'map-image-metadata.ts', 'map-layer-order.ts', 'map-overlay-admission.ts', 'map-owned-feature-input.ts', 'map-owned-resources.ts',
     'map-source-updates.ts', 'map-style-override-admission.ts', 'map-vector-style-compiler.ts',
+    'map-data-layer-model.ts', 'map-label-layer.ts', 'map-vector-style.ts',
   ].map((name) => path.join(mapDir, name));
   const sharedOverlayInternals = ['anchored-overlay-runtime.ts', 'overlay-manager.ts', 'overlay-stack.ts', 'positioner-geometry.ts']
     .map((name) => path.join(internalDir, name));
@@ -837,7 +838,7 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
   assert.deepEqual(
     [...onDemand, ...sharedOverlayInternals].filter((file) => reachable.has(file)).map((file) => path.relative(packageDir, file)),
     [],
-    'lr-map must load drawing, export, URL, resource, image, override, anchor, control and feature-state runtimes on first use',
+    'lr-map must load data-layer, drawing, export, URL, resource, image, override, anchor, control and feature-state runtimes on first use',
   );
 });
 

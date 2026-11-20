@@ -3310,6 +3310,8 @@ shown when `segments` exceeds the 500-row render ceiling).
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
+The default entry registers the search field's `lr-input` the first time `searchable` is set;
+`updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
 
@@ -3867,7 +3869,9 @@ The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to
 
 `disabled` prevents review actions. `lr-approval-open` and `lr-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
 
-Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
+Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`,
+which the default entry registers the first time a request opens;
+`updateComplete` waits for that registration and the child's first render.
 The host executes tools and persists decisions. The queue reports the outcome through
 `lr-approval-close` and contains the nested dialog’s `lr-decision-settled` event.
 

@@ -1,11 +1,9 @@
 import { snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, readOwnDataValueOr, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 
 function invalid(): never { throw new Error('Invalid map font source.'); }
 function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return invalid();
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(value, key, invalid);
 }
 function range(value: unknown): value is string {
   if (typeof value !== 'string') return false;

@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
@@ -402,7 +403,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('disabled') && this.disabled) void this.dropdownEl?.hide();
+    if (changed.has('disabled') && this.disabled) void this.dropdownEl?.hide?.();
     if (changed.has('capabilities')) {
       const normalized = normalizeCapabilities(this.capabilities);
       if (!isCanonicalCapabilitySnapshot(this.capabilities)) this.capabilities = normalized;
@@ -417,8 +418,17 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   // Merges a consumer-set host `aria-describedby` onto whichever internal trigger button is
   // currently rendered (single-capability or menu) -- the sole semantic owner -- since idrefs
   // never cross the shadow boundary on their own.
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('attachment-trigger', this.renderRoot) ?? this.childRegistration;
     this.syncTriggerDescription();
     // The composed `<lr-icon-button>` exists in the DOM by the time this update finishes, but it
     // has not run its OWN first update, so `control` is still null and the projection above lands
@@ -527,7 +537,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   override disconnectedCallback(): void {
     this.pendingPickerGeneration = -1;
     this.pickerGeneration++;
-    void this.dropdownEl?.hide();
+    void this.dropdownEl?.hide?.();
     super.disconnectedCallback();
   }
   private onControlFocus = (event: FocusEvent): void => {

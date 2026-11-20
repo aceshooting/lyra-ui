@@ -21,7 +21,8 @@ export function defineLazyChildren(owner: string, loaders: LazyChildLoaders): vo
 
 /**
  * Starts the registration of every deferred child that `root` currently contains undefined and
- * returns a promise for those registrations, or `undefined` when none is outstanding. Each child
+ * returns a promise for those registrations and the upgraded children's first render, or
+ * `undefined` when none is outstanding. Each child
  * loads once per page; a failed import is forgotten so a later render retries it, and the returned
  * promise never rejects, so a host's `updateComplete` stays settleable.
  */
@@ -34,6 +35,8 @@ export function loadLazyChildren(owner: string, root: ParentNode): Promise<unkno
     children.remaining.delete(name);
     const attempt = Promise.resolve()
       .then(load)
+      .then(() => Promise.all(Array.from(root.querySelectorAll(tag(name)),
+        (child) => (child as Element & { updateComplete?: Promise<unknown> }).updateComplete)))
       .catch(() => {
         children.remaining.set(name, load);
       })

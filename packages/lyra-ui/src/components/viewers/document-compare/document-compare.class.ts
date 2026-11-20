@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -402,8 +403,17 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     this.syncReleaseFrame = frame;
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('document-compare', this.renderRoot) ?? this.childRegistration;
     const anchor = this.anchor;
     const sourceChanged = (property: 'oldVersion' | 'newVersion'): boolean =>
       changed.has(property)
@@ -465,6 +475,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   /** Jumps both side-by-side panes and reports one `lr-anchor-result` for the pair. */
   private async jumpPanes(target: LyraAnchor | string): Promise<boolean> {
+    await this.childRegistration;
     const results = await Promise.all([
       this.previewOldEl?.scrollToAnchor(target),
       this.previewNewEl?.scrollToAnchor(target),

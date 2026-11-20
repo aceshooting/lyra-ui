@@ -2,6 +2,7 @@
 export * from './attachment-trigger.class.js';
 import { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 import { defineElement } from '../../../internal/prefix.js';
+import { defineLazyChildren } from '../../../internal/lazy-children.js';
 // The lean icon-button entry: both triggers slot this component's own glyphs, so they must not drag
 // lr-icon (and its unreachable sanitizer chunk) into a consumer's graph.
 // policy-allow(component-dependency: lr-icon): this entry composes <lr-icon-button> through its
@@ -12,6 +13,9 @@ import { defineElement } from '../../../internal/prefix.js';
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
 import '../../forms/icon-button/icon-button-register.js';
-import '../../layout/menu/menu-item.js';
-import '../../overlays/overlay/dropdown.js';
+// The capability menu registers the first time a trigger offers more than one capability.
+defineLazyChildren('attachment-trigger', {
+  dropdown: () => import('../../overlays/overlay/dropdown.js'),
+  'menu-item': () => import('../../layout/menu/menu-item.js'),
+});
 defineElement('attachment-trigger', LyraAttachmentTrigger);

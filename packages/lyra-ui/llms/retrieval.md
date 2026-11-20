@@ -3465,7 +3465,8 @@ The `empty` CSS part exposes the empty-state container.
 
 Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
 assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
-or source fetching.
+or source fetching. The default entry registers `lr-grounding-summary` the first time an
+`assessment` is set; `updateComplete` waits for that registration and the child's first render.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`

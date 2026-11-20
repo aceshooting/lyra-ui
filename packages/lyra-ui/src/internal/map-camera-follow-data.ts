@@ -1,4 +1,4 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
+import { isPlainDataRecord, readOwnDataValueOr } from './data-descriptors.js';
 
 type MapCameraFollowMode = 'ground' | 'geographic-visual';
 export interface MapCameraFollowOptions {
@@ -38,9 +38,7 @@ interface AttemptState { readonly maximum: number; readonly magnitude?: Magnitud
 const attempts = new WeakMap<MapCameraFollowAttempt, AttemptState>();
 const invalid = (): never => { throw new TypeError('Invalid camera follow data'); };
 function own(record: object, key: PropertyKey): unknown {
-  const descriptor = getOwnDataDescriptor(record, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return invalid();
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(record, key, invalid);
 }
 function record(input: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!isPlainDataRecord(input)) return invalid();

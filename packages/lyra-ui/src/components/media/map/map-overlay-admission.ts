@@ -1,4 +1,4 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { isPlainDataRecord, readOwnArrayLength, readOwnDataValueOr } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions } from './map-interaction-options.js';
 
 /** A detached native source descriptor. A canvas source retains its canvas identity, and a
@@ -24,9 +24,7 @@ class AdmissionFailure extends Error {
 }
 const reject = (code: AdmissionFailure['code']): never => { throw new AdmissionFailure(code); };
 function own(input: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(input, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return reject('invalid-input');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(input, key, () => reject('invalid-input'));
 }
 function identifier(input: unknown): string {
   if (typeof input !== 'string' || !input.trim() || input.trim().length > LIMITS.id) return reject('invalid-input');

@@ -19,6 +19,16 @@ test('every wildcard module, including nested adapters, receives a concrete type
   assert.ok(!entries.some(entry => entry.includes('*')));
   assert.equal(entries.length, new Set(entries).size);
 });
+test('a JSON metadata export resolves to its shipped file without a declaration pair', () => {
+  const withMetadata = { ...manifest(), exports: { ...manifest().exports, './custom-elements.json': './custom-elements.json' } };
+  const entries = validatePackedGenManifest(withMetadata, [...files, 'custom-elements.json'], '30.2.0');
+  assert.ok(!entries.includes('./custom-elements.json'));
+  assert.throws(() => genTypedEntrypoints(withMetadata, files), /custom-elements\.json has a missing emitted target/u);
+  const redirected = { ...manifest(), exports: { ...manifest().exports, './custom-elements.json': './dist/other.json' } };
+  assert.throws(() => genTypedEntrypoints(redirected, [...files, 'dist/other.json']), /own shipped file/u);
+  const typedJson = { ...manifest(), exports: { ...manifest().exports, './data.json': { types: './dist/data.d.ts', default: './dist/data.json' } } };
+  assert.throws(() => genTypedEntrypoints(typedJson, files), /own shipped file/u);
+});
 test('packing rejects leaked workspace ranges, missing docs/types, fixtures and erased side effects', () => {
   assert.throws(() => validatePackedGenManifest({ ...manifest(), dependencies: { lit: 'workspace:*' } }, files, '30.2.0'), /workspace/u);
   assert.throws(() => validatePackedGenManifest(manifest(), files.filter(file => file !== 'CHANGELOG.md'), '30.2.0'), /CHANGELOG/u);

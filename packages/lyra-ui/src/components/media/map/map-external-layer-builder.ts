@@ -1,4 +1,5 @@
-import { buildMapLabelLayer, numeric, type CanonicalMapExternalLayer, type LyraMapSourceCoordinates } from './map-data-layer-model.js';
+import type { CanonicalMapExternalLayer, LyraMapSourceCoordinates } from './map-data-layer-model.js';
+import { buildMapLabelLayer, numeric } from './map-label-layer.js';
 import type { LyraMapOverlayLayer, LyraMapOverlaySource } from './map-overlay-admission.js';
 import { resolveMapVectorStyle } from './map-vector-style-compiler.js';
 

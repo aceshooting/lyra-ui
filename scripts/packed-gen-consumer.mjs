@@ -57,6 +57,12 @@ export function genTypedEntrypoints(manifest, files) {
   const entries = new Set();
   for (const [entry, target] of Object.entries(manifest.exports)) {
     if (entry === './package.json') continue;
+    if (entry.endsWith('.json')) {
+      // A JSON metadata export (the custom-elements manifest) is data, so it has no declaration pair.
+      assert.ok(typeof target === 'string' && target === entry, `${entry} must export its own shipped file`);
+      assert.ok(files.includes(target.slice(2)), `${entry} has a missing emitted target`);
+      continue;
+    }
     assert.ok(target && typeof target === 'object' && typeof target.types === 'string' && typeof target.default === 'string', `${entry} needs paired types and runtime targets`);
     assert.ok(target.types.startsWith('./dist/') && target.default.startsWith('./dist/'), `${entry} must resolve into dist`);
     if (!entry.includes('*')) {

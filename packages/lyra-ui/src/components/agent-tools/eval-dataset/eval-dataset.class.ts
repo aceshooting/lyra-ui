@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
@@ -212,8 +213,17 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.sourcePages.adopted();
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('eval-dataset', this.renderRoot) ?? this.childRegistration;
     if (this.limitAnnouncementInitialized && this.examplesTruncated && !this.previouslyTruncated) {
       const truncation = publicCollectionTruncation(this, 'examples');
       if (truncation) this.limitAnnouncements.announcePolite(this.localize('evalDatasetLimit', undefined, {

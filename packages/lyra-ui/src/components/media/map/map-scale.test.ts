@@ -129,6 +129,10 @@ it('leaves explicit source updates unavailable until an incremental source exist
 });
 
 import { registerLyraLocale } from '../../../internal/localization.js';
+import { loadMapDataLayerRuntime } from './map-feature-loader.js';
+
+// The private paint seams below run synchronously, so the on-demand projection runtime loads first.
+before(() => loadMapDataLayerRuntime());
 it('refreshes canvas, marker and popup semantics for a coalesced public locale update', async () => {
   registerLyraLocale('fr-XA', { map: 'Carte test', mapMarker: 'Repère test', close: 'Fermer test', loading: 'Chargement test', zoomIn: 'Agrandir test' });
   const el = await mountMap();

@@ -7,7 +7,7 @@ import { MapDrawing, type LyraMapDrawingSnapshot } from './map-drawing.js';
 import {
   loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime,
   loadMapHashRuntime, loadMapImageExportRuntime, loadMapImageRuntime, loadMapOwnedFeatureRuntime, loadMapStyleOverrideRuntime,
-  type MapFeatureLoader,
+  loadMapDataLayerRuntime, type MapFeatureLoader,
 } from './map-feature-loader.js';
 import { setMapFeatureImporter } from '../../../../test/map-feature-loader-fixtures.js';
 import * as stateRuntime from './map-feature-state-routes.js';
@@ -16,6 +16,7 @@ import * as exportRuntime from './map-image-export-controller.js';
 import { LyraMapImageExportError } from './map-image-export.js';
 import * as imageRuntime from './map-images.js';
 import * as ownedRuntime from './map-owned-features.js';
+import * as dataLayerRuntime from './map-data-layer-runtime.js';
 import * as overrideRuntime from './map-style-overrides.js';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import './map.js';
@@ -30,7 +31,7 @@ class LazyMap extends ControlMapEngine {
 }
 
 const loaders: readonly MapFeatureLoader<unknown>[] = [loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime,
-  loadMapHashRuntime, loadMapImageExportRuntime, loadMapImageRuntime, loadMapOwnedFeatureRuntime, loadMapStyleOverrideRuntime];
+  loadMapHashRuntime, loadMapImageExportRuntime, loadMapImageRuntime, loadMapOwnedFeatureRuntime, loadMapStyleOverrideRuntime, loadMapDataLayerRuntime];
 
 interface Gate { release(): void; fail(): void; readonly imports: number }
 /** Holds one runtime's import until it is released or failed, counting the imports requested. */
@@ -122,6 +123,45 @@ describe('lr-map on-demand runtimes', () => {
     expect(element.getFeatureState({ source: 'points', id: 1 })).to.equal(undefined);
     expect(peer.sources.size).to.equal(1); await tick();
     expect(counters.map(counter => counter.imports)).to.deep.equal([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('never imports the data-layer runtime for a map without data layers or a choropleth', async () => {
+    const counter = count(loadMapDataLayerRuntime, dataLayerRuntime);
+    const { element, peer } = await mount(el => { el.controls = { attribution: false }; });
+    await settle(element, peer); await tick();
+    expect(counter.imports).to.equal(0);
+  });
+
+  it('holds construction until the data-layer runtime arrives, then builds the rows on first load', async () => {
+    const gate = hold(loadMapDataLayerRuntime, dataLayerRuntime);
+    const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+    const element = create(el => {
+      el.controls = { attribution: false };
+      el.dataLayers = [{ sourceId: 'points', geojson: { type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } }] } }];
+    });
+    wrapper.append(element);
+    await waitUntil(() => gate.imports === 1); await tick();
+    expect(element.map === undefined).to.equal(true);
+    let settled = false; void element.updateComplete.then(() => { settled = true; });
+    await tick(); expect(settled).to.equal(false);
+    gate.release();
+    await waitUntil(() => element.map !== undefined); await element.updateComplete;
+    const peer = element.map as unknown as LazyMap;
+    peer.fire('load'); await element.whenStyleReady(); await settle(element, peer);
+    expect([...peer.sources.keys()].length).to.equal(1);
+    expect(settled).to.equal(true); expect(gate.imports).to.equal(1);
+  });
+
+  it('assigns rows to a live map once the data-layer runtime loads, and reports a runtime that cannot load', async () => {
+    const gate = hold(loadMapDataLayerRuntime, dataLayerRuntime);
+    const { element, peer } = await mount(el => { el.controls = { attribution: false }; });
+    await settle(element, peer);
+    element.dataLayers = [{ sourceId: 'points', geojson: { type: 'FeatureCollection', features: [] } }];
+    await waitUntil(() => gate.imports === 1);
+    expect(peer.sources.size).to.equal(0);
+    gate.fail(); await element.updateComplete; await tick(); await element.updateComplete;
+    expect(text(element)).to.contain('The map could not be initialized.');
+    expect(peer.sources.size).to.equal(0);
   });
 
   it('renders armed drawing controls at once and starts the session once its runtime loads, with whenIdle covering the load', async () => {

@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -189,8 +190,17 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     super.disconnectedCallback();
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('rag-answer', this.renderRoot) ?? this.childRegistration;
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (

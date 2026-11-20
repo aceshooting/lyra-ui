@@ -1,4 +1,4 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { isPlainDataRecord, readOwnArrayLength, readOwnDataValueOr } from '../../../internal/data-descriptors.js';
 import { MAP_IMAGE_LIMITS } from './map-image-limits.js';
 
 export { MAP_IMAGE_MAX_DIMENSION, MAP_IMAGE_MAX_PIXELS, MAP_IMAGE_MAX_ENCODED_BYTES, MAP_IMAGE_LIMITS } from './map-image-limits.js';
@@ -22,9 +22,7 @@ export class MapImageFailure extends Error {
 }
 export const failMapImage = (code: MapImageErrorCode): never => { throw new MapImageFailure(code); };
 function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return failMapImage('invalid-descriptor');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(value, key, () => failMapImage('invalid-descriptor'));
 }
 export function mapImageBytes(text: string, ceiling: number): Uint8Array {
   if (text.length > ceiling) return failMapImage('limit');

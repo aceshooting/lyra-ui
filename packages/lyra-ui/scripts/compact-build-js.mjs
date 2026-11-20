@@ -160,28 +160,32 @@ async function javascriptFiles(directory) {
   return nested.flat();
 }
 
-/** Keep text nodes and attribute values verbatim. Only the HTML parser identifies tag boundaries. */
+/** Keep text nodes and attribute values verbatim in `html` and `svg` templates. Only the HTML parser identifies tag boundaries. */
 export function compactLitStartTags(source, filename) {
-  if (!source.includes('html`')) return source;
+  if (!source.includes('html`') && !source.includes('svg`')) return source;
   const program = parseProgram(filename, source);
-  const binding = program.body.flatMap(node =>
+  const imported = program.body.flatMap(node =>
     node.type === 'ImportDeclaration' && ['lit', 'lit-html'].includes(node.source.value)
-      ? node.specifiers : []).find(specifier =>
-    specifier.type === 'ImportSpecifier' && specifier.imported.name === 'html' && specifier.local.name === 'html');
-  if (!binding) return source;
+      ? node.specifiers : []);
+  const tags = ['html', 'svg'].filter(name => imported.some(specifier =>
+    specifier.type === 'ImportSpecifier' && specifier.imported.name === name && specifier.local.name === name));
+  if (tags.length === 0) return source;
 
-  const templates = [];
-  const references = new Set();
-  const tagUses = new Set([binding.imported.start, binding.local.start]);
+  const templatesByTag = new Map(tags.map(name => [name, []]));
+  const references = new Map(tags.map(name => [name, new Set()]));
+  const tagUses = new Set(imported.filter(specifier => tags.includes(specifier.local?.name))
+    .flatMap(specifier => [specifier.imported.start, specifier.local.start]));
   visitAst(program, node => {
-    if (node.type === 'Identifier' && node.name === 'html') references.add(node.start);
-    if (node.type === 'TaggedTemplateExpression' && node.tag.type === 'Identifier' && node.tag.name === 'html') {
-      templates.push(node.quasi);
+    if (node.type === 'Identifier' && tags.includes(node.name)) references.get(node.name).add(node.start);
+    if (node.type === 'TaggedTemplateExpression' && node.tag.type === 'Identifier' && tags.includes(node.tag.name)) {
+      templatesByTag.get(node.tag.name).push(node.quasi);
       tagUses.add(node.tag.start);
     }
   });
-  // A different lexical binding may read raw template strings. Skip ambiguous modules.
-  if ([...references].some(offset => !tagUses.has(offset))) return source;
+  // A different lexical binding may read raw template strings. Skip each ambiguous tag.
+  const templates = tags.filter(name => [...references.get(name)].every(offset => tagUses.has(offset)))
+    .flatMap(name => templatesByTag.get(name));
+  if (templates.length === 0) return source;
 
   const edits = new Map();
   for (const { quasis } of templates) {

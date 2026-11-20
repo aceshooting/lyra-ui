@@ -19,6 +19,8 @@ import {
   type LyraMapStyleSpecification } from './map.js';
 import { buildGeoJsonPropertyDiff } from './map.class.js';
 import { loadMaplibre } from './map-loader.js';
+import { loadMapDataLayerRuntime } from './map-feature-loader.js';
+import { projectGeoJson } from './map-geojson-diff.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
@@ -33,6 +35,9 @@ import { toRgba } from '../../../../test/color-contrast.js';
 // 'fr-FR' chains down to the registered base 'fr'.
 import '../../../translations/ar.js';
 import '../../../translations/fr.js';
+
+// The private paint seams below run synchronously, so the on-demand projection runtime loads first.
+before(() => loadMapDataLayerRuntime());
 
 interface TestMapSource {
   setData?(data: unknown): unknown;
@@ -5331,14 +5336,15 @@ describe('incremental GeoJSON updates', () => {
       },
     };
     const push = (el as unknown as {
-      pushGeoJson: (source: PushGeoJsonSource, id: string, value: unknown) => void;
+      pushGeoJson: (source: PushGeoJsonSource, id: string, value: unknown, projection: unknown) => void;
     }).pushGeoJson.bind(el);
+    const pushValue = (value: unknown): void => push(source, 'source', value, projectGeoJson(value));
 
-    push(source, 'source', collection(1));
+    pushValue(collection(1));
     replacements = 0;
     diffs.length = 0;
-    push(source, 'source', two);
-    push(source, 'source', collection(1));
+    pushValue(two);
+    pushValue(collection(1));
 
     expect(replacements).to.equal(0);
     expect(diffs).to.have.length(2);

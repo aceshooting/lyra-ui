@@ -82,6 +82,13 @@ export function ownDataDescriptorValue(descriptor: OwnDataDescriptorResult): unk
     : descriptor.value;
 }
 
+/** Read an own data value, or call `fail` (which throws) when the property is accessor-backed or
+ * unreadable. A missing property yields `undefined`. */
+export function readOwnDataValueOr(target: object, key: PropertyKey, fail: () => never): unknown {
+  const descriptor = getOwnDataDescriptor(target, key);
+  return descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? fail() : ownDataDescriptorValue(descriptor);
+}
+
 /** Whether any descriptor is unsafe, so a projection can reject the whole record. */
 export function hasUnsafeOwnDescriptor(descriptors: readonly OwnDataDescriptorResult[]): boolean {
   return descriptors.some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR);

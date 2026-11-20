@@ -6,14 +6,8 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import type { MapLibreGeoJsonDiff } from './map-loader.js';
+import { isRuntimeArray } from './map-descriptor-values.js';
 
-function isRuntimeArray(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
 
 /** Automatic diff ceiling; larger collections can use an explicit caller-authored source diff. */
 const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;

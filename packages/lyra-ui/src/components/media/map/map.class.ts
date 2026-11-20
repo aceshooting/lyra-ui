@@ -22,7 +22,6 @@ import {
   getInheritedPropertyDescriptor,
   getOwnDataDescriptor,
   isPlainDataRecord,
-  type OwnDataDescriptorResult,
   MISSING_OWN_DATA_DESCRIPTOR,
   projectFrozenRows,
   readOwnArrayLength,
@@ -100,6 +99,19 @@ export type LyraMapHashFormat = 'named' | 'unnamed';
 const HASH_FORMAT = literalSetConverter<LyraMapHashFormat>(['named', 'unnamed'], 'named');
 /** The settled temporary-resource work of an element whose drawing runtime is not loaded. */
 const NO_DRAWING_WORK: Promise<void> = Promise.resolve();
+
+/** The loaded data-layer runtime. Only paths holding a projected row or choropleth reach it, and a
+ *  projection exists only once the runtime has loaded. */
+const layerRuntime = (): NonNullable<typeof loadMapDataLayerRuntime.loaded> => loadMapDataLayerRuntime.loaded!;
+
+/** Whether a `dataLayers` value has rows to project; an empty or non-array value needs no runtime. */
+function dataLayersRequested(value: unknown): boolean {
+  try {
+    return Array.isArray(value) && (readOwnArrayLength(value) ?? 0) > 0;
+  } catch {
+    return true;
+  }
+}
 /** The admitted form of the default, empty `overlays`, `images` and `styleOverrides`. */
 const NO_OWNED_FEATURES: MapOwnedFeatureInput = Object.freeze({
   overlays: Object.freeze({ sources: Object.freeze([]), layers: Object.freeze([]) }),
@@ -115,7 +127,7 @@ function ownedFeaturesRequested(overlays: unknown, images: unknown, styleOverrid
 }
 import { MapCursorOwner } from './map-cursor.js';
 import { mapCoordinates, mapOwnValue, renderedSizeKey } from './map-readers.js';
-import { projectMapInteractionOptions, projectMapBasemapInteractions, expandMapStyleLayerTargets, type LyraMapInteractionOptions,
+import { projectMapBasemapInteractions, expandMapStyleLayerTargets, type LyraMapInteractionOptions,
   type LyraMapBasemapInteraction, type CanonicalMapInteraction, type LyraMapStyleLayer, type LyraMapStyleSource } from './map-interaction-options.js';
 export type { LyraMapInteractionOptions, LyraMapBasemapInteraction, LyraMapStyleLayerSelector, LyraMapStyleLayer,
   LyraMapStyleSource } from './map-interaction-options.js';
@@ -136,7 +148,7 @@ import { MapControlsReadiness } from './map-controls-readiness.js';
 import { LyraMapImageExportError, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export-error.js';
 import type { MapImageExportController, MapImageExportHost, MapImageExportRequest } from './map-image-export-controller.js';
 import { loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime,
-  loadMapImageExportRuntime, loadMapOwnedFeatureRuntime, loadMapSceneRenderRuntime, loadMapSceneBridge } from './map-feature-loader.js';
+  loadMapImageExportRuntime, loadMapOwnedFeatureRuntime, loadMapDataLayerRuntime, loadMapSceneRenderRuntime, loadMapSceneBridge } from './map-feature-loader.js';
 export { LyraMapImageExportError } from './map-image-export-error.js';
 export type { LyraMapImageExportOptions, LyraMapImageExportType, LyraMapImageExportErrorCode } from './map-image-export-error.js';
 export interface LyraMapImageExportErrorDetail { readonly code: LyraMapImageExportErrorCode; }
@@ -150,8 +162,11 @@ import type { LyraMapImageProvider } from './map-image-provider.js';
 export type { LyraMapImageProvider } from './map-image-provider.js';
 import type { MapLayerOrderGroup } from './map-layer-order.js';
 import type { buildMapExternalLayers } from './map-external-layer-builder.js';
-import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOptions, buildMapLabelLayer,
-  type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
+import type { CanonicalMapExternalLayer, LyraMapExternalDataLayer, LyraMapLabelOptions } from './map-data-layer-model.js';
+import type { CanonicalChoroplethNoData, CanonicalMapChoropleth, CanonicalMapDataLayer, CanonicalPointIcon,
+  NormalizedClusterOptions } from './map-data-layer-runtime.js';
+import { boundedLegendText, boundedOwnArrayLength, DEFAULT_ICON_STROKE_WIDTH, DEFAULT_ICON_VIEW_BOX, isRuntimeArray, isUnsafeDescriptor,
+  normalizeMapLegendGradient, optionalDescriptorValue, projectIconPaint } from './map-descriptor-values.js';
 export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
   LyraMapVectorNumericValue, LyraMapVectorColorValue, LyraMapVectorPaint, LyraMapVectorLayout } from './map-vector-style.js';
 export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, LyraMapLabelAnchor, LyraMapTileSource,
@@ -183,13 +198,7 @@ import {
 export type { LyraMapCameraOptions } from './map-camera.js';
 import type { LyraMapStyleSpecification } from './map-empty-style.js';
 export { LYRA_MAP_EMPTY_STYLE, type LyraMapStyleSpecification } from './map-empty-style.js';
-import {
-  projectGeoJson,
-  projectAdmittedGeoJson,
-  buildProjectedGeoJsonPropertyDiff,
-  type CanonicalGeoJsonProjection,
-} from './map-geojson-diff.js';
-export { buildGeoJsonPropertyDiff } from './map-geojson-diff.js';
+import type { CanonicalGeoJsonProjection } from './map-geojson-diff.js';
 import {
   clusterColorExpression,
   heatmapColorExpression,
@@ -200,8 +209,8 @@ import {
   pointColorExpression,
   pointRadiusExpression,
   stepExpression,
-  type MapDataLayerPointRadius,
 } from './map-data-layers.js';
+export { buildGeoJsonPropertyDiff } from './map-geojson-diff.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
@@ -374,92 +383,6 @@ function normalizeMapLegendGradientTicks(value: unknown): readonly LyraMapLegend
   }
 }
 
-/** Upper bound on rendered gradient stops, matching the deterministic-truncation pattern
- *  the marker/data-layer collection bounds use below. A ramp needs a handful of stops; anything
- *  past this is a data bug, and an unbounded loop here would build a pathological gradient. */
-const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
-
-/**
- * Array and record admission is deliberately separate from projection. A value can revoke between
- * either operation, so every boundary reader is contained and later code only sees its canonical
- * result rather than the caller-owned object.
- */
-function isRuntimeArray(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
-function boundedOwnArrayLength(value: unknown, limit: number): number | undefined {
-  if (!isRuntimeArray(value)) return undefined;
-  const length = readOwnArrayLength(value);
-  return length === undefined ? undefined : Math.min(length, limit);
-}
-
-function isUnsafeDescriptor(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>,
-): descriptor is typeof UNSAFE_OWN_DATA_DESCRIPTOR {
-  return descriptor === UNSAFE_OWN_DATA_DESCRIPTOR;
-}
-
-function optionalDescriptorValue(
-  descriptor: ReturnType<typeof getOwnDataDescriptor>,
-): unknown {
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)
-    ? undefined
-    : descriptor.value;
-}
-
-/**
- * Keeps only finite-value stops carrying a color CSS actually accepts, sorted ascending by value
- * and bounded. Returns an empty array when fewer than two usable stops survive: a one-stop
- * "gradient" is a flat block that describes nothing, so it falls back to rendering no bar at all
- * rather than a misleading solid one.
- */
-function normalizeMapLegendGradient(
-  value: unknown,
-): readonly (readonly [number, string])[] {
-  try {
-    const scanCount = boundedOwnArrayLength(value, MAX_MAP_LEGEND_GRADIENT_STOPS);
-    if (scanCount === undefined) return [];
-    const usable: (readonly [number, string])[] = [];
-    for (let index = 0; index < scanCount; index += 1) {
-      const stopDescriptor = getOwnDataDescriptor(value as object, String(index));
-      if (
-        stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        isUnsafeDescriptor(stopDescriptor)
-      )
-        continue;
-      const stop = stopDescriptor.value;
-      const stopLength = boundedOwnArrayLength(stop, 2);
-      if (stopLength === undefined || stopLength < 2) continue;
-      const valueDescriptor = getOwnDataDescriptor(stop as object, '0');
-      const colorDescriptor = getOwnDataDescriptor(stop as object, '1');
-      if (
-        valueDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        colorDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        isUnsafeDescriptor(valueDescriptor) ||
-        isUnsafeDescriptor(colorDescriptor) ||
-        typeof valueDescriptor.value !== 'number' ||
-        !Number.isFinite(valueDescriptor.value) ||
-        typeof colorDescriptor.value !== 'string'
-      )
-        continue;
-      const color = sanitizeCssColor(colorDescriptor.value);
-      if (!color) continue;
-      usable.push([valueDescriptor.value, color] as const);
-    }
-    if (usable.length < 2) return [];
-    return Object.freeze(
-      [...usable].sort((a, b) => a[0] - b[0]),
-    ) as readonly (readonly [number, string])[];
-  } catch {
-    return [];
-  }
-}
-
 /** Observable result of normalizing the latest `legend` assignment. */
 export interface LyraMapLegendProjection {
   readonly inputCount: number;
@@ -499,10 +422,6 @@ const EMPTY_MAP_LEGEND_PROJECTION: LyraMapLegendProjection = Object.freeze({
   truncatedLabelCount: 0,
   truncated: false,
 });
-
-function boundedLegendText(value: string, limit: number): string {
-  return value.length <= limit ? value : `${value.slice(0, Math.max(0, limit - 1))}…`;
-}
 
 function normalizeMapLegend(value: unknown): NormalizedMapLegend {
   let input: readonly unknown[];
@@ -1184,7 +1103,6 @@ function markerPopupText(host: Element, markup: unknown): string {
  *  number of sources/layers to the underlying map. First-N deterministic truncation, same
  *  rationale and pattern as `MAX_MAP_MARKERS` above. */
 
-
 /** Immutable descriptor projection used exclusively after a layer reaches the map boundary. */
 interface MapLayerIdentityDraft {
   readonly geojson: Map<string, string>;
@@ -1194,104 +1112,7 @@ interface MapLayerIdentityDraft {
   externalStyle: number;
 }
 
-interface CanonicalMapDataLayer extends CanonicalMapInteraction {
-  readonly before?: string;
-  readonly minZoom: number;
-  readonly maxZoom: number;
-  readonly placementRequested: boolean;
-  readonly sourceId: string;
-  readonly geojson: Feature | FeatureCollection;
-  readonly geojsonProjection: CanonicalGeoJsonProjection;
-  readonly label: CanonicalMapLabel | undefined;
-  readonly invalidLabel: boolean;
-  readonly tone: LyraMapGeoJsonDataLayer['tone'];
-  readonly color: string | undefined;
-  readonly strokeColor: string | undefined;
-  readonly line: CanonicalLineOptions | undefined;
-  readonly point: CanonicalPointOptions | undefined;
-  readonly kind: LyraMapDataLayerKind;
-  readonly heatmap: CanonicalHeatmapOptions | undefined;
-  readonly cluster: NormalizedClusterOptions | undefined;
-}
-
 const EMPTY_CANONICAL_MAP_DATA_LAYERS: readonly CanonicalMapDataLayer[] = Object.freeze([]);
-
-function mapTone(value: unknown): LyraMapGeoJsonDataLayer['tone'] {
-  switch (value) {
-    case 'accent':
-    case 'success':
-    case 'warning':
-    case 'danger':
-    case 'neutral':
-      return value;
-    default:
-      return undefined;
-  }
-}
-
-function projectMapDataLayer(value: unknown, kindDescriptor: OwnDataDescriptorResult): CanonicalMapDataLayer | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
-    const geojsonDescriptor = getOwnDataDescriptor(value, 'geojson');
-    const toneDescriptor = getOwnDataDescriptor(value, 'tone');
-    const colorDescriptor = getOwnDataDescriptor(value, 'color');
-    const strokeColorDescriptor = getOwnDataDescriptor(value, 'strokeColor');
-    const lineDescriptor = getOwnDataDescriptor(value, 'line');
-    const heatmapDescriptor = getOwnDataDescriptor(value, 'heatmap');
-    const clusterDescriptor = getOwnDataDescriptor(value, 'cluster');
-    if (
-      sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      isUnsafeDescriptor(sourceIdDescriptor) ||
-      isUnsafeDescriptor(geojsonDescriptor)
-    )
-      return undefined;
-
-    const sourceId = sourceIdDescriptor.value;
-    const geojson = geojsonDescriptor.value;
-    if (
-      typeof sourceId !== 'string' ||
-      sourceId.trim().length === 0 ||
-      !isSafeNonArrayObject(geojson)
-    )
-      return undefined;
-
-    const placement = projectMapRowPlacement(value);
-    if (!placement) return undefined;
-    const tone = mapTone(optionalDescriptorValue(toneDescriptor));
-    const colorValue = optionalDescriptorValue(colorDescriptor);
-    const strokeColorValue = optionalDescriptorValue(strokeColorDescriptor);
-    const kindValue = optionalDescriptorValue(kindDescriptor);
-    const heatmapValue = optionalDescriptorValue(heatmapDescriptor);
-    const clusterValue = optionalDescriptorValue(clusterDescriptor);
-    const kind: LyraMapDataLayerKind = kindValue === 'heatmap' ? 'heatmap' : 'auto';
-    const labelDescriptor = getOwnDataDescriptor(value, 'label');
-    const labelValue = optionalDescriptorValue(labelDescriptor);
-    const label = labelValue === undefined ? undefined : projectMapLabelOptions(labelValue);
-    const cluster = kind === 'auto' ? normalizedClusterOptions(clusterValue) : undefined;
-    const invalidLabel = labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (labelValue !== undefined &&
-      (!label || kind === 'heatmap' || Boolean(cluster && label.placement === 'line') || Math.max(placement.minZoom, label.minZoom) > placement.maxZoom));
-    return Object.freeze({
-      sourceId: sourceId.trim(), ...projectMapInteractionOptions(value),
-      before: placement.before, minZoom: placement.minZoom, maxZoom: placement.maxZoom, placementRequested: placement.requested,
-      // GeoJSON is deliberately retained as one opaque identity. MapLibre owns its validation and
-      // may accept a runtime payload broader than this component's type declaration.
-      geojson: geojson as unknown as Feature | FeatureCollection,
-      geojsonProjection: projectAdmittedGeoJson(geojson),
-      tone,
-      color: typeof colorValue === 'string' ? colorValue : undefined,
-      strokeColor: typeof strokeColorValue === 'string' ? strokeColorValue : undefined,
-      line: kind === 'auto' ? projectLineOptions(optionalDescriptorValue(lineDescriptor)) : undefined,
-      point: kind === 'auto' ? projectPointOptions(optionalDescriptorValue(getOwnDataDescriptor(value, 'point'))) : undefined,
-      kind,
-      heatmap: kind === 'heatmap' ? projectHeatmapOptions(heatmapValue) : undefined,
-      cluster, label, invalidLabel,
-    });
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * Every layer suffix one `dataLayers` entry can own, across all kinds.
@@ -1322,323 +1143,10 @@ const DATA_LAYER_SUFFIXES = [
  */
 const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster', '-point-icon', '-label'] as const;
 
-/** Bound on cluster/heatmap step stops, matching `MAX_MAP_LEGEND_GRADIENT_STOPS`'s rationale. */
-const MAX_MAP_STEP_STOPS = 32;
-
-/**
- * Keeps only finite-threshold stops carrying a usable output, sorted ascending and deduplicated —
- * MapLibre's `['step', …]` and `['interpolate', …]` both reject a non-ascending domain outright,
- * which would take the whole layer down rather than degrading one stop.
- */
-function normalizedSteps<T>(
-  value: unknown,
-  isOutput: (candidate: unknown) => candidate is T,
-  clampThreshold: (threshold: number) => number = (threshold) => threshold,
-): readonly (readonly [number, T])[] {
-  try {
-    const scanCount = boundedOwnArrayLength(value, MAX_MAP_STEP_STOPS);
-    if (scanCount === undefined) return Object.freeze([]);
-    const usable: [number, T][] = [];
-    for (let index = 0; index < scanCount; index += 1) {
-      const stopDescriptor = getOwnDataDescriptor(value as object, String(index));
-      if (
-        stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        isUnsafeDescriptor(stopDescriptor)
-      )
-        continue;
-      const stop = stopDescriptor.value;
-      const stopLength = boundedOwnArrayLength(stop, 2);
-      if (stopLength === undefined || stopLength < 2) continue;
-      const thresholdDescriptor = getOwnDataDescriptor(stop as object, '0');
-      const outputDescriptor = getOwnDataDescriptor(stop as object, '1');
-      if (
-        thresholdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        outputDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        isUnsafeDescriptor(thresholdDescriptor) ||
-        isUnsafeDescriptor(outputDescriptor) ||
-        typeof thresholdDescriptor.value !== 'number' ||
-        !Number.isFinite(thresholdDescriptor.value) ||
-        !isOutput(outputDescriptor.value)
-      )
-        continue;
-      usable.push([clampThreshold(thresholdDescriptor.value), outputDescriptor.value]);
-    }
-    usable.sort((a, b) => a[0] - b[0]);
-    const deduplicated = usable.filter(
-      (stop, index) => index === 0 || stop[0] > usable[index - 1]![0],
-    );
-    return Object.freeze(deduplicated.map((stop) => Object.freeze(stop) as readonly [number, T]));
-  } catch {
-    return Object.freeze([]);
-  }
-}
-
-const isFiniteOutput = (candidate: unknown): candidate is number =>
-  typeof candidate === 'number' && Number.isFinite(candidate);
-const isColorOutput = (candidate: unknown): candidate is string =>
-  typeof candidate === 'string' && candidate.trim().length > 0;
-
-/** MapLibre's own `clusterRadius` default. */
-const DEFAULT_CLUSTER_RADIUS = 50;
-/** MapLibre's own `clusterMaxZoom` default. */
-const DEFAULT_CLUSTER_MAX_ZOOM = 14;
-/** `[point_count, radiusPx]` breaks giving a visibly larger circle for a denser cluster. */
-const DEFAULT_CLUSTER_RADIUS_STEPS: readonly (readonly [number, number])[] = Object.freeze([
-  [0, 14],
-  [10, 18],
-  [50, 24],
-]);
 /** MapLibre's own `heatmap-radius` default. */
 const DEFAULT_HEATMAP_RADIUS = 30;
 /** MapLibre's own `heatmap-intensity` default. */
 const DEFAULT_HEATMAP_INTENSITY = 1;
-/** Cap on the cluster count label's font stack; a stack is a fallback chain, not a list. */
-const MAX_CLUSTER_COUNT_FONTS = 8;
-
-/** `LyraMapClusterOptions` with every value normalized to something MapLibre accepts. */
-interface NormalizedClusterOptions {
-  readonly radius: number;
-  readonly maxZoom: number;
-  readonly radiusSteps: readonly (readonly [number, number])[];
-  readonly colorSteps: readonly (readonly [number, string])[];
-  readonly strokeColor: string | undefined;
-  readonly countFont: readonly string[] | undefined;
-  readonly countColor: string | undefined;
-  readonly countHaloColor: string | undefined;
-  readonly countHaloWidth: number;
-  readonly zoomOnClick: boolean;
-}
-
-/**
- * Normalizes one entry's `cluster` option, or returns `undefined` when clustering is not requested.
- *
- * `cluster: {}` is meaningful — it opts in at every default — so presence of the object, not of any
- * particular field, is what enables clustering.
- */
-function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const radiusDescriptor = getOwnDataDescriptor(value, 'radius');
-    const maxZoomDescriptor = getOwnDataDescriptor(value, 'maxZoom');
-    const radiusStepsDescriptor = getOwnDataDescriptor(value, 'radiusSteps');
-    const colorStepsDescriptor = getOwnDataDescriptor(value, 'colorSteps');
-    const strokeColorDescriptor = getOwnDataDescriptor(value, 'strokeColor');
-    const countFontDescriptor = getOwnDataDescriptor(value, 'countFont');
-    const countColorDescriptor = getOwnDataDescriptor(value, 'countColor');
-    const countHaloColorDescriptor = getOwnDataDescriptor(value, 'countHaloColor');
-    const countHaloWidthDescriptor = getOwnDataDescriptor(value, 'countHaloWidth');
-    const zoomOnClickDescriptor = getOwnDataDescriptor(value, 'zoomOnClick');
-    const radiusValue = optionalDescriptorValue(radiusDescriptor);
-    const maxZoomValue = optionalDescriptorValue(maxZoomDescriptor);
-    const radiusSteps = normalizedSteps(
-      optionalDescriptorValue(radiusStepsDescriptor),
-      isFiniteOutput,
-    );
-    const colorSteps = normalizedSteps(optionalDescriptorValue(colorStepsDescriptor), isColorOutput);
-    const fonts = normalizedClusterFonts(optionalDescriptorValue(countFontDescriptor));
-    const countHaloWidthValue = optionalDescriptorValue(countHaloWidthDescriptor);
-    return Object.freeze({
-      radius: finiteRange(
-        typeof radiusValue === 'number' ? radiusValue : Number.NaN,
-        DEFAULT_CLUSTER_RADIUS,
-        1,
-        1_000,
-      ),
-      maxZoom: finiteRange(
-        typeof maxZoomValue === 'number' ? maxZoomValue : Number.NaN,
-        DEFAULT_CLUSTER_MAX_ZOOM,
-        0,
-        24,
-      ),
-      radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
-      colorSteps,
-      strokeColor: sanitizeCssColor(optionalDescriptorValue(strokeColorDescriptor)),
-      countFont: fonts.length ? fonts : undefined,
-      countColor: sanitizeCssColor(optionalDescriptorValue(countColorDescriptor)),
-      countHaloColor: sanitizeCssColor(optionalDescriptorValue(countHaloColorDescriptor)),
-      countHaloWidth: countHaloWidthValue === undefined ? 1 : finiteRange(
-        typeof countHaloWidthValue === 'number' ? countHaloWidthValue : Number.NaN,
-        1,
-        0,
-        3,
-      ),
-      zoomOnClick: optionalDescriptorValue(zoomOnClickDescriptor) === true,
-    });
-  } catch {
-    return undefined;
-  }
-}
-
-function normalizedClusterFonts(value: unknown): readonly string[] {
-  try {
-    const length = boundedOwnArrayLength(value, MAX_CLUSTER_COUNT_FONTS);
-    if (length === undefined) return Object.freeze([]);
-    const fonts: string[] = [];
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = getOwnDataDescriptor(value as object, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        isUnsafeDescriptor(descriptor) ||
-        typeof descriptor.value !== 'string' ||
-        descriptor.value.trim().length === 0
-      )
-        continue;
-      fonts.push(descriptor.value);
-    }
-    return Object.freeze(fonts);
-  } catch {
-    return Object.freeze([]);
-  }
-}
-
-interface CanonicalLineOptions {
-  readonly field: string | undefined;
-  readonly stops: readonly (readonly [number, string])[];
-  readonly width: number;
-  readonly opacity: number;
-}
-
-interface CanonicalPointOptions {
-  readonly field: string | undefined;
-  readonly colors: readonly (readonly [string, string])[];
-  readonly radius: number | CanonicalPointRadius;
-  readonly strokeWidth: number;
-  readonly strokeColor: string | undefined;
-  readonly iconField: string | undefined;
-  readonly icons: readonly CanonicalPointIcon[];
-  readonly iconColor: string | undefined;
-  readonly iconSize: number;
-}
-
-/**
- * The validated paint half of an icon record, shared by a point layer's `icons` and a legend
- * entry's `icon`: the same grammar, bounds and defaults reach both, so a consumer can hand one
- * record to each without either admitting something the other rejects.
- */
-interface CanonicalIconPaint {
-  readonly path: string;
-  readonly viewBox: readonly [number, number, number, number];
-  readonly mode: LyraMapPointIconMode;
-  readonly strokeWidth: number;
-  readonly lineCap: LyraMapPointIconLineCap;
-  readonly lineJoin: LyraMapPointIconLineJoin;
-}
-
-interface CanonicalPointIcon extends CanonicalIconPaint {
-  readonly value: string;
-}
-
-/** Point-icon defaults, applied identically by the projector below and the legend glyph render. */
-const DEFAULT_ICON_VIEW_BOX = Object.freeze([0, 0, 24, 24]) as readonly [
-  number,
-  number,
-  number,
-  number,
-];
-const DEFAULT_ICON_STROKE_WIDTH = 2;
-/** Markup, URLs and non-path commands are rejected: only SVG path data survives this. */
-const ICON_PATH_GRAMMAR = /^[MmLlHhVvCcSsQqTtAaZz\d.eE+,\s-]+$/u;
-const MAX_ICON_PATH_LENGTH = 8192;
-
-/**
- * Descriptor-safe projection of one hostile-input icon record, minus the point layer's category
- * key. Returns undefined for anything unusable so each caller decides what an omission means —
- * a point keeps its circle, a legend row keeps its color swatch.
- */
-function projectIconPaint(row: object): CanonicalIconPaint | undefined {
-  const path = optionalDescriptorValue(getOwnDataDescriptor(row, 'path'));
-  if (
-    typeof path !== 'string' ||
-    path.length === 0 ||
-    path.length > MAX_ICON_PATH_LENGTH ||
-    !ICON_PATH_GRAMMAR.test(path)
-  )
-    return undefined;
-  const rawBox = optionalDescriptorValue(getOwnDataDescriptor(row, 'viewBox'));
-  const box: number[] = [];
-  if (rawBox === undefined) box.push(...DEFAULT_ICON_VIEW_BOX);
-  else {
-    if (boundedOwnArrayLength(rawBox, 4) !== 4) return undefined;
-    for (let index = 0; index < 4; index++) {
-      const coordinate = optionalDescriptorValue(getOwnDataDescriptor(rawBox as object, String(index)));
-      if (typeof coordinate !== 'number' || !Number.isFinite(coordinate) || Math.abs(coordinate) > 10_000) return undefined;
-      box.push(coordinate);
-    }
-    if (box[2]! < 0.001 || box[3]! < 0.001) return undefined;
-  }
-  const mode = optionalDescriptorValue(getOwnDataDescriptor(row, 'mode'));
-  const strokeWidth = optionalDescriptorValue(getOwnDataDescriptor(row, 'strokeWidth'));
-  const lineCap = optionalDescriptorValue(getOwnDataDescriptor(row, 'lineCap'));
-  const lineJoin = optionalDescriptorValue(getOwnDataDescriptor(row, 'lineJoin'));
-  return Object.freeze({
-    path,
-    viewBox: Object.freeze(box) as unknown as CanonicalIconPaint['viewBox'],
-    mode: mode === 'stroke' || mode === 'fill-stroke' ? mode : 'fill',
-    strokeWidth: finiteRange(
-      typeof strokeWidth === 'number' ? strokeWidth : NaN,
-      DEFAULT_ICON_STROKE_WIDTH,
-      0,
-      200,
-    ),
-    lineCap: lineCap === 'butt' || lineCap === 'square' ? lineCap : 'round',
-    lineJoin: lineJoin === 'miter' || lineJoin === 'bevel' ? lineJoin : 'round',
-  });
-}
-
-type CanonicalPointRadius = MapDataLayerPointRadius;
-
-function projectPointRadius(value: unknown): number | CanonicalPointRadius {
-  if (!isSafeNonArrayObject(value)) return finiteRange(typeof value === 'number' ? value : NaN, 5, 0, 200);
-  const read = (key: string): unknown => optionalDescriptorValue(getOwnDataDescriptor(value, key));
-  const field = read('field');
-  const rawFallback = read('fallback');
-  const fallback = finiteRange(typeof rawFallback === 'number' ? rawFallback : NaN, 5, 0, 200);
-  const stops = normalizedSteps(read('stops'), isFiniteOutput)
-    .map(([threshold, radius]) => Object.freeze([threshold, finiteRange(radius, 5, 0, 200)] as const));
-  if (typeof field !== 'string' || !field.trim() || !stops.length) return fallback;
-  return Object.freeze({ field: field.trim(), stops: Object.freeze(stops), fallback,
-    interpolation: read('interpolation') === 'linear' ? 'linear' : 'step' });
-}
-
-function projectPointOptions(value: unknown): CanonicalPointOptions | undefined {
-  if (!isSafeNonArrayObject(value)) return undefined;
-  const read = (key: string): unknown => optionalDescriptorValue(getOwnDataDescriptor(value, key));
-  const string = (key: string): string | undefined => {
-    const candidate = read(key);
-    return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
-  };
-  const number = (key: string, fallback: number, min: number, max: number): number => {
-    const candidate = read(key);
-    return finiteRange(typeof candidate === 'number' ? candidate : NaN, fallback, min, max);
-  };
-  const colors: (readonly [string, string])[] = [];
-  const icons: CanonicalPointIcon[] = [];
-  const project = (input: unknown, accept: (row: object) => void): void => {
-    const length = boundedOwnArrayLength(input, MAX_MAP_STEP_STOPS) ?? 0;
-    for (let index = 0; index < length; index++) {
-      const row = optionalDescriptorValue(getOwnDataDescriptor(input as object, String(index)));
-      if (row !== null && typeof row === 'object') accept(row);
-    }
-  };
-  project(read('colors'), (row) => {
-    const key = optionalDescriptorValue(getOwnDataDescriptor(row, '0'));
-    const color = optionalDescriptorValue(getOwnDataDescriptor(row, '1'));
-    if (typeof key !== 'string' || typeof color !== 'string' || !sanitizeCssColor(color) ||
-      colors.some(([existing]) => existing === key)) return;
-    colors.push(Object.freeze([key, color]));
-  });
-  project(read('icons'), (row) => {
-    const key = optionalDescriptorValue(getOwnDataDescriptor(row, 'value'));
-    if (typeof key !== 'string' || icons.some((icon) => icon.value === key)) return;
-    const paint = projectIconPaint(row);
-    if (!paint) return;
-    icons.push(Object.freeze({ value: key, ...paint }));
-  });
-  return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: projectPointRadius(read('radius')),
-    strokeWidth: number('strokeWidth', 0, 0, 200), strokeColor: string('strokeColor'),
-    iconField: string('iconField') ?? string('field'), icons: Object.freeze(icons),
-    iconColor: string('iconColor'), iconSize: number('iconSize', 16, 1, 200) });
-}
 
 /** Fixed 2x atlas raster size; display size is controlled by point.iconSize, not device allocation. */
 const POINT_ICON_RASTER_SIZE = 64;
@@ -1673,105 +1181,6 @@ function rasterPointIcon(host: Element, icon: CanonicalPointIcon, color: string)
   }
 }
 
-function projectLineOptions(value: unknown): CanonicalLineOptions | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const field = optionalDescriptorValue(getOwnDataDescriptor(value, 'field'));
-    const width = optionalDescriptorValue(getOwnDataDescriptor(value, 'width'));
-    const opacity = optionalDescriptorValue(getOwnDataDescriptor(value, 'opacity'));
-    return Object.freeze({
-      field: typeof field === 'string' && field.trim() ? field.trim() : undefined,
-      stops: Object.freeze(normalizeMapLegendGradient(
-        optionalDescriptorValue(getOwnDataDescriptor(value, 'stops')),
-      ).filter((stop, index, stops) => index === 0 || stop[0] > stops[index - 1]![0])
-        .map((stop) => Object.freeze(stop))),
-      width: typeof width === 'number' ? finiteRange(width, 2, 0, 200) : 2,
-      opacity: typeof opacity === 'number' ? finiteRange(opacity, 1, 0, 1) : 1,
-    });
-  } catch {
-    return undefined;
-  }
-}
-
-/** Immutable heatmap fields copied once from an admitted layer branch. */
-interface CanonicalHeatmapOptions {
-  readonly weightField: string | undefined;
-  readonly weightRange: readonly [number, number] | undefined;
-  readonly stops: readonly (readonly [number, string])[];
-  readonly radius: number | readonly (readonly [number, number])[] | undefined;
-  readonly intensity: number | readonly (readonly [number, number])[] | undefined;
-  readonly opacity: number | undefined;
-}
-
-function projectedHeatmapRange(value: unknown): readonly [number, number] | undefined {
-  try {
-    const length = boundedOwnArrayLength(value, 2);
-    if (length === undefined || length < 2) return undefined;
-    const minDescriptor = getOwnDataDescriptor(value as object, '0');
-    const maxDescriptor = getOwnDataDescriptor(value as object, '1');
-    if (
-      minDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      maxDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      isUnsafeDescriptor(minDescriptor) ||
-      isUnsafeDescriptor(maxDescriptor) ||
-      typeof minDescriptor.value !== 'number' ||
-      typeof maxDescriptor.value !== 'number' ||
-      !Number.isFinite(minDescriptor.value) ||
-      !Number.isFinite(maxDescriptor.value)
-    )
-      return undefined;
-    return Object.freeze([minDescriptor.value, maxDescriptor.value] as const);
-  } catch {
-    return undefined;
-  }
-}
-
-function projectedHeatmapZoomValue(
-  value: unknown,
-): number | readonly (readonly [number, number])[] | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (!isRuntimeArray(value)) return undefined;
-  return normalizedSteps(
-    value,
-    isFiniteOutput,
-    (zoom) => finiteRange(zoom, 0, 0, 24),
-  );
-}
-
-function projectHeatmapOptions(value: unknown): CanonicalHeatmapOptions | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const weightFieldDescriptor = getOwnDataDescriptor(value, 'weightField');
-    const weightRangeDescriptor = getOwnDataDescriptor(value, 'weightRange');
-    const stopsDescriptor = getOwnDataDescriptor(value, 'stops');
-    const radiusDescriptor = getOwnDataDescriptor(value, 'radius');
-    const intensityDescriptor = getOwnDataDescriptor(value, 'intensity');
-    const opacityDescriptor = getOwnDataDescriptor(value, 'opacity');
-    const weightFieldValue = optionalDescriptorValue(weightFieldDescriptor);
-    const opacityValue = optionalDescriptorValue(opacityDescriptor);
-    return Object.freeze({
-      weightField:
-        typeof weightFieldValue === 'string' && weightFieldValue.trim().length > 0
-          ? weightFieldValue.trim()
-          : undefined,
-      weightRange: projectedHeatmapRange(optionalDescriptorValue(weightRangeDescriptor)),
-      stops: normalizedSteps(
-        optionalDescriptorValue(stopsDescriptor),
-        isColorOutput,
-        (density) => finiteRange(density, 0, 0, 1),
-      ),
-      radius: projectedHeatmapZoomValue(optionalDescriptorValue(radiusDescriptor)),
-      intensity: projectedHeatmapZoomValue(optionalDescriptorValue(intensityDescriptor)),
-      opacity:
-        typeof opacityValue === 'number' && Number.isFinite(opacityValue)
-          ? opacityValue
-          : undefined,
-    });
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * The rendering shape one entry asks for, as a comparable string. Two entries with the same shape
  * can reuse a source and its layers; a change means a full rebuild (see `_appliedDataLayerShapes`).
@@ -1786,96 +1195,6 @@ function dataLayerShape(layer: CanonicalMapDataLayer): string {
 /** MapLibre expression that is true for a feature carrying a numeric `field` value. */
 function choroplethHasValueExpression(field: string): unknown[] {
   return ['==', ['typeof', ['get', field]], 'number'];
-}
-
-/** The accepted, one-read subset of a caller-owned choropleth record. */
-interface CanonicalMapChoropleth extends CanonicalMapInteraction {
-  readonly sourceId: string;
-  readonly geojson: FeatureCollection;
-  readonly geojsonProjection: CanonicalGeoJsonProjection;
-  readonly field: string;
-  readonly stops: readonly (readonly [number, string])[];
-  readonly interpolation: LyraMapChoroplethInterpolation;
-  readonly stepBaseColor: string | undefined;
-  readonly noData: CanonicalChoroplethNoData | undefined;
-}
-
-/** The accepted `choropleth.noData` record. */
-interface CanonicalChoroplethNoData {
-  readonly color: string | undefined;
-  readonly strokeColor: string | undefined;
-  readonly label: string | undefined;
-}
-
-/** Bound on a no-data caption, matching a legend label. */
-const MAX_NO_DATA_LABEL = 256;
-
-function projectChoroplethNoData(value: unknown): CanonicalChoroplethNoData | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const label = optionalDescriptorValue(getOwnDataDescriptor(value, 'label'));
-    const trimmed = typeof label === 'string' ? label.trim() : '';
-    return Object.freeze({
-      color: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'color'))),
-      strokeColor: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'strokeColor'))),
-      label: trimmed.length > 0 ? boundedLegendText(trimmed, MAX_NO_DATA_LABEL) : undefined,
-    });
-  } catch {
-    return undefined;
-  }
-}
-
-function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
-    const geojsonDescriptor = getOwnDataDescriptor(value, 'geojson');
-    const fieldDescriptor = getOwnDataDescriptor(value, 'field');
-    const stopsDescriptor = getOwnDataDescriptor(value, 'stops');
-    const interpolationDescriptor = getOwnDataDescriptor(value, 'interpolation');
-    const stepBaseColorDescriptor = getOwnDataDescriptor(value, 'stepBaseColor');
-    if (
-      sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      fieldDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      isUnsafeDescriptor(sourceIdDescriptor) ||
-      isUnsafeDescriptor(geojsonDescriptor) ||
-      isUnsafeDescriptor(fieldDescriptor)
-    )
-      return undefined;
-    const sourceId = sourceIdDescriptor.value;
-    const geojson = geojsonDescriptor.value;
-    const field = fieldDescriptor.value;
-    if (
-      typeof sourceId !== 'string' ||
-      sourceId.trim().length === 0 ||
-      !isSafeNonArrayObject(geojson) ||
-      typeof field !== 'string' ||
-      field.trim().length === 0
-    )
-      return undefined;
-    const interpolationValue = optionalDescriptorValue(interpolationDescriptor);
-    const stepBaseColorValue = optionalDescriptorValue(stepBaseColorDescriptor);
-    const interpolation: LyraMapChoroplethInterpolation =
-      interpolationValue === 'logarithmic' || interpolationValue === 'step'
-        ? interpolationValue
-        : 'linear';
-    return Object.freeze({
-      sourceId: sourceId.trim(), ...projectMapInteractionOptions(value),
-      geojson: geojson as unknown as FeatureCollection,
-      geojsonProjection: projectAdmittedGeoJson(geojson),
-      field: field.trim(),
-      stops: normalizedSteps(optionalDescriptorValue(stopsDescriptor), isColorOutput),
-      interpolation,
-      stepBaseColor:
-        typeof stepBaseColorValue === 'string' && stepBaseColorValue.trim().length > 0
-          ? stepBaseColorValue
-          : undefined,
-      noData: projectChoroplethNoData(optionalDescriptorValue(getOwnDataDescriptor(value, 'noData'))),
-    });
-  } catch {
-    return undefined;
-  }
 }
 
 /** The accepted map marker snapshot; `unsafeHtml` remains opaque after its own descriptor read. */
@@ -4369,7 +3688,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * a dev warning; self-anchors and cross-owner cycles reject before mutation. Placement shares the 128-group/4,096-layer budget with owned overlays. */
   @property({ attribute: false }) styleOverrides: readonly LyraMapStyleOverride[] = [];
 
-
   private _canonicalChoroplethSource: unknown = UNPROJECTED_MAP_VALUE;
   private _canonicalChoropleth: CanonicalMapChoropleth | undefined;
   private _canonicalDataLayersSource: unknown = UNPROJECTED_MAP_VALUE;
@@ -4389,6 +3707,47 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (next && this.isConnected) this.announcements.announceAssertive(this.localize('mapInitializationFailed'));
     }, 'map-data-layer-feedback');
   }
+  /** The pending projection-runtime import for `dataLayers`/`choropleth`, until it settles. */
+  private dataLayerRuntimeLoad?: Promise<void>;
+  private dataLayerRuntimeFailed = false;
+
+  /** Starts the projection runtime once; its arrival re-applies both inputs as a fresh assignment. */
+  private requestDataLayerRuntime(): void {
+    if (this.dataLayerRuntimeLoad || this.dataLayerRuntimeFailed) return;
+    const load = this.dataLayerRuntimeLoad = loadMapDataLayerRuntime().then(() => undefined, () => {
+      this.dataLayerRuntimeFailed = true;
+      this.setDataLayerIssue(true);
+    }).then(() => {
+      if (this.dataLayerRuntimeLoad === load) this.dataLayerRuntimeLoad = undefined;
+      if (dataLayersRequested(this.dataLayers)) this.requestUpdate('dataLayers', EMPTY_CANONICAL_MAP_DATA_LAYERS);
+      if (isSafeNonArrayObject(this.choropleth)) this.requestUpdate('choropleth', null);
+      if (this.isConnected) this.tryConstructMap();
+    });
+    this.trackFeatureLoad(load);
+  }
+
+  /** Whether a requested `dataLayers` or `choropleth` cannot be shown because its runtime failed to load. */
+  private dataLayerRuntimeUnavailable(): boolean {
+    return this.dataLayerRuntimeFailed && !loadMapDataLayerRuntime.loaded &&
+      (dataLayersRequested(this.dataLayers) || isSafeNonArrayObject(this.choropleth));
+  }
+
+  /** Projects both inputs, which starts their runtime when needed; true while it is still loading. */
+  private dataLayerRuntimePending(): boolean {
+    void this.canonicalDataLayers; void this.canonicalChoropleth;
+    return this.dataLayerRuntimeLoad !== undefined;
+  }
+
+  /** Settles after the projection runtime and the update its arrival schedules. */
+  protected override async getUpdateComplete(): Promise<boolean> {
+    let complete = await super.getUpdateComplete();
+    while (this.dataLayerRuntimeLoad) {
+      await this.dataLayerRuntimeLoad;
+      complete = await super.getUpdateComplete();
+    }
+    return complete;
+  }
+
   private committedDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
   private committedExternalLayers: readonly CanonicalMapExternalLayer[] = [];
   private groupOrderActive = false;
@@ -4402,8 +3761,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private get canonicalChoropleth(): CanonicalMapChoropleth | undefined {
     const source = this.choropleth;
     if (Object.is(source, this._canonicalChoroplethSource)) return this._canonicalChoropleth;
+    const runtime = loadMapDataLayerRuntime.loaded;
+    if (!runtime && isSafeNonArrayObject(source)) { this.requestDataLayerRuntime(); return undefined; }
     this._canonicalChoroplethSource = source;
-    this._canonicalChoropleth = projectMapChoropleth(source);
+    this._canonicalChoropleth = runtime?.projectMapChoropleth(source);
     return this._canonicalChoropleth;
   }
 
@@ -4411,9 +3772,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const source = this.dataLayers;
     const base = this.ownerDocument.baseURI, origin = this.ownerDocument.defaultView?.origin ?? 'null';
     if (Object.is(source, this._canonicalDataLayersSource) && base === this._canonicalDataLayersBase && origin === this._canonicalDataLayersOrigin) return this._canonicalDataLayers;
+    const runtime = loadMapDataLayerRuntime.loaded;
+    // Until the projection runtime arrives the map shows no rows; its arrival re-runs this update.
+    if (!runtime && dataLayersRequested(source)) { this.requestDataLayerRuntime(); return EMPTY_CANONICAL_MAP_DATA_LAYERS; }
     this._canonicalDataLayersSource = source;
     this._canonicalDataLayersBase = base; this._canonicalDataLayersOrigin = origin;
-    const model = projectMapDataLayerModel(source, { baseUrl: base, ownerOrigin: origin, projectGeoJson: projectMapDataLayer });
+    const model = runtime?.projectMapDataLayers(source, base, origin) ?? { ok: true, geojson: EMPTY_CANONICAL_MAP_DATA_LAYERS, external: [] };
     this.invalidDataLayerModel = !model.ok;
     if (model.ok) {
       this._canonicalDataLayers = model.geojson;
@@ -4458,7 +3822,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private constructionScheduler?: MapConstructionScheduler;
   private constructionMode: LyraMapInitialization = 'visible';
   private constructionDelay?: number;
-
 
   @query('[part="container"]') private containerEl?: HTMLElement;
   @query('[part="anchor"]') private anchorEl?: HTMLElement;
@@ -4707,13 +4070,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     source: MapLibreGeoJsonSource,
     resolvedSourceId: string,
     geojson: unknown,
-    projection: CanonicalGeoJsonProjection = projectGeoJson(geojson),
+    projection: CanonicalGeoJsonProjection,
   ): void {
     const previous = this._appliedGeoJson.get(resolvedSourceId);
     if (previous === projection) return;
     const diff =
       typeof source.updateData === 'function' && previous !== undefined
-        ? buildProjectedGeoJsonPropertyDiff(previous, projection)
+        ? layerRuntime().buildProjectedGeoJsonPropertyDiff(previous, projection)
         : null;
     if (diff === null || typeof source.updateData !== 'function') source.setData(geojson);
     else if (diff.update.length > 0 || diff.add?.length || diff.remove?.length)
@@ -6044,6 +5407,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.readiness.reset();
     this.controlsReadiness.reset();
     this.hashRuntimeFailed = false;
+    this.dataLayerRuntimeFailed = false;
     this.syncHash();
     this.visible = false;
     this.constructionScheduler?.disconnect();
@@ -6321,6 +5685,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.syncHash();
     // A requested URL field is read before construction, so wait for its ownership runtime.
     if (!this.hashOwner && this.hashRequested() && !this.hashRuntimeFailed) return;
+    // Rows and the choropleth project before construction, so the first style load and the
+    // initial fit see them; their runtime's arrival retries construction.
+    if (this.dataLayerRuntimePending()) return;
     const initialHash = this.hashOwner?.read() ?? { status: 'disabled' as const };
     const hashCamera: MapHashCamera | undefined = initialHash.status === 'camera' ? initialHash.camera : undefined;
     let candidate: MapLibreMapCapability | undefined;
@@ -6815,10 +6182,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this.refreshingGeoJson) {
       const choropleth = this.canonicalChoropleth;
       if (choropleth) this._canonicalChoropleth = {
-        ...choropleth, geojsonProjection: projectAdmittedGeoJson(choropleth.geojson, true),
+        ...choropleth, geojsonProjection: layerRuntime().projectAdmittedGeoJson(choropleth.geojson, true),
       };
       this._canonicalDataLayers = this.canonicalDataLayers.map(layer => ({
-        ...layer, geojsonProjection: projectAdmittedGeoJson(layer.geojson, true),
+        ...layer, geojsonProjection: layerRuntime().projectAdmittedGeoJson(layer.geojson, true),
       }));
     }
     if (changed.has('legendGradient') || changed.has('dataLayers')) {
@@ -7784,6 +7151,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private reconcileGeneratedLayers(): Promise<void> {
     const map = this._map;
     if (!map || !this._styleLoaded) return Promise.resolve();
+    // Generated rows, the choropleth and owned resources commit together, so all of them wait
+    // for a projection runtime still loading; its arrival schedules this reconciliation again.
+    if (this.dataLayerRuntimePending()) return Promise.resolve();
     // A corrected sibling input can make a rejected mixed proposal valid without changing rows.
     if (this.dataLayerIssue || this.pendingDataLayerIssue) this._canonicalDataLayersSource = UNPROJECTED_MAP_VALUE;
     this.cancelFeaturePreparation();
@@ -8054,7 +7424,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     };
     try {
       const geojson = this.canonicalDataLayers;
-      if (this.invalidDataLayerModel || geojson.some(layer => layer.invalidLabel) ||
+      if (this.invalidDataLayerModel || this.dataLayerRuntimeUnavailable() || geojson.some(layer => layer.invalidLabel) ||
         (geojson.some(layer => layer.label !== undefined) && !this.styleProvidesGlyphs())) throw new Error('Map labels or sources are unavailable.');
       // Empty defaults stay synchronous; other resources and basemap opt-ins are admitted by the
       // ownership runtime, loaded once on demand inside this same feature transaction.
@@ -8394,7 +7764,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     this.paintPointIcons(sourceId, layer);
     if (layer.label && this.appliedGeoLabels.has(sourceId)) {
-      const descriptor = buildMapLabelLayer(`${sourceId}-label`, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
+      const descriptor = layerRuntime().buildMapLabelLayer(`${sourceId}-label`, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
       for (const [property, value] of Object.entries(descriptor['paint'] as Record<string, unknown>)) this.setMapPaint(descriptor.id, property, value);
     }
   }
@@ -8412,7 +7782,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (existing) { map.removeLayer(id); check(); }
       return;
     }
-    const descriptor = buildMapLabelLayer(id, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
+    const descriptor = layerRuntime().buildMapLabelLayer(id, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
     const native: LyraMapOverlayLayer['layer'] = layer.cluster ? { ...descriptor, filter: ['all', ['!', ['has', 'point_count']], ['==', ['geometry-type'], 'Point']] } : descriptor;
     const key = JSON.stringify(native);
     if (this.appliedGeoLabels.get(sourceId) === key) return;

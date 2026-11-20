@@ -1,6 +1,10 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import type { LyraMap } from './map.js';
+import { loadMapDataLayerRuntime } from './map-feature-loader.js';
+
+// The private paint seams below run synchronously, so the on-demand projection runtime loads first.
+before(() => loadMapDataLayerRuntime());
 
 async function connectedMap(): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
   const wrapper = await fixture<HTMLElement>(html`<div style="--stop-a: rgb(1, 2, 3); --stop-b: rgb(4, 5, 6); --step-base: rgb(7, 8, 9);"></div>`);

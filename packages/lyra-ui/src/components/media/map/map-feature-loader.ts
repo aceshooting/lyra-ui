@@ -17,6 +17,8 @@ export const loadMapImageExportRuntime = /* @__PURE__ */ mapFeatureLoader(() => 
 export const loadMapHashRuntime = /* @__PURE__ */ mapFeatureLoader(() => import('./map-hash-owner.js'));
 /** Desired feature state, its native replay and retirement, for `setFeatureState()`. */
 export const loadMapFeatureStateRuntime = /* @__PURE__ */ mapFeatureLoader(() => import('./map-feature-state-routes.js'));
+/** Projection and paint expressions for `dataLayers` and `choropleth`. */
+export const loadMapDataLayerRuntime = /* @__PURE__ */ mapFeatureLoader(() => import('./map-data-layer-runtime.js'));
 /** Native ownership of `overlays`, `images`, `styleOverrides` and external data-layer resources. */
 export const loadMapOwnedFeatureRuntime = /* @__PURE__ */ mapFeatureLoader(() => import('./map-owned-features.js'));
 

@@ -1,4 +1,4 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnDataValueOr, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { safeValue, MAX_NODES, MAX_TEXT } from './map-style-value.js';
 import type { LyraMapStyleValue } from './map-style-override-admission.js';
 
@@ -63,9 +63,7 @@ const bounds: Record<string, readonly [number, number]> = {
 };
 const invalid = (): never => { throw new Error('Invalid vector style'); };
 function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return invalid();
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(value, key, invalid);
 }
 /** Reject data that a generic collection snapshot would otherwise omit or normalize. */
 function inspect(value: unknown, limitNodes: number, limitDepth: number, limitText: number): void {

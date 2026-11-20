@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 import { ltrIsolate } from '../../../internal/bidi.js';
@@ -258,8 +259,17 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     }
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('approval-queue', this.renderRoot) ?? this.childRegistration;
     this.nestedCloseInvocationId = null;
     const anchorId = this.focusAnchorId;
     this.focusAnchorId = null;

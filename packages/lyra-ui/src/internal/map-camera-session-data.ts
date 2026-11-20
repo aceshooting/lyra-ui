@@ -1,4 +1,4 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
+import { isPlainDataRecord, readOwnDataValueOr } from './data-descriptors.js';
 import { finiteInterpolate } from './numbers.js';
 
 /** A complete saved camera. Admission rejects non-finite values and unknown or accessor fields. */
@@ -35,9 +35,7 @@ function record(input: unknown, allowed: readonly string[]): Record<string, unkn
   return input;
 }
 function own(input: object, key: PropertyKey): unknown {
-  const descriptor = getOwnDataDescriptor(input, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Invalid camera data descriptor');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(input, key, () => { throw new TypeError('Invalid camera data descriptor'); });
 }
 function finite(input: unknown): number {
   if (typeof input !== 'number' || !Number.isFinite(input)) throw new TypeError('Expected finite camera value');

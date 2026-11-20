@@ -1,17 +1,16 @@
 import { projectMapVectorStyle, type CanonicalMapVectorStyle,
   type LyraMapVectorPaint, type LyraMapVectorLayout, type LyraMapVectorStyleExpression } from './map-vector-style.js';
 import { projectMapLocalImageUrl } from './map-local-image-url.js';
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
+import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult, readOwnArrayLength, readOwnDataValueOr, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';
 import { escapeHtml } from '../../../internal/escape-html.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import type { LyraMapOverlayLayer } from './map-overlay-admission.js';
+import { invalidDataLayer as invalid, numeric, type CanonicalMapLabel, type LyraMapLabelAnchor, type LyraMapLabelValue } from './map-label-layer.js';
+export { buildMapLabelLayer } from './map-label-layer.js';
+export type { CanonicalMapLabel, LyraMapLabelAnchor, LyraMapLabelValue } from './map-label-layer.js';
 
 /** Four native corners, ordered top-left, top-right, bottom-right, bottom-left. */
 export type LyraMapSourceCoordinates = readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]];
-export type LyraMapLabelValue = null | boolean | number | string | readonly LyraMapLabelValue[] | { readonly [key: string]: LyraMapLabelValue };
-/** Physical native text anchor, independent of the surrounding UI direction. */
-export type LyraMapLabelAnchor = 'center' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 /** Text labels require a style with a glyph provider. Set exactly one of field or expression. */
 export interface LyraMapLabelOptions {
   readonly field?: string;
@@ -89,20 +88,6 @@ export interface LyraMapCanvasDataLayer extends LyraMapExternalDataLayerOptions 
   readonly redrawRevision?: number;
 }
 export type LyraMapExternalDataLayer = LyraMapVectorDataLayer | LyraMapRasterDataLayer | LyraMapImageDataLayer | LyraMapCanvasDataLayer;
-export interface CanonicalMapLabel {
-  readonly expression: readonly LyraMapLabelValue[];
-  readonly placement: 'point' | 'line';
-  readonly anchor?: LyraMapLabelAnchor;
-  readonly offset?: readonly [number, number];
-  readonly size: number;
-  readonly color?: string;
-  readonly haloColor?: string;
-  readonly haloWidth: number;
-  readonly minZoom: number;
-  readonly font?: readonly string[];
-  readonly allowOverlap: boolean;
-  readonly ignorePlacement: boolean;
-}
 export interface CanonicalMapExternalLayer extends CanonicalMapInteraction {
   readonly style?: CanonicalMapVectorStyle;
   readonly sourceId: string;
@@ -126,11 +111,8 @@ export interface CanonicalMapExternalLayer extends CanonicalMapInteraction {
 const EXTERNAL_KINDS = new Set(['vector', 'raster', 'image', 'canvas']);
 const COMMON_KEYS = ['interactive', 'priority', 'kind', 'sourceId', 'before', 'minZoom', 'maxZoom', 'opacity', 'category'];
 const TILE_TOKENS = new Set(['z', 'x', 'y', 'ratio', 'quadkey', 'bbox-epsg-3857', 'prefix']);
-function invalid(): never { throw new Error('Invalid map data layer.'); }
 function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return invalid();
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+  return readOwnDataValueOr(value, key, invalid);
 }
 function record(value: unknown, keys: readonly string[], knownKind?: string): Record<string, unknown> {
   if (!isPlainDataRecord(value)) return invalid();
@@ -149,11 +131,6 @@ function id(value: unknown): string {
 }
 function optionalText(value: unknown, limit = 256): string | undefined {
   return value === undefined ? undefined : text(value, limit);
-}
-export function numeric(value: unknown, fallback: number, min: number, max: number): number {
-  if (value === undefined) return fallback;
-  if (typeof value !== 'number' || !Number.isFinite(value)) return invalid();
-  return Math.min(max, Math.max(min, value));
 }
 function boolean(value: unknown, fallback: boolean): boolean {
   if (value === undefined) return fallback;
@@ -388,13 +365,3 @@ export function projectMapDataLayerModel<T extends { readonly sourceId: string }
   } catch { return requestedExternal || invalidPlacement ? { ok: false } : { ok: true, geojson: Object.freeze([]), external: Object.freeze([]) }; }
 }
 
-export function buildMapLabelLayer(id: string, source: string, label: CanonicalMapLabel,
-  color: (value: string | undefined) => string): LyraMapOverlayLayer['layer'] {
-  return { id, type: 'symbol', source, minzoom: label.minZoom,
-    layout: { 'text-field': label.expression, 'text-size': label.size, 'symbol-placement': label.placement,
-      'text-allow-overlap': label.allowOverlap, 'text-ignore-placement': label.ignorePlacement,
-      ...(label.font ? { 'text-font': label.font } : {}),
-      ...(label.anchor === undefined ? {} : { 'text-anchor': label.anchor }),
-      ...(label.offset === undefined ? {} : { 'text-offset': label.offset }) },
-    paint: { 'text-color': color(label.color), 'text-halo-color': color(label.haloColor ?? (label.haloWidth > 0 ? 'var(--lr-color-surface)' : undefined)), 'text-halo-width': label.haloWidth } };
-}
