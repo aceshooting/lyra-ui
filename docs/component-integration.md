@@ -31,7 +31,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-app-rail-group"></a>`lr-app-rail-group` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail-group.js';` | none | none | none | 27.5 KiB |
 | <a id="lr-app-rail-item"></a>`lr-app-rail-item` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail-item.js';` | none | none | none | 54.8 KiB |
 | <a id="lr-approval-queue"></a>`lr-approval-queue` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-approval-queue.js';` | none | `lr-badge`, `lr-tool-approval-dialog` | `lr-button`, `lr-json-viewer`, `lr-virtual-list` | 105.5 KiB |
-| <a id="lr-archive-viewer"></a>`lr-archive-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-archive-viewer.js';` | none | `lr-virtual-list` | none | 69.3 KiB |
+| <a id="lr-archive-viewer"></a>`lr-archive-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-archive-viewer.js';` | none | `lr-virtual-list` | none | 69.4 KiB |
 | <a id="lr-artifact-panel"></a>`lr-artifact-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-artifact-panel.js';` | none | `lr-live-region` | none | 38.4 KiB |
 | <a id="lr-attachment-chip"></a>`lr-attachment-chip` | media | `import '@aceshooting/lyra-ui/components/lr-attachment-chip.js';` | none | none | none | 31 KiB |
 | <a id="lr-attachment-trigger"></a>`lr-attachment-trigger` | media | `import '@aceshooting/lyra-ui/components/lr-attachment-trigger.js';` | none | `lr-dropdown`, `lr-icon-button`, `lr-menu`, `lr-menu-item` | none | 92.6 KiB |
@@ -95,7 +95,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-currency-picker"></a>`lr-currency-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-currency-picker.js';` | none | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 116 KiB |
 | <a id="lr-dashboard-grid"></a>`lr-dashboard-grid` | layout | `import '@aceshooting/lyra-ui/components/lr-dashboard-grid.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-empty`, `lr-widget`, `lr-widget-renderer` | `lr-badge`, `lr-button`, `lr-card`, `lr-markdown`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-stat` | 140.9 KiB |
 | <a id="lr-data-grid"></a>`lr-data-grid` | data | `import '@aceshooting/lyra-ui/components/lr-data-grid.js';` | none | `lr-button`, `lr-dropdown`, `lr-dropdown-item`, `lr-empty`, `lr-pagination` | `lr-menu`, `lr-menu-item` | 142.8 KiB |
-| <a id="lr-dataset-viewer"></a>`lr-dataset-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-dataset-viewer.js';` | `papaparse` | `lr-virtual-list` | none | 73.1 KiB |
+| <a id="lr-dataset-viewer"></a>`lr-dataset-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-dataset-viewer.js';` | `papaparse` | `lr-virtual-list` | none | 73.2 KiB |
 | <a id="lr-date-input"></a>`lr-date-input` | forms | `import '@aceshooting/lyra-ui/components/lr-date-input.js';` | none | `lr-date-picker` | none | 87.5 KiB |
 | <a id="lr-date-picker"></a>`lr-date-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-date-picker.js';` | none | none | none | 42.7 KiB |
 | <a id="lr-details"></a>`lr-details` | layout | `import '@aceshooting/lyra-ui/components/lr-details.js';` | none | none | none | 29 KiB |

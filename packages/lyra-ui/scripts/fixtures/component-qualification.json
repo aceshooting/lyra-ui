@@ -44,7 +44,7 @@
       "os": "linux",
       "arch": "x64"
     },
-    "humanVisualReview": false
+    "humanVisualReview": true
   },
   "knownLimitations": [
     "Human review on 2026-09-30 (UTC) by User (explicit approval in this conversation) covered ONLY the three theming-shadcn--shadcn captures across light, dark and RTL. The user approved the exact canonical Playwright Linux candidate files with the response \"Approve these three captures\". The approved medium select is 36px high. Promoted SHA-256: light 2f869b383a9fd10c7479c5e975dd438ac8b8ed2c655ecc70fed1636e2aeaaa5f; dark 87ce5ad8b86a1878becab5c3db9abe8690a019cd5d74ffd47c94058e1d84610b; RTL e328e66a3390ccdf0cb97406aa5913193eb5bc41c0983ef55c9140071905bff7. No other historical baseline or evidence capture received approval from this review.",
@@ -59,6 +59,7 @@
     "Promotion on 2026-10-10 by maintainer authorization covered ONLY the three forms-otp-input--appearances-and-sizes light/dark/RTL baselines. The document token layer now resolves the story's var(--lr-space-m) row gap, adding an intended 12px between rows; the CI diff and candidate images of all three axes were inspected and showed no other change. The promoted files are the unmodified CI candidates (Linux Playwright) bound to the CI report hashes: light 13f80894b9a572bdf2ecc6d299e974649937bf0f2fa534eadb8690ba0355622c; dark 132742d9c88d708b6afc577998f9ceb11d20de522feedd3f0784099ee923b8dd; RTL f6cb2838ed8e133f820740aa1eee44c179c843097474abf19fac13d87c8a0890. Supersedes the 2026-10-08 hashes for this story only. No other baseline or evidence capture was approved.",
     "Human review on 2026-11-02 by aceshooting (explicit approval: \"Approve these three\") covered ONLY the three layout-page--desktop light/dark/RTL baselines. The sticky banner, header and subheader now paint the opaque surface token, so their text is rasterized over that surface instead of the transparent page backdrop; the candidate and diff images of all three axes were inspected and showed only text antialiasing changes on the header and subheader (0.058-0.079% of pixels), with identical layout, colors and spacing. The promoted files are the unmodified candidates from the pinned Linux Playwright image. Approved SHA-256: light 1f767c8ef5442060b2fa957debe6c438ac4276bd5d5338541554d7fede5fafc7; dark 176d8bb2a90bca5b97ff71a604d0c8f57c51f3fb900e6e5dc3b558c445c9a3e3; RTL 05ea50d3d45258efaf941f932b1f8adae7db2199eee0d045bae68a425615658c.",
     "Human review on 2026-11-19 (UTC) by aceshooting (explicit approval: \"Approve all three\") covered only the three theming-shadcn--shadcn captures. The selected radio now displays its inner dot. Approved and promoted SHA-256: light 6d0e1428850aa0f3237fbf5fb2a503fb195ce09d2b97e3825d50d46fad8cfe03, dark 3da85a7f1d698cd15864e665d8874c3e27835495fe1c69f3125aa7bfdd9c273c, rtl 95e0a9dc7a9e4664334219be4338d224b4201223930aaa9967adf80dfdde3aa0.",
+    "Review on 2026-11-20 under maintainer authorization covered ONLY the 27 light/dark/RTL captures of these 9 stories, which no longer matched their retained baselines: archiveviewer--default, documentviewer-datasetviewer--default, documentviewer-pagerail--mediated, documentviewer-pdfviewer--default, feedback-callout--appearances, form-color-picker--inline-compatibility, layout-page--desktop, slider--default, theming-shadcn--shadcn. Every candidate, baseline and diff image was inspected. The changes are intended: sliders inset their track for endpoint hit targets; archive and dataset viewers shrink to short content, hide entry-kind text visually, word file sizes through Intl and draw no divider under the last row; PDF toolbar and page-rail controls inherit the library font; callouts drop the empty icon-column gap; sticky page regions paint an opaque surface (text antialiasing only); the selected color-picker swatch shows a check icon. The promoted files are the unmodified candidates from the pinned Linux Playwright image, bound to their report hashes: archiveviewer--default/dark.png c70f535d5b4f8d366f2a3f153d928a552c97a5ec90e19d4fdb3fe2495734a8f1; archiveviewer--default/light.png e8658fb8b54383193ceff95158e17030196214047dfed4eb3b4ab8939e0b078d; archiveviewer--default/rtl.png d5658e0127e92b285d936ab666a0cc87780f2b84bd29def695707cec13b82b33; documentviewer-datasetviewer--default/dark.png efc2614dd2ee06699a4befc5325f58ab6540565ffd1b01dee5dfbd414575da40; documentviewer-datasetviewer--default/light.png ab6f927fd684cd1ff9f0fe3c87f2a0ed6edd49bb488dc1ecc0beb6febbf2ab6e; documentviewer-datasetviewer--default/rtl.png 67b0e289a198080f2a35e5b5a38d6b2e6d768eea4713f70aa30316cc69c62ed6; documentviewer-pagerail--mediated/dark.png 947f5c0c77ac5d698f53fd930e2dbf67b632ff0778ccabcbe0d3436bccdd7904; documentviewer-pagerail--mediated/light.png 1e484f531e98d5464df130842df500e68dbda012242a6ef919a077f1ef87a705; documentviewer-pagerail--mediated/rtl.png e7f1b98d0c1e6139542e80c34ff1b05918bb70b04bb612f44f5bf7a7d202fd8b; documentviewer-pdfviewer--default/dark.png 78af6f3c6e4f9a05ed4a0b4ea2a466416d5f124df81a64e8e61a11be765f7d1c; documentviewer-pdfviewer--default/light.png 445da8c68507a7feffdc69ed727de1a3d8badddce6f365c89f6224e30393dde2; documentviewer-pdfviewer--default/rtl.png 32410bf1d611983ddea41cc3ec693249a2c7556bff05a2dbd5cad24108f0cc00; feedback-callout--appearances/dark.png f923838111f09f8b0096ca9ad9fe46522ac5633f6f124c35dd493bd78f339f0c; feedback-callout--appearances/light.png ea2a4c43150108b626d137a4c4c55e11fa58c24856caf1617d3004a867a23c15; feedback-callout--appearances/rtl.png 435082ff38971f1a070fe36bfec1548229c5e04cd72adfb04bd2d21081009ef9; form-color-picker--inline-compatibility/dark.png cbb1e57b7d367617b4ca198508dcab8374425bb83d6992f329ba4b8b8e872669; form-color-picker--inline-compatibility/light.png a969ef90c3a05d1f814b0edff121183eeffa1cb79a24e3b8e6a8b1fc6c081fab; form-color-picker--inline-compatibility/rtl.png 9d9b04305c7b963abf50264617d22ea5a1685abc2c7f5e6c2d452e3311c71230; layout-page--desktop/dark.png f8a7f61b5e2c5c050875e0389d963459f7363c7610f3aba9593ebd7a036d027e; layout-page--desktop/light.png fbf47b87c4cf10c48b34398ef62ccd850ceaa6936635d66be01cc24c139c4eb5; layout-page--desktop/rtl.png 227ef867377ce01025407b69b5b2835530486637ebe72d5869c50bf5674d9d1c; slider--default/dark.png 066eb5c17f9b874b6fa658b23e28ded509ca769f6069042b9c942d6c3bd37eaa; slider--default/light.png 553f2e95b2b190f134ede4f615ec5cdd78d9704a582196b9d9a5b7cef7dd6942; slider--default/rtl.png 5c3e0a5bd6431be785c8f9110f80c1f5186222672b77dc61dd7a9195d984361e; theming-shadcn--shadcn/dark.png fb10df907f08b8ea079bc6d668684fddef133ea14e19744c2ee9ac18a5ed2d48; theming-shadcn--shadcn/light.png 4da601a1231b32e68a6636879085bdb6394d516d87644053fba01865b510705c; theming-shadcn--shadcn/rtl.png 02b660f1a104cd22a350d8dafaf2d0c2cd67fbb567f31354e86d5eeb0fd5bd9a. No other retained baseline or evidence-only capture was approved.",
     "No assistive technology pairing has been manually verified.",
     "Firefox and WebKit run a per-commit contract subset; their complete suites are weekly/manual.",
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
@@ -205,7 +206,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "disclosure-accordion--default"
           ],
@@ -220,8 +221,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -429,8 +430,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -641,7 +642,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "activityfeed--live-expanded"
           ],
@@ -656,8 +657,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -834,8 +835,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -999,8 +1000,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -1189,8 +1190,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -1382,8 +1383,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -1555,8 +1556,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -1746,7 +1747,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "feedback-alert--variants"
           ],
@@ -1761,8 +1762,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -1946,7 +1947,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "animatedimage--default"
           ],
@@ -1961,8 +1962,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -2129,8 +2130,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -2417,7 +2418,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "apprail--forced-icon-only"
           ],
@@ -2432,8 +2433,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -2621,8 +2622,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -2888,8 +2889,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -3071,8 +3072,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -3238,7 +3239,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "archiveviewer--default"
           ],
@@ -3253,8 +3254,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -3307,6 +3308,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/archive-viewer/archive-viewer-frame-edge.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-hidden-text.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-load-lifecycle.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-register.test.ts",
@@ -3440,8 +3442,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -3622,8 +3624,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -3812,8 +3814,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -3982,7 +3984,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "audio-visualizer--idle"
           ],
@@ -3997,8 +3999,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -4211,8 +4213,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -4426,8 +4428,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -4611,8 +4613,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -4783,8 +4785,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -4967,8 +4969,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -5144,7 +5146,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-bar--default"
           ],
@@ -5159,8 +5161,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -5467,7 +5469,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-boxplot--default"
           ],
@@ -5482,8 +5484,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -5750,8 +5752,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -5961,8 +5963,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -6173,8 +6175,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -6347,8 +6349,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -6525,7 +6527,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-bubble--default"
           ],
@@ -6540,8 +6542,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -6817,8 +6819,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -7081,7 +7083,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "localization-pseudo-locales--bidirectional",
             "localization-pseudo-locales--expanded",
@@ -7100,8 +7102,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -7272,8 +7274,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -7458,8 +7460,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -7629,8 +7631,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -7848,7 +7850,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "feedback-callout--appearances"
           ],
@@ -7863,8 +7865,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -8086,7 +8088,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "card--outlined"
           ],
@@ -8101,8 +8103,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -8302,8 +8304,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -8488,8 +8490,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -8666,8 +8668,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -8909,7 +8911,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-chart--annotations-canary",
             "charts-chart--default"
@@ -8926,8 +8928,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -9275,8 +9277,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -9482,8 +9484,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -9687,8 +9689,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -9879,8 +9881,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -10082,7 +10084,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "checkbox--default"
           ],
@@ -10097,8 +10099,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -10290,8 +10292,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -10462,8 +10464,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -10734,8 +10736,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -10915,8 +10917,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -11096,7 +11098,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "chunk-inspector--default"
           ],
@@ -11111,8 +11113,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -11278,8 +11280,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -11446,8 +11448,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -11647,7 +11649,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "codeblock--default",
             "codeblock--right-to-left"
@@ -11663,8 +11665,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -11876,8 +11878,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -12076,8 +12078,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -12276,7 +12278,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "form-color-picker--inline-compatibility",
             "form-color-picker--open"
@@ -12293,8 +12295,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -12550,7 +12552,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "combobox--default"
           ],
@@ -12565,8 +12567,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -12800,8 +12802,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -12995,8 +12997,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -13160,8 +13162,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -13331,8 +13333,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -13507,8 +13509,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -13740,8 +13742,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -13910,8 +13912,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -14088,8 +14090,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -14276,8 +14278,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -14443,7 +14445,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "overlay-context-menu--open"
           ],
@@ -14458,8 +14460,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -14659,8 +14661,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -14825,8 +14827,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -15019,8 +15021,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -15228,8 +15230,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -15421,8 +15423,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -15598,7 +15600,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "documentviewer-csvviewer--quoted-fields"
           ],
@@ -15613,8 +15615,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -15815,8 +15817,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -15993,8 +15995,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -16247,8 +16249,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -16459,7 +16461,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "documentviewer-datasetviewer--default"
           ],
@@ -16474,8 +16476,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -16691,8 +16693,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -16906,8 +16908,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -17119,8 +17121,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -17366,7 +17368,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "dialog--open-initially"
           ],
@@ -17381,8 +17383,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -17565,8 +17567,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -17741,8 +17743,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -17928,8 +17930,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -18106,8 +18108,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -18300,8 +18302,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -18512,8 +18514,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -18685,8 +18687,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -18858,7 +18860,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "docxviewer--default"
           ],
@@ -18873,8 +18875,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -19070,7 +19072,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-doughnut--default"
           ],
@@ -19085,8 +19087,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -19374,7 +19376,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "drawer--end"
           ],
@@ -19389,8 +19391,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -19567,8 +19569,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -19746,8 +19748,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -19958,7 +19960,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "overlay-dropdown--default",
             "overlay-dropdown--narrow-long-rtl"
@@ -19975,8 +19977,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -20222,8 +20224,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -20401,8 +20403,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -20593,8 +20595,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -20813,8 +20815,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21017,8 +21019,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21199,8 +21201,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21386,8 +21388,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21559,8 +21561,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21734,8 +21736,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -21903,8 +21905,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -22086,8 +22088,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -22276,8 +22278,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -22453,8 +22455,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -22627,8 +22629,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -22835,8 +22837,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -23040,8 +23042,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -23226,8 +23228,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -23435,8 +23437,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -23615,8 +23617,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -23828,8 +23830,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24023,8 +24025,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24210,8 +24212,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24402,8 +24404,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24574,8 +24576,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24738,8 +24740,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -24911,8 +24913,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -25078,8 +25080,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -25264,7 +25266,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "data-display-funnel--narrow-320"
           ],
@@ -25277,8 +25279,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -25462,7 +25464,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "gauge--radial"
           ],
@@ -25477,8 +25479,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -25646,8 +25648,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -25830,8 +25832,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -26130,7 +26132,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "graph--default"
           ],
@@ -26145,8 +26147,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -26389,8 +26391,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -26558,8 +26560,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -26751,8 +26753,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -26911,8 +26913,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -27192,7 +27194,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "heatmap--default"
           ],
@@ -27207,8 +27209,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -27422,8 +27424,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -27610,7 +27612,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-histogram--default"
           ],
@@ -27625,8 +27627,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -27893,8 +27895,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -28089,8 +28091,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -28299,8 +28301,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -28482,8 +28484,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -28674,8 +28676,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -28842,8 +28844,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -29044,7 +29046,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "ingestion-queue--default"
           ],
@@ -29059,8 +29061,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -29256,7 +29258,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "input--default",
             "localization-pseudo-locales--bidirectional",
@@ -29274,8 +29276,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -29458,8 +29460,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -29642,8 +29644,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -29834,7 +29836,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "jsonviewer--default"
           ],
@@ -29849,8 +29851,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -30031,8 +30033,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -30223,8 +30225,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -30409,8 +30411,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -30611,8 +30613,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -30801,8 +30803,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -30993,8 +30995,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -31182,7 +31184,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-line--default"
           ],
@@ -31197,8 +31199,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -31550,7 +31552,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-litechart--default",
             "charts-litechart--logarithmic-scale-canary"
@@ -31566,8 +31568,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -31823,8 +31825,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -32074,7 +32076,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "localization-pseudo-locales--bidirectional",
             "localization-pseudo-locales--expanded"
@@ -32091,8 +32093,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -32397,7 +32399,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "map--default"
           ],
@@ -32412,8 +32414,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -32780,8 +32782,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -33151,7 +33153,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "markdown--default",
             "markdown--right-to-left-code",
@@ -33169,8 +33171,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -33404,8 +33406,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -33628,8 +33630,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -33841,8 +33843,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -34027,8 +34029,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -34214,8 +34216,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -34513,7 +34515,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "menu--standalone-mapped-menu"
           ],
@@ -34528,8 +34530,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -34784,8 +34786,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -34969,7 +34971,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-menu-label--default"
           ],
@@ -34984,8 +34986,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -35188,7 +35190,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-menubar--default",
             "layout-menubar--narrow"
@@ -35206,8 +35208,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -35409,7 +35411,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-menubar--default"
           ],
@@ -35425,8 +35427,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -35618,8 +35620,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -35813,8 +35815,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -36005,7 +36007,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "message-parts--narrow-error-retry",
             "message-parts--right-to-left-code"
@@ -36022,8 +36024,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -36213,8 +36215,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -36455,8 +36457,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -36637,8 +36639,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -36874,8 +36876,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -37088,7 +37090,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "multi-split--default"
           ],
@@ -37103,8 +37105,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -37275,8 +37277,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -37447,7 +37449,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "input-native-time-input--default"
           ],
@@ -37462,8 +37464,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -37672,7 +37674,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-navigation-menu--collapsed-expanded",
             "layout-navigation-menu--narrow-long-labels",
@@ -37691,8 +37693,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -37867,7 +37869,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-navigation-menu--collapsed-expanded",
             "layout-navigation-menu--open-panel"
@@ -37884,8 +37886,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -38089,7 +38091,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "neighbor-list--default"
           ],
@@ -38104,8 +38106,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -38304,8 +38306,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -38475,7 +38477,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "documentviewer-notebookviewer--default"
           ],
@@ -38490,8 +38492,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -38701,8 +38703,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -38929,8 +38931,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -39139,7 +39141,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "forms-otp-input--appearances-and-sizes"
           ],
@@ -39154,8 +39156,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -39352,7 +39354,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-page--desktop",
             "layout-page--mobile-drawer"
@@ -39368,8 +39370,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -39540,7 +39542,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "documentviewer-pagerail--mediated"
           ],
@@ -39555,8 +39557,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -39763,7 +39765,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "pagination--appearance",
             "pagination--narrow-allocation"
@@ -39780,8 +39782,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -39950,7 +39952,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "media-pan-zoom--slotted-content"
           ],
@@ -39965,8 +39967,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -40133,8 +40135,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -40318,7 +40320,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "documentviewer-pdfviewer--default"
           ],
@@ -40333,8 +40335,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -40523,8 +40525,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -40691,8 +40693,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -40852,7 +40854,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "forms-phoneinput--default"
           ],
@@ -40867,8 +40869,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -41049,7 +41051,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-pie--default"
           ],
@@ -41065,8 +41067,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -41354,7 +41356,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-polararea--default"
           ],
@@ -41369,8 +41371,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -41647,8 +41649,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -41826,8 +41828,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -42090,7 +42092,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "overlay-popover--default"
           ],
@@ -42105,8 +42107,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -42314,7 +42316,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "overlays-popup--with-arrow"
           ],
@@ -42329,8 +42331,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -42499,8 +42501,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -42684,8 +42686,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -42852,8 +42854,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43030,8 +43032,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43215,8 +43217,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43410,8 +43412,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43587,8 +43589,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43759,8 +43761,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -43935,7 +43937,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "qr-code--default"
           ],
@@ -43950,8 +43952,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -44142,7 +44144,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-radar--default"
           ],
@@ -44157,8 +44159,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -44464,8 +44466,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -44643,7 +44645,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "forms-radio-button--default"
           ],
@@ -44658,8 +44660,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -44837,7 +44839,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "input-radio-group--default"
           ],
@@ -44852,8 +44854,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -45030,8 +45032,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -45210,8 +45212,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -45390,8 +45392,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -45573,7 +45575,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "form-rating--default"
           ],
@@ -45588,8 +45590,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -45768,8 +45770,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -45935,8 +45937,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -46153,8 +46155,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -46351,8 +46353,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -46531,8 +46533,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -46690,8 +46692,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -46883,7 +46885,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "responsivepanel--forced-overlay-bottom-sheet"
           ],
@@ -46898,8 +46900,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -47087,8 +47089,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -47252,7 +47254,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "resultcard-result-field--narrow-long-rtl"
           ],
@@ -47265,8 +47267,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -47447,8 +47449,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -47648,7 +47650,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "retrieval-results--default"
           ],
@@ -47663,8 +47665,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -47865,8 +47867,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -48041,8 +48043,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -48228,8 +48230,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -48410,7 +48412,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "charts-scatter--default"
           ],
@@ -48425,8 +48427,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -48701,8 +48703,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -48953,8 +48955,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -49198,7 +49200,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "select--default"
           ],
@@ -49213,8 +49215,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -49403,8 +49405,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -49603,8 +49605,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -49827,8 +49829,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -50029,8 +50031,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -50200,8 +50202,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -50398,7 +50400,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "slider--default"
           ],
@@ -50413,8 +50415,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -50616,8 +50618,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -50795,8 +50797,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -50969,8 +50971,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -51166,7 +51168,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "observability-span-waterfall--narrow-edge-clamp"
           ],
@@ -51179,8 +51181,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -51359,7 +51361,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "data-sparkline--line"
           ],
@@ -51374,8 +51376,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -51563,8 +51565,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -51737,7 +51739,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "layout-split-panel--default"
           ],
@@ -51752,8 +51754,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -51931,8 +51933,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -52140,8 +52142,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -52336,8 +52338,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -52548,8 +52550,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -52736,8 +52738,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -52904,7 +52906,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "streamingtext--right-to-left-code-stream"
           ],
@@ -52919,8 +52921,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -53104,8 +53106,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -53269,7 +53271,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "agent-tools-subagent-panel--depth-12-narrow"
           ],
@@ -53282,8 +53284,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -53483,8 +53485,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -53667,8 +53669,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -53869,7 +53871,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "swatch-picker--forced-colors-intrinsic"
           ],
@@ -53882,8 +53884,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -54086,7 +54088,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "switch--default"
           ],
@@ -54101,8 +54103,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -54332,8 +54334,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -54575,7 +54577,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "tabs--default",
             "tabs--element-model-long-content-narrow"
@@ -54591,8 +54593,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -54845,8 +54847,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -55137,7 +55139,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "table--default"
           ],
@@ -55152,8 +55154,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -55362,8 +55364,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -55556,8 +55558,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -55763,8 +55765,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -55953,8 +55955,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -56146,7 +56148,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "localization-pseudo-locales--bidirectional",
             "localization-pseudo-locales--expanded",
@@ -56165,8 +56167,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -56345,8 +56347,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -56588,7 +56590,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "threadlist--default"
           ],
@@ -56603,8 +56605,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -56814,8 +56816,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -57030,8 +57032,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -57199,8 +57201,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -57407,8 +57409,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -57624,8 +57626,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -57810,7 +57812,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "toast--triggers"
           ],
@@ -57825,8 +57827,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -58013,8 +58015,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -58215,8 +58217,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -58400,8 +58402,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -58587,8 +58589,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -58782,7 +58784,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "toolapprovaldialog--open-initially"
           ],
@@ -58797,8 +58799,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -58996,8 +58998,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -59171,8 +59173,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -59344,8 +59346,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -59525,8 +59527,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -59692,8 +59694,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -59908,8 +59910,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -60092,8 +60094,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -60305,7 +60307,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "overlay-tooltip--default"
           ],
@@ -60320,8 +60322,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -60543,8 +60545,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -60742,8 +60744,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -60926,8 +60928,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -61176,8 +61178,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -61415,7 +61417,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "navigation-tree-node--declarative"
           ],
@@ -61430,8 +61432,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -61649,8 +61651,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -61822,8 +61824,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -61996,8 +61998,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -62198,7 +62200,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "media-video--full-controls"
           ],
@@ -62213,8 +62215,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -62396,7 +62398,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "media-video-playlist--full-controls"
           ],
@@ -62411,8 +62413,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -62636,8 +62638,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -62809,7 +62811,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "utility-visually-hidden--skip-link"
           ],
@@ -62824,8 +62826,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -63029,8 +63031,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -63266,8 +63268,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -63442,8 +63444,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -63644,7 +63646,7 @@
         },
         "visual": {
           "applicability": "applicable",
-          "status": "pending-human-review",
+          "status": "complete",
           "stories": [
             "wordcloud--default"
           ],
@@ -63659,8 +63661,8 @@
               "kind": "automated screenshot enrollment"
             }
           ],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
@@ -63879,8 +63881,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
@@ -64071,8 +64073,8 @@
           "stories": [],
           "axes": [],
           "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-20",
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {

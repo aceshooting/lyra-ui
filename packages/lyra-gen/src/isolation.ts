@@ -11,9 +11,6 @@ import { parsePointer } from './references.js';
 /** Reserved node type of an isolation marker. Generated input can never use it; only validation produces it. */
 export const LYRA_GEN_ISOLATED_TYPE = 'lyra-gen:isolated';
 
-/** Whether a failure may be contained by replacing its node, or must reject the whole document. */
-export type LyraGenDiagnosticClass = 'isolatable' | 'boundary';
-
 /**
  * Codes that describe a defect local to one component's own members (its type, properties, text,
  * slot, accessible name, child types, or the content a block expansion rejected). The node can be replaced in place
@@ -54,7 +51,7 @@ export const BOUNDARY_DIAGNOSTIC_CODES: readonly string[] = Object.freeze([
  * Classify one error. `relativePath` is the diagnostic path relative to its enclosing node (for
  * example `/props/title`). Unknown codes and every failure outside the node's own members are boundary.
  */
-export function classifyDiagnostic(code: string, relativePath = ''): LyraGenDiagnosticClass {
+export function classifyDiagnostic(code: string, relativePath = ''): 'isolatable' | 'boundary' {
   if (ISOLATABLE_DIAGNOSTIC_CODES.includes(code)) return 'isolatable';
   if (ISOLATABLE_SCHEMA_CODES.includes(code) && relativePath.startsWith('/props/')) return 'isolatable';
   return 'boundary';
