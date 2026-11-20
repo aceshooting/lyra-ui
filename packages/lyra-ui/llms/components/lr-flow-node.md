@@ -33,7 +33,7 @@ owns none of that.
 - `headingLevel: LyraHeadingLevel = 'none'` (attribute `heading-level`) — semantic level of the
   visible `heading`. `'none'` (the default) keeps it plain text, as cards inside a canvas usually
   are; `'1'`–`'6'` expose `[part="heading"]` as `role="heading"` at that `aria-level`, for a
-  standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
+  standalone card in a document outline. Invalid untyped values resolve to the default `'none'`; nothing is exposed
   while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set. A

@@ -9434,7 +9434,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
-              "line": 36,
+              "line": 46,
               "kind": "rendered RTL test signal"
             }
           ]

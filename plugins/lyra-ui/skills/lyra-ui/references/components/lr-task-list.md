@@ -124,8 +124,8 @@ localizes `taskListLabel` (`'Tasks'` in the built-in English catalog); any suppl
 explicit verbatim override, including `'Tasks'` under a non-English `.strings` catalog and `''`.
 `headingLevel: LyraHeadingLevel = 'none'`
 (attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
-level around either its disclosure button or static content, invalid untyped values use level 3,
-and `none` (the default) keeps the header visual-only. `collapsed: boolean = false` (reflected) — hides the
+level around either its disclosure button or static content, and `none` (the default, which invalid
+untyped values also resolve to) keeps the header visual-only. `collapsed: boolean = false` (reflected) — hides the
 body; the list starts shown. `withoutCollapse: boolean = false` (attribute
 `without-collapse`) — renders the header as a static heading with no toggle; `collapsed` can still
 be set programmatically. `size: LyraSize = 'm'` (reflected)
