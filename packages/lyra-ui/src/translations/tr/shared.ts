@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Çizge görünümü yüklenemedi.',
   graphSourceRecordMissing: 'Bu çizge kaydı kullanılamıyor.',
   notInCatalog: 'katalogda yok',
+  chartLegend: 'Grafik göstergesi',
   resetZoom: 'Yakınlaştırmayı sıfırla',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} tane daha göster',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'sabit',
   chartSummary: '{label}: {count} değer, {min}–{max} aralığı, {trend} eğilimi',
   chartSummarySeparator: '. ',
+  chartData: 'Grafik verileri',
   chartPreparedSummary: '{validCount} geçerli gözlemin özeti ({invalidCount} geçersiz); {displayedCount} gösteriliyor.',
   chartPreparedUnavailable: 'Hazırlanmış grafik verileri kullanılamıyor veya bu grafikle uyumlu değil.',
   chart: 'Grafik',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Bu veri kaynağında arama kullanılamıyor.',
   sourceSelectionLoading: 'Seçili öğeler yükleniyor…',
   sourceSelectionFailed: 'Seçili öğeler yüklenemedi.',
+  chartInputLimit: 'Girdi sınırına ulaşıldığı için bazı grafik verileri atlandı. Atlanan değerleri temsil etmek için daha küçük veya önceden toplulaştırılmış bir veri kümesi sağlayın.',
   catalogPickerInputLimit: 'Girdi sınırına ulaşıldığı için bazı katalog girdileri atlandı.',
   tagFacetLimit: {
     one: '+{count} etiket daha',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Bunun yerine bir liste gösteriliyor.',
   largeDataInvalid: '{column} geçersiz olduğu için veriler görüntülenemiyor.',
   largeDataLimit: 'Veriler {limit} sınırını aştığı için görüntülenemiyor.',
+  chart3dName: 'Etiket',
 };
 
 registerLyraLocale('tr', strings);

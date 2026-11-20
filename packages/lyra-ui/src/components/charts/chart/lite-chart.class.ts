@@ -81,8 +81,8 @@ import type {
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const markKeys = ['type', 'labels', 'datasets', 'skipZero', 'maxRecords', 'plotWidth', 'layout'];

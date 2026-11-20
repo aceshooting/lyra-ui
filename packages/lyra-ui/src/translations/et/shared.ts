@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graafivaadet ei õnnestunud laadida.',
   graphSourceRecordMissing: 'See graafi kirje pole saadaval.',
   notInCatalog: 'kataloogis puudub',
+  chartLegend: 'Diagrammi legend',
   resetZoom: 'Lähtesta suurendus',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Näita veel {count}',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'muutumatu',
   chartSummary: '{label}: {count} väärtust, vahemik {min} kuni {max}, trend: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Diagrammi andmed',
   chartPreparedSummary: 'Kokkuvõte {validCount} kehtivast vaatlusest ({invalidCount} kehtetut); kuvatakse {displayedCount}.',
   chartPreparedUnavailable: 'Ettevalmistatud diagrammiandmed pole saadaval või ei sobi selle diagrammiga.',
   chart: 'Diagramm',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Selle andmeallika puhul pole otsing saadaval.',
   sourceSelectionLoading: 'Valitud üksuste laadimine…',
   sourceSelectionFailed: 'Valitud üksusi ei õnnestunud laadida.',
+  chartInputLimit: 'Osa diagrammi andmeid jäeti välja, kuna sisendi piirang sai täis. Väljajäetud väärtuste esitamiseks kasutage väiksemat või eelnevalt koondatud andmestikku.',
   catalogPickerInputLimit: 'Mõned kataloogikirjed jäeti välja, kuna sisendi piirang sai täis.',
   tagFacetLimit: {
     one: '+{count} silt veel',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Selle asemel kuvatakse loend.',
   largeDataInvalid: 'Andmeid ei saa kuvada, sest {column} on kehtetu.',
   largeDataLimit: 'Andmeid ei saa kuvada, sest need ületavad piirangu {limit}.',
+  chart3dName: 'Silt',
 };
 
 registerLyraLocale('et', strings);

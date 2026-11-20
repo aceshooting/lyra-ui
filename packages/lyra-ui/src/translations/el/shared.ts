@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Δεν ήταν δυνατή η φόρτωση της προβολής του γράφου.',
   graphSourceRecordMissing: 'Αυτή η εγγραφή του γράφου δεν είναι διαθέσιμη.',
   notInCatalog: 'δεν υπάρχει στον κατάλογο',
+  chartLegend: 'Υπόμνημα γραφήματος',
   resetZoom: 'Επαναφορά μεγέθυνσης',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Εμφάνιση {count} ακόμη',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'σταθερή',
   chartSummary: '{label}: {count} τιμές, εύρος {min} έως {max}, {trend} τάση',
   chartSummarySeparator: '. ',
+  chartData: 'Δεδομένα γραφήματος',
   chartPreparedSummary: 'Σύνοψη {validCount} έγκυρων παρατηρήσεων ({invalidCount} μη έγκυρες)· εμφανίζονται {displayedCount}.',
   chartPreparedUnavailable: 'Τα προετοιμασμένα δεδομένα γραφήματος δεν είναι διαθέσιμα ή δεν είναι συμβατά με αυτό το γράφημα.',
   chart: 'Γράφημα',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Η αναζήτηση δεν είναι διαθέσιμη για αυτή την πηγή δεδομένων.',
   sourceSelectionLoading: 'Φόρτωση επιλεγμένων στοιχείων…',
   sourceSelectionFailed: 'Δεν ήταν δυνατή η φόρτωση των επιλεγμένων στοιχείων.',
+  chartInputLimit: 'Ορισμένα δεδομένα του γραφήματος παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου. Δώστε μικρότερο ή εκ των προτέρων συγκεντρωμένο σύνολο δεδομένων για να αναπαραστήσετε τις τιμές που παραλείφθηκαν.',
   catalogPickerInputLimit: 'Ορισμένες καταχωρίσεις του καταλόγου παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου.',
   tagFacetLimit: {
     one: 'Επιπλέον ετικέτες: +{count}',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Εμφανίζεται αντ’ αυτού μια λίστα.',
   largeDataInvalid: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή το {column} δεν είναι έγκυρο.',
   largeDataLimit: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή υπερβαίνουν το όριο των {limit}.',
+  chart3dName: 'Ετικέτα',
 };
 
 registerLyraLocale('el', strings);

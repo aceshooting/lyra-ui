@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'የግራፍ እይታውን መጫን አልተቻለም።',
   graphSourceRecordMissing: 'ይህ የግራፍ መዝገብ አይገኝም።',
   notInCatalog: 'በካታሎጉ ውስጥ የለም',
+  chartLegend: 'የገበታ ምልክቶች ማብራሪያ',
   resetZoom: 'ማጉላቱን ዳግም አስጀምር',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} ተጨማሪ አሳይ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ጠፍጣፋ',
   chartSummary: '{label}: {count} እሴቶች፣ ክልል {min} እስከ {max}፣ {trend} አዝማሚያ',
   chartSummarySeparator: '. ',
+  chartData: 'የገበታ ውሂብ',
   chartPreparedSummary: 'የ{validCount} ትክክለኛ ምልከታዎች ማጠቃለያ ({invalidCount} ልክ ያልሆኑ)፤ {displayedCount} ታይተዋል።',
   chartPreparedUnavailable: 'አስቀድሞ የተዘጋጀው የገበታ ውሂብ አይገኝም ወይም ከዚህ ገበታ ጋር አይጣጣምም።',
   chart: 'ገበታ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ለዚህ የውሂብ ምንጭ ፍለጋ አይገኝም።',
   sourceSelectionLoading: 'የተመረጡ ንጥሎች በመጫን ላይ…',
   sourceSelectionFailed: 'የተመረጡትን ንጥሎች መጫን አልተቻለም።',
+  chartInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የገበታ ውሂብ ተወግዷል። የተወገዱትን እሴቶች ለማካተት ያነሰ ወይም አስቀድሞ የተጠቃለለ የውሂብ ስብስብ ያቅርቡ።',
   catalogPickerInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የካታሎግ ግቤቶች ተወግደዋል።',
   tagFacetLimit: {
     one: '+{count} ተጨማሪ መለያ',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'በምትኩ ዝርዝር እየታየ ነው።',
   largeDataInvalid: '{column} ልክ ስላልሆነ ውሂቡን ማሳየት አይቻልም።',
   largeDataLimit: 'ውሂቡ ከ{limit} ገደብ ስለሚበልጥ ማሳየት አይቻልም።',
+  chart3dName: 'መለያ',
 };
 
 registerLyraLocale('am', strings);

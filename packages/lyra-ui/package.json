@@ -265,6 +265,7 @@
     "./components/data/timeline/timeline.class.js": "./dist/components/data/timeline/timeline.class.js",
     "./components/data/tree/tree-item.class.js": "./dist/components/data/tree/tree-item.class.js",
     "./components/data/tree/tree.class.js": "./dist/components/data/tree/tree.class.js",
+    "./components/data/treemap/treemap.class.js": "./dist/components/data/treemap/treemap.class.js",
     "./components/data/word-cloud/word-cloud.class.js": "./dist/components/data/word-cloud/word-cloud.class.js",
     "./components/forms": "./dist/components/forms/index.js",
     "./components/forms/button/button.class.js": "./dist/components/forms/button/button.class.js",
@@ -1542,6 +1543,10 @@
     "./components/lr-tree.js": {
       "types": "./dist/components/lr-tree.d.ts",
       "default": "./dist/components/lr-tree.js"
+    },
+    "./components/lr-treemap.js": {
+      "types": "./dist/components/lr-treemap.d.ts",
+      "default": "./dist/components/lr-treemap.js"
     },
     "./components/lr-typing-indicator.js": {
       "types": "./dist/components/lr-typing-indicator.d.ts",

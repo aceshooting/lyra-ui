@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ekokaki te kozwa vue ya graphe.',
   graphSourceRecordMissing: 'Enregistrement oyo ya graphe ezali te.',
   notInCatalog: 'ezali na molɔngɔ te',
+  chartLegend: 'Légende ya graphique',
   resetZoom: 'Zongisa bonene na ndenge ya liboso',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Lakisa {count} mosusu',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'Etelemi',
   chartSummary: '{label}: ba valeur {count}, intervalle {min} ti {max}, tendance {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data ya graphique',
   chartPreparedSummary: 'Bokuse ya ba observations {validCount} oyo ezali valide ({invalidCount} oyo ezali valide te); {displayedCount} emonisami.',
   chartPreparedUnavailable: 'Ba données ya graphique oyo ebongisami ezali te to eyokani te na graphique oyo.',
   chart: 'Graphique',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Boluki ezali te mpo na source ya ba donnée oyo.',
   sourceSelectionLoading: 'Ezali kozwa biloko oyo eponami…',
   sourceSelectionFailed: 'Ekokaki te kozwa biloko oyo eponami.',
+  chartInputLimit: 'Balongoli ndambo ya ba données ya graphique mpo motango ya kokɔtisa ekómi na ndelo. Pesa etuluku ya ba données ya moke to oyo esangisami liboso mpo na komonisa ba valeurs oyo balongoli.',
   catalogPickerInputLimit: 'Balongoli ndambo ya makomi ya catalogue mpo motango ya kokɔtisa ekómi na ndelo.',
   tagFacetLimit: {
     one: '+{count} elembo mosusu',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Liste emonisami na esika na yango.',
   largeDataInvalid: 'Ekoki te komonisa ba données mpo {column} ezali malamu te.',
   largeDataLimit: 'Ekoki te komonisa ba données mpo eleki limite ya {limit}.',
+  chart3dName: 'Nkombo',
 };
 
 registerLyraLocale('ln', strings);

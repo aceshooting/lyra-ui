@@ -91,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Zobrazenie grafu sa nepodarilo načítať.',
   graphSourceRecordMissing: 'Tento záznam grafu nie je k dispozícii.',
   notInCatalog: 'nie je v katalógu',
+  chartLegend: 'Legenda grafu',
   resetZoom: 'Obnoviť priblíženie',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Zobraziť ďalšie ({count})',
@@ -110,6 +111,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ustálený',
   chartSummary: '{label}: počet hodnôt {count}, rozsah {min} až {max}, trend {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Údaje grafu',
   chartPreparedSummary: 'Súhrn platných pozorovaní: {validCount} (neplatných: {invalidCount}); zobrazené: {displayedCount}.',
   chartPreparedUnavailable: 'Pripravené údaje grafu nie sú k dispozícii alebo nie sú kompatibilné s týmto grafom.',
   chart: 'Graf',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Vyhľadávanie pre tento zdroj údajov nie je k dispozícii.',
   sourceSelectionLoading: 'Načítavajú sa vybrané položky…',
   sourceSelectionFailed: 'Vybrané položky sa nepodarilo načítať.',
+  chartInputLimit: 'Časť údajov grafu bola vynechaná, pretože sa dosiahol limit vstupu. Na zobrazenie vynechaných hodnôt zadajte menšiu alebo vopred agregovanú množinu údajov.',
   catalogPickerInputLimit: 'Niektoré položky katalógu boli vynechané, pretože sa dosiahol limit vstupu.',
   tagFacetLimit: {
     one: 'Ďalšie štítky: +{count}',
@@ -201,6 +204,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Namiesto toho sa zobrazuje zoznam.',
   largeDataInvalid: 'Údaje nemožno zobraziť, pretože {column} je neplatné.',
   largeDataLimit: 'Údaje nemožno zobraziť, pretože prekračujú limit {limit}.',
+  chart3dName: 'Označenie',
 };
 
 registerLyraLocale('sk', strings);

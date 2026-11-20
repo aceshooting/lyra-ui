@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ba a iya loda kallon graf ba.',
   graphSourceRecordMissing: 'Ba a samun wannan rikodin graf.',
   notInCatalog: 'ba ya cikin kundin',
+  chartLegend: 'Bayanin alamomin jadawali',
   resetZoom: 'Mayar da girman kallo yadda yake',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Nuna ƙarin {count}',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'tsayawa cak',
   chartSummary: '{label}: ƙimomi {count}, daga {min} zuwa {max}, yanayin {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Bayanan jadawali',
   chartPreparedSummary: 'Taƙaitaccen bayani na ingantattun bayanan lura {validCount} ({invalidCount} marasa inganci); an nuna {displayedCount}.',
   chartPreparedUnavailable: 'Ba a samun bayanan jadawalin da aka shirya, ko kuma ba su dace da wannan jadawalin ba.',
   chart: 'Jadawali',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Babu bincike don wannan tushen bayanai.',
   sourceSelectionLoading: 'Ana loda abubuwan da aka zaɓa…',
   sourceSelectionFailed: 'Ba a iya loda abubuwan da aka zaɓa ba.',
+  chartInputLimit: 'An bar wasu bayanan zane saboda an kai iyakar shigarwa. Bayar da ƙaramin rukunin bayanai ko wanda aka taƙaita tun farko don nuna ƙimomin da aka bari.',
   catalogPickerInputLimit: 'An bar wasu shigarwar kundin zaɓuɓɓuka saboda an kai iyakar shigarwa.',
   tagFacetLimit: {
     one: '+{count} ƙarin alamar rarrabawa',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Ana nuna jeri maimakon haka.',
   largeDataInvalid: 'Ba za a iya nuna bayanan ba saboda {column} ba shi da inganci.',
   largeDataLimit: 'Ba za a iya nuna bayanan ba saboda sun wuce iyakar {limit}.',
+  chart3dName: 'Alama',
 };
 
 registerLyraLocale('ha', strings);

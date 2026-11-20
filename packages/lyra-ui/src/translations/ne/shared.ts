@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ग्राफ दृश्य लोड गर्न सकिएन।',
   graphSourceRecordMissing: 'यो ग्राफ अभिलेख उपलब्ध छैन।',
   notInCatalog: 'सूचीमा छैन',
+  chartLegend: 'चार्टको लेजेन्ड',
   resetZoom: 'जुम रिसेट गर्नुहोस्',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} थप {count} देखाउनुहोस्',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'स्थिर',
   chartSummary: '{label}: {count} मान, {min} देखि {max} सम्मको दायरा, {trend} प्रवृत्ति',
   chartSummarySeparator: '. ',
+  chartData: 'चार्टको डाटा',
   chartPreparedSummary: '{validCount} मान्य अवलोकनहरूको सारांश ({invalidCount} अमान्य); {displayedCount} देखाइएका छन्।',
   chartPreparedUnavailable: 'तयार गरिएका चार्ट डेटा उपलब्ध छैनन् वा यस चार्टसँग मिल्दैनन्।',
   chart: 'चार्ट',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'यस डेटा स्रोतमा खोज उपलब्ध छैन।',
   sourceSelectionLoading: 'चयन गरिएका वस्तुहरू लोड हुँदैछन्…',
   sourceSelectionFailed: 'चयन गरिएका वस्तुहरू लोड गर्न सकिएन।',
+  chartInputLimit: 'इनपुट सीमा पुगेकाले केही चार्ट डेटा छुटाइएको छ। छुटाइएका मानहरू समेट्न सानो वा पहिले नै एकत्रित गरिएको डेटासेट दिनुहोस्।',
   catalogPickerInputLimit: 'इनपुट सीमा पुगेकाले केही सूची प्रविष्टिहरू छुटाइएका छन्।',
   tagFacetLimit: {
     one: '+{count} थप ट्याग',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'यसको सट्टा सूची देखाइँदैछ।',
   largeDataInvalid: '{column} अमान्य भएकाले डाटा देखाउन सकिएन।',
   largeDataLimit: 'डाटा {limit} को सीमाभन्दा बढी भएकाले देखाउन सकिएन।',
+  chart3dName: 'लेबल',
 };
 
 registerLyraLocale('ne', strings);

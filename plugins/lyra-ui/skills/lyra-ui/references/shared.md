@@ -5727,6 +5727,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-transcript-feed': LyraTranscriptFeedReactProps;
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
+  'lr-treemap': LyraTreemapReactProps;
   'lr-typing-indicator': LyraTypingIndicatorReactProps;
   'lr-unit-picker': LyraUnitPickerReactProps;
   'lr-usage-badge': LyraUsageBadgeReactProps;
@@ -6169,6 +6170,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-transcript-feed': LyraComponentTypeMap['lr-transcript-feed']['element'];
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
+  'lr-treemap': LyraComponentTypeMap['lr-treemap']['element'];
   'lr-typing-indicator': LyraComponentTypeMap['lr-typing-indicator']['element'];
   'lr-unit-picker': LyraComponentTypeMap['lr-unit-picker']['element'];
   'lr-usage-badge': LyraComponentTypeMap['lr-usage-badge']['element'];
@@ -6482,6 +6484,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-transcript-feed': LyraTranscriptFeedSvelteProps;
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
+  'lr-treemap': LyraTreemapSvelteProps;
   'lr-typing-indicator': LyraTypingIndicatorSvelteProps;
   'lr-unit-picker': LyraUnitPickerSvelteProps;
   'lr-usage-badge': LyraUsageBadgeSvelteProps;
@@ -6942,6 +6945,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-transcript-feed': LyraTranscriptFeedVueProps;
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
+  'lr-treemap': LyraTreemapVueProps;
   'lr-typing-indicator': LyraTypingIndicatorVueProps;
   'lr-unit-picker': LyraUnitPickerVueProps;
   'lr-usage-badge': LyraUsageBadgeVueProps;

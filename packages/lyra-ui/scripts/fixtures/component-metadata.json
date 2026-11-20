@@ -52,7 +52,9 @@
     }
   },
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-treemap"
+    ],
     "published-stable": [
       "lr-accordion",
       "lr-accordion-item",
@@ -37235,7 +37237,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "da3358caf8bdcc533b8a15158e2cb4d263b508d3408f0d3a9fb6fd20dacd9831",
+      "manifestSha256": "74808030bd60a423245944cebe53fb305bb7e16fd1de5e78a5821ff39cc726f6",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -37535,6 +37537,7 @@
         "lr-transcript-feed",
         "lr-tree",
         "lr-tree-item",
+        "lr-treemap",
         "lr-typing-indicator",
         "lr-unit-picker",
         "lr-usage-badge",

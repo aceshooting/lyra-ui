@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'グラフの表示を読み込めませんでした。',
   graphSourceRecordMissing: 'このグラフのレコードは利用できません。',
   notInCatalog: 'カタログにありません',
+  chartLegend: 'チャートの凡例',
   resetZoom: 'ズームをリセット',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} さらに {count} 件を表示',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: '横ばい',
   chartSummary: '{label}：{count} 件の値、範囲は {min} から {max}、傾向は{trend}',
   chartSummarySeparator: '。',
+  chartData: 'チャートのデータ',
   chartPreparedSummary: '有効な観測値 {validCount} 件の要約（無効 {invalidCount} 件）。表示件数は {displayedCount} 件です。',
   chartPreparedUnavailable: '準備済みのグラフデータを利用できないか、このグラフに対応していません。',
   chart: 'チャート',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'このデータソースでは検索を利用できません。',
   sourceSelectionLoading: '選択した項目を読み込み中…',
   sourceSelectionFailed: '選択した項目を読み込めませんでした。',
+  chartInputLimit: '入力上限に達したため、グラフデータの一部が省略されました。省略された値を表すには、より小さいデータセット、または事前に集計したデータセットを指定してください。',
   catalogPickerInputLimit: '入力上限に達したため、カタログ項目の一部が省略されました。',
   tagFacetLimit: {
     other: '+{count} 件の追加タグ',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '代わりに一覧を表示しています。',
   largeDataInvalid: '{column} が無効なため、データを表示できません。',
   largeDataLimit: 'データが上限の {limit} を超えているため、表示できません。',
+  chart3dName: 'ラベル',
 };
 
 registerLyraLocale('ja', strings);

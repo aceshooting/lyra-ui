@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ଗ୍ରାଫ୍ ଦୃଶ୍ୟ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
   graphSourceRecordMissing: 'ଏହି ଗ୍ରାଫ୍ ରେକର୍ଡ ଉପଲବ୍ଧ ନାହିଁ।',
   notInCatalog: 'ତାଲିକାରେ ନାହିଁ',
+  chartLegend: 'ଚାର୍ଟର ସୂଚକ',
   resetZoom: 'ଜୁମ୍ ପୁନଃସେଟ୍ କରନ୍ତୁ',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} ଆଉ {count}ଟି ଦେଖାନ୍ତୁ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ସମତଳ',
   chartSummary: '{label}: {count} ମୂଲ୍ୟ, {min}ରୁ {max} ପର୍ଯ୍ୟନ୍ତ ସୀମା, {trend} ଧାରା',
   chartSummarySeparator: '. ',
+  chartData: 'ଚାର୍ଟ ତଥ୍ୟ',
   chartPreparedSummary: '{validCount}ଟି ବୈଧ ପର୍ଯ୍ୟବେକ୍ଷଣର ସାରାଂଶ ({invalidCount}ଟି ଅବୈଧ); {displayedCount}ଟି ଦେଖାଯାଇଛି।',
   chartPreparedUnavailable: 'ପ୍ରସ୍ତୁତ ଚାର୍ଟ ତଥ୍ୟ ଉପଲବ୍ଧ ନାହିଁ କିମ୍ବା ଏହି ଚାର୍ଟ ସହ ସୁସଙ୍ଗତ ନୁହେଁ।',
   chart: 'ଚାର୍ଟ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ଏହି ତଥ୍ୟ ଉତ୍ସ ପାଇଁ ସନ୍ଧାନ ଉପଲବ୍ଧ ନାହିଁ।',
   sourceSelectionLoading: 'ଚୟନିତ ଆଇଟମ୍‌ଗୁଡ଼ିକ ଲୋଡ୍ ହେଉଛି…',
   sourceSelectionFailed: 'ଚୟନିତ ଆଇଟମ୍‌ଗୁଡ଼ିକ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
+  chartInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ଚାର୍ଟ ତଥ୍ୟ ବାଦ ଦିଆଯାଇଛି। ବାଦ ପଡ଼ିଥିବା ମୂଲ୍ୟଗୁଡ଼ିକୁ ଦର୍ଶାଇବାକୁ ଏକ ଛୋଟ କିମ୍ବା ଆଗରୁ ଏକତ୍ରିତ ତଥ୍ୟସମୂହ ଦିଅନ୍ତୁ।',
   catalogPickerInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ତାଲିକା ପ୍ରବିଷ୍ଟି ବାଦ ଦିଆଯାଇଛି।',
   tagFacetLimit: {
     one: '+{count} ଅଧିକ ଟ୍ୟାଗ୍',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ଏହା ବଦଳରେ ଏକ ତାଲିକା ଦେଖାଯାଉଛି।',
   largeDataInvalid: '{column} ଅବୈଧ ହୋଇଥିବାରୁ ତଥ୍ୟ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
   largeDataLimit: 'ତଥ୍ୟ {limit} ସୀମାଠାରୁ ଅଧିକ ହୋଇଥିବାରୁ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
+  chart3dName: 'ଲେବଲ୍',
 };
 
 registerLyraLocale('or', strings);

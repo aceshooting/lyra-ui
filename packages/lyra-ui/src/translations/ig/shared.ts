@@ -75,6 +75,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Enweghị ike ibunye nlele graf.',
   graphSourceRecordMissing: 'Ndekọ graf a adịghị.',
   notInCatalog: 'adịghị na katalọgụ',
+  chartLegend: 'Nkọwa akara eserese',
   resetZoom: 'Tọgharịa nlele',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Gosi {count} ndị ọzọ',
@@ -94,6 +95,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'kwụ ọtọ',
   chartSummary: '{label}: uru {count}, oke {min} ruo {max}, ọnọdụ {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data eserese',
   chartPreparedSummary: 'Nchịkọta nleba anya ziri ezi {validCount} ({invalidCount} na-ezighi ezi); egosiri {displayedCount}.',
   chartPreparedUnavailable: 'Data eserese a kwadebere adịghị ma ọ bụ ọ dakọghị na eserese a.',
   chart: 'Eserese',
@@ -165,6 +167,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Ọchụchọ adịghị maka isi iyi data a.',
   sourceSelectionLoading: 'A na-ebunye ihe ndị ahọpụtara…',
   sourceSelectionFailed: 'Enweghị ike ibunye ihe ndị ahọpụtara.',
+  chartInputLimit: 'A hapụrụ ụfọdụ data eserese n\'ihi na e ruru oke ntinye. Nye obere nchịkọta data ma ọ bụ nke a chịkọtara tupu oge eruo iji gosipụta uru ndị a hapụrụ.',
   catalogPickerInputLimit: 'A hapụrụ ụfọdụ ndekọ katalọgụ n\'ihi na e ruru oke ntinye.',
   tagFacetLimit: {
     other: '+{count} mkpado ndị ọzọ',
@@ -179,6 +182,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'A na-egosi ndepụta kama nke ahụ.',
   largeDataInvalid: 'Enweghị ike igosi data n’ihi na {column} adịghị mma.',
   largeDataLimit: 'Enweghị ike igosi data n’ihi na ọ gafere oke nke {limit}.',
+  chart3dName: 'Akara',
 };
 
 registerLyraLocale('ig', strings);

@@ -300,6 +300,7 @@ export const AUTOLOADER_TAGS = [
   'lr-transcript-feed',
   'lr-tree',
   'lr-tree-item',
+  'lr-treemap',
   'lr-typing-indicator',
   'lr-unit-picker',
   'lr-usage-badge',

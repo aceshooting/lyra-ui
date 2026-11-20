@@ -164255,6 +164255,270 @@
       }
     },
     {
+      "tag": "lr-treemap",
+      "family": "data",
+      "classModule": "src/components/data/treemap/treemap.class.ts",
+      "registrationModule": "src/components/lr-treemap.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "description",
+            "property": "description",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "loading",
+            "property": "loading",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "with-data-table",
+            "property": "withDataTable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "description",
+            "attribute": "description",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "loading",
+            "attribute": "loading",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "nodes",
+            "attribute": null,
+            "type": "readonly LyraTreemapNode[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "valueFormatter",
+            "attribute": null,
+            "type": "(value: number) => string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "withDataTable",
+            "attribute": "with-data-table",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-datum-activate",
+            "type": "CustomEvent<{ id: string; label: string; value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "data-table",
+            "deprecated": null
+          },
+          {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
+            "name": "description",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "legend",
+            "deprecated": null
+          },
+          {
+            "name": "legend-item",
+            "deprecated": null
+          },
+          {
+            "name": "legend-label",
+            "deprecated": null
+          },
+          {
+            "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
+            "name": "loading",
+            "deprecated": null
+          },
+          {
+            "name": "plot",
+            "deprecated": null
+          },
+          {
+            "name": "tile",
+            "deprecated": null
+          },
+          {
+            "name": "tile-label",
+            "deprecated": null
+          },
+          {
+            "name": "tooltip",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-typing-indicator",
       "family": "conversation",
       "classModule": "src/components/conversation/typing-indicator/typing-indicator.class.ts",

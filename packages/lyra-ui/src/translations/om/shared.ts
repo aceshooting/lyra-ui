@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Mulʼata giraafii feʼuun hin dandaʼamne.',
   graphSourceRecordMissing: 'Galmeen giraafii kun hin jiru.',
   notInCatalog: 'galmee keessa hin jiru',
+  chartLegend: 'Ibsa mallattoolee chaartii',
   resetZoom: 'Guddisuu deebisi',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} dabalataa agarsiisi',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'hin jijjiiramne',
   chartSummary: '{label}: gatii {count}, daangaa {min} hanga {max}, adeemsa {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Odeeffannoo chaartii',
   chartPreparedSummary: 'Cuunfaa hubannoowwan sirrii {validCount} ({invalidCount} sirrii hin taane); {displayedCount} agarsiifamaniiru.',
   chartPreparedUnavailable: 'Daataan chaartii qophaaʼe hin jiru yookaan chaartii kanaan wal hin simu.',
   chart: 'Chaartii',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Madda deetaa kanaaf barbaaduun hin danda\'amu.',
   sourceSelectionLoading: 'Wantoonni filataman feʼamaa jiru…',
   sourceSelectionFailed: 'Wantoota filataman feʼuun hin dandaʼamne.',
+  chartInputLimit: 'Daangaan galtee waan gaʼameef daataan chaartii tokko tokko hafee jira. Gatiiwwan hafan bakka buusuuf tuuta daataa xiqqaa ykn dursee walitti qabame kenni.',
   catalogPickerInputLimit: 'Daangaan galtee waan gaʼameef galmeewwan kaataalogii tokko tokko hafaniiru.',
   tagFacetLimit: {
     one: '+{count} mallattoolee dabalataa',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Tarreen bakka isaa buʼee agarsiifameera.',
   largeDataInvalid: 'Daataan agarsiifamuu hin dandaʼu sababni {column} sirrii miti.',
   largeDataLimit: 'Daataan agarsiifamuu hin dandaʼu sababni daangaa {limit} caalu.',
+  chart3dName: 'Maqaa',
 };
 
 registerLyraLocale('om', strings);

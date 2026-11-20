@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Il-veduta tal-graff ma setgħetx titgħabba.',
   graphSourceRecordMissing: 'Dan ir-rekord tal-graff mhuwiex disponibbli.',
   notInCatalog: 'mhux fil-katalgu',
+  chartLegend: 'Ċavetta taċ-ċart',
   resetZoom: 'Irrisettja ż-żum',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Uri {count} oħra',
@@ -116,6 +117,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'stabbli',
   chartSummary: '{label}: {count} valuri, firxa minn {min} sa {max}, tendenza {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data taċ-ċart',
   chartPreparedSummary: 'Sommarju ta’ {validCount} osservazzjonijiet validi ({invalidCount} invalidi); {displayedCount} murija.',
   chartPreparedUnavailable: 'Id-data ppreparata taċ-ċart mhix disponibbli jew mhix kompatibbli ma’ din iċ-ċart.',
   chart: 'Ċart',
@@ -191,6 +193,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'It-tfittxija mhix disponibbli għal dan is-sors tad-data.',
   sourceSelectionLoading: 'Qed jitgħabbew l-elementi magħżula…',
   sourceSelectionFailed: 'L-elementi magħżula ma setgħux jitgħabbew.',
+  chartInputLimit: 'Parti mid-data taċ-ċart tħalliet barra għax intlaħaq limitu tal-input. Ipprovdi sett ta’ data iżgħar jew aggregat minn qabel biex tirrappreżenta l-valuri li tħallew barra.',
   catalogPickerInputLimit: 'Xi entrati tal-katalgu tħallew barra għax intlaħaq limitu tal-input.',
   tagFacetLimit: {
     one: '+{count} tikketta oħra',
@@ -209,6 +212,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Minflok qed tintwera lista.',
   largeDataInvalid: 'Id-data ma tistax tintwera għax {column} mhuwiex validu.',
   largeDataLimit: 'Id-data ma tistax tintwera għax taqbeż il-limitu ta’ {limit}.',
+  chart3dName: 'Tikketta',
 };
 
 registerLyraLocale('mt', strings);

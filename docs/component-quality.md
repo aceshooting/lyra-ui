@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **311**
-- Exact same-test/same-instance populated or open axe evidence: **310**
+- Public tags: **312**
+- Exact same-test/same-instance populated or open axe evidence: **311**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -358,6 +358,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-transcript-feed`](component-integration.md#lr-transcript-feed) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
 | [`lr-tree`](component-integration.md#lr-tree) | stable | automated | source signal | source signal | source signal | source signal | configured CI | client-render | not enrolled | N/A | source signal | not enrolled | not verified | measured |
 | [`lr-tree-item`](component-integration.md#lr-tree-item) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | complete | N/A | source signal | not enrolled | not verified | measured |
+| [`lr-treemap`](component-integration.md#lr-treemap) | experimental | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-typing-indicator`](component-integration.md#lr-typing-indicator) | stable | automated | N/A | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-unit-picker`](component-integration.md#lr-unit-picker) | experimental | automated | source signal | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
 | [`lr-usage-badge`](component-integration.md#lr-usage-badge) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |

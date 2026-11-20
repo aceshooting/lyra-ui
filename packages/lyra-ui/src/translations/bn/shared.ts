@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'গ্রাফের দৃশ্য লোড করা যায়নি।',
   graphSourceRecordMissing: 'গ্রাফের এই রেকর্ড উপলব্ধ নেই।',
   notInCatalog: 'ক্যাটালগে নেই',
+  chartLegend: 'চার্টের লেজেন্ড',
   resetZoom: 'জুম আগের অবস্থায় ফেরান',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} আরও {count}টি দেখান',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'সমতল',
   chartSummary: '{label}: {count}টি মান, পরিসর {min} থেকে {max}, প্রবণতা {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'চার্টের ডেটা',
   chartPreparedSummary: '{validCount}টি বৈধ পর্যবেক্ষণের সারাংশ ({invalidCount}টি অবৈধ); {displayedCount}টি দেখানো হয়েছে।',
   chartPreparedUnavailable: 'প্রস্তুত করা চার্টের তথ্য পাওয়া যাচ্ছে না বা এই চার্টের সঙ্গে সামঞ্জস্যপূর্ণ নয়।',
   chart: 'চার্ট',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'এই তথ্য উৎসে অনুসন্ধান উপলব্ধ নয়।',
   sourceSelectionLoading: 'নির্বাচিত আইটেম লোড হচ্ছে…',
   sourceSelectionFailed: 'নির্বাচিত আইটেম লোড করা যায়নি।',
+  chartInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় চার্টের কিছু তথ্য বাদ দেওয়া হয়েছে। বাদ পড়া মানগুলি দেখাতে আরও ছোট বা আগে থেকে একত্রিত করা ডেটাসেট দিন।',
   catalogPickerInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় ক্যাটালগের কিছু এন্ট্রি বাদ দেওয়া হয়েছে।',
   tagFacetLimit: {
     one: 'আরও ট্যাগ: +{count}',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'এর পরিবর্তে একটি তালিকা দেখানো হচ্ছে।',
   largeDataInvalid: '{column} অবৈধ হওয়ায় ডেটা দেখানো যাচ্ছে না।',
   largeDataLimit: 'ডেটা {limit} সীমা ছাড়িয়ে যাওয়ায় দেখানো যাচ্ছে না।',
+  chart3dName: 'লেবেল',
 };
 
 registerLyraLocale('bn', strings);

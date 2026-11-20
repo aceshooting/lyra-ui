@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ಗ್ರಾಫ್ ನೋಟವನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   graphSourceRecordMissing: 'ಈ ಗ್ರಾಫ್ ದಾಖಲೆ ಲಭ್ಯವಿಲ್ಲ.',
   notInCatalog: 'ಪಟ್ಟಿಯಲ್ಲಿ ಇಲ್ಲ',
+  chartLegend: 'ಚಾರ್ಟ್‌ನ ಲೆಜೆಂಡ್',
   resetZoom: 'ಜೂಮ್ ಮರುಹೊಂದಿಸಿ',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} ಇನ್ನೂ {count} ತೋರಿಸಿ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ಸ್ಥಿರವಾಗಿದೆ',
   chartSummary: '{label}: {count} ಮೌಲ್ಯಗಳು, ವ್ಯಾಪ್ತಿ {min}ರಿಂದ {max}ವರೆಗೆ, {trend} ಪ್ರವೃತ್ತಿ',
   chartSummarySeparator: '। ',
+  chartData: 'ಚಾರ್ಟ್ ಡೇಟಾ',
   chartPreparedSummary: '{validCount} ಮಾನ್ಯ ಅವಲೋಕನಗಳ ಸಾರಾಂಶ ({invalidCount} ಅಮಾನ್ಯ); {displayedCount} ತೋರಿಸಲಾಗಿದೆ.',
   chartPreparedUnavailable: 'ಸಿದ್ಧಪಡಿಸಿದ ಚಾರ್ಟ್ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ ಅಥವಾ ಈ ಚಾರ್ಟ್‌ಗೆ ಹೊಂದಿಕೆಯಾಗುವುದಿಲ್ಲ.',
   chart: 'ಚಾರ್ಟ್',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ಈ ಡೇಟಾ ಮೂಲಕ್ಕೆ ಹುಡುಕಾಟ ಲಭ್ಯವಿಲ್ಲ.',
   sourceSelectionLoading: 'ಆಯ್ಕೆಮಾಡಿದ ಐಟಂಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…',
   sourceSelectionFailed: 'ಆಯ್ಕೆಮಾಡಿದ ಐಟಂಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
+  chartInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಚಾರ್ಟ್‌ನ ಕೆಲವು ಡೇಟಾವನ್ನು ಬಿಡಲಾಗಿದೆ. ಬಿಟ್ಟ ಮೌಲ್ಯಗಳನ್ನು ಪ್ರತಿನಿಧಿಸಲು ಚಿಕ್ಕದಾದ ಅಥವಾ ಮೊದಲೇ ಒಟ್ಟುಗೂಡಿಸಿದ ಡೇಟಾಸೆಟ್ ನೀಡಿ.',
   catalogPickerInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕ್ಯಾಟಲಾಗ್‌ನ ಕೆಲವು ನಮೂದುಗಳನ್ನು ಬಿಡಲಾಗಿದೆ.',
   tagFacetLimit: {
     one: 'ಹೆಚ್ಚುವರಿ ಟ್ಯಾಗ್‌ಗಳು: +{count}',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ಬದಲಿಗೆ ಪಟ್ಟಿಯನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
   largeDataInvalid: '{column} ಅಮಾನ್ಯವಾಗಿರುವುದರಿಂದ ಡೇಟಾವನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
   largeDataLimit: 'ಡೇಟಾ {limit} ಮಿತಿಯನ್ನು ಮೀರುವುದರಿಂದ ಅದನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+  chart3dName: 'ಲೇಬಲ್',
 };
 
 registerLyraLocale('kn', strings);

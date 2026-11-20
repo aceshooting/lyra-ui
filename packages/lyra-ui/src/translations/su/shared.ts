@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Témbong graf teu bisa dimuat.',
   graphSourceRecordMissing: 'Rékaman graf ieu teu sayaga.',
   notInCatalog: 'teu aya dina katalog',
+  chartLegend: 'Pituduh lambang bagan',
   resetZoom: 'Reset zum',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Témbongkeun {count} deui',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'datar',
   chartSummary: '{label}: {count} nilai, rentang {min} nepi ka {max}, tren {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data bagan',
   chartPreparedSummary: 'Ringkesan tina {validCount} observasi sah ({invalidCount} teu sah); {displayedCount} ditémbongkeun.',
   chartPreparedUnavailable: 'Data bagan anu geus disiapkeun teu sayogi atawa teu cocog jeung bagan ieu.',
   chart: 'Bagan',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Pilarian teu sayaga pikeun sumber data ieu.',
   sourceSelectionLoading: 'Keur ngamuat item anu dipilih…',
   sourceSelectionFailed: 'Item anu dipilih teu tiasa dimuat.',
+  chartInputLimit: 'Sababaraha data grafik teu diasupkeun lantaran wates input geus kahontal. Pasihkeun kumpulan data nu leuwih leutik atawa geus diringkes saméméhna pikeun ngagambarkeun nilai nu teu diasupkeun.',
   catalogPickerInputLimit: 'Sababaraha éntri katalog teu diasupkeun lantaran wates input geus kahontal.',
   tagFacetLimit: {
     other: '+{count} tag deui',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Daptar dipintonkeun gaganti.',
   largeDataInvalid: 'Data teu bisa dipintonkeun sabab {column} teu valid.',
   largeDataLimit: 'Data teu bisa dipintonkeun sabab ngaleuwihan wates {limit}.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('su', strings);

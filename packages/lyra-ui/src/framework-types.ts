@@ -117,6 +117,7 @@ import type { LyraTimelineItem } from './components/data/timeline/timeline-item.
 import type { LyraTimeline, LyraTimelineEventMap } from './components/data/timeline/timeline.class.js';
 import type { LyraTreeItem, LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTree, LyraTreeEventMap } from './components/data/tree/tree.class.js';
+import type { LyraTreemap, LyraTreemapEventMap } from './components/data/treemap/treemap.class.js';
 import type { LyraWordCloud, LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
 import type { LyraButton, LyraButtonEventMap } from './components/forms/button/button.class.js';
 import type { LyraCheckboxGroup, LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.class.js';
@@ -14875,6 +14876,29 @@ export interface LyraComponentTypeMap {
       | '--lr-tree-toggle-size'
       | '--show-duration';
     attributeAliases: {};
+  };
+  'lr-treemap': {
+    element: LyraTreemap;
+    properties: LyraElementProperties<
+      LyraTreemap,
+      | 'dataTableToggle'
+      | 'description'
+      | 'label'
+      | 'loading'
+      | 'locale'
+      | 'nodes'
+      | 'strings'
+      | 'valueFormatter'
+      | 'withDataTable',
+      {}
+    >;
+    events: LyraTreemapEventMap;
+    eventNames:       | 'lr-datum-activate';
+    cssNames: never;
+    attributeAliases: {
+      'data-table-toggle'?: LyraTreemap['dataTableToggle'];
+      'with-data-table'?: LyraTreemap['withDataTable'];
+    };
   };
   'lr-typing-indicator': {
     element: LyraTypingIndicator;

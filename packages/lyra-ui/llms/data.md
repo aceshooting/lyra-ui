@@ -6162,3 +6162,67 @@ These named interfaces and helper signatures are available to typed integrations
 `lr-data-grid` publishes each server-data request through both `request` and `lr-request`.
 Both events carry equivalent frozen `DataGridRequest` details with the same abort signal identity.
 Listen to either name to handle each request once.
+
+## `lr-treemap`
+
+Show how a total is divided among nested categories. The squarified SVG layout sizes tiles by
+weight, groups related tiles under their parent, and identifies top-level groups in the legend.
+Tile labels truncate or disappear when space is limited. The full label and formatted value are
+available through the tooltip, the tile's accessible name, and the data table.
+
+| Property | Attribute | Purpose |
+| --- | --- | --- |
+| `nodes` | — | Readonly array of `LyraTreemapNode` values. Assign a new array when the tree changes. |
+| `label` | `label` | Accessible chart name. A host `aria-label` takes precedence. |
+| `description` | `description` | Optional accessible chart description. |
+| `loading` | `loading` | Shows the loading state. Defaults to `false`. |
+| `withDataTable` | `with-data-table` | Shows the data table visually. Defaults to `false`. |
+| `dataTableToggle` | `data-table-toggle` | Adds a button to show or hide the table. Defaults to `false`. |
+| `valueFormatter` | — | Optional `(value: number) => string` used for displayed and accessible values. Formatting follows the effective locale by default. |
+
+Each `LyraTreemapNode` has an `id`, a `label`, and optional `value` and `children`.
+Use unique string IDs throughout the tree and positive finite weights for leaves. Branch
+weights are derived from their children. The table identifies descendants by their full path
+and remains available to assistive technology while visually collapsed. The chart displays up to
+1,000 tiles and table rows and shows a notice when it reaches a data or rendering limit.
+
+Tab enters the tile group. Left and Right move among siblings, following the reading direction.
+Down enters the first child and Up returns to the parent. Home and End move to the ends of the
+sibling list. A tile reports `lr-datum-activate` on click, Enter, or Space. The event bubbles
+through the shadow boundary and carries `{ id, label, value }` with the numeric weight.
+Hover or keyboard focus reveals the tooltip. Escape dismisses it.
+
+The legend and tiles use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+**CSS parts:** `base`, `plot`, `description`, `tile`, `tile-label`, `tooltip`, `legend`,
+`legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`, `empty`, `loading`,
+and `limit`.
+
+```html
+<lr-treemap id="usage" label="Infrastructure usage" data-table-toggle></lr-treemap>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-treemap.js';
+
+  const chart = document.querySelector('#usage');
+  chart.nodes = [
+    {
+      id: 'compute',
+      label: 'Compute',
+      children: [
+        { id: 'web', label: 'Web servers', value: 60 },
+        { id: 'batch', label: 'Batch processing', value: 30 },
+      ],
+    },
+    { id: 'storage', label: 'Storage', value: 10 },
+  ];
+  chart.valueFormatter = (value) => `${value} credits`;
+</script>
+```
+
+- **`components-data-treemap-treemap-contracts`** — Node types for hierarchical part-to-whole data.
+  Import `@aceshooting/lyra-ui/components/lr-treemap.js`.
+  `LyraTreemapNode {
+    readonly id: string;
+    readonly label: string;
+    readonly value?: number;
+    readonly children?: readonly LyraTreemapNode[];
+  }`

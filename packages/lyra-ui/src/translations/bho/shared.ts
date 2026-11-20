@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ग्राफ के दृश्य लोड ना हो सकल।',
   graphSourceRecordMissing: 'ई ग्राफ रिकॉर्ड उपलब्ध नइखे।',
   notInCatalog: 'सूची में नइखे',
+  chartLegend: 'चार्ट के निशान के मतलब',
   resetZoom: 'जूम फेर से सेट करीं',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} अउरी देखाईं',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'बराबर',
   chartSummary: '{label}: {count} मान, {min} से {max} तक दायरा, {trend} रुझान',
   chartSummarySeparator: '. ',
+  chartData: 'चार्ट के डाटा',
   chartPreparedSummary: '{validCount} मान्य अवलोकन के सारांश ({invalidCount} अमान्य); {displayedCount} देखावल गइल बा।',
   chartPreparedUnavailable: 'पहिले से तइयार चार्ट डेटा उपलब्ध नइखे भा एह चार्ट से मेल नइखे खात।',
   chart: 'चार्ट',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'एह डेटा स्रोत खातिर खोज उपलब्ध नइखे।',
   sourceSelectionLoading: 'चुनल आइटम लोड हो रहल बा…',
   sourceSelectionFailed: 'चुनल आइटम लोड ना हो सकल।',
+  chartInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से चार्ट के कुछ डेटा छोड़ दिहल गइल बा। छूटल मान देखावे खातिर छोट भा पहिले से समेकित डेटा सेट दीं।',
   catalogPickerInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कैटलॉग के कुछ प्रविष्टि छोड़ दिहल गइल बा।',
   tagFacetLimit: {
     one: '+{count} गो अउरी टैग',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'एकरा बदला में एगो सूची देखावल जा रहल बा।',
   largeDataInvalid: 'डेटा ना देखावल जा सकेला काहेकि {column} अमान्य बा।',
   largeDataLimit: 'डेटा ना देखावल जा सकेला काहेकि ई {limit} के सीमा से ज्यादा बा।',
+  chart3dName: 'लेबल',
 };
 
 registerLyraLocale('bho', strings);

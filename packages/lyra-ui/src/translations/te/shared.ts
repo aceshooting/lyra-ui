@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'గ్రాఫ్ వీక్షణను లోడ్ చేయలేకపోయాము.',
   graphSourceRecordMissing: 'ఈ గ్రాఫ్ రికార్డు అందుబాటులో లేదు.',
   notInCatalog: 'జాబితాలో లేదు',
+  chartLegend: 'చార్ట్ సూచిక',
   resetZoom: 'జూమ్‌ను మునుపటి స్థితికి మార్చండి',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} మరిన్ని {count} చూపించండి',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'స్థిరంగా ఉంది',
   chartSummary: '{label}: {count} విలువలు, పరిధి {min} నుంచి {max} వరకు, {trend} ధోరణి',
   chartSummarySeparator: '. ',
+  chartData: 'చార్ట్ డేటా',
   chartPreparedSummary: '{validCount} చెల్లుబాటు అయ్యే పరిశీలనల సారాంశం ({invalidCount} చెల్లనివి); {displayedCount} చూపబడ్డాయి.',
   chartPreparedUnavailable: 'సిద్ధం చేసిన చార్ట్ డేటా అందుబాటులో లేదు లేదా ఈ చార్ట్‌కు అనుకూలంగా లేదు.',
   chart: 'చార్ట్',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ఈ డేటా మూలానికి శోధన అందుబాటులో లేదు.',
   sourceSelectionLoading: 'ఎంచుకున్న అంశాలు లోడ్ అవుతున్నాయి…',
   sourceSelectionFailed: 'ఎంచుకున్న అంశాలను లోడ్ చేయడం సాధ్యపడలేదు.',
+  chartInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొంత చార్ట్ డేటా వదిలివేయబడింది. వదిలివేసిన విలువలను సూచించడానికి చిన్న లేదా ముందుగానే సమీకరించిన డేటాసెట్‌ను అందించండి.',
   catalogPickerInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొన్ని కేటలాగ్ నమోదులు వదిలివేయబడ్డాయి.',
   tagFacetLimit: {
     one: '+{count} మరో ట్యాగ్',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'బదులుగా జాబితా చూపబడుతోంది.',
   largeDataInvalid: '{column} చెల్లనిది కావడంతో డేటాను ప్రదర్శించలేము.',
   largeDataLimit: 'డేటా {limit} పరిమితిని మించినందున దానిని ప్రదర్శించలేము.',
+  chart3dName: 'లేబుల్',
 };
 
 registerLyraLocale('te', strings);

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Grafvisinga kunne ikkje lastast inn.',
   graphSourceRecordMissing: 'Denne grafoppføringa er utilgjengeleg.',
   notInCatalog: 'ikkje i katalogen',
+  chartLegend: 'Diagramforklaring',
   resetZoom: 'Tilbakestill zoom',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Vis {count} til',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'flat',
   chartSummary: '{label}: {count} verdiar, område {min} til {max}, trend: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Diagramdata',
   chartPreparedSummary: 'Samandrag av {validCount} gyldige observasjonar ({invalidCount} ugyldige); {displayedCount} blir viste.',
   chartPreparedUnavailable: 'Førebudde diagramdata er utilgjengelege eller ikkje kompatible med dette diagrammet.',
   chart: 'Diagram',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Søk er ikkje tilgjengeleg for denne datakjelda.',
   sourceSelectionLoading: 'Lastar inn valde element…',
   sourceSelectionFailed: 'Dei valde elementa kunne ikkje lastast inn.',
+  chartInputLimit: 'Nokre diagramdata vart utelatne fordi ei inndatagrense vart nådd. Oppgje eit mindre eller førehandsaggregert datasett for å representere dei utelatne verdiane.',
   catalogPickerInputLimit: 'Nokre katalogoppføringar vart utelatne fordi ei inndatagrense vart nådd.',
   tagFacetLimit: {
     one: '+{count} merkelapp til',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Ei liste blir vist i staden.',
   largeDataInvalid: 'Dataa kan ikkje visast fordi {column} er ugyldig.',
   largeDataLimit: 'Dataa kan ikkje visast fordi dei overskrid grensa på {limit}.',
+  chart3dName: 'Etikett',
 };
 
 registerLyraLocale('nn', strings);

@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: '그래프 보기를 불러올 수 없습니다.',
   graphSourceRecordMissing: '이 그래프 레코드를 사용할 수 없습니다.',
   notInCatalog: '카탈로그에 없음',
+  chartLegend: '차트 범례',
   resetZoom: '확대축소 초기화',
   showMoreCollapsed: '+ {count}',
   showMoreOverflowLabel: '{visible} {count} 더 보기',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: '변화 없음',
   chartSummary: '{label}: 값 {count}개, 범위 {min}~{max}, 추세 {trend}',
   chartSummarySeparator: '. ',
+  chartData: '차트',
   chartPreparedSummary: '유효한 관측값 {validCount}개의 요약(유효하지 않은 값 {invalidCount}개). {displayedCount}개가 표시됩니다.',
   chartPreparedUnavailable: '준비된 차트 데이터를 사용할 수 없거나 이 차트와 호환되지 않습니다.',
   chart: '차트',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: '이 데이터 소스에서는 검색을 사용할 수 없습니다.',
   sourceSelectionLoading: '선택한 항목 로드 중…',
   sourceSelectionFailed: '선택한 항목을 로드할 수 없습니다.',
+  chartInputLimit: '입력 한도에 도달하여 일부 차트 데이터가 생략되었습니다. 생략된 값을 나타내려면 더 작거나 미리 집계된 데이터 세트를 제공하세요.',
   catalogPickerInputLimit: '입력 한도에 도달하여 일부 카탈로그 항목이 생략되었습니다.',
   tagFacetLimit: {
     other: '+{count}개 추가 태그',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '대신 목록을 표시합니다.',
   largeDataInvalid: '{column}이(가) 올바르지 않아 데이터를 표시할 수 없습니다.',
   largeDataLimit: '데이터가 {limit} 한도를 초과하여 표시할 수 없습니다.',
+  chart3dName: '레이블',
 };
 
 registerLyraLocale('ko', strings);

@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'A kò lè ṣàkójọ ìwòye gráfù.',
   graphSourceRecordMissing: 'Àkọsílẹ̀ gráfù yìí kò sí.',
   notInCatalog: 'kò sí nínú kátálọ́ọ̀gù',
+  chartLegend: 'Àlàyé àwọn àmì àwòrán ìṣirò',
   resetZoom: 'Tún ìfẹ̀ ṣe',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Fi {count} sí i hàn',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'Kò yí padà',
   chartSummary: '{label}: iye {count}, ààlà {min} sí {max}, àṣà {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Dátà àwòrán',
   chartPreparedSummary: 'Àkótán àwọn àkíyèsí tó bófin mu {validCount} ({invalidCount} tí kò bófin mu); {displayedCount} ni a fi hàn.',
   chartPreparedUnavailable: 'Dátà àwòrán ìṣirò tí a ti pèsè kò sí tàbí kò bá àwòrán yìí mu.',
   chart: 'Àwòrán ìṣirò',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Ìṣàwárí kò sí fún orísun dátà yìí.',
   sourceSelectionLoading: 'A ń gbé àwọn ohun tí a yàn wọlé…',
   sourceSelectionFailed: 'Kò ṣeé ṣe láti gbé àwọn ohun tí a yàn wọlé.',
+  chartInputLimit: 'A fi díẹ̀ lára dátà àwòrán sílẹ̀ nítorí pé a ti dé ààlà ìwọlé. Pèsè àkójọpọ̀ dátà tó kéré sí i tàbí èyí tí a ti ṣàkópọ̀ tẹ́lẹ̀ láti ṣojú àwọn iye tí a fi sílẹ̀.',
   catalogPickerInputLimit: 'A fi díẹ̀ lára àwọn àkọsílẹ̀ àtòjọ sílẹ̀ nítorí pé a ti dé ààlà ìwọlé.',
   tagFacetLimit: {
     other: '+{count} àmì sí i',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'A ń ṣàfihàn àtòjọ kan dípò rẹ̀.',
   largeDataInvalid: 'A kò lè ṣàfihàn data náà nítorí pé {column} kò tọ́.',
   largeDataLimit: 'A kò lè ṣàfihàn data náà nítorí pé ó kọjá ààlà {limit}.',
+  chart3dName: 'Àmì',
 };
 
 registerLyraLocale('yo', strings);

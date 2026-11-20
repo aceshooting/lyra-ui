@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Mwonekano wa grafu haukuweza kupakiwa.',
   graphSourceRecordMissing: 'Rekodi hii ya grafu haipatikani.',
   notInCatalog: 'hakipo kwenye orodha',
+  chartLegend: 'Ufafanuzi wa alama za chati',
   resetZoom: 'Weka ukuzaji upya',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Onyesha {count} zaidi',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'tambarare',
   chartSummary: '{label}: thamani {count}, masafa {min} hadi {max}, mwelekeo {trend}',
   chartSummarySeparator: '; ',
+  chartData: 'Data ya chati',
   chartPreparedSummary: 'Muhtasari wa uchunguzi halali {validCount} ({invalidCount} batili); {displayedCount} umeonyeshwa.',
   chartPreparedUnavailable: 'Data ya chati iliyoandaliwa haipatikani au haioani na chati hii.',
   chart: 'Chati',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Utafutaji haupatikani kwa chanzo hiki cha data.',
   sourceSelectionLoading: 'Inapakia vipengee vilivyochaguliwa…',
   sourceSelectionFailed: 'Vipengee vilivyochaguliwa havikuweza kupakiwa.',
+  chartInputLimit: 'Baadhi ya data ya chati imeachwa kwa sababu kikomo cha ingizo kimefikiwa. Toa mkusanyiko mdogo wa data au uliojumlishwa mapema ili kuwakilisha thamani zilizoachwa.',
   catalogPickerInputLimit: 'Baadhi ya maingizo ya katalogi yameachwa kwa sababu kikomo cha ingizo kimefikiwa.',
   tagFacetLimit: {
     one: '+{count} lebo zaidi',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Orodha inaonyeshwa badala yake.',
   largeDataInvalid: 'Data haiwezi kuonyeshwa kwa sababu {column} si halali.',
   largeDataLimit: 'Data haiwezi kuonyeshwa kwa sababu inazidi kikomo cha {limit}.',
+  chart3dName: 'Lebo',
 };
 
 registerLyraLocale('sw', strings);

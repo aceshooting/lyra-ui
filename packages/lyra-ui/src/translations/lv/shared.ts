@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Neizdevās ielādēt grafa skatu.',
   graphSourceRecordMissing: 'Šis grafa ieraksts nav pieejams.',
   notInCatalog: 'nav katalogā',
+  chartLegend: 'Diagrammas apzīmējumi',
   resetZoom: 'Atiestatīt tālummaiņu',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Rādīt vēl {count}',
@@ -104,6 +105,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'nemainīga',
   chartSummary: '{label}: vērtības: {count}, diapazons no {min} līdz {max}, {trend} tendence',
   chartSummarySeparator: '. ',
+  chartData: 'Diagrammas dati',
   chartPreparedSummary: 'Kopsavilkums: derīgi novērojumi: {validCount} (nederīgi: {invalidCount}); attēloti: {displayedCount}.',
   chartPreparedUnavailable: 'Sagatavotie diagrammas dati nav pieejami vai nav saderīgi ar šo diagrammu.',
   chart: 'Diagramma',
@@ -177,6 +179,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Šim datu avotam meklēšana nav pieejama.',
   sourceSelectionLoading: 'Ielādē atlasītos vienumus…',
   sourceSelectionFailed: 'Neizdevās ielādēt atlasītos vienumus.',
+  chartInputLimit: 'Daži diagrammas dati tika izlaisti, jo tika sasniegts ievades ierobežojums. Lai attēlotu izlaistās vērtības, norādiet mazāku vai iepriekš apkopotu datu kopu.',
   catalogPickerInputLimit: 'Daži kataloga ieraksti tika izlaisti, jo tika sasniegts ievades ierobežojums.',
   tagFacetLimit: {
     zero: '+{count} citi tagi',
@@ -193,6 +196,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Tā vietā tiek rādīts saraksts.',
   largeDataInvalid: 'Datus nevar attēlot, jo {column} nav derīgs.',
   largeDataLimit: 'Datus nevar attēlot, jo tie pārsniedz ierobežojumu {limit}.',
+  chart3dName: 'Etiķete',
 };
 
 registerLyraLocale('lv', strings);

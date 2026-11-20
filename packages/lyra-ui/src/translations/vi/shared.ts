@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Không thể tải chế độ xem đồ thị.',
   graphSourceRecordMissing: 'Bản ghi đồ thị này không khả dụng.',
   notInCatalog: 'không có trong danh mục',
+  chartLegend: 'Chú giải biểu đồ',
   resetZoom: 'Đặt lại mức thu phóng',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Hiển thị thêm {count} mục',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'đi ngang',
   chartSummary: '{label}: {count} giá trị, khoảng {min} đến {max}, xu hướng {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Dữ liệu biểu đồ',
   chartPreparedSummary: 'Tóm tắt {validCount} quan sát hợp lệ ({invalidCount} không hợp lệ); hiển thị {displayedCount}.',
   chartPreparedUnavailable: 'Dữ liệu biểu đồ đã chuẩn bị không có sẵn hoặc không tương thích với biểu đồ này.',
   chart: 'Biểu đồ',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Nguồn dữ liệu này không hỗ trợ tìm kiếm.',
   sourceSelectionLoading: 'Đang tải các mục đã chọn…',
   sourceSelectionFailed: 'Không thể tải các mục đã chọn.',
+  chartInputLimit: 'Một số dữ liệu biểu đồ đã bị bỏ qua vì đạt giới hạn đầu vào. Hãy cung cấp tập dữ liệu nhỏ hơn hoặc đã được tổng hợp trước để biểu diễn các giá trị bị bỏ qua.',
   catalogPickerInputLimit: 'Một số mục trong danh mục đã bị bỏ qua vì đạt giới hạn đầu vào.',
   tagFacetLimit: {
     other: '+{count} thẻ nữa',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Một danh sách được hiển thị thay thế.',
   largeDataInvalid: 'Không thể hiển thị dữ liệu vì {column} không hợp lệ.',
   largeDataLimit: 'Không thể hiển thị dữ liệu vì vượt quá giới hạn {limit}.',
+  chart3dName: 'Nhãn',
 };
 
 registerLyraLocale('vi', strings);

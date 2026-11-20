@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: '无法加载图视图。',
   graphSourceRecordMissing: '此图记录不可用。',
   notInCatalog: '不在目录中',
+  chartLegend: '图表图例',
   resetZoom: '重置缩放',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} 再显示{count}个',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: '持平',
   chartSummary: '{label}：{count}个值，范围从{min}到{max}，趋势{trend}',
   chartSummarySeparator: '。',
+  chartData: '图表数据',
   chartPreparedSummary: '{validCount} 个有效观测值的摘要（{invalidCount} 个无效）；显示 {displayedCount} 个。',
   chartPreparedUnavailable: '预处理的图表数据不可用或与此图表不兼容。',
   chart: '图表',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: '此数据源不支持搜索。',
   sourceSelectionLoading: '正在加载已选择的项目…',
   sourceSelectionFailed: '无法加载已选择的项目。',
+  chartInputLimit: '由于达到输入限制，部分图表数据已被省略。请提供较小或预先汇总的数据集，以呈现被省略的值。',
   catalogPickerInputLimit: '由于达到输入限制，部分目录条目已被省略。',
   tagFacetLimit: {
     other: '+{count} 个标签',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '已改为显示列表。',
   largeDataInvalid: '无法显示数据，因为 {column} 无效。',
   largeDataLimit: '无法显示数据，因为数据超过了 {limit} 的上限。',
+  chart3dName: '标签',
 };
 
 registerLyraLocale('zh-CN', strings);

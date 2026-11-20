@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'گراف دا منظر لوڈ نئیں ہو سکیا۔',
   graphSourceRecordMissing: 'ایہ گراف ریکارڈ دستیاب نئیں۔',
   notInCatalog: 'فہرست وچ موجود نئیں',
+  chartLegend: 'چارٹ دیاں نشانیاں دی وضاحت',
   resetZoom: 'زوم مڑ بحال کرو',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} ہور وکھاؤ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ہموار',
   chartSummary: '{label}: {count} قدراں، حد {min} توں {max}، {trend} رجحان',
   chartSummarySeparator: '. ',
+  chartData: 'چارٹ ڈیٹا',
   chartPreparedSummary: '{validCount} درست مشاہدیاں دا خلاصہ ({invalidCount} غلط)؛ {displayedCount} وکھائے گئے نیں۔',
   chartPreparedUnavailable: 'تیار کیتا چارٹ ڈیٹا دستیاب نئیں یا ایس چارٹ نال میل نئیں کھاندا۔',
   chart: 'چارٹ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'اِس ڈیٹا ماخذ لئی تلاش دستیاب نئیں اے۔',
   sourceSelectionLoading: 'چنیاں چیزاں لوڈ ہو رہیاں نیں…',
   sourceSelectionFailed: 'چنیاں چیزاں لوڈ نئیں ہو سکیاں۔',
+  chartInputLimit: 'اِن پُٹ دی حد پوری ہون کارن چارٹ دا کجھ ڈیٹا چھڈ دتا گیا اے۔ چھڈیاں قدراں نوں وکھاؤن لئی چھوٹا یا پہلاں توں خلاصہ کیتا ڈیٹاسیٹ دیو۔',
   catalogPickerInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کیٹالاگ دے کجھ اندراج چھڈ دتے گئے نیں۔',
   tagFacetLimit: {
     one: '+{count} ہور ٹیگ',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'اس دی تھاں اک فہرست وکھائی جا رہی اے۔',
   largeDataInvalid: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے {column} غلط اے۔',
   largeDataLimit: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے ایہ {limit} دی حد توں ودھ اے۔',
+  chart3dName: 'لیبل',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

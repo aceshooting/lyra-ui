@@ -311,6 +311,7 @@
     "unit-picker": "forms",
     "signature-pad": "forms",
     "chart-3d": "charts",
-    "model-viewer": "viewers"
+    "model-viewer": "viewers",
+    "treemap": "data"
   }
 }

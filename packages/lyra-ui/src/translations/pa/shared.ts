@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ਗ੍ਰਾਫ਼ ਦ੍ਰਿਸ਼ ਲੋਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।',
   graphSourceRecordMissing: 'ਇਹ ਗ੍ਰਾਫ਼ ਰਿਕਾਰਡ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
   notInCatalog: 'ਕੈਟਾਲਾਗ ਵਿੱਚ ਨਹੀਂ',
+  chartLegend: 'ਚਾਰਟ ਦਾ ਲੈਜੈਂਡ',
   resetZoom: 'ਜ਼ੂਮ ਮੁੜ ਸੈੱਟ ਕਰੋ',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} ਹੋਰ {count} ਦਿਖਾਓ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ਸਥਿਰ',
   chartSummary: '{label}: {count} ਮੁੱਲ, ਹੱਦ {min} ਤੋਂ {max}, {trend} ਰੁਝਾਨ',
   chartSummarySeparator: '. ',
+  chartData: 'ਚਾਰਟ ਡਾਟਾ',
   chartPreparedSummary: '{validCount} ਵੈਧ ਨਿਰੀਖਣਾਂ ਦਾ ਸਾਰ ({invalidCount} ਅਵੈਧ); {displayedCount} ਦਿਖਾਏ ਗਏ ਹਨ।',
   chartPreparedUnavailable: 'ਤਿਆਰ ਕੀਤਾ ਚਾਰਟ ਡਾਟਾ ਉਪਲਬਧ ਨਹੀਂ ਹੈ ਜਾਂ ਇਸ ਚਾਰਟ ਨਾਲ ਅਨੁਕੂਲ ਨਹੀਂ ਹੈ।',
   chart: 'ਚਾਰਟ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ਇਸ ਡਾਟਾ ਸਰੋਤ ਲਈ ਖੋਜ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
   sourceSelectionLoading: 'ਚੁਣੀਆਂ ਆਈਟਮਾਂ ਲੋਡ ਹੋ ਰਹੀਆਂ ਹਨ…',
   sourceSelectionFailed: 'ਚੁਣੀਆਂ ਆਈਟਮਾਂ ਲੋਡ ਨਹੀਂ ਕੀਤੀਆਂ ਜਾ ਸਕੀਆਂ।',
+  chartInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਚਾਰਟ ਦਾ ਕੁਝ ਡਾਟਾ ਛੱਡ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਛੱਡੇ ਗਏ ਮੁੱਲਾਂ ਨੂੰ ਦਰਸਾਉਣ ਲਈ ਛੋਟਾ ਜਾਂ ਪਹਿਲਾਂ ਤੋਂ ਜੋੜ ਕੇ ਸੰਖੇਪ ਕੀਤਾ ਡਾਟਾਸੈੱਟ ਦਿਓ।',
   catalogPickerInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੈਟਾਲਾਗ ਦੀਆਂ ਕੁਝ ਐਂਟਰੀਆਂ ਛੱਡ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।',
   tagFacetLimit: {
     one: '+{count} ਹੋਰ ਟੈਗ',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ਇਸ ਦੀ ਬਜਾਏ ਸੂਚੀ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।',
   largeDataInvalid: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ {column} ਅਵੈਧ ਹੈ।',
   largeDataLimit: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ ਇਹ {limit} ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ।',
+  chart3dName: 'ਲੇਬਲ',
 };
 
 registerLyraLocale('pa', strings);

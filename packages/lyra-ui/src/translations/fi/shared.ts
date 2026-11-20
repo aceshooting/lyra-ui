@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graafinäkymää ei voitu ladata.',
   graphSourceRecordMissing: 'Tämä graafin tietue ei ole saatavilla.',
   notInCatalog: 'ei luettelossa',
+  chartLegend: 'Kaavion selite',
   resetZoom: 'Palauta zoomaus',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Näytä {count} lisää',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'tasainen',
   chartSummary: '{label}: {count} arvoa, vaihteluväli {min}–{max}, trendi: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Kaavion tiedot',
   chartPreparedSummary: 'Havaintojen yhteenveto: kelvollisia {validCount}, virheellisiä {invalidCount}; näytetään {displayedCount}.',
   chartPreparedUnavailable: 'Valmisteltuja kaaviotietoja ei ole saatavilla tai ne eivät ole yhteensopivia tämän kaavion kanssa.',
   chart: 'Kaavio',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Haku ei ole käytettävissä tälle tietolähteelle.',
   sourceSelectionLoading: 'Ladataan valittuja kohteita…',
   sourceSelectionFailed: 'Valittujen kohteiden lataaminen epäonnistui.',
+  chartInputLimit: 'Osa kaavion tiedoista jätettiin pois syöterajan täyttymisen vuoksi. Anna pienempi tai ennalta koostettu tietojoukko, jotta pois jätetyt arvot voidaan esittää.',
   catalogPickerInputLimit: 'Osa luettelon merkinnöistä jätettiin pois syöterajan täyttymisen vuoksi.',
   tagFacetLimit: {
     one: 'Muut tunnisteet: +{count}',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Sen sijaan näytetään luettelo.',
   largeDataInvalid: 'Tietoja ei voi näyttää, koska {column} on virheellinen.',
   largeDataLimit: 'Tietoja ei voi näyttää, koska ne ylittävät rajan {limit}.',
+  chart3dName: 'Tunniste',
 };
 
 registerLyraLocale('fi', strings);

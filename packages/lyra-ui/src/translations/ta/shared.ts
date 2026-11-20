@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'வரைபடக் காட்சியை ஏற்ற முடியவில்லை.',
   graphSourceRecordMissing: 'இந்த வரைபடப் பதிவு கிடைக்கவில்லை.',
   notInCatalog: 'பட்டியலில் இல்லை',
+  chartLegend: 'விளக்கப்படக் குறியீட்டு விளக்கம்',
   resetZoom: 'பெரிதாக்கலை மீட்டமை',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} மேலும் {count} காட்டு',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'மாறவில்லை',
   chartSummary: '{label}: {count} மதிப்புகள், வரம்பு {min} முதல் {max} வரை, {trend} போக்கு',
   chartSummarySeparator: '. ',
+  chartData: 'விளக்கப்படத் தரவு',
   chartPreparedSummary: '{validCount} செல்லுபடியான கவனிப்புகளின் சுருக்கம் ({invalidCount} செல்லாதவை); {displayedCount} காட்டப்படுகின்றன.',
   chartPreparedUnavailable: 'தயாரிக்கப்பட்ட விளக்கப்படத் தரவு கிடைக்கவில்லை அல்லது இந்த விளக்கப்படத்துடன் பொருந்தவில்லை.',
   chart: 'விளக்கப்படம்',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'இந்தத் தரவு மூலத்திற்கு தேடல் கிடைக்கவில்லை.',
   sourceSelectionLoading: 'தேர்ந்தெடுக்கப்பட்ட உருப்படிகள் ஏற்றப்படுகின்றன…',
   sourceSelectionFailed: 'தேர்ந்தெடுக்கப்பட்ட உருப்படிகளை ஏற்ற முடியவில்லை.',
+  chartInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில விளக்கப்படத் தரவுகள் விடுபட்டுள்ளன. விடுபட்ட மதிப்புகளைக் குறிப்பிட சிறிய அல்லது முன்கூட்டியே தொகுக்கப்பட்ட தரவுத்தொகுப்பை வழங்கவும்.',
   catalogPickerInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில பட்டியல் பதிவுகள் விடுபட்டுள்ளன.',
   tagFacetLimit: {
     one: '+{count} கூடுதல் குறிச்சொல்',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'அதற்குப் பதிலாக பட்டியல் காட்டப்படுகிறது.',
   largeDataInvalid: '{column} தவறானது என்பதால் தரவைக் காட்ட முடியாது.',
   largeDataLimit: 'தரவு {limit} வரம்பை மீறுவதால் அதைக் காட்ட முடியாது.',
+  chart3dName: 'பெயர்',
 };
 
 registerLyraLocale('ta', strings);

@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Impossibile caricare la vista del grafo.',
   graphSourceRecordMissing: 'Questo record del grafo non è disponibile.',
   notInCatalog: 'non nel catalogo',
+  chartLegend: 'Legenda del grafico',
   resetZoom: 'Ripristina zoom',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Mostra altri {count}',
@@ -104,6 +105,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'stabile',
   chartSummary: '{label}: {count} valori, intervallo da {min} a {max}, tendenza {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Dati del grafico',
   chartPreparedSummary: 'Riepilogo di {validCount} osservazioni valide ({invalidCount} non valide); ne vengono visualizzate {displayedCount}.',
   chartPreparedUnavailable: 'I dati del grafico preparati non sono disponibili o non sono compatibili con questo grafico.',
   chart: 'Grafico',
@@ -177,6 +179,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'La ricerca non è disponibile per questa origine dati.',
   sourceSelectionLoading: 'Caricamento degli elementi selezionati…',
   sourceSelectionFailed: 'Impossibile caricare gli elementi selezionati.',
+  chartInputLimit: 'Alcuni dati del grafico sono stati omessi perché è stato raggiunto un limite di input. Fornire un insieme di dati più piccolo o aggregato in precedenza per rappresentare i valori omessi.',
   catalogPickerInputLimit: 'Alcune voci del catalogo sono state omesse perché è stato raggiunto un limite di input.',
   tagFacetLimit: {
     one: 'Altri tag: +{count}',
@@ -193,6 +196,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Viene mostrato invece un elenco.',
   largeDataInvalid: 'Impossibile visualizzare i dati perché {column} non è valido.',
   largeDataLimit: 'Impossibile visualizzare i dati perché superano il limite di {limit}.',
+  chart3dName: 'Etichetta',
 };
 
 registerLyraLocale('it', strings);

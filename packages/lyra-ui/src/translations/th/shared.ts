@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ไม่สามารถโหลดมุมมองกราฟได้',
   graphSourceRecordMissing: 'ระเบียนกราฟนี้ไม่พร้อมใช้งาน',
   notInCatalog: 'ไม่มีในแค็ตตาล็อก',
+  chartLegend: 'คำอธิบายสัญลักษณ์แผนภูมิ',
   resetZoom: 'รีเซ็ตการซูม',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} แสดงอีก {count} รายการ',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'คงที่',
   chartSummary: '{label}: {count} ค่า ช่วง {min} ถึง {max} แนวโน้ม {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'ข้อมูลแผนภูมิ',
   chartPreparedSummary: 'สรุปการสังเกตที่ใช้ได้ {validCount} รายการ (ใช้ไม่ได้ {invalidCount} รายการ) แสดง {displayedCount} รายการ',
   chartPreparedUnavailable: 'ข้อมูลแผนภูมิที่เตรียมไว้ไม่พร้อมใช้งานหรือไม่เข้ากันกับแผนภูมินี้',
   chart: 'แผนภูมิ',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'แหล่งข้อมูลนี้ไม่รองรับการค้นหา',
   sourceSelectionLoading: 'กำลังโหลดรายการที่เลือก…',
   sourceSelectionFailed: 'ไม่สามารถโหลดรายการที่เลือกได้',
+  chartInputLimit: 'ละข้อมูลแผนภูมิบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า โปรดใช้ชุดข้อมูลที่เล็กลงหรือสรุปรวมไว้ล่วงหน้าเพื่อแสดงค่าที่ถูกละไว้',
   catalogPickerInputLimit: 'ละรายการในแค็ตตาล็อกบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า',
   tagFacetLimit: {
     other: '+{count} แท็กเพิ่มเติม',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'กำลังแสดงรายการแทน',
   largeDataInvalid: 'ไม่สามารถแสดงข้อมูลได้เนื่องจาก {column} ไม่ถูกต้อง',
   largeDataLimit: 'ไม่สามารถแสดงข้อมูลได้เนื่องจากเกินขีดจำกัด {limit}',
+  chart3dName: 'ป้ายกำกับ',
 };
 
 registerLyraLocale('th', strings);

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'A gráfnézet betöltése nem sikerült.',
   graphSourceRecordMissing: 'Ez a gráfrekord nem érhető el.',
   notInCatalog: 'nincs a katalógusban',
+  chartLegend: 'A diagram jelmagyarázata',
   resetZoom: 'Nagyítás visszaállítása',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} További {count} megjelenítése',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'stagnáló',
   chartSummary: '{label}: {count} érték, tartomány: {min} – {max}, trend: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Diagramadatok',
   chartPreparedSummary: '{validCount} érvényes megfigyelés összefoglalója ({invalidCount} érvénytelen); megjelenítve: {displayedCount}.',
   chartPreparedUnavailable: 'Az előkészített diagramadatok nem érhetők el, vagy nem kompatibilisek ezzel a diagrammal.',
   chart: 'Diagram',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Ehhez az adatforráshoz nem érhető el keresés.',
   sourceSelectionLoading: 'A kijelölt elemek betöltése…',
   sourceSelectionFailed: 'A kijelölt elemek betöltése nem sikerült.',
+  chartInputLimit: 'A bemeneti korlát elérése miatt egyes diagramadatok kimaradtak. A kimaradt értékek megjelenítéséhez adjon meg kisebb vagy előzetesen összesített adathalmazt.',
   catalogPickerInputLimit: 'A bemeneti korlát elérése miatt egyes katalógusbejegyzések kimaradtak.',
   tagFacetLimit: {
     one: '+{count} további címke',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Helyette egy lista látható.',
   largeDataInvalid: 'Az adatok nem jeleníthetők meg, mert a(z) {column} érvénytelen.',
   largeDataLimit: 'Az adatok nem jeleníthetők meg, mert meghaladják a(z) {limit} korlátot.',
+  chart3dName: 'Címke',
 };
 
 registerLyraLocale('hu', strings);

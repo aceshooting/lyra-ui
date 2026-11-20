@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Níorbh fhéidir amharc an ghraif a lódáil.',
   graphSourceRecordMissing: 'Níl an taifead graif seo ar fáil.',
   notInCatalog: 'níl sé sa chatalóg',
+  chartLegend: 'Eochair na cairte',
   resetZoom: 'Athshocraigh an zúmáil',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Taispeáin {count} eile',
@@ -116,6 +117,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'cothrom',
   chartSummary: '{label}: {count} luach, raon {min} go {max}, treocht {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Sonraí na cairte',
   chartPreparedSummary: 'Achoimre ar {validCount} breathnóireacht bhailí ({invalidCount} neamhbhailí); {displayedCount} á dtaispeáint.',
   chartPreparedUnavailable: 'Níl sonraí ullmhaithe na cairte ar fáil nó níl siad comhoiriúnach leis an gcairt seo.',
   chart: 'Cairt',
@@ -191,6 +193,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Níl cuardach ar fáil don fhoinse sonraí seo.',
   sourceSelectionLoading: 'Míreanna roghnaithe á lódáil…',
   sourceSelectionFailed: 'Níorbh fhéidir na míreanna roghnaithe a lódáil.',
+  chartInputLimit: 'Fágadh cuid de shonraí na cairte ar lár mar gur sroicheadh teorainn ionchuir. Cuir tacar sonraí níos lú nó réamhchomhiomlánaithe ar fáil chun na luachanna a fágadh ar lár a léiriú.',
   catalogPickerInputLimit: 'Fágadh roinnt iontrálacha catalóige ar lár mar gur sroicheadh teorainn ionchuir.',
   tagFacetLimit: {
     one: '+{count} clib eile',
@@ -209,6 +212,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Liosta á thaispeáint ina ionad.',
   largeDataInvalid: 'Ní féidir na sonraí a thaispeáint mar go bhfuil {column} neamhbhailí.',
   largeDataLimit: 'Ní féidir na sonraí a thaispeáint mar go sáraíonn siad an teorainn ({limit}).',
+  chart3dName: 'Lipéad',
 };
 
 registerLyraLocale('ga', strings);

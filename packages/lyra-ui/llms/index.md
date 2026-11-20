@@ -2,7 +2,7 @@
 
 # Component index
 
-313 custom elements, grouped by the source family they live in.
+314 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -70,7 +70,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` — a form-associated measurement-unit identifier selector.
 - `lr-signature-pad` · lr-signature-pad.js · `experimental` since `26.0.0` — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
 
-## Data display, dashboards & flow canvas — `components/data/` (26)
+## Data display, dashboards & flow canvas — `components/data/` (27)
 
 - `lr-sparkline` · lr-sparkline.js · `stable` since `4.0.0` — a zero-dependency inline SVG trend chart.
 - `lr-stat` · lr-stat.js · `stable` since `4.0.0` — a KPI/stat card.
@@ -98,6 +98,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-document-library` · lr-document-library.js · `stable` since `4.1.0` — a searchable, filterable inventory of documents with versions, tags, owners, freshness, and bulk selection.
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with...
+- `lr-treemap` · lr-treemap.js · `experimental` since `unreleased` — A peer-free SVG treemap.
 
 ## Layout, navigation & structure — `components/layout/` (40)
 

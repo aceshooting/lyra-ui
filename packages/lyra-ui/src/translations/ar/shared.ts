@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'تعذّر تحميل عرض الرسم البياني.',
   graphSourceRecordMissing: 'سجل الرسم البياني هذا غير متاح.',
   notInCatalog: 'غير موجود في الكتالوج',
+  chartLegend: 'مفتاح المخطط',
   resetZoom: 'إعادة تعيين التكبير',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} عرض {count} أخرى',
@@ -122,6 +123,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'مستقر',
   chartSummary: '{label}: {count} قيمة، النطاق من {min} إلى {max}، الاتجاه {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'بيانات المخطط',
   chartPreparedSummary: 'ملخص {validCount} من المشاهدات الصالحة ({invalidCount} غير صالحة)؛ المعروض: {displayedCount}.',
   chartPreparedUnavailable: 'بيانات المخطط المُعدّة غير متاحة أو غير متوافقة مع هذا المخطط.',
   chart: 'مخطط',
@@ -198,6 +200,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'البحث غير متاح لمصدر البيانات هذا.',
   sourceSelectionLoading: 'جارٍ تحميل العناصر المحددة…',
   sourceSelectionFailed: 'تعذّر تحميل العناصر المحددة.',
+  chartInputLimit: 'حُذفت بعض بيانات المخطط لبلوغ حد الإدخال. قدّم مجموعة بيانات أصغر أو مُجمّعة مسبقًا لتمثيل القيم المحذوفة.',
   catalogPickerInputLimit: 'حُذفت بعض إدخالات الكتالوج لبلوغ حد الإدخال.',
   tagFacetLimit: {
     zero: '+{count} وسم آخر',
@@ -217,6 +220,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'يتم عرض قائمة بدلًا من ذلك.',
   largeDataInvalid: 'لا يمكن عرض البيانات لأن {column} غير صالح.',
   largeDataLimit: 'لا يمكن عرض البيانات لأنها تتجاوز الحد البالغ {limit}.',
+  chart3dName: 'التسمية',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

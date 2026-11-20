@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graf koʻrinishini yuklab boʻlmadi.',
   graphSourceRecordMissing: 'Bu graf yozuvi mavjud emas.',
   notInCatalog: 'katalogda yoʻq',
+  chartLegend: 'Diagrammaning shartli belgilari',
   resetZoom: 'Masshtabni tiklash',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Yana {count} ta koʻrsatish',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'tekis',
   chartSummary: '{label}: {count} ta qiymat, oraliq {min} dan {max} gacha, {trend} tendensiya',
   chartSummarySeparator: '. ',
+  chartData: 'Diagramma maʼlumotlari',
   chartPreparedSummary: '{validCount} ta yaroqli kuzatuv xulosasi ({invalidCount} ta yaroqsiz); {displayedCount} tasi ko‘rsatilgan.',
   chartPreparedUnavailable: 'Tayyorlangan diagramma maʼlumotlari mavjud emas yoki bu diagrammaga mos emas.',
   chart: 'Diagramma',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Bu maʼlumot manbasi uchun qidiruv mavjud emas.',
   sourceSelectionLoading: 'Tanlangan elementlar yuklanmoqda…',
   sourceSelectionFailed: 'Tanlangan elementlarni yuklab bo‘lmadi.',
+  chartInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim diagramma maʼlumotlari tashlab ketildi. Tashlab ketilgan qiymatlarni ifodalash uchun kichikroq yoki oldindan umumlashtirilgan maʼlumotlar toʻplamini taqdim eting.',
   catalogPickerInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim katalog yozuvlari tashlab ketildi.',
   tagFacetLimit: {
     one: '+{count} ta qoʻshimcha teg',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Buning o‘rniga ro‘yxat ko‘rsatilmoqda.',
   largeDataInvalid: '{column} yaroqsiz bo‘lgani uchun ma’lumotlarni ko‘rsatib bo‘lmaydi.',
   largeDataLimit: 'Ma’lumotlar {limit} chegarasidan oshgani uchun ularni ko‘rsatib bo‘lmaydi.',
+  chart3dName: 'Yorliq',
 };
 
 registerLyraLocale('uz', strings);

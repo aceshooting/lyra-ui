@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'د ګراف لید پورته نه شو.',
   graphSourceRecordMissing: 'د ګراف دا ریکارډ شتون نه لري.',
   notInCatalog: 'په کتلاګ کې نشته',
+  chartLegend: 'د چارټ د نښو تشریح',
   resetZoom: 'لویوالی بېرته سمول',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} نور ښکاره کړئ',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'هوار',
   chartSummary: '{label}: {count} ارزښتونه، لړۍ له {min} تر {max}، {trend} بهیر',
   chartSummarySeparator: '. ',
+  chartData: 'د چارټ معلومات',
   chartPreparedSummary: 'د {validCount} باوري مشاهداتو لنډیز ({invalidCount} ناباوره)؛ {displayedCount} ښودل شوي.',
   chartPreparedUnavailable: 'چمتو شوي چارټ معلومات نشته یا له دې چارټ سره برابر نه دي.',
   chart: 'چارټ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'د دې معلوماتي سرچینې لپاره لټون نشته.',
   sourceSelectionLoading: 'ټاکل شوي توکي رانیول کېږي…',
   sourceSelectionFailed: 'ټاکل شوي توکي رانیول کېدای نه شول.',
+  chartInputLimit: 'د ننوتو حد ته د رسېدو له امله د چارټ ځینې معلومات پرېښودل شوي دي. د پرېښودل شوو ارزښتونو د ښودلو لپاره یو کوچنی یا له مخکې لنډیز شوی معلوماتي ټولګی ورکړئ.',
   catalogPickerInputLimit: 'د ننوتو حد ته د رسېدو له امله د نوملړ ځینې ننوتنې پرېښودل شوې دي.',
   tagFacetLimit: {
     one: '+{count} نورې نښې',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'پر ځای یې یو لیست ښودل کېږي.',
   largeDataInvalid: 'معلومات نه شي ښودل کېدای ځکه {column} ناسم دی.',
   largeDataLimit: 'معلومات نه شي ښودل کېدای ځکه د {limit} له حد څخه ډېر دي.',
+  chart3dName: 'نوم',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

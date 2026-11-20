@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ukubuka kwegrafu akukwazanga ukulayishwa.',
   graphSourceRecordMissing: 'Leli rekhodi legrafu alitholakali.',
   notInCatalog: 'ayikho kukhathalogi',
+  chartLegend: 'Ukhiye weshadi',
   resetZoom: 'Setha kabusha ukusondeza',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Bonisa okunye okungu-{count}',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ayishintshi',
   chartSummary: '{label}: amanani angu-{count}, ibanga elisuka ku-{min} liye ku-{max}, ukuthambekela {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Idatha yeshadi',
   chartPreparedSummary: 'Isifinyezo sokubhekiwe okusebenzayo okungu-{validCount} (okungasebenzi okungu-{invalidCount}); kuboniswa okungu-{displayedCount}.',
   chartPreparedUnavailable: 'Idatha yeshadi elungiselelwe ayitholakali noma ayihambisani naleli shadi.',
   chart: 'Ishadi',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Ukusesha akutholakali kulo mthombo wedatha.',
   sourceSelectionLoading: 'Kulayishwa izinto ezikhethiwe…',
   sourceSelectionFailed: 'Izinto ezikhethiwe azikwazanga ukulayishwa.',
+  chartInputLimit: 'Enye idatha yeshadi ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka. Nikeza isethi yedatha encane noma ehlanganiswe kusengaphambili ukuze imele amanani ashiyiwe.',
   catalogPickerInputLimit: 'Okunye okufakiwe kukhathalogi kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
   tagFacetLimit: {
     one: '+{count} uphawu olwengeziwe',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Kubonisa uhlu esikhundleni.',
   largeDataInvalid: 'Idatha ayikwazi ukubonisa ngoba i-{column} ayivumelekile.',
   largeDataLimit: 'Idatha ayikwazi ukubonisa ngoba idlula umkhawulo we-{limit}.',
+  chart3dName: 'Ilebula',
 };
 
 registerLyraLocale('zu', strings);

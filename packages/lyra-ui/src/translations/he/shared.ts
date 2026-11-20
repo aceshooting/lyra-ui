@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'לא ניתן לטעון את תצוגת הגרף.',
   graphSourceRecordMissing: 'רשומת גרף זו אינה זמינה.',
   notInCatalog: 'לא בקטלוג',
+  chartLegend: 'מקרא התרשים',
   resetZoom: 'אפס זום',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} הצג עוד {count}',
@@ -104,6 +105,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'יציבה',
   chartSummary: '{label}: {count} ערכים, טווח {min} עד {max}, מגמה {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'נתוני תרשים',
   chartPreparedSummary: 'סיכום של {validCount} תצפיות תקינות ({invalidCount} לא תקינות); מוצגות {displayedCount}.',
   chartPreparedUnavailable: 'נתוני התרשים שהוכנו אינם זמינים או אינם תואמים לתרשים זה.',
   chart: 'תרשים',
@@ -177,6 +179,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'חיפוש אינו זמין עבור מקור הנתונים הזה.',
   sourceSelectionLoading: 'טוען את הפריטים שנבחרו…',
   sourceSelectionFailed: 'לא ניתן לטעון את הפריטים שנבחרו.',
+  chartInputLimit: 'חלק מנתוני התרשים הושמטו משום שהקלט הגיע למגבלה. יש לספק מערך נתונים קטן יותר או נתונים שאוגדו מראש כדי לייצג את הערכים שהושמטו.',
   catalogPickerInputLimit: 'חלק מרשומות הקטלוג הושמטו משום שהקלט הגיע למגבלה.',
   tagFacetLimit: {
     one: 'תגית נוספת: +{count}',
@@ -193,6 +196,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'במקום זאת מוצגת רשימה.',
   largeDataInvalid: 'לא ניתן להציג את הנתונים מכיוון ש-{column} אינו תקין.',
   largeDataLimit: 'לא ניתן להציג את הנתונים מכיוון שהם חורגים מהמגבלה של {limit}.',
+  chart3dName: 'תווית',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

@@ -299,6 +299,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-transcript-feed': ['lr-transcript-feed'],
   'lr-tree': ['lr-empty', 'lr-live-region', 'lr-tree', 'lr-tree-item', 'lr-virtual-list'],
   'lr-tree-item': ['lr-tree-item'],
+  'lr-treemap': ['lr-treemap'],
   'lr-typing-indicator': ['lr-typing-indicator'],
   'lr-unit-picker': ['lr-combobox', 'lr-empty', 'lr-option', 'lr-select', 'lr-unit-picker'],
   'lr-usage-badge': ['lr-usage-badge'],

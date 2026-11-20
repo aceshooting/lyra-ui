@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Hindi ma-load ang view ng graph.',
   graphSourceRecordMissing: 'Hindi available ang rekord ng graph na ito.',
   notInCatalog: 'wala sa katalogo',
+  chartLegend: 'Legend ng tsart',
   resetZoom: 'I-reset ang laki',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Magpakita pa ng {count}',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'pantay',
   chartSummary: '{label}: {count} value, saklaw {min} hanggang {max}, {trend} ang takbo',
   chartSummarySeparator: '. ',
+  chartData: 'Datos ng tsart',
   chartPreparedSummary: 'Buod ng {validCount} wastong obserbasyon ({invalidCount} hindi wasto); {displayedCount} ang ipinapakita.',
   chartPreparedUnavailable: 'Hindi available o hindi tugma sa tsart na ito ang inihandang data ng tsart.',
   chart: 'Tsart',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Hindi available ang paghahanap para sa pinagmumulan ng datos na ito.',
   sourceSelectionLoading: 'Nilo-load ang mga napiling item…',
   sourceSelectionFailed: 'Hindi ma-load ang mga napiling item.',
+  chartInputLimit: 'May ilang datos ng tsart na hindi isinama dahil naabot ang limitasyon sa input. Magbigay ng mas maliit o paunang pinagsama-samang dataset upang katawanin ang mga halagang hindi isinama.',
   catalogPickerInputLimit: 'May ilang tala sa katalogo na hindi isinama dahil naabot ang limitasyon sa input.',
   tagFacetLimit: {
     one: '+{count} pang tag',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Ipinapakita ang isang listahan bilang kapalit.',
   largeDataInvalid: 'Hindi maipapakita ang datos dahil di-wasto ang {column}.',
   largeDataLimit: 'Hindi maipapakita ang datos dahil lumalampas ito sa limitasyong {limit}.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('tl', strings);

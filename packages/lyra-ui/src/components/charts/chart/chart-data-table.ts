@@ -1,10 +1,4 @@
-export function chartDataTableVisible(
-  withDataTable: boolean,
-  dataTableToggle: boolean,
-  expandedOverride: boolean | null,
-): boolean {
-  return dataTableToggle ? expandedOverride ?? withDataTable : withDataTable;
-}
+export { chartDataTableVisible } from '../../../internal/chart-data-table.js';
 
 export function hasSlottedChartDataTable(element: Element): boolean {
   return Array.from(element.children).some((child) => child.getAttribute('slot') === 'data-table');

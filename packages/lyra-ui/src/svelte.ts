@@ -636,6 +636,8 @@ export type LyraTreeSvelteProps = LyraSvelteElementProps<'lr-tree'>;
 
 export type LyraTreeItemSvelteProps = LyraSvelteElementProps<'lr-tree-item'>;
 
+export type LyraTreemapSvelteProps = LyraSvelteElementProps<'lr-treemap'>;
+
 export type LyraTypingIndicatorSvelteProps = LyraSvelteElementProps<'lr-typing-indicator'>;
 
 export type LyraUnitPickerSvelteProps = LyraSvelteElementProps<'lr-unit-picker'>;
@@ -961,6 +963,7 @@ export interface LyraSvelteElements {
   'lr-transcript-feed': LyraTranscriptFeedSvelteProps;
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
+  'lr-treemap': LyraTreemapSvelteProps;
   'lr-typing-indicator': LyraTypingIndicatorSvelteProps;
   'lr-unit-picker': LyraUnitPickerSvelteProps;
   'lr-usage-badge': LyraUsageBadgeSvelteProps;
@@ -1275,6 +1278,7 @@ export interface LyraElementTagNameMap {
   'lr-transcript-feed': LyraComponentTypeMap['lr-transcript-feed']['element'];
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
+  'lr-treemap': LyraComponentTypeMap['lr-treemap']['element'];
   'lr-typing-indicator': LyraComponentTypeMap['lr-typing-indicator']['element'];
   'lr-unit-picker': LyraComponentTypeMap['lr-unit-picker']['element'];
   'lr-usage-badge': LyraComponentTypeMap['lr-usage-badge']['element'];

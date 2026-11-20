@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Di graph view no fit load.',
   graphSourceRecordMissing: 'Dis graph record no dey available.',
   notInCatalog: 'e no dey for catalog',
+  chartLegend: 'Key for di chart',
   resetZoom: 'Reset di zoom',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Show {count} extra',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'e dey flat',
   chartSummary: '{label}: {count} values, from {min} to {max}, e dey {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data for chart',
   chartPreparedSummary: 'Summary of {validCount} valid observations ({invalidCount} no valid); {displayedCount} dey show.',
   chartPreparedUnavailable: 'Di prepared chart data no dey available or e no fit work with dis chart.',
   chart: 'Chart',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Search no dey available for dis data source.',
   sourceSelectionLoading: 'Selected items dey load…',
   sourceSelectionFailed: 'Di selected items no fit load.',
+  chartInputLimit: 'Some chart data no enter because di input don reach im limit. Give smaller data set or data wey dem don summarize before, make e fit represent di values wey no enter.',
   catalogPickerInputLimit: 'Some catalog entries no enter because di input don reach im limit.',
   tagFacetLimit: {
     one: '+{count} more tag',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'We dey show list instead.',
   largeDataInvalid: 'Di data no fit show because {column} no correct.',
   largeDataLimit: 'Di data no fit show because e pass di limit of {limit}.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('pcm', strings);

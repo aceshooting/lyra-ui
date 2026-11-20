@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Grafvyn kunde inte läsas in.',
   graphSourceRecordMissing: 'Den här grafposten är inte tillgänglig.',
   notInCatalog: 'finns inte i katalogen',
+  chartLegend: 'Diagramförklaring',
   resetZoom: 'Återställ zoom',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Visa {count} till',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'oförändrad',
   chartSummary: '{label}: {count} värden, intervall {min} till {max}, trend {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Diagramdata',
   chartPreparedSummary: 'Sammanfattning av {validCount} giltiga observationer ({invalidCount} ogiltiga); {displayedCount} visas.',
   chartPreparedUnavailable: 'Förberedda diagramdata är inte tillgängliga eller är inkompatibla med detta diagram.',
   chart: 'Diagram',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Sökning är inte tillgänglig för den här datakällan.',
   sourceSelectionLoading: 'Läser in valda objekt…',
   sourceSelectionFailed: 'De valda objekten kunde inte läsas in.',
+  chartInputLimit: 'Vissa diagramdata utelämnades eftersom en indatagräns nåddes. Ange en mindre eller föraggregerad datamängd för att representera de utelämnade värdena.',
   catalogPickerInputLimit: 'Vissa katalogposter utelämnades eftersom en indatagräns nåddes.',
   tagFacetLimit: {
     one: '+{count} tagg till',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'En lista visas i stället.',
   largeDataInvalid: 'Data kan inte visas eftersom {column} är ogiltig.',
   largeDataLimit: 'Data kan inte visas eftersom de överskrider gränsen på {limit}.',
+  chart3dName: 'Etikett',
 };
 
 registerLyraLocale('sv', strings);

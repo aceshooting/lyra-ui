@@ -634,6 +634,8 @@ export type LyraTreeReactProps = LyraReactElementProps<'lr-tree'>;
 
 export type LyraTreeItemReactProps = LyraReactElementProps<'lr-tree-item'>;
 
+export type LyraTreemapReactProps = LyraReactElementProps<'lr-treemap'>;
+
 export type LyraTypingIndicatorReactProps = LyraReactElementProps<'lr-typing-indicator'>;
 
 export type LyraUnitPickerReactProps = LyraReactElementProps<'lr-unit-picker'>;
@@ -959,6 +961,7 @@ export interface LyraReactIntrinsicElements {
   'lr-transcript-feed': LyraTranscriptFeedReactProps;
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
+  'lr-treemap': LyraTreemapReactProps;
   'lr-typing-indicator': LyraTypingIndicatorReactProps;
   'lr-unit-picker': LyraUnitPickerReactProps;
   'lr-usage-badge': LyraUsageBadgeReactProps;

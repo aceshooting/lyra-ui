@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Граф көрінісін жүктеу мүмкін болмады.',
   graphSourceRecordMissing: 'Бұл граф жазбасы қолжетімсіз.',
   notInCatalog: 'каталогта жоқ',
+  chartLegend: 'Диаграмманың шартты белгілері',
   resetZoom: 'Масштабты қалпына келтіру',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Тағы {count} көрсету',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'тұрақты',
   chartSummary: '{label}: мәндер саны {count}, ауқымы {min} – {max}, үрдіс: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Диаграмма деректері',
   chartPreparedSummary: '{validCount} жарамды бақылаудың жиынтығы ({invalidCount} жарамсыз); {displayedCount} көрсетілген.',
   chartPreparedUnavailable: 'Дайындалған диаграмма деректері қолжетімсіз немесе бұл диаграммамен үйлесімді емес.',
   chart: 'Диаграмма',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Бұл деректер көзі үшін іздеу қолжетімді емес.',
   sourceSelectionLoading: 'Таңдалған элементтер жүктелуде…',
   sourceSelectionFailed: 'Таңдалған элементтерді жүктеу мүмкін болмады.',
+  chartInputLimit: 'Енгізу шегіне жеткендіктен, диаграмма деректерінің бір бөлігі алынып тасталды. Алынып тасталған мәндерді көрсету үшін кішірек немесе алдын ала біріктірілген деректер жиынын беріңіз.',
   catalogPickerInputLimit: 'Енгізу шегіне жеткендіктен, каталогтың кейбір жазбалары алынып тасталды.',
   tagFacetLimit: {
     one: '+{count} қосымша тег',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Оның орнына тізім көрсетілуде.',
   largeDataInvalid: '{column} жарамсыз болғандықтан, деректерді көрсету мүмкін емес.',
   largeDataLimit: 'Деректер {limit} шегінен асатындықтан, оларды көрсету мүмкін емес.',
+  chart3dName: 'Белгі',
 };
 
 registerLyraLocale('kk', strings);

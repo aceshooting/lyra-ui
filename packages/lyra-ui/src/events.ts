@@ -91,6 +91,7 @@ import type { LyraTableEventMap } from './components/data/table/table-support.js
 import type { LyraTimelineEventMap } from './components/data/timeline/timeline.class.js';
 import type { LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTreeEventMap } from './components/data/tree/tree.class.js';
+import type { LyraTreemapEventMap } from './components/data/treemap/treemap.class.js';
 import type { LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
 import type { LyraButtonEventMap } from './components/forms/button/button.class.js';
 import type { LyraCatalogPickerEventMap } from './components/forms/catalog-picker-base.js';
@@ -1017,15 +1018,17 @@ export type LyraDatePickerSelectRequestEvent = LyraDatePickerEventMap['lr-date-p
 export type LyraDateSelectEvent = LyraCalendarEventMap['lr-date-select'];
 
 /**
- * `lr-datum-activate` — dispatched by 12 components: `<lr-bar-chart>`, `<lr-box-plot>`,
+ * `lr-datum-activate` — dispatched by 13 components: `<lr-bar-chart>`, `<lr-box-plot>`,
  * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
  * `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
- * `<lr-scatter-chart>`; detail union of 3, e.g. `LyraBoxPlotEventMap['lr-datum-activate']`.
+ * `<lr-scatter-chart>`, `<lr-treemap>`; detail union of 4, e.g.
+ * `LyraBoxPlotEventMap['lr-datum-activate']`.
  */
 export type LyraDatumActivateEvent =
   | LyraBoxPlotEventMap['lr-datum-activate']
   | LyraChartEventMap['lr-datum-activate']
-  | LyraLiteChartEventMap['lr-datum-activate'];
+  | LyraLiteChartEventMap['lr-datum-activate']
+  | LyraTreemapEventMap['lr-datum-activate'];
 
 /**
  * `lr-datum-visibility-change` — dispatched by 10 components: `<lr-bar-chart>`,

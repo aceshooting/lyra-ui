@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Tampilan graf tidak dapat dimuat.',
   graphSourceRecordMissing: 'Rekaman graf ini tidak tersedia.',
   notInCatalog: 'tidak ada di katalog',
+  chartLegend: 'Legenda bagan',
   resetZoom: 'Atur ulang pembesaran',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Tampilkan {count} lagi',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'stabil',
   chartSummary: '{label}: {count} nilai, rentang {min} hingga {max}, tren {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data bagan',
   chartPreparedSummary: 'Ringkasan {validCount} pengamatan valid ({invalidCount} tidak valid); {displayedCount} ditampilkan.',
   chartPreparedUnavailable: 'Data bagan yang disiapkan tidak tersedia atau tidak kompatibel dengan bagan ini.',
   chart: 'Bagan',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Pencarian tidak tersedia untuk sumber data ini.',
   sourceSelectionLoading: 'Memuat item yang dipilih…',
   sourceSelectionFailed: 'Item yang dipilih tidak dapat dimuat.',
+  chartInputLimit: 'Sebagian data bagan dihilangkan karena batas masukan tercapai. Berikan kumpulan data yang lebih kecil atau sudah diagregasi untuk mewakili nilai yang dihilangkan.',
   catalogPickerInputLimit: 'Sebagian entri katalog dihilangkan karena batas masukan tercapai.',
   tagFacetLimit: {
     other: '+{count} tag lainnya',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Daftar ditampilkan sebagai gantinya.',
   largeDataInvalid: 'Data tidak dapat ditampilkan karena {column} tidak valid.',
   largeDataLimit: 'Data tidak dapat ditampilkan karena melebihi batas {limit}.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('id', strings);

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'گراف جو ڏيک لوڊ نه ٿي سگهيو.',
   graphSourceRecordMissing: 'گراف جو هي رڪارڊ دستياب ناهي.',
   notInCatalog: 'فهرست ۾ موجود ناهي',
+  chartLegend: 'چارٽ جي نشانين جي وضاحت',
   resetZoom: 'زوم بحال ڪريو',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} {count} وڌيڪ ڏيکاريو',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'بي تبديلي',
   chartSummary: '{label}: {count} قدر، حد {min} کان {max} تائين، رجحان {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'چارٽ جي ڄاڻ',
   chartPreparedSummary: '{validCount} صحيح مشاهدن جو خلاصو ({invalidCount} غلط)؛ {displayedCount} ڏيکاريل آهن.',
   chartPreparedUnavailable: 'تيار ڪيل چارٽ ڊيٽا موجود ناهي يا هن چارٽ سان مطابقت نٿي رکي.',
   chart: 'چارٽ',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'هن ڊيٽا ماخذ لاءِ ڳولا موجود ناهي.',
   sourceSelectionLoading: 'چونڊيل شيون لوڊ ٿي رهيون آهن…',
   sourceSelectionFailed: 'چونڊيل شيون لوڊ نه ٿي سگهيون.',
+  chartInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب چارٽ جي ڪجهه ڊيٽا ڇڏي وئي آهي. ڇڏيل قدرن کي ڏيکارڻ لاءِ ننڍو يا اڳواٽ گڏ ڪري مختصر ڪيل ڊيٽا سيٽ ڏيو.',
   catalogPickerInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب فهرست جون ڪجهه داخلائون ڇڏيون ويون آهن.',
   tagFacetLimit: {
     one: '+{count} وڌيڪ ٽيگ',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ان جي بدران هڪ فهرست ڏيکاري پئي وڃي.',
   largeDataInvalid: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته {column} غلط آهي.',
   largeDataLimit: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته اها {limit} جي حد کان وڌيڪ آهي.',
+  chart3dName: 'ليبل',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

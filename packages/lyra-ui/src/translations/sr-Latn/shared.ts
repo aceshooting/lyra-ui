@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Prikaz grafa nije mogao da se učita.',
   graphSourceRecordMissing: 'Ovaj zapis grafa nije dostupan.',
   notInCatalog: 'nije u katalogu',
+  chartLegend: 'Legenda grafikona',
   resetZoom: 'Resetuj zum',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Prikaži još {count}',
@@ -104,6 +105,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ravan',
   chartSummary: '{label}: vrednosti: {count}, opseg od {min} do {max}, trend: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Podaci grafikona',
   chartPreparedSummary: 'Sažetak ispravnih zapažanja: {validCount} (neispravnih: {invalidCount}); prikazano: {displayedCount}.',
   chartPreparedUnavailable: 'Pripremljeni podaci grafikona nisu dostupni ili nisu kompatibilni sa ovim grafikonom.',
   chart: 'Grafikon',
@@ -177,6 +179,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Pretraga nije dostupna za ovaj izvor podataka.',
   sourceSelectionLoading: 'Učitavanje izabranih stavki…',
   sourceSelectionFailed: 'Izabrane stavke nisu mogle da se učitaju.',
+  chartInputLimit: 'Deo podataka grafikona je izostavljen jer je dostignuto ograničenje unosa. Obezbedite manji ili unapred agregiran skup podataka da biste predstavili izostavljene vrednosti.',
   catalogPickerInputLimit: 'Neke stavke kataloga su izostavljene jer je dostignuto ograničenje unosa.',
   tagFacetLimit: {
     one: 'Još oznaka: {count}',
@@ -193,6 +196,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Umesto toga prikazuje se lista.',
   largeDataInvalid: 'Podaci ne mogu da se prikažu jer {column} nije ispravno.',
   largeDataLimit: 'Podaci ne mogu da se prikažu jer premašuju ograničenje od {limit}.',
+  chart3dName: 'Oznaka',
 };
 
 registerLyraLocale('sr-Latn', strings);

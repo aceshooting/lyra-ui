@@ -91,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Nepavyko įkelti grafo rodinio.',
   graphSourceRecordMissing: 'Šis grafo įrašas nepasiekiamas.',
   notInCatalog: 'nėra kataloge',
+  chartLegend: 'Diagramos legenda',
   resetZoom: 'Atkurti mastelį',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Rodyti dar {count}',
@@ -110,6 +111,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'pastovi',
   chartSummary: '{label}: reikšmių {count}, intervalas nuo {min} iki {max}, tendencija {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Diagramos duomenys',
   chartPreparedSummary: 'Galiojančių stebėjimų suvestinė: {validCount} (negaliojančių: {invalidCount}); rodoma: {displayedCount}.',
   chartPreparedUnavailable: 'Paruošti diagramos duomenys nepasiekiami arba nesuderinami su šia diagrama.',
   chart: 'Diagrama',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Šiam duomenų šaltiniui paieška nepasiekiama.',
   sourceSelectionLoading: 'Įkeliami pasirinkti elementai…',
   sourceSelectionFailed: 'Nepavyko įkelti pasirinktų elementų.',
+  chartInputLimit: 'Dalis diagramos duomenų praleista, nes pasiekta įvesties riba. Pateikite mažesnį arba iš anksto agreguotą duomenų rinkinį, kad būtų atvaizduotos praleistos reikšmės.',
   catalogPickerInputLimit: 'Kai kurie katalogo įrašai praleisti, nes pasiekta įvesties riba.',
   tagFacetLimit: {
     one: 'Dar žymų: +{count}',
@@ -201,6 +204,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Vietoj to rodomas sąrašas.',
   largeDataInvalid: 'Duomenų negalima parodyti, nes {column} netinkamas.',
   largeDataLimit: 'Duomenų negalima parodyti, nes viršyta {limit} riba.',
+  chart3dName: 'Etiketė',
 };
 
 registerLyraLocale('lt', strings);

@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Paparan graf tidak dapat dimuatkan.',
   graphSourceRecordMissing: 'Rekod graf ini tidak tersedia.',
   notInCatalog: 'tiada dalam katalog',
+  chartLegend: 'Petunjuk carta',
   resetZoom: 'Tetapkan semula zum',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Papar {count} lagi',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'mendatar',
   chartSummary: '{label}: {count} nilai, julat {min} hingga {max}, arah aliran {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Data carta',
   chartPreparedSummary: 'Ringkasan {validCount} pemerhatian sah ({invalidCount} tidak sah); {displayedCount} dipaparkan.',
   chartPreparedUnavailable: 'Data carta yang disediakan tidak tersedia atau tidak serasi dengan carta ini.',
   chart: 'Carta',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Carian tidak tersedia untuk sumber data ini.',
   sourceSelectionLoading: 'Memuatkan item yang dipilih…',
   sourceSelectionFailed: 'Item yang dipilih tidak dapat dimuatkan.',
+  chartInputLimit: 'Sebahagian data carta telah digugurkan kerana had input dicapai. Berikan set data yang lebih kecil atau yang telah diagregatkan untuk mewakili nilai yang digugurkan.',
   catalogPickerInputLimit: 'Sebahagian entri katalog telah digugurkan kerana had input dicapai.',
   tagFacetLimit: {
     other: '+{count} lagi tag',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Senarai dipaparkan sebagai ganti.',
   largeDataInvalid: 'Data tidak dapat dipaparkan kerana {column} tidak sah.',
   largeDataLimit: 'Data tidak dapat dipaparkan kerana melebihi had {limit}.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('ms', strings);

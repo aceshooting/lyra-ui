@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Vizualizarea grafului nu a putut fi încărcată.',
   graphSourceRecordMissing: 'Această înregistrare a grafului nu este disponibilă.',
   notInCatalog: 'absent din catalog',
+  chartLegend: 'Legenda graficului',
   resetZoom: 'Resetează zoom-ul',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Afișează încă {count}',
@@ -104,6 +105,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'constantă',
   chartSummary: '{label}: {count} valori, interval de la {min} la {max}, tendință {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Datele graficului',
   chartPreparedSummary: 'Rezumat al observațiilor valide: {validCount} ({invalidCount} nevalide); {displayedCount} afișate.',
   chartPreparedUnavailable: 'Datele pregătite pentru grafic sunt indisponibile sau incompatibile cu acest grafic.',
   chart: 'Grafic',
@@ -177,6 +179,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Căutarea nu este disponibilă pentru această sursă de date.',
   sourceSelectionLoading: 'Se încarcă elementele selectate…',
   sourceSelectionFailed: 'Elementele selectate nu au putut fi încărcate.',
+  chartInputLimit: 'Unele date ale graficului au fost omise deoarece s-a atins o limită de intrare. Furnizați un set de date mai mic sau agregat în prealabil pentru a reprezenta valorile omise.',
   catalogPickerInputLimit: 'Unele intrări din catalog au fost omise deoarece s-a atins o limită de intrare.',
   tagFacetLimit: {
     one: '+{count} — etichetă suplimentară',
@@ -193,6 +196,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'În locul ei se afișează o listă.',
   largeDataInvalid: 'Datele nu pot fi afișate deoarece {column} nu este valid.',
   largeDataLimit: 'Datele nu pot fi afișate deoarece depășesc limita de {limit}.',
+  chart3dName: 'Etichetă',
 };
 
 registerLyraLocale('ro', strings);

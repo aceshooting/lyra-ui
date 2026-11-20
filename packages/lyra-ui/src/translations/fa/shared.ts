@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'نمای گراف بارگیری نشد.',
   graphSourceRecordMissing: 'این رکورد گراف در دسترس نیست.',
   notInCatalog: 'در کاتالوگ نیست',
+  chartLegend: 'راهنمای نمودار',
   resetZoom: 'بازنشانی بزرگ‌نمایی',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} نمایش {count} مورد دیگر',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'ثابت',
   chartSummary: '{label}: {count} مقدار، بازهٔ {min} تا {max}، روند {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'داده‌های نمودار',
   chartPreparedSummary: 'خلاصهٔ {validCount} مشاهدهٔ معتبر ({invalidCount} نامعتبر)؛ {displayedCount} مورد نمایش داده شده است.',
   chartPreparedUnavailable: 'داده‌های آماده‌شدهٔ نمودار در دسترس نیست یا با این نمودار سازگار نیست.',
   chart: 'نمودار',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'جستجو برای این منبع داده در دسترس نیست.',
   sourceSelectionLoading: 'در حال بارگیری موارد انتخاب‌شده…',
   sourceSelectionFailed: 'موارد انتخاب‌شده بارگیری نشد.',
+  chartInputLimit: 'برخی داده‌های نمودار به‌دلیل رسیدن به محدودیت ورودی حذف شدند. برای نمایش مقادیر حذف‌شده، مجموعه‌داده‌ای کوچک‌تر یا از پیش تجمیع‌شده ارائه کنید.',
   catalogPickerInputLimit: 'برخی ورودی‌های فهرست به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
   tagFacetLimit: {
     one: '+{count} برچسب دیگر',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'به‌جای آن، یک فهرست نمایش داده می‌شود.',
   largeDataInvalid: 'داده‌ها نمایش داده نمی‌شوند زیرا {column} نامعتبر است.',
   largeDataLimit: 'داده‌ها نمایش داده نمی‌شوند زیرا از حد مجاز {limit} فراتر می‌روند.',
+  chart3dName: 'برچسب',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

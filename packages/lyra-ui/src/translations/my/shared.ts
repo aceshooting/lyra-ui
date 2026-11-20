@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ဂရပ်မြင်ကွင်းကို တင်၍မရပါ။',
   graphSourceRecordMissing: 'ဤဂရပ်မှတ်တမ်းကို မရရှိနိုင်ပါ။',
   notInCatalog: 'စာရင်းတွင် မရှိပါ',
+  chartLegend: 'ဇယား သင်္ကေတညွှန်း',
   resetZoom: 'ချဲ့မှုကို ပြန်လည်သတ်မှတ်ရန်',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} နောက်ထပ် {count} ခု ပြရန်',
@@ -92,6 +93,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'တည်ငြိမ်သည်',
   chartSummary: '{label}: တန်ဖိုး {count} ခု၊ အပိုင်းအခြား {min} မှ {max}၊ {trend} လမ်းကြောင်း',
   chartSummarySeparator: '။ ',
+  chartData: 'ဇယားဒေတာ',
   chartPreparedSummary: 'မှန်ကန်သော လေ့လာတွေ့ရှိချက် {validCount} ခု၏ အကျဉ်းချုပ် (မမှန်ကန်သည့် အရေအတွက် {invalidCount} ခု)၊ {displayedCount} ခုကို ပြသထားသည်။',
   chartPreparedUnavailable: 'ကြိုတင်ပြင်ဆင်ထားသော ဇယားဒေတာကို မရရှိနိုင်ပါ သို့မဟုတ် ဤဇယားနှင့် ကိုက်ညီမှုမရှိပါ။',
   chart: 'ဇယား',
@@ -163,6 +165,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'ဤဒေတာအရင်းအမြစ်အတွက် ရှာဖွေမှုမရနိုင်ပါ။',
   sourceSelectionLoading: 'ရွေးထားသော အရာများကို တင်နေသည်…',
   sourceSelectionFailed: 'ရွေးထားသော အရာများကို တင်၍မရပါ။',
+  chartInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် ဇယားဒေတာအချို့ကို ချန်လှပ်ထားသည်။ ချန်လှပ်ထားသော တန်ဖိုးများကို ဖော်ပြရန် ပိုသေးငယ်သော သို့မဟုတ် ကြိုတင်စုစည်းထားသော ဒေတာအစုကို ပေးပါ။',
   catalogPickerInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် ကတ်တလောက်စာရင်းအချို့ကို ချန်လှပ်ထားသည်။',
   tagFacetLimit: {
     other: 'နောက်ထပ် တဂ်များ: +{count}',
@@ -177,6 +180,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '၎င်းအစား စာရင်းတစ်ခုကို ပြသနေသည်။',
   largeDataInvalid: '{column} သည် မမှန်ကန်သောကြောင့် ဒေတာကို ပြသ၍ မရပါ။',
   largeDataLimit: 'ဒေတာသည် {limit} ကန့်သတ်ချက်ကို ကျော်လွန်နေသောကြောင့် ပြသ၍ မရပါ။',
+  chart3dName: 'အညွှန်း',
 };
 
 registerLyraLocale('my', strings);

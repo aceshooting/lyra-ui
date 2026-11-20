@@ -91,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Не вдалося завантажити подання графа.',
   graphSourceRecordMissing: 'Цей запис графа недоступний.',
   notInCatalog: 'немає в каталозі',
+  chartLegend: 'Легенда діаграми',
   resetZoom: 'Скинути масштаб',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Показати ще {count}',
@@ -110,6 +111,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'без змін',
   chartSummary: '{label}: значень — {count}, діапазон від {min} до {max}, тенденція — {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Дані діаграми',
   chartPreparedSummary: 'Зведення за коректними спостереженнями: {validCount} (некоректних: {invalidCount}); показано: {displayedCount}.',
   chartPreparedUnavailable: 'Підготовлені дані діаграми недоступні або несумісні з цією діаграмою.',
   chart: 'Діаграма',
@@ -184,6 +186,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Пошук недоступний для цього джерела даних.',
   sourceSelectionLoading: 'Завантаження вибраних елементів…',
   sourceSelectionFailed: 'Не вдалося завантажити вибрані елементи.',
+  chartInputLimit: 'Частину даних діаграми пропущено через досягнення обмеження на вхідні дані. Надайте менший або попередньо агрегований набір даних, щоб подати пропущені значення.',
   catalogPickerInputLimit: 'Частину записів каталогу пропущено через досягнення обмеження на вхідні дані.',
   tagFacetLimit: {
     one: '+{count} — додатковий тег',
@@ -201,6 +204,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Натомість показано список.',
   largeDataInvalid: 'Неможливо показати дані, оскільки {column} недійсне.',
   largeDataLimit: 'Неможливо показати дані, оскільки вони перевищують ліміт {limit}.',
+  chart3dName: 'Підпис',
 };
 
 registerLyraLocale('uk', strings);

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'De graafweergave kon niet worden geladen.',
   graphSourceRecordMissing: 'Dit graafrecord is niet beschikbaar.',
   notInCatalog: 'niet in de catalogus',
+  chartLegend: 'Grafieklegenda',
   resetZoom: 'Zoom herstellen',
   showMoreCollapsed: '+{count}',
   showMoreOverflowLabel: '{visible} Toon nog {count}',
@@ -98,6 +99,7 @@ const strings: LyraLocaleStrings = {
   chartTrendFlat: 'vlak',
   chartSummary: '{label}: {count} waarden, bereik {min} tot {max}, trend: {trend}',
   chartSummarySeparator: '. ',
+  chartData: 'Grafiekgegevens',
   chartPreparedSummary: 'Samenvatting van {validCount} geldige waarnemingen ({invalidCount} ongeldig); {displayedCount} weergegeven.',
   chartPreparedUnavailable: 'De voorbereide grafiekgegevens zijn niet beschikbaar of niet compatibel met deze grafiek.',
   chart: 'Grafiek',
@@ -170,6 +172,7 @@ const strings: LyraLocaleStrings = {
   sourceSearchUnavailable: 'Zoeken is niet beschikbaar voor deze gegevensbron.',
   sourceSelectionLoading: 'Geselecteerde items laden…',
   sourceSelectionFailed: 'De geselecteerde items konden niet worden geladen.',
+  chartInputLimit: 'Sommige grafiekgegevens zijn weggelaten omdat een invoerlimiet is bereikt. Geef een kleinere of vooraf geaggregeerde gegevensset op om de weggelaten waarden weer te geven.',
   catalogPickerInputLimit: 'Sommige catalogusvermeldingen zijn weggelaten omdat een invoerlimiet is bereikt.',
   tagFacetLimit: {
     one: '+{count} extra label',
@@ -185,6 +188,7 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'In plaats daarvan wordt een lijst getoond.',
   largeDataInvalid: 'De gegevens kunnen niet worden weergegeven omdat {column} ongeldig is.',
   largeDataLimit: 'De gegevens kunnen niet worden weergegeven omdat ze de limiet van {limit} overschrijden.',
+  chart3dName: 'Label',
 };
 
 registerLyraLocale('nl', strings);

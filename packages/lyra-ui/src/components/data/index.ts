@@ -23,4 +23,5 @@ export * from '../lr-timeline-item.js';
 export * from '../lr-timeline.js';
 export * from '../lr-tree-item.js';
 export * from '../lr-tree.js';
+export * from '../lr-treemap.js';
 export * from '../lr-word-cloud.js';

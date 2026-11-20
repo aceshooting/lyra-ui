@@ -6461,6 +6461,24 @@
       }
     },
     {
+      "module": "src/components/data/treemap/treemap-layout.ts",
+      "exportName": "LyraTreemapNode",
+      "kind": "interface",
+      "fingerprint": "3daa3f7207933f228d07",
+      "routes": [
+        "src/components/data/index.ts",
+        "src/components/data/treemap/treemap.class.ts",
+        "src/components/lr-treemap.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-treemap-treemap-contracts",
+        "declaration": "LyraTreemapNode"
+      }
+    },
+    {
       "module": "src/components/data/word-cloud/word-cloud-layout.ts",
       "exportName": "WordCloudWord",
       "kind": "interface",

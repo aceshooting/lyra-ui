@@ -300,6 +300,7 @@ import '../components/lr-trace-tree.js';
 import '../components/lr-transcript-feed.js';
 import '../components/lr-tree.js';
 import '../components/lr-tree-item.js';
+import '../components/lr-treemap.js';
 import '../components/lr-typing-indicator.js';
 import '../components/lr-unit-picker.js';
 import '../components/lr-usage-badge.js';

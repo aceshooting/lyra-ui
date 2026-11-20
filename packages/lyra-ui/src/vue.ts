@@ -629,6 +629,8 @@ export type LyraTreeVueProps = LyraVueCustomElement<'lr-tree'>;
 
 export type LyraTreeItemVueProps = LyraVueCustomElement<'lr-tree-item'>;
 
+export type LyraTreemapVueProps = LyraVueCustomElement<'lr-treemap'>;
+
 export type LyraTypingIndicatorVueProps = LyraVueCustomElement<'lr-typing-indicator'>;
 
 export type LyraUnitPickerVueProps = LyraVueCustomElement<'lr-unit-picker'>;
@@ -954,6 +956,7 @@ export interface LyraVueGlobalComponents {
   'lr-transcript-feed': LyraTranscriptFeedVueProps;
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
+  'lr-treemap': LyraTreemapVueProps;
   'lr-typing-indicator': LyraTypingIndicatorVueProps;
   'lr-unit-picker': LyraUnitPickerVueProps;
   'lr-usage-badge': LyraUsageBadgeVueProps;

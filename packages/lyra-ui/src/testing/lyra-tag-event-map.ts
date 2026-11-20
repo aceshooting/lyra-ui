@@ -96,6 +96,7 @@ import type { LyraTableEventMap } from '../components/data/table/table-support.j
 import type { LyraTimelineEventMap } from '../components/data/timeline/timeline.class.js';
 import type { LyraTreeItemEventMap } from '../components/data/tree/tree-item.class.js';
 import type { LyraTreeEventMap } from '../components/data/tree/tree.class.js';
+import type { LyraTreemapEventMap } from '../components/data/treemap/treemap.class.js';
 import type { LyraWordCloudEventMap } from '../components/data/word-cloud/word-cloud.class.js';
 import type { LyraButtonEventMap } from '../components/forms/button/button.class.js';
 import type { LyraCheckboxGroupEventMap } from '../components/forms/checkbox-group/checkbox-group.class.js';
@@ -527,6 +528,7 @@ export interface LyraTagEventTypes {
   'lr-transcript-feed': LyraTranscriptFeedEventMap;
   'lr-tree': LyraTreeEventMap;
   'lr-tree-item': LyraTreeItemEventMap;
+  'lr-treemap': LyraTreemapEventMap;
   'lr-unit-picker': LyraUnitPickerEventMap;
   'lr-video': LyraVideoEventMap;
   'lr-video-playlist': LyraVideoPlaylistEventMap;
