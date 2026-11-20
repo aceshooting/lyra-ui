@@ -2034,7 +2034,7 @@ it('keeps sparse snapshot holes undefined despite an inherited numeric getter', 
   const doc = frame.contentDocument!;
   const script = doc.createElement('script');
   script.type = 'module';
-  script.textContent = `import ${JSON.stringify(new URL('./json-viewer.ts', import.meta.url).href)};`;
+  script.textContent = `import ${JSON.stringify(new URL('../../lr-json-viewer.ts', import.meta.url).href)};`;
   doc.head.append(script);
   try {
     await waitUntil(() => Boolean(view.customElements.get('lr-json-viewer')));

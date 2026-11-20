@@ -57,7 +57,7 @@ async function lateRegistrationFixture(timeScale = false): Promise<{
       timeline,
       errors,
       async upgrade() {
-        await importModule<unknown>(new URL('./timeline-item.ts', import.meta.url).href);
+        await importModule<unknown>(new URL('../../lr-timeline-item.ts', import.meta.url).href);
         await realm.customElements.whenDefined('lr-timeline-item');
         const items = [...timeline.querySelectorAll<LyraTimelineItem>('lr-timeline-item')];
         expect(items.every((item, index) => item === originalItems[index]), 'Native upgrade retains the authored nodes')

@@ -188,7 +188,7 @@ test('declaration emit retains helpers referenced by the public component graph'
 });
 
 test('GeoJSON declaration emit retains fallback tag typings without eager runtime loading', (t) => {
-  const source = fileURLToPath(new URL('../src/components/viewers/geojson-view/geojson-viewer.ts', import.meta.url));
+  const source = fileURLToPath(new URL('../src/components/lr-geojson-viewer.ts', import.meta.url));
   const root = mkdtempSync(join(tmpdir(), 'lyra-geojson-declaration-emit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   writeFileSync(join(root, 'entry.ts'), readFileSync(source, 'utf8'));
@@ -203,7 +203,7 @@ test('GeoJSON declaration emit retains fallback tag typings without eager runtim
   const compiler = resolve(dirname(require.resolve('typescript/package.json')), require('typescript/package.json').bin.tsc);
   const result = spawnSync(process.execPath, [compiler, '-p', join(root, 'tsconfig.json')], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  const fallbackReference = /['"]\.\.\/\.\.\/utility\/json-viewer\/json-viewer\.js['"]/;
+  const fallbackReference = /['"]\.\/lr-json-viewer\.js['"]/;
   assert.match(readFileSync(join(root, 'entry.d.ts'), 'utf8'), fallbackReference,
     'the declaration must retain the fallback registration module and its transitive tag typings');
   assert.doesNotMatch(readFileSync(join(root, 'entry.js'), 'utf8'), fallbackReference,

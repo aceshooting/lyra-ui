@@ -574,9 +574,9 @@ for (const direction of ['ltr', 'rtl']) {
         const module = doc.createElement('script');
         module.type = 'module';
         module.textContent = `await Promise.all([
-          import(${JSON.stringify(new URL('../../overlays/overlay/dropdown.ts', import.meta.url).href)}),
-          import(${JSON.stringify(new URL('./dropdown-item.ts', import.meta.url).href)}),
-          import(${JSON.stringify(new URL('./menu.ts', import.meta.url).href)})
+          import(${JSON.stringify(new URL('../../lr-dropdown.ts', import.meta.url).href)}),
+          import(${JSON.stringify(new URL('../../lr-dropdown-item.ts', import.meta.url).href)}),
+          import(${JSON.stringify(new URL('../../lr-menu.ts', import.meta.url).href)})
         ]); document.body.dataset.ready = 'true';`;
         doc.head.append(module);
         await waitUntil(() => doc.body.dataset['ready'] === 'true', 'frame components did not register');

@@ -52,7 +52,7 @@ picker) doesn't have to pre-resolve and thread `src` by hand:
 
 ```js
 import { createFlagUrlResolver } from '@aceshooting/lyra-flags';
-import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/media/flag/flag.js';
+import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/lr-flag.js';
 
 setFlagUrlResolver(createFlagUrlResolver()); // one shared flagUrls() fetch backs every <lr-flag>
 ```
@@ -111,7 +111,7 @@ Each has the same `flagUrl(code): Promise<string | undefined>` shape as the defa
 the `options.variant` parameter (there is nothing else to select once committed to one tier); the
 `compact`/`detailed` entries still fall back to the standard vector for a code with no distinct
 tier asset, exactly like `flagUrl(code, { variant })` does. Register one with `<lr-flag>`'s
-`setFlagUrlResolver()` from `@aceshooting/lyra-ui/components/media/flag/flag.js` instead of
+`setFlagUrlResolver()` from `@aceshooting/lyra-ui/components/lr-flag.js` instead of
 importing `flag-peer.js` (which always registers the full three-tier resolver) when your app has
 made this commitment.
 
@@ -120,7 +120,7 @@ can take either bulk path above without reaching back through the package root:
 
 ```js
 import { flagUrls, createFlagUrlResolver } from '@aceshooting/lyra-flags/standard';
-import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/media/flag/flag.js';
+import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/lr-flag.js';
 
 const everyStandardUrl = await flagUrls();
 setFlagUrlResolver(createFlagUrlResolver()); // one shared eager map, standard tier only

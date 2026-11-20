@@ -39,6 +39,9 @@ function canonical(node) {
   return { tokens: tokens(text), privateInstance: omitted.some(member => !isStatic(member)), privateStatic: omitted.some(isStatic) };
 }
 
+/** Package metadata files exported verbatim; they carry no declarations and stay outside the API snapshot. */
+const metadataExports = ['./package.json', './custom-elements.json'];
+
 /** Snapshot explicit exports and their local declaration closure without importing runtime code. */
 export function collectApi({ packageDir = packageRoot, configPath = path.join(packageDir, 'scripts/fixtures/tsconfig.api.json'), experimental = experimentalPaths } = {}) {
   const manifest = json(path.join(packageDir, 'package.json'));
@@ -48,8 +51,9 @@ export function collectApi({ packageDir = packageRoot, configPath = path.join(pa
   const entrypoints = {};
   for (const [name, target] of Object.entries(manifest.exports)) {
     assert.ok(!name.includes('*'), `Explicit entrypoints required; wildcard ${name} is not allowed.`);
-    if (name === './package.json') {
-      assert.equal(target, './package.json');
+    if (metadataExports.includes(name)) {
+      assert.equal(target, name, `${name}: metadata exports map to themselves.`);
+      assert.ok(existsSync(path.join(packageDir, name)), `${name}: missing package metadata file.`);
       continue;
     }
     assert.ok(target && Object.keys(target).sort().join(',') === 'default,types', `${name}: explicit types/default targets required.`);

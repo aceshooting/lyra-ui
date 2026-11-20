@@ -11,7 +11,7 @@
 // The class module deliberately imports the side-effect-FREE `*.class.js` (that split is what
 // makes the package tree-shakeable), so nothing in the graph ever calls `defineElement('copy-
 // button', ...)`. A consumer taking the granular import path the package actively recommends --
-// `import '@aceshooting/lyra-ui/dist/components/agent-tools/tool-result-view/tool-result-view.js'`
+// `import '@aceshooting/lyra-ui/dist/components/lr-tool-result-view.js'`
 // -- then gets an un-upgraded `<lr-copy-button>`: no error, no warning, an inert element that
 // renders as an empty inline box. The root barrel (`lyra.js`) imports every registration entry, so
 // it hides the defect completely -- including from a colocated `*.test.ts` that imports only its

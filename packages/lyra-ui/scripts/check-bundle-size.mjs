@@ -477,18 +477,13 @@ if (exclusionClaimsOnly) {
     const componentsDir = join(packageDir, "dist", "components");
     const componentEntries = existsSync(componentsDir)
       ? readdirSync(componentsDir, { withFileTypes: true })
-          .filter((family) => family.isDirectory())
-          .flatMap((family) =>
-            readdirSync(join(componentsDir, family.name), {
-              withFileTypes: true,
-            })
-              .filter((component) => component.isDirectory())
-              .map(
-                (component) =>
-                  `dist/components/${family.name}/${component.name}/${component.name}.js`
-              )
+          .filter(
+            (entry) =>
+              entry.isFile() &&
+              entry.name.startsWith("lr-") &&
+              entry.name.endsWith(".js")
           )
-          .filter((entry) => existsSync(join(packageDir, entry)))
+          .map((entry) => `dist/components/${entry.name}`)
           .sort()
       : [];
     const componentGzipBytes = [];

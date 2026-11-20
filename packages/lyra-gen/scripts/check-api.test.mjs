@@ -98,6 +98,21 @@ test('detects loss of side effects and supported paths without accepting wildcar
   assert.throws(() => f.collect(), /explicit|wildcard/i);
 });
 
+test('accepts the custom-elements manifest as a self-mapped metadata export outside the snapshot', async t => {
+  const f = await fixture(t);
+  const baseline = f.collect();
+  f.manifest.exports['./custom-elements.json'] = './custom-elements.json';
+  await f.saveManifest();
+  assert.throws(() => f.collect(), /custom-elements\.json: missing package metadata file/);
+  await writeFile(path.join(f.directory, 'custom-elements.json'), '{"schemaVersion":"1.0.0","modules":[]}');
+  const result = f.collect();
+  assert.equal(result.entrypoints['./custom-elements.json'], undefined);
+  assert.deepEqual(compareApi(baseline, result), { contract: [], experimental: [] });
+  f.manifest.exports['./custom-elements.json'] = './dist/custom-elements.json';
+  await f.saveManifest();
+  assert.throws(() => f.collect(), /metadata exports map to themselves/);
+});
+
 test('fails closed for missing artifacts, unresolved local re-exports and invalid declarations', async t => {
   const f = await fixture(t);
   await rm(path.join(f.directory, 'dist', 'public.js'));

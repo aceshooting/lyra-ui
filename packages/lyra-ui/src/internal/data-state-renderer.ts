@@ -207,7 +207,7 @@ function exportPartsFor(prefix: string): string {
  * that renders once the retry succeeds.
  *
  * The host's registration entry must register `lr-empty`
- * (`import '<...>/components/overlays/empty/empty.js'`), the same way `lr-table`'s already does;
+ * (`import '<...>/components/lr-empty.js'`), the same way `lr-table`'s already does;
  * `check-component-dependencies.mjs` attributes this module's rendered tag to every entry whose
  * class module reaches it.
  *

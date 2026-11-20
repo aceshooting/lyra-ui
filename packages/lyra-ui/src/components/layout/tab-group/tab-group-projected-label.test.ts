@@ -297,8 +297,8 @@ it('repairs a removed active tab in former order while a rich addition is being 
 it('renders unregistered descriptor light DOM and refreshes it after child registration', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
   const frame = document.createElement('iframe');
-  const groupModule = new URL('./tab-group.ts', import.meta.url).href;
-  const tabModule = new URL('./tab.ts', import.meta.url).href;
+  const groupModule = new URL('../../lr-tab-group.ts', import.meta.url).href;
+  const tabModule = new URL('../../lr-tab.ts', import.meta.url).href;
   frame.srcdoc = `<style>lr-tab[data-upgrade-label]:not(:defined) > span { display: none; }</style>
     <lr-tab-group aria-label="Late registrations">
     <lr-tab panel="named"><span>Unregistered named</span></lr-tab>

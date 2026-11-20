@@ -12,7 +12,7 @@ import { isMainModule } from './is-main-module.mjs';
 // interop step, or an unoptimized dev build fails to do, and the example's reader inherits the
 // failure. A granular subpath cannot regress that way at all, so it stays the only correct
 // copy-pasteable form, e.g.
-// `@aceshooting/lyra-ui/components/forms/select/select.js` -- see the "Tree-shakeable exports" rule
+// `@aceshooting/lyra-ui/components/lr-select.js` -- see the "Tree-shakeable exports" rule
 // in docs/agents/coding-conventions.md. `check-llms-freshness.mjs` (via scripts/llms-gaps.mjs) only
 // asserts that a member *name* is mentioned somewhere in a component's section; it does not (and
 // structurally cannot, without duplicating this scan) know whether the import path shown alongside

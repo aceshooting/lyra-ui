@@ -10,8 +10,8 @@ async function viewportField(fontSize: string, top: number, topLayer = false): P
   frame.title = 'Short currency field viewport';
   frame.style.cssText = 'inline-size:390px;block-size:600px;border:0;';
   const loaded = oneEvent(frame, 'load');
-  const selectUrl = new URL('./select.ts', import.meta.url).href;
-  const optionUrl = new URL('../combobox/option.ts', import.meta.url).href;
+  const selectUrl = new URL('../../lr-select.ts', import.meta.url).href;
+  const optionUrl = new URL('../../lr-option.ts', import.meta.url).href;
   frame.srcdoc = `<!doctype html><html><body style="margin:0"><script type="module">import '${selectUrl}'; import '${optionUrl}';</script></body></html>`;
   document.body.append(frame);
   await loaded;
