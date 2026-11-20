@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'टकराव वाला',
   gitStatusIgnored: 'अनदेखा किया गया',
   envListValueHidden: 'मान छिपाया गया',
+  geojsonViewLabel: 'मानचित्र',
   provenanceEntities: 'इकाइयाँ',
   flowItemAnnouncement: '{item} ({total} में से {index})',
   neighborDirectionIn: 'आने वाला',

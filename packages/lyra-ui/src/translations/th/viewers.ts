@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'คัดลอก XML ไปยังคลิปบอร์ด',
   xmlViewerCopyNode: 'คัดลอก {name}',
   xmlViewerToggleNode: 'สลับ {name}',
-  geojsonViewLabel: 'แผนที่',
   geojsonViewInvalid: 'ไฟล์นี้ไม่ใช่ GeoJSON ที่ถูกต้อง',
   geojsonViewFeatureCount: {
     other: 'ฟีเจอร์ {count} รายการ',

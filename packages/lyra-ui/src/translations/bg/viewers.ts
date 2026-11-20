@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Копирай XML в клипборда',
   xmlViewerCopyNode: 'Копирай {name}',
   xmlViewerToggleNode: 'Превключи {name}',
-  geojsonViewLabel: 'Карта',
   geojsonViewInvalid: 'Този файл не е валиден GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} обект',

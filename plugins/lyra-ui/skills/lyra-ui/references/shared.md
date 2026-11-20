@@ -5482,6 +5482,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-chip': LyraChipReactProps;
   'lr-chip-group': LyraChipGroupReactProps;
   'lr-chord': LyraChordReactProps;
+  'lr-choropleth': LyraChoroplethReactProps;
   'lr-chunk-inspector': LyraChunkInspectorReactProps;
   'lr-citation-badge': LyraCitationBadgeReactProps;
   'lr-claim-evidence': LyraClaimEvidenceReactProps;
@@ -5927,6 +5928,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-chip': LyraComponentTypeMap['lr-chip']['element'];
   'lr-chip-group': LyraComponentTypeMap['lr-chip-group']['element'];
   'lr-chord': LyraComponentTypeMap['lr-chord']['element'];
+  'lr-choropleth': LyraComponentTypeMap['lr-choropleth']['element'];
   'lr-chunk-inspector': LyraComponentTypeMap['lr-chunk-inspector']['element'];
   'lr-citation-badge': LyraComponentTypeMap['lr-citation-badge']['element'];
   'lr-claim-evidence': LyraComponentTypeMap['lr-claim-evidence']['element'];
@@ -6243,6 +6245,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-chip': LyraChipSvelteProps;
   'lr-chip-group': LyraChipGroupSvelteProps;
   'lr-chord': LyraChordSvelteProps;
+  'lr-choropleth': LyraChoroplethSvelteProps;
   'lr-chunk-inspector': LyraChunkInspectorSvelteProps;
   'lr-citation-badge': LyraCitationBadgeSvelteProps;
   'lr-claim-evidence': LyraClaimEvidenceSvelteProps;
@@ -6706,6 +6709,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-chip': LyraChipVueProps;
   'lr-chip-group': LyraChipGroupVueProps;
   'lr-chord': LyraChordVueProps;
+  'lr-choropleth': LyraChoroplethVueProps;
   'lr-chunk-inspector': LyraChunkInspectorVueProps;
   'lr-citation-badge': LyraCitationBadgeVueProps;
   'lr-claim-evidence': LyraClaimEvidenceVueProps;

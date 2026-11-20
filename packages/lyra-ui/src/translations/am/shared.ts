@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ግጭት ያለበት',
   gitStatusIgnored: 'ተትቷል',
   envListValueHidden: 'ዋጋው ተደብቋል',
+  geojsonViewLabel: 'ካርታ',
   provenanceEntities: 'አካላት',
   flowItemAnnouncement: '{item} (ከ{total} ውስጥ {index}ኛ)',
   neighborDirectionIn: 'ገቢ',

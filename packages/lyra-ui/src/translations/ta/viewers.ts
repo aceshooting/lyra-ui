@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML-ஐ கிளிப்போர்டுக்கு நகலெடு',
   xmlViewerCopyNode: '{name}-ஐ நகலெடு',
   xmlViewerToggleNode: '{name}-ஐக் காட்டு/மறை',
-  geojsonViewLabel: 'வரைபடம்',
   geojsonViewInvalid: 'இந்தக் கோப்பு சரியான GeoJSON அல்ல.',
   geojsonViewFeatureCount: {
     one: '{count} அம்சம்',

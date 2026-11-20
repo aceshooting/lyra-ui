@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ütköző',
   gitStatusIgnored: 'Figyelmen kívül hagyva',
   envListValueHidden: 'Rejtett érték',
+  geojsonViewLabel: 'Térkép',
   provenanceEntities: 'Entitások',
   flowItemAnnouncement: '{item} ({index}/{total})',
   neighborDirectionIn: 'Bejövő',

@@ -176,6 +176,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'متعارض',
   gitStatusIgnored: 'مُتجاهَل',
   envListValueHidden: 'القيمة مخفية',
+  geojsonViewLabel: 'خريطة',
   provenanceEntities: 'الكيانات',
   flowItemAnnouncement: '{item} ({index} من {total})',
   neighborDirectionIn: 'واردة',

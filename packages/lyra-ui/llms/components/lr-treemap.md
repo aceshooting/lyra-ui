@@ -39,9 +39,10 @@ and remains available to assistive technology while visually collapsed. The char
 
 Tab enters the tile group. Left and Right move among siblings, following the reading direction.
 Down enters the first child and Up returns to the parent. Home and End move to the ends of the
-sibling list. A tile reports `lr-datum-activate` on click, Enter, or Space. The event bubbles
-through the shadow boundary and carries `{ id, label, value }` with the numeric weight.
-Hover or keyboard focus reveals the tooltip. Escape dismisses it.
+sibling list. Hover or keyboard focus reveals the tooltip. Escape dismisses it.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `{ id, label, value }` with the numeric weight.
 
 The legend and tiles use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
 **CSS parts:** `base`, `plot`, `description`, `tile`, `tile-label`, `tooltip`, `legend`,

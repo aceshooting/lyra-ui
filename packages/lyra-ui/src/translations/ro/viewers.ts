@@ -126,7 +126,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Copiază XML în clipboard',
   xmlViewerCopyNode: 'Copiază {name}',
   xmlViewerToggleNode: 'Comută {name}',
-  geojsonViewLabel: 'Hartă',
   geojsonViewInvalid: 'Acest fișier nu este un GeoJSON valid.',
   geojsonViewFeatureCount: {
     one: '{count} entitate',

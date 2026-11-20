@@ -3520,9 +3520,12 @@
       "kind": "interface",
       "fingerprint": "76b6adb485c8322e14a4",
       "routes": [
+        "src/all.ts",
         "src/components/data/chord/chord.class.ts",
         "src/components/data/index.ts",
-        "src/components/lr-chord.ts"
+        "src/components/lr-chord.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/data.md",
       "family": "data",
@@ -3533,14 +3536,59 @@
       }
     },
     {
+      "module": "src/components/data/choropleth/choropleth.class.ts",
+      "exportName": "LyraChoroplethDatum",
+      "kind": "interface",
+      "fingerprint": "0f5872affc0b8c3e3b32",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/choropleth/choropleth.class.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-choropleth.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-choropleth-choropleth-contracts",
+        "declaration": "LyraChoroplethDatum"
+      }
+    },
+    {
+      "module": "src/components/data/choropleth/choropleth.class.ts",
+      "exportName": "LyraChoroplethNoData",
+      "kind": "interface",
+      "fingerprint": "ea6e66ef101776885236",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/choropleth/choropleth.class.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-choropleth.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-choropleth-choropleth-contracts",
+        "declaration": "LyraChoroplethNoData"
+      }
+    },
+    {
       "module": "src/components/data/sankey/sankey-layout.ts",
       "exportName": "LyraSankeyLink",
       "kind": "interface",
       "fingerprint": "5dc9caa1db4a027a188f",
       "routes": [
+        "src/all.ts",
         "src/components/data/index.ts",
         "src/components/data/sankey/sankey.class.ts",
-        "src/components/lr-sankey.ts"
+        "src/components/lr-sankey.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/data.md",
       "family": "data",
@@ -3556,9 +3604,12 @@
       "kind": "interface",
       "fingerprint": "76b6adb485c8322e14a4",
       "routes": [
+        "src/all.ts",
         "src/components/data/index.ts",
         "src/components/data/sankey/sankey.class.ts",
-        "src/components/lr-sankey.ts"
+        "src/components/lr-sankey.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/data.md",
       "family": "data",
@@ -6520,9 +6571,12 @@
       "kind": "interface",
       "fingerprint": "3daa3f7207933f228d07",
       "routes": [
+        "src/all.ts",
         "src/components/data/index.ts",
         "src/components/data/treemap/treemap.class.ts",
-        "src/components/lr-treemap.ts"
+        "src/components/lr-treemap.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/data.md",
       "family": "data",

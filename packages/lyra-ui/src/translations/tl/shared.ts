@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'May salungatan',
   gitStatusIgnored: 'Binalewala',
   envListValueHidden: 'Nakatago ang value',
+  geojsonViewLabel: 'Mapa',
   provenanceEntities: 'Mga entity',
   flowItemAnnouncement: '{item} ({index} sa {total})',
   neighborDirectionIn: 'Papasok',

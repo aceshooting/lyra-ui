@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kwafi XML zuwa allon riƙewa',
   xmlViewerCopyNode: 'Kwafi {name}',
   xmlViewerToggleNode: 'Buɗe/rufe {name}',
-  geojsonViewLabel: 'Taswira',
   geojsonViewInvalid: 'Wannan fayil ba ingantaccen GeoJSON ba ne.',
   geojsonViewFeatureCount: {
     one: 'Siffa {count}',

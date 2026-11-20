@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'دارای تعارض',
   gitStatusIgnored: 'نادیده‌گرفته‌شده',
   envListValueHidden: 'مقدار پنهان است',
+  geojsonViewLabel: 'نقشه',
   provenanceEntities: 'موجودیت‌ها',
   flowItemAnnouncement: '{item} ({index} از {total})',
   neighborDirectionIn: 'ورودی',

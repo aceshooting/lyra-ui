@@ -1,4 +1,5 @@
 import type { Feature, FeatureCollection } from 'geojson';
+import { projectChoroplethNoData, type CanonicalChoroplethNoData } from '../../../internal/choropleth-no-data.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -13,7 +14,6 @@ import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOption
 import { projectAdmittedGeoJson, type CanonicalGeoJsonProjection } from './map-geojson-diff.js';
 import type { MapDataLayerPointRadius } from './map-data-layers.js';
 import {
-  boundedLegendText,
   boundedOwnArrayLength,
   isRuntimeArray,
   isUnsafeDescriptor,
@@ -26,6 +26,7 @@ import {
 // On-demand projection for `dataLayers` and `choropleth`. A map that sets neither never loads this
 // module, its descriptor model or its GeoJSON projection and diffing.
 
+export type { CanonicalChoroplethNoData } from '../../../internal/choropleth-no-data.js';
 export { buildMapLabelLayer } from './map-label-layer.js';
 export { buildProjectedGeoJsonPropertyDiff, projectAdmittedGeoJson } from './map-geojson-diff.js';
 
@@ -479,31 +480,6 @@ export interface CanonicalMapChoropleth extends CanonicalMapInteraction {
   readonly interpolation: ReturnType<typeof choroplethInterpolation>;
   readonly stepBaseColor: string | undefined;
   readonly noData: CanonicalChoroplethNoData | undefined;
-}
-
-/** The accepted `choropleth.noData` record. */
-export interface CanonicalChoroplethNoData {
-  readonly color: string | undefined;
-  readonly strokeColor: string | undefined;
-  readonly label: string | undefined;
-}
-
-/** Bound on a no-data caption, matching a legend label. */
-const MAX_NO_DATA_LABEL = 256;
-
-function projectChoroplethNoData(value: unknown): CanonicalChoroplethNoData | undefined {
-  try {
-    if (!isSafeNonArrayObject(value)) return undefined;
-    const label = optionalDescriptorValue(getOwnDataDescriptor(value, 'label'));
-    const trimmed = typeof label === 'string' ? label.trim() : '';
-    return Object.freeze({
-      color: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'color'))),
-      strokeColor: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'strokeColor'))),
-      label: trimmed.length > 0 ? boundedLegendText(trimmed, MAX_NO_DATA_LABEL) : undefined,
-    });
-  } catch {
-    return undefined;
-  }
 }
 
 /** `logarithmic` and `step` are kept; anything else interpolates linearly. */

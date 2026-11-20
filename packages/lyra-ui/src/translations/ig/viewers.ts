@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Detuo XML na klipbọọdụ',
   xmlViewerCopyNode: 'Detuo {name}',
   xmlViewerToggleNode: 'Gbanwee {name}',
-  geojsonViewLabel: 'Maapụ',
   geojsonViewInvalid: 'Faịlụ a abụghị GeoJSON ziri ezi.',
   geojsonViewFeatureCount: {
     one: 'Akụkụ {count}',

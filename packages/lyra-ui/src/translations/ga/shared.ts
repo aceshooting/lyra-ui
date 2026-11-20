@@ -170,6 +170,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'I gcoimhlint',
   gitStatusIgnored: 'Neamhairdithe',
   envListValueHidden: 'Luach i bhfolach',
+  geojsonViewLabel: 'Léarscáil',
   provenanceEntities: 'Aonáin',
   flowItemAnnouncement: '{item} ({index} as {total})',
   neighborDirectionIn: 'Isteach',

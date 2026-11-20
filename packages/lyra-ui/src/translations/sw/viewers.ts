@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Nakili XML kwenye ubao wa kunakili',
   xmlViewerCopyNode: 'Nakili {name}',
   xmlViewerToggleNode: 'Badilisha mwonekano wa {name}',
-  geojsonViewLabel: 'Ramani',
   geojsonViewInvalid: 'Faili hili si GeoJSON halali.',
   geojsonViewFeatureCount: {
     one: 'kipengele {count}',

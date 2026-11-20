@@ -55,6 +55,7 @@ import '../components/lr-checkpoint.js';
 import '../components/lr-chip.js';
 import '../components/lr-chip-group.js';
 import '../components/lr-chord.js';
+import '../components/lr-choropleth.js';
 import '../components/lr-chunk-inspector.js';
 import '../components/lr-citation-badge.js';
 import '../components/lr-claim-evidence.js';

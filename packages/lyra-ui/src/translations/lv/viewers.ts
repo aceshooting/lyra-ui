@@ -126,7 +126,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopēt XML starpliktuvē',
   xmlViewerCopyNode: 'Kopēt {name}',
   xmlViewerToggleNode: 'Pārslēgt {name}',
-  geojsonViewLabel: 'Karte',
   geojsonViewInvalid: 'Šis fails nav derīgs GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objekts',

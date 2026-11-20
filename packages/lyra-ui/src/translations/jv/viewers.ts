@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Salin XML menyang clipboard',
   xmlViewerCopyNode: 'Salin {name}',
   xmlViewerToggleNode: 'Ganti {name}',
-  geojsonViewLabel: 'Peta',
   geojsonViewInvalid: 'Berkas iki dudu GeoJSON sing sah.',
   geojsonViewFeatureCount: {
     other: '{count} fitur',

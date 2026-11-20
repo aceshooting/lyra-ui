@@ -314,6 +314,7 @@
     "model-viewer": "viewers",
     "treemap": "data",
     "sankey": "data",
-    "chord": "data"
+    "chord": "data",
+    "choropleth": "data"
   }
 }

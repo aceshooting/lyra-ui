@@ -164,6 +164,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Конфлікт',
   gitStatusIgnored: 'Ігнорується',
   envListValueHidden: 'Значення приховано',
+  geojsonViewLabel: 'Мапа',
   provenanceEntities: 'Сутності',
   flowItemAnnouncement: '{item} ({index} із {total})',
   neighborDirectionIn: 'Вхідний',

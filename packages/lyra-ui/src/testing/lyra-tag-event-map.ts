@@ -81,6 +81,7 @@ import type { LyraVoicePickerEventMap } from '../components/conversation/voice-p
 import type { LyraWidgetRendererEventMap } from '../components/conversation/widget-renderer/widget-renderer.class.js';
 import type { LyraCalendarEventMap } from '../components/data/calendar/calendar.class.js';
 import type { LyraChordEventMap } from '../components/data/chord/chord.class.js';
+import type { LyraChoroplethEventMap } from '../components/data/choropleth/choropleth.class.js';
 import type { LyraConditionBuilderEventMap } from '../components/data/condition-builder/condition-builder.class.js';
 import type { LyraContextMeterEventMap } from '../components/data/context-meter/context-meter.class.js';
 import type { LyraDataGridEventMap } from '../components/data/data-grid/data-grid-types.js';
@@ -317,6 +318,7 @@ export interface LyraTagEventTypes {
   'lr-chip': LyraChipEventMap;
   'lr-chip-group': LyraChipGroupEventMap;
   'lr-chord': LyraChordEventMap;
+  'lr-choropleth': LyraChoroplethEventMap;
   'lr-chunk-inspector': LyraChunkInspectorEventMap;
   'lr-citation-badge': LyraCitationBadgeEventMap;
   'lr-claim-evidence': LyraClaimEvidenceEventMap;

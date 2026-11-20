@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: '충돌',
   gitStatusIgnored: '이미 무시됨',
   envListValueHidden: '값 숨김',
+  geojsonViewLabel: '지도',
   provenanceEntities: '개체',
   flowItemAnnouncement: '{item}({total}개 중 {index}번째)',
   neighborDirectionIn: '수신',

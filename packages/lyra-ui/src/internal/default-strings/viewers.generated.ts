@@ -77,7 +77,6 @@ export const LYRA_DEFAULT_geojsonViewFeatureCount: LyraMessage = {
     other: '{count} features',
   };
 export const LYRA_DEFAULT_geojsonViewInvalid: LyraMessage = 'This file is not valid GeoJSON.';
-export const LYRA_DEFAULT_geojsonViewLabel: LyraMessage = 'Map';
 export const LYRA_DEFAULT_geojsonViewMissingMapLibrary: LyraMessage = 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.';
 export const LYRA_DEFAULT_highlightLayerLabel: LyraMessage = 'Highlights';
 export const LYRA_DEFAULT_htmlViewerLabel: LyraMessage = 'HTML document';

@@ -148,6 +148,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Enwere esemokwu',
   gitStatusIgnored: 'Elegharaala ya anya',
   envListValueHidden: 'Ezoro uru',
+  geojsonViewLabel: 'Maapụ',
   provenanceEntities: 'Ihe dị adị',
   flowItemAnnouncement: '{item} ({index} n’ime {total})',
   neighborDirectionIn: 'Na-abata',

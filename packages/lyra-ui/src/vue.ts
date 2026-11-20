@@ -139,6 +139,8 @@ export type LyraChipGroupVueProps = LyraVueCustomElement<'lr-chip-group'>;
 
 export type LyraChordVueProps = LyraVueCustomElement<'lr-chord'>;
 
+export type LyraChoroplethVueProps = LyraVueCustomElement<'lr-choropleth'>;
+
 export type LyraChunkInspectorVueProps = LyraVueCustomElement<'lr-chunk-inspector'>;
 
 export type LyraCitationBadgeVueProps = LyraVueCustomElement<'lr-citation-badge'>;
@@ -715,6 +717,7 @@ export interface LyraVueGlobalComponents {
   'lr-chip': LyraChipVueProps;
   'lr-chip-group': LyraChipGroupVueProps;
   'lr-chord': LyraChordVueProps;
+  'lr-choropleth': LyraChoroplethVueProps;
   'lr-chunk-inspector': LyraChunkInspectorVueProps;
   'lr-citation-badge': LyraCitationBadgeVueProps;
   'lr-claim-evidence': LyraClaimEvidenceVueProps;

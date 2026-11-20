@@ -91,9 +91,7 @@ export function normalizeMapLegendGradient(
   }
 }
 
-export function boundedLegendText(value: string, limit: number): string {
-  return value.length <= limit ? value : `${value.slice(0, Math.max(0, limit - 1))}…`;
-}
+export { boundedLegendText } from '../../../internal/choropleth-no-data.js';
 
 /** Point-icon defaults, applied identically by the projector below and the legend glyph render. */
 export const DEFAULT_ICON_VIEW_BOX = Object.freeze([0, 0, 24, 24]) as readonly [

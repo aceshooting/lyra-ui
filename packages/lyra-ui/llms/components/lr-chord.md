@@ -42,13 +42,15 @@ small to represent.
 
 Tab enters the first visible entity. Left, Right, Home, and End move within entities or within
 the current entity's ribbons. Left and Right follow the reading direction. Down enters an
-entity's ribbons and Up returns to that entity. Click, Enter, or Space emits the bubbling,
-composed `lr-datum-activate` event with `LyraChordDatum` detail. Entity detail is
-`{ kind: 'entity', id, label, value }`. Ribbon detail is
-`{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
+entity's ribbons and Up returns to that entity.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists each
 plotted pair once, including self-relationships, with From, To, and Value columns. It remains
 available to assistive technology while visually collapsed.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `LyraChordDatum` detail. Entity detail is
+`{ kind: 'entity', id, label, value }`. Ribbon detail is
+`{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
 
 Arc labels appear where space permits, and the full names are available through the tooltip
 and accessible names. The diagram mirrors in right-to-left layouts.

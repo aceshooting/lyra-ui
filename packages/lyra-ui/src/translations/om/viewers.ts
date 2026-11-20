@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML gara kuusaa waraqaatti garagalchi',
   xmlViewerCopyNode: '{name} garagalchi',
   xmlViewerToggleNode: '{name} jijjiiri',
-  geojsonViewLabel: 'Kaartaa',
   geojsonViewInvalid: 'Faayilli kun GeoJSON sirrii miti.',
   geojsonViewFeatureCount: {
     one: 'amalummaa {count}',

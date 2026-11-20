@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML-ды алмасу буферіне көшіру',
   xmlViewerCopyNode: 'Көшіру: {name}',
   xmlViewerToggleNode: 'Ауыстыру: {name}',
-  geojsonViewLabel: 'Карта',
   geojsonViewInvalid: 'Бұл файл жарамды GeoJSON емес.',
   geojsonViewFeatureCount: {
     one: '{count} нысан',

@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopyahin ang XML sa clipboard',
   xmlViewerCopyNode: 'Kopyahin ang {name}',
   xmlViewerToggleNode: 'I-toggle ang {name}',
-  geojsonViewLabel: 'Mapa',
   geojsonViewInvalid: 'Hindi wastong GeoJSON ang file na ito.',
   geojsonViewFeatureCount: {
     one: '{count} feature',

@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopeeri XML lõikelauale',
   xmlViewerCopyNode: 'Kopeeri {name}',
   xmlViewerToggleNode: 'Lülita sisse/välja: {name}',
-  geojsonViewLabel: 'Kaart',
   geojsonViewInvalid: 'See fail pole kehtiv GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objekt',

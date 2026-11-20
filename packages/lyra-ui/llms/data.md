@@ -6196,9 +6196,10 @@ and remains available to assistive technology while visually collapsed. The char
 
 Tab enters the tile group. Left and Right move among siblings, following the reading direction.
 Down enters the first child and Up returns to the parent. Home and End move to the ends of the
-sibling list. A tile reports `lr-datum-activate` on click, Enter, or Space. The event bubbles
-through the shadow boundary and carries `{ id, label, value }` with the numeric weight.
-Hover or keyboard focus reveals the tooltip. Escape dismisses it.
+sibling list. Hover or keyboard focus reveals the tooltip. Escape dismisses it.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `{ id, label, value }` with the numeric weight.
 
 The legend and tiles use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
 **CSS parts:** `base`, `plot`, `description`, `tile`, `tile-label`, `tooltip`, `legend`,
@@ -6264,12 +6265,13 @@ Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
 
 Tab enters the plot at its first node. The arrow keys move through nodes and then links.
 Left and Right follow the reading direction. Home and End move to the first and last mark.
-Click, Enter, or Space emits the bubbling, composed `lr-datum-activate` event with
-`LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
+Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted
+flows and isolated nodes and remains available to assistive technology while visually collapsed.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
 `{ kind: 'link', id, label, value, source, target }`.
-An unlabelled link uses a localized description of its endpoints for the event label. Hover or
-keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted flows and
-isolated nodes, and remains available to assistive technology while visually collapsed.
+An unlabelled link uses a localized description of its endpoints for the event label.
 
 Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
 **CSS parts:** `base`, `plot`, `description`, `node`, `node-label`, `link`, `link-label`,
@@ -6338,13 +6340,15 @@ small to represent.
 
 Tab enters the first visible entity. Left, Right, Home, and End move within entities or within
 the current entity's ribbons. Left and Right follow the reading direction. Down enters an
-entity's ribbons and Up returns to that entity. Click, Enter, or Space emits the bubbling,
-composed `lr-datum-activate` event with `LyraChordDatum` detail. Entity detail is
-`{ kind: 'entity', id, label, value }`. Ribbon detail is
-`{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
+entity's ribbons and Up returns to that entity.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists each
 plotted pair once, including self-relationships, with From, To, and Value columns. It remains
 available to assistive technology while visually collapsed.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `LyraChordDatum` detail. Entity detail is
+`{ kind: 'entity', id, label, value }`. Ribbon detail is
+`{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
 
 Arc labels appear where space permits, and the full names are available through the tooltip
 and accessible names. The diagram mirrors in right-to-left layouts.
@@ -6377,4 +6381,119 @@ The diagram and legend use the shared `--lr-color-chart-1` through `--lr-color-c
   `LyraChordEntity {
     readonly id: string;
     readonly label: string;
+  }`
+
+## `lr-choropleth`
+
+Color geographic regions by a numeric value. The chart renders polygons, multipolygons, and
+their holes as SVG and fits their projected bounds to the plot. Mercator limits latitude to
+about 85.05° in both hemispheres. Region labels appear where space permits. The map keeps its
+geographic orientation in right-to-left layouts.
+
+| Property | Attribute | Purpose |
+| --- | --- | --- |
+| `geography` | — | GeoJSON or TopoJSON object. Assign a new object when the data changes. |
+| `field` | `field` | Property key for each region's numeric value. Defaults to `'value'`. |
+| `labelField` | `label-field` | Property key for each region's name. Defaults to `'name'`. |
+| `projection` | `projection` | `LyraChoroplethProjection` is `'equirectangular'` (default) or `'mercator'`. |
+| `palette` | `palette` | `LyraChoroplethPalette` is `'sequential'` (default) or `'diverging'`. |
+| `noData` | — | Optional `LyraChoroplethNoData` overrides for the missing-value fill, outline, and label. |
+| `label` | `label` | Accessible chart name. A host `aria-label` takes precedence. |
+| `description` | `description` | Optional accessible chart description. |
+| `loading` | `loading` | Shows the loading state. Defaults to `false`. |
+| `withDataTable` | `with-data-table` | Shows the data table visually. Defaults to `false`. |
+| `dataTableToggle` | `data-table-toggle` | Adds a button to show or hide the table. Defaults to `false`. |
+| `valueFormatter` | — | Optional `(value: number) => string` for displayed and accessible numeric values. Formatting follows the effective locale by default. |
+
+Set `geography` to a GeoJSON Polygon, MultiPolygon, GeometryCollection, Feature, or
+FeatureCollection, or to a TopoJSON Topology with named polygon or collection objects.
+Use longitude in [−180°, 180°] and latitude in [−90°, 90°]. Each ring needs at least four
+positions, including its repeated first position. TopoJSON supports absolute arcs, transformed
+integer-delta arcs, and reversed arc references. Collections must contain polygonal geometry.
+A region uses its feature ID when present. Missing or repeated IDs receive generated IDs. An
+unnamed region uses its ID as its label. Only finite numeric properties count as data, so
+numeric strings and missing values use the no-data style.
+
+The decoder accepts up to 1,000 regions, 1,000 entries per collection, 1,000 named TopoJSON
+objects, 50,000 raw positions, 50,000 expanded positions, 10,000 arcs, and 10,000 ring arc
+references. It limits each position to 16 ordinates, collection nesting to 32 levels, array
+traversal to a 100,000-entry budget, and IDs, labels, and supported property keys to 1,024 UTF-16
+code units each. Invalid geometry or an exceeded limit shows an error for the input.
+
+The sequential palette spans the observed minimum and maximum, with a midpoint color for a
+constant value. The diverging palette uses a symmetric domain around zero. The legend shows
+the scale endpoints and midpoint, or one swatch for a constant domain. A missing or nonfinite
+value keeps the region visible in a distinct fill, which defaults to `--lr-color-no-data`. The
+legend includes a missing-value swatch when needed. Set `noData.label` to change the missing-value
+caption in the legend, tooltip, and table. The caption is trimmed and limited to 256 UTF-16
+code units. Use CSS colors for `noData.color` and `noData.strokeColor`.
+
+Tab enters the first region. The arrow keys and Home and End move through regions in source
+order. Left and Right follow the reading direction. Hover or keyboard focus reveals the tooltip.
+Escape dismisses it. The data table lists each region’s name and formatted value and remains
+available to assistive technology while visually collapsed.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `LyraChoroplethDatum` detail `{ id, label, value }`. An absent value is `null`.
+
+**CSS parts:** `base`, `plot`, `description`, `region`, `region-label`, `tooltip`, `legend`,
+`legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`, `empty`,
+`loading`, and `error`.
+
+```html
+<lr-choropleth id="coverage" label="Service coverage" data-table-toggle></lr-choropleth>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-choropleth.js';
+
+  const chart = document.querySelector('#coverage');
+  chart.geography = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 'west',
+        properties: { name: 'West district', value: 12 },
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[[-12, 35], [-6, 35], [-6, 39], [-12, 39], [-12, 35]]],
+        },
+      },
+    ],
+  };
+</script>
+```
+
+This TopoJSON example uses absolute arc coordinates. Assign it to the same `geography` property.
+
+```js
+chart.geography = {
+  type: 'Topology',
+  objects: {
+    districts: {
+      type: 'GeometryCollection',
+      geometries: [
+        {
+          type: 'Polygon',
+          id: 'west',
+          properties: { name: 'West district', value: 12 },
+          arcs: [[0]],
+        },
+      ],
+    },
+  },
+  arcs: [[[-12, 35], [-6, 35], [-6, 39], [-12, 39], [-12, 35]]],
+};
+```
+
+- **`components-data-choropleth-choropleth-contracts`** — Missing-value styling and region activation types.
+  Import `@aceshooting/lyra-ui/components/lr-choropleth.js`.
+  `LyraChoroplethNoData {
+    readonly color?: string;
+    readonly strokeColor?: string;
+    readonly label?: string;
+  }`
+  `LyraChoroplethDatum {
+    id: string;
+    label: string;
+    value: number | null;
   }`

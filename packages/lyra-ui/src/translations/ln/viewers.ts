@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopiá XML na presse-papier',
   xmlViewerCopyNode: 'Kopiá {name}',
   xmlViewerToggleNode: 'Bongola {name}',
-  geojsonViewLabel: 'Carte',
   geojsonViewInvalid: 'Fichier oyo ezali GeoJSON ya malamu te.',
   geojsonViewFeatureCount: {
     one: 'Eloko {count}',

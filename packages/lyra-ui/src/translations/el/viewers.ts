@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Αντιγραφή XML στο πρόχειρο',
   xmlViewerCopyNode: 'Αντιγραφή {name}',
   xmlViewerToggleNode: 'Εναλλαγή {name}',
-  geojsonViewLabel: 'Χάρτης',
   geojsonViewInvalid: 'Αυτό το αρχείο δεν περιέχει έγκυρο GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} στοιχείο',

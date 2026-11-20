@@ -130,7 +130,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Ikkopja l-XML fil-clipboard',
   xmlViewerCopyNode: 'Ikkopja {name}',
   xmlViewerToggleNode: 'Biddel {name}',
-  geojsonViewLabel: 'Mappa',
   geojsonViewInvalid: 'Dan il-fajl mhuwiex GeoJSON validu.',
   geojsonViewFeatureCount: {
     few: '{count} karatteristiċi',

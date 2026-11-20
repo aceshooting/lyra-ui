@@ -2,7 +2,7 @@
 
 # Component index
 
-316 custom elements, grouped by the source family they live in.
+317 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -70,7 +70,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` — a form-associated measurement-unit identifier selector.
 - `lr-signature-pad` · lr-signature-pad.js · `experimental` since `26.0.0` — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
 
-## Data display, dashboards & flow canvas — `components/data/` (29)
+## Data display, dashboards & flow canvas — `components/data/` (30)
 
 - `lr-sparkline` · lr-sparkline.js · `stable` since `4.0.0` — a zero-dependency inline SVG trend chart.
 - `lr-stat` · lr-stat.js · `stable` since `4.0.0` — a KPI/stat card.
@@ -101,6 +101,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-treemap` · lr-treemap.js · `experimental` since `unreleased` — A peer-free SVG treemap.
 - `lr-sankey` · lr-sankey.js · `experimental` since `unreleased` — A peer-free SVG Sankey chart for weighted flows across stages.
 - `lr-chord` · lr-chord.js · `experimental` since `unreleased` — A peer-free SVG chord chart for symmetric co-occurrence data.
+- `lr-choropleth` · lr-choropleth.js · `experimental` since `unreleased` — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
 
 ## Layout, navigation & structure — `components/layout/` (40)
 

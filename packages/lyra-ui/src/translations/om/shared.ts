@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Waldhabdeen jira',
   gitStatusIgnored: 'Tuffatame',
   envListValueHidden: 'Gatiin dhokfame',
+  geojsonViewLabel: 'Kaartaa',
   provenanceEntities: 'Qaamolee',
   flowItemAnnouncement: '{item} ({index} / {total})',
   neighborDirectionIn: 'Seenaa jira',

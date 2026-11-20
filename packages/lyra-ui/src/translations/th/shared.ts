@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ขัดแย้ง',
   gitStatusIgnored: 'ละเว้นแล้ว',
   envListValueHidden: 'ซ่อนค่าแล้ว',
+  geojsonViewLabel: 'แผนที่',
   provenanceEntities: 'เอนทิตี',
   flowItemAnnouncement: '{item} ({index} จาก {total})',
   neighborDirectionIn: 'ขาเข้า',

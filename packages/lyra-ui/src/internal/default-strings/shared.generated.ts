@@ -56,6 +56,7 @@ export const LYRA_DEFAULT_expand: LyraMessage = 'Expand';
 export const LYRA_DEFAULT_fieldRequired: LyraMessage = 'This field is required.';
 export const LYRA_DEFAULT_fileTypeAudio: LyraMessage = 'Audio';
 export const LYRA_DEFAULT_flowItemAnnouncement: LyraMessage = '{item} ({index} of {total})';
+export const LYRA_DEFAULT_geojsonViewLabel: LyraMessage = 'Map';
 export const LYRA_DEFAULT_gitStatusAdded: LyraMessage = 'Added';
 export const LYRA_DEFAULT_gitStatusConflicted: LyraMessage = 'Conflicted';
 export const LYRA_DEFAULT_gitStatusDeleted: LyraMessage = 'Deleted';

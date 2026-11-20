@@ -240,6 +240,7 @@
     "./components/data": "./dist/components/data/index.js",
     "./components/data/calendar/calendar.class.js": "./dist/components/data/calendar/calendar.class.js",
     "./components/data/chord/chord.class.js": "./dist/components/data/chord/chord.class.js",
+    "./components/data/choropleth/choropleth.class.js": "./dist/components/data/choropleth/choropleth.class.js",
     "./components/data/condition-builder/condition-builder-register.js": "./dist/components/data/condition-builder/condition-builder-register.js",
     "./components/data/condition-builder/condition-builder.class.js": "./dist/components/data/condition-builder/condition-builder.class.js",
     "./components/data/context-meter/context-meter.class.js": "./dist/components/data/context-meter/context-meter.class.js",
@@ -565,6 +566,10 @@
     "./components/lr-chord.js": {
       "types": "./dist/components/lr-chord.d.ts",
       "default": "./dist/components/lr-chord.js"
+    },
+    "./components/lr-choropleth.js": {
+      "types": "./dist/components/lr-choropleth.d.ts",
+      "default": "./dist/components/lr-choropleth.js"
     },
     "./components/lr-chunk-inspector.js": {
       "types": "./dist/components/lr-chunk-inspector.d.ts",

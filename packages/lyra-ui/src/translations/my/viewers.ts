@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML ကို ကလစ်ဘုတ်သို့ ကူးယူရန်',
   xmlViewerCopyNode: '{name} ကို ကူးယူရန်',
   xmlViewerToggleNode: '{name} ကို ဖွင့်/ပိတ်ရန်',
-  geojsonViewLabel: 'မြေပုံ',
   geojsonViewInvalid: 'ဤဖိုင်သည် မှန်ကန်သော GeoJSON မဟုတ်ပါ။',
   geojsonViewFeatureCount: {
     other: 'feature {count} ခု',

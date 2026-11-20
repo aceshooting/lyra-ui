@@ -55,6 +55,7 @@ export const AUTOLOADER_TAGS = [
   'lr-chip',
   'lr-chip-group',
   'lr-chord',
+  'lr-choropleth',
   'lr-chunk-inspector',
   'lr-citation-badge',
   'lr-claim-evidence',

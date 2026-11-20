@@ -52,6 +52,7 @@ interface TreemapView {
  * render, with a notice when the chart reaches an input or rendering limit.
  *
  * @customElement lr-treemap
+ * @renderController SvgChartInteraction
  * @event lr-datum-activate - A tile was clicked or activated with Enter or Space. Detail contains
  *   the node's `id`, `label`, and numeric `value` (the sum of the children for a branch).
  * @csspart base - The chart container.

@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML をクリップボードにコピー',
   xmlViewerCopyNode: '{name} をコピー',
   xmlViewerToggleNode: '{name} の表示を切り替える',
-  geojsonViewLabel: '地図',
   geojsonViewInvalid: 'このファイルは有効な GeoJSON ではありません。',
   geojsonViewFeatureCount: {
     other: 'フィーチャー {count} 件',

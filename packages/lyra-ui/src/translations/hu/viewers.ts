@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML másolása a vágólapra',
   xmlViewerCopyNode: 'Másolás: {name}',
   xmlViewerToggleNode: 'Megjelenítés/elrejtés: {name}',
-  geojsonViewLabel: 'Térkép',
   geojsonViewInvalid: 'Ez a fájl nem érvényes GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objektum',

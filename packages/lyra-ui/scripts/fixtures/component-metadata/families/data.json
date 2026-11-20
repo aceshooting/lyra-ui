@@ -3,6 +3,7 @@
   "assignments": {
     "new-component-experimental": [
       "lr-chord",
+      "lr-choropleth",
       "lr-sankey",
       "lr-treemap"
     ],

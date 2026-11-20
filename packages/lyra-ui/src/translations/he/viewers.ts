@@ -126,7 +126,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'העתק XML ללוח',
   xmlViewerCopyNode: 'העתק את {name}',
   xmlViewerToggleNode: 'החלף מצב של {name}',
-  geojsonViewLabel: 'מפה',
   geojsonViewInvalid: 'קובץ זה אינו GeoJSON חוקי.',
   geojsonViewFeatureCount: {
     one: '{count} תכונה',

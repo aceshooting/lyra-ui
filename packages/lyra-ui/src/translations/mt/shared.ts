@@ -170,6 +170,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'F’kunflitt',
   gitStatusIgnored: 'Injorat',
   envListValueHidden: 'Valur moħbi',
+  geojsonViewLabel: 'Mappa',
   provenanceEntities: 'Entitajiet',
   flowItemAnnouncement: '{item} ({index} minn {total})',
   neighborDirectionIn: 'Deħlin',

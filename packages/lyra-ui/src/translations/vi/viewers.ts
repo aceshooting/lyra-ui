@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Sao chép XML vào bộ nhớ tạm',
   xmlViewerCopyNode: 'Sao chép {name}',
   xmlViewerToggleNode: 'Bật/tắt {name}',
-  geojsonViewLabel: 'Bản đồ',
   geojsonViewInvalid: 'Tệp này không phải GeoJSON hợp lệ.',
   geojsonViewFeatureCount: {
     other: '{count} đối tượng',

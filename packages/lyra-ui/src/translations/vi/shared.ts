@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Bị xung đột',
   gitStatusIgnored: 'Đã bỏ qua',
   envListValueHidden: 'Giá trị đã ẩn',
+  geojsonViewLabel: 'Bản đồ',
   provenanceEntities: 'Thực thể',
   flowItemAnnouncement: '{item} ({index} trên {total})',
   neighborDirectionIn: 'Hướng vào',

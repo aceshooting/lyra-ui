@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML के क्लिपबोर्ड पर नकल करीं',
   xmlViewerCopyNode: '{name} के नकल करीं',
   xmlViewerToggleNode: '{name} टॉगल करीं',
-  geojsonViewLabel: 'नक्शा',
   geojsonViewInvalid: 'ई सही GeoJSON फाइल नइखे।',
   geojsonViewFeatureCount: {
     one: '{count} फीचर',

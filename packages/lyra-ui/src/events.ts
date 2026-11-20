@@ -76,6 +76,7 @@ import type { LyraVoicePickerEventMap } from './components/conversation/voice-pi
 import type { LyraWidgetRendererEventMap } from './components/conversation/widget-renderer/widget-renderer.class.js';
 import type { LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
 import type { LyraChordEventMap } from './components/data/chord/chord.class.js';
+import type { LyraChoroplethEventMap } from './components/data/choropleth/choropleth.class.js';
 import type { LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
 import type { LyraContextMeterEventMap } from './components/data/context-meter/context-meter.class.js';
 import type { LyraDataGridEventMap } from './components/data/data-grid/data-grid-types.js';
@@ -1020,16 +1021,17 @@ export type LyraDatePickerSelectRequestEvent = LyraDatePickerEventMap['lr-date-p
 export type LyraDateSelectEvent = LyraCalendarEventMap['lr-date-select'];
 
 /**
- * `lr-datum-activate` — dispatched by 15 components: `<lr-bar-chart>`, `<lr-box-plot>`,
- * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-chord>`, `<lr-doughnut-chart>`, `<lr-histogram>`,
- * `<lr-line-chart>`, `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`,
- * `<lr-radar-chart>`, `<lr-sankey>`, `<lr-scatter-chart>`, `<lr-treemap>`; detail union of 6, e.g.
- * `LyraBoxPlotEventMap['lr-datum-activate']`.
+ * `lr-datum-activate` — dispatched by 16 components: `<lr-bar-chart>`, `<lr-box-plot>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-chord>`, `<lr-choropleth>`, `<lr-doughnut-chart>`,
+ * `<lr-histogram>`, `<lr-line-chart>`, `<lr-lite-chart>`, `<lr-pie-chart>`,
+ * `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-sankey>`, `<lr-scatter-chart>`,
+ * `<lr-treemap>`; detail union of 7, e.g. `LyraBoxPlotEventMap['lr-datum-activate']`.
  */
 export type LyraDatumActivateEvent =
   | LyraBoxPlotEventMap['lr-datum-activate']
   | LyraChartEventMap['lr-datum-activate']
   | LyraChordEventMap['lr-datum-activate']
+  | LyraChoroplethEventMap['lr-datum-activate']
   | LyraLiteChartEventMap['lr-datum-activate']
   | LyraSankeyEventMap['lr-datum-activate']
   | LyraTreemapEventMap['lr-datum-activate'];

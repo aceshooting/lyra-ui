@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ziddiyatli',
   gitStatusIgnored: 'Eʼtiborsiz qoldirildi',
   envListValueHidden: 'Qiymat yashirildi',
+  geojsonViewLabel: 'Xarita',
   provenanceEntities: 'Obyektlar',
   flowItemAnnouncement: '{item} ({total} tadan {index})',
   neighborDirectionIn: 'Kiruvchi',

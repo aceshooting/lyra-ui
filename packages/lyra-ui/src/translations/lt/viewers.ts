@@ -128,7 +128,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopijuoti XML į iškarpinę',
   xmlViewerCopyNode: 'Kopijuoti {name}',
   xmlViewerToggleNode: 'Perjungti {name}',
-  geojsonViewLabel: 'Žemėlapis',
   geojsonViewInvalid: 'Šis failas nėra tinkamas GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} objektai',

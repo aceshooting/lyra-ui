@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Σε διένεξη',
   gitStatusIgnored: 'Αγνοήθηκε',
   envListValueHidden: 'Η τιμή είναι κρυφή',
+  geojsonViewLabel: 'Χάρτης',
   provenanceEntities: 'Οντότητες',
   flowItemAnnouncement: '{item} ({index} από τα {total})',
   neighborDirectionIn: 'Εισερχόμενο',

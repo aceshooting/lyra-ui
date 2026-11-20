@@ -2076,6 +2076,28 @@ export type {
   LyraGraphNodeRenderErrorDetail,
 } from './components/retrieval/graph/graph-node-renderer.js';
 export type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
+export type {
+  LyraChordDatum,
+  LyraChordEntity,
+  LyraChordEventMap,
+} from './components/data/chord/chord.class.js';
+export type {
+  LyraChoroplethDatum,
+  LyraChoroplethEventMap,
+  LyraChoroplethNoData,
+  LyraChoroplethPalette,
+  LyraChoroplethProjection,
+} from './components/data/choropleth/choropleth.class.js';
+export type {
+  LyraSankeyDatum,
+  LyraSankeyEventMap,
+  LyraSankeyLink,
+  LyraSankeyNode,
+} from './components/data/sankey/sankey.class.js';
+export type {
+  LyraTreemapEventMap,
+  LyraTreemapNode,
+} from './components/data/treemap/treemap.class.js';
 export type { LyraInputEventMap } from './components/forms/input/input.class.js';
 export type { LyraNumberInputEventMap } from './components/forms/input/number-input.class.js';
 export type { LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';

@@ -1,7 +1,7 @@
 import { css } from 'lit';
 import { visuallyHidden } from './a11y.js';
 import { tightContainerQuery } from './container-breakpoints.styles.js';
-import { focusRing, iconHitTarget } from './interactive-control.styles.js';
+import { focusRing, focusRingShorthandOutline, iconHitTarget } from './interactive-control.styles.js';
 import { specialistTokens } from './specialist-host-tokens.styles.js';
 
 export const svgChartStyles = css`
@@ -24,7 +24,7 @@ export const svgChartStyles = css`
   g[role='button'] { cursor: pointer; }
   g[role='button']:where([data-muted]) { opacity: var(--lr-opacity-disabled); }
   g[role='button']:hover, g[role='button']:focus-visible { ${focusRing} }
-  g[role='button']:active { outline: var(--lr-focus-ring); }
+  g[role='button']:active { ${focusRingShorthandOutline} }
   [part='tooltip'] {
     position: absolute;
     inset-inline-start: 0;

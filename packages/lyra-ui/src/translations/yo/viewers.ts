@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Dàkọ XML sí àtẹ ìkọ̀wé',
   xmlViewerCopyNode: 'Dàkọ {name}',
   xmlViewerToggleNode: 'Fi hàn/Fi {name} pamọ́',
-  geojsonViewLabel: 'Màpù',
   geojsonViewInvalid: 'Fáìlì yìí kì í ṣe GeoJSON tó bófin mu.',
   geojsonViewFeatureCount: {
     other: 'Àwọn ẹ̀yà {count}',

@@ -1,5 +1,6 @@
 export * from '../lr-calendar.js';
 export * from '../lr-chord.js';
+export * from '../lr-choropleth.js';
 export * from '../lr-context-meter.js';
 export * from '../lr-data-grid.js';
 export * from '../lr-document-library.js';

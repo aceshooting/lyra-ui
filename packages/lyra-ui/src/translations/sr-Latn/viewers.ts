@@ -126,7 +126,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopiraj XML u privremenu memoriju',
   xmlViewerCopyNode: 'Kopiraj {name}',
   xmlViewerToggleNode: 'Uključi/isključi {name}',
-  geojsonViewLabel: 'Mapa',
   geojsonViewInvalid: 'Ova datoteka nije ispravan GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} objekta',

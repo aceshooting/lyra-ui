@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: '将 XML 复制到剪贴板',
   xmlViewerCopyNode: '复制{name}',
   xmlViewerToggleNode: '切换{name}',
-  geojsonViewLabel: '地图',
   geojsonViewInvalid: '此文件不是有效的 GeoJSON。',
   geojsonViewFeatureCount: {
     other: '{count}个要素',

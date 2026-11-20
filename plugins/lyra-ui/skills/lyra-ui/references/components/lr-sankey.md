@@ -43,12 +43,13 @@ Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
 
 Tab enters the plot at its first node. The arrow keys move through nodes and then links.
 Left and Right follow the reading direction. Home and End move to the first and last mark.
-Click, Enter, or Space emits the bubbling, composed `lr-datum-activate` event with
-`LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
+Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted
+flows and isolated nodes and remains available to assistive technology while visually collapsed.
+
+**Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
+carries `LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
 `{ kind: 'link', id, label, value, source, target }`.
-An unlabelled link uses a localized description of its endpoints for the event label. Hover or
-keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted flows and
-isolated nodes, and remains available to assistive technology while visually collapsed.
+An unlabelled link uses a localized description of its endpoints for the event label.
 
 Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
 **CSS parts:** `base`, `plot`, `description`, `node`, `node-label`, `link`, `link-label`,

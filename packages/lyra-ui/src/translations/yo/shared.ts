@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ó ní ìtakora',
   gitStatusIgnored: 'A kọ̀ sílẹ̀',
   envListValueHidden: 'A fi iye náà pamọ́',
+  geojsonViewLabel: 'Màpù',
   provenanceEntities: 'Àwọn ohun ìṣẹ̀lẹ̀',
   flowItemAnnouncement: '{item} ({index} nínú {total})',
   neighborDirectionIn: 'Tó ń wọlé',

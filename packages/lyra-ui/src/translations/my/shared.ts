@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ပဋိပက္ခဖြစ်နေသည်',
   gitStatusIgnored: 'လျစ်လျူရှုထားသည်',
   envListValueHidden: 'တန်ဖိုးကို ဖျောက်ထားသည်',
+  geojsonViewLabel: 'မြေပုံ',
   provenanceEntities: 'အရာဝတ္ထုများ',
   flowItemAnnouncement: '{item} ({total} ခုအနက် {index} ခုမြောက်)',
   neighborDirectionIn: 'အဝင်',

@@ -69,6 +69,7 @@ function ribbonMarkId(source: string, target: string): string {
  * Hovering or focusing an entity emphasizes its ribbons.
  *
  * @customElement lr-chord
+ * @renderController SvgChartInteraction
  * @event lr-datum-activate - An entity or ribbon was clicked or activated with Enter or Space.
  *   Entity details contain `kind: 'entity'`, `id`, `label`, and `value`. Ribbon details contain
  *   `kind: 'ribbon'`, `source`, `target`, and `value`.

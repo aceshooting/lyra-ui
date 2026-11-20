@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Bercanggah',
   gitStatusIgnored: 'Diabaikan',
   envListValueHidden: 'Nilai disembunyikan',
+  geojsonViewLabel: 'Peta',
   provenanceEntities: 'Entiti',
   flowItemAnnouncement: '{item} ({index} daripada {total})',
   neighborDirectionIn: 'Masuk',

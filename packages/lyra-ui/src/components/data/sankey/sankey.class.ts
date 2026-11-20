@@ -53,6 +53,7 @@ function plotX(x: number, width: number, rtl: boolean): number {
  * Invalid or dangling links are omitted, and cycles render a localized notice.
  *
  * @customElement lr-sankey
+ * @renderController SvgChartInteraction
  * @event lr-datum-activate - A node or link was clicked or activated with Enter or Space. Detail
  *   contains its `kind`, `id`, `label`, and `value`. Link details include `source` and `target`.
  * @csspart base - The chart container.

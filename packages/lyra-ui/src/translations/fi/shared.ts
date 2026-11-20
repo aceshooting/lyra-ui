@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ristiriidassa',
   gitStatusIgnored: 'Ohitettu',
   envListValueHidden: 'Arvo piilotettu',
+  geojsonViewLabel: 'Kartta',
   provenanceEntities: 'Entiteetit',
   flowItemAnnouncement: '{item} ({index}/{total})',
   neighborDirectionIn: 'Saapuvat',

@@ -94,6 +94,7 @@ import type { LyraVoicePicker, LyraVoicePickerEventMap } from './components/conv
 import type { LyraWidgetRenderer, LyraWidgetRendererEventMap } from './components/conversation/widget-renderer/widget-renderer.class.js';
 import type { LyraCalendar, LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
 import type { LyraChord, LyraChordEventMap } from './components/data/chord/chord.class.js';
+import type { LyraChoropleth, LyraChoroplethEventMap } from './components/data/choropleth/choropleth.class.js';
 import type { LyraConditionBuilder, LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
 import type { LyraContextMeter, LyraContextMeterEventMap } from './components/data/context-meter/context-meter.class.js';
 import type { LyraDataGrid, LyraDataGridEventMap } from './components/data/data-grid/data-grid.class.js';
@@ -2838,6 +2839,35 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'data-table-toggle'?: LyraChord['dataTableToggle'];
       'with-data-table'?: LyraChord['withDataTable'];
+    };
+  };
+  'lr-choropleth': {
+    element: LyraChoropleth;
+    properties: LyraElementProperties<
+      LyraChoropleth,
+      | 'dataTableToggle'
+      | 'description'
+      | 'field'
+      | 'geography'
+      | 'label'
+      | 'labelField'
+      | 'loading'
+      | 'locale'
+      | 'noData'
+      | 'palette'
+      | 'projection'
+      | 'strings'
+      | 'valueFormatter'
+      | 'withDataTable',
+      {}
+    >;
+    events: LyraChoroplethEventMap;
+    eventNames:       | 'lr-datum-activate';
+    cssNames: never;
+    attributeAliases: {
+      'data-table-toggle'?: LyraChoropleth['dataTableToggle'];
+      'label-field'?: LyraChoropleth['labelField'];
+      'with-data-table'?: LyraChoropleth['withDataTable'];
     };
   };
   'lr-chunk-inspector': {

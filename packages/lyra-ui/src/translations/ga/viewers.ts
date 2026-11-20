@@ -130,7 +130,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Cóipeáil an XML chuig an ngearrthaisce',
   xmlViewerCopyNode: 'Cóipeáil {name}',
   xmlViewerToggleNode: 'Scoránaigh {name}',
-  geojsonViewLabel: 'Léarscáil',
   geojsonViewInvalid: 'Ní GeoJSON bailí é an comhad seo.',
   geojsonViewFeatureCount: {
     few: '{count} ghné',

@@ -128,7 +128,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopírovať XML do schránky',
   xmlViewerCopyNode: 'Kopírovať {name}',
   xmlViewerToggleNode: 'Prepnúť {name}',
-  geojsonViewLabel: 'Mapa',
   geojsonViewInvalid: 'Tento súbor nie je platný GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} prvky',

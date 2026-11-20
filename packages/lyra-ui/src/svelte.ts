@@ -146,6 +146,8 @@ export type LyraChipGroupSvelteProps = LyraSvelteElementProps<'lr-chip-group'>;
 
 export type LyraChordSvelteProps = LyraSvelteElementProps<'lr-chord'>;
 
+export type LyraChoroplethSvelteProps = LyraSvelteElementProps<'lr-choropleth'>;
+
 export type LyraChunkInspectorSvelteProps = LyraSvelteElementProps<'lr-chunk-inspector'>;
 
 export type LyraCitationBadgeSvelteProps = LyraSvelteElementProps<'lr-citation-badge'>;
@@ -722,6 +724,7 @@ export interface LyraSvelteElements {
   'lr-chip': LyraChipSvelteProps;
   'lr-chip-group': LyraChipGroupSvelteProps;
   'lr-chord': LyraChordSvelteProps;
+  'lr-choropleth': LyraChoroplethSvelteProps;
   'lr-chunk-inspector': LyraChunkInspectorSvelteProps;
   'lr-citation-badge': LyraCitationBadgeSvelteProps;
   'lr-claim-evidence': LyraClaimEvidenceSvelteProps;
@@ -1039,6 +1042,7 @@ export interface LyraElementTagNameMap {
   'lr-chip': LyraComponentTypeMap['lr-chip']['element'];
   'lr-chip-group': LyraComponentTypeMap['lr-chip-group']['element'];
   'lr-chord': LyraComponentTypeMap['lr-chord']['element'];
+  'lr-choropleth': LyraComponentTypeMap['lr-choropleth']['element'];
   'lr-chunk-inspector': LyraComponentTypeMap['lr-chunk-inspector']['element'];
   'lr-citation-badge': LyraComponentTypeMap['lr-citation-badge']['element'];
   'lr-claim-evidence': LyraComponentTypeMap['lr-claim-evidence']['element'];

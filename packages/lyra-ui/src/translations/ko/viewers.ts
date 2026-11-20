@@ -122,7 +122,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: '클립보드로 복사',
   xmlViewerCopyNode: '{name} 복사',
   xmlViewerToggleNode: '{name} 전환',
-  geojsonViewLabel: '지도',
   geojsonViewInvalid: '올바른 GeoJSON 파일이 아닙니다.',
   geojsonViewFeatureCount: {
     other: '피처 {count}개',

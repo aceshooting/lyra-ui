@@ -146,6 +146,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Bentrok',
   gitStatusIgnored: 'Diabaikan',
   envListValueHidden: 'Nilai didhelikake',
+  geojsonViewLabel: 'Peta',
   provenanceEntities: 'Entitas',
   flowItemAnnouncement: '{item} ({index} saka {total})',
   neighborDirectionIn: 'Mlebu',

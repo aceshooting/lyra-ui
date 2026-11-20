@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XMLʼni clipboardʼga nusxalash',
   xmlViewerCopyNode: '{name}ni nusxalash',
   xmlViewerToggleNode: '{name}ni almashtirish',
-  geojsonViewLabel: 'Xarita',
   geojsonViewInvalid: 'Bu fayl yaroqli GeoJSON emas.',
   geojsonViewFeatureCount: {
     one: '{count} ta obyekt',

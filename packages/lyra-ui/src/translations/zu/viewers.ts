@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopisha i-XML ebhodini lokunamathisela',
   xmlViewerCopyNode: 'Kopisha u-{name}',
   xmlViewerToggleNode: 'Shintsha u-{name}',
-  geojsonViewLabel: 'Imephu',
   geojsonViewInvalid: 'Leli fayela aliyona i-GeoJSON evumelekile.',
   geojsonViewFeatureCount: {
     one: 'Isici esisodwa ({count})',

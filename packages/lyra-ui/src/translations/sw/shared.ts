@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ina mgogoro',
   gitStatusIgnored: 'Imepuuzwa',
   envListValueHidden: 'Thamani imefichwa',
+  geojsonViewLabel: 'Ramani',
   provenanceEntities: 'Huluki',
   flowItemAnnouncement: '{item} ({index} kati ya {total})',
   neighborDirectionIn: 'Zinazoingia',

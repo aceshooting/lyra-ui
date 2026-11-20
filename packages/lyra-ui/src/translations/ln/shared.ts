@@ -152,6 +152,7 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ezali na matata',
   gitStatusIgnored: 'Etalelami te',
   envListValueHidden: 'Valeur ebombami',
+  geojsonViewLabel: 'Carte',
   provenanceEntities: 'Biloko',
   flowItemAnnouncement: '{item} ({index} kati na {total})',
   neighborDirectionIn: 'Ezali kokota',

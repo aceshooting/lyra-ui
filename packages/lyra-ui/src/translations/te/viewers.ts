@@ -124,7 +124,6 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XMLను క్లిప్‌బోర్డ్‌కు కాపీ చేయండి',
   xmlViewerCopyNode: '{name}ను కాపీ చేయండి',
   xmlViewerToggleNode: '{name}ను చూపించు/దాచు',
-  geojsonViewLabel: 'మ్యాప్',
   geojsonViewInvalid: 'ఈ ఫైల్ చెల్లుబాటు అయ్యే GeoJSON కాదు.',
   geojsonViewFeatureCount: {
     one: '{count} ఫీచర్',
