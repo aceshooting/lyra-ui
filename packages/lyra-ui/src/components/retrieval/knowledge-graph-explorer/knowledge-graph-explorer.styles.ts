@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -74,7 +74,7 @@ export const styles = css`
     font: inherit;
     overflow-wrap: anywhere;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='search-result'] button:hover {
     background: ${hoverFill('transparent')};

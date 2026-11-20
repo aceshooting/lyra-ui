@@ -31,7 +31,7 @@ import {
   trueDefaultSpellcheckConverter,
 } from '../../../internal/converters.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
@@ -349,7 +349,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
   @query('[part="submit-button"]') private submitButtonEl?: HTMLButtonElement;
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   private readonly panelId = nextId('message-feedback-panel');
   private readonly reasonDescriptionId = nextId('message-feedback-reason-description');
@@ -466,12 +466,9 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
   override disconnectedCallback(): void {
-    this.sink?.release();
-    this.sink = undefined;
     this.lifecycleGeneration += 1;
     this.invalidatePendingSubmission();
     this.upToolbarAction.releaseTabIndex?.();
@@ -481,6 +478,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.sink.adopted();
     this.lifecycleGeneration += 1;
     this.invalidatePendingSubmission();
     this.upToolbarAction.releaseTabIndex?.();
@@ -761,7 +759,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.setPending(false);
     if (settlement === 'finalize') {
       this.panelOpen = false;
-      this.sink?.announce(this.localize('feedbackSubmitted'));
+      this.sink.announcePolite(this.localize('feedbackSubmitted'));
       this.scheduleSettlementFocus(transaction, 'thumb');
       return;
     }
@@ -830,7 +828,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     if (this.disabled || this.pending || !this.rating || !this.panelOpen) return;
     if (this.commentExceedsLimit) {
       this.commentLengthError = true;
-      this.sink?.announce(this.commentErrorText);
+      this.sink.announcePolite(this.commentErrorText);
       return;
     }
     this.reconcileReasons();

@@ -6,7 +6,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { ref } from 'lit/directives/ref.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -498,7 +498,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       clearFeedback: () => this.copyFeedback.clear(),
       feedback: (key, ok) => this.copyFeedback.show(key, ok),
       message: (ok) => this.localize(ok ? 'copied' : 'copyFailed'),
-      announce: (message) => this.searchAnnouncementSink?.announce(message),
+      announce: (message) => this.searchAnnouncementSink.announcePolite(message),
       emit: (name, detail) => this.emit(name, detail ?? null),
     },
   });
@@ -680,7 +680,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.activeMatchElement = next;
   }
 
-  private searchAnnouncementSink?: AnnouncementSink;
+  private readonly searchAnnouncementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private searchAnnouncementsArmed = false;
   private searchAnnouncementGeneration = 0;
   private readonly copyFeedback = new KeyedCopyFeedback(this);
@@ -690,10 +690,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     super.connectedCallback();
     this.sourceBinding = undefined;
     this.requestUpdate('sourceReconnect', null);
-    this.searchAnnouncementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.searchAnnouncementsArmed = false;
     const generation = ++this.searchAnnouncementGeneration;
     // A cursor move initiated while detached may leave its Lit update pending until this
@@ -736,8 +732,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.sourceBinding = undefined;
     this.copyFeedback.clear();
     this.searchAnnouncementGeneration += 1;
-    this.searchAnnouncementSink?.release();
-    this.searchAnnouncementSink = undefined;
     this.searchAnnouncementsArmed = false;
     super.disconnectedCallback();
   }
@@ -746,8 +740,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
     this.hierarchy.adopted();
-    this.searchAnnouncementSink?.release(); this.searchAnnouncementSink = undefined;
-    if (this.isConnected) this.searchAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.searchAnnouncementSink.adopted();
     this.sourceAnnouncement = undefined;
     super.adoptedCallback();
   }
@@ -802,7 +795,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     reportCopyOutcome({
       announce: ok => {
         const message = this.localize(ok ? 'copied' : 'copyFailed');
-        if (current()) this.searchAnnouncementSink?.announce(message);
+        if (current()) this.searchAnnouncementSink.announcePolite(message);
       },
       emit: (name, detail) => this.emit(name, detail ?? null),
     }, outcome, current);
@@ -1213,14 +1206,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         errorText: () => this.localize('treeSourceError'),
         loadingText: () => this.localize('loading'),
         summary: () => this.sourceSummary(),
-        announce: (text) => this.searchAnnouncementSink?.announce(text),
+        announce: (text) => this.searchAnnouncementSink.announcePolite(text),
       }, this.sourceAnnouncement);
       if (message !== undefined) this.sourceAnnouncement = message;
       return;
     }
     this.syncActiveMatch();
     if (this.searchAnnouncementsArmed && changed.has('activeSearchIndex')) {
-      this.searchAnnouncementSink?.announce(this.activeSearchAnnouncement());
+      this.searchAnnouncementSink.announcePolite(this.activeSearchAnnouncement());
     }
   }
 

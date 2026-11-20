@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Gửi',
   rubricSubmitAndNext: 'Gửi và tiếp tục',
   rubricSkip: 'Bỏ qua',
+  rubricKeysLimit: 'Chỉ hiển thị {count} trường rubric đầu tiên trong tổng số {total}.',
   localePickerLabel: 'Ngôn ngữ',
   localePickerRequired: 'Vui lòng chọn ngôn ngữ.',
   localePickerSearchLabel: 'Tìm ngôn ngữ',

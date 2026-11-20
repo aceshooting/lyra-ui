@@ -1,4 +1,5 @@
-import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -29,18 +30,18 @@ export const styles = css`
   }
   [part='source-controls'], [part='source-record'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); align-items: center; }
   [part='source-records'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
-  [part='source-navigator'] :where(button, input, select), [part='source-status'] button {
+  [part='source-navigator'] :where(input, select) {
     font: inherit; color: inherit; background: var(--lr-color-surface);
     ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
     max-inline-size: 100%;
   }
-  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; ${interactiveTransition} }
-  [part='source-navigator'] button:where(:hover), [part='source-status'] button:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
-  [part='source-navigator'] button:where(:active), [part='source-status'] button:where(:active) { background: ${activeFill('var(--lr-color-neutral-fill-quiet)')}; }
-  [part='source-navigator'] :where(button, input, select):where(:focus-visible), [part='source-status'] button:where(:focus-visible) {
+  [part='source-navigator'] :where(input, select):where(:focus-visible) {
     ${focusRing}
   }
+  ${outlinedActionStyles("[part='source-navigator'] button", { padding: false, hoverBackground: 'var(--lr-color-neutral-fill-quiet)', activeBackground: activeFill('var(--lr-color-neutral-fill-quiet)').cssText })}
+  ${outlinedActionStyles("[part='source-status'] button", { padding: false, hoverBackground: 'var(--lr-color-neutral-fill-quiet)', activeBackground: activeFill('var(--lr-color-neutral-fill-quiet)').cssText })}
+  [part='source-navigator'] button, [part='source-status'] button { max-inline-size: 100%; overflow-wrap: anywhere; }
   .source-scene-status { position: absolute; inset-block-start: 0; inset-inline-start: 0; background: var(--lr-color-surface); }
   [part='source-status'] { padding: var(--lr-space-xs); overflow-wrap: anywhere; }
   [part='viewport'] {

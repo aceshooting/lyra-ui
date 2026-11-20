@@ -98,6 +98,7 @@ export const LYRA_DEFAULT_flowStatusWithDuration: LyraMessage = '{status} ({dura
 export const LYRA_DEFAULT_funnelComparisonShare: LyraMessage = '{label}: {value}';
 export const LYRA_DEFAULT_funnelDropoffDecreased: LyraMessage = 'decreased {value}';
 export const LYRA_DEFAULT_funnelDropoffIncreased: LyraMessage = 'increased {value}';
+export const LYRA_DEFAULT_funnelStagesInputLimit: LyraMessage = 'Showing the first {count} of {total} stages.';
 export const LYRA_DEFAULT_funnelStagesLimit: LyraMessage = 'Only the first {count} stages are shown.';
 export const LYRA_DEFAULT_gaugeLabel: LyraMessage = 'Gauge';
 export const LYRA_DEFAULT_gaugeValueLabel: LyraMessage = '{label}: {value}';

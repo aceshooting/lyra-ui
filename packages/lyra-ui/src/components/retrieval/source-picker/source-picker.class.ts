@@ -22,13 +22,12 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourcePickerLimit, LYRA_DEFAULT_sourcePickerMatches, LYRA_DEFAULT_sourcePickerSelection } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraSourceEntry {
@@ -129,26 +128,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
-    restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     selectAllSources: LYRA_DEFAULT_selectAllSources,
     sourceListDefaultLabel: LYRA_DEFAULT_sourceListDefaultLabel,
     sourcePickerLimit: LYRA_DEFAULT_sourcePickerLimit,
@@ -215,7 +198,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private keyboardFocusGeneration = 0;
   private normalizedInput?: readonly LyraSourceEntry[];
   private normalizedModel?: NormalizedSourceModel;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private isMounting = true;
   private lastFilterAnnouncement = '';
   private wasLimited = false;
@@ -233,17 +216,11 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.requestUpdate();
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
     this.isMounting = true;
     this.lastFilterAnnouncement = '';
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     super.disconnectedCallback();
   }
 
@@ -505,7 +482,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     const limited = this.sourceEntries.length > 0 && this.sourceModel.limited;
-    if (!wasMounting && limited && !this.wasLimited) this.announcementSink?.announce(this.localize('sourcePickerLimit'));
+    if (!wasMounting && limited && !this.wasLimited) this.announcementSink.announcePolite(this.localize('sourcePickerLimit'));
     this.wasLimited = limited;
     if (wasMounting || (!changed.has('query') && !changed.has('sources')))
       return;
@@ -520,7 +497,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const signature = `${query}\u0000${count}`;
     if (signature === this.lastFilterAnnouncement) return;
     this.lastFilterAnnouncement = signature;
-    this.announcementSink?.announce(count === 0
+    this.announcementSink.announcePolite(count === 0
       ? this.localize('noMatches')
       : this.localize('sourcePickerMatches', undefined, {
           count: getNumberFormat(this.effectiveLocale).format(count),

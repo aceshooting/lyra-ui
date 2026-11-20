@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingOffsetInward, focusRingShorthand, focusRingShorthandOutline } from '../../../internal/interactive-control.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -22,7 +22,7 @@ export const styles = css`
   [part='viewport'] {
     position: relative;
     block-size: var(--lr-model-viewer-height, var(--lr-size-20rem));
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingOffsetInward}
   }
   [part='viewport']:where([data-ready]) {
     cursor: grab;
@@ -42,7 +42,7 @@ export const styles = css`
     cursor: grabbing;
   }
   [part='viewport']:focus-visible {
-    outline: var(--lr-focus-ring);
+    ${focusRingShorthandOutline}
   }
   [part='toolbar'] {
     display: flex;

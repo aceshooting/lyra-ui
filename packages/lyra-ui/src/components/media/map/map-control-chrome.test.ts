@@ -137,6 +137,7 @@ describe('lr-map public native control chrome', () => {
     expect(getComputedStyle(icon).width).to.equal('25px');
     expect(getComputedStyle(icon).transform).not.to.equal('none');
     expect(getComputedStyle(query(root, '.maplibregl-ctrl-attrib a')).paddingInlineStart).to.equal('7px');
+    await waitUntil(() => getComputedStyle(query(root, '.maplibregl-ctrl-attrib-button')).backgroundColor === 'rgba(0, 0, 0, 0)', 'the toggle fill settles after the transition');
     expect(getComputedStyle(query(root, '.maplibregl-ctrl-attrib-button')).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     const scale = query(root, '.maplibregl-ctrl-scale');
     expect(getComputedStyle(scale, '::after').display).not.to.equal('none');

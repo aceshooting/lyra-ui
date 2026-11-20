@@ -1,5 +1,5 @@
 import { iconAction, iconActionActive, iconActionHover, outlinedIconActionDefaults } from '../../../internal/icon-action.styles.js';
-import { activeFill, disabledControl, focusRingShorthand, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingOffsetFrom, focusRingOutline, focusRingShorthand, focusRingShorthandInsetPastFrame, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
@@ -151,9 +151,8 @@ export const styles = css`
     outline: none;
   }
   [part="image-wrapper"]:focus-visible {
-    outline: var(--lr-focus-ring);
     /* Keep the ring inside an image that fills the clipping pan/zoom viewport. */
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width) + 2 * var(--lr-border-width-thin), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
+    ${focusRingShorthandInsetPastFrame}
   }
   /* 'actual' keeps the image at its natural pixel dimensions -- undo the 100% cap above and the
      'width'/'contain' image constraints below for that mode. */
@@ -293,15 +292,8 @@ export const styles = css`
       --lr-image-viewer-highlight-active-border-width,
       var(--lr-border-width-thick)
     );
-    outline: var(
-        --lr-image-viewer-highlight-active-outline-width,
-        var(--lr-focus-ring-width)
-      )
-      solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
-    outline-offset: var(
-      --lr-image-viewer-highlight-active-outline-offset,
-      var(--lr-focus-ring-offset)
-    );
+    ${focusRingOutline('var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand))', '--lr-image-viewer-highlight-active-outline-width')}
+    ${focusRingOffsetFrom('--lr-image-viewer-highlight-active-outline-offset')}
   }
   /* filter: brightness() multiplies every channel: it lightened a dark highlight, did nothing to a
      white one, and, applying to the whole subtree, dragged [part='highlight-label']'s text with

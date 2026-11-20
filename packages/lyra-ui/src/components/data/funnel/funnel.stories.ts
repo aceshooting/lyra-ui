@@ -18,7 +18,7 @@ const SIGNUP = [
 ];
 
 export const Default: StoryObj = {
-  parameters: { docs: { description: { story: 'Malformed entries are skipped without hiding later valid stages. Long invalid runs are inspected in cancelable chunks; the previous completed view remains busy until replacement is ready.' } } },
+  parameters: { docs: { description: { story: 'Malformed entries are skipped without hiding later valid stages. Each assignment is detached and admits at most the first 10,000 source positions.' } } },
   render: () => html`
     <lr-funnel label="Self-serve signup" .stages=${SIGNUP} style="max-inline-size: 32rem"></lr-funnel>
   `,

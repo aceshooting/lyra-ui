@@ -1,5 +1,5 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -53,53 +53,23 @@ export const styles = css`
       animation: none;
     }
   }
+  ${iconActionStyles("[part='pause-button']", {
+    color: 'inherit',
+    hoverBackground: 'var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet))',
+    hoverColor: 'var(--lr-poll-status-pause-hover-color, var(--lr-color-brand))',
+    activeBackground: `var(--lr-poll-status-pause-active-bg, ${activeFill('var(--lr-color-brand-quiet)').cssText})`,
+    activeColor: 'var(--lr-poll-status-pause-active-color, var(--lr-color-brand))',
+  })}
+  ${iconActionStyles("[part='refresh-button']", {
+    color: 'inherit',
+    hoverBackground: 'var(--lr-poll-status-refresh-hover-bg, var(--lr-color-brand-quiet))',
+    hoverColor: 'var(--lr-poll-status-refresh-hover-color, var(--lr-color-brand))',
+    activeBackground: `var(--lr-poll-status-refresh-active-bg, ${activeFill('var(--lr-poll-status-refresh-hover-bg, var(--lr-color-brand-quiet))').cssText})`,
+    activeColor: 'var(--lr-poll-status-refresh-active-color, var(--lr-color-brand))',
+  })}
   [part='pause-button'],
   [part='refresh-button'] {
-    ${iconAction}
-    ${interactiveTransition}
     flex-shrink: 0;
-    ${iconHitTarget}
-    border: none;
-    background: transparent;
-    color: inherit;
     padding: var(--lr-size-0-125rem);
-    border-radius: var(--lr-radius);
-  }
-  [part='refresh-button'] {
-    --_lr-poll-status-refresh-hover-bg: var(--lr-poll-status-refresh-hover-bg, var(--lr-color-brand-quiet));
-    --_lr-poll-status-refresh-hover-color: var(--lr-poll-status-refresh-hover-color, var(--lr-color-brand));
-    --_lr-poll-status-refresh-active-bg: var(
-      --lr-poll-status-refresh-active-bg,
-      ${activeFill('var(--_lr-poll-status-refresh-hover-bg)')}
-    );
-    --_lr-poll-status-refresh-active-color: var(--lr-poll-status-refresh-active-color, var(--lr-color-brand));
-  }
-  [part='pause-button']:hover:not(:disabled) {
-    background: var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-poll-status-pause-hover-color, var(--lr-color-brand));
-  }
-  [part='refresh-button']:hover:not(:disabled) {
-    background: var(--_lr-poll-status-refresh-hover-bg);
-    color: var(--_lr-poll-status-refresh-hover-color);
-  }
-  [part='pause-button']:active:not(:disabled) {
-    background: var(
-      --lr-poll-status-pause-active-bg,
-      ${activeFill('var(--lr-color-brand-quiet)')}
-    );
-    color: var(--lr-poll-status-pause-active-color, var(--lr-color-brand));
-  }
-  [part='refresh-button']:active:not(:disabled) {
-    background: var(--_lr-poll-status-refresh-active-bg);
-    color: var(--_lr-poll-status-refresh-active-color);
-  }
-  [part='pause-button']:disabled,
-  [part='refresh-button']:disabled {
-    cursor: default;
-    opacity: var(--lr-opacity-disabled);
-  }
-  [part='pause-button']:focus-visible,
-  [part='refresh-button']:focus-visible {
-    ${focusRing}
   }
 `;

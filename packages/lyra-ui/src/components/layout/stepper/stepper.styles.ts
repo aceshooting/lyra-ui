@@ -1,6 +1,6 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingOffset, focusRingOffsetInset } from '../../../internal/interactive-control.styles.js';
 import { scrollOverflowFade } from '../../../internal/scroll-overflow.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -117,10 +117,10 @@ export const styles = css`
      letting the track clip its block edges or the first and last step's inline edges. */
   :host(:where(:not([orientation="vertical"]))) [part="step"]:focus-visible,
   :host(:where([data-effective-orientation="horizontal"])) [part="step"]:focus-visible {
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOffsetInset}
   }
   :host(:where([data-effective-orientation="vertical"])) [part="step"]:focus-visible {
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor with no :host declaration shadowing them. ::part(step)[data-state='current'] is

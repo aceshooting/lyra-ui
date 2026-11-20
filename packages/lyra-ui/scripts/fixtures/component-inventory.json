@@ -9194,6 +9194,18 @@
         ],
         "events": [
           {
+            "name": "lr-artifact-view-change",
+            "type": "CustomEvent<{ view: ArtifactPanelView }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-artifact-view-change-request",
+            "type": "CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-copy",
             "type": "CustomEvent<LyraClipboardWriteSuccess>",
             "cancelable": "never",
@@ -9227,18 +9239,6 @@
             "name": "lr-version-change",
             "type": "CustomEvent<{ versionId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-view-change",
-            "type": "CustomEvent<{ view: ArtifactPanelView }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-view-change-request",
-            "type": "CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>",
-            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -9903,16 +9903,7 @@
         "methods": [],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/media/attachment-chip/attachment-chip.class.ts",
-            "name": "FILE_SIZE_UNIT_KEYS",
-            "kind": "variable",
-            "type": "Record<FileSizeUnit, string>",
-            "readonly": false,
-            "deprecated": null
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [
@@ -22517,7 +22508,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "type",
@@ -22594,7 +22586,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "type",
@@ -34619,7 +34612,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "frame",
@@ -34710,7 +34704,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "frame",
@@ -37591,7 +37586,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "shape",
@@ -68531,6 +68527,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-graph-view-change",
+            "type": "CustomEvent<{ view: LyraGraphView }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-node-activate",
             "type": "CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>",
             "cancelable": "never",
@@ -68563,12 +68565,6 @@
           {
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }> >",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-view-change",
-            "type": "CustomEvent<{ view: LyraGraphView }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -80524,6 +80520,13 @@
             "composed": true
           },
           {
+            "name": "lr-graph-view-change",
+            "type": "CustomEvent<{ view: LyraGraphView }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          },
+          {
             "name": "lr-hidden-types-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ hiddenTypes: string[] }> >",
             "cancelable": "never",
@@ -80589,13 +80592,6 @@
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeId: string | null; selectedNodeIds: string[]; selectedEdgeIds: string[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-view-change",
-            "type": "CustomEvent<{ view: LyraGraphView }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true
           }
         ],
         "parts": [
@@ -85997,7 +85993,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "locale",
@@ -86034,7 +86031,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "projection",
@@ -86368,7 +86366,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "legendProjection",
@@ -86471,7 +86470,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "projection",
@@ -88064,7 +88064,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "heading-anchors",
@@ -88264,7 +88265,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "headingAnchors",
@@ -127221,6 +127223,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "scale",
             "deprecated": null
           },
@@ -158014,7 +158020,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "success"
           },
           {
             "name": "tool-name",
@@ -158091,7 +158098,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "success"
           },
           {
             "name": "toolName",
@@ -159979,7 +159987,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "aria-label",
@@ -160069,7 +160078,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "distance",
@@ -167492,13 +167502,13 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-view-change",
+            "name": "lr-widget-view-change",
             "type": "CustomEvent<{ viewId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-view-request",
+            "name": "lr-widget-view-request",
             "type": "CustomEvent<{ viewId: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"

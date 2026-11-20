@@ -1,5 +1,6 @@
 import { getNumberFormat } from './intl-cache.js';
 import { finiteInteger, finiteRange } from './numbers.js';
+import { resolveActiveOrExplicitLocale } from './localization-runtime.js';
 
 /** Which Intl unit ladder a quantity is scaled on. */
 export type LyraFormatBytesUnit = 'byte' | 'bit';
@@ -92,52 +93,14 @@ export function formatByteSize(value: number, locale: string | undefined, option
   return getNumberFormat(locale, format).format(amount);
 }
 
-/** File-size rungs, labelled through localized unit strings rather than Intl unit names. */
-const FILE_SIZE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
-
-export type FileSizeUnit = (typeof FILE_SIZE_UNITS)[number];
-
-export type FileSizeUnitKey = 'fileSizeUnitB' | 'fileSizeUnitKb' | 'fileSizeUnitMb' | 'fileSizeUnitGb' | 'fileSizeUnitTb';
-
-/** Maps each file-size unit to its localization key. */
-export const FILE_SIZE_UNIT_KEYS: Readonly<Record<FileSizeUnit, FileSizeUnitKey>> = {
-  B: 'fileSizeUnitB',
-  KB: 'fileSizeUnitKb',
-  MB: 'fileSizeUnitMb',
-  GB: 'fileSizeUnitGb',
-  TB: 'fileSizeUnitTb',
-};
-
 /**
- * `512` -> `512 B`; `2415919` -> `2.3 MB`: binary rungs up to TB, whole bytes without a decimal and
- * every larger unit with exactly one. Returns `''` for a negative or non-finite size.
+ * A file size on binary (1024) rungs in Intl unit wording for `locale` -- `1536` reads `1.5 kB`,
+ * `2415919` reads `2.3 MB` -- with at most one fraction digit, the same formatter
+ * `<lr-format-bytes unit-step="1024">` uses. An omitted or `'auto'` locale resolves to the page's
+ * active `setLyraLocale()` locale. Returns `''` for a negative or non-finite size.
  */
-export function formatFileSize(
-  bytes: number,
-  unitLabel: (unit: FileSizeUnit) => string = (unit) => unit,
-  numberLabel: (value: number, fractionDigits: number) => string = (value, digits) => value.toFixed(digits),
-): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '';
-  const rung = byteUnitIndex(bytes, 1024, FILE_SIZE_UNITS.length);
+export function formatFileSize(bytes: number, locale?: string): string {
+  if (!(bytes >= 0)) return '';
   // `+ 0` turns a negative zero into zero, which Intl would otherwise print with a sign.
-  const amount = rung === 0 ? Math.round(bytes) + 0 : bytes / 1024 ** rung;
-  return `${numberLabel(amount, rung === 0 ? 0 : 1)} ${unitLabel(FILE_SIZE_UNITS[rung]!)}`;
-}
-
-/** A `formatFileSize` number label with exactly the fraction digits it asks for, in `locale`. */
-export function localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string {
-  return (value, fractionDigits) =>
-    getNumberFormat(locale, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(value);
-}
-
-/**
- * `formatFileSize` with locale digits and unit labels resolved through localization keys, e.g.
- * `formatLocalizedFileSize(size, this.effectiveLocale, (key) => this.localize(key))`.
- */
-export function formatLocalizedFileSize(
-  bytes: number,
-  locale: string,
-  unitLabel: (key: FileSizeUnitKey) => string,
-): string {
-  return formatFileSize(bytes, (unit) => unitLabel(FILE_SIZE_UNIT_KEYS[unit]), localizedNumberLabel(locale));
+  return formatByteSize(bytes + 0, resolveActiveOrExplicitLocale(locale), { unitStep: 1024 });
 }

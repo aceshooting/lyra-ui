@@ -2,7 +2,8 @@ import type { EvalRunResult } from './eval-run-result.js';
 export type { EvalRunResult } from './eval-run-result.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraSourceRevision } from '../../../data-sources.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
-import { finiteInteger } from '../../../internal/numbers.js';
+
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { projectEvalSourceRun, projectEvalSourceReview } from './eval-result-source.js';
 import { collectionSupport, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
@@ -278,8 +279,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
       const revision = source.revision;
       if (!current()) return;
       const locale = this.effectiveLocale;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       const orderInputs = [source, revision, epoch, locale, this.sourceSortKey, this.sourceSortDir];
       const resetFallback = !this.sourceOrderInputs || orderInputs.some((value, index) => value !== this.sourceOrderInputs![index]);
       if (this.sourceInputs && (size !== this.sourceInputs[6] || this.sourceSortKey !== this.sourceInputs[4] || this.sourceSortDir !== this.sourceInputs[5])) page = 0;
@@ -545,8 +546,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .columns=${source ? this.sourceColumns() : this.normalizedColumns}
           .paginationMode=${source ? 'server' : 'client'}
           .sortMode=${source ? 'server' : 'client'}
-          .page=${source ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1 : 1}
-          .pageSize=${source ? finiteInteger(this.sourcePageSize, 100, 1, 500) : 100}
+          .page=${source ? displayedSourcePage(this.sourcePage) : 1}
+          .pageSize=${source ? normalizeSourcePageSize(this.sourcePageSize) : 100}
           .sortKey=${source ? this.sourceSortKey ?? '' : ''}
           .sortDir=${source ? this.sourceSortDir : 'asc'}
           .totalItems=${source ? this.sourceTotal ?? 0 : 0}

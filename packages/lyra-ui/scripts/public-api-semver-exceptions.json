@@ -279,6 +279,397 @@
       "reason": "The published lr-graph accessor already defaults to '2d'. The manifest now documents that runtime value.",
       "reviewer": "Codex",
       "reviewedOn": "2026-11-19"
+    },
+    {
+      "changeId": "augmentation:*:\"global\":HTMLElementTagNameMap:contract",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "members": [
+        {
+          "key": ":property:lr-badge",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-button",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-chip",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-combobox",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-date-input",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-date-picker",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-details",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-dropdown",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-dropdown-item",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-empty",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-file-tree",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-input",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-json-viewer",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-menu",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-menu-item",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-neighbor-list",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-pagination",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-popover",
+          "before": true,
+          "after": null
+        },
+        {
+          "key": ":property:lr-virtual-list",
+          "before": true,
+          "after": null
+        }
+      ],
+      "reason": "Composite components now register these child tags on demand. Each tag's HTMLElementTagNameMap entry still ships with its own registration entry point; only the parent entry points stopped pulling it in.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-bar-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-bar-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-bubble-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-bubble-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-doughnut-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-doughnut-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-histogram:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-histogram preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-line-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-line-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-lite-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-lite-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-pie-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-pie-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-polar-area-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-polar-area-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-radar-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-radar-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-scatter-chart:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-scatter-chart preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-sparkline:member:field:preparedData:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": null,
+      "after": "null",
+      "reason": "The published lr-sparkline preparedData accessor already starts as null. The manifest now documents that runtime value.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-chat-composer:member:method:setSelectionRange(start:null|number,end:null|number,direction:?ChatComposerSelectionDirection):parameters",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": [
+        {
+          "name": "start",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "end",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "direction",
+          "type": "ChatComposerSelectionDirection",
+          "optional": true,
+          "default": null
+        }
+      ],
+      "after": [
+        {
+          "name": "start",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "end",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "direction",
+          "type": "ChatComposerSelectionDirection",
+          "optional": true,
+          "default": "'none'"
+        }
+      ],
+      "reason": "An omitted direction has always reached the native setSelectionRange(), which treats it as 'none'. The manifest now documents that default.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-combobox:member:method:setSelectionRange(start:null|number,end:null|number,direction:?LyraComboboxSelectionDirection):parameters",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": [
+        {
+          "name": "start",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "end",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "direction",
+          "type": "LyraComboboxSelectionDirection",
+          "optional": true,
+          "default": null
+        }
+      ],
+      "after": [
+        {
+          "name": "start",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "end",
+          "type": "null|number",
+          "optional": false,
+          "default": null
+        },
+        {
+          "name": "direction",
+          "type": "LyraComboboxSelectionDirection",
+          "optional": true,
+          "default": "'none'"
+        }
+      ],
+      "reason": "An omitted direction has always reached the native setSelectionRange(), which treats it as 'none'. The manifest now documents that default.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-color-picker:css-property:--lr-color-picker-swatch-disabled-opacity:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": "0.5",
+      "after": "var(--lr-opacity-disabled)",
+      "reason": "The fallback now reads the shared disabled-opacity token, which resolves to the same 0.5 unless a theme overrides it.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-mention-popover:css-property:--lr-mention-popover-option-disabled-opacity:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": "0.5",
+      "after": "var(--lr-opacity-disabled)",
+      "reason": "The fallback now reads the shared disabled-opacity token, which resolves to the same 0.5 unless a theme overrides it.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-model-select:css-property:--lr-model-select-option-disabled-opacity:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": "0.5",
+      "after": "var(--lr-opacity-disabled)",
+      "reason": "The fallback now reads the shared disabled-opacity token, which resolves to the same 0.5 unless a theme overrides it.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-voice-picker:css-property:--lr-voice-picker-option-disabled-opacity:default",
+      "requiredBump": "major",
+      "allowedBump": "none",
+      "before": "0.5",
+      "after": "var(--lr-opacity-disabled)",
+      "reason": "The fallback now reads the shared disabled-opacity token, which resolves to the same 0.5 unless a theme overrides it.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-code-editor:css-property:--lr-code-editor-padding:default",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "before": "var(--lr-space-s)",
+      "after": "var(--lr-form-control-padding-inline)",
+      "reason": "Reviewed visual default: the code editor now shares the form-control field padding, one spacing step larger at the default size. No attribute, property or event changes.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-code-editor:css-property:--lr-code-editor-font-size:default",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "before": "var(--lr-font-size-m)",
+      "after": "var(--lr-form-control-font-size)",
+      "reason": "Reviewed visual default: the code editor font size follows the shared form-control size scale; it is unchanged at the default size.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
+    },
+    {
+      "changeId": "cem:lr-tooltip:css-property:--lr-overlay-radius:default",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "before": null,
+      "after": "var(--lr-radius-xs)",
+      "reason": "Reviewed visual default: the tooltip now honors the inherited overlay radius and anchored-shadow tokens; with no override it keeps its previous small radius.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-20"
     }
   ]
 }

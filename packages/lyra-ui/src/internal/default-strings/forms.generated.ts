@@ -69,6 +69,7 @@ export const LYRA_DEFAULT_previousMonth: LyraMessage = 'Previous month';
 export const LYRA_DEFAULT_radioRequired: LyraMessage = 'Please select an option.';
 export const LYRA_DEFAULT_rangeEnd: LyraMessage = 'Range end';
 export const LYRA_DEFAULT_rangeStart: LyraMessage = 'Range start';
+export const LYRA_DEFAULT_rubricKeysLimit: LyraMessage = 'Only the first {count} of {total} rubric fields are shown.';
 export const LYRA_DEFAULT_rubricSkip: LyraMessage = 'Skip';
 export const LYRA_DEFAULT_rubricSubmit: LyraMessage = 'Submit';
 export const LYRA_DEFAULT_rubricSubmitAndNext: LyraMessage = 'Submit and next';

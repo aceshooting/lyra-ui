@@ -19,6 +19,7 @@ import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { findSourceRow } from '../../../internal/source-row.js';
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
+import { normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
@@ -145,7 +146,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-node-render-error': CustomEvent<LyraGraphNodeRenderErrorDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
-  'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
+  'lr-graph-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   /** Bubbles unchanged from the composed `lr-graph`. */
@@ -243,7 +244,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-node-render-error - Bubbles unchanged from the composed graph with a sanitized custom mesh refusal.
  * @event lr-camera-change - Bubbles unchanged from the composed graph with `{ camera }`.
  *   Spatial detail popovers follow the newly projected node position.
- * @event lr-view-change - Bubbles from the graph toolbar with `{ view }`; the explorer updates
+ * @event lr-graph-view-change - Bubbles from the graph toolbar with `{ view }`; the explorer updates
  *   its own view before the event reaches consumers. Property assignments are silent.
  * @event lr-edge-activate - Bubbles unchanged from the composed graph with `{ sourceNodeId, targetNodeId, edgeId? }`.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
@@ -382,7 +383,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   get sourcePage(): number { return this._sourcePage; }
   set sourcePage(value: number) {
     const old = this._sourcePage; this._sourcePage = value;
-    const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(value, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+    const size = normalizeSourcePageSize(this.sourcePageSize), page = normalizeSourcePage(value, size);
     if (this.sourceChild && this.sourceChild.sourcePage !== page) this.sourceChild.sourcePage = page;
     this.requestUpdate('sourcePage', old);
   }
@@ -433,7 +434,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.sourceChild = undefined; this.sourceChildBinding = undefined; return;
     }
     this.sourceChild = graph;
-    const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+    const size = normalizeSourcePageSize(this.sourcePageSize), page = normalizeSourcePage(this.sourcePage, size);
     if (graph.sourcePageSize !== size) graph.sourcePageSize = size;
     if (graph.sourcePage !== page) graph.sourcePage = page;
     if (this.graphSource === undefined) {
@@ -1549,7 +1550,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           @lr-node-leave=${this.onGraphNodeLeave}
           @lr-viewport-change=${this.onGraphViewportChange}
           @lr-camera-change=${this.onGraphViewportChange}
-          @lr-view-change=${(event: CustomEvent<{ view: LyraGraphView }>) => { this.view = event.detail.view; }}
+          @lr-graph-view-change=${(event: CustomEvent<{ view: LyraGraphView }>) => { this.view = event.detail.view; }}
           ${ref(this.bindSourceChild)}
         ></lr-graph>
         <lr-popover

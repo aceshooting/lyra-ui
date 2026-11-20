@@ -1031,23 +1031,25 @@ describe('lr-video public contract', () => {
       const poster = el.shadowRoot!.querySelector<HTMLElement>('[part="poster-play-button"]')!;
       const glyph = el.querySelector('svg')!;
       const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
-      const expectInk = (color: string): void => {
+      const expectInk = async (color: string): Promise<void> => {
+        await waitUntil(() => getComputedStyle(poster).color === color, 'poster ink settles after the colour transition');
         expect(getComputedStyle(poster).color).to.equal(color);
         expect(getComputedStyle(glyph).fill).to.equal(color);
         expect(getComputedStyle(controls).color).to.equal(color);
       };
-      expectInk('rgb(10, 20, 30)');
+      await expectInk('rgb(10, 20, 30)');
       expect(getComputedStyle(poster).backgroundColor).to.equal('rgb(240, 241, 242)');
       el.style.setProperty('--controls-color', 'rgb(40, 50, 60)');
-      expectInk('rgb(40, 50, 60)');
+      await expectInk('rgb(40, 50, 60)');
       wrapper.style.setProperty('--controls-color', 'rgb(70, 80, 90)');
-      expectInk('rgb(40, 50, 60)');
+      await expectInk('rgb(40, 50, 60)');
       el.style.removeProperty('--controls-color');
-      expectInk('rgb(70, 80, 90)');
+      await expectInk('rgb(70, 80, 90)');
       wrapper.style.removeProperty('--controls-color');
       wrapper.style.removeProperty('--poster-play-button-background');
       for (const themeClass of ['lr-light', 'lr-dark']) {
         wrapper.className = themeClass;
+        await waitUntil(() => getComputedStyle(poster).color === getComputedStyle(glyph).fill, 'poster ink follows the theme');
         const foreground = getComputedStyle(glyph).fill;
         expect(getComputedStyle(poster).color).to.equal(foreground);
         expect(contrastRatio(foreground, getComputedStyle(poster).backgroundColor)).to.be.at.least(3);
@@ -1075,9 +1077,11 @@ describe('lr-video public contract', () => {
     try {
       await resetMouse();
       await hover(defaultButton);
+      await waitUntil(() => getComputedStyle(defaultButton).borderColor !== defaultBorder, 'default hover border settles');
       expect(getComputedStyle(defaultButton).borderColor === defaultBorder).to.be.false;
 
       await hover(themedButton);
+      await waitUntil(() => getComputedStyle(themedButton).borderColor === 'rgb(17, 18, 19)', 'hover border settles');
       expect(getComputedStyle(themedButton).borderColor).to.equal('rgb(17, 18, 19)');
       expect(getComputedStyle(themedButton).backgroundColor).to.equal('rgb(20, 21, 22)');
     } finally {
@@ -1102,6 +1106,7 @@ describe('lr-video public contract', () => {
       await hover(aliasButton!);
       expect(getComputedStyle(aliasButton!).backgroundColor).not.to.equal('rgb(30, 31, 32)');
       await hover(bothButton!);
+      await waitUntil(() => getComputedStyle(bothButton!).backgroundColor === 'rgb(40, 41, 42)', 'hover fill settles');
       expect(getComputedStyle(bothButton!).backgroundColor).to.equal('rgb(40, 41, 42)');
     } finally {
       await resetMouse();

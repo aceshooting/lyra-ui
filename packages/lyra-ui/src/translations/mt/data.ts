@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Qed jintwerew biss l-ewwel {count} ċelloli tal-mappa tas-sħana.',
   heatmapDecorationLimit: 'Qed jintwerew biss l-ewwel {count} kuluri, punti tal-leġġenda u annotazzjonijiet tal-mappa tas-sħana.',
   funnelStagesLimit: 'Qed jintwerew biss l-ewwel {count} stadji.',
+  funnelStagesInputLimit: 'Qed jintwerew l-ewwel {count} stadji minn {total}.',
   timeline: 'Kronoloġija',
   timelineClusterCount: 'Uri l-avvenimenti tal-kronoloġija ({count})',
   timelineItemVariantWarning: 'Twissija',

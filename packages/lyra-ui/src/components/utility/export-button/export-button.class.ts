@@ -34,7 +34,7 @@ import {
   readOwnArrayLength,
 } from '../../../internal/data-descriptors.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { PopupController } from '../../../internal/popup-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -394,7 +394,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Handle on the shared light-DOM live region export outcomes announce through -- a region
    *  rendered inside this shadow root is not reliably announced. Acquired on connect, not on the
    *  first failure, so assistive tech is already observing before any text arrives. */
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   private readonly menuId = nextId('export-menu');
   private cleanup?: DeferredOperationHandle;
@@ -423,10 +423,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.connectionGeneration += 1;
     this.connectedDocument = this.ownerDocument;
     super.connectedCallback();
-    this.sink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     if (pendingDisconnectDocument) {
       if (pendingDisconnectDocument === this.ownerDocument) {
         this.deactivateMenuOverlay(false);
@@ -460,8 +456,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.unbindDocumentPointer();
     this.overlay?.suspend();
     this.restoreFocusOnMenuClose = false;
-    this.sink?.release();
-    this.sink = undefined;
     // A pending settle must not outlive the detached element; cut straight to hidden rather than
     // waiting on a transition a disconnected element may never finish painting.
     this.menuHideToken++;
@@ -482,12 +476,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.sink.adopted();
     this.cleanup?.();
     this.cleanup = undefined;
     this.unbindDocumentPointer();
     this.overlay?.suspend();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   private bindDocumentPointer(): void {
@@ -874,7 +867,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     } catch (error) {
       if (generation !== this.connectionGeneration) return;
       this.exportFailed = true;
-      this.sink?.announce(this.localize('exportFailed'));
+      this.sink.announcePolite(this.localize('exportFailed'));
       this.emit('lr-export-error', Object.freeze({ format, error }));
     }
   }

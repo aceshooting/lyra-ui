@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'הגש',
   rubricSubmitAndNext: 'הגש ועבור לפריט הבא',
   rubricSkip: 'דלג',
+  rubricKeysLimit: 'מוצגים רק {count} השדות הראשונים מתוך {total} שדות הרובריקה.',
   localePickerLabel: 'שפה',
   localePickerRequired: 'אנא בחר שפה.',
   localePickerSearchLabel: 'חיפוש שפות',

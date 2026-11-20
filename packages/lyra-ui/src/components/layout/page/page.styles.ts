@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -166,6 +166,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
   }
   :host([disable-navigation-toggle]) [part~="navigation-toggle"] {
     display: none;

@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Отправить',
   rubricSubmitAndNext: 'Отправить и далее',
   rubricSkip: 'Пропустить',
+  rubricKeysLimit: 'Показаны только первые {count} из {total} полей рубрики.',
   localePickerLabel: 'Язык',
   localePickerRequired: 'Выберите язык.',
   localePickerSearchLabel: 'Поиск языков',

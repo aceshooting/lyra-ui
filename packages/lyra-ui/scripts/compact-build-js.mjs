@@ -38,6 +38,36 @@ const pureInitializers = new Map([
   ]],
 ]);
 
+// Production diagnostics are reviewed no-ops. Marking each declaration side-effect free lets a
+// consumer bundler drop every call, and the warning text passed to it, from production output.
+const sideEffectFreeFunctions = new Map([
+  ['internal/dev-warning.production.js', ['litDevWarnings', 'devWarn', 'devWarnOnce', 'warnLocaleFallback', 'warnDeprecatedUsage']],
+  ['internal/dev-mode-attribute-warning.production.js', ['warnUnknownAttributes', 'warnThemeScopeUsage']],
+]);
+const NO_SIDE_EFFECTS = '/* @__NO_SIDE_EFFECTS__ */';
+
+function restoreSideEffectFreeAnnotations(code, relativePath) {
+  const names = sideEffectFreeFunctions.get(relativePath.split(path.sep).join('/'));
+  if (!names) return code;
+  const parsed = parseSync(relativePath, code);
+  if (parsed.errors.length) throw new Error(`${relativePath}: cannot parse side-effect-free inventory`);
+  const bindings = exportedBindings(parsed.program);
+  const positions = [];
+  for (const name of names) {
+    const matches = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
+      .filter(node => node?.type === 'FunctionDeclaration' && node.id?.name === bindings.get(name));
+    // Only an exported, synchronous declaration with an empty body is inert by construction.
+    if (matches.length !== 1 || matches[0].async || matches[0].generator || matches[0].body.body.length !== 0) {
+      throw new Error(`${relativePath}: side-effect-free function inventory changed`);
+    }
+    if (!code.slice(0, matches[0].start).trimEnd().endsWith(NO_SIDE_EFFECTS)) positions.push(matches[0].start);
+  }
+  for (const position of positions.sort((a, b) => b - a)) {
+    code = code.slice(0, position) + NO_SIDE_EFFECTS + code.slice(position);
+  }
+  return code;
+}
+
 function exportedBindings(program) {
   const bindings = new Map();
   for (const node of program.body) {
@@ -231,7 +261,8 @@ export async function compactBuildJavaScript(directory) {
     // entirely once asked to minify whitespace, since it exports nothing -- silently turning a
     // real (if inert) ES module into a 0-byte non-module file. Restore the marker whenever a
     // non-empty source would otherwise compact to nothing.
-    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : restorePureAnnotations(compactLitStartTags(result.code, file), path.relative(directory, file));
+    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : restoreSideEffectFreeAnnotations(
+      restorePureAnnotations(compactLitStartTags(result.code, file), path.relative(directory, file)), path.relative(directory, file));
     afterBytes += Buffer.byteLength(code);
     await writeFile(file, code);
   }));

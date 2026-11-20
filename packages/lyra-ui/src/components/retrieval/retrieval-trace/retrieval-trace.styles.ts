@@ -1,4 +1,4 @@
-import { activeFill, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { containerHost, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -49,7 +49,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='evidence-toggle']:hover {
     background: var(--lr-color-surface-raised);

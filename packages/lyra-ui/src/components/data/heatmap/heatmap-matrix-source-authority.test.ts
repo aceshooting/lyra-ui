@@ -299,7 +299,7 @@ for (const change of ['replacement', 'rebind', 'disconnect'] as const) {
     const parent = el.parentNode!;
     const canvas = el.shadowRoot!.querySelector('canvas')!;
     const getContext = canvas.getContext;
-    const controller = (el as unknown as { sourceController: { fail(): void } }).sourceController;
+    const controller = (el as unknown as { matrixController: { fail(): void } }).matrixController;
     const fail = controller.fail;
     let failures = 0, changed = false;
     controller.fail = function () { failures++; fail.call(this); };

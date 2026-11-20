@@ -1,7 +1,8 @@
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
-import { finiteInteger } from '../../../internal/numbers.js';
+
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, SourceQueryInputs } from '../../../internal/source-paging.js';
 import { createHaystackMemo } from '../../../internal/search-haystack.js';
 import { indexByKey } from '../../../internal/keyed-index.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -231,7 +232,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   private sourceEpoch = 0;
   private sourceSyncing = false;
   private sourceInputs?: readonly unknown[];
-  private sourceQueryInputs?: readonly unknown[];
+  private readonly sourceQueryInputs = new SourceQueryInputs();
   private sourceFailure: unknown;
   private sourceResult?: LyraPageResult<EvalExample>;
   private sourceRows: EvalExample[] = [];
@@ -297,16 +298,15 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     try {
       if (!this.sourceMode) {
         if (this.sourceInputs) this.sourcePages.bind(undefined);
-        this.sourceInputs = undefined; this.sourceQueryInputs = undefined;
+        this.sourceInputs = undefined; this.sourceQueryInputs.clear();
         this.sourceResult = undefined; this.sourceRows = []; this.sourceTags = []; this.sourceFailure = undefined;
         return;
       }
       const source = this.dataSource!; const epoch = this.sourceEpoch + this.explicitRefresh;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       const queryInputs = [this.searchText, this.activeTags, this.sourceSortKey, this.sourceSortDir, size];
-      if (this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
-      this.sourceQueryInputs = queryInputs;
+      if (this.sourceQueryInputs.changed(queryInputs)) { page = 0; this.sourcePage = 0; }
       const revision = source.revision;
       const inputs = [source, revision, epoch, this.effectiveLocale, ...queryInputs, page];
       if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
@@ -777,7 +777,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           aria-label=${label}
           .strings=${this.strings}
           .paginationMode=${this.sourceMode ? 'server' : 'client'}
-          .page=${this.sourceMode ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER) + 1 : 1}
+          .page=${this.sourceMode ? displayedSourcePage(this.sourcePage) : 1}
           .totalItems=${this.sourceMode ? this.sourceTotal ?? 0 : -1}
           .unknownTotal=${this.sourceMode && this.sourceTotal === null}
           .hasNext=${!this.sourceMode || this.sourceTotal !== null}
@@ -789,7 +789,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .selectionMode=${this.disabled || this.sourceBlocked ? 'none' : 'single'}
           .columns=${this.buildColumns()}
           .rows=${visible}
-          .pageSize=${this.sourceMode ? finiteInteger(this.sourcePageSize, 100, 1, 500) : MAX_RENDERED_EXAMPLES}
+          .pageSize=${this.sourceMode ? normalizeSourcePageSize(this.sourcePageSize) : MAX_RENDERED_EXAMPLES}
           .rowKey=${rowKey}
           .selectedRowKeys=${this.selectedKeys()}
           .emptyHeading=${emptyText}

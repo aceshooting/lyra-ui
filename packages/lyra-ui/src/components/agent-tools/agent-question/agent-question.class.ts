@@ -3,7 +3,7 @@ import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
@@ -181,16 +181,13 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
 
   private restoreActionFocus = false;
   private submittedFocusAnchor: Element | null = null;
-  private announcements?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private isMounting = true;
   override connectedCallback(): void {
     super.connectedCallback();
     this.isMounting = !this.hasUpdated;
-    this.announcements = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
   override disconnectedCallback(): void {
-    this.announcements?.release();
-    this.announcements = undefined;
     super.disconnectedCallback();
   }
   protected override updated(changed: PropertyValues): void {
@@ -212,7 +209,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
         if (status && shadowFocusTarget(this) === status) return;
       }
     }
-    if (mounted) this.announcements?.announce(this.localize('agentQuestionSubmitted'));
+    if (mounted) this.announcements.announcePolite(this.localize('agentQuestionSubmitted'));
   }
   private get supportedSchema(): boolean {
     if (this.schemaInvalid || !this.schema || typeof this.schema !== 'object' || Array.isArray(this.schema)) return false;

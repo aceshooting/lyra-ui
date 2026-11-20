@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, formControlIconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingOffset, focusRingOutline, formControlIconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlTextWrap,
@@ -131,11 +131,11 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
     background-color: transparent;
-    outline: var(--lr-focus-ring-width) solid transparent;
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('transparent')}
+    ${focusRingOffset}
     /* Hover/active below only repaint background-color, so that is all this needs; without it
        this indicator's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='input'][type='time']:not(:disabled):hover::-webkit-calendar-picker-indicator {
     background-color: var(--lr-input-time-picker-hover-bg, var(--lr-color-brand-quiet));

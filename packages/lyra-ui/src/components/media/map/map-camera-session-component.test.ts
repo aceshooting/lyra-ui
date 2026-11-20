@@ -8,7 +8,7 @@ import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { CameraPeer } from '../../../../test/map-camera-peer.js';
 import { resolveSceneAttachment } from '../../../internal/map-scene-session-registry.js';
-import { createMapSceneSessionFacade, mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { createMapSceneSessionFacade, mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 
 const originalObserver = window.IntersectionObserver;
 const originalContext = HTMLCanvasElement.prototype.getContext;

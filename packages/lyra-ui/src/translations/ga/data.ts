@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Ní thaispeántar ach an chéad {count} cill den teasmhapa.',
   heatmapDecorationLimit: 'Ní thaispeántar ach an chéad {count} dath teasmhapa, stad eochrach agus nóta.',
   funnelStagesLimit: 'Ní thaispeántar ach an chéad {count} céim.',
+  funnelStagesInputLimit: 'Á thaispeáint an chéad {count} céim as {total}.',
   timeline: 'Amlíne',
   timelineClusterCount: 'Taispeáin imeachtaí na hamlíne ({count})',
   timelineItemVariantWarning: 'Rabhadh',

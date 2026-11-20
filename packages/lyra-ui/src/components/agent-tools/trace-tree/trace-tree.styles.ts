@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
@@ -190,6 +190,7 @@ export const styles = css`
     padding: 0;
     color: var(--lr-color-text-quiet);
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part='toggle']:hover {
     background: var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet));

@@ -1,5 +1,5 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRingInsetOffset, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, focusRingInwardOffset, focusRingOffsetInsetOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -58,7 +58,7 @@ export const styles = css`
   }
   [part='code-block']:focus-visible,
   [part='table-wrapper']:focus-visible {
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingOffsetInsetOffset}
   }
   /* Shared by the streaming, still-loading and failure-fallback states. The template keeps its
      binding flush (markdown-shared.ts renderMarkdownContent), so this state shows exactly content. */

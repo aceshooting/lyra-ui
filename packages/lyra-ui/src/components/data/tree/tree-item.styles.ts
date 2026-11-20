@@ -1,5 +1,5 @@
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
-import { activeFill, focusRingInsetOffset, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 
@@ -18,7 +18,7 @@ export const styles = css`
   [part~='item'] {
     --_lr-tree-selected-fill: initial;
     border-radius: var(--lr-radius);
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :host(:focus-visible) [part='row'] {
     ${focusRingInsetOffset}
@@ -104,7 +104,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     flex: 0 0 auto;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));

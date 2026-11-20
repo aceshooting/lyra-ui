@@ -78,6 +78,7 @@ import {
   finiteInteger,
   extent,
 } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord } from '../../../internal/source-paging.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -337,7 +338,7 @@ export interface LyraGraphEventMap {
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-node-render-error': CustomEvent<LyraGraphNodeRenderErrorDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
-  'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
+  'lr-graph-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
   'lr-node-enter': CustomEvent<{ nodeId: string }>;
   'lr-node-leave': CustomEvent<{ nodeId: string }>;
@@ -446,7 +447,7 @@ export interface LyraGraphEventMap {
  * @event lr-engine-fallback - Renderer fell back, with `{ from, to, reason }`.
  * @event lr-camera-change - Spatial camera changed by a gesture, fit or focus, with `{ camera }`.
  *   Coalesced to one event per animation frame. Property assignments are silent.
- * @event lr-view-change - User switched the spatial toolbar view, with `{ view }`.
+ * @event lr-graph-view-change - User switched the spatial toolbar view, with `{ view }`.
  *   Programmatic `view` assignments are silent.
  * @event lr-edge-activate - Pointer or keyboard edge activation with
  *   `{ sourceNodeId, targetNodeId, edgeId? }` detail.
@@ -721,7 +722,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const currentSource = this.sourceAuthority();
     const current = () => currentSource() && this.sourceComposition.profile === profile && this.sourcePages.state === state;
     if (current()) profile.accepted(Object.freeze({ query: this.sourceQuery, page: finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER),
-      pageSize: finiteInteger(this.sourcePageSize, 100, 1, 500), total: this.sourceTotal, current }));
+      pageSize: normalizeSourcePageSize(this.sourcePageSize), total: this.sourceTotal, current }));
   }
 
   /** Full host-owned graph. Node keys are node:<id>; edge keys are edge:<id> with explicit edge IDs.
@@ -805,8 +806,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.lastPositionById.clear(); this.sourceModel = undefined; this.sourceModelScene = undefined; this.sourceModelVersion++;
         if (this.view !== 'list') void this.sourceScene.request({ mode: 'neighborhood', centerKey: this.sourceCenter, bounds: null, includeKeys: this.sourceKeys });
       }
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       if (this.sourcePageInputs && this.sourcePageInputs[1] !== size) { page = 0; this.sourcePage = 0; }
       const pageInputs = [page, size, this.sourceQuery];
       if (!this.sourcePageInputs || pageInputs.some((value, index) => value !== this.sourcePageInputs![index])) {
@@ -851,7 +852,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!current()) return false;
     if (index === null) { this.sourceMissing = true; this.sourceState++; return false; }
     this.sourceSyncing = true;
-    this.sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+    this.sourcePage = sourcePageOfRecord(index, this.sourcePageSize);
     this.sourceSyncing = false;
     this.syncGraphSource(); await this.sourcePagePromise;
     if (!current()) return false;
@@ -1000,8 +1001,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 this.setSourceQuery({ ...EMPTY_SOURCE_QUERY, kind: 'edges', centerKey: record.key });
             }}>${this.localize('graphSourceIncidentEdges', undefined, { label })}</button>` : nothing}</li>`;
       }) : html`<li>${this.localize('noData')}</li>`}</ul>` : nothing}
-      <lr-pagination format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
-        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${failed || state.pending || this.sourceTotal === null}
+      <lr-pagination format="compact" with-edges .page=${displayedSourcePage(this.sourcePage)}
+        .pageSize=${normalizeSourcePageSize(this.sourcePageSize)} .total=${this.sourceTotal ?? -1} .disabled=${failed || state.pending || this.sourceTotal === null}
         .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); this.sourcePage = event.detail.page - 1; }}
         @lr-before-page-change=${stop} @lr-activate=${stop} @focus=${stop} @blur=${stop}></lr-pagination>
     </section>`;
@@ -1588,7 +1589,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     },
     community: (community) => this.onCommunityClick(community),
     cameraChanged: (camera) => this.emit('lr-camera-change', { camera }),
-    viewChanged: () => this.emit('lr-view-change', { view: this.view }),
+    viewChanged: () => this.emit('lr-graph-view-change', { view: this.view }),
     unavailable: () => this.announcements.announceAssertive(this.localize('graphSpatialUnavailable')),
     clearSelection: () => this.clearSelection(),
     afterUpdate: (callback, key) => this.scheduleAfterUpdate(callback, key),

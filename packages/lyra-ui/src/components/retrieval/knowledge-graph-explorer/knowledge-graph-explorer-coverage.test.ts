@@ -79,6 +79,18 @@ describe('knowledge graph explorer preset activation while the graph loads', () 
 });
 
 describe('knowledge graph explorer 3D direct activation', () => {
+  it('follows a toolbar view switch and lets lr-graph-view-change bubble out under its own name', async () => {
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer view="3d" .camera=${camera} .nodes=${people}></lr-knowledge-graph-explorer>`);
+    const graph = el.shadowRoot!.querySelector<LyraGraph>('[part="graph"]')!;
+    await graph.updateComplete;
+    const seen: string[] = [];
+    for (const name of ['lr-view-change', 'lr-graph-view-change']) el.addEventListener(name, () => seen.push(name));
+    graph.shadowRoot!.querySelector<HTMLButtonElement>('[data-spatial-action="list"]')!.click();
+    await el.updateComplete;
+    expect(seen).to.deep.equal(['lr-graph-view-change']);
+    expect(el.view).to.equal('list');
+  });
+
   it('anchors a native click to the node position projected after the camera moved', async () => {
     const nodes = [
       { id: 'front', label: 'Front', position: { x: 0, y: 0, z: 0 } },

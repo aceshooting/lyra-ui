@@ -1,4 +1,4 @@
-import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -135,7 +135,7 @@ export const styles = css`
       var(--_lr-multi-split-divider-color)
     );
     pointer-events: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* :where() drops this from (0,3,0) to (0,1,0); at (0,3,0) its cursor: row-resize out-ranks the
      (0,2,0) [part='divider'][aria-disabled='true'] rule below, and a divider beside a collapsed

@@ -9,6 +9,7 @@ import {
   ALLOWED_INLINE,
   buildSharedVocabulary,
   fileFindings,
+  focusRingFindings,
   importsSharedUnion,
   key,
   readInlineStringUnions,
@@ -229,5 +230,15 @@ check('one ALLOWED decision covers both rules, so the same members need no secon
   assert.equal(fileFindings(where, source, vocabulary()).length, 1);
 });
 
+
+check('flags a hand-written focus ring and accepts the shared fragments', () => {
+  const hand = "export const styles = css`\n  a:focus-visible {\n    outline: var(--lr-focus-ring-width) solid red;\n  }\n`;";
+  assert.equal(focusRingFindings('src/components/x/x.styles.ts', hand).length, 1);
+  const offset = "css`a:focus-visible { outline-offset: calc(-1 * var(--lr-focus-ring-offset)); }`";
+  assert.equal(focusRingFindings('src/components/x/x.styles.ts', offset).length, 1);
+  assert.equal(focusRingFindings('src/components/x/x.styles.ts', 'css`a:focus-visible { ${focusRing} }`').length, 0);
+  assert.equal(focusRingFindings('src/components/x/x.styles.ts', 'css`:host { --_x-outline: var(--lr-focus-ring-color); }`').length, 0);
+  assert.equal(focusRingFindings('src/internal/interactive-control.styles.ts', hand).length, 0);
+});
 
 console.log(`Style-vocabulary checker self-test passed (${passed} cases).`);

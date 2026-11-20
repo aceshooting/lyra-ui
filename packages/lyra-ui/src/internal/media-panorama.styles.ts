@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRingShorthand } from './interactive-control.styles.js';
+import { focusRingOffsetInset, focusRingShorthand, focusRingShorthandOutline } from './interactive-control.styles.js';
 
 export const panoramaStyles = css`
   [part='panorama'] {
@@ -9,12 +9,12 @@ export const panoramaStyles = css`
     min-block-size: var(--lr-size-12rem);
     min-inline-size: var(--lr-icon-button-size);
     border-radius: var(--lr-radius);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOffsetInset}
     pointer-events: none;
   }
   [part='panorama']:where([data-ready]) { pointer-events: auto; cursor: grab; }
   [part='panorama']:hover { outline: var(--lr-border-width-thin) solid var(--lr-color-border); }
-  [part='panorama']:focus-visible { outline: var(--lr-focus-ring); }
+  [part='panorama']:focus-visible { ${focusRingShorthandOutline} }
   [part='panorama']:active { cursor: grabbing; }
   [part='panorama'][hidden] { display: none; }
   [part='panorama-engine'] { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: hidden; border-radius: inherit; }

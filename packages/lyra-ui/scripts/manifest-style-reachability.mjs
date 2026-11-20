@@ -5,7 +5,7 @@ import path from 'node:path';
  * Shared style helpers that build CSS from a string argument. The argument is the same `var()`
  * expression a sheet would otherwise write inline, so it counts as stylesheet text.
  */
-const CSS_STRING_HELPERS = new Set(['hoverFill', 'activeFill', 'hoverTint', 'activeTint', 'outlinedIconActionDefaults']);
+const CSS_STRING_HELPERS = new Set(['hoverFill', 'activeFill', 'hoverTint', 'activeTint', 'outlinedIconActionDefaults', 'hoverFillTowardText', 'activeFillTowardText', 'hoverFillDoubled', 'activeFillDoubled', 'activeWash', 'focusRingOutline', 'focusRingOffsetFrom']);
 
 /** Resolve only stylesheet bindings a component actually adopts and interpolates. */
 export function collectStyleSources(entry, readSource) {

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInwardMax, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
@@ -33,8 +33,7 @@ export const styles = css`
     padding: var(--lr-chat-viewport-padding, var(--lr-space-m));
   }
   [part='scroll']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-offset), var(--lr-focus-ring-width)));
+    ${focusRingInwardMax}
   }
   /* Virtual mode. Keyed off [part='base']'s data-virtual marker, not :host(:has(> lr-virtual-list)):
      :has() is invalid inside :host() (Chromium reports CSS.supports('selector(:host(:has(> em)))')

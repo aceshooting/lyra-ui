@@ -996,7 +996,7 @@ export type {
 } from './components/conversation/chat-composer/chat-composer.class.js';
 export {
   formatFileSize,
-} from './components/media/attachment-chip/file-size.js';
+} from './internal/bytes.js';
 export type {
   LyraAttachmentIdDetail,
   LyraAttachmentPreviewRequestDetail,

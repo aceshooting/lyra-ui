@@ -102,10 +102,10 @@ describe('lr-artifact-panel', () => {
     expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
   });
 
-  it('does not re-emit lr-view-change when the already active view is pressed again', async () => {
+  it('does not re-emit lr-artifact-view-change when the already active view is pressed again', async () => {
     const el = (await fixture(html`<lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>`)) as LyraArtifactPanel;
     let changes = 0;
-    el.addEventListener('lr-view-change', () => changes++);
+    el.addEventListener('lr-artifact-view-change', () => changes++);
     (el.shadowRoot!.querySelector('[part="view-button"][data-view="preview"]') as HTMLButtonElement).click();
     expect(changes).to.equal(0);
     (el.shadowRoot!.querySelector('[part="view-button"][data-view="code"]') as HTMLButtonElement).click();
@@ -124,16 +124,26 @@ describe('lr-artifact-panel', () => {
     expect(colors).to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(1, 2, 3)']);
   });
 
-  it('view-button activation emits lr-view-change and updates view', async () => {
+  it('view-button activation emits lr-artifact-view-change and updates view', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>
     `)) as LyraArtifactPanel;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lr-view-change');
+    const listener = oneEvent(el, 'lr-artifact-view-change');
     (el.shadowRoot!.querySelector('[part="view-button"][data-view="code"]') as HTMLButtonElement).click();
     const event = (await listener) as CustomEvent<{ view: string }>;
     expect(event.detail.view).to.equal('code');
     expect(el.view).to.equal('code');
+  });
+
+  it('names its view events after the panel, never the shared generic view-change names', async () => {
+    const el = (await fixture(html`<lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>`)) as LyraArtifactPanel;
+    const generic: string[] = [];
+    for (const name of ['lr-view-change', 'lr-view-change-request']) el.addEventListener(name, () => generic.push(name));
+    const request = oneEvent(el, 'lr-artifact-view-change-request');
+    (el.shadowRoot!.querySelector('[part="view-button"][data-view="code"]') as HTMLButtonElement).click();
+    expect(((await request) as CustomEvent<{ view: string; previousView: string }>).detail).to.deep.equal({ view: 'code', previousView: 'preview' });
+    expect(generic).to.deep.equal([]);
   });
 
   it('renders version-position text and disables previous/next at the ends', async () => {
@@ -760,7 +770,7 @@ describe('lr-artifact-panel remediation (evals batch)', () => {
     await el.updateComplete;
     expect(el.view).to.equal('code');
     const changes: string[] = [];
-    el.addEventListener('lr-view-change', (event) => changes.push((event as CustomEvent<{ view: string }>).detail.view));
+    el.addEventListener('lr-artifact-view-change', (event) => changes.push((event as CustomEvent<{ view: string }>).detail.view));
     el.querySelector('pre')!.remove();
     await waitUntil(() => changes.length > 0, 'view change reported');
     expect(el.view).to.equal('preview');

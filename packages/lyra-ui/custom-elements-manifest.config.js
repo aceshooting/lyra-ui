@@ -370,6 +370,49 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
       for: { default: "''", attribute: 'for' },
     },
   ],
+  [
+    'lr-chart-3d',
+    {
+      selectedId: { default: "''", attribute: 'selected-id' },
+    },
+  ],
+  [
+    'lr-commit-card',
+    {
+      filesExpanded: { default: 'false', attribute: 'files-expanded', reflects: true },
+    },
+  ],
+  [
+    'lr-context-meter',
+    {
+      selectedIndices: { default: '[]' },
+    },
+  ],
+  [
+    'lr-map',
+    {
+      legendOpen: { default: 'true', attribute: 'legend-open', reflects: true },
+      pickMode: { default: 'false', attribute: 'pick-mode' },
+    },
+  ],
+  [
+    'lr-markdown',
+    {
+      content: { default: "''", attribute: 'content' },
+    },
+  ],
+  [
+    'lr-tool-result-view',
+    {
+      status: { default: "'success'", attribute: 'status', reflects: true },
+    },
+  ],
+  [
+    'lr-tour',
+    {
+      activeIndex: { default: '0', attribute: 'active-index', reflects: true },
+    },
+  ],
 ]);
 
 // TypeScript can model a narrow getter and wider setter on one accessor, but CEM has only one

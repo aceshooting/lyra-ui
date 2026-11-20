@@ -184,7 +184,7 @@ describe('--lr-flow-controls-lock-active-color', () => {
     const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
 
     expect(lock.getAttribute('aria-pressed')).to.equal('true');
-    expect(getComputedStyle(lock).color).to.equal('rgb(10, 20, 30)');
+    await waitUntil(() => getComputedStyle(lock).color === 'rgb(10, 20, 30)');
     expect(getComputedStyle(zoomIn).color).to.not.equal('rgb(10, 20, 30)');
   });
 

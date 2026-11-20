@@ -1,4 +1,4 @@
-import { disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeWash, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 /**
@@ -43,7 +43,7 @@ export const styles = css`
     font-size: var(--lr-size-0-75em);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part~='remove-button']:not(:disabled):hover {
     background: var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background));
@@ -57,7 +57,7 @@ export const styles = css`
      lighten while pressing darkened. Layering on the hover custom property also gives a retinted
      hover a matching press. */
   [part~='remove-button']:not(:disabled):active {
-    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background)));
+    background: ${activeWash('currentColor', 'var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background))')};
   }
   [part~='remove-button']:focus-visible {
     ${focusRing}

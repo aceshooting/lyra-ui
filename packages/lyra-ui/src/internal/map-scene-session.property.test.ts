@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { createMapSceneSessionFacade } from './map-scene-session.js';
+import { createMapSceneSessionFacade } from './fixtures/map-scene-session.js';
 import { sceneBackingHarness, sceneStateHarness, sceneTarget, sceneViewport } from '../../test/map-scene-session-fixtures.js';
 
 type WatchOperation =

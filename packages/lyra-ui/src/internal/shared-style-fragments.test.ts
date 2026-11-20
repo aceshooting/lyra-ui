@@ -1,6 +1,11 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import {
   activeFill,
+  activeFillDoubled,
+  activeFillTowardText,
+  activeWash,
+  hoverFillDoubled,
+  hoverFillTowardText,
   disabledControl,
   focusRingInset,
   focusRingInsetOffset,
@@ -134,4 +139,20 @@ it('points the generic colour slots at the neutral and brand rows', async () => 
       expect(getComputedStyle(brand).getPropertyValue(`--lr-color-${axis}-${tier}`).trim()).to.equal(`brand-${axis}-${tier}`);
     }
   }
+});
+
+it('mixes the text-colour, doubled and wash fills like their literal color-mix', async () => {
+  const sample = async (value: string) =>
+    getComputedStyle(await probe(`#t { background: ${value}; }`)).backgroundColor;
+  const text = 'color-mix(in oklab, rgb(200, 10, 10), rgb(20, 20, 20) 10%)';
+  const probeText = await probe('#t { --lr-color-text: rgb(20, 20, 20); background: ' + hoverFillTowardText('rgb(200, 10, 10)').cssText + '; }');
+  expect(getComputedStyle(probeText).backgroundColor).to.equal(await sample(text));
+  const pressed = await probe('#t { --lr-color-text: rgb(20, 20, 20); background: ' + activeFillTowardText('rgb(200, 10, 10)').cssText + '; }');
+  expect(getComputedStyle(pressed).backgroundColor).to.equal(await sample('color-mix(in oklab, rgb(200, 10, 10), rgb(20, 20, 20) 20%)'));
+  const doubled = await probe('#t { --lr-color-text: rgb(20, 20, 20); background: ' + hoverFillDoubled('rgb(200, 10, 10)').cssText + '; }');
+  expect(getComputedStyle(doubled).backgroundColor).to.equal(await sample('color-mix(in oklab, rgb(200, 10, 10), rgb(20, 20, 20) 20%)'));
+  const doubledPress = await probe('#t { --lr-color-text: rgb(20, 20, 20); background: ' + activeFillDoubled('rgb(200, 10, 10)').cssText + '; }');
+  expect(getComputedStyle(doubledPress).backgroundColor).to.equal(await sample('color-mix(in oklab, rgb(200, 10, 10), rgb(20, 20, 20) 40%)'));
+  const wash = await probe('#t { background: ' + activeWash('rgb(0, 0, 0)', 'rgb(255, 255, 255)').cssText + '; }');
+  expect(getComputedStyle(wash).backgroundColor).to.equal(await sample('color-mix(in srgb, rgb(0, 0, 0) 20%, rgb(255, 255, 255))'));
 });

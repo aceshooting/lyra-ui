@@ -1,13 +1,13 @@
 import { tag } from '../../../internal/prefix.js';
 import { copyOutcome, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { checkIcon, copyIcon } from '../../../internal/icons.js';
+import { checkIcon, copyIcon, errorCircleIcon } from '../../../internal/icons.js';
 import { acquireNativeControlDescription } from '../../../internal/native-control-description.js';
 import { acquireResolvedAriaRelationship } from '../../../internal/aria-controls.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -36,28 +36,6 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from 
 
 /** The `feedback-duration` default, in milliseconds. */
 const DEFAULT_FEEDBACK_DURATION = COPY_FEEDBACK_MS;
-
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-/** An exclamation mark in a circle: a shape nothing else in this component uses, so the failure
- *  state is legible without relying on its color. */
-function errorIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><circle cx="12" cy="12" r="9"></circle><path d="M12 7.25v5.5"></path><path d="M12 16.4v.01"></path></svg>
-  `;
-}
 
 export type {
   LyraClipboardWriteFailure,
@@ -249,7 +227,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   /** Handle on the shared light-DOM live region outcomes actually announce through -- a region
    *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
    *  outright), so `[part="feedback"]` is only an `aria-hidden` mirror. */
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   @state() private hasCustomTrigger = false;
 
@@ -361,10 +339,6 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Acquired on connect, not on the first outcome: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all, and the first copy
     // can land in the same task this element is appended in.
-    this.sink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
@@ -372,18 +346,15 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.releaseHostRelationships();
     super.disconnectedCallback();
     this.resetFeedback();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   override adoptedCallback(): void {
     this.toolbarAction.releaseTabIndex?.();
     super.adoptedCallback();
+    this.sink.adopted();
     // Adoption may occur while already disconnected, so defensively retire old-realm resources
     // even when no additional disconnected callback will run.
     this.resetFeedback();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   private cancelFeedbackTimer(): void {
@@ -546,7 +517,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Announced from the transition, not from a rendered text change: the shared region appends
     // each announcement as its own node, so copying twice in a row is read twice instead of the
     // second one being a silent no-op.
-    this.sink?.announce(this.statusLabel(status));
+    this.sink.announcePolite(this.statusLabel(status));
     this.cancelFeedbackTimer();
     // A NaN/negative feedbackDuration (a bad attribute, or a stray programmatic assignment) must
     // not reach setTimeout() unsanitized -- self-heals to the constructed default instead.
@@ -650,7 +621,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private renderIcon(): TemplateResult {
     if (this.status === 'error') {
-      return html`<span part="error-icon" aria-hidden="true"><slot name="error-icon">${errorIcon()}</slot></span>`;
+      return html`<span part="error-icon" aria-hidden="true"><slot name="error-icon">${errorCircleIcon()}</slot></span>`;
     }
     if (this.status === 'success') {
       return html`<span part="success-icon" aria-hidden="true"><slot name="success-icon">${checkIcon()}</slot></span>`;

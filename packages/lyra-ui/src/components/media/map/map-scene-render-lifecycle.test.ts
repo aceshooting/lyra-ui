@@ -1,5 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneMarker, sceneModel } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';

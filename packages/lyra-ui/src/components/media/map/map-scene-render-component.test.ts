@@ -1,5 +1,5 @@
 import { expect, fixtureCleanup, waitUntil } from '@open-wc/testing';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';

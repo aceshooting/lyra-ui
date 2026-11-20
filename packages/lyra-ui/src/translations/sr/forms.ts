@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Пошаљи',
   rubricSubmitAndNext: 'Пошаљи и пређи на следеће',
   rubricSkip: 'Прескочи',
+  rubricKeysLimit: 'Приказује се само првих {count} од {total} поља рубрике.',
   localePickerLabel: 'Језик',
   localePickerRequired: 'Изаберите језик.',
   localePickerSearchLabel: 'Претражи језике',

@@ -872,10 +872,10 @@ test('lr-map admits a scene synchronously without loading the scene session used
   const entry = path.join(packageDir, 'src/components/media/map/map.class.ts');
   const reachable = staticValueImportClosure(entry);
   assert.ok(reachable.has(path.join(packageDir, 'src/components/media/map/map-scene-admission.ts')));
-  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/map-scene-session.ts')));
-  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/map-camera-follow-scene.ts')),
+  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/fixtures/map-scene-session.ts')));
+  assert.ok(!reachable.has(path.join(packageDir, 'src/internal/fixtures/map-camera-follow-scene.ts')),
     'the map uses accepted ground targets without the visual follow adapter');
   const camera = staticValueImportClosure(path.join(packageDir, 'src/internal/map-camera-session-controller.ts'));
-  assert.ok(!camera.has(path.join(packageDir, 'src/internal/map-scene-session.ts')),
+  assert.ok(!camera.has(path.join(packageDir, 'src/internal/fixtures/map-scene-session.ts')),
     'ground camera follow reads accepted geography without loading the frame facade');
 });

@@ -1,3 +1,4 @@
+import { holdOpen } from '../../../../test/tooltip-consult.js';
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -58,6 +59,7 @@ it('tracks flattened forwarded text and actionability through mutation, reassign
   `)) as TooltipContentForwarder;
   const el = wrapper.tooltip;
   await el.updateComplete;
+  await holdOpen(el);
   await waitUntil(() => descriptionProxy(el).textContent === 'Initial forwarded help');
   expect(popup(el).getAttribute('role')).to.equal('tooltip');
 
@@ -193,7 +195,7 @@ it('classifies closed actionable content without ignoring consumer accessibility
   `)) as LyraTooltip;
   const action = el.querySelector('#action') as HTMLButtonElement;
 
-  expect(el.open).to.be.false;
+  await holdOpen(el);
   await waitUntil(() => popup(el).getAttribute('role') === 'dialog');
   expect(descriptionProxy(el).textContent).to.equal('Closed action');
 
@@ -220,7 +222,10 @@ it('restores an authored inline popup visibility and priority after closed-conte
   const popupElement = popup(el);
   popupElement.style.setProperty('visibility', 'collapse', 'important');
 
-  el.querySelector('#content')!.textContent = 'Updated help';
+  // Replacing the assigned node is a slot change: the closed tooltip inspects its content then.
+  const replacement = document.createElement('span');
+  replacement.textContent = 'Updated help';
+  el.querySelector('#content')!.replaceWith(replacement);
   await waitUntil(() => descriptionProxy(el).textContent === 'Updated help');
 
   expect(popupElement.style.getPropertyValue('visibility')).to.equal('collapse');
@@ -1048,6 +1053,7 @@ it('tracks image alternatives, labeling references, and collapsed details in its
     </div>
   `);
   const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  await holdOpen(el);
   const label = wrapper.querySelector('#diagram-label')!;
   const image = el.querySelector('#diagram')!;
   const details = el.querySelector<HTMLDetailsElement>('#details')!;
@@ -1087,6 +1093,7 @@ it('tracks missing, inserted, replaced, removed, and cyclic external labeling ta
     </div>
   `);
   const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  await holdOpen(el);
   const image = el.querySelector('#late-image')!;
   await waitUntil(() => descriptionProxy(el).textContent === 'Fallback image');
 
@@ -1449,6 +1456,7 @@ it('does not re-inspect content for unrelated mutations in a label-reference roo
     </div>
   `);
   const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  await holdOpen(el);
   await waitUntil(() => descriptionProxy(el).textContent === 'Quiet label');
   const internals = el as unknown as { updateInteractiveContent(): void };
   const original = internals.updateInteractiveContent;

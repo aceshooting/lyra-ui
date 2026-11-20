@@ -45,7 +45,7 @@ of filtering, search limits and child rendering.
 options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
 view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
 controls work with all views. User toolbar changes update the explorer's `view` before
-`lr-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
+`lr-graph-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
 popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
@@ -230,7 +230,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-search-change`, so reassigning back is optional.
 - `lr-camera-change` (`detail: { camera: LyraGraphCamera }`) — bubbles unchanged from the graph;
   spatial detail popovers follow the newly projected node position.
-- `lr-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
+- `lr-graph-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
   explorer updates its own view. Direct view and camera property assignments are silent.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`

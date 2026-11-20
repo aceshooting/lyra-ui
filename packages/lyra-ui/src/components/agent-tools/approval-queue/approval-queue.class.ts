@@ -13,7 +13,7 @@ import type {
   LyraToolApprovalDialog,
   ToolApprovalDialogCloseReason,
 } from '../tool-approval-dialog/tool-approval-dialog.class.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { styles } from './approval-queue.styles.js';
@@ -172,20 +172,17 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   @query('lr-tool-approval-dialog') private dialogEl?: LyraToolApprovalDialog;
   @query('[part="count"]') private countEl?: HTMLElement;
 
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly decidedInvocationIds = new Set<string>();
   private settledAnnouncements: string[] = [];
   private focusAnchorId: string | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.sink?.release();
-    this.sink = undefined;
     this.decidedInvocationIds.clear();
     this.settledAnnouncements = [];
   }
@@ -272,7 +269,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
       const index = rows.findIndex((row) => row.dataset['requestId'] === anchorId);
       focusFirstAvailable([...rows.slice(index + 1), ...rows.slice(0, Math.max(index, 0)).reverse(), this.countEl]);
     }
-    for (const text of this.settledAnnouncements.splice(0)) this.sink?.announce(text);
+    for (const text of this.settledAnnouncements.splice(0)) this.sink.announcePolite(text);
   }
 
   /** Remembers the focused request (or the dialog's) and queues decided requests this update resolves. */

@@ -719,7 +719,7 @@ const iconHitTargetDeclarations = fs.readFileSync(
 ).match(/export const iconHitTarget = css`([\s\S]*?)`;/)?.[1];
 
 function expandHitTarget(source) {
-  if (!iconHitTargetDeclarations || !/\b(?:iconHitTarget|iconActionStyles)\b/.test(source)) return source;
+  if (!iconHitTargetDeclarations || !/\b(?:iconHitTarget|iconActionStyles|outlinedActionStyles)\b/.test(source)) return source;
   let program;
   try {
     program = parseProgram('styles.ts', source);
@@ -738,7 +738,7 @@ function expandHitTarget(source) {
       if (module === 'interactive-control' && specifier.imported.name === 'iconHitTarget') {
         fragments.add(specifier.local.name);
       }
-      if (module === 'icon-action' && specifier.imported.name === 'iconActionStyles') {
+      if (module === 'icon-action' && (specifier.imported.name === 'iconActionStyles' || specifier.imported.name === 'outlinedActionStyles')) {
         recipes.add(specifier.local.name);
       }
     }

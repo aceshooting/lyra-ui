@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: '僅顯示熱力圖的前 {count} 個單元格。',
   heatmapDecorationLimit: '僅顯示熱力圖的前 {count} 種顏色、圖例節點和註釋。',
   funnelStagesLimit: '僅顯示前{count}個階段。',
+  funnelStagesInputLimit: '顯示 {total} 個階段中的前 {count} 個。',
   timeline: '時間線',
   timelineClusterCount: '顯示時間線事件（{count}個）',
   timelineItemVariantWarning: '警告',

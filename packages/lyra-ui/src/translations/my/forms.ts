@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'တင်သွင်းရန်',
   rubricSubmitAndNext: 'တင်သွင်းပြီး နောက်တစ်ခုသို့',
   rubricSkip: 'ကျော်ရန်',
+  rubricKeysLimit: 'Rubric အကွက် {total} ခုအနက် ပထမဆုံး {count} ခုကိုသာ ပြထားသည်။',
   localePickerLabel: 'ဘာသာစကား',
   localePickerRequired: 'ဘာသာစကားတစ်ခုကို ရွေးပါ။',
   localePickerSearchLabel: 'ဘာသာစကားများ ရှာရန်',

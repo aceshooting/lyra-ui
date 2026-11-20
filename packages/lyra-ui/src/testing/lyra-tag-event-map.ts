@@ -553,7 +553,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-app-rail-group': { 'lr-toggle-request': true },
   'lr-app-rail-item': { 'lr-toggle-request': true },
   'lr-approval-queue': { 'lr-approval-decision-request': true },
-  'lr-artifact-panel': { 'lr-view-change-request': true },
+  'lr-artifact-panel': { 'lr-artifact-view-change-request': true },
   'lr-bar-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-box-plot': { 'lr-legend-visibility-change-request': true },
   'lr-bubble-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
@@ -665,5 +665,5 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change-request': true },
   'lr-unit-picker': { 'lr-invalid': true, 'lr-show': true },
   'lr-voice-picker': { 'lr-change-request': true, 'lr-hide': true, 'lr-invalid': true, 'lr-preview-request': true, 'lr-show': true },
-  'lr-widget': { 'lr-fullscreen-request': true, 'lr-toggle-request': true, 'lr-view-request': true },
+  'lr-widget': { 'lr-fullscreen-request': true, 'lr-toggle-request': true, 'lr-widget-view-request': true },
 };

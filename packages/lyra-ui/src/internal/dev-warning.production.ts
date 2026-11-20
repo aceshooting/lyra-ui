@@ -1,7 +1,13 @@
 import type { LyraDeprecatedUsageKind } from './dev-warning.development.js';
 export type { LyraDeprecatedUsageKind } from './dev-warning.development.js';
 
-/** Production diagnostics retain call compatibility without allocating warning state. */
+/** Production builds compile every `if (DEV_DIAGNOSTICS)` diagnostic away. */
+export const DEV_DIAGNOSTICS: boolean = false;
+
+/**
+ * Production diagnostics retain call compatibility without allocating warning state. The build marks
+ * each no-op side-effect free, so consumer bundlers drop its calls and the warning text they carry.
+ */
 export function litDevWarnings(): Set<string> | undefined { return undefined; }
 export function devWarn(_message: string): void {}
 export function devWarnOnce(_key: string, _message: string): void {}

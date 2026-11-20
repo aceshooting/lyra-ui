@@ -92,6 +92,163 @@ function resolveUniqueAliases(typeTextValue, snapshot, seen = new Set()) {
   return value;
 }
 
+// Inline `import("file").Name` spellings of declarations a comparison proved relocated, mapped
+// from the baseline spelling to the current one. Reset by every diffPublicApi() call.
+let relocatedImportSpellings = new Map();
+
+/** Rewrite every non-generic, uniquely defined alias, `typeof CONSTANT` and
+ * `Interface['member']` reference in a normalized type text to its definition, repeating until
+ * nothing changes. Property keys, parameter names, qualified members and string literals are left
+ * alone, as is any name the text itself binds as a type parameter. The result is only used to
+ * prove two spellings equivalent; it never replaces a recorded contract value. */
+function expandTypeReferences(typeTextValue, snapshot) {
+  const aliases = snapshot?.typeAliases ?? {};
+  const constants = snapshot?.constantTypes ?? {};
+  const interfaces = snapshot?.interfaceMembers ?? {};
+  const identifier = /[A-Za-z_$][\w$]*/y;
+  const expandOnce = (text) => {
+    let output = '';
+    let changed = false;
+    let index = 0;
+    while (index < text.length) {
+      const character = text[index];
+      if (character === "'" || character === '"' || character === '`') {
+        let end = index + 1;
+        while (end < text.length && text[end] !== character) end += text[end] === '\\' ? 2 : 1;
+        const body = text.slice(index + 1, end);
+        output += character !== '`' && !/['\\]/.test(body) ? `'${body}'` : text.slice(index, end + 1);
+        index = end + 1;
+        continue;
+      }
+      if (!/[A-Za-z_$]/.test(character) || /[\w$.]/.test(text[index - 1] ?? '')) {
+        output += character;
+        index += 1;
+        continue;
+      }
+      identifier.lastIndex = index;
+      const name = identifier.exec(text)[0];
+      let end = index + name.length;
+      const rest = text.slice(end);
+      if (name === 'typeof') {
+        identifier.lastIndex = end + (/^\s*/.exec(rest)[0].length);
+        const target = identifier.exec(text)?.[0];
+        const after = identifier.lastIndex;
+        if (target && !/^\s*[.<[]/.test(text.slice(after)) && constants[target] !== undefined) {
+          output += `(${constants[target]})`;
+          index = after;
+          changed = true;
+          continue;
+        }
+        output += name;
+        index = end;
+        continue;
+      }
+      // A name the text binds itself (`infer X`, `X extends ...`, `<X>(...)`) is a type parameter.
+      const escaped = name.replace(/\$/g, '\\$');
+      const bound = new RegExp(`\\binfer\\s+${escaped}\\b|\\b${escaped}\\s+extends\\b|<[^<>]*\\b${escaped}\\b[^<>]*>\\s*\\(`).test(text);
+      if (/^\s*\??:/.test(rest) || /^\s*[(<]/.test(rest) || bound || name.length < 2) {
+        output += name;
+        index = end;
+        continue;
+      }
+      const member = /^\[\s*'([^'\\]*)'\s*\]/.exec(rest) ?? /^\[\s*"([^"\\]*)"\s*\]/.exec(rest);
+      const memberType = member && (interfaces[name] && Object.hasOwn(interfaces[name], member[1])
+        ? interfaces[name][member[1]]
+        : aliasMemberType(aliases[name], member[1])) || undefined;
+      if (memberType !== undefined) {
+        output += `(${memberType})`;
+        end += member[0].length;
+        changed = true;
+      } else if (Array.isArray(aliases[name]) && aliases[name].length === 1) {
+        output += `(${aliases[name][0]})`;
+        changed = true;
+      } else output += name;
+      index = end;
+    }
+    return { output, changed };
+  };
+  // `(readonly['a','b'])[number]` is the element union a `typeof TUPLE[number]` alias names.
+  const tupleElements = (text) => text.replace(
+    /\(\s*(?:\(\s*)?(?:readonly\s*)?\[((?:\s*'[^'\\]*'\s*,?)+)\](?:\s*\))?\s*\)\s*\[number\]/g,
+    (_, elements) => `(${elements.split(',').map((element) => element.trim()).filter(Boolean).join('|')})`,
+  );
+  let value = normalizeType(typeTextValue);
+  for (let pass = 0; pass < 12; pass += 1) {
+    const { output, changed } = expandOnce(value);
+    const next = normalizeType(tupleElements(output));
+    if (!changed && next === value) break;
+    value = next;
+  }
+  // Nested unions only flatten once their parentheses are gone; settle the normal form.
+  for (let pass = 0; pass < 4; pass += 1) {
+    // Only a grouping parenthesis may go: never a call/parameter list, an array or indexed
+    // operand, or one that keeps a union/intersection/function boundary inside a larger type.
+    const next = normalizeType(value.replace(/\(([^()]*)\)/g, (match, inner, offset) => {
+      const before = value.slice(0, offset);
+      const after = value.slice(offset + match.length);
+      if (/[\w$\]>)]\s*$/.test(before) || /^\s*(?:=>|\[)/.test(after) || inner.includes(':')) return match;
+      const operators = /[|&]/.test(inner);
+      const bounded = (/(?:^|[<,|(])\s*$/.test(before) || before.trim() === '')
+        && (/^\s*(?:$|[>,|)])/.test(after));
+      return !operators || bounded ? inner : match;
+    }));
+    if (next === value) break;
+    value = next;
+  }
+  return value;
+}
+
+/** `Alias['key']` for an alias of object literals (optionally `Readonly<...>`, optionally a
+ * union of them) that each declare `key`: the union of those member types. */
+function aliasMemberType(definitions, key) {
+  if (!Array.isArray(definitions) || definitions.length !== 1) return undefined;
+  const types = [];
+  for (let atom of typeAtoms(definitions[0])) {
+    const readonly = genericTypeParts(atom);
+    if (readonly?.name === 'Readonly' && readonly.args.length === 1) atom = readonly.args[0];
+    const members = objectTypeMembers(atom);
+    if (!members) return undefined;
+    const entry = [...members].find(([name]) => name.replace(/^readonly\s+/, '') === key)?.[1];
+    if (!entry) return undefined;
+    types.push(entry.optional ? `${entry.type}|undefined` : entry.type);
+  }
+  return types.length > 0 ? normalizeType(types.map((type) => `(${type})`).join('|')) : undefined;
+}
+
+/** Apply proven relocations to a baseline type text's inline import spellings. */
+function translateRelocatedSpellings(typeTextValue) {
+  let value = String(typeTextValue);
+  for (const [before, after] of relocatedImportSpellings) value = value.split(before).join(after);
+  return value;
+}
+
+/** Whether two spellings denote the same type once aliases, constants and relocations resolve. */
+function isEquivalentType(before, after, baseline, current) {
+  if (typeof before !== 'string' || typeof after !== 'string') return false;
+  return expandTypeReferences(translateRelocatedSpellings(before), baseline)
+    === expandTypeReferences(after, current);
+}
+
+/** Intersections whose members pair up one-to-one, each identical or an object that only gained
+ * optional members, e.g. `Detail & {a?: X}` -> `Detail & {a?: X; b?: Y}`. */
+function isIntersectionWidening(before, after) {
+  const oldMembers = splitTopLevel(normalizeType(before), '&').map(normalizeType);
+  const newMembers = splitTopLevel(normalizeType(after), '&').map(normalizeType);
+  if (oldMembers.length < 2 || oldMembers.length !== newMembers.length) return false;
+  const unclaimed = [...newMembers];
+  let widened = false;
+  for (const member of oldMembers) {
+    let index = unclaimed.indexOf(member);
+    if (index < 0) {
+      index = unclaimed.findIndex((candidate) => isObjectTypeWidening(member, candidate));
+      if (index < 0) return false;
+      widened = true;
+    }
+    unclaimed.splice(index, 1);
+  }
+  return widened;
+}
+
 /**
  * Whether `after` only widens `before`.
  *
@@ -245,7 +402,7 @@ function isTypeWidening(before, after, baseline, current, allowReadonlyCollectio
     return isTypeWidening(resolvedBefore, resolvedAfter, baseline, current, allowReadonlyCollections);
   }
   if (allowReadonlyCollections && isReadonlyLiteralCollectionWidening(before, after, baseline, current)) return true;
-  if (isObjectTypeWidening(before, after)) return true;
+  if (isObjectTypeWidening(before, after) || isIntersectionWidening(before, after)) return true;
   const oldAtoms = typeAtoms(before);
   const newAtoms = typeAtoms(after);
   if (oldAtoms.size < newAtoms.size && [...oldAtoms].every((atom) => newAtoms.has(atom))) {
@@ -1373,6 +1530,65 @@ function normalizedTypeAliases(graph) {
   );
 }
 
+/** Declared types of ambient constants and the members of plain interfaces, keyed by name. They
+ * let a type text that names `typeof CONSTANT` or `Interface['member']` be compared with an
+ * equivalent spelling. A name declared more than once keeps every definition, which disables its
+ * expansion; generic or extending interfaces are omitted because their members need substitution
+ * or merging first. */
+function normalizedStructuralNames(graph) {
+  const constants = new Map();
+  const interfaces = new Map();
+  const remember = (map, name, value) => {
+    const values = map.get(name) ?? [];
+    values.push(value);
+    map.set(name, values);
+  };
+  // Only declarations the public graph reaches: a private-only helper must not enter the snapshot.
+  const reachable = graph?.directDependencyCache ?? new Map();
+  for (const module of graph?.modules?.values() ?? []) {
+    for (const records of module.symbols.values()) {
+      for (const record of records) {
+        const node = record.node;
+        if (!record.name || record.name.includes(MODULE_NAMESPACE_SEGMENT)) continue;
+        if (!reachable.has(declarationIdentity({ module, records: [record], path: record.path }))) continue;
+        if (node.type === 'VariableDeclarator') {
+          remember(constants, record.name, node.id?.typeAnnotation
+            ? typeNodeText(module, node.id.typeAnnotation)
+            : null);
+        } else if (node.type === 'TSInterfaceDeclaration') {
+          if (node.typeParameters?.params?.length || node.extends?.length) {
+            remember(interfaces, record.name, null);
+            continue;
+          }
+          const members = {};
+          let supported = true;
+          for (const member of node.body?.body ?? []) {
+            const key = member.type === 'TSPropertySignature' && !member.computed
+              ? propertyName(member.key, module)
+              : undefined;
+            if (key === undefined || !member.typeAnnotation || Object.hasOwn(members, key)) {
+              supported = false;
+              break;
+            }
+            const type = typeNodeText(module, member.typeAnnotation);
+            members[key] = member.optional ? normalizeType(`${type}|undefined`) : type;
+          }
+          remember(interfaces, record.name, supported ? members : null);
+        } else if (node.type === 'ClassDeclaration' || node.type === 'TSEnumDeclaration') {
+          // A same-named value or class makes a bare name ambiguous for both maps.
+          remember(constants, record.name, null);
+          remember(interfaces, record.name, null);
+        }
+      }
+    }
+  }
+  const unique = (map) => Object.fromEntries([...map]
+    .filter(([, values]) => values.length === 1 && values[0] !== null)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, [value]]) => [name, value]));
+  return { constantTypes: unique(constants), interfaceMembers: unique(interfaces) };
+}
+
 /** Public routes with competing or unresolved wildcard exports cannot prove one alias authority. */
 function recordPublicOrigin(graph, base, entryFile, name, resolved) {
   graph.publicOrigins.set(base, declarationIdentity(resolved));
@@ -1872,23 +2088,6 @@ function addMemberSurfaces(entries, base, surface, label, module, members) {
   }
 }
 
-// These types require scope resolution or generic substitution before two same-spelled
-// signatures can be considered identical. Keep those overrides in the contract until that
-// equivalence can be proved; lifecycle and other primitive-only signatures need neither.
-function scopeIndependentMethod(member) {
-  if (member.type !== 'MethodDefinition' || member.kind !== 'method'
-    || member.computed || member.abstract || member.accessibility === 'private') return false;
-  const scopeDependent = new Set(['TSTypeReference', 'TSTypeQuery', 'TSImportType', 'TSThisType']);
-  const visit = (node) => {
-    if (!node || typeof node !== 'object') return true;
-    if (scopeDependent.has(node.type)) return false;
-    return Object.entries(node).every(([key, value]) =>
-      key === 'type' || key === 'start' || key === 'end'
-        || (Array.isArray(value) ? value.every(visit) : visit(value)));
-  };
-  return visit(member);
-}
-
 // A single nongeneric method returning void can forward the exact argument tuple of its
 // direct base method without adding a member. Parameters cannot preserve overloads, method
 // generics or explicit this parameters, so those shapes deliberately remain conservative.
@@ -1939,10 +2138,168 @@ function inheritedParameterForwarder(graph, resolved, primary, member) {
     && !inherited[0].value.params.some((argument) => argument.name === 'this' || dependsOnInstance(argument));
 }
 
-/** Project provably scope-independent inherited methods into the effective class contract.
- * An explicit identical override then retains the same entries, while a changed override is
- * still compared with the inherited signature. Nearest declarations shadow whole overload
- * groups; unresolved/mixin heritage and signatures needing substitution stay conservative. */
+// Lit is a runtime dependency whose declarations are not part of this package, so a class's
+// chain ends at `LitElement`. The lifecycle members every element inherits from it are restated
+// here exactly as lit's own typings declare them (lit 3, `@lit/reactive-element` 2), so removing
+// a redundant override resolves to the member that remains reachable instead of to nothing.
+// Anything not listed stays unresolved, which keeps a removal conservative.
+const EXTERNAL_BASE_CLASSES = new Map([
+  ['lit#LitElement', `import type { PropertyValues } from 'lit';
+export declare class LitElement {
+  connectedCallback(): void;
+  disconnectedCallback(): void;
+  attributeChangedCallback(name: string, _old: string | null, value: string | null): void;
+  protected createRenderRoot(): HTMLElement | DocumentFragment;
+  protected shouldUpdate(_changedProperties: PropertyValues): boolean;
+  protected willUpdate(_changedProperties: PropertyValues): void;
+  protected update(changedProperties: PropertyValues): void;
+  protected updated(_changedProperties: PropertyValues): void;
+  protected firstUpdated(_changedProperties: PropertyValues): void;
+  protected render(): unknown;
+}`],
+]);
+const externalBaseCache = new Map();
+
+function externalBaseClass(module, reference) {
+  const imported = module.imports.get(reference);
+  if (!imported || imported.imported === '*' || /^[./]/.test(imported.source)) return undefined;
+  const key = `${imported.source}#${imported.imported}`;
+  if (!EXTERNAL_BASE_CLASSES.has(key)) return undefined;
+  if (!externalBaseCache.has(key)) {
+    const external = parseDeclarationModule(`\0external/${key}.d.ts`, EXTERNAL_BASE_CLASSES.get(key));
+    const records = external.symbols.get(symbolPathKey([imported.imported])) ?? [];
+    externalBaseCache.set(key, records.length === 1
+      ? { module: external, records, path: [imported.imported], external: true }
+      : undefined);
+  }
+  return externalBaseCache.get(key);
+}
+
+/** Whether an inherited member's recorded text means the same thing when projected into the
+ * deriving class. Its spelling must be free of `this`/`typeof`/inline imports and of the
+ * ancestor's own type parameters, and every named type must either carry an external package
+ * authority in the recorded text or resolve to the same declaration from both scopes. */
+function scopeSafeInheritedMember(graph, ancestor, derived, member) {
+  if (!['MethodDefinition', 'PropertyDefinition'].includes(member.type)
+    || (member.type === 'MethodDefinition' && !['method', 'get', 'set'].includes(member.kind))
+    || member.computed || member.abstract || member.decorators?.length
+    || member.accessibility === 'private' || member.key?.type === 'PrivateIdentifier') return false;
+  const { module } = ancestor;
+  const sameDeclaration = (name) => {
+    const leftmost = name.split('.')[0];
+    const imported = module.imports.get(leftmost);
+    if (imported && imported.imported !== '*' && !/^[./]/.test(imported.source)
+      && !module.resolveImportSource?.(imported.source)) return true;
+    if (!graph || ancestor.external) return false;
+    const from = resolveTypeDependencies(graph, ancestor, name);
+    const to = resolveTypeDependencies(graph, derived, name);
+    return from.length === 1 && to.length === 1
+      && declarationIdentity(from[0].resolved) === declarationIdentity(to[0].resolved);
+  };
+  const scopeDependent = new Set(['TSTypeQuery', 'TSImportType', 'TSThisType', 'ThisExpression']);
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return true;
+    if (scopeDependent.has(node.type)) return false;
+    if (node.type === 'TSTypeReference') {
+      const leftmost = leftmostEntityIdentifier(node.typeName);
+      if (!leftmost || module.binderNames.has(nodePositionKey(leftmost))) return false;
+      if (!sameDeclaration(entityNameParts(node.typeName).join('.'))) return false;
+      return visit(node.typeArguments);
+    }
+    return Object.entries(node).every(([key, value]) =>
+      key === 'type' || key === 'start' || key === 'end'
+        || (Array.isArray(value) ? value.every(visit) : visit(value)));
+  };
+  return visit(member);
+}
+
+/** Member names a mixin's constructor type adds, or undefined when one cannot be resolved. */
+function mixinInstanceMemberNames(graph, owner, constructorType, seen = new Set()) {
+  const names = new Set();
+  const unwrap = (node) => {
+    while (node?.type === 'TSParenthesizedType' || node?.type === 'TSTypeAnnotation') node = node.typeAnnotation;
+    return node;
+  };
+  const collect = (resolvedOwner, node) => {
+    node = unwrap(node);
+    if (node?.type === 'TSIntersectionType') return node.types.every((part) => collect(resolvedOwner, part));
+    let targets;
+    if (node?.type === 'TSTypeReference') {
+      targets = resolveTypeDependencies(graph, resolvedOwner, entityNameParts(node.typeName).join('.'));
+    } else if (node?.type === 'TSImportType' && typeof node.source?.value === 'string') {
+      targets = resolveImportTypeDependencies(graph, resolvedOwner.module,
+        { source: node.source.value, qualifier: entityNameParts(node.qualifier) });
+    } else if (node?.type === 'TSTypeLiteral') {
+      for (const member of node.members) {
+        const name = propertyName(member.key, resolvedOwner.module);
+        if (name === undefined) return false;
+        names.add(name);
+      }
+      return true;
+    } else return false;
+    if (targets.length !== 1 || targets[0].resolved.records.length !== 1) return false;
+    const target = targets[0].resolved;
+    const identity = declarationIdentity(target);
+    if (seen.has(identity)) return true;
+    seen.add(identity);
+    const declaration = target.records[0].node;
+    if (declaration.type === 'TSTypeAliasDeclaration') return collect(target, declaration.typeAnnotation);
+    if (declaration.type !== 'TSInterfaceDeclaration' && declaration.type !== 'ClassDeclaration') return false;
+    for (const member of declaration.body?.body ?? []) {
+      const name = propertyName(member.key, target.module);
+      if (name === undefined) return false;
+      names.add(name);
+    }
+    if (declaration.type === 'ClassDeclaration' && declaration.superClass) return false;
+    return (declaration.extends ?? []).every((heritage) => collect(target, {
+      type: 'TSTypeReference', typeName: heritage.expression, typeArguments: heritage.typeArguments,
+    }));
+  };
+  const constructor = unwrap(constructorType);
+  if (constructor?.type !== 'TSConstructorType') return undefined;
+  return collect(owner, constructor.returnType) ? names : undefined;
+}
+
+/** The next class up a heritage chain. A `typeof Base & (new (...) => Mixin)` constant, the
+ * declaration a mixin call leaves behind, continues at `Base`; the mixin's own members are
+ * returned so they shadow, rather than inherit, anything `Base` declares under those names. */
+function nextHeritageClass(graph, owner, reference, seen) {
+  const dependencies = resolveTypeDependencies(graph, owner, reference);
+  if (dependencies.length === 0) {
+    const external = externalBaseClass(owner.module, reference);
+    return external ? { ancestor: external, node: external.records[0].node, mixinNames: [] } : undefined;
+  }
+  if (dependencies.length !== 1) return undefined;
+  const ancestor = dependencies[0].resolved;
+  const identity = declarationIdentity(ancestor);
+  if (seen.has(identity) || ancestor.records.length !== 1) return undefined;
+  seen.add(identity);
+  const node = ancestor.records[0].node;
+  if (node.type === 'ClassDeclaration') return { ancestor, node, mixinNames: [] };
+  let type = node.type === 'VariableDeclarator' ? node.id?.typeAnnotation?.typeAnnotation : undefined;
+  while (type?.type === 'TSParenthesizedType') type = type.typeAnnotation;
+  if (type?.type !== 'TSIntersectionType') return undefined;
+  const queries = type.types.filter((part) => part.type === 'TSTypeQuery');
+  const baseName = queries.length === 1 && !queries[0].typeArguments
+    ? entityNameParts(queries[0].exprName).join('.')
+    : '';
+  if (!baseName) return undefined;
+  const mixinNames = [];
+  for (const part of type.types) {
+    if (part === queries[0]) continue;
+    const names = mixinInstanceMemberNames(graph, ancestor, part);
+    if (!names) return undefined;
+    mixinNames.push(...names);
+  }
+  const next = nextHeritageClass(graph, ancestor, baseName, seen);
+  return next && { ...next, mixinNames: [...mixinNames, ...next.mixinNames] };
+}
+
+/** Project inherited members into the effective class contract when their text provably means
+ * the same thing in the deriving class. An explicit identical override then retains the same
+ * entries, a changed override is still compared with the inherited signature, and removing a
+ * redundant override leaves the inherited member in place. Nearest declarations shadow whole
+ * overload groups and accessor pairs; an unresolvable step ends the walk conservatively. */
 function addClassMemberSurfaces(entries, base, surface, label, resolved, primary, graph) {
   const ownMembers = (primary.body?.body ?? []).filter((member) =>
     !inheritedParameterForwarder(graph, resolved, primary, member));
@@ -1959,14 +2316,11 @@ function addClassMemberSurfaces(entries, base, surface, label, resolved, primary
   while (ancestorNode.superClass) {
     const reference = entityNameParts(ancestorNode.superClass).join('.');
     if (!reference) break;
-    const dependencies = resolveTypeDependencies(graph, ancestor, reference);
-    if (dependencies.length !== 1) break;
-    ancestor = dependencies[0].resolved;
-    const identity = declarationIdentity(ancestor);
-    if (seen.has(identity) || ancestor.records.length !== 1) break;
-    seen.add(identity);
-    ancestorNode = ancestor.records[0].node;
-    if (ancestorNode.type !== 'ClassDeclaration') break;
+    const step = nextHeritageClass(graph, ancestor, reference, seen);
+    if (!step || step.node.type !== 'ClassDeclaration') break;
+    for (const name of step.mixinNames) shadowed.add(name);
+    ancestor = step.ancestor;
+    ancestorNode = step.node;
     const groups = new Map();
     for (const member of ancestorNode.body?.body ?? []) {
       const key = memberKey(ancestor.module, member);
@@ -1977,7 +2331,7 @@ function addClassMemberSurfaces(entries, base, surface, label, resolved, primary
     for (const [key, inherited] of groups) {
       if (shadowed.has(key)) continue;
       shadowed.add(key);
-      if (inherited.every(scopeIndependentMethod)) {
+      if (inherited.every((member) => scopeSafeInheritedMember(graph, ancestor, resolved, member))) {
         addMemberSurfaces(entries, base, surface, label, ancestor.module, inherited);
       }
     }
@@ -2933,6 +3287,7 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
         })]),
     ),
     typeAliases: normalizedTypeAliases(graph),
+    ...normalizedStructuralNames(graph),
     literalAliasSets: publicLiteralAliasSets(graph),
     shadowedReadonly: [...(graph?.modules.values() ?? [])].some((module) =>
       module.imports.has('Readonly') || [...module.symbols.values()].some((records) =>
@@ -2950,7 +3305,8 @@ function sameValue(left, right) {
 function isInputTypeWidening(before, after, baseline, current) {
   const old = resolveUniqueAliases(before, baseline);
   const next = resolveUniqueAliases(after, current);
-  if (old === next || isObjectTypeWidening(old, next)) return true;
+  if (old === next || isObjectTypeWidening(old, next)
+    || isEquivalentType(before, after, baseline, current)) return true;
   const oldAtoms = typeAtoms(old);
   const newAtoms = typeAtoms(next);
   return newAtoms.size > oldAtoms.size && [...oldAtoms].every((atom) => newAtoms.has(atom));
@@ -3110,23 +3466,64 @@ function declarationContractBump(before, after, baseline, current) {
   for (const id of ids) {
     const beforeEntry = before?.[id];
     const afterEntry = after?.[id];
+    if (beforeEntry && !sameValue(beforeEntry.value, afterEntry?.value)
+      && isReviewedMemberChange(id, before, after)) continue;
     if (!beforeEntry) bump = maxBump(bump, 'minor');
-    else if (!afterEntry) return finish('major');
-    else if (!sameValue(beforeEntry.value, afterEntry.value)) {
-      // The generated map uses never for a component with no CSS custom property names.
-      if (isFrameworkMap && /^:property:lr-[a-z0-9-]+:property:cssNames:type$/.test(id)
+    else if (!afterEntry) {
+      if (isFrameworkMap && isFrameworkFirstEventMap(id, before, after)) {
+        bump = maxBump(bump, 'minor');
+        continue;
+      }
+      return finish('major');
+    } else if (!sameValue(beforeEntry.value, afterEntry.value)) {
+      // The generated map uses never for a component with no CSS custom property or event names.
+      if (isFrameworkMap && /^:property:lr-[a-z0-9-]+:property:(?:cssNames|eventNames):type$/.test(id)
         && beforeEntry.value === 'never' && typeof afterEntry.value === 'string'
-        && [...typeAtoms(afterEntry.value)].every(atom => /^'--lr-[a-z0-9-]+'$/.test(atom))) {
+        && [...typeAtoms(afterEntry.value)].every((atom) => (id.endsWith(':cssNames:type')
+          ? /^'--lr-[a-z0-9-]+'$/ : /^'lr-[a-z0-9-]+'$/).test(atom))) {
         bump = maxBump(bump, 'minor');
         continue;
       }
       bump = maxBump(
         bump,
-        changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current),
+        changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current,
+          (name) => Boolean(after[`:property:${name}`])),
       );
     }
   }
   return finish(bump);
+}
+
+/** The generated framework map spells a component with no events as `events: {}` and gives it
+ * its event map once it has one. Dropping the empty object literal's shape for that named map is
+ * the first-event counterpart of the `never` -> names transition, not a removal. */
+function isFrameworkFirstEventMap(id, before, after) {
+  const match = /^(:property:lr-[a-z0-9-]+:property:events):type-kind$/.exec(id);
+  if (!match || before[id]?.value !== 'object') return false;
+  const prefix = `${match[1]}:property:`;
+  return !Object.keys(before).some((key) => key.startsWith(prefix))
+    && typeof after[`${match[1]}:type`]?.value === 'string'
+    && /^Lyra[A-Za-z0-9]*EventMap$/.test(after[`${match[1]}:type`].value);
+}
+
+// Member-level reviewed exceptions active while a reviewed change is re-evaluated. Each accepts
+// one contract member's exact before -> after value (after `null` for a removal, which also
+// accepts the removal of that member's own sub-entries).
+let reviewedMemberChanges = [];
+function isReviewedMemberChange(id, before, after) {
+  for (const accepted of reviewedMemberChanges) {
+    const exact = id === accepted.key;
+    const nested = !exact && accepted.after === null && id.startsWith(`${accepted.key}:`)
+      && before[accepted.key] && !after[accepted.key];
+    if (!exact && !nested) continue;
+    if (nested) {
+      if (after[id] !== undefined) continue;
+    } else if (!exactValue(before[id]?.value ?? null, accepted.before)
+      || !exactValue(after[id]?.value ?? null, accepted.after)) continue;
+    accepted.used = true;
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -3158,6 +3555,39 @@ function isHeritageSpecialization(before, after) {
   return specialized;
 }
 
+/** Interface heritage that keeps every clause, adds clauses, or adjusts a `Pick`/`Omit` clause
+ * only in ways that cannot lose a member: a `Pick` may name more keys, and an `Omit` may name
+ * more keys only when the extending declaration declares each of them itself. */
+function isHeritageWidening(before, after, ownProperty) {
+  if (!Array.isArray(before) || !Array.isArray(after) || after.length < before.length) return false;
+  const keyed = (clause) => {
+    const generic = genericTypeParts(clause);
+    if (!generic || !['Omit', 'Pick'].includes(generic.name) || generic.args.length !== 2) return undefined;
+    const keys = [...typeAtoms(generic.args[1])];
+    if (!keys.every((key) => /^'[^'\\]*'$/.test(key))) return undefined;
+    return { name: generic.name, base: generic.args[0], keys: new Set(keys.map((key) => key.slice(1, -1))) };
+  };
+  const unclaimed = after.map(normalizeType);
+  let changed = after.length > before.length;
+  for (const clause of before.map(normalizeType)) {
+    let index = unclaimed.indexOf(clause);
+    if (index < 0) {
+      const old = keyed(clause);
+      index = old ? unclaimed.findIndex((candidate) => {
+        const next = keyed(candidate);
+        if (!next || next.name !== old.name || next.base !== old.base
+          || ![...old.keys].every((key) => next.keys.has(key))) return false;
+        return old.name === 'Pick'
+          || [...next.keys].every((key) => old.keys.has(key) || ownProperty(key));
+      }) : -1;
+      if (index < 0) return false;
+      changed = true;
+    }
+    unclaimed.splice(index, 1);
+  }
+  return changed;
+}
+
 /** Physical graph identities remain distinct within each snapshot. Only an unchanged public
  * export can establish correspondence across snapshots, and aliases must agree one-to-one. */
 function publicOriginCorrespondence(baseline, current) {
@@ -3183,7 +3613,54 @@ function publicOriginCorrespondence(baseline, current) {
     if (targets.size !== 1 || reverse.get(after).size !== 1) conflicts.add(before);
     else forward.set(before, after);
   }
+  // An unexported declaration has no route to anchor it, but a move between internal modules
+  // leaves one identity that exists only before and one that exists only after under the same
+  // declaration path. Pair those when the path is unique on both sides; the pair's contracts and
+  // edges are then compared exactly like a public relocation, so any shape change still counts.
+  if (baseline.dependencyTopology && current.dependencyTopology) {
+    const declarationPath = (identity) => identity.slice(identity.indexOf('#') + 1);
+    const onlyIn = (left, right) => {
+      const byPath = new Map();
+      for (const identity of Object.keys(left)) {
+        if (Object.hasOwn(right, identity) || forward.has(identity) || reverse.has(identity)
+          || conflicts.has(identity)) continue;
+        const group = byPath.get(declarationPath(identity)) ?? [];
+        group.push(identity);
+        byPath.set(declarationPath(identity), group);
+      }
+      return byPath;
+    };
+    const removed = onlyIn(baseline.dependencyTopology, current.dependencyTopology);
+    const added = onlyIn(current.dependencyTopology, baseline.dependencyTopology);
+    for (const [pathKey, [before, ...otherBefore]] of removed) {
+      const [after, ...otherAfter] = added.get(pathKey) ?? [];
+      if (after && otherBefore.length === 0 && otherAfter.length === 0) forward.set(before, after);
+    }
+  }
   return { forward, conflicts };
+}
+
+/** Inline `import("file").Name` spellings of every relocated declaration. */
+function relocationSpellings(forward) {
+  const spellings = new Map();
+  const spelling = (identity) => {
+    const separator = identity.indexOf('#');
+    let pathParts;
+    try {
+      pathParts = JSON.parse(identity.slice(separator + 1));
+    } catch {
+      return undefined;
+    }
+    if (!Array.isArray(pathParts) || pathParts.some((part) => typeof part !== 'string'
+      || part.includes(MODULE_NAMESPACE_SEGMENT) || part.includes(ANONYMOUS_DEFAULT_SEGMENT))) return undefined;
+    return `import(${JSON.stringify(identity.slice(0, separator))}).${pathParts.join('.')}`;
+  };
+  for (const [before, after] of forward) {
+    const from = spelling(before);
+    const to = spelling(after);
+    if (from && to && from !== to) spellings.set(from, to);
+  }
+  return spellings;
 }
 
 /** Compare each declaration's direct edges once, even when many public roots share it. */
@@ -3196,13 +3673,42 @@ function dependencyTopologyBump(identity, baseline, current) {
   let bump = 'major';
   if (beforeEdges && afterEdges) {
     const afterSet = new Set(afterEdges.map((edge) => JSON.stringify(edge)));
-    if (beforeEdges.every(([reference, target]) =>
-      afterSet.has(JSON.stringify([reference, translated(target)])))) {
-      bump = afterEdges.length > beforeEdges.length ? 'minor' : 'none';
+    const lost = beforeEdges.filter(([reference, target]) =>
+      !afterSet.has(JSON.stringify([reference, translated(target)])));
+    // A dropped edge is explained when nothing else now answers to the target's name (a
+    // same-named replacement is a rewiring and stays breaking) and the target is either a deleted
+    // internal declaration or one that still exists, e.g. now reached through a base class.
+    // A target that still exists stays checked by the reachable-contract comparison, which
+    // fails when it is no longer reachable at all.
+    // Any edge that replaces a dropped one must lead to a declaration the baseline did not have;
+    // re-pointing at an existing declaration, however it is spelled, is a rewiring.
+    const beforeSet = new Set(beforeEdges.map(([reference, target]) => JSON.stringify([reference, translated(target)])));
+    const relocatedTargets = new Set(declarationOrigins.forward.values());
+    const rewired = lost.length > 0 && afterEdges.some((edge) => !beforeSet.has(JSON.stringify(edge))
+      && (Object.hasOwn(baseline.dependencyTopology, edge[1]) || relocatedTargets.has(edge[1])));
+    const afterPaths = new Set(afterEdges.map(([, target]) => declarationPathKey(target)));
+    if (!rewired && lost.every(([, target]) => !afterPaths.has(declarationPathKey(target))
+      && (isRetiredInternalDeclaration(target, baseline, current)
+        || Object.hasOwn(current.dependencyTopology, translated(target))))) {
+      bump = afterEdges.length > beforeEdges.length - lost.length ? 'minor' : 'none';
     }
   }
   dependencyTopologyBumps.set(identity, bump);
   return bump;
+}
+
+function declarationPathKey(identity) {
+  return String(identity).slice(String(identity).indexOf('#') + 1);
+}
+
+/** A declaration no public route ever named, which the current package no longer declares at
+ * all and which no relocation explains. Consumers could only observe it through the public
+ * declarations that referenced it, and those are compared on their own. */
+function isRetiredInternalDeclaration(identity, baseline, current) {
+  if (!baseline.dependencyTopology || !current.dependencyTopology) return false;
+  if (declarationOrigins.forward.has(identity) || declarationOrigins.conflicts.has(identity)) return false;
+  if (Object.hasOwn(current.dependencyTopology ?? {}, identity)) return false;
+  return !Object.values(baseline.publicOrigins ?? {}).includes(identity);
 }
 
 /** Explain a changed reachable fingerprint using full declaration contracts and direct edges.
@@ -3240,6 +3746,10 @@ function dependencyContractBump(before, after, baseline, current) {
     if (declarationOrigins.conflicts.has(identity)) return 'major';
     const target = translated(identity);
     if (identity === beforeDefinition.root && target !== afterDefinition.root) return 'major';
+    // A deleted internal declaration has no edges of its own left to compare; the edges that
+    // referenced it are compared on the declarations that held them.
+    if (identity !== beforeDefinition.root && target === identity && afterReachable[identity] === undefined
+      && isRetiredInternalDeclaration(identity, baseline, current)) continue;
     // Include the root's edges even though it is excluded from the interned reachable map.
     // Otherwise rewiring a signature could preserve its complete reachable declaration set.
     bump = maxBump(bump, dependencyTopologyBump(identity, baseline, current));
@@ -3270,7 +3780,7 @@ function dependencyContractBump(before, after, baseline, current) {
   return bump;
 }
 
-function changedBump(entry, before, after, baseline, current) {
+function changedBump(entry, before, after, baseline, current, ownProperty = () => false) {
   if (entry.semantic === 'property-access') return propertyAccessBump(before, after, baseline, current);
   if (entry.semantic === 'declaration-contract-ref') {
     const beforeContract = baseline?.contracts?.[before];
@@ -3282,9 +3792,17 @@ function changedBump(entry, before, after, baseline, current) {
     return dependencyContractBump(before, after, baseline, current);
   }
   if (entry.semantic === 'parameters' && isParameterWidening(before, after, baseline, current)) return 'minor';
-  if (entry.semantic === 'type' && typeof before === 'string' && typeof after === 'string'
-    && isTypeWidening(before, after, baseline, current)) return 'minor';
-  if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
+  if (entry.semantic === 'type' && typeof before === 'string' && typeof after === 'string') {
+    if (isTypeWidening(before, after, baseline, current)) return 'minor';
+    // A spelling change (an extracted alias, `typeof` constant, interface member lookup or a
+    // relocated inline import) that resolves to the same structure is no change at all; one that
+    // resolves to a widening is the widening.
+    if (isEquivalentType(before, after, baseline, current)) return 'none';
+    if (isTypeWidening(expandTypeReferences(translateRelocatedSpellings(before), baseline),
+      expandTypeReferences(after, current), baseline, current)) return 'minor';
+  }
+  if (entry.semantic === 'heritage' && (isHeritageSpecialization(before, after)
+    || isHeritageWidening(before, after, ownProperty))) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
   if (entry.semantic === 'readonly' && before === true && after === false) return 'minor';
   if (entry.semantic === 'privacy' && before === 'protected' && after === 'public') return 'minor';
@@ -3310,10 +3828,15 @@ function samePublicLiteralAlias(id, before, after, baseline, current) {
     Object.entries(old).every(([key, entry]) => key === ':type' || sameValue(entry, next[key]));
 }
 
-export function diffPublicApi(baseline, current) {
+function prepareComparison(baseline, current) {
   declarationBumpCache = new WeakMap();
   declarationOrigins = publicOriginCorrespondence(baseline, current);
+  relocatedImportSpellings = relocationSpellings(declarationOrigins.forward);
   dependencyTopologyBumps = new Map();
+}
+
+export function diffPublicApi(baseline, current) {
+  prepareComparison(baseline, current);
   if (baseline.packageName !== current.packageName) {
     throw new Error(
       `Cannot compare different packages: ${baseline.packageName} and ${current.packageName}.`,
@@ -3355,7 +3878,8 @@ export function diffPublicApi(baseline, current) {
       changes.push({
         id,
         surface: afterEntry.surface,
-        bump: changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current),
+        bump: changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current,
+          (name) => Boolean(currentEntries[`${id.slice(0, id.lastIndexOf(':'))}:property:${name}`])),
         kind: 'changed',
         before: beforeEntry.value,
         after: afterEntry.value,
@@ -3440,7 +3964,37 @@ function exactValue(left, right) {
   return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
-export function applyReviewedExceptions(changes, config = { exceptions: [] }) {
+/** `*` is the only wildcard; every other character matches itself. */
+function changeIdPattern(changeId) {
+  return new RegExp(`^${changeId.split('*').map((part) => part.replace(/[\\^$.|?+()[\]{}]/g, '\\$&')).join('.*')}$`);
+}
+
+/** Re-evaluate one contract change with reviewed member changes accepted, so everything else in
+ * the same contract is still classified normally. */
+function reevaluateWithReviewedMembers(change, members, { baseline, current }) {
+  const beforeEntry = baseline.entries[change.id];
+  const afterEntry = current.entries[change.id];
+  if (!beforeEntry || !afterEntry
+    || !['declaration-contract-ref', 'dependency-contract-ref'].includes(afterEntry.semantic)) return undefined;
+  prepareComparison(baseline, current);
+  reviewedMemberChanges = members;
+  try {
+    return changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current);
+  } finally {
+    reviewedMemberChanges = [];
+    prepareComparison(baseline, current);
+  }
+}
+
+/**
+ * Lower reviewed changes. A plain exception names one change exactly, with its exact before and
+ * after values. A member exception instead lists contract members (`key`, exact `before`, exact
+ * `after`, `null` meaning absent) and may use `*` in `changeId` to cover every route that reaches
+ * the same declaration; each matching change is re-evaluated with only those members accepted,
+ * so any other difference in that contract keeps its own classification. Both forms fail when
+ * they no longer match, so a stale review cannot linger.
+ */
+export function applyReviewedExceptions(changes, config = { exceptions: [] }, snapshots = undefined) {
   if (!config || !Array.isArray(config.exceptions)) {
     throw new Error('Public API exception config must contain an exceptions array.');
   }
@@ -3472,6 +4026,40 @@ export function applyReviewedExceptions(changes, config = { exceptions: [] }) {
       throw new Error(`Duplicate API exception for ${exception.changeId}.`);
     }
     seenIds.add(exception.changeId);
+    const review = {
+      reason: exception.reason,
+      reviewer: exception.reviewer,
+      reviewedOn: exception.reviewedOn,
+      originalBump: exception.requiredBump,
+    };
+    if (exception.members !== undefined) {
+      if (!Array.isArray(exception.members) || exception.members.length === 0
+        || exception.members.some((member) => !member || typeof member.key !== 'string'
+          || !Object.hasOwn(member, 'before') || !Object.hasOwn(member, 'after'))) {
+        throw new Error(`API exception ${exception.changeId} members need key, before and after.`);
+      }
+      if (!snapshots) throw new Error(`API exception ${exception.changeId} needs the compared snapshots.`);
+      const members = exception.members.map((member) => ({ ...member, used: false }));
+      const pattern = changeIdPattern(exception.changeId);
+      let applied = 0;
+      for (const change of adjusted) {
+        if (change.exception || change.kind !== 'changed' || change.bump !== exception.requiredBump
+          || !pattern.test(change.id)) continue;
+        const bump = reevaluateWithReviewedMembers(change, members, snapshots);
+        if (bump === undefined || BUMP_RANK[bump] > BUMP_RANK[exception.allowedBump]) continue;
+        change.bump = bump;
+        change.exception = review;
+        applied += 1;
+      }
+      const unused = members.filter((member) => !member.used).map((member) => member.key);
+      if (applied === 0 || unused.length > 0) {
+        throw new Error(
+          `Reviewed API exception ${exception.changeId} does not match the current API changes`
+            + (unused.length ? ` (unused members: ${unused.join(', ')})` : '') + '; remove or update it.',
+        );
+      }
+      continue;
+    }
     const match = adjusted.find(
       (change) =>
         change.id === exception.changeId &&
@@ -3485,12 +4073,7 @@ export function applyReviewedExceptions(changes, config = { exceptions: [] }) {
       );
     }
     match.bump = exception.allowedBump;
-    match.exception = {
-      reason: exception.reason,
-      reviewer: exception.reviewer,
-      reviewedOn: exception.reviewedOn,
-      originalBump: exception.requiredBump,
-    };
+    match.exception = review;
   }
   return adjusted;
 }
@@ -3775,7 +4358,7 @@ export function runCli(argv = process.argv.slice(2)) {
     const exceptionConfig = existsSync(options.exceptions)
       ? readJson(options.exceptions)
       : { exceptions: [] };
-    changes = applyReviewedExceptions(changes, exceptionConfig);
+    changes = applyReviewedExceptions(changes, exceptionConfig, { baseline, current });
     const changesetBump = readChangesetBump(options.changesets, current.packageName);
     const gate = evaluateSemverGate({
       changes,

@@ -7,7 +7,7 @@ export type { LyraPreparedSeriesData } from '../../../utilities/data-preparation
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { nextId } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { chartValueFractionDigits, formatChartValue } from '../../../internal/chart-number-format.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
@@ -372,10 +372,7 @@ export class LyraSparkline extends LyraElement {
     if (last === undefined) return this.localize('noData');
     // Two fraction digits, widened below one so a small value keeps two significant digits
     // instead of reading "0".
-    const magnitude = Math.abs(last);
-    const digits = magnitude > 0 && magnitude < 1
-      ? Math.min(20, Math.max(2, 1 - Math.floor(Math.log10(magnitude))))
-      : 2;
+    const digits = chartValueFractionDigits(last, 2, 2);
     return this.localize('trendOf', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(this.valuesMemo?.result === values ? this.valuesMemo.count : values.length),
       value: getNumberFormat(this.effectiveLocale, {

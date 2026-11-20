@@ -1081,14 +1081,14 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraArtifactPanelEventMap;
-    eventNames:       | 'lr-copy'
+    eventNames:       | 'lr-artifact-view-change'
+      | 'lr-artifact-view-change-request'
+      | 'lr-copy'
       | 'lr-copy-error'
       | 'lr-download'
       | 'lr-error'
       | 'lr-restore'
-      | 'lr-version-change'
-      | 'lr-view-change'
-      | 'lr-view-change-request';
+      | 'lr-version-change';
     cssNames:       | '--lr-artifact-panel-view-active-bg'
       | '--lr-artifact-panel-view-active-color';
     attributeAliases: {
@@ -6369,13 +6369,13 @@ export interface LyraComponentTypeMap {
       | 'lr-edge-enter'
       | 'lr-edge-leave'
       | 'lr-engine-fallback'
+      | 'lr-graph-view-change'
       | 'lr-node-activate'
       | 'lr-node-enter'
       | 'lr-node-expand'
       | 'lr-node-leave'
       | 'lr-node-render-error'
       | 'lr-selection-change'
-      | 'lr-view-change'
       | 'lr-viewport-change';
     cssNames:       | '--lr-canvas-reserved-height'
       | '--lr-graph-cat-1'
@@ -7465,6 +7465,7 @@ export interface LyraComponentTypeMap {
       | 'lr-community-activate'
       | 'lr-edge-activate'
       | 'lr-engine-fallback'
+      | 'lr-graph-view-change'
       | 'lr-hidden-types-change'
       | 'lr-hidden-types-change-request'
       | 'lr-node-activate'
@@ -7474,8 +7475,7 @@ export interface LyraComponentTypeMap {
       | 'lr-pin-change'
       | 'lr-relation-activate'
       | 'lr-search-change'
-      | 'lr-selection-change'
-      | 'lr-view-change';
+      | 'lr-selection-change';
     cssNames:       | '--lr-canvas-reserved-height'
       | '--lr-knowledge-graph-explorer-source-action-hover-fill';
     attributeAliases: {
@@ -15063,8 +15063,8 @@ export interface LyraComponentTypeMap {
       | 'lr-fullscreen-request'
       | 'lr-toggle'
       | 'lr-toggle-request'
-      | 'lr-view-change'
-      | 'lr-view-request';
+      | 'lr-widget-view-change'
+      | 'lr-widget-view-request';
     cssNames:       | '--lr-scroll-fade-size'
       | '--lr-widget-backdrop-inset'
       | '--lr-widget-bg'

@@ -65,3 +65,18 @@ it('localizes removed search-placeholder while preserving an explicitly empty pl
   await el.updateComplete;
   expect(input.placeholder).to.equal('Again');
 });
+
+it('renders the clear and load-more actions as named native buttons on the shared action recipes', async () => {
+  const tools = Array.from({ length: 205 }, (_, index) => ({ id: `tool-${index}`, name: `Tool ${index}` }));
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open .tools=${tools} style="--lr-icon-button-bg: rgb(10, 20, 30)"></lr-tool-select-dialog>`);
+  const loadMore = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-more"]')!;
+  expect(loadMore.localName).to.equal('button');
+  expect(loadMore.textContent!.trim().length).to.be.greaterThan(0);
+  expect(getComputedStyle(loadMore).borderTopStyle).to.equal('solid');
+  expect(getComputedStyle(loadMore).cursor).to.equal('pointer');
+  (el as unknown as { query: string }).query = 'Tool';
+  await el.updateComplete;
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+  expect(clear.getAttribute('aria-label')!.length).to.be.greaterThan(0);
+  expect(getComputedStyle(clear).backgroundColor).to.equal('rgb(10, 20, 30)');
+});

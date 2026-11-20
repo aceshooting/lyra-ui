@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'አስገባ',
   rubricSubmitAndNext: 'አስገባ እና ቀጣይ',
   rubricSkip: 'ዝለል',
+  rubricKeysLimit: 'ከ{total} የሩብሪክ መስኮች ውስጥ የመጀመሪያዎቹ {count} ብቻ ይታያሉ።',
   localePickerLabel: 'ቋንቋ',
   localePickerRequired: 'እባክዎ ቋንቋ ይምረጡ።',
   localePickerSearchLabel: 'ቋንቋዎችን ፈልግ',

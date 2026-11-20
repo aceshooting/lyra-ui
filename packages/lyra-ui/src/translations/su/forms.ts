@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Kirim',
   rubricSubmitAndNext: 'Kirim tuluy salajengna',
   rubricSkip: 'Liwatkeun',
+  rubricKeysLimit: 'Ngan {count} widang rubrik munggaran tina {total} anu dipintonkeun.',
   localePickerLabel: 'Basa',
   localePickerRequired: 'Pilih basa.',
   localePickerSearchLabel: 'Téangan basa',

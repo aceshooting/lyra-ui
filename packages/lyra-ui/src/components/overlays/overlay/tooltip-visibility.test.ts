@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { holdOpen } from '../../../../test/tooltip-consult.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import './tooltip.js';
 
@@ -22,6 +23,7 @@ it('reads each content/ancestor visibility once per inspection and refreshes it 
     </div>
   `);
   const tooltip = ancestor.querySelector('lr-tooltip')!;
+  await holdOpen(tooltip);
   await tooltip.updateComplete;
   const content = tooltip.querySelector('span:not([slot])')!;
   const action = content.querySelector('button')!;
@@ -59,6 +61,7 @@ it('keeps live slotted visibility, ancestor observation and reconnect actionabil
     </div>
   `);
   const tooltip = ancestor.querySelector('lr-tooltip')!;
+  await holdOpen(tooltip);
   const action = tooltip.querySelector('span:not([slot]) button') as HTMLButtonElement;
   const description = () => tooltip.querySelector('[data-lyra-tooltip-description]')?.textContent;
   const role = () => tooltip.shadowRoot!.querySelector('[part~="popup"]')!.getAttribute('role');
@@ -105,6 +108,7 @@ it('preserves image-map actionability when the text walk exhausts its shared loo
     <div><lr-tooltip manual><button slot="trigger">Help</button><map name="bounded-tooltip-map"><area href="#target" alt="Mapped link" shape="rect" coords="0,0,32,32"></map></lr-tooltip></div>
   `);
   const tooltip = container.querySelector('lr-tooltip')!;
+  await holdOpen(tooltip);
   const padding = document.createElement('div');
   for (let index = 0; index < 2100; index++) padding.append(document.createElement('span'));
   const image = document.createElement('img');

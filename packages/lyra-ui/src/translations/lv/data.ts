@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Tiek rādītas tikai pirmās {count} siltumkartes šūnas.',
   heatmapDecorationLimit: 'Tiek rādītas tikai pirmās {count} siltumkartes krāsas, leģendas pieturas un anotācijas.',
   funnelStagesLimit: 'Tiek rādīti tikai pirmie {count} posmi.',
+  funnelStagesInputLimit: 'Tiek rādīti pirmie {count} no {total} posmiem.',
   timeline: 'Laika skala',
   timelineClusterCount: 'Rādīt laika skalas notikumus ({count})',
   timelineItemVariantWarning: 'Brīdinājums',

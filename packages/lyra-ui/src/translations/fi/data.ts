@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Vain ensimmäiset {count} lämpökartan solua näytetään.',
   heatmapDecorationLimit: 'Vain ensimmäiset {count} lämpökartan väriä, selitteen väripistettä ja merkintää näytetään.',
   funnelStagesLimit: 'Vain ensimmäiset {count} vaihetta näytetään.',
+  funnelStagesInputLimit: 'Näytetään ensimmäiset {count} vaihetta {total} vaiheesta.',
   timeline: 'Aikajana',
   timelineClusterCount: 'Näytä aikajanan tapahtumat ({count})',
   timelineItemVariantWarning: 'Varoitus',

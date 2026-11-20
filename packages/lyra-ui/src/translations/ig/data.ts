@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'A na-egosi naanị sel heatmap {count} mbụ.',
   heatmapDecorationLimit: 'A na-egosi naanị agba heatmap {count} mbụ, akara igodo, na nkọwa.',
   funnelStagesLimit: 'A na-egosi naanị ọkwa {count} mbụ.',
+  funnelStagesInputLimit: 'A na-egosi ọkwa {count} mbụ n’ime {total}.',
   timeline: 'Usoro oge',
   timelineClusterCount: 'Gosi ihe omume usoro oge ({count})',
   timelineItemVariantWarning: 'Ịdọ aka ná ntị',

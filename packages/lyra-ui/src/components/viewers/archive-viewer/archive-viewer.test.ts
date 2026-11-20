@@ -149,7 +149,7 @@ window.addEventListener(
   true,
 );
 
-expectLocaleFallback('ar-EG', ['archiveViewerFile', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'fileSizeUnitB', 'loadingDocument']);
+expectLocaleFallback('ar-EG', ['archiveViewerFile', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'loadingDocument']);
 
 describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
 

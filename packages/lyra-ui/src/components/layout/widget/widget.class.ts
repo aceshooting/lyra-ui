@@ -171,8 +171,8 @@ export interface LyraWidgetEventMap {
   'lr-toggle': CustomEvent<{ expanded: boolean }>;
   'lr-fullscreen-request': CustomEvent<{ fullscreen: boolean }>;
   'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
-  'lr-view-request': CustomEvent<{ viewId: string }>;
-  'lr-view-change': CustomEvent<{ viewId: string }>;
+  'lr-widget-view-request': CustomEvent<{ viewId: string }>;
+  'lr-widget-view-change': CustomEvent<{ viewId: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
 /**
@@ -212,22 +212,21 @@ export interface LyraWidgetEventMap {
  * @event lr-fullscreen-change - Non-cancelable post-commit notification, fired after the
  *   fullscreen toggle, Escape, or a backdrop click accepts the change. Not fired when a consumer
  *   sets `fullscreen` directly. `detail: { fullscreen }` (the new `fullscreen` state).
- * @event lr-view-request - A cancelable proposed `activeViewId` from a header view-toggle click.
+ * @event lr-widget-view-request - A cancelable proposed `activeViewId` from a header view-toggle click.
  *   Call `preventDefault()` to leave `activeViewId` unchanged. Not fired when a consumer sets
  *   `activeViewId` directly. `detail: { viewId }`.
- * @event lr-view-change - Non-cancelable post-commit notification, fired after a header
+ * @event lr-widget-view-change - Non-cancelable post-commit notification, fired after a header
  *   view-toggle click accepts the change. Also fires when a `views` reassignment drops the
  *   currently-active view, forcing a fallback to the first remaining view. Not fired when a
  *   consumer sets `activeViewId` directly, even to a now-invalid id. `detail: { viewId }`.
- *   Check `event.target === widget` to identify this event when a descendant also changes views.
  * @event lr-activate - Fired on every accepted header view-toggle activation, whether or not
  *   `activeViewId` actually moved. `detail: { value }` carries the activated view's `viewId`.
  *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable:
- *   `lr-view-request` is this component's veto point, and a vetoed activation emits no activation
- *   at all. Re-picking the active view is the case `lr-view-change` deliberately stays silent for
+ *   `lr-widget-view-request` is this component's veto point, and a vetoed activation emits no activation
+ *   at all. Re-picking the active view is the case `lr-widget-view-change` deliberately stays silent for
  *   -- "rebuild that view" is a real intent -- and it is otherwise unobservable, because the
  *   toggles live in this shadow root, so a retargeted `click` names no view. When an activation
- *   does move the view, `lr-view-request` and `lr-view-change` are emitted first. Not fired when a
+ *   does move the view, `lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not fired when a
  *   consumer sets `activeViewId` directly.
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
@@ -512,7 +511,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
           this.hasUpdated && changed.has('views') && !changed.has('activeViewId');
         this.activeViewId = views[0]?.viewId ?? '';
         if (forcedBySibling) {
-          this.emit('lr-view-change', { viewId: this.activeViewId });
+          this.emit('lr-widget-view-change', { viewId: this.activeViewId });
         }
       }
     }
@@ -720,14 +719,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     if (!current()) return;
     const previous = this.activeViewId;
     if (viewId !== previous) {
-      const request = this.emit('lr-view-request', { viewId }, { cancelable: true });
+      const request = this.emit('lr-widget-view-request', { viewId }, { cancelable: true });
       if (request.defaultPrevented || !current() || this.activeViewId !== previous) return;
       this.activeViewId = viewId;
-      this.emit('lr-view-change', { viewId });
+      this.emit('lr-widget-view-change', { viewId });
       if (!current() || this.activeViewId !== viewId) return;
     }
     // Every accepted toggle activation reports, including the re-pick of the active view that
-    // `lr-view-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
+    // `lr-widget-view-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
     this.emit('lr-activate', { value: viewId });
   };
 

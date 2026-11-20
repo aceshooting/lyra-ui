@@ -1,5 +1,5 @@
 import { nativeSearchStyles } from '../../../internal/native-search.styles.js';
-import { activeFill, disabledControl, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -56,7 +56,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: grab;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='item'][aria-disabled='true'] {
     ${disabledControl}

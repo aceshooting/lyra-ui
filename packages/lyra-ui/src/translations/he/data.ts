@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'מוצגים רק {count} התאים הראשונים במפת החום.',
   heatmapDecorationLimit: 'במפת החום מוצגים רק {count} הפריטים הראשונים מכל סוג: צבעים, נקודות במקרא וביאורים.',
   funnelStagesLimit: 'מוצגים רק {count} השלבים הראשונים.',
+  funnelStagesInputLimit: 'מוצגים {count} השלבים הראשונים מתוך {total}.',
   timeline: 'ציר זמן',
   timelineClusterCount: 'הצג אירועים בציר הזמן ({count})',
   timelineItemVariantWarning: 'אזהרה',

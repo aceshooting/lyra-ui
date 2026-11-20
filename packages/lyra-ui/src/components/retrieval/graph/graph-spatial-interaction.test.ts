@@ -178,6 +178,18 @@ describe('graph spatial views', () => {
     expect(expansions).to.equal(0);
   });
 
+  it('reports a toolbar view switch as lr-graph-view-change, never the generic lr-view-change', async () => {
+    const el = await mount();
+    let generic = 0;
+    el.addEventListener('lr-view-change', () => { generic++; });
+    const changed = oneEvent(el, 'lr-graph-view-change');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-spatial-action="list"]')!.click();
+    const event = (await changed) as CustomEvent<{ view: string }>;
+    expect(event.detail.view).to.equal('list');
+    expect(event.bubbles && event.composed).to.equal(true);
+    expect(generic).to.equal(0);
+  });
+
   it('releases a cancelled gesture and returns to the 2D renderer', async () => {
     const el = await mount();
     const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;

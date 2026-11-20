@@ -193,7 +193,7 @@ try {
     const emitted = await esbuild.transform(source, { loader: 'ts', format: 'esm', target: 'es2022' });
     await writeFile(path.join(internal, `${name}.js`), emitted.code);
   }
-  await writeFile(path.join(internal, 'dev-warning.js'), 'export function devWarnOnce() {}');
+  await writeFile(path.join(internal, 'dev-mode-attribute-warning.js'), 'export const DEV_DIAGNOSTICS = true;\nexport function devWarnOnce() {}');
   await compactBuildJavaScript(collectionFixture);
   const published = await readFile(path.join(internal, 'collection-snapshot.js'), 'utf8');
   async function consume(exported) {
@@ -257,6 +257,57 @@ try {
   }
 } finally {
   await rm(collectionFixture, { recursive: true, force: true });
+}
+
+// Production diagnostics are marked side-effect free, so a consumer bundle drops each call and the
+// message it carries, while a used return value and every other module keep working.
+const diagnosticsFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-diagnostics-'));
+try {
+  const internal = path.join(diagnosticsFixture, 'internal');
+  await mkdir(internal);
+  const productionSource = `
+    export function litDevWarnings() { return undefined; }
+    export function devWarn(_message) {}
+    export function devWarnOnce(_key, _message) {}
+    export function warnLocaleFallback(_locale, _key) {}
+    export function warnDeprecatedUsage(_host, _kind, _name, _replacement) {}
+    export function deprecationWarningKey(tag, kind, name) { return 'lyra-deprecated:' + tag + ':' + kind + ':' + name; }
+  `;
+  await writeFile(path.join(internal, 'dev-warning.production.js'), productionSource);
+  await writeFile(path.join(internal, 'dev-mode-attribute-warning.production.js'), `
+    export function warnUnknownAttributes(_host, _observed = [], _known = []) {}
+    export function warnThemeScopeUsage(_host) {}
+  `);
+  await compactBuildJavaScript(diagnosticsFixture);
+  const compacted = await readFile(path.join(internal, 'dev-warning.production.js'), 'utf8');
+  assert.equal(compacted.match(/@__NO_SIDE_EFFECTS__/gu)?.length, 5, 'every reviewed no-op is marked once');
+  await compactBuildJavaScript(diagnosticsFixture);
+  assert.equal(await readFile(path.join(internal, 'dev-warning.production.js'), 'utf8'), compacted, 'a second pass is stable');
+  const consumer = await esbuild.build({
+    stdin: {
+      contents: `import { devWarnOnce, devWarn, warnDeprecatedUsage, litDevWarnings, deprecationWarningKey } from './internal/dev-warning.production.js';
+        import { warnUnknownAttributes } from './internal/dev-mode-attribute-warning.production.js';
+        export function run(host) {
+          devWarnOnce('key', \`<\${host.localName}>: discarded warning text\`);
+          devWarn('discarded plain text');
+          warnDeprecatedUsage(host, 'property', 'old', 'discarded replacement');
+          warnUnknownAttributes(host, ['discarded-attribute']);
+          return [litDevWarnings(), deprecationWarningKey('lr-x', 'property', 'kept')];
+        }`,
+      resolveDir: diagnosticsFixture,
+    },
+    bundle: true, write: false, format: 'esm', minify: true,
+  });
+  const bundle = consumer.outputFiles[0].text;
+  assert.doesNotMatch(bundle, /discarded/u, 'consumer bundlers drop the production diagnostic calls and their text');
+  const module = await import('data:text/javascript;base64,' + Buffer.from(bundle).toString('base64'));
+  assert.deepEqual(module.run({ localName: 'lr-x' }), [undefined, 'lyra-deprecated:lr-x:property:kept']);
+  await writeFile(path.join(internal, 'dev-warning.production.js'),
+    productionSource.replace('devWarn(_message) {}', 'devWarn(message) { console.warn(message); }'));
+  await assert.rejects(compactBuildJavaScript(diagnosticsFixture), /side-effect-free function inventory changed/u,
+    'a diagnostic that gains a body is no longer marked side-effect free');
+} finally {
+  await rm(diagnosticsFixture, { recursive: true, force: true });
 }
 
 // A rejected initializer must drain sibling writes before a caller can remove the build tree.

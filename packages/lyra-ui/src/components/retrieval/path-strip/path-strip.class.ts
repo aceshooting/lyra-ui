@@ -18,8 +18,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -99,7 +98,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   @state() private activeIndex = 0;
   @state() private liveText = '';
   private restoreFocusAfterPathChange = false;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private pathOccurrenceSource?: readonly LyraPathElement[];
   private pathOccurrenceSnapshot: readonly PathOccurrence[] = [];
 
@@ -128,15 +127,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     super.disconnectedCallback();
   }
 
@@ -210,7 +203,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
             relation: el.relation,
           })
         : '';
-    this.announcementSink?.announce(this.liveText);
+    this.announcementSink.announcePolite(this.liveText);
   }
 
   private focusIndex(index: number): void {

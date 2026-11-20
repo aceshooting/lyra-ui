@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: '제출',
   rubricSubmitAndNext: '제출 및 다음',
   rubricSkip: '넘기기',
+  rubricKeysLimit: '전체 {total}개 루브릭 필드 중 처음 {count}개만 표시됩니다.',
   localePickerLabel: '언어',
   localePickerRequired: '언어 선택',
   localePickerSearchLabel: '언어 검색',

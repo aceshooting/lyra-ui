@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Sunt afișate doar primele {count} celule ale hărții termice.',
   heatmapDecorationLimit: 'Sunt afișate doar primele {count} culori, repere de legendă și adnotări ale hărții termice.',
   funnelStagesLimit: 'Sunt afișate doar primele {count} etape.',
+  funnelStagesInputLimit: 'Sunt afișate primele {count} din {total} etape.',
   timeline: 'Cronologie',
   timelineClusterCount: 'Afișează evenimentele din cronologie ({count})',
   timelineItemVariantWarning: 'Avertisment',

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Yalnızca ilk {count} ısı haritası hücresi gösteriliyor.',
   heatmapDecorationLimit: 'Yalnızca ilk {count} ısı haritası rengi, gösterge durağı ve açıklama gösteriliyor.',
   funnelStagesLimit: 'Yalnızca ilk {count} aşama gösteriliyor.',
+  funnelStagesInputLimit: '{total} aşamanın ilk {count} tanesi gösteriliyor.',
   timeline: 'Zaman çizelgesi',
   timelineClusterCount: 'Zaman çizelgesi etkinliklerini göster ({count})',
   timelineItemVariantWarning: 'Uyarı',

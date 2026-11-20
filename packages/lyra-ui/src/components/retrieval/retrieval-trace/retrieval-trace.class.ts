@@ -2,6 +2,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -440,7 +441,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
         ></lr-span-waterfall>
         ${hasAnyEvidence
           ? html`<div part="evidence-list">
-              ${stages.map((stage, index) => this.renderEvidenceRow(stage, index))}
+              ${repeat(stages, (stage) => stage.id, (stage, index) => this.renderEvidenceRow(stage, index))}
             </div>`
           : nothing}
       </div>

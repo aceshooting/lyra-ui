@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Alleen de eerste {count} heatmapcellen worden weergegeven.',
   heatmapDecorationLimit: 'Alleen de eerste {count} heatmapkleuren, legendaonderbrekingen en annotaties worden weergegeven.',
   funnelStagesLimit: 'Alleen de eerste {count} fasen worden weergegeven.',
+  funnelStagesInputLimit: 'De eerste {count} van {total} fasen worden weergegeven.',
   timeline: 'Tijdlijn',
   timelineClusterCount: 'Tijdlijngebeurtenissen tonen ({count})',
   timelineItemVariantWarning: 'Waarschuwing',

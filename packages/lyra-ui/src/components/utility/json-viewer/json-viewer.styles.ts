@@ -1,5 +1,5 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill, focusRingOffset, focusRingOutline, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
@@ -113,26 +113,25 @@ export const styles = css`
      '.row [part=copy-button] { opacity: 0 }' further down, which is (0,2,0). A :where() around
      either compound drops the selector to (0,1,0); the resting rule then wins from any source
      position and the button never fades in at all, on hover or on focus. */
+  /* no-pressed-state: this only reveals the button; its own press fill comes from the shared icon action recipe below. */
   .row:hover [part="copy-button"],
   .row:focus-within [part="copy-button"] {
     opacity: 1;
   }
+  ${iconActionStyles('[part="toggle"]', {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: `var(--lr-json-viewer-toggle-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)').cssText})`,
+    hoverColor: 'var(--lr-json-viewer-toggle-hover-color, var(--lr-color-brand))',
+    activeBackground: `var(--lr-json-viewer-toggle-active-bg, ${activeFill('var(--lr-color-brand-quiet)').cssText})`,
+    activeColor: 'var(--lr-json-viewer-toggle-active-color, var(--lr-color-brand))',
+  })}
   [part="toggle"] {
-    ${iconAction}
-    ${interactiveTransition}
     /* Compact glyph, but the interactive box keeps the shared minimum target size even in deeply
        nested rows. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    ${iconHitTarget}
     margin-block-start: var(--lr-size-0-1875rem);
     flex: 0 0 auto;
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--lr-color-text-quiet);
-    border-radius: var(--lr-radius);
-
   }
   /* An author declaration beats the UA '[hidden] { display: none }' regardless of specificity,
      !important aside, so this only needs to add visibility, not re-declare display. Keeping the box
@@ -152,20 +151,6 @@ export const styles = css`
   }
   /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed row's
      chevron always points at the LTR-positioned children, to the right, as in an LTR document. */
-  /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0) -- the same
-     weight as the :active rule below, which therefore wins on source order while held. */
-  :where([part="toggle"]):hover:where(:not([hidden])) {
-    background: var(--lr-json-viewer-toggle-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)')});
-    color: var(--lr-json-viewer-toggle-hover-color, var(--lr-color-brand));
-  }
-  :where([part="toggle"]):active:where(:not([hidden])) {
-    background: var(--lr-json-viewer-toggle-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
-    color: var(--lr-json-viewer-toggle-active-color, var(--lr-color-brand));
-  }
-  [part="toggle"]:focus-visible,
-  [part="copy-button"]:focus-visible {
-    ${focusRing}
-  }
   /* Stands in for [part='toggle'] on the closing-bracket row, so it matches the toggle's used
      inline-size: min-inline-size wins over the toggle's smaller inline-size, making the real box
      --lr-icon-button-size, not --lr-size-1-25rem. */
@@ -231,12 +216,8 @@ export const styles = css`
   }
   [part="key"][data-active],
   [part="value"][data-active] {
-    outline: var(--lr-focus-ring-width) solid
-      var(
-        --lr-json-viewer-active-outline,
-        var(--_lr-json-viewer-active-outline)
-      );
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('var( --lr-json-viewer-active-outline, var(--_lr-json-viewer-active-outline) )')}
+    ${focusRingOffset}
   }
   .preview {
     flex: 0 0 auto;
@@ -244,31 +225,19 @@ export const styles = css`
     font-style: italic;
     margin-inline: var(--lr-space-xs);
   }
+  ${iconActionStyles('[part="copy-button"]', {
+    color: 'var(--lr-color-text-quiet)',
+    hoverBackground: `var(--lr-json-viewer-copy-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)').cssText})`,
+    hoverColor: 'var(--lr-json-viewer-copy-hover-color, var(--lr-color-brand))',
+    activeBackground: `var(--lr-json-viewer-copy-active-bg, ${activeFill('var(--lr-color-brand-quiet)').cssText})`,
+    activeColor: 'var(--lr-json-viewer-copy-active-color, var(--lr-color-brand))',
+  })}
   [part="copy-button"] {
     flex: 0 0 auto;
     margin-inline-start: auto;
-    border: none;
-    background: none;
-    color: var(--lr-color-text-quiet);
-    font: inherit;
     font-size: var(--lr-font-size-xs);
     line-height: var(--lr-line-height-none);
-    ${iconHitTarget}
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    border-radius: var(--lr-radius);
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
-  }
-  [part="copy-button"]:hover {
-    background: var(--lr-json-viewer-copy-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)')});
-    color: var(--lr-json-viewer-copy-hover-color, var(--lr-color-brand));
-  }
-  /* Also the pressed state for the row-hover reveal rule further up: that rule only fades the
-     button in when its row is hovered rather than styling the button's own hover, so the button's
-     held state belongs here beside its hover. */
-  [part="copy-button"]:active {
-    background: var(--lr-json-viewer-copy-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
-    color: var(--lr-json-viewer-copy-active-color, var(--lr-color-brand));
   }
   /* Per-node copy buttons stay out of the way until the row is interacted with; the toolbar's own
      top-level copy button has no ancestor .row, so this rule never matches it. */

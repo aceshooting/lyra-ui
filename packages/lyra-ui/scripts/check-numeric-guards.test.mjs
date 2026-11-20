@@ -42,6 +42,20 @@ try {
     ].join('\n')
   );
 
+  writeFileSync(
+    path.join(componentsDir, 'paged.ts'),
+    [
+      "import { property } from 'lit/decorators.js';",
+      "import { normalizeSourcePage, normalizeSourcePageSize } from '../internal/source-paging.js';",
+      'export class PagedFixture {',
+      '  @property({ type: Number }) sourcePage = 0;',
+      '  @property({ type: Number }) sourcePageSize = 100;',
+      '  page(): number { return normalizeSourcePage(this.sourcePage, normalizeSourcePageSize(this.sourcePageSize)); }',
+      '}',
+      '',
+    ].join('\n')
+  );
+
   const result = spawnSync(
     process.execPath,
     [path.join(scriptsDir, 'check-numeric-guards.mjs')],
@@ -56,6 +70,11 @@ try {
     result.stderr,
     /src[/\\]internal[/\\]unguarded\.ts/u,
     'the finding identifies the internal helper that owns the property'
+  );
+  assert.doesNotMatch(
+    result.stderr,
+    /paged\.ts/u,
+    'the shared provider-paging normalizers count as finite guards'
   );
   assert.match(
     result.stdout,

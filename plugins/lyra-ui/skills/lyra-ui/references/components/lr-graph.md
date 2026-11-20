@@ -209,7 +209,7 @@ once per frame. Camera property assignments are silent. `minZoom`/`maxZoom` boun
 relative to the fitted distance. `fit({ padding })` and `focusNode(id, { zoom })` act immediately
 in 3D, including with reduced motion. `focusNode` reveals a node's page in list view; it retains
 the existing contract of not moving DOM focus. `focusNodeId` still centers and paints the focus
-halo. The toolbar emits `lr-view-change` with `{ view }` after a user switch; property assignments
+halo. The toolbar emits `lr-graph-view-change` with `{ view }` after a user switch; property assignments
 are silent.
 
 Drag to orbit; Shift-drag pans. Wheel zoom is active only while the canvas has focus or an active
@@ -393,7 +393,7 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), `lr-viewport-change`
 (`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced 2D camera/layout signal),
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
-coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
+coalesced to one event per frame), and `lr-graph-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.

@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'ارسال',
   rubricSubmitAndNext: 'ارسال و رفتن به بعدی',
   rubricSkip: 'رد کردن',
+  rubricKeysLimit: 'فقط {count} فیلد نخست از {total} فیلد روبریک نمایش داده می‌شود.',
   localePickerLabel: 'زبان',
   localePickerRequired: 'لطفاً یک زبان انتخاب کنید.',
   localePickerSearchLabel: 'جستجوی زبان‌ها',

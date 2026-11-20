@@ -1,4 +1,4 @@
-import { activeTint, disabledControl, focusRingInset, hoverTint, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeTint, disabledControl, focusRingInset, focusRingOffset, focusRingOffsetInsetOffset, hoverTint, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -201,13 +201,13 @@ export const styles = css`
   [role="gridcell"]:focus-visible,
   [role="columnheader"]:focus-visible {
     outline: var(--focus-ring, var(--_lr-data-grid-focus-ring));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   button:focus-visible,
   [part="resize-handle"]:focus-visible,
   [role="gridcell"]:focus-visible,
   [role="columnheader"]:focus-visible {
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingOffsetInsetOffset}
   }
 
   button {
@@ -702,7 +702,7 @@ export const styles = css`
 
   [part="page-size"]:focus-visible {
     outline: var(--focus-ring, var(--_lr-data-grid-focus-ring));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
 
   .page-size-chevron {

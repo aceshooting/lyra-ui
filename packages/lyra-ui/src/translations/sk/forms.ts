@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Odoslať',
   rubricSubmitAndNext: 'Odoslať a ďalej',
   rubricSkip: 'Preskočiť',
+  rubricKeysLimit: 'Zobrazuje sa len prvých {count} z {total} polí rubriky.',
   localePickerLabel: 'Jazyk',
   localePickerRequired: 'Vyberte jazyk.',
   localePickerSearchLabel: 'Hľadať jazyky',

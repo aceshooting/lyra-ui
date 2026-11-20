@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { containerHost, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -41,7 +41,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part~='slice'] {
     min-inline-size: var(--lr-icon-button-size);

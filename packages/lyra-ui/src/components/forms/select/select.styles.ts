@@ -1,5 +1,5 @@
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -345,6 +345,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part~="tag__remove-button"]:hover {
     color: var(--lr-color-text);
@@ -385,6 +386,7 @@ export const styles = css`
     font: inherit;
     line-height: var(--lr-line-height-none);
     cursor: pointer;
+    ${interactiveTransition}
   }
   .control[data-clearable] > [part="tags"] {
     margin-inline-end: calc(var(--lr-select-expand-size, var(--_lr-select-expand-size)) +

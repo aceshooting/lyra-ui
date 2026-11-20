@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Seelota kaartaa ho\'aa jalqabaa {count} qofa agarsiifameera.',
   heatmapDecorationLimit: 'Halluu kaartaa ho\'aa, dhaabbiiwwan furtuu fi yaadannoo jalqabaa {count} qofa agarsiifameera.',
   funnelStagesLimit: 'Sadarkaawwan jalqabaa {count} qofa agarsiifameera.',
+  funnelStagesInputLimit: 'Sadarkaawwan {total} keessaa isaan jalqabaa {count} agarsiifamaniiru.',
   timeline: 'Yeroo',
   timelineClusterCount: 'Taateewwan tarree yeroo agarsiisi ({count})',
   timelineItemVariantWarning: 'Akeekkachiisa',

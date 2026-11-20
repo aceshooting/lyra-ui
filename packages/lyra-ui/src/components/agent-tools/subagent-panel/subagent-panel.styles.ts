@@ -1,4 +1,4 @@
-import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, focusRingOffsetInset, focusRingOutline } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
@@ -91,8 +91,8 @@ export const styles = css`
 
   @media (forced-colors: active) {
     [part~='run-selected'] {
-      outline: var(--lr-focus-ring-width) solid Highlight;
-      outline-offset: calc(-1 * var(--lr-focus-ring-width));
+      ${focusRingOutline('Highlight')}
+      ${focusRingOffsetInset}
     }
     [part='progress'] > span {
       forced-color-adjust: none;

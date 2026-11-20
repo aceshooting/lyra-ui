@@ -266,6 +266,42 @@ export function fileFindings(where, rawSource, sharedByKey) {
   return findings;
 }
 
+/**
+ * Focus-ring placement is owned by the fragments in `src/internal/interactive-control.styles.ts`
+ * (`focusRing*`). A stylesheet that spells `outline` or `outline-offset` from the `--lr-focus-ring*`
+ * tokens by hand forks the recipe: the next ring change (width, offset step, forced-colors) has to be
+ * found in every copy, which is how a hundred of them drifted into five spellings. Use a fragment, or
+ * `focusRingOutline(color)` / `focusRingOffsetFrom(hook)` when only the colour or a documented
+ * override differs. Files exempt from the rule are the fragment module and the token declarations.
+ */
+export const FOCUS_RING_OWNERS = new Set([
+  'src/internal/interactive-control.styles.ts',
+  'src/internal/tokens.styles.ts',
+]);
+
+/** Hand-written `outline`/`outline-offset` declarations that read a `--lr-focus-ring*` token. */
+export function focusRingFindings(where, rawSource) {
+  if (FOCUS_RING_OWNERS.has(where.replaceAll('\\', '/'))) return [];
+  const source = stripComments(rawSource);
+  const findings = [];
+  for (const match of source.matchAll(/(?:^|[\s;{`'"])(outline(?:-offset)?)\s*:([^;{}]*)/g)) {
+    if (!match[2].includes('--lr-focus-ring')) continue;
+    const line = source.slice(0, match.index).split('\n').length;
+    findings.push(
+      `${where}:${line}: hand-written \`${match[1]}\` from the focus-ring tokens -- use a focusRing* fragment from internal/interactive-control.styles.ts`
+    );
+  }
+  return findings;
+}
+
+function ringSourceFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const file = join(directory, entry.name);
+    if (entry.isDirectory()) return ringSourceFiles(file);
+    return /\.ts$/.test(entry.name) && !/\.(test|stories|generated|property\.test)\.ts$/.test(entry.name) ? [file] : [];
+  });
+}
+
 if (isMainModule(import.meta.url)) {
   const sharedByKey = buildSharedVocabulary(
     vocabularyPaths.map((file) => ({
@@ -281,6 +317,11 @@ if (isMainModule(import.meta.url)) {
   for (const file of sourceFiles(componentsRoot)) {
     const where = relative(packageDir, file);
     findings.push(...fileFindings(where, readFileSync(file, 'utf8'), sharedByKey));
+  }
+
+  for (const file of ringSourceFiles(join(packageDir, 'src'))) {
+    const where = relative(packageDir, file).replaceAll('\\', '/');
+    findings.push(...focusRingFindings(where, readFileSync(file, 'utf8')));
   }
 
   if (findings.length) {

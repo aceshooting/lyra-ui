@@ -4,7 +4,6 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
-import { formatFileSize } from './attachment-chip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -28,34 +27,7 @@ function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
 }
 
-expectLocaleFallback('ar-EG', ['attachmentRetryWithContext', 'attachmentUntitledFile', 'attachmentUploadFailed', 'attachmentUploadingProgress', 'attachmentUploadingWithContext', 'fileSizeUnitMb', 'removeWithContext']);
-
-describe('formatFileSize', () => {
-  it('renders whole bytes with no decimal', () => {
-    expect(formatFileSize(0)).to.equal('0 B');
-    expect(formatFileSize(512)).to.equal('512 B');
-    expect(formatFileSize(1023)).to.equal('1023 B');
-  });
-
-  it('renders KB/MB/GB with exactly one decimal place', () => {
-    expect(formatFileSize(1024)).to.equal('1.0 KB');
-    expect(formatFileSize(2415919)).to.equal('2.3 MB');
-    expect(formatFileSize(1024 * 1024 * 1024 * 1.5)).to.equal('1.5 GB');
-  });
-
-  it('returns an empty string for a negative or non-finite input', () => {
-    expect(formatFileSize(-1)).to.equal('');
-    expect(formatFileSize(NaN)).to.equal('');
-    expect(formatFileSize(Infinity)).to.equal('');
-  });
-
-  describe('formatFileSize unit-label resolver', () => {
-    it('accepts an optional unit-label resolver, defaulting to the plain English abbreviation', () => {
-      expect(formatFileSize(2415919)).to.equal('2.3 MB');
-      expect(formatFileSize(2415919, (unit) => `[${unit}]`)).to.equal('2.3 [MB]');
-    });
-  });
-});
+expectLocaleFallback('ar-EG', ['attachmentRetryWithContext', 'attachmentUntitledFile', 'attachmentUploadFailed', 'attachmentUploadingProgress', 'attachmentUploadingWithContext', 'removeWithContext']);
 
 it('defaults to status="pending", a remove button, and empty independent props', async () => {
   const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;
@@ -265,7 +237,7 @@ describe('independent name/bytes/mime-type props', () => {
     )) as LyraAttachmentChip;
     const emptySize = empty.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(emptySize.hidden).to.be.false;
-    expect(emptySize.textContent).to.equal('0 B');
+    expect(emptySize.textContent).to.equal('0 byte');
   });
 
   it('treats a negative, NaN, or infinite bytes value as unknown', async () => {
@@ -319,7 +291,7 @@ describe('the file property', () => {
       html`<lr-attachment-chip name="ignored.txt" bytes="1" mime-type="text/plain" .file=${file}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('photo.png');
-    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 KB');
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2 kB');
   });
 
   it('renders an <img> object-URL thumbnail for an image file, created lazily', async () => {
@@ -348,7 +320,7 @@ describe('the file property', () => {
     expect(img.getAttribute('src')).to.equal(thumb);
     // name, size and type still derive from the File.
     expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('photo.png');
-    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 KB');
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2 kB');
   });
 
   it('creates no blob: URL at all once thumbnail-src and preview-src cover a file', async () => {
@@ -1366,18 +1338,7 @@ describe('themeable padding', () => {
 });
 
 describe('file-size unit localization', () => {
-  it('localizes file-size units via this.localize(), not hardcoded English abbreviations', async () => {
-    const el = (await fixture(
-      html`<lr-attachment-chip
-        .file=${makeFile('report.pdf', 'application/pdf', 2415919)}
-        .strings=${{ fileSizeUnitMb: 'Mo' }}
-      ></lr-attachment-chip>`,
-    )) as LyraAttachmentChip;
-    const size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
-    expect(size.textContent).to.equal('2.3 Mo');
-  });
-
-  it('defaults to English unit abbreviations when no strings override is set', async () => {
+  it('defaults to English unit abbreviations when no locale is set', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip .file=${makeFile('report.pdf', 'application/pdf', 2415919)}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -1395,7 +1356,10 @@ describe('file-size unit localization', () => {
         progress="42"
       ></lr-attachment-chip>
     `)) as LyraAttachmentChip;
-    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.contain('٢٫٣');
+    // File-size units are worded through Intl in the effective locale.
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal(
+      new Intl.NumberFormat('ar-EG', { style: 'unit', unit: 'megabyte', unitDisplay: 'short', maximumFractionDigits: 1 }).format(2.3),
+    );
     expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.contain('٤٢');
   });
 });

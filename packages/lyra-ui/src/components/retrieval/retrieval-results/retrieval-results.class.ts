@@ -14,7 +14,8 @@ import {
   firstByRetrievalIdentity,
   canonicalIdentityList,
 } from '../retrieval-identity.js';
-import { finiteCount, finiteRange, finiteInteger } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord, SourceQueryInputs } from '../../../internal/source-paging.js';
 import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
@@ -26,8 +27,7 @@ import {
 import { renderRetrievalMetadata } from '../retrieval-metadata.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -283,7 +283,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private sourceLifecycle = 0;
   private sourceSyncing = false;
   private sourceInputs?: readonly unknown[];
-  private sourceQueryInputs?: readonly unknown[];
+  private readonly sourceQueryInputs = new SourceQueryInputs();
   private sourceResult?: LyraPageResult<RetrievalChunk>;
   private sourceRows: readonly RetrievalChunk[] = [];
   private sourceGroups: LyraVirtualListGroup[] = [];
@@ -427,16 +427,15 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     try {
       if (!this.sourceMode) {
         if (this.sourceInputs) { this.sourceVersion++; this.focusRestoreGeneration++; this.sourcePages.bind(undefined); this.processedChunksCache = undefined; }
-        this.sourceInputs = undefined; this.sourceQueryInputs = undefined; this.sourceResult = undefined;
+        this.sourceInputs = undefined; this.sourceQueryInputs.clear(); this.sourceResult = undefined;
         this.sourceRows = []; this.sourceGroups = []; this.sourceSelectionInputs = undefined; this.sourceSelectionEvent = undefined;
         this.sourceActiveInputs = undefined; this.sourceReveal = undefined; return;
       }
       const source = this.dataSource!;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       const queryInputs = [this.sort, this.withoutDedupe, this.grouping, this.groupBy, this.groupLabel, this.groupOrder, size];
-      if (this.hasUpdated && this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
-      this.sourceQueryInputs = queryInputs;
+      if (this.sourceQueryInputs.changed(queryInputs) && this.hasUpdated) { page = 0; this.sourcePage = 0; }
       const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...queryInputs, page];
       if (!force && this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
       if (!this.sourceInputs || inputs.slice(0, 3).some((value, index) => value !== this.sourceInputs![index])) {
@@ -500,13 +499,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (!this.activeChunkId) { this.sourceActiveInputs = undefined; return; }
     if (this.sourceBlocked) return;
     const source = this.dataSource!; const id = this.activeChunkId;
-    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs ?? []), id];
+    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs.current ?? []), id];
     if (this.sourceActiveInputs && inputs.every((value, index) => value === this.sourceActiveInputs![index])) return;
     this.sourceActiveInputs = inputs;
     const version = this.sourceVersion; const owner = this.ownerDocument;
     void this.sourcePages.locate(id).then(index => {
       if (index === null || !this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.dataSource !== source || this.sourceVersion !== version || this.activeChunkId !== id) return;
-      const page = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+      const page = sourcePageOfRecord(index, this.sourcePageSize);
       if (page === this.sourcePage) { this.revealSourceActive(id, version); return; }
       this.sourcePage = page; this.sourceReveal = { id, version: this.sourceVersion };
     });
@@ -536,7 +535,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   override adoptedCallback(): void {
-    this.invalidateSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback();
+    this.invalidateSourceLifecycle(); this.sourcePages.adopted(); this.announcements.adopted(); super.adoptedCallback();
   }
 
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. Assign a new array to update: mutating an array and assigning it again does not. */
@@ -649,8 +648,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private loadMoreHadFocus = false;
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
-  private errorAnnouncementSink?: AnnouncementSink;
-  private emptyAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive', 'polite'] });
   private readonly retrievalChunkKey = (item: unknown): string => this.sourceRowKeys.get(item as RetrievalChunk) ?? (item as RetrievalChunk).id;
   private wasEmptyPresented = false;
   // Memoizes `computeProcessedChunks()` (identity + sort + group) for the current render cycle.
@@ -697,14 +695,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.requestUpdate();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.emptyAnnouncementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     const generation = ++this.connectionGeneration;
     void announceAfterFirstPaint(
       this,
@@ -721,10 +711,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.invalidateSourceLifecycle();
     this.isMounting = true;
     this.connectionGeneration += 1;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-    this.emptyAnnouncementSink?.release();
-    this.emptyAnnouncementSink = undefined;
     this.wasEmptyPresented = false;
     super.disconnectedCallback();
   }
@@ -866,16 +852,16 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       this.isMounting = false;
       if (!sourceMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
         this.initialStateAnnounced = true;
-        this.errorAnnouncementSink?.announce(this.errorText);
+        this.announcements.announceAssertive(this.errorText);
       }
       const status = this.sourcePages.state.pending ? this.localize('loading') : !this.sourcePages.state.result ? this.localize('tableLoadFailed')
         : this.sourcePages.state.selectionPending ? this.localize('sourceSelectionLoading') : this.sourceSelectionFailed ? this.localize('sourceSelectionFailed') : '';
-      if (this.sourceStatusInitialized && status && status !== this.sourceStatus) this.emptyAnnouncementSink?.announce(status);
+      if (this.sourceStatusInitialized && status && status !== this.sourceStatus) this.announcements.announcePolite(status);
       this.sourceStatusInitialized = true; this.sourceStatus = status; return;
     }
     const inputTruncated = publicCollectionTruncation(this, 'chunks') !== undefined;
     if (this.limitInitialized && inputTruncated && !this.previouslyInputTruncated) {
-      this.emptyAnnouncementSink?.announce(this.inputLimitText());
+      this.announcements.announcePolite(this.inputLimitText());
     }
     this.limitInitialized = true;
     this.previouslyInputTruncated = inputTruncated;
@@ -892,7 +878,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       this.isConnected
     ) {
       this.initialStateAnnounced = true;
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.announcements.announceAssertive(this.errorText);
     }
     const emptyPresented =
       !this.loading &&
@@ -905,7 +891,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       this.isConnected
     ) {
       this.initialStateAnnounced = true;
-      this.emptyAnnouncementSink?.announce(
+      this.announcements.announcePolite(
         this.localize('chunkInspectorEmpty')
       );
     }
@@ -926,11 +912,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private announcePresentedState(): void {
     if (this.sourceMode) return;
     if (this.errorText !== '') {
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.announcements.announceAssertive(this.errorText);
       return;
     }
     if (!this.loading && this.processedChunks.chunks.length === 0)
-      this.emptyAnnouncementSink?.announce(
+      this.announcements.announcePolite(
         this.localize('chunkInspectorEmpty')
       );
   }
@@ -1105,7 +1091,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       const next = new Set(this.selectedChunkIds);
       if (next.has(chunk.id)) next.delete(chunk.id);
       else if (next.size < MAX_SOURCE_SELECTION) next.add(chunk.id);
-      else this.emptyAnnouncementSink?.announce(this.localize('retrievalResultsSelectionLimit', undefined, {
+      else this.announcements.announcePolite(this.localize('retrievalResultsSelectionLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_SOURCE_SELECTION),
       }));
       this.selectedChunkIds = [...next]; this.sourceSelectionEvent = this.selectedChunkIds;
@@ -1278,7 +1264,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           if (current()) { this.sourceSelectionInputs = undefined; this.syncSourceSelection(); }
         }}>${this.localize('retry')}</button>` : nothing}</p>` : nothing}
       <lr-pagination part="source-pagination" format="compact" .strings=${this.strings}
-        .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1} .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)}
+        .page=${displayedSourcePage(this.sourcePage)} .pageSize=${normalizeSourcePageSize(this.sourcePageSize)}
         .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
         @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (!this.sourceBlocked) this.sourcePage = event.detail.page - 1; }}
         @lr-before-page-change=${this.stopOwnedEvent} @lr-activate=${this.stopOwnedEvent} @focus=${this.stopOwnedEvent} @blur=${this.stopOwnedEvent}

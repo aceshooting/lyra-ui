@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingOffset, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -101,7 +101,7 @@ export const styles = css`
   [part='node'][data-active-highlight],
   [part='source-row']:has([data-active-highlight]) {
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-highlight-active-outline, var(--lr-color-brand));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   @media (forced-colors: active) {
     [part='node'][data-highlight],
@@ -125,6 +125,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
+    ${interactiveTransition}
   }
   [part='highlight-action']:hover {
     background: var(--_lr-xml-viewer-highlight-background);

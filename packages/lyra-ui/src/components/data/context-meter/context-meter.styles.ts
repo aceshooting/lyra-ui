@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { focusRingShorthand, focusRingShorthandInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   [part='limit'] {
@@ -160,8 +160,7 @@ export const styles = css`
     outline-color: var(--lr-color-text);
   }
   button[part~='segment']:where(:focus-visible) {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(var(--lr-focus-ring-width) * -1);
+    ${focusRingShorthandInset}
   }
   /* An arc has no box to outline per segment -- every arc shares the ring's bounding box -- so the
      ring reports which arc is involved by dimming it, and keeps the shared outline for the "focus

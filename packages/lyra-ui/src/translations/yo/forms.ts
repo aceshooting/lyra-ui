@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Fi sílẹ̀',
   rubricSubmitAndNext: 'Fi sílẹ̀ kí o sì tẹ̀síwájú',
   rubricSkip: 'Fo kọjá',
+  rubricKeysLimit: 'A fi àwọn pápá rubric àkọ́kọ́ {count} nìkan hàn nínú {total}.',
   localePickerLabel: 'Èdè',
   localePickerRequired: 'Jọ̀wọ́ yan èdè kan.',
   localePickerSearchLabel: 'Wá àwọn èdè',

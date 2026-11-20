@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Esita',
   rubricSubmitAndNext: 'Esita ja järgmine',
   rubricSkip: 'Jäta vahele',
+  rubricKeysLimit: 'Kuvatakse ainult esimesed {count} hindamisraamistiku välja {total}-st.',
   localePickerLabel: 'Keel',
   localePickerRequired: 'Valige keel.',
   localePickerSearchLabel: 'Otsi keeli',

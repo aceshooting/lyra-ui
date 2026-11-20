@@ -1,5 +1,5 @@
 import { css, type CSSResult } from 'lit';
-import { activeFill, iconHitTarget } from '../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthandInward, iconHitTarget, interactiveTransition } from '../../internal/interactive-control.styles.js';
 
 /** Grid chrome shared by the csv and spreadsheet viewers; `maxHeight` is the viewer's own `var()` hook. */
 export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
@@ -95,7 +95,7 @@ export function tableCellHighlightStyles({
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {
@@ -107,8 +107,7 @@ export function tableCellHighlightStyles({
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingShorthandInward}
   }
 `;
 }

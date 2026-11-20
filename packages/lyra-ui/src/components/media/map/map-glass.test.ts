@@ -52,6 +52,7 @@ describe('map floating chrome material', () => {
     it(`shares readable ${look}/${mode} material across navigation, scale, attribution and legend`, async function () {
       if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
       const { host, controls, surfaces } = await chromeFixture(look, mode);
+      host.style.setProperty('--lr-transition-interactive', 'none');
       const base = host.shadowRoot!.querySelector('[part="base"]')!;
       const actions = ['pick-center', 'drawing-cancel', 'anchor-close', 'scene-toggle', 'scene-item', 'drawing-status', 'drawing-summary', 'drawing-measurement'].map(name => {
         const button = document.createElement('button');
@@ -145,9 +146,11 @@ describe('map floating chrome material', () => {
       base.append(button);
       try {
         await hoverUntilMatched(button, name);
+        await waitUntil(() => toRgba(getComputedStyle(button).backgroundColor).join() === '24,48,72,255', 'hover fill settles');
         expect(toRgba(getComputedStyle(button).backgroundColor)).to.deep.equal([24, 48, 72, 255]);
         await sendMouse({ type: 'down' });
         await waitUntil(() => button.matches(':active'));
+        await waitUntil(() => toRgba(getComputedStyle(button).backgroundColor).join() === '72,48,24,255', 'pressed fill settles');
         expect(toRgba(getComputedStyle(button).backgroundColor)).to.deep.equal([72, 48, 24, 255]);
       } finally { await resetMouse(); button.remove(); }
     }

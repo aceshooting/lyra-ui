@@ -4,7 +4,7 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { composedAccessibilityTextResult } from '../../../internal/announcement-text.js';
 import { pauseIcon, playIcon, refreshIcon } from '../../../internal/icons.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
@@ -207,7 +207,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   );
   private authorStateObserverPauseDepth = 0;
   private focusWithin = false;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private connectionGeneration = 0;
   private selectionAnnouncementsArmed = false;
   private lastAnnouncementText = '';
@@ -225,10 +225,6 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     super.connectedCallback();
     this.addEventListener('slotchange', this.onForwardedSlotChange);
     this.selectionAnnouncementsArmed = false;
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.startAuthorStateObserver();
     this.reduceMotion = prefersReducedMotion(this);
     this.stopMotionWatch = observeReducedMotion(this, this.onMotionPreferenceChange);
@@ -258,8 +254,6 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.connectionGeneration += 1;
     this.selectionBeforeDisconnect = this.previousSelection;
     this.selectionAnnouncementsArmed = false;
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.stopAutoplay();
     this.stopAuthorStateObserver();
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
@@ -525,7 +519,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
     if (text === this.lastAnnouncementText) return;
     this.lastAnnouncementText = text;
-    if (text) this.announcementSink?.announce(text);
+    if (text) this.announcementSink.announcePolite(text);
   }
 
   private onForwardedSlotChange = (event: Event): void => {
@@ -560,7 +554,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const announcement = this.observeAnnouncementContent();
     this.lastAnnouncementText = announcement;
     if (options.announce !== false) {
-      this.announcementSink?.announce(announcement);
+      this.announcementSink.announcePolite(announcement);
     }
     const exposedSelection = Object.freeze([...selected]);
     if (!keep) this.emit('lr-content-change', Object.freeze({ items: exposedSelection }));

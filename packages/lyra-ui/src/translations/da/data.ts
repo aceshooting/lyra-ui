@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Kun de første {count} heatmap-celler vises.',
   heatmapDecorationLimit: 'Kun de første {count} heatmap-farver, forklaringstrin og anmærkninger vises.',
   funnelStagesLimit: 'Kun de første {count} faser vises.',
+  funnelStagesInputLimit: 'Viser de første {count} af {total} faser.',
   timeline: 'Tidslinje',
   timelineClusterCount: 'Vis begivenheder på tidslinjen ({count})',
   timelineItemVariantWarning: 'Advarsel',

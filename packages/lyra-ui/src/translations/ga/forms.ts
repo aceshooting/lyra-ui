@@ -105,6 +105,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Seol',
   rubricSubmitAndNext: 'Seol agus ar aghaidh',
   rubricSkip: 'Scipeáil',
+  rubricKeysLimit: 'Ní thaispeántar ach an chéad {count} réimse rúibricí as {total}.',
   localePickerLabel: 'Teanga',
   localePickerRequired: 'Roghnaigh teanga.',
   localePickerSearchLabel: 'Cuardaigh teangacha',

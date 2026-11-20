@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Envia',
   rubricSubmitAndNext: 'Envia i continua',
   rubricSkip: 'Omet',
+  rubricKeysLimit: 'Només es mostren els primers {count} de {total} camps de la rúbrica.',
   localePickerLabel: 'Idioma',
   localePickerRequired: 'Trieu un idioma.',
   localePickerSearchLabel: 'Cerca idiomes',

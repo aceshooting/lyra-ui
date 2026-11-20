@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'முதல் {count} வெப்ப வரைபடக் கட்டங்கள் மட்டுமே காட்டப்படுகின்றன.',
   heatmapDecorationLimit: 'முதல் {count} வெப்ப வரைபட நிறங்கள், குறியீட்டு அளவுகள் மற்றும் குறிப்புகள் மட்டுமே காட்டப்படுகின்றன.',
   funnelStagesLimit: 'முதல் {count} நிலைகள் மட்டுமே காட்டப்படுகின்றன.',
+  funnelStagesInputLimit: 'மொத்தம் {total} நிலைகளில் முதல் {count} காட்டப்படுகின்றன.',
   timeline: 'காலவரிசை',
   timelineClusterCount: 'காலவரிசை நிகழ்வுகளைக் காட்டு ({count})',
   timelineItemVariantWarning: 'எச்சரிக்கை',

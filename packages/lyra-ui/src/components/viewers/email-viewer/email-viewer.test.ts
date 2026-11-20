@@ -38,7 +38,6 @@ expectLocaleFallback('ar', [
   'emailViewerOpenAttachment',
   'emailViewerSubject',
   'emailViewerTo',
-  'fileSizeUnitB',
   'loadingDocument',
 ]);
 
@@ -1006,7 +1005,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('Unnamed attachment');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Open Unnamed attachment 1 B');
+        ).to.equal('Open Unnamed attachment 1 byte');
 
         el.strings = {
           emailViewerUnnamedAttachment: 'pièce jointe sans nom',
@@ -1019,7 +1018,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('pièce jointe sans nom');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Ouvrir pièce jointe sans nom 1 B');
+        ).to.equal('Ouvrir pièce jointe sans nom 1 byte');
       } finally {
         restore();
       }
@@ -1075,27 +1074,6 @@ describe("lr-email-viewer", () => {
       }
     });
 
-    it("localizes the attachment file-size unit via this.localize(), not a hardcoded English abbreviation", async () => {
-      // 'hello attachment' is 16 bytes -- under the 1024 threshold, so this exercises the 'B' unit.
-      const restore = stubFetch(ATTACHMENT_EML);
-      try {
-        const el = await fixture<LyraEmailViewer>(
-          html`<lr-email-viewer
-            src="https://example.test/message.eml"
-            .strings=${{ fileSizeUnitB: "o" }}
-          ></lr-email-viewer>`
-        );
-        await untilRendered(el, '[part="body"]');
-        const button = el.shadowRoot!.querySelector(
-          '[part="attachment-button"]'
-        ) as HTMLButtonElement;
-        const sizeText = button.querySelectorAll("span")[1]!.textContent;
-        expect(sizeText).to.equal("16 o");
-      } finally {
-        restore();
-      }
-    });
-
     it("defaults to the English file-size unit abbreviation when no strings override is set", async () => {
       const { el, restore } = await loaded(ATTACHMENT_EML);
       try {
@@ -1103,7 +1081,7 @@ describe("lr-email-viewer", () => {
           '[part="attachment-button"]'
         ) as HTMLButtonElement;
         const sizeText = button.querySelectorAll("span")[1]!.textContent;
-        expect(sizeText).to.equal("16 B");
+        expect(sizeText).to.equal("16 byte");
       } finally {
         restore();
       }
@@ -1258,9 +1236,7 @@ describe("lr-email-viewer", () => {
         expect(
           el.shadowRoot!.querySelector('[part="attachment-size"]')!.textContent
         ).to.equal(
-          `${new Intl.NumberFormat("ar", { maximumFractionDigits: 0 }).format(
-            2
-          )} B`
+          new Intl.NumberFormat("ar", { style: "unit", unit: "byte", unitDisplay: "short", maximumFractionDigits: 1 }).format(2)
         );
       } finally {
         restore();

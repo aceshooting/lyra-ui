@@ -1,8 +1,8 @@
 import { fixture, html } from '@open-wc/testing';
 import { createMapSceneOwner } from '../src/components/media/map/map-scene-owner.js';
 import { createMapSceneCompletionHost, createMapSceneCompletionAdapter } from '../src/components/media/map/fixtures/map-scene-completion-adapter.js';
-import { createMapSceneSessionFacade } from '../src/internal/map-scene-session.js';
-import { createMapCameraFollowScene } from '../src/internal/map-camera-follow-scene.js';
+import { createMapSceneSessionFacade } from '../src/internal/fixtures/map-scene-session.js';
+import { createMapCameraFollowScene } from '../src/internal/fixtures/map-camera-follow-scene.js';
 import { prepareMapCameraFollow, startMapCameraFollow } from '../src/internal/map-camera-follow-controller.js';
 import type { MapCameraFollowOwner } from '../src/internal/map-camera-follow-controller.js';
 import type { SceneCompletedFrame, SceneTargetFact, SceneTargetProjection } from '../src/internal/map-scene-contract.js';

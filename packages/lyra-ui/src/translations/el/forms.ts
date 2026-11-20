@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Υποβολή',
   rubricSubmitAndNext: 'Υποβολή και επόμενο',
   rubricSkip: 'Παράλειψη',
+  rubricKeysLimit: 'Εμφανίζονται μόνο τα πρώτα {count} από {total} πεδία της ρουμπρίκας.',
   localePickerLabel: 'Γλώσσα',
   localePickerRequired: 'Επιλέξτε μια γλώσσα.',
   localePickerSearchLabel: 'Αναζήτηση γλωσσών',

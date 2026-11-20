@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Beküldés',
   rubricSubmitAndNext: 'Beküldés és tovább',
   rubricSkip: 'Kihagyás',
+  rubricKeysLimit: 'Csak az első {count} értékelési rubrikamező látható a(z) {total} közül.',
   localePickerLabel: 'Nyelv',
   localePickerRequired: 'Válasszon nyelvet.',
   localePickerSearchLabel: 'Nyelvek keresése',

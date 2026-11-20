@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { resolveTitleHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity, firstByRetrievalIdentity } from '../retrieval-identity.js';
@@ -205,7 +206,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
           : nothing}
         ${!this.dense
           ? html`<div part="members">
-              ${visibleMembers.map(
+              ${repeat(visibleMembers, (m) => m.id,
                 (m) => html`<button
                   part="member"
                   type="button"

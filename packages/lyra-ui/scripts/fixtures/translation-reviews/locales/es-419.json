@@ -2,12 +2,12 @@
   "locale": "es-419",
   "direction": "ltr",
   "source": {
-    "keyCount": 1729,
-    "sha256": "sha256:c893a58db7a418b64e66adc6240dcc52134ba39bc0b4c6d5070c50e664e9628c"
+    "keyCount": 1726,
+    "sha256": "sha256:38356f7dc034f5675ce8f5d3f85144c87b0298997caf987ba8dadede683fc964"
   },
   "catalog": {
-    "keyCount": 1729,
-    "sha256": "sha256:f405cec7c60c7a9dc287f6feed1340d922e7c9ce488986487d72e47b6692f5b8"
+    "keyCount": 1726,
+    "sha256": "sha256:7cab6778650ffe383ffa290905942bd8835744a5dfbd896b498bf18b73f1265e"
   },
   "translator": {
     "status": "complete-original",
@@ -145,26 +145,6 @@
     {
       "messagePath": "entityChipWithType",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
-    },
-    {
-      "messagePath": "fileSizeUnitB",
-      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitGb",
-      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitKb",
-      "rationale": "'KB' is the SI-style byte-size unit symbol for a kilobyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitMb",
-      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitTb",
-      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
     },
     {
       "messagePath": "fileTreeDiffSummary",

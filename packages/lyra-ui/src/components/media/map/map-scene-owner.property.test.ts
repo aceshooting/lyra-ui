@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import fc from 'fast-check';
-import { createMapSceneSessionFacade } from '../../../internal/map-scene-session.js';
+import { createMapSceneSessionFacade } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneMarker } from '../../../../test/map-scene-admission-fixtures.js';
 import { propertyRuns } from '../../../../test/property-options.js';
 import { createMapSceneOwner } from './map-scene-owner.js';

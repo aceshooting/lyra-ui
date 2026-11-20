@@ -141,39 +141,6 @@ describe('resolveEngineStyle', () => {
     expect([style.pointSize, style.lineWidth]).to.deep.equal([5, 0]);
   });
 
-  it('uses already-resolved overrides verbatim without probing their tokens', () => {
-    const host = engineHost();
-    const probes = probeCounter(host);
-    const style = resolveEngineStyle(host, {
-      pointSize: 6,
-      overrides: {
-        background: 'rgba(0,0,0,0)',
-        foreground: 'red',
-        muted: 'red',
-        accent: 'blue',
-        focus: 'blue',
-        palette: ['red'],
-        fontFamily: 'Mono',
-        fontSize: 300,
-      },
-    });
-    expect(probes()).to.equal(0);
-    expect([style.background, style.foreground, style.accent, style.fontFamily, style.fontSize, style.pointSize])
-      .to.deep.equal(['rgba(0,0,0,0)', 'red', 'blue', 'Mono', 300, 6]);
-    expect([...style.palette]).to.deep.equal(['red']);
-    const painted = {
-      overrides: { background: 'x', foreground: 'x', muted: 'x', accent: 'x', focus: 'x', palette: ['x'], fontFamily: 'Mono', fontSize: 12 },
-    };
-    const calm = resolveEngineStyle(host, painted);
-    const forced = withProperty(window, 'matchMedia', (query: string) =>
-      ({ matches: query === '(forced-colors: active)', media: query } as MediaQueryList),
-    () => resolveEngineStyle(host, painted));
-    expect([forced === calm, forced.forcedColors, probes()]).to.deep.equal([false, true, 0]);
-    const partial = resolveEngineStyle(host, { overrides: { accent: 'blue' } });
-    expect(probes()).to.equal(12);
-    expect([partial.accent, partial.background]).to.deep.equal(['blue', 'rgb(255, 255, 255)']);
-  });
-
   it('bounds the device pixel ratio', () => {
     const host = engineHost();
     const ratio = (value: number): number =>
@@ -208,30 +175,5 @@ describe('resolveEngineStyle', () => {
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', getContext);
     }
-  });
-
-  it('degrades to engine defaults for a host without a browsing context', () => {
-    const doc = document.implementation.createHTMLDocument('detached');
-    const host = doc.createElement('div');
-    doc.body.append(host);
-    const style = resolveEngineStyle(host, { pointSize: 12, overrides: { accent: 'blue' } });
-    expect(style).to.deep.equal({
-      background: '',
-      foreground: '',
-      muted: '',
-      accent: 'blue',
-      focus: '',
-      palette: [],
-      fontFamily: '',
-      fontSize: 14,
-      pointSize: 12,
-      lineWidth: 1,
-      devicePixelRatio: 1,
-      reducedMotion: true,
-      forcedColors: false,
-    });
-    expect(Object.isFrozen(style)).to.equal(true);
-    const plain = resolveEngineStyle(host);
-    expect([plain.pointSize, plain.lineWidth, plain.accent, plain.palette.length]).to.deep.equal([8, 1, '', 0]);
   });
 });

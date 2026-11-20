@@ -222,7 +222,7 @@ export function readRuntimeTokenValues(packageDir = defaultPackageDir) {
   // stays internal and is deliberately not added to canonical-tokens.json.
   const sizesPath = path.join(packageDir, 'src', 'internal', 'sizes.styles.ts');
   const sizes = readFileSync(sizesPath, 'utf8');
-  const sizesTierMarker = sizes.indexOf("[size='2xs']");
+  const sizesTierMarker = sizes.indexOf('${sizeTiersWithDefault}');
   if (sizesTierMarker < 0) {
     throw new Error('sizes.styles.ts base-tier marker changed; update the parity reader explicitly');
   }

@@ -2,12 +2,12 @@
   "locale": "de-CH",
   "direction": "ltr",
   "source": {
-    "keyCount": 1729,
-    "sha256": "sha256:c893a58db7a418b64e66adc6240dcc52134ba39bc0b4c6d5070c50e664e9628c"
+    "keyCount": 1726,
+    "sha256": "sha256:38356f7dc034f5675ce8f5d3f85144c87b0298997caf987ba8dadede683fc964"
   },
   "catalog": {
-    "keyCount": 1729,
-    "sha256": "sha256:cbc2e37cfa881b7944c0649cc93dd17ec9ef6e86da5a5611b33a7f4239349458"
+    "keyCount": 1726,
+    "sha256": "sha256:574f478eaa251524f9fac378e4a32a5f4ecb49f2d79b0c32f32029943fc07f5b"
   },
   "translator": {
     "status": "complete-original",
@@ -185,26 +185,6 @@
     {
       "messagePath": "evalDatasetColumnTags",
       "rationale": "'Tags' names the metadata tags column/label; Swiss Standard German uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
-    },
-    {
-      "messagePath": "fileSizeUnitB",
-      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitGb",
-      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitKb",
-      "rationale": "'KB' is the SI-style byte-size unit symbol for a kilobyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitMb",
-      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitTb",
-      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
     },
     {
       "messagePath": "fileTreeDiffSummary",

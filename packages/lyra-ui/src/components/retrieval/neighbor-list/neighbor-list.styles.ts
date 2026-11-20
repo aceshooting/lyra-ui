@@ -1,4 +1,4 @@
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -59,7 +59,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='node-label']:focus-visible,
   lr-virtual-list::part(node-label):focus-visible {
@@ -118,7 +118,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font: inherit;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='expand-button']:hover,
   lr-virtual-list::part(expand-button):hover {

@@ -10,7 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { splitLines as splitTextLines } from '../../../internal/text-lines.js';
 import { makeScrollRegionFocusable, revealWithinScrollParent } from '../../../internal/scroll-region.js';
-import { acquireAnnouncementSink, Announcer, type AnnouncementSink } from '../../../internal/announcer.js';
+import { Announcer } from '../../../internal/announcer.js';
 import { advanceViewerSearchIndex, announceSearchResult, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -351,10 +351,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
   @state() private diffTooLarge = false;
 
-  /** Copy outcomes announce through a light-DOM sink because live regions inside shadow roots are
-   * not consistently exposed by assistive technology. */
-  private copyAnnouncementSink?: AnnouncementSink;
-
   @state() private searchMatches: DiffSearchMatch[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
@@ -504,10 +500,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       this.syncHighlight();
       this.syncScrollRegions();
     }
-    this.copyAnnouncementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.searchAnnouncements.connect();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.searchAnnouncer.setTimerHost(ownerWindow);
@@ -548,8 +540,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     this.searchGeneration++;
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry)
     this.resetCopyFeedback();
-    this.copyAnnouncementSink?.release();
-    this.copyAnnouncementSink = undefined;
     this.searchAnnouncer.cancel();
     this.searchAnnouncements.disconnect();
   }
@@ -561,8 +551,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     super.adoptedCallback();
     // A disconnected node can be adopted without receiving another disconnect notification.
     this.resetCopyFeedback();
-    this.copyAnnouncementSink?.release();
-    this.copyAnnouncementSink = undefined;
     this.searchAnnouncements.adopted();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.searchAnnouncer.setTimerHost(ownerWindow);
@@ -953,7 +941,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     reportCopyOutcome({
       announce: ok => {
         this.copyFeedback.show('diff', ok);
-        this.copyAnnouncementSink?.announce(this.localize(ok ? 'copied' : 'copyFailed'));
+        this.searchAnnouncements.announcePolite(this.localize(ok ? 'copied' : 'copyFailed'));
       },
       emit: (name, detail) => this.emit(name, detail ?? null),
     }, outcome, () => this.isCurrentCopy(generation, owner));

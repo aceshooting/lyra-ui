@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
@@ -11,7 +11,7 @@ export const styles = css`
   }
   [part='base']:where([tabindex]) {
     cursor: help;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* no-pressed-state: with a tabindex, [part='base'] is a focusable role="group" that reveals a
      tooltip -- not activatable, no click handler, nothing on mousedown -- so a pressed tint would

@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { catalogPickerStyles } from '../catalog-picker-trigger.styles.js';
 
 export const styles = css`
@@ -36,6 +36,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part='preview-button']:hover:not(:disabled) {
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
@@ -90,6 +91,7 @@ export const styles = css`
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     color: var(--lr-color-text-quiet);
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part='option-preview']:hover {
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));

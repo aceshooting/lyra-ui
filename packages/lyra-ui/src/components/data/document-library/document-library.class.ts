@@ -1,18 +1,18 @@
 import { compareNullable } from '../../../internal/sort-compare.js';
 import { createInputMemo } from '../../../internal/input-memo.js';
-import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraCursorSource, LyraCursorNavigationState } from '../../../data-sources.js';
+import type { LyraPageResult, LyraSourceRecord, LyraCursorNavigationState } from '../../../data-sources.js';
 import { SourceCursorController } from '../../../internal/source-cursor-controller.js';
 import { setSourcePageScope, sourcePageScope, shareSourcePageQueries } from '../../../internal/source-page-scope.js';
-import { cursorIds, cursorQueryText } from './document-library-cursor.js';
+import { cursorIds } from './document-library-cursor.js';
 import type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
 export type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, SourceQueryInputs } from '../../../internal/source-paging.js';
 import { indexByKey } from '../../../internal/keyed-index.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
-import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -50,194 +50,9 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryCursorEmptyBatch, LYRA_DEFAULT_documentLibraryCursorEnd, LYRA_DEFAULT_documentLibraryCursorFailed, LYRA_DEFAULT_documentLibraryCursorHistoryLimit, LYRA_DEFAULT_documentLibraryCursorNavigation, LYRA_DEFAULT_documentLibraryCursorRestart, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOmitted, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectPage, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tagFacetLimit, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
+import { cursorQuery, FRESHNESS_RANK, MAX_LIBRARY_COLLECTION_ENTRIES, MAX_TAG_FACETS, documentKey, FRESHNESS_TONE, projectLibraryDocument, type DocumentLibrarySourceQuery, type DocumentLibrarySource, type DocumentLibraryCursorSource, type LyraDocumentLibraryEventMap } from './document-library-support.js';
+export type { DocumentLibrarySourceQuery, DocumentLibrarySource, DocumentLibraryCursorSource, DocumentLibraryQueryChangeDetail, DocumentLibraryFilterChangeDetail, DocumentLibrarySortRequestDetail, DocumentLibrarySortCommitDetail, DocumentLibrarySortDetail, DocumentLibrarySelectionChangeDetail, DocumentLibraryOpenDetail, LyraDocumentLibraryEventMap } from './document-library-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** Full-source document query; tags use AND semantics and filter receives folded search text. */
-export interface DocumentLibrarySourceQuery {
-  readonly searchTerm: string;
-  readonly tagFilter: readonly string[];
-  readonly sortKey: LibraryDocumentSortKey;
-  readonly sortDir: 'asc' | 'desc';
-  readonly filter: LyraDocumentLibrary['filter'];
-}
-export type DocumentLibrarySource = LyraPageSource<LibraryDocument, DocumentLibrarySourceQuery>;
-/** Unknown-total document batches; the provider owns the complete query. */
-export type DocumentLibraryCursorSource = LyraCursorSource<LibraryDocument, DocumentLibrarySourceQuery>;
-export interface DocumentLibraryQueryChangeDetail {
-  readonly searchTerm: string;
-  readonly tags: readonly string[];
-}
-
-export interface DocumentLibraryFilterChangeDetail {
-  readonly searchTerm: string;
-  readonly tags: readonly string[];
-  readonly matchCount: number;
-}
-export interface DocumentLibrarySortRequestDetail {
-  readonly phase: 'request';
-  readonly sortKey: LibraryDocumentSortKey;
-  readonly sortDir: TableSortDirection;
-}
-export interface DocumentLibrarySortCommitDetail {
-  readonly phase: 'commit';
-  readonly sortKey: LibraryDocumentSortKey;
-  readonly sortDir: TableSortDirection;
-}
-/** Canonical request/commit sort transaction detail. */
-export type DocumentLibrarySortDetail =
-  | DocumentLibrarySortRequestDetail
-  | DocumentLibrarySortCommitDetail;
-export interface DocumentLibrarySelectionChangeDetail {
-  readonly selectedRowKeys?: readonly string[];
-  readonly documentIds: readonly string[];
-}
-export interface DocumentLibraryOpenDetail {
-  readonly documentId: string;
-}
-
-export interface LyraDocumentLibraryEventMap {
-  'lr-query-change': CustomEvent<LyraEventDetailSnapshot<DocumentLibraryQueryChangeDetail>>;
-  'lr-filter-change': CustomEvent<LyraEventDetailSnapshot<DocumentLibraryFilterChangeDetail>>;
-  'lr-sort-request': CustomEvent<DocumentLibrarySortRequestDetail>;
-  'lr-sort': CustomEvent<DocumentLibrarySortCommitDetail>;
-  'lr-selection-change': CustomEvent<LyraEventDetailSnapshot<DocumentLibrarySelectionChangeDetail>>;
-  'lr-open': CustomEvent<DocumentLibraryOpenDetail>;
-  /** Cancelable retry proposal. The default action clears the parent and nested table error. */
-  'lr-retry-request': CustomEvent<null>;
-}
-
-function cursorQuery(value: DocumentLibrarySourceQuery, current: () => boolean): DocumentLibrarySourceQuery {
-  const { searchTerm, tagFilter } = cursorQueryText(value.searchTerm, value.tagFilter, current);
-  if (!['name', 'version', 'owner', 'freshness', 'updatedAt'].includes(value.sortKey) ||
-    (value.sortDir !== 'asc' && value.sortDir !== 'desc') || (value.filter !== undefined && typeof value.filter !== 'function')) throw new TypeError('Invalid cursor query');
-  return Object.freeze({ searchTerm, tagFilter, sortKey: value.sortKey, sortDir: value.sortDir, filter: value.filter });
-}
-
-const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
-  fresh: 0,
-  aging: 1,
-  stale: 2,
-};
-const MAX_LIBRARY_COLLECTION_ENTRIES = 10_000;
-const MAX_TAG_FACETS = 500;
-const documentKey = (document: LibraryDocument): string => document.id;
-const INVALID_DOCUMENT_DATE = Symbol('invalid-document-date');
-const FRESHNESS_TONE: Record<
-  LibraryDocumentFreshness,
-  'success' | 'warning' | 'danger'
-> = {
-  fresh: 'success',
-  aging: 'warning',
-  stale: 'danger',
-};
-
-function projectLibraryStringArray(value: unknown): readonly string[] | undefined {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const length = readOwnArrayLength(value);
-    if (length === undefined) return undefined;
-    const tags: string[] = [];
-    for (let index = 0; index < Math.min(length, MAX_LIBRARY_COLLECTION_ENTRIES); index += 1) {
-      const entry = getOwnDataDescriptor(value, String(index));
-      if (
-        entry === MISSING_OWN_DATA_DESCRIPTOR ||
-        entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        typeof entry.value !== 'string'
-      )
-        return undefined;
-      tags.push(entry.value);
-    }
-    return Object.freeze(tags);
-  } catch {
-    return undefined;
-  }
-}
-
-function projectLibraryDate(value: unknown): Date | string | typeof INVALID_DOCUMENT_DATE {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return new Date(value);
-  try {
-    return new Date(Date.prototype.getTime.call(value));
-  } catch {
-    return INVALID_DOCUMENT_DATE;
-  }
-}
-
-function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined {
-  try {
-    if (
-      candidate === null ||
-      typeof candidate !== 'object' ||
-      Array.isArray(candidate)
-    )
-      return undefined;
-    const id = getOwnDataDescriptor(candidate, 'id');
-    const name = getOwnDataDescriptor(candidate, 'name');
-    const mimeType = getOwnDataDescriptor(candidate, 'mimeType');
-    const uri = getOwnDataDescriptor(candidate, 'uri');
-    const version = getOwnDataDescriptor(candidate, 'version');
-    const tags = getOwnDataDescriptor(candidate, 'tags');
-    const owner = getOwnDataDescriptor(candidate, 'owner');
-    const updatedAt = getOwnDataDescriptor(candidate, 'updatedAt');
-    const freshness = getOwnDataDescriptor(candidate, 'freshness');
-    if (
-      id === MISSING_OWN_DATA_DESCRIPTOR ||
-      id === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      name === MISSING_OWN_DATA_DESCRIPTOR ||
-      name === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      mimeType === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      uri === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      version === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      tags === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      owner === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      updatedAt === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      freshness === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof id.value !== 'string' ||
-      id.value.trim().length === 0 ||
-      typeof name.value !== 'string'
-    )
-      return undefined;
-
-    const mimeTypeValue = mimeType === MISSING_OWN_DATA_DESCRIPTOR ? undefined : mimeType.value;
-    const uriValue = uri === MISSING_OWN_DATA_DESCRIPTOR ? undefined : uri.value;
-    const versionValue = version === MISSING_OWN_DATA_DESCRIPTOR ? undefined : version.value;
-    const ownerValue = owner === MISSING_OWN_DATA_DESCRIPTOR ? undefined : owner.value;
-    const freshnessValue = freshness === MISSING_OWN_DATA_DESCRIPTOR ? undefined : freshness.value;
-    if (
-      (mimeTypeValue !== undefined && typeof mimeTypeValue !== 'string') ||
-      (uriValue !== undefined && typeof uriValue !== 'string') ||
-      (versionValue !== undefined && typeof versionValue !== 'string') ||
-      (ownerValue !== undefined && typeof ownerValue !== 'string') ||
-      (freshnessValue !== undefined &&
-        freshnessValue !== 'fresh' &&
-        freshnessValue !== 'aging' &&
-        freshnessValue !== 'stale')
-    )
-      return undefined;
-
-    const tagsValue = tags === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tags.value;
-    const tagValues = tagsValue === undefined ? undefined : projectLibraryStringArray(tagsValue);
-    if (tagsValue !== undefined && !tagValues) return undefined;
-    const updatedAtValue = updatedAt === MISSING_OWN_DATA_DESCRIPTOR || updatedAt.value === undefined
-      ? undefined
-      : projectLibraryDate(updatedAt.value);
-    if (updatedAtValue === INVALID_DOCUMENT_DATE) return undefined;
-
-    return Object.freeze({
-      id: id.value,
-      name: name.value,
-      ...(mimeTypeValue === undefined ? {} : { mimeType: mimeTypeValue }),
-      ...(uriValue === undefined ? {} : { uri: uriValue }),
-      ...(versionValue === undefined ? {} : { version: versionValue }),
-      ...(tagValues === undefined ? {} : { tags: tagValues }),
-      ...(ownerValue === undefined ? {} : { owner: ownerValue }),
-      ...(updatedAtValue === undefined ? {} : { updatedAt: updatedAtValue }),
-      ...(freshnessValue === undefined ? {} : { freshness: freshnessValue }),
-    });
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * `<lr-document-library>` — a searchable, filterable inventory of documents with versions, tags,
@@ -416,7 +231,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private sourceEpoch = 0;
   private sourceSyncing = false;
   private sourceInputs?: readonly unknown[];
-  private sourceQueryInputs?: readonly unknown[];
+  private readonly sourceQueryInputs = new SourceQueryInputs();
   private sourceFailure: unknown;
   private sourceResult?: LyraPageResult<LibraryDocument>;
   private sourceRows: LibraryDocument[] = [];
@@ -542,7 +357,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     if (source === undefined && this.cursorInputs?.[0] === undefined) return;
     const inputs = [source, this.dataSource, this.cursorEpoch, this.explicitRefresh, this.effectiveLocale,
       this.searchTerm, this.tagFilter, this.sortKey, this.sortDir, this.filter,
-      finiteInteger(this.sourcePageSize, 100, 1, 500), this.loading, this.error];
+      normalizeSourcePageSize(this.sourcePageSize), this.loading, this.error];
     if (this.cursorInputs && inputs.every((value, index) => value === this.cursorInputs![index])) return;
     const transaction = ++this.cursorBindingVersion;
     const selectionVersion = this.cursorSelectionVersion;
@@ -598,12 +413,12 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       // Keep the fingerprints aligned with the owned snapshots without scheduling another query.
       this.cursorInputs = [source, this.dataSource, this.cursorEpoch, this.explicitRefresh, this.effectiveLocale,
         this.searchTerm, this._tagFilter, this.sortKey, this.sortDir, this.filter,
-        finiteInteger(this.sourcePageSize, 100, 1, 500), this.loading, this.error];
+        normalizeSourcePageSize(this.sourcePageSize), this.loading, this.error];
       this.ensurePageScope();
       this.cursorPages.bind({ source, revision, scope, epoch: transaction, locale: this.effectiveLocale });
       if (!current()) return;
       if (this.loading || this.error || !this.isConnected) return;
-      this.cursorRequest = this.cursorPages.request(query, finiteInteger(this.sourcePageSize, 100, 1, 500));
+      this.cursorRequest = this.cursorPages.request(query, normalizeSourcePageSize(this.sourcePageSize));
     } catch {
       if (current()) { this.cursorPages.fail(); this.cursorRequest = Promise.resolve(false); }
     }
@@ -708,7 +523,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     try {
       if (!this.sourceMode) {
         if (this.sourceInputs) this.sourcePages.bind(undefined);
-        this.sourceInputs = undefined; this.sourceQueryInputs = undefined; this.sourceSelectionInputs = undefined;
+        this.sourceInputs = undefined; this.sourceQueryInputs.clear(); this.sourceSelectionInputs = undefined;
         this.sourceSelectionEvent = undefined; this.sourceFilterEvent = false;
         this.sourceResult = undefined; this.sourceRows = []; this.sourceTags = []; this.sourceFailure = undefined;
         return;
@@ -716,13 +531,12 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       this.ensurePageScope();
       const source = this.dataSource!;
       const epoch = this.sourceEpoch + this.explicitRefresh;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       const queryInputs = [this.searchTerm, this.tagFilter, this.sortKey, this.sortDir, this.filter, size];
-      if (this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) {
+      if (this.sourceQueryInputs.changed(queryInputs)) {
         page = 0; this.sourcePage = 0;
       }
-      this.sourceQueryInputs = queryInputs;
       const revision = source.revision;
       const inputs = [source, revision, epoch, this.effectiveLocale, ...queryInputs, page];
       if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
@@ -1645,8 +1459,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           aria-label=${label}
           .strings=${this.strings}
           .paginationMode=${this.sourceMode ? 'server' : 'client'}
-          .page=${this.sourceMode ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER) + 1 : 1}
-          .pageSize=${this.providerMode ? finiteInteger(this.sourcePageSize, 100, 1, 500) : 100}
+          .page=${this.sourceMode ? displayedSourcePage(this.sourcePage) : 1}
+          .pageSize=${this.providerMode ? normalizeSourcePageSize(this.sourcePageSize) : 100}
           .totalItems=${this.sourceMode ? this.sourceTotal ?? 0 : -1}
           .unknownTotal=${this.sourceMode && this.sourceTotal === null}
           .hasNext=${!this.sourceMode || this.sourceTotal !== null}

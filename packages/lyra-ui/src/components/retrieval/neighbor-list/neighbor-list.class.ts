@@ -50,7 +50,8 @@ import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { expandIcon } from '../../../internal/icons.js';
-import { finiteInteger, finiteCount } from '../../../internal/numbers.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord } from '../../../internal/source-paging.js';
 import {
   getCollator,
   getListFormat,
@@ -283,8 +284,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         } });
         if (epoch !== this.sourceEpoch || source !== this.graphSource) return;
       }
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      const page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      const page = normalizeSourcePage(this.sourcePage, size);
       const signature = [page, size, this.centerKey, this.sourceDirection, this.sourceNodeTypes];
       if (!this.sourcePageBinding || signature.some((value, index) => value !== this.sourcePageBinding![index])) {
         this.sourcePageBinding = signature;
@@ -306,7 +307,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     await this.sourcePromise; if (!current() || this.sourceError) return false;
     const index = await this.sourcePages.locate(key); if (!current() || index === null) return false;
     this.sourceSyncing = true;
-    this.sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+    this.sourcePage = sourcePageOfRecord(index, this.sourcePageSize);
     this.sourceSyncing = false; this.syncSource(); await this.sourcePromise; await this.updateComplete;
     if (!current()) return false;
     const target = findSourceRow<HTMLButtonElement>(this.renderRoot, key);
@@ -623,8 +624,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
             @focus=${this.onRowFocus} @keydown=${onRowKey} type="button" aria-label=${this.localize('neighborExpand', undefined, { label: name })}
             @click=${() => { if (valid() && this.expandable && rows.includes(row)) this.emit('lr-node-expand', { nodeId: row.value.id }); }}>${expandIcon()}</button>` : nothing}</div>`;
       })}</div>
-      ${this.centerKey !== null ? html`<lr-pagination format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
-        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${total ?? -1} .disabled=${failed || state.pending || total === null}
+      ${this.centerKey !== null ? html`<lr-pagination format="compact" with-edges .page=${displayedSourcePage(this.sourcePage)}
+        .pageSize=${normalizeSourcePageSize(this.sourcePageSize)} .total=${total ?? -1} .disabled=${failed || state.pending || total === null}
         .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (valid()) this.sourcePage = event.detail.page - 1; }}></lr-pagination>` : nothing}
     </div>`;
   }

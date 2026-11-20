@@ -3835,16 +3835,14 @@ Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 
 **Optional peer deps:** none.
 
-Also exported from the package root:
-`formatFileSize(bytes: number, unitLabel?: (unit: 'B' | 'KB' | 'MB' | 'GB' | 'TB') => string,
-numberLabel?: (value: number, fractionDigits: number) => string): string`. `unitLabel` localizes each
-selected unit abbreviation; `numberLabel` formats the scaled value and receives `fractionDigits`
-as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
-`"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
-exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
-an unknown size renders nothing instead of `"NaN B"`. The same module's
-`localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string` is the
-ready-made `numberLabel` for `locale`, rendering exactly the requested fraction digits.
+Also exported from the package root (and from `components/media/attachment-chip/file-size.js`):
+`formatFileSize(bytes: number, locale?: string): string`. It scales on binary (1024) rungs through
+PB and words the unit through `Intl.NumberFormat` with at most one fraction digit, exactly like
+`<lr-format-bytes unit-step="1024">`: `512` → `"512 byte"`, `1536` → `"1.5 kB"`, `2415919` →
+`"2.3 MB"` in English. An omitted or `'auto'` locale follows the active `setLyraLocale()` locale.
+A negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown size renders nothing.
+Every component that shows a file size (`lr-attachment-chip`, `lr-file-input`, `lr-file-icon`,
+`lr-archive-viewer`, `lr-email-viewer`) uses it with its effective locale.
 
 ```html
 <lr-attachment-chip
@@ -3868,7 +3866,7 @@ ready-made `numberLabel` for `locale`, rendering exactly the requested fraction 
   );
   chip.addEventListener("lr-retry", (e) => retryUpload(e.detail.attachmentId));
   chip.addEventListener("lr-preview-request", (e) => openPreview(e.detail));
-  console.log(formatFileSize(pickedFile.size));
+  console.log(formatFileSize(pickedFile.size, "en"));
 </script>
 ```
 
@@ -4613,6 +4611,8 @@ disconnect and reconnect.
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
+The badge shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text,
+followed by `showMoreCount` (`+2 Show 2 more`).
 
 **Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
 and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible

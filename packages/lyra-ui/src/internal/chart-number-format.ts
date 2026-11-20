@@ -1,10 +1,21 @@
 import { getNumberFormat } from './intl-cache.js';
 
-/** Fraction digits keeping three significant digits below one (0.0004 needs six), else `base`. */
-export function chartValueFractionDigits(value: number, base = 3): number {
+/**
+ * Fraction digits (0-20) that show `significant` significant digits of a positive `magnitude`:
+ * two significant digits of 0.0004 need four, of 5 need one, of 10 need none.
+ */
+export function significantFractionDigits(magnitude: number, significant: number): number {
+  return Math.min(20, Math.max(0, significant - 1 - Math.floor(Math.log10(magnitude)))) || 0;
+}
+
+/**
+ * Fraction digits keeping `significant` significant digits below one (three significant digits of
+ * 0.0004 need six), never fewer than `base`; `base` for zero and magnitudes of one or more.
+ */
+export function chartValueFractionDigits(value: number, base = 3, significant = 3): number {
   const magnitude = Math.abs(value);
   return magnitude > 0 && magnitude < 1
-    ? Math.min(20, Math.max(base, 2 - Math.floor(Math.log10(magnitude))))
+    ? Math.max(base, significantFractionDigits(magnitude, significant))
     : base;
 }
 

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -159,7 +159,7 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     touch-action: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="canvas"]:focus-visible {
     ${focusRing}

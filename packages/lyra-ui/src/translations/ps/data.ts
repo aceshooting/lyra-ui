@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'یوازې لومړي {count} تودوخه‌نقشې خانې ښودل کېږي.',
   heatmapDecorationLimit: 'یوازې د تودوخه‌نقشې لومړي {count} رنګونه، د نښې تمځایونه او یادښتونه ښودل کېږي.',
   funnelStagesLimit: 'یوازې لومړي {count} پړاوونه ښودل کېږي.',
+  funnelStagesInputLimit: 'له {total} پړاوونو څخه لومړي {count} ښودل کېږي.',
   timeline: 'مهالوېش',
   timelineClusterCount: 'د مهالوېش پېښې ښکاره کول ({count})',
   timelineItemVariantWarning: 'خبرداری',

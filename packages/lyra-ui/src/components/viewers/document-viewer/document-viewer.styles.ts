@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, focusRingShorthand, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -49,7 +49,7 @@ export const styles = css`
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
     text-decoration: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
 
   [part="download-link"]:hover {

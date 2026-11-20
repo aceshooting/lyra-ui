@@ -1218,10 +1218,14 @@ it('keeps the tooltip description proxy synchronized without including trigger t
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
   expect(description.textContent).to.equal('Initial help');
 
+  // A closed tooltip reads its content when the description matters: here, as it opens.
   const content = el.querySelector('span:not([data-lyra-tooltip-description])')!;
   content.textContent = 'Updated help';
-  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  (el as unknown as { open: boolean }).open = true;
+  await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
   expect(description.textContent).to.equal('Updated help');
+  content.textContent = 'Updated again';
+  await waitUntil(() => description.textContent === 'Updated again');
 });
 
 it('promotes actionable tooltip content to a focus-persistent dialog surface', async () => {

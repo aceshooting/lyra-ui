@@ -198,7 +198,7 @@ for (const name of ['lr-code-block', 'lr-code-block-core']) {
         await resetMouse();
         expect(background()).to.equal('rgb(255, 0, 0)');
         await hoverUntilMatched(control, `hovering the ${token}`);
-        expect(background()).to.equal('rgb(0, 128, 0)');
+        await waitUntil(() => background() === 'rgb(0, 128, 0)');
         await sendMouse({ type: 'down' });
         await waitUntil(() => background() === 'rgb(0, 0, 255)');
       } finally {

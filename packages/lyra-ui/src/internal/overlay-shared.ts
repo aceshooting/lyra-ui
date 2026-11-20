@@ -11,7 +11,6 @@
  */
 
 import { resolveAccessibleTrigger } from './accessible-trigger.js';
-import { settlePopupTransition } from './anchored-overlay-runtime.js';
 import { collectComposedFocusTargets } from './focus-navigation.js';
 import type { VirtualAnchor } from './positioner.js';
 import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
@@ -42,28 +41,6 @@ export class OverlayDelayTimer {
     this.view = undefined;
     this.pendingDirection = undefined;
   }
-}
-
-/** Runs the common render, placement, motion, and closed-layout phases of an overlay transition.
- * Each owner supplies its placement failure policy and its own registered animation. A thin
- * caller of `settlePopupTransition`, the library's one settle ordering. */
-export async function settleOverlayTransition(options: {
-  showing: boolean;
-  updateComplete: () => Promise<unknown>;
-  isCurrent: () => boolean;
-  readyToShow: () => Promise<boolean>;
-  animate: () => Promise<void>;
-  afterHide: () => void;
-  settled: () => void;
-}): Promise<void> {
-  return settlePopupTransition({
-    host: { get updateComplete() { return options.updateComplete(); } },
-    isCurrent: options.isCurrent,
-    waitForPosition: options.showing ? options.readyToShow : undefined,
-    animate: options.animate,
-    conceal: options.showing ? undefined : options.afterHide,
-    onSettled: options.settled,
-  });
 }
 
 /**

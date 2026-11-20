@@ -1,4 +1,5 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { stopIcon } from '../../../internal/icons.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
@@ -13,28 +14,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokens, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_map } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
-// stop glyph to that module -- it's off limits here -- so this one-off icon
-// still reads as part of the same visual language as the rest of the
-// library's inline icons. Identical shape to `<lr-chat-composer>`'s own
-// local `stopIcon()` (the conventional filled-square "stop generating"
-// glyph), duplicated rather than imported since these are two independently
-// consumable components with no dependency between them.
-function stopIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
-      aria-hidden="true"
-      focusable="false"
-    ><rect x="6" y="6" width="12" height="12" rx="1.5"></rect></svg>
-  `;
-}
 
 interface FormattedElapsed {
   key: 'generationStatusElapsedSeconds' | 'elapsedMinutesSecondsTemplate';

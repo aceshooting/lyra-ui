@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -194,7 +194,7 @@ export const styles = css`
   [part="resizer-track"] {
     inline-size: var(--lr-size-3px);
     background: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="resizer"]:hover [part="resizer-track"] {
     background: var(--lr-app-rail-resizer-hover-bg, var(--lr-color-brand));

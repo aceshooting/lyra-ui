@@ -4,7 +4,7 @@ import { createMapCameraSessionController } from './map-camera-session-controlle
 import { admitMapViewpoint, type MapViewpoint } from './map-camera-session-data.js';
 import { registerMapCameraSession, type MapCameraPreparedCommand, type MapCameraSessionCallbacks,
   type MapCameraSessionLease } from './map-camera-session.js';
-import { createMapSceneSessionFacade, registerMapSceneSession } from './map-scene-session.js';
+import { createMapSceneSessionFacade, registerMapSceneSession } from './fixtures/map-scene-session.js';
 import type { SceneTargetEntry } from './map-scene-contract.js';
 import { sceneStateHarness, sceneTarget } from '../../test/map-scene-session-fixtures.js';
 

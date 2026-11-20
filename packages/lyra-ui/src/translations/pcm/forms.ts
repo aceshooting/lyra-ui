@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Submit am',
   rubricSubmitAndNext: 'Submit am and go next',
   rubricSkip: 'Skip am',
+  rubricKeysLimit: 'Na only di first {count} rubric fields out of {total} dem show.',
   localePickerLabel: 'Language',
   localePickerRequired: 'Abeg choose one language.',
   localePickerSearchLabel: 'Find language',

@@ -1,5 +1,5 @@
 import { shouldIgnoreNavigationKey } from './list-navigation.js';
-import { capturePointer, releasePointer } from './pointer-capture.js';
+import { capturePointer, releasePointer, togglePointerGesture } from './pointer-capture.js';
 
 /** Shared interaction math for vertical column separators. The component owns its width storage
  * and event detail, while this module keeps keyboard and pointer geometry consistent. */
@@ -65,16 +65,10 @@ export class ColumnResizePointerSession {
     this.stop();
     this.active = { handle, owner, pointerId: event.pointerId };
     capturePointer(handle, event.pointerId);
-    owner.addEventListener('pointermove', this.handleMove);
-    owner.addEventListener('pointerup', this.handleCommit);
-    owner.addEventListener('pointercancel', this.handleCancel);
-    owner.addEventListener('lostpointercapture', this.handleCancel);
     // A synthetic non-composed event remains in a shadow root; native captured events can also
-    // originate at the handle. Listen there too, then process each bubbling event only once.
-    handle.addEventListener('pointermove', this.handleMove);
-    handle.addEventListener('pointerup', this.handleCommit);
-    handle.addEventListener('pointercancel', this.handleCancel);
-    handle.addEventListener('lostpointercapture', this.handleCancel);
+    // originate at the handle. Listen on both, then process each bubbling event only once.
+    togglePointerGesture(owner, true, this.handleMove, this.handleCommit, this.handleCancel);
+    togglePointerGesture(handle, true, this.handleMove, this.handleCommit, this.handleCancel);
     return true;
   }
 
@@ -82,14 +76,8 @@ export class ColumnResizePointerSession {
     const active = this.active;
     if (!active) return;
     this.active = undefined;
-    active.owner.removeEventListener('pointermove', this.handleMove);
-    active.owner.removeEventListener('pointerup', this.handleCommit);
-    active.owner.removeEventListener('pointercancel', this.handleCancel);
-    active.owner.removeEventListener('lostpointercapture', this.handleCancel);
-    active.handle.removeEventListener('pointermove', this.handleMove);
-    active.handle.removeEventListener('pointerup', this.handleCommit);
-    active.handle.removeEventListener('pointercancel', this.handleCancel);
-    active.handle.removeEventListener('lostpointercapture', this.handleCancel);
+    togglePointerGesture(active.owner, false, this.handleMove, this.handleCommit, this.handleCancel);
+    togglePointerGesture(active.handle, false, this.handleMove, this.handleCommit, this.handleCancel);
     releasePointer(active.handle, active.pointerId);
   }
 

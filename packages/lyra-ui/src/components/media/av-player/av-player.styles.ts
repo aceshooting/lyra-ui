@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, focusRingShorthandInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
@@ -61,7 +61,7 @@ export const styles = css`
     overflow: hidden;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   @container ${compactContainerQuery} {
     [part='rate-select'] {
@@ -153,7 +153,7 @@ export const styles = css`
     cursor: pointer;
     --_lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
     background: var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill));
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   .timeline-markers {
     position: absolute;
@@ -232,7 +232,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* Before ::part(cue-current) below, so the current cue's own background wins the specificity tie
      on source order even while hovered. A dedicated hook, not the bare shared token, mirroring
@@ -258,8 +258,7 @@ export const styles = css`
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning));
   }
   lr-virtual-list::part(cue):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
+    ${focusRingShorthandInsetOffset}
   }
   lr-virtual-list::part(cue-time) {
     color: var(--lr-color-text);

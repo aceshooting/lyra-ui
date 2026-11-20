@@ -510,6 +510,10 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     const localizedHiddenCount = getNumberFormat(this.effectiveLocale).format(
       hiddenCount
     );
+    // The visible "+N" leads the accessible name so speech users can say what they see.
+    const collapsedText = overflowing
+      ? this.localize('showMoreCollapsed', undefined, { count: localizedHiddenCount })
+      : '';
 
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
@@ -519,15 +523,13 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
               part="overflow-badge"
               type="button"
               ?data-first-visible=${badgeIsFirstVisible}
-              aria-label=${this.localize('showMoreCount', undefined, {
+              aria-label=${`${collapsedText} ${this.localize('showMoreCount', undefined, {
                 count: localizedHiddenCount,
-              })}
+              })}`}
               @click=${this.onOverflowClick}
             >
               <span part="overflow-badge-visual" aria-hidden="true"
-                >${this.localize('showMoreCollapsed', undefined, {
-                  count: localizedHiddenCount,
-                })}</span
+                >${collapsedText}</span
               >
             </button>`
           : nothing}

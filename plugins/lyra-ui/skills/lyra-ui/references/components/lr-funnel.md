@@ -38,14 +38,12 @@ Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and
 The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
 real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
 list carries the accessible name; a host `aria-label` overrides `label`.
-Stage and comparison projections reuse their input identities. Reassign after changes, or call
-`requestUpdate()` after mutating the current arrays. The component resolves at most the first 501
-valid stages to detect overflow and renders at most 500.
-Validation inspects at most 10,000 source positions per chunk and continues through malformed
-entries until it reaches that valid-stage boundary or the end. The last completed chart stays
-visible with `aria-busy` while a replacement is inspected. Keep pending source arrays and records
-unchanged, or reassign/explicitly refresh to restart inspection. Replacement and disconnect cancel
-unfinished work; reconnect derives the current input again.
+`stages` and `comparison` are owned collections: each assignment is detached into a frozen
+snapshot of at most the first 10,000 source positions, and the getters return that snapshot.
+Mutating the caller's array afterwards has no effect; assign a new array to publish a change.
+Validation runs synchronously over the admitted positions, resolves at most the first 501 valid
+stages to detect overflow and renders at most 500. A `stages` source longer than 10,000 positions
+shows a localized `limit` notice with the admitted and source counts.
 
 **Properties:**
 
@@ -81,7 +79,7 @@ stage's share is still measured against the true first stage regardless of trunc
 **CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
 `stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
 `bar` when the stage exceeds the first stage), `comparison-bar`, `empty`, `limit` (localized notice
-shown when `stages` exceeds the 500-stage render ceiling)
+shown when `stages` exceeds the 500-stage render ceiling or the 10,000-position admission bound)
 
 **Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
 `--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
@@ -133,8 +131,8 @@ shown when `stages` exceeds the 500-stage render ceiling)
   stages past its end simply get no comparison bar. A comparison series whose own first value is
   zero or negative draws nothing.
 - **Malformed stage entries are omitted independently.** Non-record entries and records without a
-  string `label` cannot suppress valid neighbors in either series. This is a render-only boundary:
-  the public `stages` and `comparison` arrays retain caller identity and are never rewritten.
+  string `label` cannot suppress valid neighbors in either series. Accessor properties are never
+  invoked; the caller's arrays are never rewritten.
 - **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
   take the chart with it.
 - Values, shares and drop-off percentages all format through the component's effective locale

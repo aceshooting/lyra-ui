@@ -444,7 +444,7 @@ describe('localization', () => {
     expect(badge.textContent!.trim()).to.equal('+2');
   });
 
-  it('defaults to English "Show N more" for the aria-label when no strings override is set', async () => {
+  it('defaults to an aria-label that starts with the visible "+N" then "Show N more"', async () => {
     const el = (await fixture(html`
       <lr-avatar-group max="1">
         <lr-avatar initials="AB"></lr-avatar>
@@ -453,7 +453,7 @@ describe('localization', () => {
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
-    expect(badge.getAttribute('aria-label')).to.equal('Show 2 more');
+    expect(badge.getAttribute('aria-label')).to.equal('+2 Show 2 more');
   });
 
   it('localizes the collapsed overflow-badge visible text via this.localize(), not a hardcoded "+N"', async () => {
@@ -477,7 +477,7 @@ describe('localization', () => {
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
-    expect(badge.getAttribute('aria-label')).to.equal('2 de plus');
+    expect(badge.getAttribute('aria-label')).to.equal('+2 2 de plus');
   });
 });
 

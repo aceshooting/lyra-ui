@@ -18,7 +18,7 @@ function capability(namespace) {
 
 test('the loader imports the published qrcode peer and validates its create() capability', () => {
   assert.match(loaderSource, /load: \(\) => import\('qrcode'\)/);
-  assert.match(loaderSource, /'create' in value &&\s*typeof value\.create === 'function'/);
+  assert.match(loaderSource, /hasPeerMethods\(value, 'create'\)/);
 });
 
 test('the real qrcode module satisfies the capability on its namespace or default export', async () => {

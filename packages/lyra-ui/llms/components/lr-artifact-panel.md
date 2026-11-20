@@ -55,8 +55,8 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 `preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
-**Events:** cancelable `lr-view-change-request` (`detail: { view, previousView }`, before a toggle
-press changes `view`; `preventDefault()` keeps the current view), `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
+**Events:** cancelable `lr-artifact-view-change-request` (`detail: { view, previousView }`, before a toggle
+press changes `view`; `preventDefault()` keeps the current view), `lr-artifact-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
@@ -66,7 +66,7 @@ nothing itself), `lr-copy`
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
-**View changes:** `lr-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`. When the `code` slot disappears while `view="code"`, the view falls back to `preview` and `lr-view-change` reports it. Copy shows visible `Copied!`/`Copy failed` feedback on the button, and Restore acts only on the version it was rendered for.
+**View changes:** `lr-artifact-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`. When the `code` slot disappears while `view="code"`, the view falls back to `preview` and `lr-artifact-view-change` reports it. Copy shows visible `Copied!`/`Copy failed` feedback on the button, and Restore acts only on the version it was rendered for.
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`

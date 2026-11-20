@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { activeFill, disclosureChevron, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -241,6 +241,7 @@ export const styles = css`
     color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
     font: inherit;
     cursor: pointer;
+    ${interactiveTransition}
   }
   lr-virtual-list::part(row-action):hover {
     background: var(

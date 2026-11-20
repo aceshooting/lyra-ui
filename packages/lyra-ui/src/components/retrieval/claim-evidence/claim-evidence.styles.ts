@@ -1,4 +1,4 @@
-import { activeFill, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInwardOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
@@ -66,7 +66,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='claim-trigger']:hover {
     background: var(--lr-color-surface-raised);

@@ -1,5 +1,5 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -31,33 +31,19 @@ export const styles = css`
     align-items: var(--lr-random-content-item-alignment, flex-start);
     gap: var(--lr-random-content-item-gap, var(--lr-space-s));
   }
-  [part='pause-button'],
-  [part='next-button'] {
-    ${iconHitTarget}
-    ${iconAction}
-    ${interactiveTransition}
-    margin-block-start: var(--lr-space-xs);
-    padding: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-  }
-  [part='pause-button']:hover,
-  [part='next-button']:hover {
+  ${outlinedActionStyles(':is([part=\'pause-button\'], [part=\'next-button\'])', {
+    padding: 'var(--lr-space-xs)',
+    extra: 'margin-block-start: var(--lr-space-xs);',
+    hoverBackground: 'var(--lr-random-content-action-hover-bg, var(--lr-color-surface))',
+    activeBackground: `var(--lr-random-content-action-active-bg, ${activeFill('var(--lr-color-surface)').cssText})`,
+  })}
+  :is([part='pause-button'], [part='next-button']):where(:not(:disabled)):hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-random-content-action-hover-color, var(--lr-color-brand));
-    background: var(--lr-random-content-action-hover-bg, var(--lr-color-surface));
   }
-  [part='pause-button']:active,
-  [part='next-button']:active {
+  :is([part='pause-button'], [part='next-button']):where(:not(:disabled)):active {
     border-color: var(--lr-color-brand);
     color: var(--lr-random-content-action-active-color, var(--lr-color-brand));
-    background: var(--lr-random-content-action-active-bg, ${activeFill('var(--lr-color-surface)')});
-  }
-  [part='pause-button']:focus-visible,
-  [part='next-button']:focus-visible {
-    ${focusRing}
   }
   ::slotted(*) {
     /* Inline candidates need a transformable box for directional entrance effects; inline-block

@@ -319,6 +319,7 @@ describe('danger-state cssprops', () => {
         '--lr-menu-item-danger-active-bg',
         'rgb(7, 8, 9)'
       );
+      await waitUntil(() => getComputedStyle(destructiveBase).color === 'rgb(1, 2, 3)' && getComputedStyle(variantBase).color === 'rgb(1, 2, 3)' && getComputedStyle(dropdownBase).color === 'rgb(1, 2, 3)', 'danger ink settles after the colour transition');
       expect(getComputedStyle(destructiveBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(variantBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(dropdownBase).color).to.equal('rgb(1, 2, 3)');

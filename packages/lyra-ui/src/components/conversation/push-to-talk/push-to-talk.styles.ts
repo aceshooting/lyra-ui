@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -28,6 +28,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     touch-action: none;
+    ${interactiveTransition}
   }
   [part='trigger']:focus-visible {
     ${focusRing}

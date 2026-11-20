@@ -551,8 +551,8 @@
         "sourceObservations": 1100000,
         "sourceReads": 1100000
       },
-      "n=1000000 invalid prefix staged inspection": {
-        "inspected": 1100000,
+      "n=1000000 bounded admission": {
+        "inspected": 11000,
         "rendered": 2
       }
     },

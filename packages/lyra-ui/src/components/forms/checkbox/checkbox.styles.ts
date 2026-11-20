@@ -1,5 +1,6 @@
 import { disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -136,8 +137,6 @@ export const styles = css`
       --lr-checkbox-label-indent,
       var(--_lr-checkbox-label-indent)
     );
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
   }
   [part~="hint"][hidden] {
     display: none;
@@ -149,9 +148,8 @@ export const styles = css`
       --lr-checkbox-label-indent,
       var(--_lr-checkbox-label-indent)
     );
-    color: var(--lr-color-danger);
-    font-size: var(--lr-font-size-sm);
   }
+  ${formControlSupportingTone}
   [part="error"][hidden] {
     display: none;
   }

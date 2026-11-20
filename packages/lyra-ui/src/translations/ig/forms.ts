@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Nyefee',
   rubricSubmitAndNext: 'Nyefee ma gaa n’ihu',
   rubricSkip: 'Mafee',
+  rubricKeysLimit: 'A na-egosi naanị ubi rubric {count} mbụ n’ime {total}.',
   localePickerLabel: 'Asụsụ',
   localePickerRequired: 'Biko họrọ asụsụ.',
   localePickerSearchLabel: 'Chọọ asụsụ',

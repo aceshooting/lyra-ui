@@ -1,5 +1,5 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill, focusRingOffset, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -148,61 +148,35 @@ export const styles = css`
   }
   [part="line"][data-active-highlight] {
     outline: var(--lr-border-width-medium) solid var(--lr-diff-view-highlight-active-outline, var(--lr-color-brand));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
-  [part="line-highlight-action"] {
-    display: inline-block;
-    margin-inline-start: var(--lr-space-xs);
-    ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    cursor: pointer;
-    font: inherit;
-    font-size: var(--lr-font-size-xs);
-    padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    transition: var(--lr-transition-interactive);
-  }
-  [part="line-highlight-action"]:hover {
-    background: var(--lr-diff-view-highlight-action-hover-bg, var(--_lr-diff-view-highlight-background));
+  ${outlinedActionStyles('[part="line-highlight-action"]', {
+    padding: 'var(--lr-size-0-125rem) var(--lr-space-xs)',
+    extra: 'display: inline-block; margin-inline-start: var(--lr-space-xs); font-size: var(--lr-font-size-xs);',
+    hoverBackground: 'var(--lr-diff-view-highlight-action-hover-bg, var(--_lr-diff-view-highlight-background))',
+    activeBackground: `var(--lr-diff-view-highlight-action-active-bg, ${activeFill('var(--_lr-diff-view-highlight-background)').cssText})`,
+  })}
+  [part="line-highlight-action"]:where(:not(:disabled)):hover {
     color: var(--lr-diff-view-highlight-action-hover-color, var(--lr-color-text));
   }
-  [part="line-highlight-action"]:active {
-    background: var(--lr-diff-view-highlight-action-active-bg, ${activeFill('var(--_lr-diff-view-highlight-background)')});
+  [part="line-highlight-action"]:where(:not(:disabled)):active {
     color: var(--lr-diff-view-highlight-action-active-color, var(--lr-color-text));
   }
   [part="line-highlight-action"]:focus-visible {
     ${focusRingShorthand}
   }
-  [part="copy-button"] {
-    ${iconAction}
-    ${interactiveTransition}
-    position: sticky;
-    inset-block-start: var(--lr-space-xs);
-    z-index: var(--lr-layer-content);
-    display: block;
-    margin: var(--lr-space-xs);
-    margin-inline-start: auto;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-xs);
-    padding: var(--lr-size-0-125rem) var(--lr-space-s);
-    ${iconHitTarget}
-  }
-  [part="copy-button"]:hover {
+  ${outlinedActionStyles('[part="copy-button"]', {
+    padding: 'var(--lr-size-0-125rem) var(--lr-space-s)',
+    extra: 'position: sticky; inset-block-start: var(--lr-space-xs); z-index: var(--lr-layer-content); display: block; margin: var(--lr-space-xs); margin-inline-start: auto; font-size: var(--lr-font-size-xs);',
+    hoverBackground: 'var(--lr-diff-view-copy-hover-bg, var(--lr-color-surface))',
+    activeBackground: `var(--lr-diff-view-copy-active-bg, ${activeFill('var(--lr-color-surface)').cssText})`,
+  })}
+  [part="copy-button"]:where(:not(:disabled)):hover {
     border-color: var(--lr-color-brand);
-    background: var(--lr-diff-view-copy-hover-bg, var(--lr-color-surface));
     color: var(--lr-diff-view-copy-hover-color, var(--lr-color-text));
   }
-  [part="copy-button"]:active {
+  [part="copy-button"]:where(:not(:disabled)):active {
     border-color: var(--lr-color-brand);
-    background: var(--lr-diff-view-copy-active-bg, ${activeFill('var(--lr-color-surface)')});
     color: var(--lr-diff-view-copy-active-color, var(--lr-color-text));
-  }
-  [part="copy-button"]:focus-visible {
-    ${focusRing}
   }
 `;

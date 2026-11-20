@@ -1,4 +1,4 @@
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -59,7 +59,7 @@ export const styles = css`
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it these
        buttons' fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='reveal-button']:hover,
   [part='copy-button']:hover {

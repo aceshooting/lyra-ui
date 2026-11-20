@@ -14561,7 +14561,9 @@ categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only commen
 leading visual rendered into `<lr-option>`'s `start` slot in the single-select branch, or inline
 before the label in the multiple-select `<lr-checkbox>` branch, inert and `aria-hidden` either way,
 matching `LyraFilterBarOption.icon`. Runtime schema normalization retains the first occurrence of each nonempty key and
-rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
+rejects malformed rows. At most the first 500 valid keys are admitted (from the first 10,000 source
+positions): `keys` reads back that admitted schema, values for discarded fields are dropped like any
+undeclared field, and a localized `limit` notice follows the fields. `value: RubricValue = {}` is a defensive readonly snapshot and
 `defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
 `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
@@ -14623,8 +14625,8 @@ the currently focused editor.
 `label`, `description`, `scale` (the
 rendered score/category/comment control's wrapper), `error` (a field-level validation message),
 `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has no
-entries), and `unsupported` (the fallback note for a key whose `type` is outside the three supported
-ones).
+entries), `limit` (the notice shown when `keys` holds more than 500 valid fields), and `unsupported`
+(the fallback note for a key whose `type` is outside the three supported ones).
 
 Field-level `error` content is ordinary visible validation text, not a shadow live region. Score
 controls compose the current message into the semantic control's accessible name; category/comment
@@ -17844,14 +17846,12 @@ Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and
 The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
 real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
 list carries the accessible name; a host `aria-label` overrides `label`.
-Stage and comparison projections reuse their input identities. Reassign after changes, or call
-`requestUpdate()` after mutating the current arrays. The component resolves at most the first 501
-valid stages to detect overflow and renders at most 500.
-Validation inspects at most 10,000 source positions per chunk and continues through malformed
-entries until it reaches that valid-stage boundary or the end. The last completed chart stays
-visible with `aria-busy` while a replacement is inspected. Keep pending source arrays and records
-unchanged, or reassign/explicitly refresh to restart inspection. Replacement and disconnect cancel
-unfinished work; reconnect derives the current input again.
+`stages` and `comparison` are owned collections: each assignment is detached into a frozen
+snapshot of at most the first 10,000 source positions, and the getters return that snapshot.
+Mutating the caller's array afterwards has no effect; assign a new array to publish a change.
+Validation runs synchronously over the admitted positions, resolves at most the first 501 valid
+stages to detect overflow and renders at most 500. A `stages` source longer than 10,000 positions
+shows a localized `limit` notice with the admitted and source counts.
 
 **Properties:**
 
@@ -17887,7 +17887,7 @@ stage's share is still measured against the true first stage regardless of trunc
 **CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
 `stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
 `bar` when the stage exceeds the first stage), `comparison-bar`, `empty`, `limit` (localized notice
-shown when `stages` exceeds the 500-stage render ceiling)
+shown when `stages` exceeds the 500-stage render ceiling or the 10,000-position admission bound)
 
 **Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
 `--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
@@ -17939,8 +17939,8 @@ shown when `stages` exceeds the 500-stage render ceiling)
   stages past its end simply get no comparison bar. A comparison series whose own first value is
   zero or negative draws nothing.
 - **Malformed stage entries are omitted independently.** Non-record entries and records without a
-  string `label` cannot suppress valid neighbors in either series. This is a render-only boundary:
-  the public `stages` and `comparison` arrays retain caller identity and are never rewritten.
+  string `label` cannot suppress valid neighbors in either series. Accessor properties are never
+  invoked; the caller's arrays are never rewritten.
 - **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
   take the chart with it.
 - Values, shares and drop-off percentages all format through the component's effective locale
@@ -22797,9 +22797,9 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   `lr-toggle` and persist the state yourself.
 
 The fullscreen dialog receives the host's `aria-describedby` references. A fullscreen request
-listener can resolve the request by writing `fullscreen` synchronously. When observing a widget
-that contains another view switcher, check `event.target === widget` before reading the widget's
-`lr-view-change` detail.
+listener can resolve the request by writing `fullscreen` synchronously. The view events carry the
+widget's own name, so a view switcher inside the panel body never reaches a
+`lr-widget-view-change` listener.
 
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
@@ -22809,20 +22809,20 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
-toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
-`activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+`activeViewId` directly), `lr-widget-view-change` (non-cancelable; `detail: { viewId }`, the accepted
 active view's `viewId`. Also emitted when a `views` reassignment drops the currently-active view,
 forcing a fallback to the first remaining view. Not emitted when a consumer sets `activeViewId`
 directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
-`activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits
-no activation at all. Use it for the repeat pick `lr-view-change` deliberately stays silent for —
+`activeViewId` actually moved. `lr-widget-view-request` stays the veto point, and a vetoed activation emits
+no activation at all. Use it for the repeat pick `lr-widget-view-change` deliberately stays silent for —
 "rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
 this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
-`lr-view-request` and `lr-view-change` are emitted first. Not emitted when a consumer sets
+`lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
@@ -30081,7 +30081,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button takes its accessible name from `showMoreCount` and its visible text from `showMoreCollapsed`. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -38538,16 +38538,14 @@ Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 
 **Optional peer deps:** none.
 
-Also exported from the package root:
-`formatFileSize(bytes: number, unitLabel?: (unit: 'B' | 'KB' | 'MB' | 'GB' | 'TB') => string,
-numberLabel?: (value: number, fractionDigits: number) => string): string`. `unitLabel` localizes each
-selected unit abbreviation; `numberLabel` formats the scaled value and receives `fractionDigits`
-as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
-`"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
-exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
-an unknown size renders nothing instead of `"NaN B"`. The same module's
-`localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string` is the
-ready-made `numberLabel` for `locale`, rendering exactly the requested fraction digits.
+Also exported from the package root (and from `components/media/attachment-chip/file-size.js`):
+`formatFileSize(bytes: number, locale?: string): string`. It scales on binary (1024) rungs through
+PB and words the unit through `Intl.NumberFormat` with at most one fraction digit, exactly like
+`<lr-format-bytes unit-step="1024">`: `512` → `"512 byte"`, `1536` → `"1.5 kB"`, `2415919` →
+`"2.3 MB"` in English. An omitted or `'auto'` locale follows the active `setLyraLocale()` locale.
+A negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown size renders nothing.
+Every component that shows a file size (`lr-attachment-chip`, `lr-file-input`, `lr-file-icon`,
+`lr-archive-viewer`, `lr-email-viewer`) uses it with its effective locale.
 
 ```html
 <lr-attachment-chip
@@ -38571,7 +38569,7 @@ ready-made `numberLabel` for `locale`, rendering exactly the requested fraction 
   );
   chip.addEventListener("lr-retry", (e) => retryUpload(e.detail.attachmentId));
   chip.addEventListener("lr-preview-request", (e) => openPreview(e.detail));
-  console.log(formatFileSize(pickedFile.size));
+  console.log(formatFileSize(pickedFile.size, "en"));
 </script>
 ```
 
@@ -39316,6 +39314,8 @@ disconnect and reconnect.
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
+The badge shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text,
+followed by `showMoreCount` (`+2 Show 2 more`).
 
 **Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
 and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible
@@ -56357,8 +56357,8 @@ slot has assigned content. Assigning `view='code'` without assigned code content
 `preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
-**Events:** cancelable `lr-view-change-request` (`detail: { view, previousView }`, before a toggle
-press changes `view`; `preventDefault()` keeps the current view), `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
+**Events:** cancelable `lr-artifact-view-change-request` (`detail: { view, previousView }`, before a toggle
+press changes `view`; `preventDefault()` keeps the current view), `lr-artifact-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
@@ -56368,7 +56368,7 @@ nothing itself), `lr-copy`
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
-**View changes:** `lr-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`. When the `code` slot disappears while `view="code"`, the view falls back to `preview` and `lr-view-change` reports it. Copy shows visible `Copied!`/`Copy failed` feedback on the button, and Restore acts only on the version it was rendered for.
+**View changes:** `lr-artifact-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`. When the `code` slot disappears while `view="code"`, the view falls back to `preview` and `lr-artifact-view-change` reports it. Copy shows visible `Copied!`/`Copy failed` feedback on the button, and Restore acts only on the version it was rendered for.
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
@@ -59027,7 +59027,7 @@ once per frame. Camera property assignments are silent. `minZoom`/`maxZoom` boun
 relative to the fitted distance. `fit({ padding })` and `focusNode(id, { zoom })` act immediately
 in 3D, including with reduced motion. `focusNode` reveals a node's page in list view; it retains
 the existing contract of not moving DOM focus. `focusNodeId` still centers and paints the focus
-halo. The toolbar emits `lr-view-change` with `{ view }` after a user switch; property assignments
+halo. The toolbar emits `lr-graph-view-change` with `{ view }` after a user switch; property assignments
 are silent.
 
 Drag to orbit; Shift-drag pans. Wheel zoom is active only while the canvas has focus or an active
@@ -59211,7 +59211,7 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), `lr-viewport-change`
 (`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced 2D camera/layout signal),
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
-coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
+coalesced to one event per frame), and `lr-graph-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
@@ -61444,7 +61444,7 @@ of filtering, search limits and child rendering.
 options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
 view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
 controls work with all views. User toolbar changes update the explorer's `view` before
-`lr-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
+`lr-graph-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
 popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
@@ -61629,7 +61629,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-search-change`, so reassigning back is optional.
 - `lr-camera-change` (`detail: { camera: LyraGraphCamera }`) — bubbles unchanged from the graph;
   spatial detail popovers follow the newly projected node position.
-- `lr-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
+- `lr-graph-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
   explorer updates its own view. Direct view and camera property assignments are silent.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`

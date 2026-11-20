@@ -19,6 +19,14 @@ import {
   stopIcon,
   thumbIcon,
   trashIcon,
+  searchIcon,
+  errorCircleIcon,
+  warningIcon,
+  plusIcon,
+  minusIcon,
+  fitIcon,
+  lockClosedIcon,
+  lockOpenIcon,
 } from './icons.js';
 
 function renderIcon(tpl: ReturnType<typeof chevronIcon>): SVGElement {
@@ -45,6 +53,14 @@ const icons = {
   retryIcon,
   sendIcon,
   trashIcon,
+  searchIcon,
+  errorCircleIcon,
+  warningIcon,
+  plusIcon,
+  minusIcon,
+  fitIcon,
+  lockClosedIcon,
+  lockOpenIcon,
 };
 
 for (const [name, fn] of Object.entries(icons)) {

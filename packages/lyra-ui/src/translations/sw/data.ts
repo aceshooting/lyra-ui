@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Visanduku {count} vya kwanza vya ramani ya joto pekee ndivyo vinavyoonyeshwa.',
   heatmapDecorationLimit: 'Rangi {count} za kwanza za ramani ya joto, alama za ufafanuzi na maelezo pekee ndizo zinazoonyeshwa.',
   funnelStagesLimit: 'Hatua {count} za kwanza pekee ndizo zinazoonyeshwa.',
+  funnelStagesInputLimit: 'Inaonyesha hatua {count} za kwanza kati ya {total}.',
   timeline: 'Ratiba ya matukio',
   timelineClusterCount: 'Onyesha matukio ya ratiba ({count})',
   timelineItemVariantWarning: 'Onyo',

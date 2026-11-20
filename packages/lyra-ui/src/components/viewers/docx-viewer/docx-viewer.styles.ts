@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
@@ -99,7 +99,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
 
   [part="highlight-action"]:hover {

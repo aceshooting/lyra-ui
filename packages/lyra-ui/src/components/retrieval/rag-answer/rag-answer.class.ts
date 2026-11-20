@@ -20,8 +20,7 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -164,7 +163,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   private isMounting = true;
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly errorAnnouncementSink = new AnnouncementSinkController(this, { eager: ['assertive'] });
   /** @internal */
   protected readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
 
@@ -172,10 +171,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.requestUpdate();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     const generation = ++this.connectionGeneration;
     void announceAfterFirstPaint(
       this,
@@ -191,8 +186,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   override disconnectedCallback(): void {
     this.isMounting = true;
     this.connectionGeneration += 1;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();
   }
 
@@ -210,7 +203,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       // to say -- without this latch a change landing between the first update and the deferred
       // frame would be read twice.
       this.initialStateAnnounced = true;
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.errorAnnouncementSink.announceAssertive(this.errorText);
     }
   }
 
@@ -218,7 +211,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
    *  announcement: a rendered answer is ordinary content, read in document order. */
   private announcePresentedState(): void {
     if (this.errorText !== '')
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.errorAnnouncementSink.announceAssertive(this.errorText);
   }
 
   private hasSlot(name: string): boolean {

@@ -29,10 +29,10 @@ describe('histogram binning properties', () => {
     fc.assert(fc.property(sample, sample, sample, sample, fc.integer({ min: 1, max: 64 }), (a, b, x, y, bins) => {
       const lo = Math.min(a, b);
       const hi = Math.max(a, b);
-      const ix = histogramBucketIndex(x, lo, hi, bins);
-      const iy = histogramBucketIndex(y, lo, hi, bins);
-      expect(ix >= 0 && ix < bins, 'index in range').to.equal(true);
-      if (x <= y) expect(ix <= iy, 'monotonic').to.equal(true);
+      const indexX = histogramBucketIndex(x, lo, hi, bins);
+      const indexY = histogramBucketIndex(y, lo, hi, bins);
+      expect(indexX >= 0 && indexX < bins, 'index in range').to.equal(true);
+      if (x <= y) expect(indexX <= indexY, 'monotonic').to.equal(true);
     }), propertyRuns());
   });
 

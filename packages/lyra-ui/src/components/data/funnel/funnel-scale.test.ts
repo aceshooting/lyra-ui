@@ -19,13 +19,15 @@ it('bounds stage projection before rendering a 10000-stage source', async () => 
 });
 
 
-it('refreshes mutated stages on an explicit update', async () => {
+it('ignores caller mutation after assignment and publishes a reassigned array', async () => {
   const stages = [{ label: 'A', value: 10 }, { label: 'B', value: 5 }];
   const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${stages}></lr-funnel>`);
+  const values = () => [...el.shadowRoot!.querySelectorAll('[part="stage-value"]')].map(node => node.textContent);
   stages[1]!.value = 7;
   el.requestUpdate(); await el.updateComplete;
-  const seam = el as unknown as { resolveStages(): { value: number }[] };
-  expect(seam.resolveStages()[1]!.value).to.equal(7);
+  expect(values()).to.deep.equal(['10', '5']);
+  el.stages = [...stages]; await el.updateComplete;
+  expect(values()).to.deep.equal(['10', '7']);
 });
 
 it('renders aggregate conversion counts from every observation including the final cohort member', async () => {

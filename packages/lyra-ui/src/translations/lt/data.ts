@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Rodomi tik pirmieji šilumos žemėlapio langeliai: {count}.',
   heatmapDecorationLimit: 'Rodomi tik pirmieji šilumos žemėlapio spalvų, legendos taškų ir anotacijų elementai: {count}.',
   funnelStagesLimit: 'Rodomi tik pirmieji etapai: {count}.',
+  funnelStagesInputLimit: 'Rodomi pirmieji {count} iš {total} etapų.',
   timeline: 'Laiko juosta',
   timelineClusterCount: 'Rodyti laiko juostos įvykius ({count})',
   timelineItemVariantWarning: 'Įspėjimas',

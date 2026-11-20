@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Na only di first {count} heatmap cells dem show.',
   heatmapDecorationLimit: 'Na only di first {count} heatmap colors, legend stops, and annotations dem show.',
   funnelStagesLimit: 'Na only di first {count} stages dem show.',
+  funnelStagesInputLimit: 'Dem dey show di first {count} stages out of {total}.',
   timeline: 'Timeline',
   timelineClusterCount: 'Show events for di timeline ({count})',
   timelineItemVariantWarning: 'Make you watch out',

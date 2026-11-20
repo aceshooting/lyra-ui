@@ -2,6 +2,7 @@ import { collectionSupport, publicCollectionTruncation } from '../../../internal
 import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -504,7 +505,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           : nothing}
         <section part="runs">
           <div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('ragEvalDashboardRuns')}</div>
-          ${renderedRuns.map(
+          ${repeat(renderedRuns, (run) => run.id,
             (run, index) => html`
               <button
                 part="run"

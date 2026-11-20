@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Zobrazuje sa len prvých {count} buniek tepelnej mapy.',
   heatmapDecorationLimit: 'Zobrazuje sa len prvých {count} farieb tepelnej mapy, zarážok legendy a poznámok.',
   funnelStagesLimit: 'Zobrazuje sa len prvých {count} fáz.',
+  funnelStagesInputLimit: 'Zobrazuje sa prvých {count} z {total} fáz.',
   timeline: 'Časová os',
   timelineClusterCount: 'Zobraziť udalosti časovej osi ({count})',
   timelineItemVariantWarning: 'Upozornenie',

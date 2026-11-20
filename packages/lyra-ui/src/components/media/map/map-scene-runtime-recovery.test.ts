@@ -1,8 +1,9 @@
 import { expect, fixtureCleanup, waitUntil } from '@open-wc/testing';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneMarker } from '../../../../test/map-scene-admission-fixtures.js';
 import { deferred, renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
-import { __setMapFeatureImporterForTesting, loadMapSceneRenderRuntime } from './map-feature-loader.js';
+import { loadMapSceneRenderRuntime } from './map-feature-loader.js';
+import { setMapFeatureImporter } from '../../../../test/map-feature-loader-fixtures.js';
 import * as runtime from './map-scene-render-controller.js';
 
 describe('lr-map scene runtime startup recovery', () => {
@@ -10,7 +11,7 @@ describe('lr-map scene runtime startup recovery', () => {
   beforeEach(async () => { env = await renderEnvironment(); });
   afterEach(async () => {
     await env.close();
-    __setMapFeatureImporterForTesting(loadMapSceneRenderRuntime);
+    setMapFeatureImporter(loadMapSceneRenderRuntime);
     fixtureCleanup();
   });
 
@@ -18,7 +19,7 @@ describe('lr-map scene runtime startup recovery', () => {
     it(`preserves accepted targets after a runtime ${failure} failure and recovers on new scene intent`, async () => {
       let imports = 0, factories = 0;
       const states: { state: string; code?: string }[] = [];
-      __setMapFeatureImporterForTesting(loadMapSceneRenderRuntime, async () => {
+      setMapFeatureImporter(loadMapSceneRenderRuntime, async () => {
         imports++;
         if (failure === 'import' && imports === 1) throw new Error('Scene runtime unavailable');
         return { ...runtime, createMapSceneRenderController(options) {
@@ -65,7 +66,7 @@ describe('lr-map scene runtime startup recovery', () => {
     it(`discards a late runtime ${completion} after scene demand clears and accepts the next scene`, async () => {
       const gate = deferred<typeof runtime>();
       let attempts = 0;
-      __setMapFeatureImporterForTesting(loadMapSceneRenderRuntime, () => {
+      setMapFeatureImporter(loadMapSceneRenderRuntime, () => {
         attempts++;
         return attempts === 1 ? gate.promise : Promise.resolve(runtime);
       });
@@ -94,7 +95,7 @@ describe('lr-map scene runtime startup recovery', () => {
 
   it('disposes a controller returned after its factory disconnects the map and reconnects with fresh ownership', async () => {
     let factories = 0, disposals = 0;
-    __setMapFeatureImporterForTesting(loadMapSceneRenderRuntime, async () => ({ ...runtime,
+    setMapFeatureImporter(loadMapSceneRenderRuntime, async () => ({ ...runtime,
       createMapSceneRenderController(options) {
         factories++;
         const controller = runtime.createMapSceneRenderController(options);
@@ -142,6 +143,8 @@ describe('lr-map scene runtime startup recovery', () => {
       expect(acquired.length).to.equal(event === 'terrain' ? 2 : 1);
       expect(bridge.host.captureRenderInput().allocation?.width).to.equal(640);
       peer.width = 800; peer.syncBacking();
+      // A camera move re-measures only when the padding it animates changes; size changes arrive as resize.
+      if (event === 'resize') peer.padding = { ...peer.padding, top: peer.padding.top + 1 };
       peer.fire(event === 'resize' ? 'move' : 'resize');
       await waitUntil(() => bridge.host.captureRenderInput().allocation?.width === 800, 'surviving native signal refreshes allocation');
       expect(mapSceneSessionAttachment(element)!.target('observed').status).to.equal('accepted');

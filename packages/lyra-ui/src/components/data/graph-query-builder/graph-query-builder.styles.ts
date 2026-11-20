@@ -1,6 +1,6 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
+import { iconActionStyles, outlinedActionStyles } from '../../../internal/icon-action.styles.js';
 import { formControlLabelTypography } from '../../../internal/form-control.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -72,66 +72,30 @@ export const styles = css`
     flex-wrap: wrap;
   }
 
-  [part='run-button'],
-  [part='save-button'] {
-    font: inherit;
-    border-radius: var(--lr-radius);
-    padding: var(--lr-space-xs) var(--lr-space-m);
-    cursor: pointer;
-    border: var(--lr-border-width-thin) solid;
-    ${iconHitTarget}
-  }
+  ${outlinedActionStyles("[part='run-button']", {
+    padding: 'var(--lr-space-xs) var(--lr-space-m)',
+    hoverBackground: `var(--lr-graph-query-builder-run-hover-bg, ${hoverFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))').cssText})`,
+    activeBackground: `var(--lr-graph-query-builder-run-active-bg, ${activeFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))').cssText})`,
+  })}
+  ${outlinedActionStyles("[part='save-button']", {
+    padding: 'var(--lr-space-xs) var(--lr-space-m)',
+    hoverBackground: 'var(--lr-graph-query-builder-save-hover-bg, var(--lr-color-brand-quiet))',
+    activeBackground: `var(--lr-graph-query-builder-save-active-bg, ${activeFill('var(--lr-color-brand-quiet)').cssText})`,
+  })}
   [part='run-button'] {
     background: var(--lr-graph-query-builder-run-bg, var(--lr-color-brand));
     border-color: var(--lr-graph-query-builder-run-border-color, var(--lr-color-brand));
     color: var(--lr-graph-query-builder-run-color, var(--lr-color-on-brand));
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
   }
   [part='save-button'] {
-    background: var(--lr-graph-query-builder-save-bg, var(--lr-color-surface));
     border-color: var(--lr-graph-query-builder-save-border-color, var(--lr-color-border));
     color: var(--lr-graph-query-builder-save-color, var(--lr-color-text));
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    background: var(--lr-graph-query-builder-save-bg, var(--lr-color-surface));
   }
-  /* The resting fill mixed toward --lr-color-mix-partner (which follows the text colour) rather
-     than multiplied channel-wise by filter: brightness(): a filter lightens a dark brand and
-     darkens a light one only by accident, does nothing at all to a pure white or pure black one,
-     and applies to the whole subtree, so it shifted this button's label too. */
-  [part='run-button']:where(:not(:disabled)):hover {
-    background: var(
-      --lr-graph-query-builder-run-hover-bg,
-      ${hoverFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))')}
-    );
-  }
-  [part='run-button']:where(:not(:disabled)):active {
-    background: var(
-      --lr-graph-query-builder-run-active-bg,
-      ${activeFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))')}
-    );
-  }
-  [part='save-button']:where(:not(:disabled)):hover {
-    background: var(--lr-graph-query-builder-save-hover-bg, var(--lr-color-brand-quiet));
-  }
-  [part='save-button']:where(:not(:disabled)):active {
-    background: var(
-      --lr-graph-query-builder-save-active-bg,
-      ${activeFill('var(--lr-color-brand-quiet)')}
-    );
-  }
-  [part='run-button']:disabled,
-  [part='save-button']:disabled,
-  [part='saved-load-button']:disabled,
-  [part='saved-delete-button']:disabled {
+  [part='saved-load-button']:disabled {
     ${disabledControl}
   }
-  [part='run-button']:focus-visible,
-  [part='save-button']:focus-visible,
-  [part='saved-load-button']:focus-visible,
-  [part='saved-delete-button']:focus-visible {
+  [part='saved-load-button']:focus-visible {
     ${focusRing}
   }
 
@@ -195,7 +159,7 @@ export const styles = css`
     /* :active below only repaints background (the hover below is text-decoration only), so that
        is all this needs; without it this button's fill snaps while lr-button/lr-icon-button
        ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='saved-load-button']:where(:not(:disabled)):hover {
     text-decoration: underline;
@@ -210,32 +174,25 @@ export const styles = css`
     );
     text-decoration: underline;
   }
+  ${iconActionStyles("[part='saved-delete-button']", {
+    color: 'var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))',
+    hoverBackground: 'transparent',
+    hoverColor: 'var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger))',
+    /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening
+       the glyph: a colour step on an icon this small is easy to miss, and this is the row's
+       destructive control. */
+    activeBackground: 'var(--lr-graph-query-builder-saved-delete-active-bg, var(--lr-color-danger-quiet))',
+    activeColor: `var(--lr-graph-query-builder-saved-delete-active-color, ${activeFill('var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger))').cssText})`,
+  })}
   [part='saved-delete-button'] {
     flex: none;
-    --_lr-icon-button-color-default: var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet));
     --_lr-icon-button-radius-default: var(--lr-radius-xs);
-    ${iconAction}
     inline-size: var(--lr-space-2xl);
     block-size: var(--lr-space-2xl);
-    ${iconHitTarget}
-
   }
   [part='saved-delete-button'] svg {
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
-  }
-  [part='saved-delete-button']:where(:not(:disabled)):hover {
-    color: var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger));
-  }
-  /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening the
-     glyph: a colour step on an icon this small is easy to miss, and this is the row's destructive
-     control. */
-  [part='saved-delete-button']:where(:not(:disabled)):active {
-    color: var(
-      --lr-graph-query-builder-saved-delete-active-color,
-      ${activeFill('var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger))')}
-    );
-    background: var(--lr-graph-query-builder-saved-delete-active-bg, var(--lr-color-danger-quiet));
   }
 
   [part='saved-empty'] {

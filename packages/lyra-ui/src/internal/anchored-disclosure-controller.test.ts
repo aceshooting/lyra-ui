@@ -5,7 +5,6 @@ import { LyraElement } from './lyra-element.js';
 import { defineElement } from './prefix.js';
 import { AnchoredDisclosureController } from './anchored-disclosure-controller.js';
 import { anchoredPopupSettle } from './overlay-surface.styles.js';
-import { settleOverlayTransition } from './overlay-shared.js';
 import { settlePopupTransition } from './anchored-overlay-runtime.js';
 
 class DisclosureProbe extends LyraElement {
@@ -185,28 +184,24 @@ describe('AnchoredDisclosureController', () => {
 });
 
 describe('settle abstraction', () => {
-  it('settleOverlayTransition runs the popup ordering: render, place, animate, conceal, settle', async () => {
+  it('settlePopupTransition runs the popup ordering: render, place, animate, conceal, settle', async () => {
     const steps: string[] = [];
-    const ready = () => Promise.resolve();
-    await settleOverlayTransition({
-      showing: true,
-      updateComplete: () => { steps.push('update'); return ready(); },
+    const host = { get updateComplete() { steps.push('update'); return Promise.resolve(); } };
+    await settlePopupTransition({
+      host,
       isCurrent: () => true,
-      readyToShow: async () => { steps.push('place'); return true; },
+      waitForPosition: async () => { steps.push('place'); return true; },
       animate: async () => { steps.push('animate'); },
-      afterHide: () => steps.push('afterHide'),
-      settled: () => steps.push('settled'),
+      onSettled: () => steps.push('settled'),
     });
     expect(steps).to.deep.equal(['update', 'place', 'update', 'animate', 'settled']);
     steps.length = 0;
-    await settleOverlayTransition({
-      showing: false,
-      updateComplete: () => { steps.push('update'); return ready(); },
+    await settlePopupTransition({
+      host,
       isCurrent: () => true,
-      readyToShow: async () => { steps.push('place'); return true; },
       animate: async () => { steps.push('animate'); },
-      afterHide: () => steps.push('afterHide'),
-      settled: () => steps.push('settled'),
+      conceal: () => steps.push('afterHide'),
+      onSettled: () => steps.push('settled'),
     });
     expect(steps).to.deep.equal(['update', 'animate', 'afterHide', 'update', 'settled']);
   });

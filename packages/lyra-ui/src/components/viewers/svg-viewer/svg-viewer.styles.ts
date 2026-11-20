@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -58,7 +58,7 @@ export const styles = css`
     border: var(--lr-border-width-thick) solid
       var(--_lr-svg-viewer-highlight-color);
     border-radius: var(--lr-radius-xs);
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="region-highlight-target"] {
     position: absolute;
@@ -134,7 +134,7 @@ export const styles = css`
     color: var(--lr-color-text);
     background: var(--lr-svg-viewer-action-background, var(--lr-color-surface));
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="region-highlight-action"]:hover {
     background: var(--lr-svg-viewer-action-hover-background, var(--lr-color-surface-raised));

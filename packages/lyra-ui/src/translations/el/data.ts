@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Εμφανίζονται μόνο τα πρώτα {count} κελιά του χάρτη θερμότητας.',
   heatmapDecorationLimit: 'Εμφανίζονται μόνο τα πρώτα {count} χρώματα, όρια υπομνήματος και σχόλια του χάρτη θερμότητας.',
   funnelStagesLimit: 'Εμφανίζονται μόνο τα πρώτα {count} στάδια.',
+  funnelStagesInputLimit: 'Εμφανίζονται τα πρώτα {count} από {total} στάδια.',
   timeline: 'Χρονολόγιο',
   timelineClusterCount: 'Εμφάνιση συμβάντων χρονολογίου ({count})',
   timelineItemVariantWarning: 'Προειδοποίηση',

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Hanya {count} sel peta haba pertama dipaparkan.',
   heatmapDecorationLimit: 'Hanya {count} warna peta haba, tanda petunjuk dan anotasi pertama dipaparkan.',
   funnelStagesLimit: 'Hanya {count} peringkat pertama dipaparkan.',
+  funnelStagesInputLimit: 'Memaparkan {count} peringkat pertama daripada {total}.',
   timeline: 'Garis masa',
   timelineClusterCount: 'Papar acara garis masa ({count})',
   timelineItemVariantWarning: 'Amaran',

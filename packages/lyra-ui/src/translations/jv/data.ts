@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Mung {count} sel peta panas kapisan sing ditampilake.',
   heatmapDecorationLimit: 'Mung {count} warna peta panas, tandha legenda, lan anotasi kapisan sing ditampilake.',
   funnelStagesLimit: 'Mung {count} tahap kapisan sing ditampilake.',
+  funnelStagesInputLimit: 'Nampilake {count} tahap kapisan saka {total}.',
   timeline: 'Garis wektu',
   timelineClusterCount: 'Tampilake acara garis wektu ({count})',
   timelineItemVariantWarning: 'Pènget',

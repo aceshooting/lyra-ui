@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'మొదటి {count} హీట్‌మ్యాప్ గడులను మాత్రమే చూపిస్తున్నారు.',
   heatmapDecorationLimit: 'మొదటి {count} హీట్‌మ్యాప్ రంగులు, లెజెండ్ గుర్తులు, వ్యాఖ్యలను మాత్రమే చూపిస్తున్నారు.',
   funnelStagesLimit: 'మొదటి {count} దశలను మాత్రమే చూపిస్తున్నారు.',
+  funnelStagesInputLimit: 'మొత్తం {total} దశలలో మొదటి {count} చూపిస్తున్నారు.',
   timeline: 'కాలరేఖ',
   timelineClusterCount: 'కాలరేఖ ఈవెంట్‌లను చూపించండి ({count})',
   timelineItemVariantWarning: 'హెచ్చరిక',

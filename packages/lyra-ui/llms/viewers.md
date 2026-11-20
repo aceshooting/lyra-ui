@@ -3564,3 +3564,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly page?: number;
     readonly nodeId?: string;
   }`
+
+## `lr-docx-editor`
+
+Companion element from `@aceshooting/lyra-docs`: an in-browser `.docx` editor driven by a session from `createDocxSession()`. The package root registers nothing; import `@aceshooting/lyra-docs/docx/editor` and `@aceshooting/lyra-docs/docx/editor.css`. Its attributes, events, parts and custom properties are in `packages/lyra-docs/custom-elements.json` and the generated per-tag page; the foundation guide (`llms/shared.md`) covers command search, the review panels and toolbar placement.

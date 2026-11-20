@@ -107,6 +107,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'إرسال',
   rubricSubmitAndNext: 'إرسال والتالي',
   rubricSkip: 'تخطي',
+  rubricKeysLimit: 'يتم عرض أول {count} فقط من أصل {total} حقل في معيار التقييم.',
   localePickerLabel: 'اللغة',
   localePickerRequired: 'يُرجى اختيار لغة.',
   localePickerSearchLabel: 'ابحث عن اللغات',

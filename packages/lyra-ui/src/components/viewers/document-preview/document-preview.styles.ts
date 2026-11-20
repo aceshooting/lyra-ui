@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
@@ -212,7 +212,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     text-decoration: none;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="download-link"]:hover {
     background: var(

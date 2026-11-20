@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Жылу картасының тек алғашқы {count} ұяшығы көрсетіледі.',
   heatmapDecorationLimit: 'Жылу картасының тек алғашқы {count} түсі, шартты белгі шкаласының нүктесі және аннотациясы көрсетіледі.',
   funnelStagesLimit: 'Тек алғашқы {count} кезең көрсетіледі.',
+  funnelStagesInputLimit: '{total} кезеңнің алғашқы {count} кезеңі көрсетілуде.',
   timeline: 'Уақыт шкаласы',
   timelineClusterCount: 'Уақыт шкаласының оқиғаларын көрсету ({count})',
   timelineItemVariantWarning: 'Ескерту',

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,7 +33,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='relation'] {
     color: var(--lr-color-text-quiet);

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Ngan {count} sél peta panas munggaran nu dipintonkeun.',
   heatmapDecorationLimit: 'Ngan {count} warna peta panas, tanda skala legenda, jeung anotasi munggaran nu dipintonkeun.',
   funnelStagesLimit: 'Ngan {count} tahapan munggaran nu dipintonkeun.',
+  funnelStagesInputLimit: 'Nampilkeun {count} tahapan munggaran tina {total}.',
   timeline: 'Garis waktu',
   timelineClusterCount: 'Témbongkeun acara garis waktu ({count})',
   timelineItemVariantWarning: 'Pépéling',

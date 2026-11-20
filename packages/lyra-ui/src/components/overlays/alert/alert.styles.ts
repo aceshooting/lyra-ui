@@ -1,5 +1,5 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -148,7 +148,7 @@ export const styles = css`
     margin-block: calc(-1 * var(--_lr-alert-close-pull));
     margin-inline-end: calc(-1 * var(--_lr-alert-close-pull));
     padding: var(--lr-space-xs);
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
     --_lr-icon-button-radius-default: var(--lr-radius-pill);
     --_lr-icon-button-background-hover-default: var(--lr-alert-close-hover-bg,
       ${hoverFill('transparent')});

@@ -4,4 +4,5 @@ import './public-api-diff-normalize.cases.mjs';
 import './public-api-diff-compare.cases.mjs';
 import './public-api-diff-cli.cases.mjs';
 import './public-api-diff-relocation.cases.mjs';
+import './public-api-diff-semantics.cases.mjs';
 import './public-api-compatibility.cases.mjs';

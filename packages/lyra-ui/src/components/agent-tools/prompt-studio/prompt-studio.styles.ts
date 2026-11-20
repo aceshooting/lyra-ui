@@ -90,7 +90,7 @@ export const styles = css`
     );
   }
   [part='version']:where([aria-pressed='true']):where(:active:not(:disabled)) {
-    background: ${activeFill('var( --lr-prompt-studio-version-selected-hover-bg, color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)) )')};
+    background: ${activeFill(`var(--lr-prompt-studio-version-selected-hover-bg, ${hoverFill('var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet))').cssText})`)};
   }
   [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {

@@ -466,10 +466,12 @@ describe("recording-state cssprop escape hatches", () => {
       expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length).to.equal(
         1
       );
-      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(
-        "rgb(1, 2, 3)"
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).borderTopColor === "rgb(1, 2, 3)"
       );
-      expect(getComputedStyle(trigger(el)).color).to.equal("rgb(4, 5, 6)");
+      await waitUntil(
+        () => getComputedStyle(trigger(el)).color === "rgb(4, 5, 6)"
+      );
       expect(getComputedStyle(glyph).stroke).to.equal("rgb(4, 5, 6)");
       expect(getComputedStyle(pulse).borderTopColor).to.equal("rgb(7, 8, 9)");
     } finally {

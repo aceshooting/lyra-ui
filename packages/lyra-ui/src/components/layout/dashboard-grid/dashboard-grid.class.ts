@@ -20,8 +20,7 @@ import { tag } from '../../../internal/prefix.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -383,12 +382,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     return sorted;
   }
 
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly announcer = new Announcer({
     onFlush: (text) => {
       this.liveText = text;
       if (isAccessibilityVisible(this)) {
-        this.announcementSink?.announce(text);
+        this.announcementSink.announcePolite(text);
       }
     },
   });
@@ -418,8 +417,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   override disconnectedCallback(): void {
     this.announcer.cancel();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.childObserver.clear();
     this.defaultCellSyncQueued = false;
     this.restoreManagedAuthoredSlots();
@@ -432,9 +429,8 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.announcementSink.adopted();
     this.childObserver.clear();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.clearSuppressedClick();
     if (this.isConnected) {
       this.bindOwnerRealmResources();
@@ -446,10 +442,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const ownerDocument = this.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: ownerDocument,
-      source: this,
-    });
     this.observeChildren();
   }
 

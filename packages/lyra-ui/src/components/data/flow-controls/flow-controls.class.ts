@@ -1,5 +1,6 @@
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
-import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
+import { fitIcon, lockClosedIcon, lockOpenIcon, minusIcon, plusIcon } from '../../../internal/icons.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -38,48 +39,6 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
     typeof candidate.readonly === 'boolean'
   );
 }
-
-const GLYPH_VIEW_BOX = '0 0 24 24';
-const GLYPH_STROKE_WIDTH = '1.75';
-
-// Each glyph is authored as its own real `svg\`...\`` tagged template and composed into the
-// shared outer <svg> as an `SVGTemplateResult` child -- interpolating one svg-tagged template
-// into another is Lit's normal, supported nesting. Taking the inner markup as a plain string and
-// splicing it in by casting a `[inner]` array to `TemplateStringsArray` is rejected by lit-html
-// at render time ("Internal Error: expected template strings to be an array with a 'raw' field"):
-// it tracks genuine tagged-template-literal call sites via their frozen `strings` object identity
-// to guard against exactly that "fake the template strings" pattern (its own error message names
-// it as equivalent to `unsafeHtml`). This also matches the repo's existing icon convention (see
-// `internal/icons.ts`'s local `icon()` wrapper, and `rating.class.ts`/`attachment-chip.class.ts`).
-function glyphSvg(inner: SVGTemplateResult): SVGTemplateResult {
-  return svg`<svg
-    width="1em"
-    height="1em"
-    viewBox=${GLYPH_VIEW_BOX}
-    fill="none"
-    stroke="currentColor"
-    stroke-width=${GLYPH_STROKE_WIDTH}
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-    focusable="false"
-  >${inner}</svg>`;
-}
-
-const plusGlyph = () =>
-  glyphSvg(svg`<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`);
-const minusGlyph = () => glyphSvg(svg`<line x1="5" y1="12" x2="19" y2="12"></line>`);
-const fitGlyph = () =>
-  glyphSvg(svg`
-    <polyline points="9 3 3 3 3 9"></polyline>
-    <polyline points="15 3 21 3 21 9"></polyline>
-    <polyline points="3 15 3 21 9 21"></polyline>
-    <polyline points="21 15 21 21 15 21"></polyline>
-  `);
-const lockClosedGlyph = () =>
-  glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>`);
-const lockOpenGlyph = () =>
-  glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
 
 /**
  * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
@@ -248,7 +207,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
         aria-label=${this.localize('zoomIn')}
         title=${this.localize('zoomIn')}
         @click=${() => this.canvasEl?.zoomIn()}
-      >${plusGlyph()}</button>
+      >${plusIcon()}</button>
       <button
         part="zoom-out"
         type="button"
@@ -256,7 +215,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
         aria-label=${this.localize('zoomOut')}
         title=${this.localize('zoomOut')}
         @click=${() => this.canvasEl?.zoomOut()}
-      >${minusGlyph()}</button>
+      >${minusIcon()}</button>
       <button
         part="fit"
         type="button"
@@ -264,7 +223,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
         aria-label=${this.localize('zoomToFit')}
         title=${this.localize('zoomToFit')}
         @click=${() => this.canvasEl?.fit()}
-      >${fitGlyph()}</button>
+      >${fitIcon()}</button>
       ${this.withoutLock
         ? nothing
         : html`<button
@@ -275,7 +234,7 @@ export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
             aria-label=${this.localize('flowLockCanvas')}
             title=${this.localize('flowLockCanvas')}
             @click=${this.toggleLock}
-          >${this.canvasReadonly ? lockClosedGlyph() : lockOpenGlyph()}</button>`}
+          >${this.canvasReadonly ? lockClosedIcon() : lockOpenIcon()}</button>`}
       <slot></slot>
     </div>`;
   }

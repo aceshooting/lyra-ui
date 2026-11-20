@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { hoverFill } from '../../../internal/interactive-control.styles.js';
+import { focusRingShorthandInset, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -56,8 +56,7 @@ export const styles = css`
   }
   [part="pane-old"]:focus-visible,
   [part="pane-new"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingShorthandInset}
   }
   /* no-pressed-state: each pane is a role='region' scroll container with tabindex='0' and no
      activation behaviour -- the strengthened border marks which pane the wheel and keys will

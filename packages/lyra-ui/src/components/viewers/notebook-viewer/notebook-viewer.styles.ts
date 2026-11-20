@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingOffsetInset, focusRingOutline, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -82,9 +82,8 @@ export const styles = css`
      cell-active's background swap, so it layers over any highlight tone above instead of
      replacing it. */
   lr-virtual-list::part(cell-highlight-active) {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-notebook-viewer-highlight-active-outline, var(--lr-focus-ring-color));
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOutline('var(--lr-notebook-viewer-highlight-active-outline, var(--lr-focus-ring-color))')}
+    ${focusRingOffsetInset}
   }
   lr-virtual-list::part(cell-gutter) {
     min-inline-size: var(--lr-size-4rem);
@@ -104,7 +103,7 @@ export const styles = css`
     ${iconHitTarget}
     max-inline-size: 100%;
     overflow: auto;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control
      -- the tint tells the pointer which cell it is about to scroll, and mousedown there starts a

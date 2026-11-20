@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, focusRingShorthandInward, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mapOverlayPanel, mapOverlayPanelLayer, mapOverlayCloseButton, mapOverlayCloseButtonHover, mapOverlayCloseButtonActive } from '../../../internal/map-overlay-panel.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -73,6 +73,7 @@ export const styles = css`
     display: grid; place-items: center; padding: var(--lr-space-m);
     border: 0; background: transparent; color: var(--lr-color-text); font: inherit; cursor: pointer;
     overflow-wrap: anywhere;
+    ${interactiveTransition}
   }
   [part='initialization-activate']::after {
     content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -83,7 +84,7 @@ export const styles = css`
   [part='initialization-activate']:where(:active)::after {
     opacity: 1; background: ${activeFill('transparent')};
   }
-  [part='initialization-activate']:focus-visible { ${focusRing} outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
+  [part='initialization-activate']:focus-visible { ${focusRingInset} }
   .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   /* The fill comes from the shared control material below, so loading and installed controls match. */
   [part~='initialization-control'] { position: relative; flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); }
@@ -97,6 +98,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     pointer-events: none;
   }
+  /* no-transition-needed: the drawing and pick controls are the one map surface that stays free of animation under every motion preference. */
   [part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close'] {
     ${iconHitTarget}
     pointer-events: auto;
@@ -112,14 +114,14 @@ export const styles = css`
     cursor: pointer;
   }
   [part='pick-controls'] button, [part='drawing-controls'] button, [part='anchor-close'] { position: relative; }
-  [part='pick-center']:where(:hover), [part='pick-cancel']:where(:hover), [part='drawing-add']:where(:hover), [part='drawing-undo']:where(:hover), [part='drawing-complete']:where(:hover), [part='drawing-cancel']:where(:hover), [part='anchor-close']:where(:hover) {
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:hover) {
     --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
-  [part='pick-center']:where(:active), [part='pick-cancel']:where(:active), [part='drawing-add']:where(:active), [part='drawing-undo']:where(:active), [part='drawing-complete']:where(:active), [part='drawing-cancel']:where(:active), [part='anchor-close']:where(:active) {
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:active) {
     --_lr-map-action-fill: var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
-  [part='pick-center']:focus-visible, [part='pick-cancel']:focus-visible, [part='drawing-add']:focus-visible, [part='drawing-undo']:focus-visible, [part='drawing-complete']:focus-visible, [part='drawing-cancel']:focus-visible, [part='anchor-close']:focus-visible { ${focusRing} }
-  [part='pick-center']:where(:disabled), [part='pick-cancel']:where(:disabled), [part='drawing-add']:where(:disabled), [part='drawing-undo']:where(:disabled), [part='drawing-complete']:where(:disabled), [part='drawing-cancel']:where(:disabled), [part='anchor-close']:where(:disabled) { cursor: default; }
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):focus-visible { ${focusRing} }
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:disabled) { cursor: default; }
   [part='drawing-handles'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   [part='drawing-vertex'] {
     ${iconHitTarget}
@@ -232,8 +234,7 @@ export const styles = css`
     filter: brightness(0.9);
   }
   .maplibregl-marker[role='button']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingShorthandInward}
   }
   .maplibregl-popup {
     position: absolute;
@@ -347,8 +348,7 @@ export const styles = css`
     ${mapOverlayCloseButtonActive}
   }
   .maplibregl-popup-close-button:where(:focus-visible) {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingShorthandInward}
   }
   /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same
      missing-optional-peer-dependency failure shape. */
@@ -798,8 +798,7 @@ export const styles = css`
     background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   .maplibregl-ctrl-group button:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingShorthandInward}
   }
   .maplibregl-ctrl-group button:disabled {
     ${disabledControl}
@@ -916,7 +915,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     place-items: center;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   .maplibregl-ctrl-attrib-button::before {
     content: '';
@@ -946,8 +945,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   .maplibregl-ctrl-attrib-button:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingShorthandInward}
   }
   /* Remove the native <summary> disclosure marker (the stray "▼") on the compact-toggle button. */
   .maplibregl-ctrl-attrib summary {
@@ -962,8 +960,9 @@ export const styles = css`
     content: '';
   }
 
-  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"], [part="drawing-summary"], [part="drawing-status"], [part="drawing-measurement"]', css`var(--lr-color-surface)`)}
-  ${glassSurface('[part="pick-center"], [part="pick-cancel"], [part="drawing-add"], [part="drawing-undo"], [part="drawing-complete"], [part="drawing-cancel"], [part="anchor-close"], [part="scene-toggle"], button[part="scene-item"], [part="scene-pagination"] button', css`var(--_lr-map-action-fill, var(--lr-color-surface))`)}
+  /* One material for chrome and actions: only the action parts set the private action fill, and no
+     chrome surface sits inside an action, so the chrome resolves the plain surface fill. */
+  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"], [part="drawing-summary"], [part="drawing-status"], [part="drawing-measurement"], [part="pick-center"], [part="pick-cancel"], [part="drawing-add"], [part="drawing-undo"], [part="drawing-complete"], [part="drawing-cancel"], [part="anchor-close"], [part="scene-toggle"], button[part="scene-item"], [part="scene-pagination"] button', css`var(--_lr-map-action-fill, var(--lr-color-surface))`)}
   [part='anchor-close']:where(:hover) {
     --_lr-map-action-fill: var(--lr-map-popup-close-button-hover-bg, var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet)));
     color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));

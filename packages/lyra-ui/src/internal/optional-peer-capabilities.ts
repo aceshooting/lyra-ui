@@ -1,4 +1,4 @@
-import { devWarnOnce } from './dev-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from './dev-mode-attribute-warning.js';
 import { classifyOptionalPeerImportError } from './optional-peer-failure.js';
 
 /**
@@ -113,11 +113,11 @@ export function createOptionalPeerLoader<Capability>(
       module = await importer();
     } catch (error) {
       const failed = classifyOptionalPeerImportError(error) === 'failed';
-      devWarnOnce(options.warningKey, failed ? (options.failedWarning ?? options.warning) : options.warning);
+      if (DEV_DIAGNOSTICS) devWarnOnce(options.warningKey, failed ? (options.failedWarning ?? options.warning) : options.warning);
       return { capability: null, transient: true };
     }
     const capability = resolveOptionalPeerCapability(module, options.isCapability);
-    if (capability === null) devWarnOnce(options.warningKey, options.warning);
+    if (DEV_DIAGNOSTICS && capability === null) devWarnOnce(options.warningKey, options.warning);
     return { capability, transient: false };
   };
   const loadWith = async (importer = importerOverride ?? options.load): Promise<Capability | null> =>

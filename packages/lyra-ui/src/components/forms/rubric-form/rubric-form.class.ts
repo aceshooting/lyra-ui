@@ -47,7 +47,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_rubricKeysLimit, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -96,6 +96,9 @@ export type RubricValue = Readonly<Record<string, number | string | readonly str
 const EMPTY_KEYS: readonly RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
 const MAX_RUBRIC_COLLECTION_ENTRIES = 10_000;
+/** Fields admitted from `keys`. Every admitted field renders a composed control and is re-rendered
+ * and re-validated on each edit, so the schema stays far below the generic collection ceiling. */
+const MAX_RUBRIC_KEYS = 500;
 
 function cloneRubricValue(value: RubricValue): RubricValue {
   return Object.freeze(
@@ -258,11 +261,19 @@ function projectRubricKey(candidate: unknown): RubricKey | undefined {
   }
 }
 
-function normalizeRubricKeys(next: unknown): readonly RubricKey[] {
+interface NormalizedRubricKeys {
+  readonly keys: readonly RubricKey[];
+  /** Source positions when valid fields past {@link MAX_RUBRIC_KEYS} were discarded. */
+  readonly truncatedFrom?: number;
+}
+
+const NO_RUBRIC_KEYS: NormalizedRubricKeys = Object.freeze({ keys: EMPTY_KEYS });
+
+function normalizeRubricKeys(next: unknown): NormalizedRubricKeys {
   try {
-    if (!Array.isArray(next)) return EMPTY_KEYS;
+    if (!Array.isArray(next)) return NO_RUBRIC_KEYS;
     const length = readOwnArrayLength(next);
-    if (length === undefined) return EMPTY_KEYS;
+    if (length === undefined) return NO_RUBRIC_KEYS;
     const seen = new Set<string>();
     const normalized: RubricKey[] = [];
     for (let index = 0; index < Math.min(length, MAX_RUBRIC_COLLECTION_ENTRIES); index += 1) {
@@ -270,12 +281,14 @@ function normalizeRubricKeys(next: unknown): readonly RubricKey[] {
       if (candidate === MISSING_OWN_DATA_DESCRIPTOR || candidate === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       const key = projectRubricKey(candidate.value);
       if (!key || seen.has(key.key)) continue;
+      if (normalized.length === MAX_RUBRIC_KEYS)
+        return Object.freeze({ keys: Object.freeze(normalized), truncatedFrom: length });
       seen.add(key.key);
       normalized.push(key);
     }
-    return Object.freeze(normalized);
+    return Object.freeze({ keys: Object.freeze(normalized) });
   } catch {
-    return EMPTY_KEYS;
+    return NO_RUBRIC_KEYS;
   }
 }
 
@@ -382,6 +395,9 @@ export interface LyraRubricFormEventMap {
  * supplied default records its rendered, snapped midpoint in both the default and live value;
  * segmented scores remain unselected. `defaultValue` is the explicit reset baseline; reads return
  * defensive snapshots.
+ * At most the first 500 valid, uniquely named keys are admitted: `keys` reads back that admitted
+ * schema, values for discarded fields are dropped like any undeclared field, and a localized
+ * `[part="limit"]` notice follows the fields. Only the first 10,000 source positions are inspected.
  * Replacing the parent value reconciles live multiple-category checkbox state, even immediately
  * after a user edit, without changing child reset defaults or emitting user-edit events.
  *
@@ -440,6 +456,7 @@ export interface LyraRubricFormEventMap {
  * @csspart submit - The Submit button.
  * @csspart skip - The Skip button (only rendered when `skippable`).
  * @csspart empty - The message shown when `keys` has no entries.
+ * @csspart limit - Localized notice shown when `keys` holds more than the 500 admitted fields.
  * @csspart unsupported - The fallback note for a key whose `type` is outside the three supported ones.
  * @cssprop [--lr-rubric-form-submit-bg=var(--lr-color-brand)] - Submit-button background.
  * @cssprop [--lr-rubric-form-submit-border-color=var(--lr-color-brand)] - Submit-button border.
@@ -484,6 +501,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
+    rubricKeysLimit: LYRA_DEFAULT_rubricKeysLimit,
     rubricSkip: LYRA_DEFAULT_rubricSkip,
     rubricSubmit: LYRA_DEFAULT_rubricSubmit,
     rubricSubmitAndNext: LYRA_DEFAULT_rubricSubmitAndNext,
@@ -533,6 +551,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   private _fieldsetDisabled = false;
   private _name = '';
   private _keys: readonly RubricKey[] = EMPTY_KEYS;
+  private _keysTruncatedFrom: number | undefined;
   private _value: RubricValue = EMPTY_VALUE;
   private _defaultValue: RubricValue = EMPTY_VALUE;
   // The pre-normalization input behind `_value`/`_defaultValue`, retained so a later `.keys`
@@ -593,7 +612,9 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     // deliberately re-narrows from the *current* (already-normalized) value/defaultValue, matching
     // the library's cascading-renormalization contract across repeated `.keys` reassignment.
     const recoverFromRaw = old.length === 0;
-    this._keys = normalizeRubricKeys(next ?? EMPTY_KEYS);
+    const normalized = normalizeRubricKeys(next ?? EMPTY_KEYS);
+    this._keys = normalized.keys;
+    this._keysTruncatedFrom = normalized.truncatedFrom;
     const oldDefault = this._defaultValue;
     const oldValue = this._value;
     this._defaultValue = normalizeRubricValue(
@@ -1254,6 +1275,12 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
             ${this._keys.length === 0
               ? html`<p part="empty">${this.localize('noData')}</p>`
               : repeat(this._keys, key => key.key, (key, index) => this.renderField(key, index))}
+            ${this._keysTruncatedFrom === undefined
+              ? nothing
+              : html`<p part="limit" role="note">${this.localize('rubricKeysLimit', undefined, {
+                  count: this.formatLocaleNumber(this._keys.length),
+                  total: this.formatLocaleNumber(this._keysTruncatedFrom),
+                })}</p>`}
           </div>
           <div
             id=${this.aggregateErrorId}

@@ -17,7 +17,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { getDateTimeFormat, getListFormat } from '../../../internal/intl-cache.js';
-import { formatLocalizedFileSize } from '../../../internal/bytes.js';
+import { formatFileSize } from '../../../internal/bytes.js';
 import { loadEmailDeps, type EmailDeps, type PostalMimeApi } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
@@ -36,7 +36,7 @@ import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -399,17 +399,12 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeEmail: LYRA_DEFAULT_documentPreviewTypeEmail,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
-    download: LYRA_DEFAULT_download,
     emailViewerAttachments: LYRA_DEFAULT_emailViewerAttachments,
     emailViewerDate: LYRA_DEFAULT_emailViewerDate,
     emailViewerEmptyBody: LYRA_DEFAULT_emailViewerEmptyBody,
@@ -424,17 +419,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerSubject: LYRA_DEFAULT_emailViewerSubject,
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
     emailViewerUnnamedAttachment: LYRA_DEFAULT_emailViewerUnnamedAttachment,
-    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -705,7 +690,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     return html`<div part="attachments"><span part="attachments-label">${this.localize('emailViewerAttachments')}</span><ul part="attachment-list">
       ${attachments.map((attachment) => {
         const filename = attachment.filename || this.localize('emailViewerUnnamedAttachment');
-        const size = formatLocalizedFileSize(attachment.size, this.effectiveLocale, key => this.localize(key));
+        const size = formatFileSize(attachment.size, this.effectiveLocale);
         return html`<li part="attachment-item"><button
           type="button"
           part="attachment-button"

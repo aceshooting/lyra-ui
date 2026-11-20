@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
-import { activeFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   ${opaqueContentBorders('[part~="accordion-item"][data-appearance="outlined"] [part~="panel"]')}
@@ -85,8 +85,7 @@ export const styles = css`
     );
   }
   [part~="button"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-width) * -1);
+    ${focusRingInset}
   }
   [part~="button"]:disabled {
     cursor: not-allowed;

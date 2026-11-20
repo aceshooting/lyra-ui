@@ -5,7 +5,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './typing-indicator.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -137,19 +137,16 @@ export class LyraTypingIndicator extends LyraElement {
   // Keep the authored override separate from the computed name reflected on the host.
   private appliedAriaLabel: string | null = null;
   private explicitAriaLabel: string | null = null;
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private announcedLabel?: string;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
     if (this.hasUpdated) this.announce();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -161,7 +158,7 @@ export class LyraTypingIndicator extends LyraElement {
     const label = this.accessibleLabel;
     if (label === this.announcedLabel) return;
     this.announcedLabel = label;
-    this.sink?.announce(label);
+    this.sink.announcePolite(label);
   }
 
   private get accessibleLabel(): string {

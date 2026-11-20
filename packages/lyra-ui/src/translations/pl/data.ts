@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Limit wyświetlanych komórek mapy cieplnej: {count}.',
   heatmapDecorationLimit: 'Limit dekoracji mapy cieplnej (kolorów, podziałek legendy i adnotacji): {count}.',
   funnelStagesLimit: 'Limit wyświetlanych etapów: {count}.',
+  funnelStagesInputLimit: 'Wyświetlono pierwsze {count} z {total} etapów.',
   timeline: 'Oś czasu',
   timelineClusterCount: 'Pokaż wydarzenia na osi czasu ({count})',
   timelineItemVariantWarning: 'Ostrzeżenie',

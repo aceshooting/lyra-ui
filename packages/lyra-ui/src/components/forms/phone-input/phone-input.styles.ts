@@ -8,7 +8,7 @@ import {
   formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { activeFill, disabledControl, focusRingInset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -183,7 +183,7 @@ export const styles = css`
     padding-inline: var(--lr-space-s);
     border-start-start-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
     border-end-start-radius: var(--lr-phone-input-radius, var(--_lr-phone-input-radius-default));
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
 
   [part='country-select']:not(:disabled):hover + [part='country-trigger'] {

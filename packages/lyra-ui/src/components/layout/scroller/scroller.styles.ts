@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingOffsetFrom, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -154,7 +154,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
 
   [part~="control"]:hover:not(:disabled) {
@@ -183,10 +183,7 @@ export const styles = css`
       --lr-scroller-hover-outline-color,
       var(--lr-color-border)
     );
-    outline-offset: var(
-      --lr-scroller-hover-outline-offset,
-      var(--lr-focus-ring-offset)
-    );
+    ${focusRingOffsetFrom('--lr-scroller-hover-outline-offset')}
   }
 
   /* previous and next are the same rendered button as [part='control'] above -- each carries both

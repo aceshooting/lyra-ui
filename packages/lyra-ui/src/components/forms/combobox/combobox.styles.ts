@@ -1,5 +1,5 @@
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
-import { activeFill, activeTint, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeTint, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -300,6 +300,7 @@ export const styles = css`
     font: inherit;
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
+    ${interactiveTransition}
   }
 
   [part="combobox-input"] {

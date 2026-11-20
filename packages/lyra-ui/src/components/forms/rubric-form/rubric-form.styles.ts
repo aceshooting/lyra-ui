@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
-import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -102,7 +102,7 @@ export const styles = css`
     color: var(--lr-rubric-form-skip-color, var(--lr-button-on-fill, var(--lr-color-text)));
     /* Hover/active below only repaint background, so that is all this needs; without it this
        button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* A colour mix, not filter: brightness(). The filter multiplied every channel, so it moved a
      mid-brand fill but did nothing to a pure white or pure black one, and applied to the whole

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInwardMax, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -22,8 +22,7 @@ export const styles = [
       box-sizing: border-box;
     }
     [part='base']:focus-visible {
-      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-      outline-offset: calc(-1 * max(var(--lr-focus-ring-offset), var(--lr-focus-ring-width)));
+      ${focusRingInwardMax}
     }
     [part='log'],
     [part='interim-area'] {
@@ -106,7 +105,7 @@ export const styles = [
       cursor: pointer;
       /* Overlay step, matching lr-chat-viewport's jump pill: it floats over the feed, not in it. */
       box-shadow: var(--lr-transcript-feed-jump-shadow, var(--lr-shadow-m));
-      transition: background-color var(--lr-transition-fast);
+      ${interactiveTransition}
     }
     [part='jump-button']:focus-visible {
       ${focusRing}

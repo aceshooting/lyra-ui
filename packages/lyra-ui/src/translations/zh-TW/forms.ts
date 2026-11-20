@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: '提交',
   rubricSubmitAndNext: '提交併繼續下一個',
   rubricSkip: '跳過',
+  rubricKeysLimit: '僅顯示 {total} 個評分標準欄位中的前 {count} 個。',
   localePickerLabel: '語言',
   localePickerRequired: '請選擇一種語言。',
   localePickerSearchLabel: '搜尋語言',

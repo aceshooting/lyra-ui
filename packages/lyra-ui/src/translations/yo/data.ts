@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Àwọn sẹ́ẹ̀lì heatmap àkọ́kọ́ {count} nìkan ni a fi hàn.',
   heatmapDecorationLimit: 'Àwọn àwọ̀ heatmap àkọ́kọ́ {count}, àmì àlàyé àti àkọsílẹ̀ nìkan ni a fi hàn.',
   funnelStagesLimit: 'Àwọn ìpele àkọ́kọ́ {count} nìkan ni a fi hàn.',
+  funnelStagesInputLimit: 'A ń fi àwọn ìpele àkọ́kọ́ {count} hàn nínú {total}.',
   timeline: 'Ìlà àkókò',
   timelineClusterCount: 'Fi àwọn ìṣẹ̀lẹ̀ ìlà àkókò hàn ({count})',
   timelineItemVariantWarning: 'Ikilọ',

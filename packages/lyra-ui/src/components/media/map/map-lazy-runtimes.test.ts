@@ -5,10 +5,11 @@ import * as controlRuntime from './map-controls-lifecycle.js';
 import * as drawingRuntime from './map-drawing-controller.js';
 import { MapDrawing, type LyraMapDrawingSnapshot } from './map-drawing.js';
 import {
-  __setMapFeatureImporterForTesting, loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime,
+  loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime,
   loadMapHashRuntime, loadMapImageExportRuntime, loadMapImageRuntime, loadMapOwnedFeatureRuntime, loadMapStyleOverrideRuntime,
   type MapFeatureLoader,
 } from './map-feature-loader.js';
+import { setMapFeatureImporter } from '../../../../test/map-feature-loader-fixtures.js';
 import * as stateRuntime from './map-feature-state-routes.js';
 import * as hashRuntime from './map-hash-owner.js';
 import * as exportRuntime from './map-image-export-controller.js';
@@ -37,13 +38,13 @@ function hold<T>(loader: MapFeatureLoader<T>, runtime: T): Gate {
   let release!: () => void, fail!: (error: Error) => void, imports = 0;
   const settled = new Promise<void>((resolve, reject) => { release = resolve; fail = reject; });
   settled.catch(() => undefined);
-  __setMapFeatureImporterForTesting(loader, async () => { imports += 1; await settled; return runtime; });
+  setMapFeatureImporter(loader, async () => { imports += 1; await settled; return runtime; });
   return { release: () => release(), fail: () => fail(new Error('Runtime chunk unavailable')), get imports() { return imports; } };
 }
 /** Counts imports of a runtime that otherwise loads normally. */
 function count<T>(loader: MapFeatureLoader<T>, runtime: T): { readonly imports: number } {
   let imports = 0;
-  __setMapFeatureImporterForTesting(loader, async () => { imports += 1; return runtime; });
+  setMapFeatureImporter(loader, async () => { imports += 1; return runtime; });
   return { get imports() { return imports; } };
 }
 
@@ -100,7 +101,7 @@ describe('lr-map on-demand runtimes', () => {
   });
   afterEach(() => {
     fixtureCleanup(); history.replaceState(originalState, '', originalUrl);
-    for (const loader of loaders) __setMapFeatureImporterForTesting(loader);
+    for (const loader of loaders) setMapFeatureImporter(loader);
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: originalObserver });
     HTMLCanvasElement.prototype.getContext = originalContext;
   });
@@ -166,7 +167,7 @@ describe('lr-map on-demand runtimes', () => {
     await waitUntil(() => gate.imports === 1); gate.fail();
     await waitUntil(() => text(element).includes('Drawing tools unavailable'));
     expect(element.drawMode).to.equal('line'); await element.updateComplete; await tick(); expect(gate.imports).to.equal(1);
-    __setMapFeatureImporterForTesting(loadMapDrawingRuntime, async () => drawingRuntime);
+    setMapFeatureImporter(loadMapDrawingRuntime, async () => drawingRuntime);
     element.drawMode = 'none'; await element.updateComplete; element.drawMode = 'line'; await element.updateComplete;
     await waitUntil(() => element.shadowRoot!.querySelector<HTMLButtonElement>('[part="drawing-add"]')?.disabled === false);
     expect(text(element)).not.to.include('Drawing tools unavailable');
@@ -197,7 +198,7 @@ describe('lr-map on-demand runtimes', () => {
     expect(element.setFeatureState(target, { selected: true })).to.equal(false); gate.fail();
     await waitUntil(() => text(element).includes('Highlighting unavailable'));
     expect(element.setFeatureState(target, { selected: true })).to.equal(false); expect(gate.imports).to.equal(1);
-    __setMapFeatureImporterForTesting(loadMapFeatureStateRuntime, async () => stateRuntime);
+    setMapFeatureImporter(loadMapFeatureStateRuntime, async () => stateRuntime);
     element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; await element.updateComplete; await element.whenStyleReady(); await settle(element, peer);
     expect(element.setFeatureState(target, { selected: true })).to.equal(false); await element.whenIdle();
     expect(element.setFeatureState(target, { selected: true })).to.equal(true);
@@ -267,7 +268,7 @@ describe('lr-map on-demand runtimes', () => {
     await tick(); await element.updateComplete;
     expect(element.map === undefined).to.equal(true);
     expect(location.hash).to.equal('#map=9/40/20');
-    if (fails) __setMapFeatureImporterForTesting(loadMapHashRuntime, async () => hashRuntime);
+    if (fails) setMapFeatureImporter(loadMapHashRuntime, async () => hashRuntime);
     history.replaceState({}, '', '#map=7/30/10');
     wrapper.append(element);
     await waitUntil(() => element.map !== undefined);
@@ -426,7 +427,7 @@ describe('lr-map on-demand runtimes', () => {
     const { element, peer } = await mount(el => { el.controls = { geolocate: true, attribution: false }; el.strings = { mapControlUnavailable: 'Controls unavailable' }; });
     await waitUntil(() => gate.imports === 1); expect(peer.controls.size).to.equal(0);
     gate.fail(); await waitUntil(() => text(element).includes('Controls unavailable')); expect(peer.controls.size).to.equal(0);
-    __setMapFeatureImporterForTesting(loadMapControlRuntime, async () => controlRuntime);
+    setMapFeatureImporter(loadMapControlRuntime, async () => controlRuntime);
     element.controls = { geolocate: true }; await element.updateComplete;
     await waitUntil(() => peer.controls.size === 2); expect(text(element)).not.to.include('Controls unavailable');
   });
@@ -467,7 +468,7 @@ describe('lr-map on-demand runtimes', () => {
       expect(peer.controls.size).to.equal(0);
       expect(peer.removed).to.equal(true);
       expect(text(element)).not.to.include('Controls unavailable');
-      if (fails) __setMapFeatureImporterForTesting(loadMapControlRuntime, async () => controlRuntime);
+      if (fails) setMapFeatureImporter(loadMapControlRuntime, async () => controlRuntime);
       wrapper.append(element);
       await waitUntil(() => element.map !== undefined && element.map !== peer);
       const replacement = element.map as unknown as LazyMap;

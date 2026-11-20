@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Kuvatakse ainult esimesed {count} soojuskaardi lahtrit.',
   heatmapDecorationLimit: 'Kuvatakse ainult esimesed {count} soojuskaardi värvi, legendi punkti ja märkust.',
   funnelStagesLimit: 'Kuvatakse ainult esimesed {count} etappi.',
+  funnelStagesInputLimit: 'Kuvatakse esimesed {count} etappi {total}-st.',
   timeline: 'Ajajoon',
   timelineClusterCount: 'Näita ajajoone sündmusi ({count})',
   timelineItemVariantWarning: 'Hoiatus',

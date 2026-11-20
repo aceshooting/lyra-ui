@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Tinda',
   rubricSubmitAndNext: 'Tinda mpe kende na oyo elandi',
   rubricSkip: 'leka',
+  rubricKeysLimit: 'Emonisami kaka ba champ {count} ya liboso ya rubrique na kati ya {total}.',
   localePickerLabel: 'Monoko',
   localePickerRequired: 'Pona monoko.',
   localePickerSearchLabel: 'Luka minoko',

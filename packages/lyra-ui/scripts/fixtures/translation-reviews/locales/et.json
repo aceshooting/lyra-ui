@@ -2,18 +2,18 @@
   "locale": "et",
   "direction": "ltr",
   "source": {
-    "keyCount": 1729,
-    "sha256": "sha256:c893a58db7a418b64e66adc6240dcc52134ba39bc0b4c6d5070c50e664e9628c"
+    "keyCount": 1726,
+    "sha256": "sha256:38356f7dc034f5675ce8f5d3f85144c87b0298997caf987ba8dadede683fc964"
   },
   "catalog": {
-    "keyCount": 1729,
-    "sha256": "sha256:edf417ea3474390252f62da04f7c8efb80af68b50d21446940635951ec3ed8b0"
+    "keyCount": 1726,
+    "sha256": "sha256:7dc1e32859f196301e615c5221d49577d6b16ca839f01f6979016a15b10a3200"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-11-16",
-    "evidence": "Original Estonian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. Added localized error, action, and viewport messages for the corresponding components.\n\n2026-11-19 AI-assisted catalog update. Restored released locale keys and verified their values against the 31.2.1 catalogs.\n\n2026-11-20 AI-assisted structural refresh for new datasetViewerLabel and emailViewerEmptyBody messages and plural category records for dataGridRowLimit, tableRowLimit, tagFacetLimit, commitCardDiffSummary, commitCardShowFiles, commitCardHideFiles, contextInspectorSegmentTokens and contextInspectorTruncatedCount; placeholders and pinned CLDR categories verified; no human or native-speaker review is claimed."
+    "evidence": "Original Estonian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed.\n\n2026-11-16 bounded AI-assisted addition of ten feedback, ingestion-action and document-batch messages. Original translations preserve the maximum-character bound, optional single-reason selection, displayed-action counts, current-batch scope and retained-history meaning. Five regional difference catalogs inherit their reviewed parents; Portuguese (Portugal) resolves three authored regional overrides against Brazilian Portuguese. No upstream translated text was copied and no human or native-speaker authorship is claimed.\n\n2026-11-19 AI-assisted catalog update. 16 original messages for data-flow, query-builder, timeline, tree, map, media, file-input and carousel controls\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. original messages added by library-wide accessibility, lifecycle and localization repairs\n\n2026-11-19 AI-assisted catalog update. Added localized error, action, and viewport messages for the corresponding components.\n\n2026-11-19 AI-assisted catalog update. Restored released locale keys and verified their values against the 31.2.1 catalogs.\n\n2026-11-20 AI-assisted structural refresh for new datasetViewerLabel and emailViewerEmptyBody messages and plural category records for dataGridRowLimit, tableRowLimit, tagFacetLimit, commitCardDiffSummary, commitCardShowFiles, commitCardHideFiles, contextInspectorSegmentTokens and contextInspectorTruncatedCount; placeholders and pinned CLDR categories verified; no human or native-speaker review is claimed.\n\n2026-11-20 AI-assisted structural refresh for new funnelStagesInputLimit and rubricKeysLimit messages; the five retired fileSizeUnit* keys are no longer listed; placeholders verified; no human or native-speaker review is claimed."
   },
   "reviewer": {
     "status": "approved",
@@ -113,22 +113,6 @@
     {
       "messagePath": "entityChipWithType",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
-    },
-    {
-      "messagePath": "fileSizeUnitB",
-      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitGb",
-      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitMb",
-      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
-    },
-    {
-      "messagePath": "fileSizeUnitTb",
-      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
     },
     {
       "messagePath": "fileTreeDiffSummary",

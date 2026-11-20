@@ -1,5 +1,12 @@
 type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
 
+/**
+ * `true` in the development build and `false` in production. Guarding a diagnostic with
+ * `if (DEV_DIAGNOSTICS)` lets a production bundler drop the call and its message text even when
+ * the diagnostics module lands in a shared chunk.
+ */
+export const DEV_DIAGNOSTICS: boolean = true;
+
 /** Piggybacks on Lit's own dev-mode signal (`@lit/reactive-element`'s `development` build sets
  *  this global when a consumer's bundler resolves Lit into dev mode). This implementation is
  *  selected only by the package's development condition. */

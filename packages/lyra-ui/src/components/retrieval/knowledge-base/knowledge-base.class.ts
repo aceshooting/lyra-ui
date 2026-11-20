@@ -18,7 +18,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
-import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { createRetryForwarder } from '../../../internal/retry-forwarder.js';
 import {
@@ -469,8 +470,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       }
       const revision = source.revision;
       if (!current()) return;
-      const locale = this.effectiveLocale; const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const locale = this.effectiveLocale; const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       if (this.sourceInputs && (size !== this.sourceInputs[6] || this.sourceSortKey !== this.sourceInputs[4] || this.sourceSortDir !== this.sourceInputs[5])) page = 0;
       const inputs = [source, revision, epoch, locale, this.sourceSortKey, this.sourceSortDir, size, page];
       if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
@@ -939,8 +940,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .strings=${this.strings}
           .paginationMode=${source ? 'server' : 'client'}
           .sortMode=${source ? 'server' : 'client'}
-          .page=${source ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1 : 1}
-          .pageSize=${source ? finiteInteger(this.sourcePageSize, 100, 1, 500) : 100}
+          .page=${source ? displayedSourcePage(this.sourcePage) : 1}
+          .pageSize=${source ? normalizeSourcePageSize(this.sourcePageSize) : 100}
           .sortKey=${source ? this.sourceSortKey ?? '' : ''}
           .sortDir=${source ? this.sourceSortDir : 'asc'}
           .totalItems=${source ? this.sourceTotal ?? 0 : 0}

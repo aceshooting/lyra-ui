@@ -79,8 +79,8 @@ export const styles = css`
   [part='zoom-out'],
   [part='zoom-in'],
   [part='reset'] {
-    ${outlinedIconActionDefaults('var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))')}
     ${iconHitTarget}
+    ${outlinedIconActionDefaults('var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))')}
     ${iconAction}
     ${interactiveTransition}
     padding: revert;

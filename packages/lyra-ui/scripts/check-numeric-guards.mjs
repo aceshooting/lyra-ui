@@ -24,10 +24,16 @@ const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const componentsRoot = path.join(packageDir, 'src', 'components');
 const internalRoot = path.join(packageDir, 'src', 'internal');
 
-const GUARD_HELPERS = ['finiteNumber', 'finiteRange', 'finiteInteger', 'finiteCount', 'finiteDuration'];
+// The provider-paging normalizers in `src/internal/source-paging.ts` are thin `finiteInteger`
+// wrappers shared by every `sourcePage`/`sourcePageSize` host, so they count as guard helpers too.
+const GUARD_HELPERS = [
+  'finiteNumber', 'finiteRange', 'finiteInteger', 'finiteCount', 'finiteDuration',
+  'normalizeSourcePage', 'normalizeSourcePageSize', 'displayedSourcePage', 'sourcePageOfRecord',
+];
 const GUARD_IMPORT_RE =
-  /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*(?:\/internal\/|\.\/)numbers(?:\.js)?['"]/g;
-const GUARD_CALL_RE = /\bfinite(?:Number|Range|Integer|Count|Duration)\s*\(/g;
+  /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*(?:\/internal\/|\.\/)(?:numbers|source-paging)(?:\.js)?['"]/g;
+const GUARD_CALL_RE =
+  /\b(?:finite(?:Number|Range|Integer|Count|Duration)|normalizeSourcePage(?:Size)?|displayedSourcePage|sourcePageOfRecord)\s*\(/g;
 const EXEMPT_RE = /^\s*\/\/\s*numeric-guard-exempt:\s*(.+?)\s*$/;
 
 // How many lines around a guard-helper call site count as "near" a property's own name for the

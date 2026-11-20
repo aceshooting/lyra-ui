@@ -23,14 +23,13 @@ import {
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
-  acquireAnnouncementSink,
   AnnouncementSinkController,
-  type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController, type SourcePageState } from '../../../internal/source-page-controller.js';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
-import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import {
   getListFormat,
   getNumberFormat,
@@ -420,8 +419,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         this.sourceRows = []; return;
       }
       const source = this.dataSource!;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       if (this.sourceSize !== undefined && this.sourceSize !== size) { page = 0; this.sourcePage = 0; }
       this.sourceSize = size;
       const revision = source.revision;
@@ -488,11 +487,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   /** True once the `announce` opt-in has spoken the mount-time failures, so a reconnection (which
    *  resets `isMounting`) stages them as history instead of replaying them. */
   private initialFailuresAnnounced = false;
-  /** Handle on the shared light-DOM assertive region failures actually announce through -- a
+  /** Shared light-DOM live regions (polite limits, assertive failures) announce through -- a
    *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
    *  one outright), so `[part="failure-live"]` is only an `aria-hidden` mirror. */
-  private sink?: AnnouncementSink;
-  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private limitInitialized = false;
   private previouslyInputTruncated = false;
 
@@ -500,7 +498,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     this.focusRepairGeneration++;
     this.actionFocusRepair = undefined;
     super.adoptedCallback();
-    this.limitAnnouncements.adopted();
+    this.announcements.adopted();
     this.sourcePages.adopted();
     this.sourceStatusInitialized = false;
   }
@@ -521,14 +519,14 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     if (this.sourceMode) {
       const status = this.sourceFailed ? this.localize('tableLoadFailed')
         : this.sourcePages.state.pending ? this.localize('loading') : '';
-      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.limitAnnouncements.announcePolite(status);
+      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.announcements.announcePolite(status);
       this.sourceStatusInitialized = true; this.previousSourceStatus = status;
       return;
     }
     this.sourceStatusInitialized = false; this.previousSourceStatus = '';
     const inputTruncated = publicCollectionTruncation(this, 'items') !== undefined;
     if (this.limitInitialized && inputTruncated && !this.previouslyInputTruncated) {
-      this.limitAnnouncements.announcePolite(this.inputLimitText());
+      this.announcements.announcePolite(this.inputLimitText());
     }
     this.limitInitialized = true;
     this.previouslyInputTruncated = inputTruncated;
@@ -617,12 +615,6 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.requestUpdate();
-    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
-    // live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
@@ -633,8 +625,6 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     this.sourceStatusInitialized = false;
     this.previousSourceStatus = '';
     this.isMounting = true;
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -690,7 +680,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     // Announced from the computation, not from a rendered text change: the shared region appends
     // each announcement as its own node, so an identical repeat (the same row failing the same way
     // twice) is read again instead of being a silent no-op.
-    if (this.failureLiveText !== '') this.sink?.announce(this.failureLiveText);
+    if (this.failureLiveText !== '') this.announcements.announceAssertive(this.failureLiveText);
   }
 
   private stageLabel(stage: RenderedIngestionStage): string {
@@ -949,8 +939,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       ${failed || pending ? html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>` : nothing}
       ${failed ? html`<button type="button" part="source-retry" @click=${() => this.onSourceRetry(retrySource, retryState)}>${this.localize('retry')}</button>` : nothing}
       ${failed || pending ? nothing : this.sourceRows.length ? this.renderRows(this.sourceRows) : html`<div part="list" tabindex="-1"><lr-empty part="empty" heading=${this.localize('ingestionQueueEmpty')}></lr-empty></div>`}
-      <lr-pagination part="source-pagination" format="compact" .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
-        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
+      <lr-pagination part="source-pagination" format="compact" .page=${displayedSourcePage(this.sourcePage)}
+        .pageSize=${normalizeSourcePageSize(this.sourcePageSize)} .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
         .strings=${this.strings} @lr-page-change=${this.onSourcePage} @lr-before-page-change=${this.stopOwnedEvent} @lr-activate=${this.stopOwnedEvent}
         @focus=${this.stopOwnedEvent} @blur=${this.stopOwnedEvent}></lr-pagination>
     </div>`;

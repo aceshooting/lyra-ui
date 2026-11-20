@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInsetOffset, focusRingInwardOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -75,6 +75,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part='toggle']:hover {
     background: var(--_lr-code-block-toggle-bg-hover);
@@ -199,10 +200,9 @@ export const styles = css`
     display: none;
   }
   [part='body']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Negative (inward) so the ring isn't clipped by this element's own
        overflow:auto -- same reasoning as lr-virtual-list's [part="base"]. */
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   [part='body'] lr-skeleton {
     display: block;

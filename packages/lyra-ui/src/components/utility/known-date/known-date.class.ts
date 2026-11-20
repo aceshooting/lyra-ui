@@ -36,8 +36,7 @@ import {
 } from '../../../internal/submit-on-enter.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { formatIsoDate, localDate, parseIsoDate } from '../../../internal/calendar-date.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
@@ -342,7 +341,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
    *  own "input fires more often than change" contract. */
   private lastCommittedValue = '';
   private lastEditedField: LyraKnownDateField = 'day';
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly errorAnnouncementSink = new AnnouncementSinkController(this, { eager: ['assertive'] });
   private readonly errorTextObserver = new AccessibleTextController(
     this, ['error'], () => this.announceVisibleError(), ['slot'],
   );
@@ -378,10 +377,6 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.addEventListener('slotchange', this.onForwardedSlotChange);
     this.errorAnnouncementsArmed = false;
     const generation = ++this.connectionGeneration;
@@ -409,13 +404,12 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.errorAnnouncementsArmed = false;
     this.lastVisibleError = '';
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.errorAnnouncementSink.adopted();
     this.errorTextObserver.adopted();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
@@ -840,7 +834,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const message = this.visibleErrorText();
     if (message === this.lastVisibleError) return;
     this.lastVisibleError = message;
-    if (message) this.errorAnnouncementSink?.announce(message);
+    if (message) this.errorAnnouncementSink.announceAssertive(message);
   }
 
   private digitMapCache?: { locale: string; map: ReadonlyMap<string, string> };

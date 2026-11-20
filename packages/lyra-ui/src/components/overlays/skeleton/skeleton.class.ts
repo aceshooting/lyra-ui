@@ -1,6 +1,6 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
-import type { AnnouncementSink } from '../../../internal/announcer.js';
+import type { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { styles } from './skeleton.styles.js';
@@ -62,13 +62,12 @@ export class LyraSkeleton extends LyraElement {
    *  supplied value, including the English fallback, remains literal. */
   @property() label?: string;
 
-  private sink?: AnnouncementSink;
+  /** Created on the first announcement, after the announcer module loads. */
+  private sink?: AnnouncementSinkController;
   private readonly announcementFrame = new OwnedFrame(this);
 
   override disconnectedCallback(): void {
     this.announcementFrame.cancel();
-    this.sink?.release();
-    this.sink = undefined;
     super.disconnectedCallback();
   }
 
@@ -76,8 +75,7 @@ export class LyraSkeleton extends LyraElement {
     super.updated(changed);
     if (!this.announce) {
       this.announcementFrame.cancel();
-      this.sink?.release();
-      this.sink = undefined;
+      this.sink?.releaseChannel('polite');
     } else if (changed.has('announce') || changed.has('label')) {
       this.scheduleAnnouncement();
     }
@@ -90,12 +88,12 @@ export class LyraSkeleton extends LyraElement {
 
   private scheduleAnnouncement(): void {
     // Decorative skeletons do not load the announcer.
-    void import('../../../internal/announcer.js').then(({ acquireAnnouncementSink }) => {
+    void import('../../../internal/announcer.js').then(({ AnnouncementSinkController: Controller }) => {
       if (!this.announce || !this.isConnected) return;
-      this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+      const sink = (this.sink ??= new Controller(this, { eager: ['polite'] }));
       // Text follows a frame after the sink mounts so assistive technology is already watching it.
       this.announcementFrame.schedule(() => {
-        this.sink?.announce(this.label ?? this.localize('loading'));
+        sink.announcePolite(this.label ?? this.localize('loading'));
       });
     });
   }

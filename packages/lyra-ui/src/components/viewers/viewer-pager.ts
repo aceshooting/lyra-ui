@@ -1,6 +1,6 @@
 import { css, html, type TemplateResult } from 'lit';
 import { chevronIcon } from '../../internal/icons.js';
-import { activeFill, disabledControl, focusRingShorthand } from '../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, interactiveTransition } from '../../internal/interactive-control.styles.js';
 
 /** Shared icon pager controls for chapter and slide navigation. */
 export function renderViewerPagerButton(
@@ -31,7 +31,7 @@ export const viewerPagerStyles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="previous-button"]:hover:not(:disabled),
   [part="next-button"]:hover:not(:disabled) {

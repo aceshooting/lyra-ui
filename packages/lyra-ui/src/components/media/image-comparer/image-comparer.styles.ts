@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -84,7 +84,7 @@ export const styles = css`
        imagery on both sides -- a wider blur reads as a smudge along the seam. */
     box-shadow: var(--lr-shadow-s);
     pointer-events: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part~="base"][data-orientation="vertical"] [part="divider"] {
     inset-block: auto;

@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -103,7 +103,7 @@ export const styles = css`
       var(--_lr-animated-image-icon-size)
     );
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* Internal state qualifiers stay low-specificity so sibling rules in this sheet compose easily;
      consumer ::part() authority follows the shadow cascade, independent of this specificity. */

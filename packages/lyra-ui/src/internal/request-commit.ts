@@ -1,4 +1,4 @@
-import { devWarnOnce } from './dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from './dev-mode-attribute-warning.js';
 import type { VetoWriteGuard } from './veto-write-guard.js';
 
 /** The caller-supplied half of one request/commit pair. */
@@ -119,7 +119,7 @@ export function requestThenCommit<D, E extends Event>(
   guard?.open();
   const request = emitRequest(requestDetail, { cancelable: true });
   const listenerResolvedItself = guard?.touched ?? false;
-  if (!request.cancelable) {
+  if (DEV_DIAGNOSTICS && !request.cancelable) {
     devWarnOnce(
       `lyra-request-commit-not-cancelable:${request.type}`,
       `requestThenCommit(): '${request.type}' was dispatched non-cancelable, so preventDefault() ` +

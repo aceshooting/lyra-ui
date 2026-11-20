@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -147,7 +147,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="open-button"]:not(:disabled):hover {
     background: var(--lr-color-surface);

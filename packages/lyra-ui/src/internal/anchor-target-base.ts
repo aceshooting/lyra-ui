@@ -1,7 +1,7 @@
 import { collectionSupport } from './collection-snapshot.js';
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from './announcer.js';
+import { AnnouncementSinkController } from './announcer.js';
 import { isAccessibilityVisible } from './accessibility-visibility.js';
 import { LyraElement } from './lyra-element.js';
 import { snapshotLyraHighlights } from './highlight-collection.js';
@@ -162,17 +162,8 @@ export function DocumentAnchorTargetBase(
     private anchorRetryOwner?: Window;
     private anchorRetryResolve?: () => void;
     private selectionCleanup?: () => void;
-    private anchorAnnouncementSink?: AnnouncementSink;
-
-    override connectedCallback(): void {
-      super.connectedCallback();
-      // The live region must already exist before the first anchor result arrives; acquire against
-      // the current owner document so adoption into an iframe retargets the announcement too.
-      this.anchorAnnouncementSink ??= acquireAnnouncementSink('polite', {
-        document: this.ownerDocument,
-        source: this,
-      });
-    }
+    // Mounted at connect: the live region must already exist before the first anchor result arrives.
+    private readonly anchorAnnouncementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
 
     protected override willUpdate(changed: PropertyValues): void {
       super.willUpdate(changed);
@@ -193,8 +184,6 @@ export function DocumentAnchorTargetBase(
       // retry against a detached element.
       this.cancelPendingAnchor();
       this.unbindTextSelection();
-      this.anchorAnnouncementSink?.release();
-      this.anchorAnnouncementSink = undefined;
       super.disconnectedCallback();
     }
 
@@ -346,7 +335,7 @@ export function DocumentAnchorTargetBase(
       // distinct accessible-tree addition without mutating the user-visible/localized text. The
       // document-level sink does not inherit this component's visibility, so block the write when
       // the host or one of its composed ancestors is excluded from the accessibility tree.
-      if (isAccessibilityVisible(this)) this.anchorAnnouncementSink?.announce(text);
+      if (isAccessibilityVisible(this)) this.anchorAnnouncementSink.announcePolite(text);
       this.anchorAnnouncementText = text;
     }
 

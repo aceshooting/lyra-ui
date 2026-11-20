@@ -1,8 +1,7 @@
-import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
+import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
 import { toolStatusKeyframes } from '../tool-status.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 
@@ -206,26 +205,11 @@ export const styles = css`
     max-inline-size: 100%;
     margin-inline-start: auto;
   }
-  [part="maximize-button"],
-  [part="close-button"] {
-    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
-    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
-    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
-    ${iconHitTarget}
-    ${iconAction}
-  }
-  [part="maximize-button"]:hover,
-  [part="close-button"]:hover {
-    ${iconActionHover}
-  }
-  [part="maximize-button"]:active,
-  [part="close-button"]:active {
-    ${iconActionActive}
-  }
-  [part="maximize-button"]:focus-visible,
-  [part="close-button"]:focus-visible {
-    ${focusRing}
-  }
+  ${iconActionStyles(':is([part="maximize-button"], [part="close-button"])', {
+    color: 'var(--lr-color-text-quiet)',
+    hoverColor: 'var(--lr-color-brand)',
+    hoverBackground: 'var(--lr-color-brand-quiet)',
+  })}
   [part="body"] {
     flex: 1 1 auto;
     min-block-size: 0;

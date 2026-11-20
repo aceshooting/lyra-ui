@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Send inn',
   rubricSubmitAndNext: 'Send inn og gå vidare',
   rubricSkip: 'Hopp over',
+  rubricKeysLimit: 'Berre dei første {count} av {total} rubrikkfelt blir viste.',
   localePickerLabel: 'Språk',
   localePickerRequired: 'Vel eit språk.',
   localePickerSearchLabel: 'Søk etter språk',

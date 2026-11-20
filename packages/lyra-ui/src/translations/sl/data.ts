@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Prikazane so samo prve celice toplotnega zemljevida (največ {count}).',
   heatmapDecorationLimit: 'Prikazane so samo prve barve, točke legende in opombe toplotnega zemljevida (največ {count}).',
   funnelStagesLimit: 'Prikazane so samo prve stopnje (največ {count}).',
+  funnelStagesInputLimit: 'Prikazanih je prvih {count} od {total} stopenj.',
   timeline: 'Časovnica',
   timelineClusterCount: 'Pokaži dogodke na časovnici ({count})',
   timelineItemVariantWarning: 'Opozorilo',

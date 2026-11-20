@@ -5,6 +5,7 @@ import {
   formControlLabelTypography,
   formControlFocusHalo,
   formControlRequiredMarker,
+  formControlSupportingColor,
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -279,10 +280,10 @@ export const styles = css`
   [part="remove-button"]:disabled {
     ${disabledControl}
   }
+  ${formControlSupportingColor}
   [part="hint"] {
     min-inline-size: 0;
     margin-block-start: var(--lr-space-xs);
-    color: var(--lr-color-text-quiet);
     font-size: var(
       --lr-file-input-detail-font-size,
       var(--_lr-file-input-detail-font-size)
@@ -292,7 +293,6 @@ export const styles = css`
   [part="error"] {
     min-inline-size: 0;
     margin-block-start: var(--lr-space-xs);
-    color: var(--lr-color-danger);
     font-size: var(
       --lr-file-input-detail-font-size,
       var(--_lr-file-input-detail-font-size)

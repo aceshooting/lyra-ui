@@ -9,7 +9,8 @@ import {
   restoreMapEnvironment, stubMapEnvironment, zIndex,
 } from '../../../../test/map-anchors.js';
 import * as anchorRuntime from './map-anchor-controller.js';
-import { __setMapFeatureImporterForTesting, loadMapAnchorRuntime } from './map-feature-loader.js';
+import { loadMapAnchorRuntime } from './map-feature-loader.js';
+import { setMapFeatureImporter } from '../../../../test/map-feature-loader-fixtures.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
 import type { LyraMapAnchor } from './map-anchor.js';
 
@@ -33,7 +34,7 @@ describe('lr-map-anchor lifecycle and content identity', () => {
   beforeEach(() => { stubMapEnvironment(); });
   afterEach(async () => {
     await resetMouse(); fixtureCleanup(); restoreMapEnvironment();
-    __setMapFeatureImporterForTesting(loadMapAnchorRuntime);
+    setMapFeatureImporter(loadMapAnchorRuntime);
   });
 
   it('creates its slot for initial and later anchors and removes it after the final assignment leaves', async () => {
@@ -226,7 +227,7 @@ describe('lr-map-anchor lifecycle and content identity', () => {
 
   it('imports the shared anchor runtime once for many anchors, keeps them hidden when it fails and retries on a new request', async () => {
     let imports = 0, fail = true;
-    __setMapFeatureImporterForTesting(loadMapAnchorRuntime, async () => {
+    setMapFeatureImporter(loadMapAnchorRuntime, async () => {
       imports += 1;
       if (fail) throw new Error('Runtime chunk unavailable');
       return anchorRuntime;

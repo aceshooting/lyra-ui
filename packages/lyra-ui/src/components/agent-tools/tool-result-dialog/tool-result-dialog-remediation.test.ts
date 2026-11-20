@@ -27,3 +27,16 @@ it('updates the inner dialog name from a direct accessibleLabel and prioritizes 
   expect(panel.hasAttribute('aria-label')).to.equal(false);
   expect(panel.hasAttribute('aria-labelledby')).to.equal(true);
 });
+
+it('keeps the header actions named native buttons that follow the shared icon-button tokens', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open tool-name="Task" style="--lr-icon-button-bg: rgb(10, 20, 30); --lr-icon-button-border: 2px solid rgb(1, 2, 3)"></lr-tool-result-dialog>`);
+  for (const part of ['maximize-button', 'close-button']) {
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!;
+    expect(button.localName).to.equal('button');
+    expect(button.type).to.equal('button');
+    expect(button.getAttribute('aria-label')!.length).to.be.greaterThan(0);
+    const style = getComputedStyle(button);
+    expect(style.backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(style.borderTopWidth).to.equal('2px');
+  }
+});

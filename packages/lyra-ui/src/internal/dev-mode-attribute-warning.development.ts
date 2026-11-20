@@ -2,7 +2,7 @@ import { devWarnOnce, litDevWarnings } from './dev-warning.js';
 import { DOCUMENT_TOKEN_SCOPE_SELECTOR, LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
 import { foreignLyraTokenLayer, hasLyraTokens, lyraTokenLayerArrivedLate } from './document-tokens.js';
 import { flattenedParentElement } from './composed-tree.js';
-export { devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
+export { DEV_DIAGNOSTICS, devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
 
 /**
  * Structural view of the `protected static knownUnobservedAttributes` a component may declare for

@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, focusRingInset, focusRingInwardOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeFillTowardText, disabledControl, focusRing, focusRingInset, focusRingInwardOffset, focusRingOffsetInward, hoverFill, hoverFillTowardText, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
 
@@ -262,7 +262,7 @@ export const styles = css`
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it this
        cell's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* State hooks are inline fallbacks, not :host declarations, so an ancestor theme customizing one
      state is not shadowed. The former active-bg hook stays a compatibility fallback for hover and
@@ -279,7 +279,7 @@ export const styles = css`
     color: var(--lr-emoji-picker-selected-color, var(--lr-color-text));
     outline: var(--lr-border-width-thin) solid
       var(--lr-emoji-picker-selected-outline-color, var(--lr-color-brand));
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingOffsetInward}
   }
   [part='emoji'][data-active] {
     --_lr-emoji-picker-state-fill: var(
@@ -289,7 +289,7 @@ export const styles = css`
     background: var(--_lr-emoji-picker-state-fill);
     outline: var(--lr-border-width-thin) dotted
       var(--lr-emoji-picker-keyboard-active-outline-color, var(--lr-color-brand));
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingOffsetInward}
   }
   [part='emoji']:active:not(:disabled) {
     background: var(
@@ -340,10 +340,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='load-retry']:where(:hover:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-hover));
+    background: ${hoverFillTowardText('var(--lr-color-surface)')};
   }
   [part='load-retry']:where(:active:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
+    background: ${activeFillTowardText('var(--lr-color-surface)')};
   }
   [part='load-retry']:focus-visible {
     ${focusRing}
@@ -361,7 +361,7 @@ export const styles = css`
   @media (forced-colors: active) {
     [part='emoji']:hover:not(:disabled) {
       outline: var(--lr-border-width-thin) dashed Highlight;
-      outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+      ${focusRingOffsetInward}
     }
     /* Same order as the base block above, same reason: [aria-selected='true'] and [data-active]
        are both (0,2,0) and both declare an outline, so source order decides what a

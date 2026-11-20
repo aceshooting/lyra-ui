@@ -27,6 +27,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
+import { normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord } from '../../../internal/source-paging.js';
 import { isActionableElement, repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -552,7 +553,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         this.sourceOverviewRequests.setSource(source, revision); if (!owned()) return;
         this.sourceInputs = inputs; this.sourcePageInputs = undefined; this.sourceSceneInputs = '';
       }
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize), page = normalizeSourcePage(this.sourcePage, size);
       const pageInputs = [this.sourceQuery, page, size];
       if (!this.sourcePageInputs || pageInputs.some((value, index) => value !== this.sourcePageInputs![index])) {
         this.sourcePageInputs = pageInputs; this.sourceMissing = false;
@@ -614,7 +615,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     await this.sourcePagePromise; if (!current()) return false;
     const index = await this.sourcePages.locate(key); if (!current()) return false;
     if (index === null) { this.sourceMissing = true; this.sourceState++; return false; }
-    this._sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+    this._sourcePage = sourcePageOfRecord(index, this.sourcePageSize);
     this.syncFlowSource(); await this.sourcePagePromise; if (!current()) return false;
     this.sourceState++; await this.updateComplete; if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
@@ -634,7 +635,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (!authority() || this.sourceIntent !== startIntent) return;
     const startPage = this.sourcePage;
     const startKey = origin.dataset['sourceKey'];
-    const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+    const size = normalizeSourcePageSize(this.sourcePageSize);
     let intent = ++this.sourceIntent;
     const current = () => {
       const focused = deepActiveElementIn(document);
@@ -707,7 +708,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private renderSourceNavigator(): TemplateResult {
     const state = this.sourcePages.state, query = this.sourceQuery, authority = this.sourceAuthority(), error = this.sourceError;
     const current = () => authority() && this.sourcePages.state === state && this.sourceQuery === query && this.sourceError === error;
-    const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(this.sourcePage, 0, 0), total = this.sourceTotal;
+    const size = normalizeSourcePageSize(this.sourcePageSize), page = finiteInteger(this.sourcePage, 0, 0), total = this.sourceTotal;
     const changePage = (next: number) => { if (current()) this.sourcePage = next; };
     return html`<section part="source-navigator" aria-label=${this.localize('graphSourceRecords')} aria-busy=${String(state.pending)}>
       <div part="source-controls"><label>${this.localize('graphSourceRecords')}<select data-source-kind .value=${query.kind} @change=${(event: Event) => { if (current()) this.setSourceQuery({ ...EMPTY_FLOW_QUERY, kind: (event.target as HTMLSelectElement).value === 'edges' ? 'edges' : 'nodes' }); }}>

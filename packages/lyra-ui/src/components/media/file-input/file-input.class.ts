@@ -3,7 +3,7 @@ import { emitValueEvents } from '../../../internal/value-events.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState } from '../../../internal/form-control-template.js';
-import { formatLocalizedFileSize } from '../../../internal/bytes.js';
+import { formatFileSize } from '../../../internal/bytes.js';
 import { FormControlController } from '../../../internal/form-control-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -39,7 +39,7 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileInputRejectionsMore } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
@@ -291,11 +291,6 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
     fileInputRejectionsMore: LYRA_DEFAULT_fileInputRejectionsMore,
-    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     open: LYRA_DEFAULT_open,
@@ -1111,7 +1106,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   }
 
   private fileSize(file: File): string {
-    return formatLocalizedFileSize(file.size, this.effectiveLocale, (key) => this.localize(key));
+    return formatFileSize(file.size, this.effectiveLocale);
   }
 
   private renderFile(file: File, index: number): TemplateResult {

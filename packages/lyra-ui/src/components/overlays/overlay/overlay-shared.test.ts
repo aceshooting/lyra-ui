@@ -7,8 +7,8 @@ import {
   resolveOverlayInteractionTrigger,
   OverlayTransitionGate,
   resolveOverlayTriggerById,
-  settleOverlayTransition,
 } from '../../../internal/overlay-shared.js';
+import { settlePopupTransition } from '../../../internal/anchored-overlay-runtime.js';
 
 it('replaces a pending overlay delay without committing the old direction', async () => {
   const timer = new OverlayDelayTimer();
@@ -24,14 +24,12 @@ it('replaces a pending overlay delay without committing the old direction', asyn
 
 it('settles a shown overlay after placement and motion', async () => {
   const steps: string[] = [];
-  await settleOverlayTransition({
-    showing: true,
-    updateComplete: async () => { steps.push('render'); },
+  await settlePopupTransition({
+    host: { get updateComplete() { steps.push('render'); return Promise.resolve(); } },
     isCurrent: () => true,
-    readyToShow: async () => { steps.push('placed'); return true; },
+    waitForPosition: async () => { steps.push('placed'); return true; },
     animate: async () => { steps.push('animated'); },
-    afterHide: () => { steps.push('hidden'); },
-    settled: () => { steps.push('settled'); },
+    onSettled: () => { steps.push('settled'); },
   });
   expect(steps).to.deep.equal(['render', 'placed', 'render', 'animated', 'settled']);
 });
@@ -39,14 +37,12 @@ it('settles a shown overlay after placement and motion', async () => {
 it('does not settle a superseded hide after motion', async () => {
   const steps: string[] = [];
   let current = true;
-  await settleOverlayTransition({
-    showing: false,
-    updateComplete: async () => { steps.push('render'); },
+  await settlePopupTransition({
+    host: { get updateComplete() { steps.push('render'); return Promise.resolve(); } },
     isCurrent: () => current,
-    readyToShow: async () => true,
     animate: async () => { steps.push('animated'); current = false; },
-    afterHide: () => { steps.push('hidden'); },
-    settled: () => { steps.push('settled'); },
+    conceal: () => { steps.push('hidden'); },
+    onSettled: () => { steps.push('settled'); },
   });
   expect(steps).to.deep.equal(['render', 'animated']);
 });

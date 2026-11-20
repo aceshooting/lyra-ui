@@ -1,5 +1,6 @@
 import { canonicalizeLocaleTag } from './locale-tag.js';
 import { warnLocaleFallback } from './dev-warning.js';
+import { DEV_DIAGNOSTICS } from './dev-mode-attribute-warning.js';
 import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
 import { readOwnDataValue } from './data-descriptors.js';
 import { getMessageNumberFormat, getPluralRules } from './intl-cache.js';
@@ -1196,7 +1197,7 @@ export function resolveLyraStringWithLocale(
         break;
       }
     }
-    if (message === undefined) warnLocaleFallback(locale, key);
+    if (DEV_DIAGNOSTICS && message === undefined) warnLocaleFallback(locale, key);
   }
   message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;

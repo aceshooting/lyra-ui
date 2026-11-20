@@ -3557,7 +3557,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1445,
+              "line": 1409,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5810,7 +5810,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -5898,10 +5897,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -5991,7 +5990,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -6023,7 +6022,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -6111,10 +6109,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -6204,7 +6202,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -7329,7 +7327,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -7395,10 +7392,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -7487,7 +7484,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -10978,7 +10975,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -11041,10 +11037,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -11139,7 +11135,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -11152,6 +11148,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/chunk-inspector/chunk-inspector-keyed-rows.test.ts",
           "src/components/retrieval/chunk-inspector/chunk-inspector-membership-cost.test.ts",
           "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts"
         ],
@@ -11340,7 +11337,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -11387,10 +11383,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -11475,7 +11471,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -11488,6 +11484,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/claim-evidence/claim-evidence-keyed-rows.test.ts",
           "src/components/retrieval/claim-evidence/claim-evidence.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -13054,7 +13051,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -13101,10 +13097,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -13189,7 +13185,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -13202,6 +13198,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/community-card/community-card-keyed-rows.test.ts",
           "src/components/retrieval/community-card/community-card.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -15237,7 +15234,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 561,
+              "line": 539,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15876,7 +15873,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "peerFailure",
           "security",
@@ -15929,10 +15925,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -16021,7 +16017,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -17446,7 +17442,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -17507,10 +17502,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -17607,7 +17602,7 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -18579,7 +18574,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -18626,10 +18620,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -18720,7 +18714,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -18763,7 +18757,6 @@
           "scale",
           "keyboard",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -18804,10 +18797,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -18916,7 +18909,7 @@
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -20479,7 +20472,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "peerFailure",
@@ -20533,10 +20525,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -20627,7 +20619,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -21447,7 +21439,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -21500,10 +21491,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -21588,7 +21579,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -21794,7 +21785,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -21840,10 +21830,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -21933,7 +21923,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -24080,7 +24070,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -24146,10 +24135,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -24244,7 +24233,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -25151,7 +25140,7 @@
             "10000 stages admission",
             "10000 stages label change",
             "aggregate-observations@1000000",
-            "n=1000000 invalid prefix staged inspection"
+            "n=1000000 bounded admission"
           ],
           "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
@@ -25282,16 +25271,10 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/data/funnel/funnel.class.ts",
-              "line": 238,
-              "kind": "remote-content or trust-boundary source signal"
-            }
-          ],
-          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -25316,7 +25299,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -26454,7 +26437,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -26506,10 +26488,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -26599,7 +26581,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -29072,7 +29054,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
-              "line": 798,
+              "line": 799,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30624,7 +30606,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 715,
+              "line": 716,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33900,7 +33882,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -33963,10 +33944,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -34055,7 +34036,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -34067,6 +34048,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/memory-panel/memory-panel-keyed-rows.test.ts",
           "src/components/retrieval/memory-panel/memory-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36948,7 +36930,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -37028,10 +37009,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -37131,7 +37112,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -38169,7 +38150,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -38246,10 +38226,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -38334,7 +38314,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -39431,7 +39411,6 @@
         "evidenceGaps": [
           "scale",
           "rtl",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -39482,10 +39461,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -39592,7 +39571,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -40025,7 +40004,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -40077,10 +40055,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -40164,7 +40142,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -40194,7 +40172,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -40262,10 +40239,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -40377,7 +40354,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -40755,7 +40732,6 @@
           "scale",
           "keyboard",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -40802,10 +40778,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -40902,7 +40878,7 @@
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -43470,7 +43446,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -43528,10 +43503,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -43615,7 +43590,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -43769,7 +43744,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.class.ts",
-              "line": 398,
+              "line": 399,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45094,7 +45069,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -45149,10 +45123,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -45237,7 +45211,7 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -45250,6 +45224,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard-keyed-rows.test.ts",
           "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard-scale.test.ts",
           "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.test.ts"
         ],
@@ -45646,7 +45621,6 @@
         "evidenceGaps": [
           "keyboard",
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -45707,10 +45681,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -45796,7 +45770,7 @@
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -47326,7 +47300,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -47387,10 +47360,10 @@
           "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -47475,7 +47448,7 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "No component-local rendered RTL assertion is recorded.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -47929,7 +47902,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -47982,10 +47954,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -48070,7 +48042,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -48083,6 +48055,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/retrieval-trace/retrieval-trace-keyed-rows.test.ts",
           "src/components/retrieval/retrieval-trace/retrieval-trace.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48583,7 +48556,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -48634,10 +48606,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -48726,7 +48698,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -50480,7 +50452,6 @@
         "evidenceGaps": [
           "scale",
           "keyboard",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -50550,10 +50521,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -50643,7 +50614,7 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -50853,7 +50824,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -50904,10 +50874,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -50978,7 +50948,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 582,
+              "line": 566,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51002,7 +50972,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -51621,7 +51591,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -51677,10 +51646,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -51780,7 +51749,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -53547,7 +53516,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -53604,10 +53572,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -53708,7 +53676,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -55964,7 +55932,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 474,
+              "line": 475,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -61879,7 +61847,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -61930,10 +61897,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -62022,7 +61989,7 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",

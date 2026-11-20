@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Lähetä',
   rubricSubmitAndNext: 'Lähetä ja siirry seuraavaan',
   rubricSkip: 'Ohita',
+  rubricKeysLimit: 'Vain ensimmäiset {count} arviointiohjeen kenttää {total} kentästä näytetään.',
   localePickerLabel: 'Kieli',
   localePickerRequired: 'Valitse kieli.',
   localePickerSearchLabel: 'Hae kieliä',

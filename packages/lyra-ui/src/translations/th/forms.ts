@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'ส่ง',
   rubricSubmitAndNext: 'ส่งและถัดไป',
   rubricSkip: 'ข้าม',
+  rubricKeysLimit: 'แสดงเฉพาะ {count} ช่องรูบริกแรกจากทั้งหมด {total} ช่อง',
   localePickerLabel: 'ภาษา',
   localePickerRequired: 'โปรดเลือกภาษา',
   localePickerSearchLabel: 'ค้นหาภาษา',

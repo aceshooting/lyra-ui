@@ -440,6 +440,18 @@ export type LyraApproveRequestEvent =
   | LyraToolApprovalDialogEventMap['lr-approve-request'];
 
 /**
+ * `lr-artifact-view-change` — dispatched by `<lr-artifact-panel>`; detail
+ * `LyraArtifactPanelEventMap['lr-artifact-view-change']`.
+ */
+export type LyraArtifactViewChangeEvent = LyraArtifactPanelEventMap['lr-artifact-view-change'];
+
+/**
+ * `lr-artifact-view-change-request` — dispatched by `<lr-artifact-panel>`; detail
+ * `LyraArtifactPanelEventMap['lr-artifact-view-change-request']`.
+ */
+export type LyraArtifactViewChangeRequestEvent = LyraArtifactPanelEventMap['lr-artifact-view-change-request'];
+
+/**
  * `lr-attachment-open` — dispatched by `<lr-email-viewer>`; detail
  * `LyraEmailViewerEventMap['lr-attachment-open']`.
  */
@@ -1435,6 +1447,15 @@ export type LyraFullscreenChangeEvent = LyraWidgetEventMap['lr-fullscreen-change
  * `LyraWidgetEventMap['lr-fullscreen-request']`.
  */
 export type LyraFullscreenRequestEvent = LyraWidgetEventMap['lr-fullscreen-request'];
+
+/**
+ * `lr-graph-view-change` — dispatched by 2 components: `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`; detail union of 2, e.g.
+ * `LyraGraphEventMap['lr-graph-view-change']`.
+ */
+export type LyraGraphViewChangeEvent =
+  | LyraGraphEventMap['lr-graph-view-change']
+  | LyraKnowledgeGraphExplorerEventMap['lr-graph-view-change'];
 
 /**
  * `lr-group-collapse` — dispatched by `<lr-data-grid>`; detail
@@ -3417,9 +3438,12 @@ export type LyraSwitchToggleRequestEvent = LyraSwitchEventMap['lr-switch-toggle-
 export type LyraTabChangeEvent = LyraKnowledgeBaseAdminEventMap['lr-tab-change'];
 
 /**
- * `lr-tab-hide` — dispatched by `<lr-tab-group>`; detail `LyraTabGroupEventMap['lr-tab-hide']`.
+ * `lr-tab-hide` — dispatched by `<lr-tab-group>`; detail union of 2, e.g.
+ * `LyraEntityDossierEventMap['lr-tab-hide']`.
  */
-export type LyraTabHideEvent = LyraTabGroupEventMap['lr-tab-hide'];
+export type LyraTabHideEvent =
+  | LyraEntityDossierEventMap['lr-tab-hide']
+  | LyraTabGroupEventMap['lr-tab-hide'];
 
 /**
  * `lr-tab-show` — dispatched by 2 components: `<lr-entity-dossier>`, `<lr-tab-group>`; detail
@@ -3718,28 +3742,12 @@ export type LyraVersionSelectEvent = LyraPromptStudioEventMap['lr-version-select
 export type LyraVideoChangeEvent = LyraVideoPlaylistEventMap['lr-video-change'];
 
 /**
- * `lr-view-change` — dispatched by 6 components: `<lr-artifact-panel>`, `<lr-calendar>`,
- * `<lr-date-picker>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, `<lr-widget>`; detail union
- * of 6, e.g. `LyraArtifactPanelEventMap['lr-view-change']`.
+ * `lr-view-change` — dispatched by 2 components: `<lr-calendar>`, `<lr-date-picker>`; detail union
+ * of 2, e.g. `LyraCalendarEventMap['lr-view-change']`.
  */
 export type LyraViewChangeEvent =
-  | LyraArtifactPanelEventMap['lr-view-change']
   | LyraCalendarEventMap['lr-view-change']
-  | LyraDatePickerEventMap['lr-view-change']
-  | LyraGraphEventMap['lr-view-change']
-  | LyraKnowledgeGraphExplorerEventMap['lr-view-change']
-  | LyraWidgetEventMap['lr-view-change'];
-
-/**
- * `lr-view-change-request` — dispatched by `<lr-artifact-panel>`; detail
- * `LyraArtifactPanelEventMap['lr-view-change-request']`.
- */
-export type LyraViewChangeRequestEvent = LyraArtifactPanelEventMap['lr-view-change-request'];
-
-/**
- * `lr-view-request` — dispatched by `<lr-widget>`; detail `LyraWidgetEventMap['lr-view-request']`.
- */
-export type LyraViewRequestEvent = LyraWidgetEventMap['lr-view-request'];
+  | LyraDatePickerEventMap['lr-view-change'];
 
 /**
  * `lr-viewer-diagnostic` — dispatched by 7 components: `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
@@ -3818,6 +3826,18 @@ export type LyraWidgetActionEvent = LyraWidgetRendererEventMap['lr-widget-action
 export type LyraWidgetStateChangeEvent = LyraWidgetRendererEventMap['lr-widget-state-change'];
 
 /**
+ * `lr-widget-view-change` — dispatched by `<lr-widget>`; detail
+ * `LyraWidgetEventMap['lr-widget-view-change']`.
+ */
+export type LyraWidgetViewChangeEvent = LyraWidgetEventMap['lr-widget-view-change'];
+
+/**
+ * `lr-widget-view-request` — dispatched by `<lr-widget>`; detail
+ * `LyraWidgetEventMap['lr-widget-view-request']`.
+ */
+export type LyraWidgetViewRequestEvent = LyraWidgetEventMap['lr-widget-view-request'];
+
+/**
  * `lr-word-activate` — dispatched by `<lr-word-cloud>`; detail
  * `LyraWordCloudEventMap['lr-word-activate']`.
  */
@@ -3887,6 +3907,8 @@ export interface LyraGlobalEventMap {
   'lr-approval-open': LyraApprovalOpenEvent;
   'lr-approval-select': LyraApprovalSelectEvent;
   'lr-approve-request': LyraApproveRequestEvent;
+  'lr-artifact-view-change': LyraArtifactViewChangeEvent;
+  'lr-artifact-view-change-request': LyraArtifactViewChangeRequestEvent;
   'lr-attachment-open': LyraAttachmentOpenEvent;
   'lr-attachment-preview-request': LyraAttachmentPreviewRequestEvent;
   'lr-attachment-remove': LyraAttachmentRemoveEvent;
@@ -4008,6 +4030,7 @@ export interface LyraGlobalEventMap {
   'lr-frame-select': LyraFrameSelectEvent;
   'lr-fullscreen-change': LyraFullscreenChangeEvent;
   'lr-fullscreen-request': LyraFullscreenRequestEvent;
+  'lr-graph-view-change': LyraGraphViewChangeEvent;
   'lr-group-collapse': LyraGroupCollapseEvent;
   'lr-group-expand': LyraGroupExpandEvent;
   'lr-group-toggle': LyraGroupToggleEvent;
@@ -4300,8 +4323,6 @@ export interface LyraGlobalEventMap {
   'lr-version-select': LyraVersionSelectEvent;
   'lr-video-change': LyraVideoChangeEvent;
   'lr-view-change': LyraViewChangeEvent;
-  'lr-view-change-request': LyraViewChangeRequestEvent;
-  'lr-view-request': LyraViewRequestEvent;
   'lr-viewer-diagnostic': LyraViewerDiagnosticEvent;
   'lr-viewport-change': LyraViewportChangeEvent;
   'lr-virtual-scroll': LyraVirtualScrollEvent;
@@ -4313,6 +4334,8 @@ export interface LyraGlobalEventMap {
   'lr-vote-request': LyraVoteRequestEvent;
   'lr-widget-action': LyraWidgetActionEvent;
   'lr-widget-state-change': LyraWidgetStateChangeEvent;
+  'lr-widget-view-change': LyraWidgetViewChangeEvent;
+  'lr-widget-view-request': LyraWidgetViewRequestEvent;
   'lr-word-activate': LyraWordActivateEvent;
   'lr-zoom': LyraZoomEvent;
   'lr-zoom-change': LyraZoomChangeEvent;

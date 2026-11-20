@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { createGroundFollowScene } from './map-camera-ground-follow-scene.js';
-import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
-import { createMapSceneSessionFacade } from './map-scene-session.js';
+import { createMapCameraFollowScene } from './fixtures/map-camera-follow-scene.js';
+import { createMapSceneSessionFacade } from './fixtures/map-scene-session.js';
 import { admitMapCameraFollowProfile } from './map-camera-follow-data.js';
 import { prepareMapCameraFollow, startMapCameraFollow } from './map-camera-follow-controller.js';
 import type { MapCameraFollowFrame, MapCameraFollowNotice, MapCameraFollowOwner,

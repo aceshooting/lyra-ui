@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeWash, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -139,7 +139,7 @@ export const styles = css`
   }
   :host([toggleable]:not([removable])) [part='base'] {
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
     --_lr-chip-toggle-bg: var(--lr-chip-bg, var(--_lr-chip-bg));
   }
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:hover {
@@ -152,7 +152,7 @@ export const styles = css`
      :active matches even though the button is [part='toggle-button'] stretched over the base, since
      :active applies to the activated element's ancestors too. */
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:active {
-    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) var(--lr-color-mix-active), var(--_lr-chip-toggle-bg));
+    background: ${activeWash('var(--lr-chip-accent, var(--_lr-chip-accent))', 'var(--_lr-chip-toggle-bg)')};
   }
   [part='toggle-button']:focus-visible {
     ${focusRing}
@@ -269,7 +269,7 @@ export const styles = css`
     font-size: var(--lr-size-0-75em);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='remove-button']:not(:disabled):hover {
     background: var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background));
@@ -280,7 +280,7 @@ export const styles = css`
      is the only colour guaranteed to contrast there, while --lr-color-mix-partner follows the PAGE
      text and would point the opposite way from the hover on a non-neutral chip. */
   [part='remove-button']:not(:disabled):active {
-    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background)));
+    background: ${activeWash('currentColor', 'var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background))')};
   }
   [part='remove-button']:focus-visible {
     ${focusRing}

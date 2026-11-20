@@ -1,6 +1,7 @@
 import type { LyraPageSource, LyraSourceRecord } from '../../../data-sources.js';
 import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
-import { finiteInteger } from '../../../internal/numbers.js';
+
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -332,8 +333,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       const statuses = [...new Set(this.statusFilter)];
       if (statuses.some(status => !STATUSES.includes(status))) throw new TypeError('Invalid filter');
       const filter = JSON.stringify(statuses);
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       if ((this.sourceSize !== undefined && this.sourceSize !== size) || (this.sourceFilter !== undefined && this.sourceFilter !== filter)) { page = 0; this.sourcePage = 0; }
       this.sourceSize = size; this.sourceFilter = filter;
       const epoch = this.sourceEpoch;
@@ -829,8 +830,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           >${run.rows.map(({ value, index }) => this.renderTest(value.suiteId, value.suiteName, value.test, index, 0))}</div
         >`)}
       ${result && !rows.length ? html`<lr-empty part="empty" heading=${this.localize(result.summary!.total ? 'noMatches' : 'noData')}></lr-empty>` : nothing}
-      <lr-pagination part="source-pagination" format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
-        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${!result}
+      <lr-pagination part="source-pagination" format="compact" with-edges .page=${displayedSourcePage(this.sourcePage)}
+        .pageSize=${normalizeSourcePageSize(this.sourcePageSize)} .total=${this.sourceTotal ?? -1} .disabled=${!result}
         .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
           event.stopPropagation(); if (this.sourcePages.state === state && result) this.sourcePage = event.detail.page - 1;
         }} @lr-before-page-change=${(event: Event) => event.stopPropagation()} @lr-activate=${(event: Event) => event.stopPropagation()}></lr-pagination>

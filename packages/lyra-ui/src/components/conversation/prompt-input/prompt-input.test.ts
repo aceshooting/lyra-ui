@@ -1491,7 +1491,7 @@ it("forwards LyraPromptInputAttachment.bytes to the attachment chip byte-count c
   expect(chip.bytes).to.equal(2_048);
   expect(
     chip.shadowRoot!.querySelector('[part="size"]')?.textContent?.trim()
-  ).to.equal("2.0 KB");
+  ).to.equal("2 kB");
 });
 
 it("preserves omitted attachment bytes instead of converting unknown size to a known empty file", async () => {

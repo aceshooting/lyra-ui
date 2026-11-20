@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Wasilisha',
   rubricSubmitAndNext: 'Wasilisha na uendelee',
   rubricSkip: 'Ruka',
+  rubricKeysLimit: 'Sehemu {count} za kwanza pekee za rubriki kati ya {total} ndizo zinazoonyeshwa.',
   localePickerLabel: 'Lugha',
   localePickerRequired: 'Chagua lugha.',
   localePickerSearchLabel: 'Tafuta lugha',

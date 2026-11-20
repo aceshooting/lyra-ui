@@ -1,4 +1,4 @@
-import { activeFill, disclosureChevron, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -59,7 +59,7 @@ export const styles = css`
     );
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="disclosure"] {
     display: inline-grid;
@@ -73,7 +73,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   ${disclosureChevron({
     glyph: "[part='disclosure'] svg",

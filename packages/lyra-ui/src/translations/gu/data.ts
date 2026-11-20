@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'ફક્ત પ્રથમ {count} હીટમૅપ સેલ બતાવવામાં આવે છે.',
   heatmapDecorationLimit: 'ફક્ત પ્રથમ {count} હીટમૅપ રંગો, સંજ્ઞાના નિશાન અને નોંધો બતાવવામાં આવે છે.',
   funnelStagesLimit: 'ફક્ત પ્રથમ {count} તબક્કા બતાવવામાં આવે છે.',
+  funnelStagesInputLimit: 'કુલ {total} તબક્કામાંથી પ્રથમ {count} બતાવવામાં આવે છે.',
   timeline: 'સમયરેખા',
   timelineClusterCount: 'સમયરેખાની ઇવેન્ટ બતાવો ({count})',
   timelineItemVariantWarning: 'ચેતવણી',

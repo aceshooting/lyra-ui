@@ -16,7 +16,7 @@ import {
   TEXT_QUOTE_LIMITS,
   type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
-import { formatLocalizedFileSize } from '../../../internal/bytes.js';
+import { formatFileSize } from '../../../internal/bytes.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
@@ -29,7 +29,7 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -105,25 +105,12 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     archiveViewerEmpty: LYRA_DEFAULT_archiveViewerEmpty,
     archiveViewerFile: LYRA_DEFAULT_archiveViewerFile,
     archiveViewerFolder: LYRA_DEFAULT_archiveViewerFolder,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -397,7 +384,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     // DOM id (the canonical DOM-clobbering primitive). applyAnchor() resolves a fragment anchor
     // by matching entry.name against the loaded DATA and then, for the exact scroll target,
     // against rendered text content -- never against a DOM id -- so no id was ever needed here.
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatLocalizedFileSize(entry.size, this.effectiveLocale, key => this.localize(key))}</span>`}</div>`;
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span part="entry-kind">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(entry.size, this.effectiveLocale)}</span>`}</div>`;
   };
 
   private stopVirtualListEvent(event: Event): void {

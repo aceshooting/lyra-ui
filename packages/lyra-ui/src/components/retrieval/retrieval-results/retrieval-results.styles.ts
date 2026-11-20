@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -109,13 +109,13 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     padding: var(--lr-space-2xs) var(--lr-space-m);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='load-more']:hover {
     background: var(--lr-color-brand-quiet);
   }
   [part='load-more']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='load-more']:focus-visible {
     ${focusRing}
@@ -153,10 +153,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='source-retry']:hover, [part='source-selection-retry']:hover {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-color-surface)')};
   }
   [part='source-retry']:active, [part='source-selection-retry']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='source-retry']:focus-visible, [part='source-selection-retry']:focus-visible {
     ${focusRing}

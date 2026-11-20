@@ -64,7 +64,7 @@ it('measures bounded current and pending exact retention through window replacem
   const observed = new WeakSet<Cell[]>();
   let el: LyraHeatmap | undefined;
   let peakRecords = 0, peakUnits = 0, peakCurrent = 0, peakPending = 0, peakTiles = 0;
-  const state = () => (el as unknown as { sourceController: Retention }).sourceController;
+  const state = () => (el as unknown as { matrixController: Retention }).matrixController;
   const sample = () => {
     if (!el) return;
     const controller = state();

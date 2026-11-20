@@ -5,7 +5,7 @@ import { sceneArc } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment } from '../../../../test/map-scene-render-component-fixtures.js';
 import { ControlMapEngine, FakeAttributionControl as Attribution, FakeGeolocateControl as Geolocate } from '../../../../test/map-control-engine.js';
 import { MapCanvasAllocationController } from './map-canvas-target.js';
-import { mapFeatureLoader } from './map-feature-loader-core.js';
+import { mapFeatureLoader } from '../../../internal/map-feature-loader-core.js';
 import { normalizeCameraOptions } from './map-camera.js';
 import * as chrome from './map-control-chrome.js';
 import { normalizeMapControlOptions } from './map-control-options.js';

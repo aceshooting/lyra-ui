@@ -167,6 +167,12 @@ export interface LyraTooltipEventMap {
  * an explicit empty label suppresses both derived content text and the localized actionable-popup
  * fallback.
  *
+ * Content is read once when it is assigned, and then kept current only while something consumes
+ * it: while the tooltip is open, while its trigger has focus, and always in `label-mode="label"`
+ * (the content is then the trigger's accessible name). A closed description-mode tooltip does no
+ * content observation; an edit made while closed is picked up when the trigger takes focus or the
+ * tooltip opens, which is when the description is exposed.
+ *
  * Interaction/ARIA ownership is independent of positioning. A slotted trigger wins; without one,
  * a live HTML element resolved by `for` receives the configured interaction listeners and
  * the selected label-mode relationship. A direct `.anchor` is positioning-only. `showAt()`'s virtual anchor wins
@@ -557,6 +563,14 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // (where select.class.ts's own equivalent `listboxHidden` clear lives), so unhiding a
     // newly-opened popup does not itself trip the change-in-update warning.
     if (changed.has('open') && this.open) this.popupHidden = false;
+    // A closed description-mode tooltip skips content inspection, so classify the content (dialog
+    // versus tooltip role, description text) before the open render rather than after it.
+    if (changed.has('open') && this.open && this.hasUpdated && this.isConnected) this.updateInteractiveContent();
+    // Entering or leaving `label` mode changes whether the content is observed at all.
+    if (changed.has('labelMode') && this.hasUpdated && this.isConnected) {
+      if (this.contentNeeded) this.updateInteractiveContent();
+      else this.observeStructureOnly();
+    }
     // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
     // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
     // against, which flips the state after the update completed and buys a second render. Deriving
@@ -635,15 +649,22 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.contentObserver = MutationObserverCtor
       ? new MutationObserverCtor((records, observer) => {
+          // A closed description-mode tooltip is not read by anything yet: it only tracks whether
+          // it has a named trigger, and inspects its content when it opens or its trigger takes focus.
+          if (!this.contentNeeded) {
+            this.syncNamedTriggerMode();
+            return;
+          }
           if (!accessibleTextRecordsMatter(observer, records)) return;
           this.syncNamedTriggerMode();
           this.updateInteractiveContent();
         })
       : undefined;
-    // The light-DOM description proxy is consumed while closed: a focused trigger must already
-    // have its current accessible description before any delayed show. Keep this one bounded
-    // content pass (the shared text walk caps nodes and characters). Ancestor visibility changes
-    // also refresh closed descriptions; the shared observer filter ignores unrelated style writes.
+    // The light-DOM description proxy is consumed while the tooltip is open, while its trigger has
+    // focus, and always in `label` mode (it is then the trigger's accessible name). Connecting
+    // runs one bounded content pass (the shared text walk caps nodes and characters), but only
+    // those states keep content observers alive; a closed description-mode tooltip watches its
+    // direct structure and inspects again when its trigger takes focus or it opens.
     this.updateInteractiveContent();
     this.syncInteractionTrigger();
     // A cross-document move can connect before the adopted shadow slot has redistributed. Refresh
@@ -1203,6 +1224,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
 
   private onContentSlotChange = (event: Event): void => {
     if ((event.target as Element | null)?.localName !== 'slot') return;
+    // One inspection per slot change even while closed: assignment is a discrete event, unlike the
+    // continuous content observation a closed description-mode tooltip skips.
     this.updateInteractiveContent();
   };
 
@@ -1376,7 +1399,28 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     });
   }
 
+  /** True while something reads the content-derived name, description or role: the open popup, a
+   *  focused trigger, or `label` mode, where the content is the trigger's accessible name. */
+  private get contentNeeded(): boolean {
+    return this.open || this.focusDescribesTrigger || this.labelMode === 'label';
+  }
+
+  /** The cheap closed-state observation: direct structure only, no content inspection. */
+  private observeStructureOnly(): void {
+    this.stopLabelReferenceIdentityObservation?.();
+    this.stopLabelReferenceIdentityObservation = undefined;
+    this.cancelShadowContentScan();
+    const observer = this.contentObserver;
+    if (!observer) return;
+    observer.disconnect();
+    observer.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'], subtree: true });
+  }
+
   private bindContentObservation(snapshot: TooltipContentSnapshot): void {
+    if (!this.contentNeeded) {
+      this.observeStructureOnly();
+      return;
+    }
     this.stopLabelReferenceIdentityObservation?.();
     this.stopLabelReferenceIdentityObservation = undefined;
     if (this.isConnected && snapshot.labelReferenceRoots.size > 0) {

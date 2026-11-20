@@ -1,8 +1,8 @@
-import { followTarget } from './map-camera-ground-follow-scene.js';
+import { followTarget } from '../map-camera-ground-follow-scene.js';
 import type { MapCameraFollowFrame, MapCameraFollowNotice, MapCameraFollowScene, MapCameraFollowStamp,
-  MapCameraFollowTarget } from './map-camera-follow-controller.js';
+  MapCameraFollowTarget } from '../map-camera-follow-controller.js';
 import type { MapSceneSessionAttachment, SceneCameraProfile, SceneCompletedFrame,
-  SceneTargetFact, SceneTargetProjection } from './map-scene-contract.js';
+  SceneTargetFact, SceneTargetProjection } from '../map-scene-contract.js';
 
 interface ObservationReceipt {
   readonly frame: SceneCompletedFrame;

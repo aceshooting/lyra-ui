@@ -6,18 +6,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
 import { compactManifest } from './manifest-compact.mjs';
+import { COMPANION_MANIFESTS } from './companion-manifests.mjs';
 
 const packagesDir = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 
-/** Companion packages that register their own `lr-*` custom elements. */
-export const COMPANION_MANIFESTS = Object.freeze([
-  { directory: 'lyra-docs', tags: ['lr-docx-editor'] },
-  { directory: 'lyra-gen', tags: ['lr-gen-view'] },
-]);
+export { COMPANION_MANIFESTS };
 
 export async function generateCompanionManifest(directory) {
   const cwd = path.join(packagesDir, directory);
   const analyzed = await analyzeManifest({ argv: ['analyze', '--litelement', '--quiet'], cwd, noWrite: true });
+  const companion = COMPANION_MANIFESTS.find((candidate) => candidate.directory === directory);
+  for (const module of analyzed.modules ?? []) {
+    for (const declaration of module.declarations ?? []) {
+      if (declaration.customElement && companion?.tags.includes(declaration.tagName)) {
+        declaration.status = companion.status;
+        declaration.since = companion.since;
+      }
+    }
+  }
   const manifest = compactManifest(analyzed);
   return { path: path.join(cwd, 'custom-elements.json'), manifest, text: `${JSON.stringify(manifest)}\n` };
 }

@@ -1,29 +1,16 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { byteFormat, byteUnitIndex, formatFileSize } from './bytes.js';
+import { byteFormat, byteUnitIndex, formatByteSize, formatFileSize } from './bytes.js';
 
-/** Reference ladder: divide by 1024 until the value fits or the terabyte rung is reached. */
-function naiveFileSize(bytes: number): string {
-  if (bytes < 1024) return `${(Math.round(bytes) + 0).toFixed(0)} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let value = bytes / 1024;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toFixed(1)} ${units[unit]}`;
-}
-
-it('formatFileSize matches a repeated-division reference for every finite non-negative size', () => {
+it('formatFileSize is the shared byte formatter at a binary step for every finite non-negative size', () => {
   const sizes = fc.oneof(
     fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),
     fc.double({ min: 0, max: 1e21, noNaN: true }),
     fc.constantFrom(1023.5, 1024, 1024 ** 2 - 1, 1024 ** 4, 1024 ** 5 + 1),
   );
   fc.assert(fc.property(sizes, (bytes) => {
-    expect(formatFileSize(bytes)).to.equal(naiveFileSize(bytes));
+    expect(formatFileSize(bytes, 'en')).to.equal(formatByteSize(bytes + 0, 'en', { unitStep: 1024 }));
   }), propertyRuns());
 });
 

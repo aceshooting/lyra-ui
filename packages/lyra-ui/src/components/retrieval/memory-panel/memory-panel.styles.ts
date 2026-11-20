@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -94,7 +94,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='expand-toggle']:focus-visible {
     ${focusRing}
@@ -136,7 +136,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='add-button']:focus-visible,
   [part='remove-button']:focus-visible,

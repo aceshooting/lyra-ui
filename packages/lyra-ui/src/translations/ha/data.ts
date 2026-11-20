@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Ana nuna sel {count} na farko kawai a taswirar zafi.',
   heatmapDecorationLimit: 'Ana nuna launuka, matakan maɓalli da bayanan ƙarin bayani {count} na farko kawai a taswirar zafi.',
   funnelStagesLimit: 'Ana nuna matakai {count} na farko kawai.',
+  funnelStagesInputLimit: 'Ana nuna matakai {count} na farko daga cikin {total}.',
   timeline: 'Jadawalin lokaci',
   timelineClusterCount: 'Nuna abubuwan jadawalin lokaci ({count})',
   timelineItemVariantWarning: 'Gargaɗi',

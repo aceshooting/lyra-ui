@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Verzenden',
   rubricSubmitAndNext: 'Verzenden en volgende',
   rubricSkip: 'Overslaan',
+  rubricKeysLimit: 'Alleen de eerste {count} van {total} rubriekvelden worden weergegeven.',
   localePickerLabel: 'Taal',
   localePickerRequired: 'Kies een taal.',
   localePickerSearchLabel: 'Talen zoeken',

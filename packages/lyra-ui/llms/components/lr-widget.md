@@ -69,9 +69,9 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   `lr-toggle` and persist the state yourself.
 
 The fullscreen dialog receives the host's `aria-describedby` references. A fullscreen request
-listener can resolve the request by writing `fullscreen` synchronously. When observing a widget
-that contains another view switcher, check `event.target === widget` before reading the widget's
-`lr-view-change` detail.
+listener can resolve the request by writing `fullscreen` synchronously. The view events carry the
+widget's own name, so a view switcher inside the panel body never reaches a
+`lr-widget-view-change` listener.
 
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
@@ -81,20 +81,20 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
-toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
-`activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+`activeViewId` directly), `lr-widget-view-change` (non-cancelable; `detail: { viewId }`, the accepted
 active view's `viewId`. Also emitted when a `views` reassignment drops the currently-active view,
 forcing a fallback to the first remaining view. Not emitted when a consumer sets `activeViewId`
 directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
-`activeViewId` actually moved. `lr-view-request` stays the veto point, and a vetoed activation emits
-no activation at all. Use it for the repeat pick `lr-view-change` deliberately stays silent for —
+`activeViewId` actually moved. `lr-widget-view-request` stays the veto point, and a vetoed activation emits
+no activation at all. Use it for the repeat pick `lr-widget-view-change` deliberately stays silent for —
 "rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
 this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
-`lr-view-request` and `lr-view-change` are emitted first. Not emitted when a consumer sets
+`lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading

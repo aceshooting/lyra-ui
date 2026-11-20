@@ -8,8 +8,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
@@ -384,7 +383,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   private lastObservedWidth?: number;
   private readonly resizeRaf = new OwnedFrame(this);
   private readonly countAnnounceTimer = new OwnedTimeout(this);
-  private countAnnouncementSink?: AnnouncementSink;
+  private readonly countAnnouncementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly hostDescription = new HostDescriptionController(this, () => this.textareaEl ?? null);
 
   constructor() {
@@ -474,10 +473,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.connectedCallback();
     // The debounce ensures text arrives later, but the live region itself still has to be mounted
     // before that first message and in the textarea's current owner document.
-    this.countAnnouncementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     if (this.resize === 'auto' && this.hasUpdated) {
       this.armResizeObserver();
       this.fitToContent();
@@ -494,13 +489,12 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.resizeObserver = undefined;
     this.resizeRaf.cancel();
     this.countAnnounceTimer.cancel();
-    this.countAnnouncementSink?.release();
-    this.countAnnouncementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.countAnnouncementSink.adopted();
     this.hostDescription.adopted();
   }
 
@@ -539,7 +533,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       if (!isAccessibilityVisible(this)) return;
       const text = this.countText();
       this.announcedCountText = text;
-      this.countAnnouncementSink?.announce(text);
+      this.countAnnouncementSink.announcePolite(text);
     });
   }
 

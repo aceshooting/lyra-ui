@@ -160,7 +160,7 @@ it('ignores unrelated document mutations while closed', async () => {
   expect(syncs).to.equal(0);
 });
 
-it('skips content inspection for an unrelated ancestor style write while closed, yet reacts to a visibility change', async () => {
+it('stops observing ancestors while closed, and inspects again when the trigger takes focus', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><button id="gated-trigger">Save</button><lr-tooltip for="gated-trigger">Tip</lr-tooltip></div>
   `);
@@ -173,19 +173,15 @@ it('skips content inspection for an unrelated ancestor style write while closed,
     inspections += 1;
     original.call(this);
   };
-  // The first batch always matters: it opts the observer in and its rebind records the baseline.
-  wrapper.style.setProperty('--prime', '1');
-  await waitUntil(() => inspections > 0, 'the first batch never inspected content');
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  inspections = 0;
-  // A custom-property or class write is part of the presentation key (a closed tooltip's hidden
-  // content cannot rule it out), so the unrelated write here is a plain inline style.
   wrapper.style.color = 'red';
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  expect(inspections, 'an ancestor style write that cannot change visibility inspected content').to.equal(0);
   wrapper.style.display = 'none';
-  await waitUntil(() => inspections > 0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(inspections, 'a closed description-mode tooltip does no content work for ancestor changes').to.equal(0);
+  wrapper.style.removeProperty('display');
+  const trigger = wrapper.querySelector('button')!;
+  await focusByKeyboard(trigger);
+  await waitUntil(() => inspections > 0, 'focus on the trigger inspects the content');
 });
 
 /** Flat-tree text of a shadow subtree: assigned nodes replace a slot, else its fallback renders. */

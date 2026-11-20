@@ -1,7 +1,8 @@
+import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   ${formControlAppearance}
@@ -84,36 +85,17 @@ export const styles = css`
     display: none;
   }
 
-  [part='clear-button'] {
-    justify-self: end;
-    ${iconHitTarget}
-    padding-inline: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
-  }
-  [part='clear-button']:not(:disabled):hover {
-    background: var(--lr-signature-pad-clear-hover-bg, ${hoverFill('var(--lr-color-surface)')});
-  }
-  [part='clear-button']:not(:disabled):active {
-    background: var(--lr-signature-pad-clear-active-bg, ${activeFill('var(--lr-color-surface)')});
-  }
-  [part='clear-button']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: default;
-  }
+  [part='clear-button'] { justify-self: end; }
+  ${outlinedActionStyles("[part='clear-button']", {
+    padding: false,
+    extra: 'padding-inline: var(--lr-space-s);',
+    hoverBackground: `var(--lr-signature-pad-clear-hover-bg, ${hoverFill('var(--lr-color-surface)').cssText})`,
+    activeBackground: `var(--lr-signature-pad-clear-active-bg, ${activeFill('var(--lr-color-surface)').cssText})`,
+  })}
 
   [part='hint'],
   [part='error'] {
     margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
   }
-  [part='error'] {
-    color: var(--lr-color-danger);
-  }
+  ${formControlSupportingTone}
 `;

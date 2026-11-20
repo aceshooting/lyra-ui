@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'የመጀመሪያዎቹ {count} የሙቀት ካርታ ሕዋሶች ብቻ ይታያሉ።',
   heatmapDecorationLimit: 'የመጀመሪያዎቹ {count} የሙቀት ካርታ ቀለሞች፣ የቁልፍ ምልክቶች እና ማብራሪያዎች ብቻ ይታያሉ።',
   funnelStagesLimit: 'የመጀመሪያዎቹ {count} ደረጃዎች ብቻ ይታያሉ።',
+  funnelStagesInputLimit: 'ከ{total} ደረጃዎች ውስጥ የመጀመሪያዎቹ {count} ይታያሉ።',
   timeline: 'የጊዜ መስመር',
   timelineClusterCount: 'የጊዜ መስመር ክስተቶችን አሳይ ({count})',
   timelineItemVariantWarning: 'ማስጠንቀቂያ',

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'แสดงเฉพาะช่องแผนที่ความร้อน {count} ช่องแรก',
   heatmapDecorationLimit: 'แสดงเฉพาะสี จุดหยุดคำอธิบาย และคำอธิบายประกอบแผนที่ความร้อน {count} รายการแรก',
   funnelStagesLimit: 'แสดงเฉพาะขั้นตอน {count} ขั้นแรก',
+  funnelStagesInputLimit: 'แสดง {count} ขั้นตอนแรกจากทั้งหมด {total} ขั้นตอน',
   timeline: 'ไทม์ไลน์',
   timelineClusterCount: 'แสดงเหตุการณ์ในไทม์ไลน์ ({count})',
   timelineItemVariantWarning: 'คำเตือน',

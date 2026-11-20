@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'جمع کرو',
   rubricSubmitAndNext: 'جمع کرو تے اگلا',
   rubricSkip: 'چھڈ دیو',
+  rubricKeysLimit: '{total} روبرک خانیاں وچوں صرف پہلے {count} وکھائے گئے نیں۔',
   localePickerLabel: 'زبان',
   localePickerRequired: 'براہ کرم اک زبان چنو۔',
   localePickerSearchLabel: 'زباناں لبھو',

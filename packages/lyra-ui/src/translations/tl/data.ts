@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Ang unang {count} heatmap cell lang ang ipinapakita.',
   heatmapDecorationLimit: 'Ang unang {count} kulay ng heatmap, hinto ng legend, at anotasyon lang ang ipinapakita.',
   funnelStagesLimit: 'Ang unang {count} yugto lang ang ipinapakita.',
+  funnelStagesInputLimit: 'Ipinapakita ang unang {count} sa {total} yugto.',
   timeline: 'Takbo ng panahon',
   timelineClusterCount: 'Ipakita ang mga kaganapan sa timeline ({count})',
   timelineItemVariantWarning: 'Babala',

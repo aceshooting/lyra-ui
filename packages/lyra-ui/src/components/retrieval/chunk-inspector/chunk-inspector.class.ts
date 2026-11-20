@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
@@ -564,7 +565,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               @focusout=${this.rebaseVirtualTabStop}
             ></lr-virtual-list>`
           : html`<div role=${embedded ? nothing : 'list'}>
-              ${sorted.map((chunk, index) => this.chunkTemplate(chunk, index, embedded))}
+              ${repeat(sorted, (chunk) => chunk.id, (chunk, index) => this.chunkTemplate(chunk, index, embedded))}
             </div>`}
       </div>
     `;

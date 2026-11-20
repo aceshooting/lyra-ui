@@ -1,10 +1,10 @@
 import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
-import { registerSceneAttachmentProvider, resolveSceneAttachment } from './map-scene-session-registry.js';
+import { registerSceneAttachmentProvider, resolveSceneAttachment } from '../map-scene-session-registry.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR,
-  readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
+  readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../data-descriptors.js';
 import type { MapSceneSessionAttachment, MapSceneSessionBacking, MapSceneSessionFacade, MapSceneSessionState,
   SceneCompletedFrame, ScenePadding, SceneRegistryNotice, SceneSessionStateSnapshot, SceneTargetEntry,
-  SceneTargetFact, SceneTargetLookup, SceneTargetProjection, SceneViewportNotice } from './map-scene-contract.js';
+  SceneTargetFact, SceneTargetLookup, SceneTargetProjection, SceneViewportNotice } from '../map-scene-contract.js';
 
 type Release = () => void;
 interface StateView {

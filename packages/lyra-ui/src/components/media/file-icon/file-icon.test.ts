@@ -76,17 +76,18 @@ function measureTokenFit(el: LyraFileIcon): { token: HTMLElement; textRect: DOMR
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-file-icon', 'size');
 
-expectLocaleFallback('ar-EG', ['fileSizeUnitMb', 'fileTypePdf', 'fileTypeWithSize']);
+expectLocaleFallback('ar-EG', ['fileTypePdf', 'fileTypeWithSize']);
 expectLocaleFallback('tr', ['fileTypeFile']);
 
-it('includes the file size with locale digits and the supplied unit label', async () => {
+it('includes the file size with locale digits and Intl unit wording', async () => {
   const el = await fixture<LyraFileIcon>(html`
     <lr-file-icon mode="label" mime-type="application/pdf" locale="de" bytes="1536"
-      .strings=${{ fileSizeUnitKb: 'KiB', fileTypePdf: 'PDF', fileTypeFile: 'Datei', fileTypeWithSize: '{label} ({size})' }}></lr-file-icon>
+      .strings=${{ fileTypePdf: 'PDF', fileTypeFile: 'Datei', fileTypeWithSize: '{label} ({size})' }}></lr-file-icon>
   `);
+  const size = new Intl.NumberFormat('de', { style: 'unit', unit: 'kilobyte', unitDisplay: 'short', maximumFractionDigits: 1 }).format(1.5);
   const root = el.shadowRoot!;
-  expect(root.querySelector('[part="base"]')?.getAttribute('aria-label')).to.include('1,5 KiB');
-  expect(root.textContent).to.include('1,5 KiB');
+  expect(root.querySelector('[part="base"]')?.getAttribute('aria-label')).to.include(size);
+  expect(root.textContent).to.include(size);
 });
 
 describe('file type metadata', () => {
@@ -262,9 +263,9 @@ describe('lr-file-icon', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
 
-  it('formats a whole-unit size with one decimal, like the other file displays', async () => {
+  it('formats a whole-unit size without a trailing zero, like the other file displays', async () => {
     const el = await fixture(html`<lr-file-icon mime-type="application/pdf" mode="label" bytes="2097152"></lr-file-icon>`);
-    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 MB');
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2 MB');
   });
 
   it('lets a host aria-label win on the image owner without replacing the visible label', async () => {

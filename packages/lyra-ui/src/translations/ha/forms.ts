@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Aika',
   rubricSubmitAndNext: 'Aika sannan a ci gaba',
   rubricSkip: 'Tsallake',
+  rubricKeysLimit: 'Ana nuna filayen rubric {count} na farko kawai daga cikin {total}.',
   localePickerLabel: 'Harshe',
   localePickerRequired: 'Da fatan zaɓi harshe.',
   localePickerSearchLabel: 'Nemo harsuna',

@@ -46,6 +46,23 @@ export function tryReleasePointerCapture(el: Element, id: number): void {
   }
 }
 
+/** Binds (`on`) or unbinds the move / end listener quartet of one pointer gesture on `target`:
+ *  `pointermove` to `move`, `pointerup` to `commit`, `pointercancel` and `lostpointercapture` to
+ *  `cancel` (which defaults to `commit`). Pass the same function references to unbind. */
+export function togglePointerGesture(
+  target: EventTarget,
+  on: boolean,
+  move: (event: PointerEvent) => void,
+  commit: (event: PointerEvent) => void,
+  cancel: (event: PointerEvent) => void = commit,
+): void {
+  const method = on ? 'addEventListener' : 'removeEventListener';
+  target[method]('pointermove', move as EventListener);
+  target[method]('pointerup', commit as EventListener);
+  target[method]('pointercancel', cancel as EventListener);
+  target[method]('lostpointercapture', cancel as EventListener);
+}
+
 interface Suppression {
   keys: Set<string>;
   timer: number;

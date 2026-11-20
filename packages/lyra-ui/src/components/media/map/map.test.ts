@@ -2475,10 +2475,12 @@ it('paints a theme-aware compact attribution glyph while preserving native discl
   el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-text', 'rgb(221, 238, 255)');
   el.style.setProperty('--lr-color-surface', 'rgb(17, 34, 51)');
+  await waitUntil(() => getComputedStyle(summary, '::before').backgroundColor === 'rgb(221, 238, 255)', 'the glyph colour settles after the transition');
   expect(getComputedStyle(summary, '::before').backgroundColor).to.equal('rgb(221, 238, 255)');
   await setForcedColors('active');
   try {
     if (matchMedia('(forced-colors: active)').matches) {
+      await waitUntil(() => getComputedStyle(summary, '::before').backgroundColor === getComputedStyle(summary).color, 'forced-colors glyph settles');
       expect(getComputedStyle(summary, '::before').backgroundColor).to.equal(getComputedStyle(summary).color);
     }
   } finally { await setForcedColors('none'); }

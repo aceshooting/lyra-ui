@@ -473,6 +473,8 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart filename - The local file name or untitled fallback.
  * @csspart state - Current load, dirty or save state.
  * @csspart zoom - Page zoom select: Fit width or a percentage.
+ * @csspart text-color-fields - Field group inside the text colour dialog.
+ * @csspart highlight-fields - Field group inside the highlight colour dialog.
  */
 export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   static override styles = [LyraElement.styles, styles];

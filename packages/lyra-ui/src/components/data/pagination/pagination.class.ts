@@ -10,7 +10,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
@@ -362,7 +362,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Handle on the shared light-DOM live region page changes actually announce through -- a region
    *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
    *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private pendingFocusPage?: number;
   private pendingFocusOrigin: Element | null = null;
 
@@ -381,16 +381,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     super.connectedCallback();
     // Acquired on connect, not on the first page change: assistive tech has to have been observing
     // a live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
     this.clearPendingFocus();
-    this.sink?.release();
-    this.sink = undefined;
     super.disconnectedCallback();
   }
 
@@ -544,13 +538,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       // Announced from the computation, not from a rendered text change: the shared region appends
       // each announcement as its own node, so returning to a page already announced is read again
       // instead of being a silent no-op.
-      this.sink?.announce(this.liveText);
+      this.sink.announcePolite(this.liveText);
     } else if (this.initialized && changed.has('page') && this.calculatedTotalPages > 0) {
       this.liveText = this.localize('paginationApplied', undefined, {
         page: this.formatLocaleNumber(this.currentPage),
         totalPages: this.formatLocaleNumber(this.calculatedTotalPages),
       });
-      this.sink?.announce(this.liveText);
+      this.sink.announcePolite(this.liveText);
     }
     this.initialized = true;
   }

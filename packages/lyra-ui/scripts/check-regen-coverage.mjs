@@ -340,6 +340,9 @@ export const EXEMPTIONS = Object.freeze({
   'generate-component-quality.mjs':
     'measures BUILT dist/ output (gzip size) and test quality, so it must run after `pnpm build`; ' +
     'documented as the one step run separately after `regen`, not inside it (docs/agents/ci-and-gates.md).',
+  'build-migration-runtime.mjs':
+    'assembles dist/cli inside build.mjs (buildMigrationRuntime), so it runs with every `pnpm build`; ' +
+    'it writes only ignored dist/ output, never a tracked source artifact.',
   'build.mjs':
     'the build step itself, a prerequisite for `component-quality`, not a source-artifact generator; ' +
     'run `pnpm build` separately before `component-quality` (docs/agents/ci-and-gates.md).',

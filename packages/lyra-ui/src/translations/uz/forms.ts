@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Yuborish',
   rubricSubmitAndNext: 'Yuborish va keyingisi',
   rubricSkip: 'Oʻtkazib yuborish',
+  rubricKeysLimit: 'Jami {total} ta rubrika maydonidan faqat dastlabki {count} tasi koʻrsatiladi.',
   localePickerLabel: 'Til',
   localePickerRequired: 'Tilni tanlang.',
   localePickerSearchLabel: 'Tillarni qidirish',

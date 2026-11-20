@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'ਸਿਰਫ਼ ਪਹਿਲੇ {count} ਹੀਟਮੈਪ ਖਾਨੇ ਦਿਖਾਏ ਗਏ ਹਨ।',
   heatmapDecorationLimit: 'ਸਿਰਫ਼ ਪਹਿਲੇ {count} ਹੀਟਮੈਪ ਰੰਗ, ਲੈਜੈਂਡ ਨਿਸ਼ਾਨ ਅਤੇ ਟਿੱਪਣੀਆਂ ਦਿਖਾਈਆਂ ਗਈਆਂ ਹਨ।',
   funnelStagesLimit: 'ਸਿਰਫ਼ ਪਹਿਲੇ {count} ਪੜਾਅ ਦਿਖਾਏ ਗਏ ਹਨ।',
+  funnelStagesInputLimit: 'ਕੁੱਲ {total} ਪੜਾਵਾਂ ਵਿੱਚੋਂ ਪਹਿਲੇ {count} ਦਿਖਾਏ ਜਾ ਰਹੇ ਹਨ।',
   timeline: 'ਸਮਾਂ-ਰੇਖਾ',
   timelineClusterCount: 'ਸਮਾਂ-ਰੇਖਾ ਇਵੈਂਟ ਦਿਖਾਓ ({count})',
   timelineItemVariantWarning: 'ਚੇਤਾਵਨੀ',

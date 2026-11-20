@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Pateikti',
   rubricSubmitAndNext: 'Pateikti ir toliau',
   rubricSkip: 'Praleisti',
+  rubricKeysLimit: 'Rodomi tik pirmieji {count} iš {total} vertinimo rubrikos laukų.',
   localePickerLabel: 'Kalba',
   localePickerRequired: 'Pasirinkite kalbą.',
   localePickerSearchLabel: 'Ieškoti kalbų',

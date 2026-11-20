@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Trimite',
   rubricSubmitAndNext: 'Trimite și continuă',
   rubricSkip: 'Omite',
+  rubricKeysLimit: 'Sunt afișate doar primele {count} din {total} câmpuri ale grilei de evaluare.',
   localePickerLabel: 'Limbă',
   localePickerRequired: 'Alege o limbă.',
   localePickerSearchLabel: 'Caută limbi',

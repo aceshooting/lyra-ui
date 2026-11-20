@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Hantar',
   rubricSubmitAndNext: 'Hantar dan seterusnya',
   rubricSkip: 'Langkau',
+  rubricKeysLimit: 'Hanya {count} medan rubrik pertama daripada {total} dipaparkan.',
   localePickerLabel: 'Bahasa',
   localePickerRequired: 'Pilih bahasa.',
   localePickerSearchLabel: 'Cari bahasa',

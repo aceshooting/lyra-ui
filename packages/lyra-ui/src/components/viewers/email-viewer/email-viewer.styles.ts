@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, focusRingShorthand, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -97,7 +97,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="attachment-button"]:hover {
     background: var(--lr-email-viewer-action-hover-background, ${hoverFill('var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet))')});
@@ -127,7 +127,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="quote-toggle"]:hover {
     background: var(--lr-email-viewer-action-hover-background, var(--lr-color-brand-quiet));

@@ -6,8 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import {
   getOwnDataDescriptor,
@@ -306,11 +305,11 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private readonly listId = nextId('node-palette-list');
   private readonly hintId = nextId('node-palette-hint');
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly announcer = new Announcer({
     onFlush: (text) => {
       this.liveText = text;
-      this.announcementSink?.announce(text);
+      this.announcementSink.announcePolite(text);
     },
   });
   /** Gates the item-count announcement so a freshly-mounted palette (or one that receives its
@@ -455,10 +454,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (this.hasUpdated) this.isMounting = false;
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   override disconnectedCallback(): void {
@@ -466,13 +461,12 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     this.announcer.cancel();
     this.liveText = '';
     this.isMounting = true;
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.announcementSink.adopted();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }

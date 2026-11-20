@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Thumela',
   rubricSubmitAndNext: 'Thumela bese uya kokulandelayo',
   rubricSkip: 'Yeqa',
+  rubricKeysLimit: 'Kuboniswa izinkambu ze-rubric ezingu-{count} zokuqala kuphela kwezingu-{total}.',
   localePickerLabel: 'Ulimi',
   localePickerRequired: 'Khetha ulimi.',
   localePickerSearchLabel: 'Sesha izilimi',

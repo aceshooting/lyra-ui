@@ -13,12 +13,16 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { readCompanionManifests } from './companion-manifests.mjs';
 import { collectStyleSources, declaredStyleTokens, sharedStyleHooks } from './manifest-style-reachability.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifest = expandManifestInheritance(
   JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8')),
 );
+// Companion packages declare their own elements; their modules are scanned from their own roots.
+const companionModules = readCompanionManifests().flatMap(({ root, manifest }) =>
+  (manifest.modules ?? []).map((module) => ({ module, root, companion: true })));
 const listOnly = process.argv.includes('--list');
 
 /** Reviewed public namespaces that predate the exact `--<tag>-*` convention. Every property read
@@ -34,12 +38,16 @@ const isSharedToken = (token) => baseTokens.has(token) ||
 
 const findings = [];
 
-for (const mod of manifest.modules ?? []) {
+const scanned = [
+  ...(manifest.modules ?? []).map((module) => ({ module, root: packageDir, companion: false })),
+  ...companionModules,
+];
+for (const { module: mod, root, companion } of scanned) {
   const match = mod.path.match(/^src\/components\/([^/]+)\/([^/]+)\//);
-  if (!match) continue;
+  if (!match && !companion) continue;
   for (const decl of mod.declarations ?? []) {
     if (!decl.customElement || !decl.tagName) continue;
-    const dir = path.join(packageDir, path.dirname(mod.path));
+    const dir = path.join(root, path.dirname(mod.path));
     if (!existsSync(dir)) continue;
 
     const declaredProps = new Set((decl.cssProperties ?? []).map((p) => p.name));
@@ -76,11 +84,11 @@ for (const mod of manifest.modules ?? []) {
     // `chart.styles.ts`), still governed by the own-namespace prefix above; treating it as shared
     // would demand a declaration for every unprefixed token a sibling happens to read.
     const composed = collectStyleSources(mod.path, (file) => {
-      const absolute = path.join(packageDir, file);
+      const absolute = path.join(root, file);
       return existsSync(absolute) ? readFileSync(absolute, 'utf8') : undefined;
     });
     for (const [sheet, source] of composed) {
-      if (path.dirname(path.join(packageDir, sheet)) === dir) continue;
+      if (path.dirname(path.join(root, sheet)) === dir) continue;
       for (const token of sharedStyleHooks(source, isSharedToken)) usedProps.add(token);
     }
 
@@ -92,7 +100,7 @@ for (const mod of manifest.modules ?? []) {
     //   - CSS attribute selectors, `[part="x"]`, used to query into a child's shadow root.
     // A rendered part is `part="x"`; a selector is `[part="x"]`, so the preceding `[` discriminates.
     const usedParts = new Set();
-    const classFile = path.join(packageDir, mod.path);
+    const classFile = path.join(root, mod.path);
     if (existsSync(classFile)) {
       const text = readFileSync(classFile, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')

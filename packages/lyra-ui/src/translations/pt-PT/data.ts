@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Apenas as primeiras {count} células do mapa de calor são exibidas.',
   heatmapDecorationLimit: 'Apenas as primeiras {count} cores, marcações da legenda e anotações do mapa de calor são exibidas.',
   funnelStagesLimit: 'Somente as primeiras {count} etapas são exibidas.',
+  funnelStagesInputLimit: 'A mostrar as primeiras {count} de {total} etapas.',
   timeline: 'Cronologia',
   timelineClusterCount: 'Mostrar eventos da cronologia ({count})',
   timelineItemVariantWarning: 'Aviso',

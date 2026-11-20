@@ -6,6 +6,7 @@ import {
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
+import { focusRingInwardOffset } from '../../../internal/interactive-control.styles.js';
 export const styles = css`
   ${formControlAppearance}
   :host {
@@ -212,8 +213,7 @@ export const styles = css`
     tab-size: var(--lr-code-editor-tab-size, var(--_lr-code-editor-tab-size));
   }
   [part='textarea']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
   }
   /* The opt-in focus halo, on the frame that owns the border rather than the borderless absolute
      textarea inside it, and on :focus-within since the frame itself is never the focused element.

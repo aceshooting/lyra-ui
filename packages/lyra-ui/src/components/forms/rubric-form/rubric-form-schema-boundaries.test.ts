@@ -139,3 +139,30 @@ describe('rubric multiple-choice answer admission', () => {
     });
   }
 });
+
+describe('<lr-rubric-form> field admission bound', () => {
+  it('admits the first 500 fields, reads them back, drops later values and shows a notice', async () => {
+    const keys: RubricKey[] = [
+      { key: 'dup', type: 'comment' },
+      { key: 'dup', type: 'comment' },
+      ...Array.from({ length: 600 }, (_, index): RubricKey => ({ key: `field-${index}`, type: 'comment' })),
+    ];
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form lang="en" .keys=${keys}
+      .value=${{ 'field-0': 'kept', 'field-598': 'dropped' }}></lr-rubric-form>`);
+    expect(el.keys.length).to.equal(500);
+    expect(el.keys.at(-1)?.key).to.equal('field-498');
+    expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(500);
+    expect(el.value).to.deep.equal({ 'field-0': 'kept' });
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Only the first 500 of 602 rubric fields are shown.');
+  });
+
+  it('shows no notice at the bound and lets a strings override reach the notice', async () => {
+    const keys = (length: number) => Array.from({ length }, (_, index): RubricKey => ({ key: `k${index}`, type: 'comment' }));
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${keys(500)}
+      .strings=${{ rubricKeysLimit: '{count}/{total}' }}></lr-rubric-form>`);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+    el.keys = keys(501);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('500/501');
+  });
+});

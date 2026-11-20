@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -35,7 +35,7 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
     box-sizing: border-box;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   lr-virtual-list::part(page):hover {
     background: var(--lr-color-surface-raised);

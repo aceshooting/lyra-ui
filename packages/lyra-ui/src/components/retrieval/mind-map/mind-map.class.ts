@@ -19,8 +19,7 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import {
   decimateMindMapLayout,
@@ -346,14 +345,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   private observedSize = '';
   private layoutInvalidated = true;
   private layoutContext = '';
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.layoutInvalidated = true;
     this.armResizeObserver();
   }
@@ -393,18 +388,15 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   override disconnectedCallback(): void {
     this.sourceVersion++; this.clearSourceDiagram();
     this.resetResizeWork();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.announcementSink.adopted();
     this.sourceControl.adopted();
     this.sourceVersion++; this.clearSourceDiagram();
     this.resetResizeWork();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
   }
 
   private resetResizeWork(): void {
@@ -492,7 +484,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       this.scheduleSourceDiagram(); return;
     }
     if (this.hasUpdated && changed.has('topics') && this.inputTruncated)
-      this.announcementSink?.announce(this.localize('mindMapInputLimit'));
+      this.announcementSink.announcePolite(this.localize('mindMapInputLimit'));
     const hubLabel =
       this.label == null ? this.localize('mindMapLabel') : this.label;
     // The ring gap is re-read only by a relayout (connect, resize, dir/lang, structural change).
@@ -523,7 +515,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private setAnnouncement(text: string): void {
     this.liveText = text;
-    this.announcementSink?.announce(text);
+    this.announcementSink.announcePolite(text);
   }
 
   /** Local-topics toggle. Source mode never reaches this: `activate()` routes source rows first

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Ba cellule ya liboso {count} ya heatmap nde emonisami.',
   heatmapDecorationLimit: 'Ba couleur, ba marqueur ya légende mpe ba annotation {count} ya liboso nde emonisami.',
   funnelStagesLimit: 'Ba étape {count} ya liboso nde emonisami.',
+  funnelStagesInputLimit: 'Emonisami ba étape {count} ya liboso na kati ya {total}.',
   timeline: 'Calendrier ya ntango',
   timelineClusterCount: 'Lakisa makambo ya calendrier ({count})',
   timelineItemVariantWarning: 'Likebisi',

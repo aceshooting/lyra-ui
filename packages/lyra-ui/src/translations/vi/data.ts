@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Chỉ hiển thị {count} ô bản đồ nhiệt đầu tiên.',
   heatmapDecorationLimit: 'Chỉ hiển thị {count} màu, mốc chú giải và chú thích bản đồ nhiệt đầu tiên.',
   funnelStagesLimit: 'Chỉ hiển thị {count} giai đoạn đầu tiên.',
+  funnelStagesInputLimit: 'Hiển thị {count} giai đoạn đầu tiên trong tổng số {total}.',
   timeline: 'Dòng thời gian',
   timelineClusterCount: 'Hiện sự kiện dòng thời gian ({count})',
   timelineItemVariantWarning: 'Cảnh báo',

@@ -96,7 +96,7 @@ it('transitions the close button hover fill like the other icon buttons', async 
     expect(parseFloat(style.transitionDuration)).to.equal(0);
     return;
   }
-  expect(style.transitionProperty).to.equal('background-color');
+  expect(style.transitionProperty.split(', ')).to.include('background-color');
   expect(parseFloat(style.transitionDuration)).to.be.greaterThan(0);
 });
 

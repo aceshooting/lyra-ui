@@ -1,4 +1,4 @@
-import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 // A pressed link uses a token-derived fill so it tints its inherited surface without assuming a
@@ -29,7 +29,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     min-inline-size: 0;
     max-inline-size: 100%;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   button[part="base"] {
     padding: 0;

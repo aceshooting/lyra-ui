@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
@@ -129,6 +129,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part="view-icon"] {
     display: inline-flex;
@@ -197,7 +198,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     font: inherit;
     cursor: pointer;
-    transition: transform var(--lr-transition-fast);
+    transition: var(--lr-transition-interactive), transform var(--lr-transition-fast);
   }
   /* Each button's hover/active fill is scoped to its OWN --lr-widget-<part>-hover-* pair, mirroring
      the --lr-widget-view-toggle-hover-* pair above: a consumer retinting the shared

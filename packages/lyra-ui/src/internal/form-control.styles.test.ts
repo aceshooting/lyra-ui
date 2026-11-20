@@ -10,6 +10,9 @@ import '../components/forms/emoji-picker/emoji-picker.js';
 import '../components/forms/otp-input/otp-input.js';
 import '../components/forms/checkbox-group/checkbox-group.js';
 import '../components/forms/token-input/token-input.js';
+import '../components/forms/checkbox/checkbox.js';
+import '../components/forms/slider/slider.js';
+import '../components/forms/signature-pad/signature-pad.js';
 import '../components/media/file-input/file-input.js';
 import '../components/agent-tools/tool-param-form/tool-param-form.js';
 import '../components/utility/known-date/known-date.js';
@@ -165,6 +168,9 @@ describe('the shared supporting text', () => {
       <lr-checkbox-group hint="Hint" error-text="Error"></lr-checkbox-group>
       <lr-token-input hint="Hint" error-text="Error"></lr-token-input>
       <lr-emoji-picker hint="Hint" error-text="Error"></lr-emoji-picker>
+      <lr-checkbox hint="Hint" error-text="Error"></lr-checkbox>
+      <lr-slider hint="Hint" error-text="Error"></lr-slider>
+      <lr-signature-pad hint="Hint" error-text="Error"></lr-signature-pad>
     </div>`);
     const tone = (el: Element, part: string) => {
       const style = getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!);

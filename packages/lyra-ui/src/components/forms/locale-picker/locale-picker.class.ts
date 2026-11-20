@@ -7,7 +7,6 @@ import { formControlSupportingState, renderFormControlHintError } from '../../..
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -514,7 +513,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   @state() private registryTick = 0;
   @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
   @query('[part="search-input"]') private searchElement?: HTMLInputElement;
-  private searchAnnouncements?: AnnouncementSink;
+  private readonly searchAnnouncements = new AnnouncementSinkController(this);
   private searchFocusGeneration = 0;
 
   private internals: ElementInternals;
@@ -632,8 +631,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.lastRenderedOpen = false;
     this.clearSearch();
     this.cancelLocaleLoad();
-    this.loadAnnouncements?.release();
-    this.loadAnnouncements = undefined;
+    this.loadAnnouncements.releaseChannel('polite');
     this.listboxHidden = true;
     super.disconnectedCallback();
     this.cleanup?.();
@@ -655,8 +653,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.popupController.cancel();
     this.clearSearch();
     this.cancelLocaleLoad();
-    this.loadAnnouncements?.release();
-    this.loadAnnouncements = undefined;
+    this.loadAnnouncements.releaseChannel('polite');
     super.adoptedCallback();
     this.description.adopted();
     this.cleanup?.();
@@ -987,8 +984,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private clearSearch(): void {
     this.searchQuery = '';
     this.searchFocusGeneration++;
-    this.searchAnnouncements?.release();
-    this.searchAnnouncements = undefined;
+    this.searchAnnouncements.releaseChannel('polite');
   }
 
   private queueSearchFocus(): void {
@@ -1195,8 +1191,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.suppressedOpenGeneration = undefined;
     if (this.open && this.searchable && changed.has('searchQuery') && this.searchQuery.trim() &&
         this.visibleEntries.length === 0) {
-      this.searchAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-      this.searchAnnouncements.announce(this.localize('localePickerEmpty'));
+      this.searchAnnouncements.announcePolite(this.localize('localePickerEmpty'));
     }
     if (changed.has('searchable') && this.searchable && shadowFocusTarget(this) === this.triggerElement) {
       this.queueSearchFocus();
@@ -1209,21 +1204,19 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private commitDispatching = false;
   private valueWriteVersion = 0;
   private loadGeneration = 0;
-  private loadAnnouncements?: AnnouncementSink;
+  private readonly loadAnnouncements = new AnnouncementSinkController(this);
   @state() private loadingTag?: string;
   @state() private loadFailureTag?: string;
 
   private cancelLocaleLoad(): void {
-    this.loadAnnouncements?.release();
-    this.loadAnnouncements = undefined;
+    this.loadAnnouncements.releaseChannel('polite');
     this.loadGeneration++;
     this.loadingTag = undefined;
     this.loadFailureTag = undefined;
   }
 
   private announceLoad(key: 'loading' | 'statusError'): void {
-    this.loadAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-    this.loadAnnouncements.announce(key === 'loading' ? this.localize('loading') : this.localize('statusError'));
+    this.loadAnnouncements.announcePolite(key === 'loading' ? this.localize('loading') : this.localize('statusError'));
   }
 
   /** Requests a selection before loading or updating the control and the global locale. */

@@ -105,6 +105,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Ibgħat',
   rubricSubmitAndNext: 'Ibgħat u kompli',
   rubricSkip: 'Aqbeż',
+  rubricKeysLimit: 'Qed jintwerew biss l-ewwel {count} oqsma tar-rubrika minn {total}.',
   localePickerLabel: 'Lingwa',
   localePickerRequired: 'Jekk jogħġbok agħżel lingwa.',
   localePickerSearchLabel: 'Fittex lingwi',

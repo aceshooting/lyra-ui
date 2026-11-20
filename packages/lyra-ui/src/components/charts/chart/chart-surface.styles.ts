@@ -1,5 +1,5 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS, type CSSResult } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
@@ -38,6 +38,12 @@ export const chartDataTableStyles = css`
     overflow-wrap: break-word;
     cursor: pointer;
     transition: var(--lr-transition-interactive);
+  }
+  [part='data-table-toggle']:hover {
+    background: ${hoverFill('var(--_lr-chart-toggle-bg, var(--lr-chart-data-table-toggle-bg, var(--lr-color-surface)))')};
+  }
+  [part='data-table-toggle']:active {
+    background: ${activeFill('var(--_lr-chart-toggle-bg, var(--lr-chart-data-table-toggle-bg, var(--lr-color-surface)))')};
   }
   [part='data-table-toggle']:focus-visible {
     ${focusRing}
@@ -145,7 +151,7 @@ export const chartSurfaceStyles = css`
         --lr-chart-canvas-hover-outline-color,
         var(--lr-chart-grid-color, var(--lr-color-border))
       );
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   [part='canvas']:active {
     outline-color: ${activeFill('var(--lr-chart-canvas-hover-outline-color, var(--lr-chart-grid-color, var(--lr-color-border)))')};

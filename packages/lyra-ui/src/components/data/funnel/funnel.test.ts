@@ -212,8 +212,9 @@ describe('<lr-funnel>', () => {
     `);
     await el.updateComplete;
 
-    expect(el.stages).to.equal(stages);
-    expect(el.comparison).to.equal(comparison);
+    // Both series are owned: the public getters expose detached, frozen snapshots.
+    expect([el.stages === stages, Object.isFrozen(el.stages)]).to.deep.equal([false, true]);
+    expect([el.comparison === comparison, Object.isFrozen(el.comparison)]).to.deep.equal([false, true]);
     expect(parts(el, 'stage-label').map(text)).to.deep.equal(['Visited', 'Converted']);
     expect(parts(el, 'comparison-value').map(text)).to.deep.equal(['Comparison: 100%', 'Comparison: 40%']);
   });

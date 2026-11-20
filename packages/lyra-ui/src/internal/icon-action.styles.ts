@@ -82,3 +82,40 @@ export function iconActionStyles(selector: string, fallbacks: IconActionFallback
   ${selector}:focus-visible { ${focusRing.cssText} }
   ${selector}:disabled, ${selector}[aria-disabled='true'] { ${disabledControl.cssText} }`);
 }
+
+/** Options for {@link outlinedActionStyles}; all are author-controlled CSS. */
+export interface OutlinedActionOptions {
+  /** Padding of the action (default: the compact text-action padding); `false` leaves the native padding. */
+  readonly padding?: string | false;
+  /** Extra declarations for the resting rule, for example a one-axis padding. */
+  readonly extra?: string;
+  /** Corner radius (default: `var(--lr-radius)`). */
+  readonly radius?: string;
+  /** Hover fill (default: the surface mixed toward the theme partner). */
+  readonly hoverBackground?: string;
+  /** Pressed fill (default: the surface mixed toward the theme partner by the press step). */
+  readonly activeBackground?: string;
+}
+
+/**
+ * The bordered, surface-filled text or glyph action for `selector` (pagination, clear, navigator
+ * and reset controls): shared hit area, thin border, surface fill, the shared hover/press mix,
+ * focus ring and disabled state. Hover and press skip disabled controls. Unlike
+ * {@link iconActionStyles} it does not follow the `--lr-icon-button-*` tokens, because these are
+ * labelled text actions, not icon buttons. `selector` and the options are author-controlled CSS.
+ */
+export function outlinedActionStyles(selector: string, options: OutlinedActionOptions = {}): CSSResult {
+  const {
+    padding = 'var(--lr-space-2xs) var(--lr-space-xs)',
+    radius = 'var(--lr-radius)',
+    extra = '',
+    hoverBackground = hoverFill('var(--lr-color-surface)').cssText,
+    activeBackground = activeFill('var(--lr-color-surface)').cssText,
+  } = options;
+  const enabled = `${selector}:where(:not(:disabled):not([aria-disabled='true']))`;
+  return unsafeCSS(`${selector} { ${iconHitTarget.cssText} ${padding === false ? '' : `padding: ${padding};`} border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: ${radius}; background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer; ${interactiveTransition.cssText} ${extra} }
+  ${enabled}:hover { background: ${hoverBackground}; }
+  ${enabled}:active { background: ${activeBackground}; }
+  ${selector}:focus-visible { ${focusRing.cssText} }
+  ${selector}:disabled, ${selector}[aria-disabled='true'] { ${disabledControl.cssText} }`);
+}

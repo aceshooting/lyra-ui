@@ -21,14 +21,13 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatLocalizedFileSize } from '../../../internal/bytes.js';
+import { formatFileSize } from '../../../internal/bytes.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 
 export type LyraAttachmentUploadStatus =
   | 'pending'
@@ -190,16 +189,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     attachmentUploadingIndeterminate: LYRA_DEFAULT_attachmentUploadingIndeterminate,
     attachmentUploadingProgress: LYRA_DEFAULT_attachmentUploadingProgress,
     attachmentUploadingWithContext: LYRA_DEFAULT_attachmentUploadingWithContext,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -523,7 +512,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     const displayName = name || untitledLabel;
     const sizeText =
       this.effectiveSize !== undefined
-        ? formatLocalizedFileSize(this.effectiveSize, this.effectiveLocale, (key) => this.localize(key))
+        ? formatFileSize(this.effectiveSize, this.effectiveLocale)
         : '';
     const uploadFailedLabel = this.localizedUploadFailedLabel;
     const progressPercent = getNumberFormat(this.effectiveLocale, {

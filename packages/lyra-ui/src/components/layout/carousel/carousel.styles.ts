@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingOffsetFrom, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -84,10 +84,7 @@ export const styles = css`
       --lr-carousel-scroll-container-hover-outline-color,
       var(--lr-color-border-strong)
     );
-    outline-offset: var(
-      --lr-carousel-scroll-container-hover-outline-offset,
-      var(--lr-focus-ring-offset)
-    );
+    ${focusRingOffsetFrom('--lr-carousel-scroll-container-hover-outline-offset')}
   }
 
   [data-mouse-dragging] [part~="scroll-container"]:hover {

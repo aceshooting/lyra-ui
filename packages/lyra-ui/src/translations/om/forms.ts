@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Galchi',
   rubricSubmitAndNext: 'Galchii itti aanu deemi',
   rubricSkip: 'Darbii',
+  rubricKeysLimit: 'Dirreewwan rubrikii {total} keessaa isaan jalqabaa {count} qofa agarsiifamaniiru.',
   localePickerLabel: 'Afaan',
   localePickerRequired: 'Maaloo afaan tokko filadhu.',
   localePickerSearchLabel: 'Afaanota barbaadi',

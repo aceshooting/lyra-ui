@@ -1,5 +1,6 @@
 import { svg, type SVGTemplateResult } from 'lit';
 import { ifDefined } from 'lit/directives/if-defined.js';
+import { REFRESH_ICON_PATH, SEARCH_ICON_PATH } from './icon-paths.js';
 
 /**
  * Shared inline-SVG icon set. Every component in this library previously
@@ -88,7 +89,7 @@ export function pauseIcon(): SVGTemplateResult {
 
 /** Two circular arrows, for a refresh/"show another" action. */
 export function refreshIcon(): SVGTemplateResult {
-  return iconFrame(svg`<path d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4"></path>`);
+  return iconFrame(svg`<path d=${REFRESH_ICON_PATH}></path>`);
 }
 
 /** A calendar/date glyph, for date-input's open-calendar toggle. */
@@ -277,4 +278,49 @@ export function statusDeniedIcon(): SVGTemplateResult {
 /** A circle with a level dash: stopped short, neither succeeded nor failed. */
 export function statusIncompleteIcon(): SVGTemplateResult {
   return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line>`);
+}
+
+/** A magnifier, for search fields. */
+export function searchIcon(): SVGTemplateResult {
+  return iconFrame(svg`<path d=${SEARCH_ICON_PATH}></path>`);
+}
+
+/** An exclamation mark in a circle: a failure state legible without relying on colour. */
+export function errorCircleIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><path d="M12 7.25v5.5"></path><path d="M12 16.4v.01"></path>`);
+}
+
+/** An exclamation mark in a triangle, for a warning or failed-action state. */
+export function warningIcon(): SVGTemplateResult {
+  return iconFrame(svg`<path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17h.01"></path>`);
+}
+
+/** A plus sign, for zoom-in and add actions. */
+export function plusIcon(): SVGTemplateResult {
+  return iconFrame(svg`<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`);
+}
+
+/** A minus sign, for zoom-out and remove actions. */
+export function minusIcon(): SVGTemplateResult {
+  return iconFrame(svg`<line x1="5" y1="12" x2="19" y2="12"></line>`);
+}
+
+/** Four corner brackets, for a "fit to view" action. */
+export function fitIcon(): SVGTemplateResult {
+  return iconFrame(svg`
+    <polyline points="9 3 3 3 3 9"></polyline>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <polyline points="3 15 3 21 9 21"></polyline>
+    <polyline points="21 15 21 21 15 21"></polyline>
+  `);
+}
+
+/** A closed padlock. */
+export function lockClosedIcon(): SVGTemplateResult {
+  return iconFrame(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>`);
+}
+
+/** An open padlock. */
+export function lockOpenIcon(): SVGTemplateResult {
+  return iconFrame(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
 }

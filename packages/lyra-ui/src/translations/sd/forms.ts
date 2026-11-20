@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'جمع ڪريو',
   rubricSubmitAndNext: 'جمع ڪريو ۽ اڳتي',
   rubricSkip: 'ڇڏي ڏيو',
+  rubricKeysLimit: '{total} روبرڪ خانن مان صرف پهريان {count} ڏيکاريل آهن.',
   localePickerLabel: 'ٻولي',
   localePickerRequired: 'مهرباني ڪري ٻولي چونڊيو.',
   localePickerSearchLabel: 'ٻوليون ڳوليو',

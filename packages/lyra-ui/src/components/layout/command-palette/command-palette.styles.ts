@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 export const styles = css`
@@ -173,7 +173,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :where([part="command"]):hover:where(:not(:disabled)) {
     background: var(

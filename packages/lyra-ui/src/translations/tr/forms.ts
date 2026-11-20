@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Gönder',
   rubricSubmitAndNext: 'Gönder ve sonrakine geç',
   rubricSkip: 'Atla',
+  rubricKeysLimit: 'Yalnızca {total} rubrik alanının ilk {count} tanesi gösteriliyor.',
   localePickerLabel: 'Dil',
   localePickerRequired: 'Bir dil seçin.',
   localePickerSearchLabel: 'Dil ara',

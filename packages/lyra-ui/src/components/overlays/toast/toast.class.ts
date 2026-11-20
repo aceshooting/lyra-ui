@@ -1,8 +1,7 @@
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { html, render, type TemplateResult } from 'lit';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { property } from 'lit/decorators.js';
@@ -131,7 +130,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   private readonly queuedEntries: ToastRegionEntry[] = [];
   private readonly admissionsInProgress = new Set<ToastRegionEntry>();
   private connectionGeneration = 0;
-  private overflowSink?: AnnouncementSink;
+  private readonly overflowSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private pendingOverflowCount = 0;
   private overflowNotificationScheduled = false;
 
@@ -150,10 +149,6 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectionGeneration += 1;
-    this.overflowSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     const MutationObserverConstructor =
       this.ownerDocument.defaultView?.MutationObserver;
     if (MutationObserverConstructor) {
@@ -170,8 +165,6 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     const connectionGeneration = ++this.connectionGeneration;
     this.childObserver?.disconnect();
     this.childObserver = undefined;
-    this.overflowSink?.release();
-    this.overflowSink = undefined;
     this.pendingOverflowCount = 0;
     this.overflowNotificationScheduled = false;
     setCustomState(this.toastInternals, 'visible', false);
@@ -335,7 +328,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       if (count <= 0) return;
       this.emit('lr-toast-overflow', { count });
       if (this.isConnected) {
-        this.overflowSink?.announce(
+        this.overflowSink.announcePolite(
           this.localize('toastOverflow', undefined, { count: this.formatLocaleNumber(count) })
         );
       }

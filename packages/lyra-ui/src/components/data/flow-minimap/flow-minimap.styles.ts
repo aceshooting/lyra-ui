@@ -1,4 +1,4 @@
-import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
 
@@ -45,7 +45,7 @@ export const styles = css`
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it this
        map's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* Mouse-hover cue matching the cursor: pointer affordance above -- the reveal-button/copy-button/
      sources-summary brand-quiet tint the library uses for a clickable surface with no dedicated

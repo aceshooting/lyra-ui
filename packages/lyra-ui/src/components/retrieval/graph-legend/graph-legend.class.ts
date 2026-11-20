@@ -18,8 +18,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -122,26 +121,26 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   @property() label?: string;
   @state() private liveText = '';
   /** Announce in light DOM for assistive technologies that miss shadow live regions. */
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  /** Bumped on every connect and disconnect so a toggle can tell its host was detached (or moved)
+   *  while a cancelable request event was being handled. */
+  private connectionEpoch = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
+    this.connectionEpoch++;
   }
 
   override disconnectedCallback(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
+    this.connectionEpoch++;
     super.disconnectedCallback();
   }
 
   private toggle(type: LyraNodeTypeStyle): void {
     if (this.withoutInteraction) return;
     const { types, hiddenTypes: previous } = this;
-    const owner = this.announcementSink;
+    const epoch = this.connectionEpoch;
     const hiddenTypes = canonicalIdentityList(previous);
     const wasVisible = !hiddenTypes.includes(type.id);
     const next = wasVisible
@@ -152,7 +151,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       { hiddenTypes: next },
       { cancelable: true },
     );
-    if (proposal.defaultPrevented || this.withoutInteraction || !owner || this.announcementSink !== owner ||
+    if (proposal.defaultPrevented || this.withoutInteraction || !this.isConnected || this.connectionEpoch !== epoch ||
         this.types !== types || this.hiddenTypes !== previous) return;
     this.hiddenTypes = next;
     this.liveText = this.localize(
@@ -162,7 +161,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
         label: type.label,
       }
     );
-    this.announcementSink?.announce(this.liveText);
+    this.announcementSink.announcePolite(this.liveText);
     this.emit('lr-visibility-change', { hiddenTypes: next });
   }
 

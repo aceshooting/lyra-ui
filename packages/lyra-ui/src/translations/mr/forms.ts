@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'सबमिट करा',
   rubricSubmitAndNext: 'सबमिट करून पुढे जा',
   rubricSkip: 'वगळा',
+  rubricKeysLimit: 'एकूण {total} रूब्रिक फील्डपैकी फक्त पहिली {count} दाखवली आहेत.',
   localePickerLabel: 'भाषा',
   localePickerRequired: 'एक भाषा निवडा.',
   localePickerSearchLabel: 'भाषा शोधा',

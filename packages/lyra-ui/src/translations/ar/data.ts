@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'لا تظهر سوى أول {count} خلية في الخريطة الحرارية.',
   heatmapDecorationLimit: 'لا تظهر سوى أول {count} لونًا للخريطة الحرارية وتوقفًا في وسيلة الإيضاح وتعليقًا توضيحيًا.',
   funnelStagesLimit: 'يتم عرض أول {count} مرحلة فقط.',
+  funnelStagesInputLimit: 'يتم عرض أول {count} من أصل {total} مرحلة.',
   timeline: 'مخطط زمني',
   timelineClusterCount: 'عرض أحداث المخطط الزمني ({count})',
   timelineItemVariantWarning: 'تحذير',

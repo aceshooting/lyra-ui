@@ -1,4 +1,4 @@
-export { devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
+export { DEV_DIAGNOSTICS, devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
 
 /** Production entry: unknown-attribute diagnostics are available in the development condition. */
 export function warnUnknownAttributes(

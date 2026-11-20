@@ -9,8 +9,7 @@ import { specialistTokens } from '../../../internal/specialist-host-tokens.style
 import { srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -392,7 +391,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           else if (name === 'lr-error') this.emit('lr-error');
           else this.emit('lr-copy-error', detail as LyraClipboardWriteFailure);
         },
-        announce: (ok) => this.sink?.announce(this.localize(ok ? 'copied' : 'copyFailed')),
+        announce: (ok) => this.sink.announcePolite(this.localize(ok ? 'copied' : 'copyFailed')),
       },
       outcome,
     );
@@ -414,12 +413,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   /** Handle on the shared light-DOM live region every flush actually announces through -- a region
    *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
    *  outright), so `[part="announcer"]` below is only an `aria-hidden` mirror. */
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly announcer = new Announcer({
     throttleMs: ANNOUNCE_THROTTLE_MS,
     onFlush: (text) => {
       this.pendingAnnounceText = '';
-      this.sink?.announce(text);
+      this.sink.announcePolite(text);
       if (this.announceRegionEl) this.announceRegionEl.textContent = text;
     },
   });
@@ -438,10 +437,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all, and
     // streamed output can start in the same task the element is appended in.
-    this.sink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     if (this.hasUpdated) this.bindViewportSelection();
   }
 
@@ -451,12 +446,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.releaseSelection = undefined;
     this.downloadGeneration += 1;
     this.cancelPendingAnnouncement();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.sink.adopted();
     this.copyFeedback.reset();
     this.downloadGeneration += 1;
     const ownerWindow = this.ownerDocument.defaultView;
@@ -631,7 +625,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
     this.pendingOverflow = undefined;
     if (overflow.inputCharactersDropped || overflow.lineCharactersDropped) {
-      if (!this.outputOmitted) this.sink?.announce(this.localize('terminalOutputTruncated'));
+      if (!this.outputOmitted) this.sink.announcePolite(this.localize('terminalOutputTruncated'));
       this.outputOmitted = true;
     }
     if (overflow.inputCharactersDropped || overflow.lineCharactersDropped || overflow.linesDropped) this.emit('lr-overflow', overflow);

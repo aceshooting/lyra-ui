@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Hanya {count} sel peta panas pertama yang ditampilkan.',
   heatmapDecorationLimit: 'Hanya {count} warna peta panas, penanda legenda, dan anotasi pertama yang ditampilkan.',
   funnelStagesLimit: 'Hanya {count} tahap pertama yang ditampilkan.',
+  funnelStagesInputLimit: 'Menampilkan {count} tahap pertama dari {total}.',
   timeline: 'Linimasa',
   timelineClusterCount: 'Tampilkan acara linimasa ({count})',
   timelineItemVariantWarning: 'Peringatan',

@@ -6,7 +6,7 @@ import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
-import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { parseHotkey, matchesHotkey, isIgnorableKeyEvent, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
@@ -26,7 +26,7 @@ import { styles } from './command-palette.styles.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { closeIcon } from '../../../internal/icons.js';
+import { closeIcon, searchIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -34,7 +34,6 @@ import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteInputLimit
 import { LYRA_DEFAULT_clear } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const SEARCH_ICON = svg`<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"></path></svg>`;
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
  *  `-group-height`, which default to `3rem`/`2rem` -- equal to these numbers at a 16px root font
  *  and *unequal* at any other, including a user's raised browser font size. Rows are absolutely
@@ -1025,7 +1024,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         @keydown=${this.onKeyDown}
       >
         <div part="search">
-          ${SEARCH_ICON}<input
+          ${searchIcon()}<input
             part="input"
             type="search"
             .value=${this.queryText}

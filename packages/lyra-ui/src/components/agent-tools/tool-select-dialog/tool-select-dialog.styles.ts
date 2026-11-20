@@ -1,7 +1,7 @@
-import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
+import { iconActionStyles, outlinedActionStyles } from '../../../internal/icon-action.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
-import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -95,18 +95,12 @@ export const styles = css`
     position: absolute;
     inset-block: var(--lr-space-m) 0;
     inset-inline-end: var(--lr-space-l);
-    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
-    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
-    --_lr-icon-button-background-hover-default: var(--lr-color-brand-quiet);
-    ${iconHitTarget}
-    ${iconAction}
   }
-  [part="search-clear"]:hover {
-    ${iconActionHover}
-  }
-  [part="search-clear"]:active {
-    ${iconActionActive}
-  }
+  ${iconActionStyles('[part="search-clear"]', {
+    color: 'var(--lr-color-text-quiet)',
+    hoverColor: 'var(--lr-color-brand)',
+    hoverBackground: 'var(--lr-color-brand-quiet)',
+  })}
   [part="search-clear"]:focus-visible {
     ${focusRingInset}
   }
@@ -193,29 +187,14 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
-  [part="load-more"] {
-    ${iconHitTarget}
-    max-inline-size: 100%;
-    padding: var(--lr-space-xs) var(--lr-space-m);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-    ${interactiveTransition}
-  }
-  [part="load-more"]:hover {
-    border-color: var(--lr-color-brand);
-    background: var(--lr-color-brand-quiet);
-  }
-  [part="load-more"]:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
-  }
-  [part="load-more"]:focus-visible {
-    ${focusRing}
-  }
+  ${outlinedActionStyles('[part="load-more"]', {
+    padding: 'var(--lr-space-xs) var(--lr-space-m)',
+    extra: 'max-inline-size: 100%; overflow-wrap: anywhere;',
+    hoverBackground: 'var(--lr-color-brand-quiet)',
+    activeBackground: activeFill('var(--lr-color-brand-quiet)').cssText,
+  })}
+  [part="load-more"]:where(:not(:disabled)):hover,
+  [part="load-more"]:where(:not(:disabled)):active { border-color: var(--lr-color-brand); }
 
   [part="category"] {
     min-inline-size: 0;

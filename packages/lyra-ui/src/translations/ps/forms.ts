@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'سپارل',
   rubricSubmitAndNext: 'سپارل او بل ته تلل',
   rubricSkip: 'پرېښودل',
+  rubricKeysLimit: 'له {total} روبریک ساحو څخه یوازې لومړي {count} ښودل کېږي.',
   localePickerLabel: 'ژبه',
   localePickerRequired: 'یوه ژبه وټاکئ.',
   localePickerSearchLabel: 'ژبې ولټوئ',

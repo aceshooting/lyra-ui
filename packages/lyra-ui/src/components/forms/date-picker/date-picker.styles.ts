@@ -1,4 +1,4 @@
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlPresetButton } from '../../../internal/form-control/preset-button.styles.js';
 
@@ -153,7 +153,7 @@ export const styles = css`
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
     /* Hover/active below only repaint background, so that is all this needs; without it these
        buttons' fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* :where() ties this with the pressed rule at (0,1,0), so source order hands that one the press
      while the arrow is held. The scoped cssprop retints this hover alone, not the shared
@@ -257,7 +257,7 @@ export const styles = css`
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
     /* Hover/active below only repaint background, so that is all this needs; without it this
        cell's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :where([part~="day"]):hover:not(:disabled) {
     background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet));
@@ -322,7 +322,7 @@ export const styles = css`
     /* Hover/active below only repaint background-color (the re-asserted color value below is
        unchanged), so that is all this needs; without it this cell's fill snaps while
        lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):hover:not(:disabled),
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):active:not(:disabled) {
@@ -374,7 +374,7 @@ export const styles = css`
     padding: var(--lr-space-s);
     /* Hover/active below only repaint background, so that is all this needs; without it this
        item's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :where([part~="view-item"]):hover:not(:disabled) {
     background: var(

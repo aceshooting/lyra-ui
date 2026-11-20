@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { focusRing, focusRingOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -43,7 +43,7 @@ export const styles = css`
   }
   svg:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   svg:focus-visible {
     ${focusRing}

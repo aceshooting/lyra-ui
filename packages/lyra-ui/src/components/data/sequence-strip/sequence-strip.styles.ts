@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, focusRing, focusRingInset, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, focusRingOffsetInset, focusRingOutline, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   [part='source-status'] { overflow-wrap: anywhere; color: var(--lr-color-text-quiet); }
@@ -63,8 +63,8 @@ export const styles = css`
   }
   /* The pressed ring leaves the data color readable. */
   [part='cell']:where(:not([aria-disabled='true'])):active {
-    outline: var(--lr-focus-ring-width) solid var(--lr-color-text);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOutline('var(--lr-color-text)')}
+    ${focusRingOffsetInset}
   }
   [part='cell'][aria-disabled='true'] {
     cursor: default;
@@ -73,9 +73,8 @@ export const styles = css`
   /* The controlled selection reads as a persistent ring, not a colour change: a cell's background
      is data (its category colour), so tinting it would misreport the category. */
   [part='cell'][data-selected] {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-sequence-strip-selected-color, var(--lr-color-text));
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOutline('var(--lr-sequence-strip-selected-color, var(--lr-color-text))')}
+    ${focusRingOffsetInset}
   }
   /* The selection ring above and the :hover/:focus-visible ring further up are both (0,2,0) with
      the same outline, so selection wins on source order -- correctly dropping hover, but it also

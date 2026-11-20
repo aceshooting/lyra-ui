@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Iesniegt',
   rubricSubmitAndNext: 'Iesniegt un nākamais',
   rubricSkip: 'Izlaist',
+  rubricKeysLimit: 'Tiek rādīti tikai pirmie {count} no {total} rubrikas laukiem.',
   localePickerLabel: 'Valoda',
   localePickerRequired: 'Lūdzu, izvēlieties valodu.',
   localePickerSearchLabel: 'Meklēt valodas',

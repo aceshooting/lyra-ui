@@ -1,5 +1,5 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlFocusHalo, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -230,7 +230,7 @@ export const styles = css`
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it this
        button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="remove"]:hover {
     background: var(
@@ -264,7 +264,7 @@ export const styles = css`
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it this
        token's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :host(:where(:not(:disabled))) [part="token-label"]:hover {
     background: var(

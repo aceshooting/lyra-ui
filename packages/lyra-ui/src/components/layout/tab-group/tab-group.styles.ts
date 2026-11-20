@@ -1,6 +1,6 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, focusRing, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInwardOffset, focusRingOffsetFrom, focusRingOffsetInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS } from 'lit';
 import { tag } from '../../../internal/prefix.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -245,15 +245,12 @@ export const styles = css`
       --lr-tab-group-panel-hover-outline-color,
       var(--lr-color-border)
     );
-    outline-offset: var(
-      --lr-tab-group-panel-hover-outline-offset,
-      var(--lr-focus-ring-offset)
-    );
+    ${focusRingOffsetFrom('--lr-tab-group-panel-hover-outline-offset')}
     border-radius: var(--lr-radius);
   }
   /* A filled panel touches the clipping boundary of the body. Keep its focus ring inside. */
   :host([fill]) [part="panel"]:focus-visible {
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOffsetInset}
   }
   [part="panel"]:focus-visible {
     ${focusRing}

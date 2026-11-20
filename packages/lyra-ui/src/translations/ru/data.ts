@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Показаны только первые {count} ячеек тепловой карты.',
   heatmapDecorationLimit: 'Показаны только первые {count} цветов, отметок легенды и аннотаций тепловой карты.',
   funnelStagesLimit: 'Показаны только первые {count} этапов.',
+  funnelStagesInputLimit: 'Показаны первые {count} из {total} этапов.',
   timeline: 'Хронология',
   timelineClusterCount: 'Показать события хронологии ({count})',
   timelineItemVariantWarning: 'Предупреждение',

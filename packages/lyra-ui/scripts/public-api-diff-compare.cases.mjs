@@ -2533,13 +2533,26 @@ test('only equal resolved finite string aliases preserve their direct type contr
   const ambiguous = type => literalAliasFixture(stars, {
     'dist/a.d.ts': type, 'dist/b.d.ts': "export type Mode = 'unrelated';",
   });
-  assert.ok(diffPublicApi(ambiguous("export type Mode = 'a' | 'b';"),
+  // An ambiguous route gets no literal-set proof. Extracting a uniquely defined local alias is
+  // still structurally the same declaration, but the alias carrying a different set is not.
+  assert.ok(!diffPublicApi(ambiguous("export type Mode = 'a' | 'b';"),
     ambiguous("type Local = 'a' | 'b'; export type Mode = Local;"))
     .some(change => root.includes(change.id) && change.bump === 'major'));
+  assert.ok(diffPublicApi(ambiguous("export type Mode = 'a' | 'b';"),
+    ambiguous("type Local = 'a'; export type Mode = Local;"))
+    .some(change => root.includes(change.id) && change.bump === 'major'));
 
-  const moved = literalAliasFixture(imported.replace('./native.js', './replacement.js'), {
-    'dist/replacement.d.ts': "export type Native = 'both' | 'none';",
-  });
-  assert.ok(diffPublicApi(after, moved).some(change => change.id.endsWith(':Mode:dependencies') &&
+  // The original declaration still exists, so pointing at a same-named one elsewhere is a
+  // rewiring rather than a move.
+  const keep = literalAliasFixture(`${imported} export type { Native as Kept } from './native.js';`,
+    { 'dist/native.d.ts': "export type Native = 'both' | 'none';" });
+  const rewiredKept = literalAliasFixture(
+    `${imported.replace('./native.js', './replacement.js')} export type { Native as Kept } from './native.js';`,
+    {
+      'dist/native.d.ts': "export type Native = 'both' | 'none';",
+      'dist/replacement.d.ts': "export type Native = 'both' | 'none';",
+    },
+  );
+  assert.ok(diffPublicApi(keep, rewiredKept).some(change => change.id.endsWith(':Mode:dependencies') &&
     change.bump === 'major'), 'an equal literal set cannot hide a replaced dependency');
 });

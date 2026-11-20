@@ -1,4 +1,5 @@
-import { activeFill, disabledControl, focusRing, focusRingInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
@@ -54,7 +55,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part~='chunk']:hover {
     background: var(--lr-color-surface-raised);
@@ -130,21 +131,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin-block: var(--lr-space-s);
   }
-  [part='page-button'] {
-    ${iconHitTarget}
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    cursor: pointer;
-    ${interactiveTransition}
-  }
-  [part='page-button']:hover:where(:not(:disabled)) { background: ${hoverFill('var(--lr-color-surface)')}; }
-  [part='page-button']:active:where(:not(:disabled)) { background: ${activeFill('var(--lr-color-surface)')}; }
-  [part='page-button']:focus-visible { ${focusRing} }
-  [part='page-button']:disabled { ${disabledControl} }
+  ${outlinedActionStyles("[part='page-button']")}
   [part='page-status'],
   [part='input-limit'],
   [part='result-limit'] {

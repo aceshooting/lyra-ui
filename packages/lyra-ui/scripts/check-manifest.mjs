@@ -201,6 +201,13 @@ function namesFromTemplates(source) {
   for (const match of source.matchAll(/\bparts\.push\(\s*["']([^"']+)["']\s*\)/g)) {
     names.add(match[1]);
   }
+  // The shared icon frame (`iconFrame(paths, 'checkmark checked-icon')`, internal/icons.ts) binds
+  // its literal second argument as the svg's part list.
+  for (const match of source.matchAll(/\biconFrame\((?:[^()]|\([^()]*\))*?,\s*(['"])([^'"]+)\1\s*\)/g)) {
+    for (const name of match[2].trim().split(/\s+/)) {
+      if (name) names.add(name);
+    }
+  }
   // `exportparts="inner:outer, inner2:outer2"` re-exposes a shadow-nested child's own part under
   // this component's own part namespace (e.g. <lr-svg-viewer>'s internal <lr-zoomable-frame>
   // forwarding `viewport` as `frame-viewport`) -- the exposed (right-hand, or bare when there's no

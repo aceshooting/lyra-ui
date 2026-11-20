@@ -627,7 +627,7 @@ describe("views", () => {
     expect(el.shadowRoot!.querySelector('slot[name="view-table"]')).to.exist;
   });
 
-  it("switches the active view on click and emits lr-view-change", async () => {
+  it("switches the active view on click and emits lr-widget-view-change", async () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
@@ -646,12 +646,12 @@ describe("views", () => {
       ...el.shadowRoot!.querySelectorAll('[part="view-toggle"]'),
     ] as HTMLButtonElement[];
     setTimeout(() => toggles[1]!.click());
-    const ev = await oneEvent(el, "lr-view-change");
+    const ev = await oneEvent(el, "lr-widget-view-change");
     expect(ev.detail).to.deep.equal({ viewId: "table" });
     expect(el.activeViewId).to.equal("table");
   });
 
-  it("emits a cancelable lr-view-request before lr-view-change, vetoing the switch when prevented", async () => {
+  it("emits a cancelable lr-widget-view-request before lr-widget-view-change, vetoing the switch when prevented", async () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
@@ -666,8 +666,8 @@ describe("views", () => {
     `)) as LyraWidget;
     await el.updateComplete;
     const order: string[] = [];
-    el.addEventListener("lr-view-request", (e) => {
-      order.push("lr-view-request");
+    el.addEventListener("lr-widget-view-request", (e) => {
+      order.push("lr-widget-view-request");
       expect((e as CustomEvent).cancelable).to.equal(true);
       expect((e as CustomEvent).detail).to.deep.equal({ viewId: "table" });
       expect(
@@ -676,7 +676,7 @@ describe("views", () => {
       ).to.equal("chart");
       e.preventDefault();
     });
-    el.addEventListener("lr-view-change", () => order.push("lr-view-change"));
+    el.addEventListener("lr-widget-view-change", () => order.push("lr-widget-view-change"));
 
     const toggles = [
       ...el.shadowRoot!.querySelectorAll('[part="view-toggle"]'),
@@ -684,7 +684,7 @@ describe("views", () => {
     toggles[1]!.click();
     await el.updateComplete;
 
-    expect(order).to.deep.equal(["lr-view-request"]);
+    expect(order).to.deep.equal(["lr-widget-view-request"]);
     expect(el.activeViewId).to.equal("chart");
   });
 
@@ -702,7 +702,7 @@ describe("views", () => {
       </lr-widget>
     `)) as LyraWidget;
     let viewChanges = 0;
-    el.addEventListener("lr-view-change", () => viewChanges++);
+    el.addEventListener("lr-widget-view-change", () => viewChanges++);
 
     el.activeViewId = "missing";
     await el.updateComplete;
@@ -933,7 +933,7 @@ describe("views", () => {
     ).to.equal(true);
     expect(el.shadowRoot!.activeElement === beforeToggle).to.equal(true);
 
-    const pending = oneEvent(el, "lr-view-change");
+    const pending = oneEvent(el, "lr-widget-view-change");
     el.views = [{ viewId: "c", label: "C" }];
     const event = await pending;
     expect(el.activeViewId).to.equal("c");
@@ -2522,11 +2522,13 @@ it("lets a consumer retint the view-toggle hover state via the scoped --lr-widge
         Math.round(rect.top + rect.height / 2),
       ],
     });
-    expect(getComputedStyle(toggle).backgroundColor).to.equal(
-      "rgb(0, 51, 102)"
+    await waitUntil(
+      () =>
+        getComputedStyle(toggle).backgroundColor === "rgb(0, 51, 102)" &&
+        getComputedStyle(toggle).color === "rgb(255, 255, 255)",
+      "the hover colours settle after the transition"
     );
     expect(getComputedStyle(toggle).backgroundColor).to.not.equal(before);
-    expect(getComputedStyle(toggle).color).to.equal("rgb(255, 255, 255)");
   } finally {
     await resetMouse();
   }
@@ -3329,9 +3331,9 @@ describe("lr-widget view activation event", () => {
       await el.updateComplete;
       const changed: string[] = [];
       const activated: string[] = [];
-      el.addEventListener('lr-view-change', event => changed.push(event.detail.viewId));
+      el.addEventListener('lr-widget-view-change', event => changed.push(event.detail.viewId));
       el.addEventListener('lr-activate', event => activated.push(event.detail.value));
-      el.addEventListener('lr-view-request', () => {
+      el.addEventListener('lr-widget-view-request', () => {
         if (replacement === 'views') el.views = el.views.filter(view => view.viewId !== 'table');
         else el.activeViewId = 'details';
       }, { once: true });
@@ -3349,19 +3351,19 @@ describe("lr-widget view activation event", () => {
     const el = await widgetWithViews();
     const activated: string[] = [];
     el.addEventListener('lr-activate', event => activated.push(event.detail.value));
-    el.addEventListener('lr-view-change', () => { el.activeViewId = 'chart'; }, { once: true });
+    el.addEventListener('lr-widget-view-change', () => { el.activeViewId = 'chart'; }, { once: true });
     toggleFor(el, 'table').click();
     expect(el.activeViewId).to.equal('chart');
     expect(activated).to.deep.equal([]);
   });
 
-  it("fires lr-activate without lr-view-change when the active view toggle is clicked again", async () => {
+  it("fires lr-activate without lr-widget-view-change when the active view toggle is clicked again", async () => {
     const el = await widgetWithViews();
     expect(el.activeViewId).to.equal("chart");
     let changeCount = 0;
     let requestCount = 0;
-    el.addEventListener("lr-view-change", () => changeCount++);
-    el.addEventListener("lr-view-request", () => requestCount++);
+    el.addEventListener("lr-widget-view-change", () => changeCount++);
+    el.addEventListener("lr-widget-view-request", () => requestCount++);
     setTimeout(() => toggleFor(el, "chart").click());
     const ev = await oneEvent(el, "lr-activate");
     await el.updateComplete;
@@ -3371,12 +3373,12 @@ describe("lr-widget view activation event", () => {
     expect(requestCount, "and proposes no change either").to.equal(0);
   });
 
-  it("emits lr-view-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
+  it("emits lr-widget-view-change before lr-activate for a moving pick, and bubbles composed and uncancelable", async () => {
     const el = await widgetWithViews();
     const order: string[] = [];
     const flags: Array<Record<string, boolean>> = [];
-    el.addEventListener("lr-view-request", () => order.push("lr-view-request"));
-    el.addEventListener("lr-view-change", () => order.push("lr-view-change"));
+    el.addEventListener("lr-widget-view-request", () => order.push("lr-widget-view-request"));
+    el.addEventListener("lr-widget-view-change", () => order.push("lr-widget-view-change"));
     const documentListener = (e: Event): void => {
       order.push("lr-activate");
       flags.push({
@@ -3394,8 +3396,8 @@ describe("lr-widget view activation event", () => {
     }
     expect(el.activeViewId).to.equal("table");
     expect(order).to.deep.equal([
-      "lr-view-request",
-      "lr-view-change",
+      "lr-widget-view-request",
+      "lr-widget-view-change",
       "lr-activate",
     ]);
     expect(flags).to.deep.equal([
@@ -3407,7 +3409,7 @@ describe("lr-widget view activation event", () => {
     const el = await widgetWithViews();
     let activateCount = 0;
     el.addEventListener("lr-activate", () => activateCount++);
-    el.addEventListener("lr-view-request", (e) => e.preventDefault());
+    el.addEventListener("lr-widget-view-request", (e) => e.preventDefault());
     toggleFor(el, "table").click();
     await el.updateComplete;
     expect(el.activeViewId, "the veto held").to.equal("chart");

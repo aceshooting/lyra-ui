@@ -2,11 +2,8 @@ import { expect } from '@open-wc/testing';
 import {
   byteFormat,
   byteUnitIndex,
-  FILE_SIZE_UNIT_KEYS,
   formatByteSize,
   formatFileSize,
-  formatLocalizedFileSize,
-  localizedNumberLabel,
   safeByteUnitStep,
 } from './bytes.js';
 
@@ -63,62 +60,29 @@ describe('formatByteSize', () => {
 });
 
 describe('formatFileSize', () => {
-  it('prints whole bytes and one decimal for each binary rung up to terabytes', () => {
-    expect(formatFileSize(0)).to.equal('0 B');
-    expect(formatFileSize(512)).to.equal('512 B');
-    expect(formatFileSize(1023.4)).to.equal('1023 B');
-    expect(formatFileSize(1023.6)).to.equal('1024 B');
-    expect(formatFileSize(1024)).to.equal('1.0 KB');
-    expect(formatFileSize(1536)).to.equal('1.5 KB');
-    expect(formatFileSize(2_415_919)).to.equal('2.3 MB');
-    expect(formatFileSize(1.5 * 1024 ** 3)).to.equal('1.5 GB');
-    expect(formatFileSize(1024 ** 4)).to.equal('1.0 TB');
-    expect(formatFileSize(1024 ** 5)).to.equal('1024.0 TB');
+  it('scales on binary rungs through PB with Intl unit wording and at most one fraction digit', () => {
+    const intl = (amount: number, unit: string) =>
+      new Intl.NumberFormat('en', { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(amount);
+    expect(formatFileSize(0, 'en')).to.equal(intl(0, 'byte'));
+    expect(formatFileSize(512, 'en')).to.equal(intl(512, 'byte'));
+    expect(formatFileSize(1023.96, 'en')).to.equal(intl(1, 'kilobyte'));
+    expect(formatFileSize(1536, 'en')).to.equal(intl(1.5, 'kilobyte'));
+    expect(formatFileSize(2_415_919, 'en')).to.equal(intl(2.3, 'megabyte'));
+    expect(formatFileSize(1024 ** 4, 'en')).to.equal(intl(1, 'terabyte'));
+    expect(formatFileSize(1024 ** 5, 'en')).to.equal(intl(1, 'petabyte'));
+  });
+
+  it('matches the shared byte formatter at a binary step in any locale', () => {
+    for (const [bytes, locale] of [[1536, 'de'], [5 * 1024 ** 3, 'fr'], [999, 'ja']] as const) {
+      expect(formatFileSize(bytes, locale)).to.equal(formatByteSize(bytes, locale, { unitStep: 1024 }));
+    }
+    expect(formatFileSize(1536, 'de')).to.match(/^1,5\s?kB$/);
   });
 
   it('returns an empty string for a negative or non-finite size and never prints negative zero', () => {
     for (const bytes of [-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-      expect(formatFileSize(bytes)).to.equal('');
+      expect(formatFileSize(bytes, 'en')).to.equal('');
     }
-    expect(formatFileSize(-0, undefined, localizedNumberLabel('en'))).to.equal('0 B');
-  });
-
-  it('labels units and numbers through the supplied callbacks', () => {
-    const units: string[] = [];
-    const text = formatFileSize(
-      2_415_919,
-      (unit) => {
-        units.push(unit);
-        return `<${unit}>`;
-      },
-      (value, digits) => `${value.toFixed(3)}/${digits}`,
-    );
-    expect(text).to.equal('2.304/1 <MB>');
-    expect(units).to.deep.equal(['MB']);
-  });
-
-  it('formats numbers with exactly the requested fraction digits in a locale', () => {
-    expect(localizedNumberLabel('de')(2.25, 1)).to.equal('2,3');
-    expect(localizedNumberLabel('en')(1234.5, 1)).to.equal('1,234.5');
-    expect(localizedNumberLabel('en')(3, 1)).to.equal('3.0');
-  });
-
-  it('resolves localized unit keys and locale digits in one call', () => {
-    const keys: string[] = [];
-    const label = (key: string): string => {
-      keys.push(key);
-      return `[${key}]`;
-    };
-    expect(formatLocalizedFileSize(1536, 'de', label)).to.equal('1,5 [fileSizeUnitKb]');
-    expect(formatLocalizedFileSize(3, 'en', label)).to.equal('3 [fileSizeUnitB]');
-    expect(formatLocalizedFileSize(-5, 'en', label)).to.equal('');
-    expect(keys).to.deep.equal(['fileSizeUnitKb', 'fileSizeUnitB']);
-    expect(Object.values(FILE_SIZE_UNIT_KEYS)).to.deep.equal([
-      'fileSizeUnitB',
-      'fileSizeUnitKb',
-      'fileSizeUnitMb',
-      'fileSizeUnitGb',
-      'fileSizeUnitTb',
-    ]);
+    expect(formatFileSize(-0, 'en')).to.equal(formatFileSize(0, 'en'));
   });
 });

@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, disabledControl, focusRingInset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   /* Inline var() fallbacks for the row-chrome hooks, not :host declarations, so an application can
@@ -57,7 +57,7 @@ export const styles = css`
        needs; without it this row's fill snaps while lr-button/lr-icon-button/lr-app-rail-item ease.
        No local reduced-motion override needed -- tokens.styles.ts's shared reduced-motion block
        already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* Unlike lr-option/lr-select/lr-combobox/lr-tree-item, a checked row here previously had no
      row-chrome hooks of its own: type="checkbox" only painted the checkmark glyph, leaving the

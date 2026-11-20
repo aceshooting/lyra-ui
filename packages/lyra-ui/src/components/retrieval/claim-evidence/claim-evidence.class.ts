@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import type {
   Citation,
@@ -453,8 +454,8 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
       >
         ${claims.length
           ? html`<ol part="list">
-              ${renderedClaims
-                .map((claim, index) => this.renderClaim(claim, byId, index, renderedClaims.length, rovingClaimId))}
+              ${repeat(renderedClaims, (claim) => claim.id,
+                (claim, index) => this.renderClaim(claim, byId, index, renderedClaims.length, rovingClaimId))}
             </ol>
             ${claims.length > MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS
               ? html`<p part="limit" role="note">${this.localize(

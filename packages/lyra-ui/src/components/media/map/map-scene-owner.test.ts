@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { createMapSceneSessionFacade } from '../../../internal/map-scene-session.js';
+import { createMapSceneSessionFacade } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneArc, sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { createMapSceneOwner } from './map-scene-owner.js';
 import { publicationCoherent, renderOwner, scenePresentation, sceneViewport } from '../../../../test/map-scene-render-fixtures.js';

@@ -39,12 +39,13 @@ it('describes the rendered hint without associating an unused help-text slot', a
   expect(trigger.getAttribute('aria-describedby')).to.equal('file-input-hint');
 });
 
-it('shows the selected file size with locale digits and the supplied unit label', async () => {
+it('shows the selected file size with locale digits and Intl unit wording', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`
     <lr-file-input locale="de" .files=${[new File([new Uint8Array(1536)], 'report.txt')]}
-      .strings=${{ fileSizeUnitKb: 'KiB', fileInputDefaultLabel: 'Dateien auswählen', removeWithContext: '{label} entfernen' }}></lr-file-input>
+      .strings=${{ fileInputDefaultLabel: 'Dateien auswählen', removeWithContext: '{label} entfernen' }}></lr-file-input>
   `);
-  expect(el.shadowRoot!.querySelector('[part="file-size"]')?.textContent).to.equal('1,5 KiB');
+  expect(el.shadowRoot!.querySelector('[part="file-size"]')?.textContent).to.equal(
+    new Intl.NumberFormat('de', { style: 'unit', unit: 'kilobyte', unitDisplay: 'short', maximumFractionDigits: 1 }).format(1.5));
 });
 
 for (const property of ['label', 'hint'] as const) {

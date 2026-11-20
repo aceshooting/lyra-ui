@@ -1,5 +1,5 @@
 import { unsafeCSS, type CSSResult } from 'lit';
-import { activeFill, hoverFill } from './interactive-control.styles.js';
+import { activeFill, focusRingOffset, hoverFill } from './interactive-control.styles.js';
 
 /** The painted text-quote tones and their fallback fills. */
 const TONES = [
@@ -47,11 +47,11 @@ export function highlightToneStyles(prefix: string, options: HighlightToneStyleO
     rules.push(`${scope} mark[data-lr-highlight-tone='${tone}'] { ${carrier}: ${fill(tone, fallback)}; }`);
   }
   if (options.interactive) {
-    rules.push(`${mark} { cursor: pointer; transition: background-color var(--lr-transition-fast); }`);
+    rules.push(`${mark} { cursor: pointer; transition: var(--lr-transition-interactive); }`);
     rules.push(`${mark}:hover { background: ${hoverFill(`var(${carrier})`).cssText}; }`);
     rules.push(`${mark}:active { background: ${activeFill(`var(${carrier})`).cssText}; }`);
   }
-  rules.push(`${scope} mark[data-lr-highlight-name='lr-highlight-active'] { outline: var(--lr-border-width-thin) solid var(${outline}, var(--lr-color-brand)); outline-offset: var(--lr-focus-ring-offset); }`);
+  rules.push(`${scope} mark[data-lr-highlight-name='lr-highlight-active'] { outline: var(--lr-border-width-thin) solid var(${outline}, var(--lr-color-brand)); ${focusRingOffset.cssText} }`);
   const toneHighlights = TONES.map(([tone]) => `::highlight(lr-highlight-${tone})`).join(', ');
   rules.push(`@media (forced-colors: active) {
     ${toneHighlights}, ${mark} { text-decoration: underline; }

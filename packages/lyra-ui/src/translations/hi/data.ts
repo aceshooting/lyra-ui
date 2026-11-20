@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'केवल पहले {count} हीटमैप सेल दिखाए गए हैं।',
   heatmapDecorationLimit: 'केवल पहले {count} हीटमैप रंग, लेजेंड स्टॉप और एनोटेशन दिखाए गए हैं।',
   funnelStagesLimit: 'केवल पहले {count} चरण दिखाए गए हैं।',
+  funnelStagesInputLimit: '{total} चरणों में से पहले {count} दिखाए गए हैं।',
   timeline: 'समयरेखा',
   timelineClusterCount: 'समयरेखा इवेंट दिखाएँ ({count})',
   timelineItemVariantWarning: 'चेतावनी',

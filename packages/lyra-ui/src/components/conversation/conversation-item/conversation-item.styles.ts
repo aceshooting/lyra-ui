@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -26,7 +26,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding: var(--lr-space-s) var(--lr-space-m);
     border-radius: var(--lr-radius);
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   :host([disabled]) [part='select-button'] {
     cursor: not-allowed;
@@ -74,10 +74,7 @@ export const styles = css`
      and dark surfaces alike. :active propagates up from the pressed [part='select-button'], so this
      plain wrapper div answers a press the way it answers hover. */
   :host(:where(:not([disabled])):active) [part~='base'] {
-    background: var(
-      --lr-conversation-item-pressed-bg,
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
-    );
+    background: var(--lr-conversation-item-pressed-bg, ${activeFill('transparent')});
   }
   /* Both rules above are (0,3,0), like this one, so being written last hands this rule BOTH
      contests: an active-and-hovered row keeps the stronger active tint instead of two backgrounds
@@ -93,11 +90,7 @@ export const styles = css`
      --lr-conversation-item-active-bg rather than transparent, so retinting the active row deepens
      THAT colour, not the stock one. */
   :host([active]:active) [part~='base'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet))')};
   }
 
   /* The thread-list row retains this tint while its actions menu is open. The tint's contrast is
@@ -212,7 +205,7 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
   })}
   [part='rename-button'] {

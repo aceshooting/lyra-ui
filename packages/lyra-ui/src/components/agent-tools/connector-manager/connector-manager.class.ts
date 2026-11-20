@@ -5,7 +5,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './connector-manager.styles.js';
 import '../../forms/button/button.class.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
@@ -131,20 +131,17 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   private dispatchingAction = false;
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private actedConnectorId: string | null = null;
   private pendingAnnouncement = '';
   private focusedRowId: string | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.sink?.release();
-    this.sink = undefined;
     this.actedConnectorId = null;
     this.pendingAnnouncement = '';
   }
@@ -192,7 +189,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
       }
     }
     if (this.pendingAnnouncement) {
-      this.sink?.announce(this.pendingAnnouncement);
+      this.sink.announcePolite(this.pendingAnnouncement);
       this.pendingAnnouncement = '';
     }
   }

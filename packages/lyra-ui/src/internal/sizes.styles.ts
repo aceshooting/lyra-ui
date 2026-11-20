@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { sizeTiersWithDefault } from './size-tiers.styles.js';
 
 // The ONE size ladder. Twenty-two components carried their own copy of this scale, and four
 // different ladders were in circulation ('2xs..xl', 'xs..xl', 'small|medium|large', 'sm|md').
@@ -31,6 +32,7 @@ export const sizes = css`
     /* The default tier is "m"; these :host declarations ARE that tier, so a :host([size='m']) block
        would only restate them. */
     --lr-form-control-height: var(--lr-form-control-height-m);
+    --_lr-form-control-tier-height: var(--lr-form-control-height-m);
     /* Cap default padding against the consumer's live line box. Rows retain auto height, so
        larger authored content still grows instead of being clipped to the tier's floor. */
     --_lr-form-control-padding-block-limit: max(
@@ -43,86 +45,14 @@ export const sizes = css`
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
-  :host([size='2xs']) {
-    --lr-form-control-height: var(--lr-form-control-height-2xs);
-    --lr-form-control-font-size: var(--lr-font-size-2xs);
-    --lr-form-control-padding-inline: var(--lr-space-2xs);
-    --lr-form-control-padding-block: 0;
-    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
-  }
-  :host([size='xs']) {
-    --lr-form-control-height: var(--lr-form-control-height-xs);
-    --lr-form-control-font-size: var(--lr-font-size-xs);
-    --lr-form-control-padding-inline: var(--lr-space-xs);
-    --lr-form-control-padding-block: 0;
-    --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
-  }
-  :host([size='s']),
-  :host([size='small']) {
-    --lr-form-control-height: var(--lr-form-control-height-s);
-    --lr-form-control-font-size: var(--lr-font-size-sm);
-    --lr-form-control-padding-inline: var(--lr-space-s);
-    --lr-form-control-padding-block: min(var(--lr-space-2xs), var(--_lr-form-control-padding-block-limit));
-  }
-  :host([size='medium']) {
-    --lr-form-control-height: var(--lr-form-control-height-m);
-    --lr-form-control-font-size: var(--lr-font-size-m);
-    --lr-form-control-padding-inline: var(--lr-space-m);
-    --lr-form-control-padding-block: min(var(--lr-space-xs), var(--_lr-form-control-padding-block-limit));
-  }
-  :host([size='l']),
-  :host([size='large']) {
-    --lr-form-control-height: var(--lr-form-control-height-l);
-    --lr-form-control-font-size: var(--lr-font-size-lg);
-    --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
-  }
-  :host([size='xl']) {
-    --lr-form-control-height: var(--lr-form-control-height-xl);
-    --lr-form-control-font-size: var(--lr-font-size-xl);
-    --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
-  }
-
-  /* Coarse-pointer touch-target floor, paired with the identical --lr-icon-button-size rule in
-     tokens.styles.ts's baseTokens -- the two token systems the density-axis request named as "the
-     only lever". Every tier's tappable height floors at 2.75rem (44px, the iOS HIG / Android
-     Material touch-target convention) once the pointer that reaches it is a finger rather than a
-     mouse; a tier grows only when its resolved height is below that floor. Font size and
-     padding are deliberately left alone -- only the tappable box itself grows, so a coarse-pointer
-     '2xs' row still reads as dense, it just is not finger-hostile. Selector-for-selector against
-     every rule above (not one generic :host rule): :host([size='2xs']) outranks a bare :host on
-     specificity, so a single lower-specificity override here would silently lose the cascade for
-     every sized tier and only ever apply to the unsized default. Each rule reads its own
-     '--lr-form-control-height-<tier>' input rather than the shared '--lr-form-control-height'
-     output above -- referencing the very property a declaration assigns, on the same selector, is
-     a cycle per the Custom Properties spec and resolves to guaranteed-invalid (inherited) instead
-     of the intended floor, not to some sensible current value. */
+  /* Coarse-pointer touch-target floor for the unsized default tier; the explicit tiers carry their
+     own floor in the shared tier rules, which outrank this bare :host rule. */
   @media (hover: none), (pointer: coarse) {
     :host {
-      --lr-form-control-height: max(var(--lr-form-control-height-m), 2.75rem);
-    }
-    :host([size='2xs']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-2xs), 2.75rem);
-    }
-    :host([size='xs']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-xs), 2.75rem);
-    }
-    :host([size='s']),
-    :host([size='small']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-s), 2.75rem);
-    }
-    :host([size='medium']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-m), 2.75rem);
-    }
-    :host([size='l']),
-    :host([size='large']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-l), 2.75rem);
-    }
-    :host([size='xl']) {
-      --lr-form-control-height: max(var(--lr-form-control-height-xl), 2.75rem);
+      --lr-form-control-height: max(var(--lr-form-control-height-m), var(--_lr-touch-target-min, 2.75rem));
     }
   }
+  ${sizeTiersWithDefault}
 `;
 
 /** An owning group supplies its resolved size tier while preserving an option's authored size.

@@ -123,6 +123,17 @@ const INTERPOLATION_FRAGMENTS = new Map([
   ['focusRingInset', FOCUS_RING_CSS],
   ['focusRingInsetOffset', FOCUS_RING_CSS],
   ['focusRingInwardOffset', FOCUS_RING_CSS],
+  ['focusRingShorthandInward', 'outline: var(--lr-focus-ring); outline-offset: calc(-1 * var(--lr-focus-ring-offset));'],
+  ['focusRingShorthandInset', 'outline: var(--lr-focus-ring); outline-offset: calc(-1 * var(--lr-focus-ring-width));'],
+  ['focusRingShorthandInsetOffset', 'outline: var(--lr-focus-ring); outline-offset: calc(-1 * var(--lr-focus-ring-width));'],
+  ['focusRingShorthandInsetPastFrame', 'outline: var(--lr-focus-ring); outline-offset: calc(-1 * var(--lr-focus-ring-width));'],
+  ['focusRingShorthandOutline', 'outline: var(--lr-focus-ring);'],
+  ['focusRingInwardMax', FOCUS_RING_CSS],
+  ['focusRingOffset', 'outline-offset: var(--lr-focus-ring-offset);'],
+  ['focusRingOffsetInset', 'outline-offset: calc(-1 * var(--lr-focus-ring-width));'],
+  ['focusRingOffsetInward', 'outline-offset: calc(-1 * var(--lr-focus-ring-offset));'],
+  ['focusRingOffsetInsetOffset', 'outline-offset: calc(-1 * var(--lr-focus-ring-width));'],
+  ['iconHitTarget', 'min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size);'],
   ['interactiveTransition', 'transition: var(--lr-transition-interactive);'],
   ['blockHost', 'display: block; min-inline-size: 0; max-inline-size: 100%;'],
   ['inlineSizeContainer', 'container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem);'],
@@ -130,6 +141,13 @@ const INTERPOLATION_FRAGMENTS = new Map([
   ['disabledControl', 'opacity: var(--lr-opacity-disabled); cursor: not-allowed;'],
 ]);
 const INTERPOLATION_FUNCTIONS = new Map([
+  ['hoverFillTowardText', (base) => `color-mix(in oklab, ${base}, var(--lr-color-text) var(--lr-color-mix-hover))`],
+  ['activeFillTowardText', (base) => `color-mix(in oklab, ${base}, var(--lr-color-text) var(--lr-color-mix-active))`],
+  ['hoverFillDoubled', (base) => `color-mix(in oklab, ${base}, var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-hover))))`],
+  ['activeFillDoubled', (base) => `color-mix(in oklab, ${base}, var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-active))))`],
+  ['activeWash', (accent, underlay) => `color-mix(in srgb, ${accent} var(--lr-color-mix-active), ${underlay})`],
+  ['focusRingOutline', (color) => `outline: var(--lr-focus-ring-width) solid ${color};`],
+  ['focusRingOffsetFrom', (hook) => `outline-offset: var(${hook}, var(--lr-focus-ring-offset));`],
   ['hoverFill', (base) => `color-mix(in oklab, ${base}, var(--lr-color-mix-partner) var(--lr-color-mix-hover))`],
   ['activeFill', (base) => `color-mix(in oklab, ${base}, var(--lr-color-mix-partner) var(--lr-color-mix-active))`],
   ['hoverTint', (base) => `color-mix(in srgb, ${base} var(--lr-color-mix-hover), transparent)`],
@@ -151,9 +169,9 @@ export function expandInterpolations(source) {
     }
     if (end < 0) { out += source.slice(start); break; }
     const expression = source.slice(start + 2, end).trim();
-    const call = /^(\w+)\(\s*'([^'\n]*)'\s*\)$/.exec(expression);
+    const call = /^(\w+)\(\s*('[^'\n]*'(?:\s*,\s*'[^'\n]*')*)\s*\)$/.exec(expression);
     const replacement = INTERPOLATION_FRAGMENTS.get(expression) ??
-      (call ? INTERPOLATION_FUNCTIONS.get(call[1])?.(call[2]) : undefined);
+      (call ? INTERPOLATION_FUNCTIONS.get(call[1])?.(...[...call[2].matchAll(/'([^'\n]*)'/g)].map((m) => m[1])) : undefined);
     const original = source.slice(start, end + 1);
     out += replacement !== undefined && !original.includes('\n') ? replacement : original;
     index = end + 1;

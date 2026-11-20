@@ -1,4 +1,4 @@
-import { activeFill, disclosureChevron, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInsetOffset, focusRingOffsetFrom } from '../../../internal/interactive-control.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
@@ -151,9 +151,8 @@ export const styles = css`
      region, as in lr-code-block's [part='body'] and lr-virtual-list's [part='base']. Without this
      rule a keyboard user tabbing into the transcript gets no visible indicator. */
   [part="body"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Inward so the ring isn't clipped by this element's overflow-block:auto, as lr-code-block. */
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   /* A subtler preview for mouse users, who otherwise get no cue this is a separately
      scrollable/focusable region. Plain border color, not the focus ring's brand, so the eventual
@@ -173,10 +172,7 @@ export const styles = css`
       --lr-thinking-panel-body-hover-outline-color,
       var(--lr-color-border)
     );
-    outline-offset: var(
-      --lr-thinking-panel-body-hover-outline-offset,
-      calc(-1 * var(--lr-focus-ring-offset))
-    );
+    ${focusRingOffsetFrom('--lr-thinking-panel-body-hover-outline-offset', 'inward')}
   }
   [part="body"][hidden] {
     display: none;

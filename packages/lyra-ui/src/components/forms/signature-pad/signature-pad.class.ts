@@ -17,7 +17,7 @@ import {
   withStaticValidityCheck,
 } from '../../../internal/invalid-event-alias.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { capturePointer } from '../../../internal/pointer-capture.js';
 import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -197,7 +197,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   /** The ratio the cached PNG was exported at; `undefined` until an export ran. */
   private exportedRatio?: number;
   private readonly surfaceObserver = new OwnedResizeObserver(this, () => this.refreshMeasuredExport());
-  private sink?: AnnouncementSink;
+  private readonly sink = new AnnouncementSinkController(this);
 
   constructor() {
     super();
@@ -362,12 +362,11 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     super.disconnectedCallback();
     this.surfaceObserver.disconnect();
     this.cancelStroke();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.sink.adopted();
     this.hostDescription.adopted();
   }
 
@@ -460,8 +459,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   private announceDrawingLimit(): void {
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-    this.sink.announce(this.localize('signaturePadDrawingLimit'));
+    this.sink.announcePolite(this.localize('signaturePadDrawingLimit'));
   }
 
   private begin(point: Point): boolean {
@@ -572,17 +570,17 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
 
   private togglePen(): void {
     if (this.penDown) {
-      this.sink?.announce(this.localize('signaturePadPenUp'));
+      this.sink.announcePolite(this.localize('signaturePadPenUp'));
       this.commit();
     } else if (!this.active && this.begin(this.cursor)) {
       this.penDown = true;
-      this.sink?.announce(this.localize('signaturePadPenDown'));
+      this.sink.announcePolite(this.localize('signaturePadPenDown'));
     }
   }
 
   private onFocus(): void {
     // Mounted before the first key press: a live region must exist before its text arrives.
-    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.sink.current('polite');
   }
 
   private onBlur(): void {

@@ -27,8 +27,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { literalSetConverter } from '../../../internal/converters.js';
@@ -263,22 +262,13 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   private initialStateAnnounced = false;
   private connectionGeneration = 0;
   private searchGeneration = 0;
-  private errorAnnouncementSink?: AnnouncementSink;
-  private emptyAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive', 'polite'] });
   private wasEmptyPresented = false;
   private chipFocusGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.requestUpdate();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.emptyAnnouncementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     const generation = ++this.connectionGeneration;
     void announceAfterFirstPaint(
       this,
@@ -295,10 +285,6 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     this.isMounting = true;
     this.connectionGeneration += 1;
     this.searchGeneration += 1;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-    this.emptyAnnouncementSink?.release();
-    this.emptyAnnouncementSink = undefined;
     this.wasEmptyPresented = false;
     super.disconnectedCallback();
   }
@@ -317,7 +303,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
       this.isConnected
     ) {
       this.initialStateAnnounced = true;
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.announcements.announceAssertive(this.errorText);
     }
     const emptyPresented = this.empty && !this.loading && this.errorText === '';
     if (
@@ -327,7 +313,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
       this.isConnected
     ) {
       this.initialStateAnnounced = true;
-      this.emptyAnnouncementSink?.announce(this.localize('noMatches'));
+      this.announcements.announcePolite(this.localize('noMatches'));
     }
     this.wasEmptyPresented = emptyPresented;
   }
@@ -337,11 +323,11 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  settled on either state, so it announces nothing. */
   private announcePresentedState(): void {
     if (this.errorText !== '') {
-      this.errorAnnouncementSink?.announce(this.errorText);
+      this.announcements.announceAssertive(this.errorText);
       return;
     }
     if (this.empty && !this.loading)
-      this.emptyAnnouncementSink?.announce(this.localize('noMatches'));
+      this.announcements.announcePolite(this.localize('noMatches'));
   }
 
   private modeItems(): LyraSegmentedItem[] {

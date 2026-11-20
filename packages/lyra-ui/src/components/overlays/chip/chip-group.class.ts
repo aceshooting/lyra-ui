@@ -489,6 +489,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     // Resolved only for a rendered indicator, so a group that never overflows reads no overflow copy.
+    // The collapsed name starts with this visible text, so speech users can say what they see.
     const visible = !overflowing ? '' : this.expanded
       ? this.localize('showLess') : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount });
 
@@ -507,7 +508,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? visible : this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}
+              aria-label=${this.expanded ? visible : `${visible} ${this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}`}
               @click=${this.onToggleOverflow}
             >
               ${visible}

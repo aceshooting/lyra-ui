@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { captureMapSceneCompletionCamera } from './fixtures/map-scene-completion-camera.js';
 import { completionUiFixture } from '../../../../test/map-scene-completion-fixtures.js';
 import { sceneViewport } from '../../../../test/map-scene-render-fixtures.js';
-import { createMapCameraFollowScene } from '../../../internal/map-camera-follow-scene.js';
+import { createMapCameraFollowScene } from '../../../internal/fixtures/map-camera-follow-scene.js';
 import type { MapCameraFollowFrame } from '../../../internal/map-camera-follow-controller.js';
 
 async function cameraFixture() {

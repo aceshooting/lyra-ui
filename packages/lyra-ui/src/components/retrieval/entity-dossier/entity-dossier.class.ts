@@ -71,6 +71,8 @@ export interface LyraEntityDossierEventMap
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
+  /** Forwarded from the dossier's tab strip for the outgoing tab. */
+  'lr-tab-hide': LyraTabGroupEventMap['lr-tab-hide'];
   /** @deprecated Use `lr-retrieval-disclosure-change` and read `origin` and `kind`. */
   'lr-toggle': LyraProvenancePanelEventMap['lr-toggle'];
   'lr-retrieval-disclosure-change': CustomEvent<LyraEntityDossierDisclosureDetail>;

@@ -1,5 +1,5 @@
 import { expect, fixtureCleanup, waitUntil } from '@open-wc/testing';
-import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
+import { mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneMarker } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 
@@ -103,6 +103,24 @@ describe('lr-map scene native allocation', () => {
     expect([allocation?.width, allocation?.height, allocation?.pixelRatio]).to.deep.equal([640, 480, 1.25]);
   });
 
+  it('reads only padding for a camera move that keeps the measured padding', async () => {
+    const { peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+    const bridge = await env.bridge(peer), before = bridge.host.captureRenderInput().allocation;
+    const reads: string[] = [];
+    peer.onRead = name => { reads.push(name); };
+    try {
+      for (let frame = 0; frame < 5; frame++) peer.fire('move');
+      await renderTurns();
+      expect(reads.every(name => name === 'padding')).to.equal(true);
+      expect(reads.length).to.equal(5);
+      expect(bridge.host.captureRenderInput().allocation === before).to.equal(true);
+      reads.length = 0;
+      peer.padding = { top: 13, right: 5, bottom: 7, left: 11 }; peer.fire('move'); await renderTurns();
+      expect(reads.includes('container')).to.equal(true);
+      expect(bridge.host.captureRenderInput().allocation?.padding.top).to.equal(13);
+    } finally { peer.onRead = undefined; }
+  });
+
   it('prevents an outer allocation read from overwriting a nested read on the same native objects', async () => {
     const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
     const bridge = await env.bridge(peer), widths: number[] = [];
@@ -161,7 +179,7 @@ describe('lr-map scene allocation reentry boundaries', () => {
       const reenter = (): void => {
         if (++reads !== readNumber) return;
         replaced = true;
-        peer.width = 900; peer.height = 600; peer.syncBacking(); peer.fire('move');
+        peer.width = 900; peer.height = 600; peer.syncBacking(); peer.fire('resize');
       };
       const target = field === 'clientWidth' || field === 'clientHeight' ? peer.container : peer.renderCanvas;
       const own = Object.getOwnPropertyDescriptor(target, field);
@@ -175,7 +193,7 @@ describe('lr-map scene allocation reentry boundaries', () => {
         });
       }
       try {
-        peer.width = 700; peer.height = 500; peer.syncBacking(); peer.fire('move');
+        peer.width = 700; peer.height = 500; peer.syncBacking(); peer.fire('resize');
         await renderTurns();
         expect(replaced).to.equal(true);
         const allocation = bridge.host.captureRenderInput().allocation;

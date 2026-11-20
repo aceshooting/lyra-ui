@@ -1,9 +1,9 @@
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
-import { render, svg } from 'lit';
-import { checkIcon, copyIcon } from '../../../internal/icons.js';
+import { render } from 'lit';
+import { checkIcon, copyIcon, warningIcon } from '../../../internal/icons.js';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { acquireAnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 
 export const MARKDOWN_CODE_HEADER_MAX = 200;
 export interface MarkdownCodeBlockRecord { language: string; source: string; ordinal: number }
@@ -42,8 +42,7 @@ function glyph(button: HTMLButtonElement, status: Status): void {
   let icon = cache.get(status);
   if (!icon) {
     const container = document.createElement('div');
-    const warning = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 2 21h20L12 3Z M12 9v5 M12 17h.01"></path></svg>`;
-    render(status === 'error' ? warning : status === 'success' ? checkIcon() : copyIcon(), container);
+    render(status === 'error' ? warningIcon() : status === 'success' ? checkIcon() : copyIcon(), container);
     icon = container.querySelector('svg')!;
     // Keep template markers and surrounding whitespace out of the document text index.
     icon.replaceChildren(...icon.children);
@@ -83,9 +82,10 @@ export class MarkdownCodeHeaderController implements ReactiveController {
   private contentVersion: unknown;
   private contentRoot: ParentNode | null = null;
   private remembered?: { button: Element; index: number };
-  private sink?: ReturnType<typeof acquireAnnouncementSink>;
+  private readonly sink: AnnouncementSinkController;
 
   constructor(private readonly host: HeaderHost, private readonly options: HeaderOptions) {
+    this.sink = new AnnouncementSinkController(host, { register: false });
     host.addController(this);
   }
 
@@ -119,16 +119,13 @@ export class MarkdownCodeHeaderController implements ReactiveController {
 
   private release(): void {
     for (const index of this.feedback.keys()) this.resetIndex(index);
-    this.sink?.release();
-    this.sink = undefined;
+    this.sink.disconnect();
     this.remembered = undefined;
     this.contentRoot = null;
   }
 
   hostConnected(): void {
-    if (this.options.isEnabled() && !this.sink) {
-      this.sink = acquireAnnouncementSink('polite', { document: this.host.ownerDocument, source: this.host });
-    }
+    if (this.options.isEnabled()) this.sink.current('polite');
   }
   hostDisconnected(): void { this.release(); }
   hostAdopted(): void { this.release(); }
@@ -140,7 +137,7 @@ export class MarkdownCodeHeaderController implements ReactiveController {
   }
 
   hostUpdated(): void {
-    if (!this.options.isEnabled()) { this.sink?.release(); this.sink = undefined; this.contentRoot = null; return; }
+    if (!this.options.isEnabled()) { this.sink.disconnect(); this.contentRoot = null; return; }
     if (!this.host.isConnected) return;
     this.hostConnected();
     const root = this.options.getContentRoot();
@@ -220,7 +217,7 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     const feedback = new RecordCopyFeedback(this.host, () => record.source, outcome => {
       reportCopyOutcome({
         emit: this.options.emit,
-        announce: ok => this.sink?.announce(ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed')),
+        announce: ok => this.sink.announcePolite(ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed')),
       }, outcome, () => this.feedback.get(index) === feedback && this.options.isEnabled());
     });
     this.feedback.set(index, feedback);

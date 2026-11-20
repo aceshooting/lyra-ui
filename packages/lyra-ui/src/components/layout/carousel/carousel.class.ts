@@ -5,8 +5,7 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import {
   isAccessibilitySubtreeExcluded,
@@ -309,7 +308,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private dragMoved = false;
   private readonly gestureKey = nextId('carousel-gesture');
   private releaseClickSuppression?: () => void;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private announcementsArmed = false;
   private changeOrigin: CarouselChangeOrigin = 'manual';
   private manualPending = false;
@@ -355,10 +354,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.currentSlide = finiteInteger(Number(this.getAttribute('current-slide') ?? 0), 0);
     }
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.announcementsArmed = false;
     this.manualPending = false;
     this.reduceMotion = prefersReducedMotion(this);
@@ -379,8 +374,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.announcementsArmed = false;
     this.manualPending = false;
     this.cancelDrag(false);
@@ -660,7 +653,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
           : position,
       ];
     });
-    this.announcementSink?.announce(
+    this.announcementSink.announcePolite(
       messages.join(this.localize('carouselSlideAnnouncementSeparator'))
     );
   }

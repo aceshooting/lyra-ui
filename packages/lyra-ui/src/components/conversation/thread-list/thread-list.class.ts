@@ -3,7 +3,8 @@ import { isElementNode } from '../../../internal/dom-guards.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraPageSource } from '../../../data-sources.js';
 import type { SourcePageState } from '../../../internal/source-page-controller.js';
-import { finiteInteger } from '../../../internal/numbers.js';
+
+import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, sourcePageOfRecord, SourceQueryInputs } from '../../../internal/source-paging.js';
 import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -384,7 +385,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private sourceEpoch = 0;
   private sourceSyncing = false;
   private sourceInputs?: readonly unknown[];
-  private sourceQueryInputs?: readonly unknown[];
+  private readonly sourceQueryInputs = new SourceQueryInputs();
   private sourceRequestVersion = 0;
   private sourceFilterIntent?: { text: string; version: number };
   private sourceActiveInputs?: readonly unknown[];
@@ -417,16 +418,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     try {
       if (!this.sourceMode) {
         if (this.sourceInputs) { this.sourceRequestVersion++; this.focusTaskGeneration++; this.sourcePages.bind(undefined); }
-        this.sourceInputs = undefined; this.sourceQueryInputs = undefined;
+        this.sourceInputs = undefined; this.sourceQueryInputs.clear();
         this.sourcePages.clearPage(); this.sourceActiveInputs = undefined;
         this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined; return;
       }
       const source = this.dataSource!;
-      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
-      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const size = normalizeSourcePageSize(this.sourcePageSize);
+      let page = normalizeSourcePage(this.sourcePage, size);
       const queryInputs = [this.searchText, this.withArchived, this.grouping, this.filter, this.groupBy, this.getGroupLabel, this.groupOrder, size];
-      if (this.hasUpdated && this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
-      this.sourceQueryInputs = queryInputs;
+      if (this.sourceQueryInputs.changed(queryInputs) && this.hasUpdated) { page = 0; this.sourcePage = 0; }
       const revision = source.revision;
       const inputs = [source, revision, this.sourceEpoch, this.effectiveLocale, ...queryInputs, this.collapsedGroupIds, page];
       if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
@@ -473,14 +473,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (!this.sourceMode || this.sourceBlocked) return;
     const source = this.dataSource!;
     const id = this.activeConversationId;
-    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs ?? []), id];
+    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs.current ?? []), id];
     if (this.sourceActiveInputs && inputs.every((value, index) => value === this.sourceActiveInputs![index])) return;
     this.sourceActiveInputs = inputs;
     const version = this.sourceRequestVersion;
     const owner = this.ownerDocument;
     void this.sourcePages.locate(id).then(index => {
       if (index === null || !this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.dataSource !== source || this.activeConversationId !== id || this.sourceRequestVersion !== version) return;
-      const page = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+      const page = sourcePageOfRecord(index, this.sourcePageSize);
       if (page === this.sourcePage) { this.revealSourceActive(id, version); return; }
       this.sourcePage = page;
       this.sourceActiveReveal = { id, version: this.sourceRequestVersion };
@@ -1793,7 +1793,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ></slot>
       </div>
       ${provider ? html`<lr-pagination part="source-pagination" format="compact"
-        .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1} .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)}
+        .page=${displayedSourcePage(this.sourcePage)} .pageSize=${normalizeSourcePageSize(this.sourcePageSize)}
         .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null} .strings=${this.strings}
         @lr-page-change=${this.onSourcePage} @lr-before-page-change=${this.stopEvent} @lr-activate=${this.stopEvent}
         @focus=${this.stopEvent} @blur=${this.stopEvent}></lr-pagination>` : nothing}

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
@@ -136,7 +136,7 @@ export const styles = css`
     background: transparent;
     cursor: nwse-resize;
     touch-action: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="resize-handle"]::before {
     content: '';

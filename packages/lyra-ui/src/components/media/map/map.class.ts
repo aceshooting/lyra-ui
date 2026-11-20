@@ -29,7 +29,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -2442,13 +2442,13 @@ function warnOnUntileableProperties(
   projection: CanonicalGeoJsonProjection,
   sourceLabel: string,
 ): void {
-  if (!litDevWarnings()) return;
+  if (!DEV_DIAGNOSTICS || !litDevWarnings()) return;
   for (const feature of projection.diagnostics) {
     for (const [key, value] of feature.properties) {
       if (typeof value !== 'number' || !Number.isFinite(value)) continue;
       if (Math.abs(value) <= Number.MAX_SAFE_INTEGER) continue;
       const identity = feature.id ?? `index ${feature.index}`;
-      devWarnOnce(
+      if (DEV_DIAGNOSTICS) devWarnOnce(
         `lyra-map-untileable-property:${sourceLabel}:${key}`,
         `<lr-map>: feature ${String(identity)} in "${sourceLabel}" carries ${key}=${value}, which is `
           + 'too large to survive maplibre-gl\'s vector-tile encoding. Tiling happens in a worker, '
@@ -3552,7 +3552,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       typeof value === 'number' && Number.isFinite(value) ? finiteRange(value, 0, 0, 24) : undefined;
     const min = explicit(this.minZoom), max = explicit(this.maxZoom);
     if (min !== undefined && max !== undefined && min > max) {
-      devWarnOnce('lyra-map-zoom-limits-inverted', `<${this.localName}>: minZoom ${min} exceeds maxZoom ${max}; both limits are ignored.`);
+      if (DEV_DIAGNOSTICS) devWarnOnce('lyra-map-zoom-limits-inverted', `<${this.localName}>: minZoom ${min} exceeds maxZoom ${max}; both limits are ignored.`);
       return DEFAULT_ZOOM_LIMITS;
     }
     const lower = min ?? 0;
@@ -4009,7 +4009,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Dev-mode-only: catches a gradient key whose value/color stops disagree with the layer it
    * claims to describe. Warning preserves explicit override behavior while making drift visible. */
   private warnOnLegendChoroplethMismatch(): void {
-    if (!litDevWarnings() || this.legendIsLine) return;
+    if (!DEV_DIAGNOSTICS || !litDevWarnings() || this.legendIsLine) return;
     const layer = this.canonicalChoropleth;
     const legend = this.legendGradient;
     if (!layer || legend.length === 0 || layer.stops.length === 0) {
@@ -4028,7 +4028,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         );
       });
     if (sameStops) return;
-    devWarnOnce(
+    if (DEV_DIAGNOSTICS) devWarnOnce(
       'lyra-map-legend-choropleth-mismatch',
       `<${this.localName}>: legendGradient does not match choropleth.stops, so the visible key ` +
         'may misdescribe the map. Assign the same stops array to both, or derive both from one ' +
@@ -4819,7 +4819,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     if (typeof zoomBefore === 'number' && Number.isFinite(zoomBefore)) map.setZoom(zoomBefore);
     if (centerBefore) map.setCenter([centerBefore.lng, centerBefore.lat]);
-    devWarnOnce(
+    if (DEV_DIAGNOSTICS) devWarnOnce(
       'lyra-map-max-bounds-rejected',
       '<lr-map>: maxBounds left maplibre-gl without a usable camera, so it was dropped and the '
         + 'camera restored. This is a peer limitation, not a bad value -- it shows up at sub-1 '
@@ -4886,7 +4886,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (runtime) { apply(runtime); return; }
     if (typeof provider !== 'function') { this.ownedFeatures?.configureImageProvider(map, undefined, this); return; }
     this.trackFeatureLoad(loadMapOwnedFeatureRuntime().then(apply, () => {
-      devWarnOnce('lyra-map-image-provider-runtime', `<${this.localName}>: the imageProvider runtime could not be loaded; missing images stay missing.`);
+      if (DEV_DIAGNOSTICS) devWarnOnce('lyra-map-image-provider-runtime', `<${this.localName}>: the imageProvider runtime could not be loaded; missing images stay missing.`);
     }));
   }
 
@@ -4964,7 +4964,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   fitBounds(bounds: LyraMapBounds, options: LyraMapFitBoundsOptions = {}): boolean {
     const box = normalizeFitBounds(bounds);
     if (!box) {
-      devWarnOnce(
+      if (DEV_DIAGNOSTICS) devWarnOnce(
         'lyra-map-fit-bounds-rejected',
         `<${this.localName}>: fitBounds() ignored a box that is not [[west, south], [east, north]] `
           + 'with finite coordinates, latitudes in [-90, 90], south <= north, and longitudes in '
@@ -5247,7 +5247,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private runCameraCommand(kind: MapCommandKind, options: LyraMapCameraOptions): boolean {
     const target = normalizeCameraOptions(options, this.zoomLimits);
     if (!target) {
-      devWarnOnce(
+      if (DEV_DIAGNOSTICS) devWarnOnce(
         'lyra-map-camera-command-rejected',
         `<${this.localName}>: ${kind}() ignored options with no usable center, zoom, bearing or `
           + 'pitch (center is [longitude, latitude]; every number must be finite).',
@@ -5688,7 +5688,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.childAnchorSet.forEach(refresh);
     for (const node of (event.target as HTMLSlotElement).assignedElements({ flatten: true })) {
       if (node.localName === tag('map-anchor') && !customElements.get(node.localName)) {
-        devWarnOnce('lyra-map-anchor-undefined', `<${this.localName}>: import @aceshooting/lyra-ui/components/${node.localName}.js to place <${node.localName}> children.`);
+        if (DEV_DIAGNOSTICS) devWarnOnce('lyra-map-anchor-undefined', `<${this.localName}>: import @aceshooting/lyra-ui/components/${node.localName}.js to place <${node.localName}> children.`);
       }
       refresh(node); node.querySelectorAll(tag('map-anchor')).forEach(refresh);
     }
@@ -7973,7 +7973,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         const planned = basemapOrderDraft ? basemapOrderDraft.plan(this.nativeLayerOrder(map), orderGroups)
           : runtime.planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
         if (!planned.valid) throw new Error('Map layer order is invalid.');
-        if (planned.diagnostics.some(issue => issue.code === 'missing-anchor')) devWarnOnce('lyra-map-missing-layer-anchor', `<${this.localName}>: a missing layer anchor appends its group.`);
+        if (DEV_DIAGNOSTICS && planned.diagnostics.some(issue => issue.code === 'missing-anchor')) devWarnOnce('lyra-map-missing-layer-anchor', `<${this.localName}>: a missing layer anchor appends its group.`);
         if (!current()) { finish(); return; }
         // Existing registries receive concrete anchors; a final guarded group plan resolves forward cross-owner edges.
         const allGroups = [...orderGroups, ...(basemapOrderDraft?.groups ?? [])];

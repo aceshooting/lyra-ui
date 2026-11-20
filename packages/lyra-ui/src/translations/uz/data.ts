@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Faqat dastlabki {count} ta issiqlik xaritasi katagi koʻrsatiladi.',
   heatmapDecorationLimit: 'Faqat dastlabki {count} ta issiqlik xaritasi rangi, legenda belgisi va izohi koʻrsatiladi.',
   funnelStagesLimit: 'Faqat dastlabki {count} ta bosqich koʻrsatiladi.',
+  funnelStagesInputLimit: 'Jami {total} ta bosqichdan dastlabki {count} tasi koʻrsatilmoqda.',
   timeline: 'Vaqt jadvali',
   timelineClusterCount: 'Vaqt jadvalidagi tadbirlarni koʻrsatish ({count})',
   timelineItemVariantWarning: 'Ogohlantirish',

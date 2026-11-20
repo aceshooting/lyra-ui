@@ -4,15 +4,15 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
-import { projectArrayInBatches } from '../../../internal/staged-array-projection.js';
+import { chartValueFractionDigits, significantFractionDigits } from '../../../internal/chart-number-format.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesInputLimit, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -31,10 +31,24 @@ const MAX_SHARE_PRECISION = 20;
 
 const MAX_RENDERED_STAGES = 500;
 
-interface StageScan {
-  stages: readonly LyraFunnelStage[];
-  done: boolean;
-  cancel?: () => void;
+const EMPTY_STAGES: readonly LyraFunnelStage[] = Object.freeze([]);
+
+/** Projects an owned (already detached and bounded) series to its valid stage records. */
+function validStages(value: unknown): readonly LyraFunnelStage[] {
+  if (!Array.isArray(value)) return EMPTY_STAGES;
+  const stages: LyraFunnelStage[] = [];
+  for (const stage of value as readonly unknown[]) {
+    if (stages.length > MAX_RENDERED_STAGES) break;
+    if (!isSafeNonArrayObject(stage)) continue;
+    const { label, value: stageValue, color } = stage as Partial<Record<keyof LyraFunnelStage, unknown>>;
+    if (typeof label !== 'string') continue;
+    stages.push({
+      label,
+      value: typeof stageValue === 'number' ? finiteNumber(stageValue, 0) : 0,
+      ...(typeof color === 'string' ? { color } : {}),
+    });
+  }
+  return stages;
 }
 
 interface ResolvedStage {
@@ -73,15 +87,14 @@ interface ResolvedStage {
  *   Finite values whose positive ratio overflows also fill the main or comparison track.
  * - A comparison series of a different length pairs by index: extra comparison entries are
  *   ignored, and stages past its end simply get no comparison bar.
- * - Malformed/non-record entries and records without a string `label` are omitted while later
- *   valid neighbors remain in either series; caller-owned arrays are never rewritten. Long invalid
- *   runs are inspected in cancelable chunks. The previous completed view remains aria-busy until
- *   both new series are ready; disconnecting or explicit refresh revokes unfinished work. Keep
- *   pending source arrays and records unchanged, or reassign/explicitly refresh to restart them.
- * - At most 500 valid stages render, each as its own bar row; a `stages` array past that length
- *   renders a localized `[part="limit"]` notice after the list rather than mounting an unbounded
- *   number of bars. Every stage's share is still measured against the true first stage regardless
- *   of truncation.
+ * - `stages` and `comparison` are owned collections: each assignment is detached into a frozen
+ *   snapshot of at most the first 10,000 source positions, so later caller mutation has no effect
+ *   until a new array is assigned. Malformed/non-record entries and records without a string
+ *   `label` are omitted while later valid neighbors remain in either series.
+ * - At most 500 valid stages render, each as its own bar row; more valid stages, or a `stages`
+ *   array past the 10,000-position admission bound, renders a localized `[part="limit"]` notice
+ *   after the list rather than mounting an unbounded number of bars. Every stage's share is still
+ *   measured against the true first stage regardless of truncation.
  *
  * @customElement lr-funnel
  * @csspart base - The container element.
@@ -99,7 +112,8 @@ interface ResolvedStage {
  * @csspart bar-overflow - Added to bar when the stage exceeds the first stage.
  * @csspart comparison-bar - The comparison series' outline drawn behind a stage's bar.
  * @csspart empty - The empty state shown when there are no stages.
- * @csspart limit - Localized notice shown when `stages` exceeds the 500-stage render ceiling.
+ * @csspart limit - Localized notice shown when `stages` exceeds the 500-stage render ceiling or the
+ *   10,000-position admission bound.
  * @cssprop [--lr-funnel-bar-color=var(--lr-color-brand)] - Fill of every stage bar that has no own color.
  * @cssprop [--lr-funnel-comparison-color=var(--lr-color-border-strong)] - Outline of the comparison bars.
  * @cssprop [--lr-funnel-track-color=var(--lr-color-surface-raised)] - Background of the bar track.
@@ -117,16 +131,21 @@ export class LyraFunnel extends LyraElement {
     funnelComparisonShare: LYRA_DEFAULT_funnelComparisonShare,
     funnelDropoffDecreased: LYRA_DEFAULT_funnelDropoffDecreased,
     funnelDropoffIncreased: LYRA_DEFAULT_funnelDropoffIncreased,
+    funnelStagesInputLimit: LYRA_DEFAULT_funnelStagesInputLimit,
     funnelStagesLimit: LYRA_DEFAULT_funnelStagesLimit,
     noData: LYRA_DEFAULT_noData,
     trendUnchanged: LYRA_DEFAULT_trendUnchanged,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override collectionSupport = collectionSupport;
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['stages', 'comparison']);
+
   static override styles = [LyraElement.styles, styles];
 
   /** The ordered stages, first to last. Every share is measured against the first entry.
-   * Reassign after changes, or call `requestUpdate()` after mutating the existing array. */
+   * Assigned arrays are detached; assign a new array to publish a change. */
   @property({ attribute: false }) stages: readonly LyraFunnelStage[] = [];
 
   /**
@@ -160,7 +179,7 @@ export class LyraFunnel extends LyraElement {
     const precision = this.precision;
     const percent = Math.abs(ratio) * 100;
     // A non-zero share that would round to 0 keeps its first significant digit.
-    const digits = percent > 0 && percent < 0.5 * 10 ** -precision ? Math.min(20, -Math.floor(Math.log10(percent))) : precision;
+    const digits = percent > 0 && percent < 0.5 * 10 ** -precision ? significantFractionDigits(percent, 1) : precision;
     return getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       minimumFractionDigits: precision,
@@ -168,86 +187,20 @@ export class LyraFunnel extends LyraElement {
     }).format(ratio);
   }
 
-  private stagesMemo?: { stages: readonly LyraFunnelStage[]; comparison: readonly LyraFunnelStage[]; result: ResolvedStage[] };
-  private readonly stageScans = new Map<unknown, StageScan>();
-  private stageGeneration = 0;
-  private completedStages: ResolvedStage[] = [];
-
-  private cancelStageScans(): void {
-    for (const scan of this.stageScans?.values() ?? []) scan.cancel?.();
-    this.stageGeneration++;
-    this.stageScans?.clear();
-    this.stagesMemo = undefined;
-  }
-
-  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
-    if (name === undefined || name === 'stages' || name === 'comparison') this.cancelStageScans();
-    super.requestUpdate(name, oldValue, options);
-  }
-
-  override disconnectedCallback(): void {
-    this.cancelStageScans();
-    super.disconnectedCallback();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    super.requestUpdate();
-  }
-
-  private get scanningStages(): boolean {
-    return [...this.stageScans.values()].some(scan => !scan.done);
-  }
-
-  private validStages(value: unknown): readonly LyraFunnelStage[] {
-    const cached = this.stageScans.get(value);
-    if (cached) return cached.stages;
-    const scan: StageScan = { stages: [], done: false };
-    this.stageScans.set(value, scan);
-    scan.cancel = projectArrayInBatches<LyraFunnelStage>(value, {
-      batchSize: 10_000,
-      retain: MAX_RENDERED_STAGES + 1,
-      current: () => this.stageScans.get(value) === scan,
-      canSchedule: () => this.isConnected,
-      project(stage) {
-        if (!isSafeNonArrayObject(stage)) return;
-        const { label } = stage;
-        if (typeof label !== 'string') return;
-        const { value, color } = stage;
-        return Object.freeze({
-          label,
-          value: typeof value === 'number' ? finiteNumber(value, 0) : 0,
-          ...(typeof color === 'string' ? { color } : {}),
-        });
-      },
-      onComplete: stages => {
-        scan.stages = stages;
-        scan.done = true;
-        if (scan.cancel) super.requestUpdate();
-      },
-    });
-    return scan.stages;
-  }
+  private stagesMemo?: { stages: unknown; comparison: unknown; result: ResolvedStage[] };
 
   /** Resolves every stage's geometry and text inputs in one pass so render stays declarative. */
   private resolveStages(): ResolvedStage[] {
     const memo = this.stagesMemo;
     if (memo && memo.stages === this.stages && memo.comparison === this.comparison) return memo.result;
-    const generation = this.stageGeneration;
     const result = this.computeStages();
-    if (generation !== this.stageGeneration) {
-      this.scheduleAfterUpdate(() => super.requestUpdate(), 'funnel-stages');
-      return this.completedStages;
-    }
-    if (this.scanningStages) return this.completedStages;
-    this.completedStages = result;
     this.stagesMemo = { stages: this.stages, comparison: this.comparison, result };
     return result;
   }
 
   private computeStages(): ResolvedStage[] {
-    const stages = this.validStages(this.stages);
-    const comparison = this.validStages(this.comparison);
+    const stages = validStages(this.stages);
+    const comparison = validStages(this.comparison);
     const values = stages.map((stage) => finiteNumber(stage.value, 0));
     const base = values[0] ?? 0;
     // A zero or negative first stage cannot define "share of the first stage" at all: every ratio
@@ -335,20 +288,26 @@ export class LyraFunnel extends LyraElement {
   override render(): TemplateResult {
     const resolved = this.resolveStages();
     if (resolved.length === 0) {
-      return html`<div part="base" aria-busy=${this.scanningStages ? 'true' : 'false'}>${this.scanningStages ? nothing : html`<p part="empty">${this.localize('noData')}</p>`}</div>`;
+      return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
     }
-    const truncated = resolved.length > MAX_RENDERED_STAGES;
     // Every stage's share/change was already resolved against the full, untruncated series above --
     // slicing here only bounds the rendered DOM node count, it never changes what a surviving bar reports.
     const renderedStages = resolved.slice(0, MAX_RENDERED_STAGES);
+    const truncated = resolved.length > MAX_RENDERED_STAGES;
+    const admission = publicCollectionTruncation(this, 'stages');
     const name = hostAriaLabel(this) ?? (this.label || this.localize('chart'));
-    return html`<div part="base" aria-busy=${this.scanningStages ? 'true' : 'false'}>
+    return html`<div part="base">
       <ol part="stages" aria-label=${name}>
         ${renderedStages.map((entry) => this.renderStage(entry))}
       </ol>
       ${truncated
         ? html`<p part="limit" role="note">${this.localize('funnelStagesLimit', undefined, {
             count: this.formatLocaleNumber(MAX_RENDERED_STAGES),
+          })}</p>`
+        : admission
+        ? html`<p part="limit" role="note">${this.localize('funnelStagesInputLimit', undefined, {
+            count: this.formatLocaleNumber(admission.retained),
+            total: this.formatLocaleNumber(admission.source),
           })}</p>`
         : nothing}
     </div>`;

@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Показано лише перші {count} комірок теплової мапи.',
   heatmapDecorationLimit: 'Показано лише перші {count} кольорів теплової мапи, поділок легенди й анотацій.',
   funnelStagesLimit: 'Показано лише перші {count} етапів.',
+  funnelStagesInputLimit: 'Показано перші {count} із {total} етапів.',
   timeline: 'Часова шкала',
   timelineClusterCount: 'Показати події часової шкали ({count})',
   timelineItemVariantWarning: 'Попередження',

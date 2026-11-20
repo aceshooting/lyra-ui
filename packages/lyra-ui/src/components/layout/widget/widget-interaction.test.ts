@@ -114,15 +114,14 @@ it('accepts a programmatic accessibleLabel on the base', async () => {
   expect(owner.getAttribute('aria-label')).to.equal('Quarterly results');
 });
 
-it('distinguishes a descendant view change from the widget view change by event target', async () => {
+it('reports its own view switch under a widget-specific name a descendant view change cannot share', async () => {
   const el = await fixture<LyraWidget>(html`<lr-widget><span>Content</span></lr-widget>`);
   el.views = [{ viewId: 'chart', label: 'Chart' }, { viewId: 'table', label: 'Table' }];
   await el.updateComplete;
-  const views: string[] = [];
-  el.addEventListener('lr-view-change', (event) => {
-    if (event.target === el) views.push(event.detail.viewId);
-  });
-  el.querySelector('span')!.dispatchEvent(new CustomEvent('lr-view-change', { bubbles: true, detail: { month: 1 } }));
+  const seen: string[] = [];
+  el.addEventListener('lr-widget-view-change', (event) => seen.push(event.detail.viewId));
+  el.addEventListener('lr-view-change', () => seen.push('generic'));
+  el.addEventListener('lr-view-request', () => seen.push('generic request'));
   el.shadowRoot!.querySelector<HTMLButtonElement>('[data-view-id="table"]')!.click();
-  expect(views).to.deep.equal(['table']);
+  expect(seen).to.deep.equal(['table']);
 });

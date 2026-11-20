@@ -1,4 +1,4 @@
-import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -55,7 +55,7 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: start;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='title']:not(:disabled):hover {
     text-decoration: underline;
@@ -94,7 +94,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='toggle']:not(:disabled):hover {
     text-decoration: underline;

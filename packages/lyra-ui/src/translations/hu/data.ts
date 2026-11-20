@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Csak az első {count} hőtérképcella látható.',
   heatmapDecorationLimit: 'Csak az első {count} hőtérképszín, jelmagyarázat-pont és jegyzet látható.',
   funnelStagesLimit: 'Csak az első {count} szakasz látható.',
+  funnelStagesInputLimit: 'Az első {count} szakasz látható a(z) {total} közül.',
   timeline: 'Idővonal',
   timelineClusterCount: 'Idővonal-események megjelenítése ({count})',
   timelineItemVariantWarning: 'Figyelmeztetés',

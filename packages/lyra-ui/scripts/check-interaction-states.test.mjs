@@ -619,7 +619,7 @@ test('shared fill, tint and focus helpers are read as the CSS they render', () =
   const expanded = expandInterpolations(source);
   assert.match(expanded, /color-mix\(in oklab, var\(--x\), var\(--lr-color-mix-partner\) var\(--lr-color-mix-hover\)\)/);
   assert.match(expanded, /outline: var\(--lr-focus-ring-width\)/);
-  assert.match(expanded, /\$\{iconHitTarget\}/);
+  assert.match(expanded, /min-inline-size: var\(--lr-icon-button-size\)/);
   assert.equal(expanded.split('\n').length, source.split('\n').length);
   assert.deepEqual(readHoverRules(source).map((rule) => rule.selector), ["[part='a']:hover"]);
 });

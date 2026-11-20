@@ -1,5 +1,5 @@
 import type { Feature, Geometry } from 'geojson';
-import { litDevWarnings } from '../../../internal/dev-warning.js';
+import { DEV_DIAGNOSTICS, litDevWarnings } from '../../../internal/dev-warning.js';
 import { isConstructor, isObjectLike } from '../../../internal/object-guards.js';
 import {
   createOptionalPeerLoader,
@@ -257,9 +257,9 @@ export function createMapEngineLoader<T>(
       if (module) return { module };
       capability = missing(unwrapOptionalPeerDefault(value)) ?? capability;
     } catch { /* The namespace may have unusable accessors. */ }
-    const warnings = litDevWarnings();
+    const warnings = DEV_DIAGNOSTICS ? litDevWarnings() : undefined;
     const key = `lyra-map:${peer}:${capability}`;
-    if (warnings && !warnings.has(key)) {
+    if (DEV_DIAGNOSTICS && warnings && !warnings.has(key)) {
       warnings.add(key);
       console.warn(`<lr-map> found \`${peer}\`, but it lacks a capability the map needs. Check its version.`,
         new Error(`Invalid optional peer \`${peer}\`: missing or invalid \`${capability}\` capability.`));

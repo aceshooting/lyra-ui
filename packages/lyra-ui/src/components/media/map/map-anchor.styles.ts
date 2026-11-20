@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { mapOverlayPanel, mapOverlayPanelLayer, mapOverlayCloseButton, mapOverlayCloseButtonHover, mapOverlayCloseButtonActive } from '../../../internal/map-overlay-panel.styles.js';
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { focusRing, focusRingOffsetInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   /* The host never generates a box, so application layout cannot become the containing block of
@@ -57,7 +57,7 @@ export const styles = css`
   }
   [part~='close-button']:focus-visible {
     ${focusRing}
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingOffsetInset}
   }
   [part~='close-icon'] {
     display: inline-flex;

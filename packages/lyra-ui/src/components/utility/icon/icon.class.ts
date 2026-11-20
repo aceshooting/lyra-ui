@@ -1,9 +1,10 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { REFRESH_ICON_PATH, SEARCH_ICON_PATH } from '../../../internal/icon-paths.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
@@ -21,8 +22,8 @@ const PATHS: Record<string, string> = {
   add: 'M12 5v14M5 12h14',
   check: 'm5 12 4 4L19 6',
   close: 'm6 6 12 12M18 6 6 18',
-  refresh: 'M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4',
-  search: 'm21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z',
+  refresh: REFRESH_ICON_PATH,
+  search: SEARCH_ICON_PATH,
   menu: 'M4 6h16M4 12h16M4 18h16',
   'chevron-left': 'm15 18-6-6 6-6',
   'chevron-right': 'm9 18 6-6-6-6',
@@ -210,7 +211,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   private customContentObserver?: MutationObserver;
   private stopLibrarySubscription?: () => void;
   private resourceLease?: ResourceCacheLease<SVGSVGElement | null>;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly errorAnnouncementSink = new AnnouncementSinkController(this);
   /** Bumped by every load start and by disconnect, and re-checked after every `await`, so a
    *  superseded response can never paint over a newer one. */
   private generation = 0;
@@ -235,8 +236,6 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     this.stopLibrarySubscription = undefined;
     this.customContentObserver?.disconnect();
     this.customContentObserver = undefined;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
     // A detached icon holds no half-finished remote state; reconnecting re-resolves from scratch.
     // Assigning an equal-but-new state object would schedule an update while detached, and that
     // update re-clones slotted geometry the observer has deliberately stopped tracking.
@@ -361,10 +360,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     }
 
     // Only a remote load can fail; mount the region before any failure text.
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
+    this.errorAnnouncementSink.current('assertive');
     this.fetchState = { kind: 'loading' };
     let source = this.src;
     try {
@@ -434,7 +430,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     await this.updateComplete;
     if (!this.isConnected || generation !== this.generation) return;
     if (isAccessibilityVisible(this) && normalizeLabel(this.accessibleLabel()) !== undefined) {
-      this.errorAnnouncementSink?.announce(this.errorMessage(reason));
+      this.errorAnnouncementSink.announceAssertive(this.errorMessage(reason));
     }
     this.emit('lr-error', { src, error });
   }

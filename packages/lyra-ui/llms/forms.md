@@ -7028,7 +7028,9 @@ categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only commen
 leading visual rendered into `<lr-option>`'s `start` slot in the single-select branch, or inline
 before the label in the multiple-select `<lr-checkbox>` branch, inert and `aria-hidden` either way,
 matching `LyraFilterBarOption.icon`. Runtime schema normalization retains the first occurrence of each nonempty key and
-rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
+rejects malformed rows. At most the first 500 valid keys are admitted (from the first 10,000 source
+positions): `keys` reads back that admitted schema, values for discarded fields are dropped like any
+undeclared field, and a localized `limit` notice follows the fields. `value: RubricValue = {}` is a defensive readonly snapshot and
 `defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
 `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
@@ -7090,8 +7092,8 @@ the currently focused editor.
 `label`, `description`, `scale` (the
 rendered score/category/comment control's wrapper), `error` (a field-level validation message),
 `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has no
-entries), and `unsupported` (the fallback note for a key whose `type` is outside the three supported
-ones).
+entries), `limit` (the notice shown when `keys` holds more than 500 valid fields), and `unsupported`
+(the fallback note for a key whose `type` is outside the three supported ones).
 
 Field-level `error` content is ordinary visible validation text, not a shadow live region. Score
 controls compose the current message into the semantic control's accessible name; category/comment

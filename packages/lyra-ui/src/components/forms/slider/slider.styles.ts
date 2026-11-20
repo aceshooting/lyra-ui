@@ -1,6 +1,6 @@
 import { disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -443,12 +443,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: break-word;
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
   }
-  [part="error"] {
-    color: var(--lr-color-danger);
-  }
+  ${formControlSupportingTone}
   [part="error"][hidden],
   [part~="hint"][hidden] {
     display: none;

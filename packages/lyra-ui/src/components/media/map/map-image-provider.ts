@@ -1,4 +1,4 @@
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image-admission.js';
 import type { prepareMapImages, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
@@ -290,7 +290,7 @@ export class MapImageProvider {
 
   private decline(id: string, epoch: number, reason: string): undefined {
     if (this.epoch === epoch) this.declined.add(id);
-    devWarnOnce(`lyra-map-image-provider:${reason}`, `<lr-map>: imageProvider did not supply image "${id}" (${reason}); it stays missing.`);
+    if (DEV_DIAGNOSTICS) devWarnOnce(`lyra-map-image-provider:${reason}`, `<lr-map>: imageProvider did not supply image "${id}" (${reason}); it stays missing.`);
     return undefined;
   }
 

@@ -119,6 +119,7 @@ export function createMapSceneRenderController(options: {
   const abort = new (view?.AbortController ?? AbortController)(), releases: (() => void)[] = [];
   let closed = false, intersecting = false, visibilityObserved = false, intersectionObserved = false;
   let allocationRead: object = {};
+  let measured: SceneViewportInput | undefined;
   let bridge: MapSceneRenderBridge | undefined, visible: boolean | undefined;
   let loading = false, attemptedRevision: number | undefined;
   let preparing = false;
@@ -349,8 +350,25 @@ export function createMapSceneRenderController(options: {
       }
     } catch { /* Missing or failed public capabilities do not authorize an allocation. */ }
     if (!active()) return;
+    measured = allocation;
     owner.setViewport(allocation);
     if (active()) syncVisibility();
+  }
+  /**
+   * Camera movement changes the allocation only through animated padding; size and pixel ratio
+   * change through resize events and the element's own observers. A move whose padding matches the last
+   * measurement therefore skips the container and canvas layout reads.
+   */
+  function refreshMovedAllocation(): void {
+    const previous = measured;
+    if (previous && current()) {
+      try {
+        const padding = map.getPadding?.();
+        if (padding && padding.top === previous.padding.top && padding.right === previous.padding.right &&
+          padding.bottom === previous.padding.bottom && padding.left === previous.padding.left) return;
+      } catch { /* A failed padding read falls back to the full measurement. */ }
+    }
+    refreshAllocation();
   }
   function startBridge(): void {
     if (!current() || !demand() || bridge || loading) return;
@@ -424,10 +442,10 @@ export function createMapSceneRenderController(options: {
   }
 
   keep(owner.subscribeRenderPublication(sync));
-  for (const event of ['move', 'resize'] as const) {
-    try { keep(() => { map.off?.(event, refreshAllocation); }); if (current()) {
-      Reflect.apply(map.on, map, [event, refreshAllocation]);
-      if (!current()) map.off?.(event, refreshAllocation);
+  for (const [event, listener] of [['move', refreshMovedAllocation], ['resize', refreshAllocation]] as const) {
+    try { keep(() => { map.off?.(event, listener); }); if (current()) {
+      Reflect.apply(map.on, map, [event, listener]);
+      if (!current()) map.off?.(event, listener);
     } }
     catch { /* Other allocation notifications may still establish current dimensions. */ }
   }

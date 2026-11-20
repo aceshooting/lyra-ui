@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
@@ -105,6 +105,7 @@ export const styles = css`
     box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     pointer-events: auto;
+    ${interactiveTransition}
   }
 
   [part='poster-play-button']:hover {

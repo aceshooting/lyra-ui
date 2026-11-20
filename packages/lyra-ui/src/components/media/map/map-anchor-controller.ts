@@ -2,7 +2,7 @@ import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { isElementNode } from '../../../internal/dom-guards.js';
 import { deferredPlaceSession as place, type DeferredPlacementSession } from '../../../internal/anchored-overlay-runtime.js';
 import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, focusFirstAvailable,
   type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
@@ -642,7 +642,7 @@ export class MapAnchorChildren {
       first.splice(low, 0, anchor);
       if (first.length > LIMIT) first.pop();
     }
-    if (overflow) devWarnOnce('lyra-map-anchor-limit', `<${this.host.element.localName}>: only the first ${LIMIT} open <${overflow.localName}> children are placed; later ones stay hidden until one closes.`);
+    if (DEV_DIAGNOSTICS && overflow) devWarnOnce('lyra-map-anchor-limit', `<${this.host.element.localName}>: only the first ${LIMIT} open <${overflow.localName}> children are placed; later ones stay hidden until one closes.`);
     const selected = new Set(first);
     const changed = new Set<MapAnchorChildEntry>();
     this.admittedControllers.clear();

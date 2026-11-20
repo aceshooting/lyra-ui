@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { createMapSceneSessionFacade } from './map-scene-session.js';
+import { createMapSceneSessionFacade } from './fixtures/map-scene-session.js';
 import { sceneBackingHarness, sceneStateHarness, sceneTarget } from '../../test/map-scene-session-fixtures.js';
 
 function setup() {

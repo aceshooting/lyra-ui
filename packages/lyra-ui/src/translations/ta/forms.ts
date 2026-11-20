@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'சமர்ப்பி',
   rubricSubmitAndNext: 'சமர்ப்பித்து அடுத்து செல்',
   rubricSkip: 'தவிர்',
+  rubricKeysLimit: 'மொத்தம் {total} ரூப்ரிக் புலங்களில் முதல் {count} மட்டுமே காட்டப்படுகின்றன.',
   localePickerLabel: 'மொழி',
   localePickerRequired: 'ஒரு மொழியைத் தேர்ந்தெடுக்கவும்.',
   localePickerSearchLabel: 'மொழிகளைத் தேடு',

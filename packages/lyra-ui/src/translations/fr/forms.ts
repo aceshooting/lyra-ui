@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Envoyer',
   rubricSubmitAndNext: 'Envoyer et passer au suivant',
   rubricSkip: 'Ignorer',
+  rubricKeysLimit: 'Seuls les {count} premiers champs de grille sur {total} sont affichés.',
   localePickerLabel: 'Langue',
   localePickerRequired: 'Veuillez choisir une langue.',
   localePickerSearchLabel: 'Rechercher une langue',

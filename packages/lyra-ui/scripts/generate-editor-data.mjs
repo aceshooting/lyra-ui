@@ -38,6 +38,7 @@ import { webTypesElementContributions } from './editor-web-types.mjs';
 import { editorDescription, editorMemberDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { mergeManifests, readCompanionManifests } from './companion-manifests.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifestPath = join(packageDir, 'custom-elements.json');
@@ -46,7 +47,11 @@ const cssDataPath = join(packageDir, 'vscode-css-data.json');
 const webTypesPath = join(packageDir, 'web-types.json');
 const publishedJson = (value) => `${JSON.stringify(value)}\n`;
 
-const manifest = expandManifestInheritance(JSON.parse(readFileSync(manifestPath, 'utf8')));
+// Companion packages (lyra-docs, lyra-gen) register their own tags; their manifests join lyra-ui's so
+// the editor data covers every `lr-*` element a consumer can import.
+const manifest = expandManifestInheritance(
+  mergeManifests(JSON.parse(readFileSync(manifestPath, 'utf8')), readCompanionManifests()),
+);
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
 const designTokenInput = JSON.parse(
   readFileSync(join(packageDir, 'scripts', 'fixtures', 'token-editor.generated.json'), 'utf8'),

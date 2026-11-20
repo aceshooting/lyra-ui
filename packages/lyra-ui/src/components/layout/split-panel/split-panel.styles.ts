@@ -1,4 +1,4 @@
-import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -105,7 +105,7 @@ export const styles = css`
     cursor: col-resize;
     touch-action: none;
     user-select: none;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
 
   /* Transparent hit slop preserves the visible divider width while maintaining Lyra's minimum

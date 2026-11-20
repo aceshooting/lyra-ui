@@ -1,5 +1,5 @@
-import { iconAction } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, focusRing, activeFill, disabledControl } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionStyles } from '../../../internal/icon-action.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,32 +33,31 @@ export const styles = css`
     background: transparent;
     box-shadow: none;
   }
+  ${iconActionStyles(":is([part='zoom-in'], [part='zoom-out'], [part='fit'], [part='lock'])", {
+    color: 'var(--lr-color-text)',
+    hoverColor: 'var(--lr-color-text)',
+    activeColor: 'var(--lr-color-text)',
+    hoverBackground: 'var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)))',
+    activeBackground: `var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))').cssText})`,
+  })}
   [part='zoom-in'],
   [part='zoom-out'],
   [part='fit'],
-  [part='lock'],
+  [part='lock'] {
+    transition: background-color var(--lr-transition-fast);
+  }
   ::slotted(button) {
     --_lr-icon-button-color-default: var(--lr-color-text);
     --_lr-flow-controls-hover-bg: var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
     --_lr-flow-controls-active-bg: var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')});
     ${iconHitTarget}
     ${iconAction}
-    transition: background-color var(--lr-transition-fast);
-  }
-  :where([part='base'] button):hover:where(:not(:disabled)) {
-    background: var(--_lr-flow-controls-hover-bg);
-  }
-  :where([part='base'] button):active:where(:not(:disabled)) {
-    background: var(--_lr-flow-controls-active-bg);
-  }
-  [part='base'] button:disabled {
-    ${disabledControl}
-  }
-  [part='base'] button:focus-visible {
-    ${focusRing}
+    ${interactiveTransition}
   }
   [part='lock'][aria-pressed='true'] {
-    color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
+    --_lr-icon-button-color-default: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
+    --_lr-icon-button-color-hover-default: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
+    --_lr-icon-button-color-active-default: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
   }
   ::slotted(button) {
     max-inline-size: 100%;

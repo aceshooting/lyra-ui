@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { focusRingOffset, focusRingOutline, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -81,7 +81,7 @@ export const styles = css`
   [part="canvas"]:hover {
     outline: var(--lr-border-width-thin) solid
       var(--lr-heatmap-hover-ring-color, var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color)));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   :host([multiple]) [part='canvas'],
   :host([multiple]) [part='cell'] {
@@ -92,9 +92,8 @@ export const styles = css`
      painted into the bitmap from consumer data -- so the outline carries the feedback, and the
      pressed step is the ring thickening from a hairline to the full focus-ring width. */
   [part="canvas"]:active {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color))')}
+    ${focusRingOffset}
   }
   [part="cells"] {
     position: absolute;
@@ -165,22 +164,19 @@ export const styles = css`
   [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid
       var(--lr-heatmap-hover-ring-color, var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color)));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOffset}
   }
   [part="cell"]:active {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color))')}
+    ${focusRingOffset}
   }
   [part="cell"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color))')}
+    ${focusRingOffset}
   }
   [part="canvas"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingOutline('var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color))')}
+    ${focusRingOffset}
   }
   [part="tooltip"] {
     position: absolute;

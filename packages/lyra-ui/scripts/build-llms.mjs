@@ -31,6 +31,7 @@ import {
 } from './generate-component-inventory.mjs';
 import { formatDeprecationSubject } from './component-metadata.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { COMPANION_MANIFESTS, mergeManifests, readCompanionManifests } from './companion-manifests.mjs';
 import { isMainModule } from './is-main-module.mjs';
 import { projectRenameLedger } from './lyra-rename-ledger.mjs';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
@@ -118,9 +119,28 @@ export function readTagFacts(manifest) {
   const tags = new Map();
   for (const mod of expandedManifest.modules ?? []) {
     const m = mod.path.match(/^src\/components\/([^/]+)\/([^/]+)\//);
-    if (!m) continue;
     for (const decl of mod.declarations ?? []) {
       if (!decl.customElement || !decl.tagName) continue;
+      const companion = COMPANION_MANIFESTS.find((candidate) => candidate.tags.includes(decl.tagName));
+      if (companion && mod.path.startsWith(`${companion.directory}/`)) {
+        // A companion element lives outside `src/components/<family>/`; its family and import path are declared once.
+        tags.set(decl.tagName, {
+          tag: decl.tagName,
+          family: companion.family,
+          className: decl.name,
+          importPath: companion.importPath,
+          modulePath: mod.path,
+          purpose: summarize(decl.description ?? decl.summary ?? ''),
+          status: decl.status,
+          since: decl.since,
+          maturity: decl.maturity,
+          deprecations: decl.deprecations ?? [],
+          cssParts: decl.cssParts ?? [],
+          cssProperties: decl.cssProperties ?? [],
+        });
+        continue;
+      }
+      if (!m) continue;
       // `foo.class.ts` declares the class; `foo.ts` next to it is the side-effect entry that
       // registers the tag — that is what a consumer imports.
       const entry = mod.path.replace(/\.class\.ts$/, '.ts').replace(/^src\//, '').replace(/\.ts$/, '.js');
@@ -1450,7 +1470,7 @@ export function rewriteSharedLinksForRoot(text) {
 // ---------------------------------------------------------------------------------------------
 
 export function build({ write = true } = {}) {
-  const manifest = JSON.parse(read('custom-elements.json'));
+  const manifest = mergeManifests(JSON.parse(read('custom-elements.json')), readCompanionManifests());
   const tagFacts = readTagFacts(manifest);
 
   const preamble = read('llms', '00-preamble.md').trimEnd();

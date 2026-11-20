@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeFillTowardText, disabledControl, focusRing, focusRingInset, hoverFillTowardText, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -264,7 +264,7 @@ export const styles = css`
        this needs; without it this option's fill snaps while lr-button/lr-copy-button/
        lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
        reduced-motion block already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='option']:hover {
     background: var(
@@ -343,10 +343,10 @@ export const styles = css`
     transition: background var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
   [part='load-retry']:where(:hover:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-hover));
+    background: ${hoverFillTowardText('var(--lr-color-surface)')};
   }
   [part='load-retry']:where(:active:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
+    background: ${activeFillTowardText('var(--lr-color-surface)')};
   }
   [part='load-retry']:focus-visible {
     ${focusRing}

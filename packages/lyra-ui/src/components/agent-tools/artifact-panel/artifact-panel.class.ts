@@ -32,8 +32,8 @@ export interface ArtifactVersion {
 export type ArtifactPanelView = 'preview' | 'code';
 
 export interface LyraArtifactPanelEventMap {
-  'lr-view-change-request': CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>;
-  'lr-view-change': CustomEvent<{ view: ArtifactPanelView }>;
+  'lr-artifact-view-change-request': CustomEvent<{ view: ArtifactPanelView; previousView: ArtifactPanelView }>;
+  'lr-artifact-view-change': CustomEvent<{ view: ArtifactPanelView }>;
   'lr-version-change': CustomEvent<{ versionId: string }>;
   'lr-restore': CustomEvent<{ versionId: string }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
@@ -54,10 +54,10 @@ export interface LyraArtifactPanelEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-artifact-panel
- * @event lr-view-change-request - `detail: { view, previousView }`. Cancelable; fired before a
+ * @event lr-artifact-view-change-request - `detail: { view, previousView }`. Cancelable; fired before a
  *   preview/code toggle press changes `view`. Preventing it keeps the current view; a listener
  *   that assigns a different `view` keeps its own assignment.
- * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
+ * @event lr-artifact-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
  * @event lr-version-change - `detail: { versionId }`. Fired when the previous/next
  *   navigation moves to a different version. Not fired when a `versions` reassignment drops the
  *   currently-active version id: `activeVersionId` resets to `null` silently, since `null` is
@@ -214,7 +214,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
     if (!this.hasCodeSlot && this.view === 'code') {
       this.view = 'preview';
-      this.emit('lr-view-change', { view: 'preview' });
+      this.emit('lr-artifact-view-change', { view: 'preview' });
     }
   };
 
@@ -222,7 +222,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     super.updated(changed);
     if (this.viewCoerced) {
       this.viewCoerced = false;
-      this.emit('lr-view-change', { view: this.view });
+      this.emit('lr-artifact-view-change', { view: this.view });
     }
   }
 
@@ -235,11 +235,11 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     if (view === previousView) return;
     requestThenCommit({
       requestDetail: { view, previousView },
-      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-view-change-request', detail, init),
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-artifact-view-change-request', detail, init),
       commit: () => {
         if (this.view !== previousView) return;
         this.view = view;
-        this.emit('lr-view-change', { view });
+        this.emit('lr-artifact-view-change', { view });
       },
     });
   }

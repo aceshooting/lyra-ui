@@ -8,7 +8,7 @@ import {
   isPlainDataRecord as isRealmNeutralPlainRecord,
   readOwnArrayLength,
 } from './data-descriptors.js';
-import { devWarnOnce } from './dev-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from './dev-mode-attribute-warning.js';
 import { isRuntimeArray } from './object-guards.js';
 
 /** Maximum number of plain-record properties retained across one snapshot. */
@@ -1293,6 +1293,7 @@ function recordCollectionTruncation(
     collectionTruncations.set(host, byName);
   }
   byName.set(name, truncation);
+  if (!DEV_DIAGNOSTICS) return;
   const tagName = host.localName;
   const property = String(name);
   devWarnOnce(
@@ -1383,7 +1384,7 @@ export const collectionSupport: LyraCollectionSupport = /* @__PURE__ */ Object.f
  */
 export const eventCollectionSupport: LyraCollectionSupport = /* @__PURE__ */ Object.freeze({
   installProperties(ctor: typeof LyraElement): void {
-    if (!declaresOwnedCollections(ctor)) return;
+    if (!DEV_DIAGNOSTICS || !declaresOwnedCollections(ctor)) return;
     devWarnOnce(
       `lyra-event-collection-support:${ctor.name}`,
       `${ctor.name} enrolls ownedCollectionProperties but declares eventCollectionSupport; ` +

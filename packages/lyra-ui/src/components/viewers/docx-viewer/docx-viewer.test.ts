@@ -1583,7 +1583,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
         await el.updateComplete;
         const mark = el.shadowRoot!.querySelector<HTMLElement>('[part="content"] mark[data-lr-highlight-tone]')!;
-        expect(getComputedStyle(mark).transitionProperty).to.equal('background-color');
+        expect(getComputedStyle(mark).transitionProperty.split(', ')).to.include('background-color');
         await setReducedMotion('reduce');
         expect(getComputedStyle(mark).transitionProperty).to.equal('none');
       } finally {

@@ -215,7 +215,7 @@ once per frame. Camera property assignments are silent. `minZoom`/`maxZoom` boun
 relative to the fitted distance. `fit({ padding })` and `focusNode(id, { zoom })` act immediately
 in 3D, including with reduced motion. `focusNode` reveals a node's page in list view; it retains
 the existing contract of not moving DOM focus. `focusNodeId` still centers and paints the focus
-halo. The toolbar emits `lr-view-change` with `{ view }` after a user switch; property assignments
+halo. The toolbar emits `lr-graph-view-change` with `{ view }` after a user switch; property assignments
 are silent.
 
 Drag to orbit; Shift-drag pans. Wheel zoom is active only while the canvas has focus or an active
@@ -399,7 +399,7 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), `lr-viewport-change`
 (`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced 2D camera/layout signal),
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
-coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
+coalesced to one event per frame), and `lr-graph-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
@@ -2632,7 +2632,7 @@ of filtering, search limits and child rendering.
 options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
 view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
 controls work with all views. User toolbar changes update the explorer's `view` before
-`lr-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
+`lr-graph-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
 popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
@@ -2817,7 +2817,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-search-change`, so reassigning back is optional.
 - `lr-camera-change` (`detail: { camera: LyraGraphCamera }`) — bubbles unchanged from the graph;
   spatial detail popovers follow the newly projected node position.
-- `lr-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
+- `lr-graph-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
   explorer updates its own view. Direct view and camera property assignments are silent.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`

@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSubmit: 'Isumite',
   rubricSubmitAndNext: 'Isumite at susunod',
   rubricSkip: 'Laktawan',
+  rubricKeysLimit: 'Ang unang {count} lang sa {total} field ng rubric ang ipinapakita.',
   localePickerLabel: 'Wika',
   localePickerRequired: 'Pumili ng wika.',
   localePickerSearchLabel: 'Maghanap ng mga wika',

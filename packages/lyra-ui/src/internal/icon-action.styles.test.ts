@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../test/wtr-media.js';
-import { iconAction, iconActionActive, iconActionHover, iconActionStyles } from './icon-action.styles.js';
+import { iconAction, iconActionActive, iconActionHover, iconActionStyles, outlinedActionStyles } from './icon-action.styles.js';
 
 const tokens = '--lr-color-surface: rgb(255, 255, 255); --lr-color-mix-partner: rgb(0, 0, 0); --lr-color-mix-hover: 10%; --lr-color-mix-active: 20%; --lr-transition-fast: 0s;';
 
@@ -63,4 +63,21 @@ it('composes a complete icon action with per-control fallbacks that yield to the
   expect(style('disabled').opacity).to.equal('0.5');
   expect(style('aria-disabled').cursor).to.equal('not-allowed');
   expect(iconActionStyles('.plain').cssText.includes('--_lr-icon-button-background-default:')).to.equal(false);
+});
+
+it('composes a bordered surface action that mixes hover and press and skips disabled controls', async () => {
+  const css = outlinedActionStyles('.act', { padding: '3px 9px', extra: 'letter-spacing: 2px;' }).cssText;
+  const root = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style=${`${tokens} --lr-icon-button-size: 40px; --lr-opacity-disabled: 0.5; --lr-color-border: rgb(9, 9, 9); --lr-color-text: rgb(5, 5, 5); --lr-border-width-thin: 1px; --lr-transition-interactive: none;`}>
+    <style>${css}</style>
+    <button class="act" id="rest"></button>
+    <button class="act" id="off" disabled></button>
+  </div>`);
+  const style = (id: string) => getComputedStyle(root.querySelector(`#${id}`)!);
+  expect(style('rest').backgroundColor).to.equal('rgb(255, 255, 255)');
+  expect(style('rest').minInlineSize).to.equal('40px');
+  expect(style('rest').paddingInlineStart).to.equal('9px');
+  expect(style('rest').letterSpacing).to.equal('2px');
+  expect(style('rest').borderTopStyle).to.equal('solid');
+  expect(style('off').opacity).to.equal('0.5');
+  expect(style('off').cursor).to.equal('not-allowed');
 });

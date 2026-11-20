@@ -96,7 +96,7 @@ function dropEntriesWith(el: HTMLElement, entries: readonly unknown[]): void {
   el.dispatchEvent(event);
 }
 
-expectLocaleFallback('ar-EG', ['fileInputAcceptedMany', 'fileInputDefaultLabel', 'fileInputRejectedMany', 'fileInputRejectedType', 'fileSizeUnitB', 'removeWithContext']);
+expectLocaleFallback('ar-EG', ['fileInputAcceptedMany', 'fileInputDefaultLabel', 'fileInputRejectedMany', 'fileInputRejectedType', 'removeWithContext']);
 
 it("renders the label text by default", async () => {
   const el = (await fixture(
@@ -1948,7 +1948,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     }
     expect(
       el.shadowRoot!.querySelector('[part~="file-size"]')!.textContent
-    ).to.contain("B");
+    ).to.contain("byte");
   });
 
   it("keeps programmatic files silent while synchronizing form submission and required validity", async () => {

@@ -12,7 +12,7 @@ import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js'
 import { resolveIntlLocale } from './intl-cache.js';
 import { formatLocaleNumber } from './locale-number.js';
 import { claimDocumentRuntime } from './runtime-diagnostics.js';
-import { devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
 
 type DeprecatedAliasSyncHook = (host: LyraElement<any>, name: PropertyKey | undefined, oldValue: unknown) => void;
@@ -336,7 +336,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.collectionSupport?.installProperties(this);
     // Registration time, not import time: class modules stay free of side effects.
     primeLyraTokens();
-    if (Object.hasOwn(this, 'deprecatedAliases') && this.deprecatedAliases && !deprecatedAliasSyncHook) {
+    if (DEV_DIAGNOSTICS && Object.hasOwn(this, 'deprecatedAliases') && this.deprecatedAliases && !deprecatedAliasSyncHook) {
       devWarnOnce(`lyra-deprecated-alias-installer:${this.name}`,
         `${this.name} declares deprecatedAliases; call installDeprecatedAliases() in a static block.`);
     }
@@ -504,8 +504,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // re-checks, which restores a layer an application removed by replacing adoptedStyleSheets.
     ensureLyraTokens(this);
     super.connectedCallback();
-    warnUnknownAttributes(this);
-    warnThemeScopeUsage(this);
+    if (DEV_DIAGNOSTICS) {
+      warnUnknownAttributes(this);
+      warnThemeScopeUsage(this);
+    }
     recordLyraOwnerDocumentConnection(this);
     trackInputModality(this.ownerDocument);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,

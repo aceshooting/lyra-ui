@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeFillDoubled, disabledControl, focusRing, hoverFill, hoverFillDoubled, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -122,8 +122,8 @@ export const styles = css`
      preserving contrast. Neutral plain already uses body text. */
   :host([appearance="quiet"]),
   :host([appearance="plain"][variant]:not([variant="neutral"])) {
-    --_lr-button-hover-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-hover))));
-    --_lr-button-active-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-active))));
+    --_lr-button-hover-color: ${hoverFillDoubled('var(--_lr-button-resolved-color)')};
+    --_lr-button-active-color: ${activeFillDoubled('var(--_lr-button-resolved-color)')};
   }
   :host([appearance="quiet"]) {
     --_lr-button-resolved-color: var(

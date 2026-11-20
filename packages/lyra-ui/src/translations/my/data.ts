@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'ပထမဆုံး အပူမြေပုံအကွက် {count} ခုကိုသာ ပြထားသည်။',
   heatmapDecorationLimit: 'ပထမဆုံး အပူမြေပုံအရောင် {count} ခု၊ ညွှန်းတိုင်များနှင့် မှတ်ချက်များကိုသာ ပြထားသည်။',
   funnelStagesLimit: 'ပထမဆုံး အဆင့် {count} ခုကိုသာ ပြထားသည်။',
+  funnelStagesInputLimit: 'အဆင့် {total} ခုအနက် ပထမဆုံး {count} ခုကို ပြထားသည်။',
   timeline: 'အချိန်ဇယား',
   timelineClusterCount: 'အချိန်ဇယားဖြစ်ရပ်များ ပြရန် ({count})',
   timelineItemVariantWarning: 'သတိပေးချက်',

@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { shouldIgnoreNavigationKey } from './list-navigation.js';
-import { capturePointer, releasePointer } from './pointer-capture.js';
+import { capturePointer, releasePointer, togglePointerGesture } from './pointer-capture.js';
 
 export type SeparatorAxis = 'inline' | 'block';
 
@@ -61,10 +61,7 @@ export class SeparatorDragController implements ReactiveController {
     this.handles.set(event.pointerId, handle);
     if (!this.ownerWindow) {
       this.ownerWindow = ownerWindow;
-      ownerWindow.addEventListener('pointermove', this.handleMove);
-      ownerWindow.addEventListener('pointerup', this.handleEnd);
-      ownerWindow.addEventListener('pointercancel', this.handleEnd);
-      ownerWindow.addEventListener('lostpointercapture', this.handleEnd);
+      togglePointerGesture(ownerWindow, true, this.handleMove, this.handleEnd);
     }
     handle.addEventListener('lostpointercapture', this.handleEnd);
     capturePointer(handle, event.pointerId);
@@ -89,10 +86,7 @@ export class SeparatorDragController implements ReactiveController {
   private removeWindowListeners(): void {
     const ownerWindow = this.ownerWindow;
     this.ownerWindow = undefined;
-    ownerWindow?.removeEventListener('pointermove', this.handleMove);
-    ownerWindow?.removeEventListener('pointerup', this.handleEnd);
-    ownerWindow?.removeEventListener('pointercancel', this.handleEnd);
-    ownerWindow?.removeEventListener('lostpointercapture', this.handleEnd);
+    if (ownerWindow) togglePointerGesture(ownerWindow, false, this.handleMove, this.handleEnd);
   }
 
   private readonly handleMove = (event: PointerEvent): void => {

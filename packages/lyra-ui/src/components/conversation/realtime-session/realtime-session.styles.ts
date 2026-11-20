@@ -1,6 +1,6 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -20,7 +20,7 @@ export const styles = css`
   [part='controls'] button {
     min-block-size: var(--lr-icon-button-size); padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='controls'] button:hover:where(:not(:disabled)) { background: var(--lr-color-surface-raised); }
   [part='controls'] button:active:where(:not(:disabled)) { background: ${activeFill('var(--lr-color-surface-raised)')}; }

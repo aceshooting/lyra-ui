@@ -29,28 +29,28 @@ export function isMapSceneLayerHandle(value: unknown): value is MapSceneLayerHan
   return typeof value === 'object' && value !== null && handleMethods.every(name => typeof Reflect.get(value, name) === 'function');
 }
 
-const defaultImporter = (): Promise<unknown> => import('@aceshooting/lyra-map/scene');
-let importer = defaultImporter;
-let pending: Promise<MapSceneLayerRuntime> | undefined;
+/** Validates the optional namespace's custom-layer bridge before it enters the shared cache. */
+export function resolveMapSceneLayerRuntime(namespace: unknown): MapSceneLayerRuntime {
+  const runtime = resolveOptionalPeerCapability(namespace, isMapSceneLayerRuntime);
+  if (!runtime) throw new TypeError('Map custom layers are unavailable');
+  return runtime;
+}
 
 /**
  * Loads the optional custom-layer bridge from `@aceshooting/lyra-map/scene` on first use. A failed
- * import or a module without `createSceneLayer` rejects and is retried by the next call.
+ * import or a module without `createSceneLayer` rejects and is retried by the next call. The cache
+ * keeps the shape of `mapFeatureLoader` without importing it, because this module is reached only
+ * from on-demand chunks.
  */
-export function loadMapSceneLayerRuntime(): Promise<MapSceneLayerRuntime> {
-  if (pending) return pending;
-  const attempt: Promise<MapSceneLayerRuntime> = importer().then(module => {
-    const runtime = resolveOptionalPeerCapability(module, isMapSceneLayerRuntime);
-    if (!runtime) throw new TypeError('Map custom layers are unavailable');
-    return runtime;
-  });
-  pending = attempt;
-  attempt.catch(() => { if (pending === attempt) pending = undefined; });
+export const loadMapSceneLayerRuntime = Object.assign((): Promise<MapSceneLayerRuntime> => {
+  const cache = loadMapSceneLayerRuntime;
+  if (cache.pending) return cache.pending;
+  const attempt = cache.importer();
+  cache.pending = attempt;
+  attempt.catch(() => { if (cache.pending === attempt) cache.pending = undefined; });
   return attempt;
-}
-
-/** @internal Replaces the raw optional namespace; omit to restore the real module. */
-export function __setMapSceneLayerImporterForTesting(next?: () => Promise<unknown>): void {
-  importer = next ?? defaultImporter;
-  pending = undefined;
-}
+}, {
+  importer: (): Promise<MapSceneLayerRuntime> => import('@aceshooting/lyra-map/scene').then(resolveMapSceneLayerRuntime),
+  pending: undefined as Promise<MapSceneLayerRuntime> | undefined,
+  loaded: undefined as MapSceneLayerRuntime | undefined,
+});

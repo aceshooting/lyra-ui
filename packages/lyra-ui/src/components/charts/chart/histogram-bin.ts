@@ -1,7 +1,7 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../../../internal/localization-runtime.js';
 import { finiteInterpolate, finiteRatio } from '../../../internal/numbers.js';
-import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
+import { chartValueFractionDigits, significantFractionDigits } from '../../../internal/chart-number-format.js';
 
 export interface HistogramBucket {
   label: string;
@@ -31,7 +31,7 @@ export function histogramNumberFormat(locale: string | undefined, width: number,
     return getNumberFormat(locale, { notation: 'scientific', maximumSignificantDigits: 17 });
   }
   return getNumberFormat(locale, { maximumFractionDigits: constant === undefined
-    ? Math.min(20, Math.max(0, 1 - Math.floor(Math.log10(width)))) || 0
+    ? significantFractionDigits(width, 2)
     : chartValueFractionDigits(constant) });
 }
 

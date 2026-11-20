@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { completionFollow, completionUiFixture } from '../../../../test/map-scene-completion-fixtures.js';
 import { sceneArc, sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
-import { createMapCameraFollowScene } from '../../../internal/map-camera-follow-scene.js';
+import { createMapCameraFollowScene } from '../../../internal/fixtures/map-camera-follow-scene.js';
 import type { MapCameraFollowFrame } from '../../../internal/map-camera-follow-controller.js';
 import type { SceneCompletedFrame } from '../../../internal/map-scene-contract.js';
 

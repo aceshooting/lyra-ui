@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   heatmapProjectionLimit: 'Kuboniswa amaseli angu-{count} okuqala kuphela emephini yokushisa.',
   heatmapDecorationLimit: 'Kuboniswa imibala engu-{count} yokuqala kuphela, izigaba zokhiye wombala, nezichasiselo zemephu yokushisa.',
   funnelStagesLimit: 'Kuboniswa izigaba ezingu-{count} zokuqala kuphela.',
+  funnelStagesInputLimit: 'Kuboniswa izigaba ezingu-{count} zokuqala kwezingu-{total}.',
   timeline: 'Umugqa wesikhathi',
   timelineClusterCount: 'Bonisa imicimbi yomugqa wesikhathi ({count})',
   timelineItemVariantWarning: 'Isexwayiso',

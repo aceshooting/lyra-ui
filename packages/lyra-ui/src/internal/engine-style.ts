@@ -36,26 +36,17 @@ export interface EngineStyleOptions {
    * and line-width tokens, so their units resolve live.
    */
   readonly probe?: Element | null;
-  /** Values the caller already resolved (a graph's paint, for example); used verbatim, never probed. */
-  readonly overrides?: Partial<EngineStyle>;
 }
 
 /** The categorical chart tokens, in palette order. */
-export const ENGINE_CHART_PALETTE: readonly string[] = Object.freeze(
-  Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`),
-);
+export const ENGINE_CHART_PALETTE: readonly string[] = /* @__PURE__ */ Object.freeze(['--lr-color-chart-1',
+  '--lr-color-chart-2', '--lr-color-chart-3', '--lr-color-chart-4', '--lr-color-chart-5', '--lr-color-chart-6',
+  '--lr-color-chart-7', '--lr-color-chart-8']);
 
 export { ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
 
-type ColorField = 'background' | 'foreground' | 'muted' | 'accent' | 'focus';
-
-const COLOR_TOKENS: ReadonlyArray<readonly [ColorField, string]> = [
-  ['background', '--lr-color-surface'],
-  ['foreground', '--lr-color-text'],
-  ['muted', '--lr-color-text-quiet'],
-  ['accent', '--lr-color-brand'],
-  ['focus', '--lr-focus-ring-color'],
-];
+/** Background, foreground, muted, accent and focus, in that order. */
+const COLOR_TOKENS = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color'];
 
 interface ResolvedEngineStyle {
   readonly key: string;
@@ -66,27 +57,6 @@ interface ResolvedEngineStyle {
 
 const resolvedStyles = new WeakMap<Element, ResolvedEngineStyle>();
 
-/** Without a browsing context nothing resolves; empty colours leave the engine on its defaults. */
-function windowlessStyle(options: EngineStyleOptions): EngineStyle {
-  const overrides = options.overrides ?? {};
-  const color = (field: ColorField): string => overrides[field] ?? '';
-  return Object.freeze({
-    background: color('background'),
-    foreground: color('foreground'),
-    muted: color('muted'),
-    accent: color('accent'),
-    focus: color('focus'),
-    palette: Object.freeze([...(overrides.palette ?? [])]),
-    fontFamily: overrides.fontFamily ?? '',
-    fontSize: overrides.fontSize ?? 14,
-    pointSize: overrides.pointSize ?? finiteRange(options.pointSize ?? 8, 8, 1, 1024),
-    lineWidth: overrides.lineWidth ?? finiteRange(options.lineWidth ?? 1, 1, 0, 64),
-    devicePixelRatio: overrides.devicePixelRatio ?? 1,
-    reducedMotion: overrides.reducedMotion ?? true,
-    forcedColors: overrides.forcedColors ?? false,
-  });
-}
-
 /**
  * Resolves the live design tokens, fonts, point size, line width, a bounded device pixel ratio and
  * the motion/forced-colour preferences an engine paints with, all in the host's owner window.
@@ -95,28 +65,21 @@ function windowlessStyle(options: EngineStyleOptions): EngineStyle {
  * not probed again.
  */
 export function resolveEngineStyle(host: Element, options: EngineStyleOptions = {}): EngineStyle {
-  const view = host.ownerDocument.defaultView;
-  if (!view) return windowlessStyle(options);
-  const overrides = options.overrides ?? {};
+  const view = host.ownerDocument.defaultView!;
   const computed = view.getComputedStyle(host);
   const measured = options.probe ? view.getComputedStyle(options.probe) : undefined;
   const [reducedMotion = false, forcedColors = false, dark = false] =
     ENGINE_STYLE_MEDIA_QUERIES.map((query) => view.matchMedia(query).matches);
-  const fields = COLOR_TOKENS.filter(([field]) => overrides[field] === undefined);
-  const paletteTokens = overrides.palette === undefined ? options.palette ?? ENGINE_CHART_PALETTE : [];
-  const tokens = [...fields.map(([, token]) => token), ...paletteTokens];
+  const tokens = [...COLOR_TOKENS, ...options.palette ?? ENGINE_CHART_PALETTE];
   const values = tokens.map((token) => computed.getPropertyValue(token).trim());
-  const context = tokens.length ? JSON.stringify([computed.color, computed.colorScheme, dark, forcedColors]) : '';
-  const font = overrides.fontFamily === undefined || overrides.fontSize === undefined
-    ? [computed.fontFamily, computed.fontSize]
-    : [];
-  const key = JSON.stringify([context, tokens, values, font, measured?.inlineSize, measured?.borderBlockStartWidth,
-    view.devicePixelRatio, reducedMotion, forcedColors, options.pointSize, options.lineWidth, overrides]);
+  const context = JSON.stringify([computed.color, computed.colorScheme, dark, forcedColors]);
+  const key = JSON.stringify([context, tokens, values, computed.fontFamily, computed.fontSize, measured?.inlineSize,
+    measured?.borderBlockStartWidth, view.devicePixelRatio, reducedMotion, options.pointSize, options.lineWidth]);
   const previous = resolvedStyles.get(host);
   if (previous?.key === key) return previous.style;
 
   const colors = new Map<string, string>();
-  const resolved = tokens.map((token, index) => {
+  const [background, foreground, muted, accent, focus, ...palette] = tokens.map((token, index) => {
     const memo = `${context}\n${values[index]}`;
     let value = colors.get(memo) ?? previous?.colors.get(memo);
     if (value === undefined) {
@@ -126,27 +89,19 @@ export function resolveEngineStyle(host: Element, options: EngineStyleOptions = 
     }
     colors.set(memo, value);
     return value;
-  });
-  const color = new Map(fields.map(([field], index): [ColorField, string] => [field, resolved[index]!]));
-  const pick = (field: ColorField): string => overrides[field] ?? color.get(field)!;
+  }) as [string, string, string, string, string, ...string[]];
   const pointFallback = finiteRange(options.pointSize ?? 8, 8, 1, 1024);
   const lineFallback = finiteRange(options.lineWidth ?? 1, 1, 0, 64);
   const style: EngineStyle = Object.freeze({
-    background: pick('background'),
-    foreground: pick('foreground'),
-    muted: pick('muted'),
-    accent: pick('accent'),
-    focus: pick('focus'),
-    palette: Object.freeze([...(overrides.palette ?? resolved.slice(fields.length))]),
-    fontFamily: overrides.fontFamily ?? computed.fontFamily,
-    fontSize: overrides.fontSize ?? finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
-    pointSize: overrides.pointSize
-      ?? (measured ? finiteRange(Number.parseFloat(measured.inlineSize), pointFallback, 1, 1024) : pointFallback),
-    lineWidth: overrides.lineWidth
-      ?? (measured ? finiteRange(Number.parseFloat(measured.borderBlockStartWidth), lineFallback, 0, 64) : lineFallback),
-    devicePixelRatio: overrides.devicePixelRatio ?? finiteRange(view.devicePixelRatio, 1, 0.25, 4),
-    reducedMotion: overrides.reducedMotion ?? reducedMotion,
-    forcedColors: overrides.forcedColors ?? forcedColors,
+    background, foreground, muted, accent, focus,
+    palette: Object.freeze(palette),
+    fontFamily: computed.fontFamily,
+    fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
+    pointSize: measured ? finiteRange(Number.parseFloat(measured.inlineSize), pointFallback, 1, 1024) : pointFallback,
+    lineWidth: measured ? finiteRange(Number.parseFloat(measured.borderBlockStartWidth), lineFallback, 0, 64) : lineFallback,
+    devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4),
+    reducedMotion,
+    forcedColors,
   });
   resolvedStyles.set(host, { key, style, colors });
   return style;
