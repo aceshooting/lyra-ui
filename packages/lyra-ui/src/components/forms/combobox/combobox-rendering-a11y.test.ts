@@ -12,8 +12,7 @@ import "../../lr-color-picker.js";
 import "../../lr-segmented.js";
 import type { ComboboxFilterDetail, LyraCombobox } from "../../lr-combobox.js";
 import type { LyraOption } from "../../lr-option.js";
-import { styles } from "./combobox.styles.js";
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from "../../../../test/wtr-media.js";
@@ -235,14 +234,6 @@ it("is accessible with the listbox open, a keyboard-active option, and selected 
 });
 
 it("transitions the listbox with the shared fast-transition token and respects reduced motion", async () => {
-  const css = styles.cssText;
-  const listboxBlock = /\[part=['"]?listbox['"]?]\s*{([^}]*)}/.exec(css);
-  expect(listboxBlock, 'expected a base [part="listbox"] rule').to.not.equal(
-    null
-  );
-  expect(listboxBlock![1]).to.include("var(--lr-transition-fast)");
-  expect(css).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
-
   try {
     await setReducedMotion("no-preference");
     const el = (await fixture(html`
@@ -269,36 +260,22 @@ it("transitions the listbox with the shared fast-transition token and respects r
 
 it("uses the shared disabled-opacity token for the disabled host and disabled options", async () => {
   const el = (await fixture(html`
-    <lr-combobox open>
+    <lr-combobox open style="--lr-opacity-disabled: 0.3">
       <lr-option value="a">Apple</lr-option>
       <lr-option value="b" disabled>Banana</lr-option>
     </lr-combobox>
   `)) as LyraCombobox;
   await el.updateComplete;
+  const options = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]');
+  expect(getComputedStyle(options[1]!).opacity).to.equal("0.3");
 
-  const css = styles.cssText;
-  const disabledHostBlock =
-    /:host\(:disabled\)\s*\[part=['"]?combobox['"]?]\s*{([^}]*)}/.exec(css);
-  expect(
-    disabledHostBlock,
-    'expected a :host(:disabled) [part="combobox"] rule'
-  ).to.not.equal(null);
-  expect(disabledHostBlock![1]).to.include("var(--lr-opacity-disabled)");
-
-  const disabledOptionBlock =
-    /\[part=['"]?option['"]?]\[aria-disabled=['"]?true['"]?]\s*{([^}]*)}/.exec(
-      css
-    );
-  expect(
-    disabledOptionBlock,
-    'expected a [part="option"][aria-disabled="true"] rule'
-  ).to.not.equal(null);
-  expect(disabledOptionBlock![1]).to.include("var(--lr-opacity-disabled)");
-
-  const disabledOption = el.shadowRoot!.querySelectorAll(
-    '[part="option"]'
-  )[1] as HTMLElement;
-  expect(getComputedStyle(disabledOption).opacity).to.equal("0.5");
+  const disabled = (await fixture(html`
+    <lr-combobox disabled style="--lr-opacity-disabled: 0.3">
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  const row = disabled.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  expect(getComputedStyle(row).opacity).to.equal("0.3");
 });
 
 it("inherits the theme-wide form-control radius at a compact size tier", async () => {
@@ -362,35 +339,6 @@ it("lets a consumer retint the tag background/text/radius with no ::part(tag) ru
 });
 
 it("gives the clear button and expand icon a real touch target instead of collapsing to bare glyph height", async () => {
-  const css = styles.cssText;
-  // [part='clear-button'] and [part='expand-icon'] used to share one rule for their sizing; they
-  // now resolve independently ([[part='clear-button'] to the full --lr-icon-button-size floor,
-  // since it's a real independently-focusable button; [part='expand-icon'] to its smaller capped
-  // box, since it's a decorative aria-hidden indicator with no click handler of its own) -- both
-  // still reference the shared token.
-  // Each part now has its own dedicated sizing rule (in addition to the shared base rule the two
-  // still share for layout/color/cursor) -- there can be more than one block whose selector
-  // matches either part, so scan every match and require at least one dedicated rule per part to
-  // reference the shared token.
-  const clearBlocks = [
-    ...css.matchAll(/\[part=['"]?clear-button['"]?]\s*{([^}]*)}/g),
-  ];
-  expect(
-    clearBlocks.length,
-    'expected at least one [part="clear-button"] rule'
-  ).to.be.greaterThan(0);
-  expect(clearBlocks.some((match) => match[1]?.includes("var(--lr-icon-button-size)")))
-    .to.be.true;
-  const expandBlocks = [
-    ...css.matchAll(/\[part=['"]?expand-icon['"]?]\s*{([^}]*)}/g),
-  ];
-  expect(
-    expandBlocks.length,
-    'expected at least one [part="expand-icon"] rule'
-  ).to.be.greaterThan(0);
-  expect(expandBlocks.some((match) => match[1]?.includes("var(--lr-icon-button-size)")))
-    .to.be.true;
-
   const el = (await fixture(basic())) as LyraCombobox;
   el.withClear = true;
   el.value = "a";
@@ -1954,14 +1902,32 @@ it("renders the combobox-input's ::placeholder in the shared quiet-text token's 
 });
 
 // -- Hover states (mouse-modality parity with the focus ring) --------------
-it("gives the clear button a :hover rule, matching its own :focus-visible affordance", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part=["']clear-button["']\]:hover/);
-});
+it("repaints the clear button and a selected tag's remove button on :hover", async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple with-clear>
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  try {
+    const clear = el.shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
+    const restColor = getComputedStyle(clear).color;
+    await hoverUntilMatched(clear, 'clear button never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(clear).color !== restColor,
+      'clear button did not repaint on :hover'
+    );
 
-it("gives a selected tag's remove button a :hover rule, matching its own :focus-visible affordance", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part=["']tag__remove-button["']\]:hover/);
+    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="tag__remove-button"]')!;
+    const restBackground = getComputedStyle(remove).backgroundColor;
+    await hoverUntilMatched(remove, 'tag remove button never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(remove).backgroundColor !== restBackground,
+      'tag remove button did not repaint on :hover'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 // -- Per-component theming indirection --------------------------------------

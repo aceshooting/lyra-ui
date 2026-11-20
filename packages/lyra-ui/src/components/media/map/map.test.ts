@@ -235,7 +235,7 @@ for (const treatment of ['solid', 'glass'] as const) {
 
     expect(getComputedStyle(marker).cursor).to.equal('pointer');
     await sendKeys({ press: 'Tab' });
-    marker.focus();
+    await focusByKeyboard(marker);
     await waitUntil(() => marker.matches(':focus-visible'), 'the interactive marker did not receive keyboard focus');
     const paint = getComputedStyle(marker);
     expect(paint.outlineWidth).to.equal('5px');
@@ -1873,7 +1873,7 @@ it('toggles a legend category from a native pointer press', async () => {
 
 it('toggles a focused legend category with Enter and Space', async () => {
   const el = await interactiveLegendMap();
-  legendToggles(el)[0]!.focus();
+  await focusByKeyboard(legendToggles(el)[0]!);
   expect(el.shadowRoot!.activeElement === legendToggles(el)[0]).to.be.true;
 
   await sendKeys({ press: 'Enter' });
@@ -1896,7 +1896,7 @@ it('gives every keyed legend row its own tab stop in DOM order and skips inert r
   const buttons = legendToggles(el);
   expect(buttons.length).to.equal(2);
 
-  buttons[0]!.focus();
+  await focusByKeyboard(buttons[0]!);
   await sendKeys({ press: 'Tab' });
   expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
   expect(buttons.some((button) => button.hasAttribute('tabindex'))).to.be.false;
@@ -2156,7 +2156,7 @@ it('toggles a focused checkbox legend row with Enter and Space', async () => {
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
-  legendCheckboxes(el)[0]!.focus();
+  await focusByKeyboard(legendCheckboxes(el)[0]!);
   expect(el.shadowRoot!.activeElement === legendCheckboxes(el)[0]).to.be.true;
 
   await sendKeys({ press: 'Enter' });
@@ -2471,7 +2471,7 @@ it('paints a theme-aware compact attribution glyph while preserving native discl
   expect(summary.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
   const details = summary.parentElement as HTMLDetailsElement;
   const opened = details.open;
-  summary.focus();
+  await focusByKeyboard(summary);
   await sendKeys({ press: 'Enter' });
   await waitUntil(() => details.open !== opened, 'native keyboard toggle');
   expect(attribution.querySelector('a')?.getAttribute('href')).to.equal('https://example.com');
@@ -7837,7 +7837,7 @@ describe('standard peer navigation and scale controls', () => {
         expect(textRect.right).to.be.at.most(scale.getBoundingClientRect().right);
         expect(parseFloat(getComputedStyle(scale, '::after').width))
           .to.be.closeTo(parseFloat(scale.style.width), 0.1);
-        toggle.focus();
+        await focusByKeyboard(toggle);
         await sendKeys({ press: 'Enter' });
         await waitUntil(() => !control.classList.contains('maplibregl-compact-show'));
       }
@@ -7881,7 +7881,7 @@ describe('standard peer navigation and scale controls', () => {
     expect(legend.getBoundingClientRect().bottom).to.be.at.most(scale.getBoundingClientRect().top);
     expect(legend.getBoundingClientRect().bottom).to.be.at.most(zoom.getBoundingClientRect().top);
     const before = map.getZoom();
-    zoom.focus();
+    await focusByKeyboard(zoom);
     await sendKeys({ press: 'Enter' });
     await waitUntil(() => map.getZoom() > before);
     el.strings = { zoomIn: 'Zoom closer', mapResetNorth: 'North up' };
@@ -8273,7 +8273,7 @@ it('ignores retired lr-map-legend-panel-toggle vetoes while preserving the canon
 
   it('toggles the panel from the focused disclosure with Enter and Space', async () => {
     const el = await collapsibleMap();
-    disclosure(el)!.focus();
+    await focusByKeyboard(disclosure(el)!);
     expect(el.shadowRoot!.activeElement === disclosure(el)).to.be.true;
 
     await sendKeys({ press: 'Enter' });

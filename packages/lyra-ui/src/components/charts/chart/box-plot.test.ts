@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
@@ -1767,7 +1768,7 @@ describe('per-box interactivity', () => {
 
     expect(politeTexts(), 'mounting must not announce an initial box').to.deep.equal([]);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     const first = politeTexts().at(-1) ?? '';
     expect(first).to.contain('Latency');
@@ -1795,7 +1796,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
 
     const details: unknown[] = [];
@@ -1873,7 +1874,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
     await el.updateComplete;
 
@@ -1896,7 +1897,7 @@ describe('per-box interactivity', () => {
 
     expect(politeTexts()).to.deep.equal([]);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect(politeTexts()).to.deep.equal([]);
 
@@ -1914,7 +1915,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     const first = politeTexts().at(-1) ?? '';
 
@@ -1944,7 +1945,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     const first = politeTexts().at(-1) ?? '';
 
@@ -1976,7 +1977,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
     await el.updateComplete;
@@ -2000,7 +2001,7 @@ describe('per-box interactivity', () => {
     await waitUntil(() => (el as any).chart != null);
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect(politeTexts().at(-1) ?? '', 'only the 2 valid points are addressable').to.contain('of 2');
 

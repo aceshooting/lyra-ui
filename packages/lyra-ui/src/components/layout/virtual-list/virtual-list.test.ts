@@ -16,7 +16,6 @@ import {
   type LyraVirtualList,
   type LyraVirtualListIndexedSource,
 } from "../../lr-virtual-list.js";
-import { styles } from "./virtual-list.styles.js";
 import {
   hoverUntilMatched,
   resetMouse,
@@ -1905,11 +1904,6 @@ it("renders row positions from the public offset coordinate rather than a paddin
     el.offsetForIndex(1),
     0.5
   );
-});
-
-it('gives the always-focusable [part="base"] scroll region a :hover state, matching its own :focus-visible affordance', () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
 });
 
 describe("hover-outline cssprops", () => {

@@ -13,7 +13,6 @@ import {
 import "../../lr-widget.js";
 import '../../lr-switch.js';
 import type { LyraWidget } from "../../lr-widget.js";
-import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
@@ -2503,11 +2502,28 @@ it("disables the rendered collapse/fullscreen icon rotate transition under reduc
   }
 });
 
-it("gives view-toggle's resting state a hover, gated via :where() so a consumer ::part(view-toggle):hover can win, without changing the pressed state's own styling", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/:where\(\[part='view-toggle'\]\):hover(?!\[)/);
-  // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
-  expect(css).to.not.include("[part='view-toggle']:hover {");
+it("lets a consumer ::part(view-toggle):hover override beat the internal hover rule without !important", async () => {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync("lr-widget::part(view-toggle):hover { background-color: rgb(7, 8, 9); }");
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  try {
+    const el = (await fixture(html`
+      <lr-widget label="Usage" .views=${[{ viewId: "chart", label: "Chart" }, { viewId: "table", label: "Table" }]}>
+        <div slot="view-chart">chart</div>
+        <div slot="view-table">table</div>
+      </lr-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="view-toggle"][aria-pressed="false"]')!;
+    await hoverUntilMatched(toggle, "the view-toggle never matched :hover");
+    await waitUntil(
+      () => getComputedStyle(toggle).backgroundColor === "rgb(7, 8, 9)",
+      "the consumer hover override must win the cascade"
+    );
+  } finally {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+    await resetMouse();
+  }
 });
 
 it("lets a consumer retint the view-toggle hover state via the scoped --lr-widget-view-toggle-hover-* cssprops (regression)", async () => {
@@ -2532,15 +2548,8 @@ it("lets a consumer retint the view-toggle hover state via the scoped --lr-widge
   ) as HTMLElement;
   expect(toggle != null, "expected an unpressed view-toggle").to.equal(true);
   const before = getComputedStyle(toggle).backgroundColor;
-  const rect = toggle.getBoundingClientRect();
   try {
-    await sendMouse({
-      type: "move",
-      position: [
-        Math.round(rect.left + rect.width / 2),
-        Math.round(rect.top + rect.height / 2),
-      ],
-    });
+    await hoverUntilMatched(toggle, 'the view-toggle never matched :hover');
     await waitUntil(
       () =>
         getComputedStyle(toggle).backgroundColor === "rgb(0, 51, 102)" &&

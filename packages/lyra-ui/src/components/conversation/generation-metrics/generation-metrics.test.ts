@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { ownedTimerPending } from "../../../../test/timer-probe.js";
 import "../../lr-generation-metrics.js";
 import type { LyraGenerationMetrics } from "../../lr-generation-metrics.js";
 
@@ -279,13 +280,14 @@ it("freezes elapsed when status becomes complete, and stops ticking", async () =
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`
   )) as LyraGenerationMetrics;
   await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > 0.5, "ticker never advanced", { timeout: 5000 });
+  expect(ownedTimerPending(el, "tickTimer"), "a running meter owns a ticker").to.equal(true);
   el.status = "complete";
   await el.updateComplete;
   const frozen = elapsedText(el);
   expect(parseElapsedSeconds(frozen)).to.be.greaterThan(0.5);
 
-  // wait-reason: asserts the display stays frozen for longer than one ticker interval
-  await aTimeout(1150);
+  // The ticker is gone, so the display cannot advance again.
+  expect(ownedTimerPending(el, "tickTimer"), "the ticker stops once complete").to.equal(false);
   expect(
     elapsedText(el),
     "the display must not keep advancing once complete"
@@ -520,11 +522,10 @@ it("clears the ticker on disconnect so it cannot keep updating a detached elemen
   const el = (await fixture(
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`
   )) as LyraGenerationMetrics;
+  expect(ownedTimerPending(el, "tickTimer")).to.equal(true);
   el.remove();
-  // Purely a "must not throw" / no-leaked-timer-crash check -- there is
-  // nothing externally observable left on a detached, un-rendered element.
-  // wait-reason: asserts a detached element survives a full ticker interval without throwing
-  await aTimeout(1150);
+  // Nothing is externally observable on a detached, un-rendered element except its timer.
+  expect(ownedTimerPending(el, "tickTimer"), "disconnect retires the ticker").to.equal(false);
   expect(el.isConnected).to.be.false;
 });
 

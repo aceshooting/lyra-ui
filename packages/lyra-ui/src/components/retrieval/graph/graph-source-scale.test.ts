@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-graph.js';
 import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from '../../lr-graph.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraSourceRecord, LyraGraphSceneRequest, LyraGraphSourceQuery } from '../../../data-sources.js';
+import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
@@ -353,7 +354,7 @@ it('rejects an obsolete incident-record action after provider replacement', asyn
   graph.graphSource = next.source;
   await waitUntil(() => row(graph, 'node:0')?.textContent?.includes('New ') === true);
   const before = next.queries.length;
-  old.click(); await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 30));
+  old.click(); await graph.updateComplete; await twoFrames();
   expect(next.queries.length).to.equal(before);
   expect(next.queries.at(-1)!.query.kind).to.equal('nodes');
 });
@@ -367,7 +368,7 @@ it('rejects an obsolete records retry after provider replacement', async () => {
   graph.graphSource = next.source;
   await waitUntil(() => row(graph, 'node:0')?.textContent?.includes('New ') === true);
   const before = next.queries.length;
-  old.click(); await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 30));
+  old.click(); await graph.updateComplete; await twoFrames();
   expect(next.queries.length).to.equal(before);
 });
 
@@ -382,7 +383,7 @@ it('rejects an obsolete scene retry after provider replacement', async () => {
   graph.graphSource = next.source;
   await waitUntil(() => row(graph, 'node:0')?.textContent?.includes('New ') === true);
   const queries = next.queries.length, scenes = next.scenes.length;
-  old.click(); await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 30));
+  old.click(); await graph.updateComplete; await twoFrames();
   expect(next.queries.length).to.equal(queries); expect(next.scenes.length).to.equal(scenes);
 });
 
@@ -397,7 +398,7 @@ it('revokes incident controls before render on page/query changes and removal', 
       const input = graph.shadowRoot!.querySelector<HTMLInputElement>('[part="source-search"]')!;
       input.value = 'new'; input.dispatchEvent(new Event('input', { bubbles: true }));
     } else graph.remove();
-    old.click(); await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 30));
+    old.click(); await graph.updateComplete; await twoFrames();
     expect(data.queries.at(-1)!.query.kind, change).to.equal('nodes');
     expect(data.queries.at(-1)!.query.centerKey, change).to.equal(null);
   }
@@ -675,7 +676,7 @@ describe('global reveal boundaries', () => {
     const scenes = data.scenes.length;
     row(graph, 'node:3')!.click();
     await waitUntil(() => data.scenes.length > scenes, 'activation scene requested');
-    await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+    await graph.updateComplete; await twoFrames();
     expect(activations).to.equal(0);
   });
 
@@ -690,7 +691,7 @@ describe('global reveal boundaries', () => {
     removeOnScene = true;
     row(graph, 'node:3')!.click();
     await waitUntil(() => !graph.isConnected, 'removed');
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await twoFrames();
     expect(activations).to.equal(0);
   });
 
@@ -704,7 +705,7 @@ describe('global reveal boundaries', () => {
     let activations = 0; graph.addEventListener('lr-node-activate', () => activations++);
     const scenes = data.scenes.length;
     stale.click();
-    await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+    await graph.updateComplete; await twoFrames();
     expect(activations).to.equal(0);
     expect(data.scenes.length).to.equal(scenes);
   });

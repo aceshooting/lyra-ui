@@ -1,5 +1,6 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';
+import { probeTimers } from '../../../../test/timer-probe.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -933,10 +934,18 @@ it('is accessible with items, groups, and a disabled item', async () => {
 });
 
 it('never announces the initial item count on mount, but does announce a later filter change', async () => {
-  const el = (await fixture(
-    html`<lr-node-palette .items=${items}></lr-node-palette>`
-  )) as LyraNodePalette;
-  await el.updateComplete;
+  const throttle = probeTimers((delay) => delay === 500);
+  let el: LyraNodePalette;
+  try {
+    el = (await fixture(
+      html`<lr-node-palette .items=${items}></lr-node-palette>`
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    // An unguarded mount announcement would have queued the Announcer's 500ms throttle flush.
+    expect(throttle.pending(), 'no announcement is queued on mount').to.deep.equal([]);
+  } finally {
+    throttle.restore();
+  }
   const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
   const liveRegionText = () => mirror.textContent?.trim() ?? '';
   expect(liveRegionText()).to.equal('');
@@ -944,11 +953,6 @@ it('never announces the initial item count on mount, but does announce a later f
   expect(mirror.getAttribute('aria-live')).to.equal(null);
   expect(mirror.getAttribute('aria-hidden')).to.equal('true');
   expect(sinkTexts()).to.deep.equal([]);
-  // Real timer, margined past the Announcer's default 500ms throttle -- long enough for a
-  // regression that re-introduces an unguarded mount announcement to actually flush and fail
-  // this assertion, per this repo's "no fake timers under wtr" testing convention.
-  // wait-reason: negative assertion, margined past the Announcer 500ms throttle so an unguarded mount announcement would flush and fail
-  await new Promise((r) => setTimeout(r, 600));
   expect(liveRegionText()).to.equal('');
 
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -1431,16 +1435,22 @@ describe('reorderable', () => {
     const before = sinkTexts().length;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
     await focusByKeyboard(first);
-    pressReorder(first, 'ArrowDown');
-    await el.updateComplete;
+    const throttle = probeTimers((delay) => delay === 500);
+    try {
+      pressReorder(first, 'ArrowDown');
+      await el.updateComplete;
 
-    el.items = items.filter((item) => item.category !== 'Data');
-    await el.updateComplete;
-    // wait-reason: negative assertion, margined past the 500ms Announcer throttle so a bogus reorder confirmation would flush and be counted
-    await new Promise((r) => setTimeout(r, 600));
+      el.items = items.filter((item) => item.category !== 'Data');
+      await el.updateComplete;
+      // The one throttled flush lands; a bogus reorder confirmation would have queued a second one.
+      await waitUntil(() => sinkTexts().length - before === 1, 'the result-count announcement flushed', { timeout: 3000 });
+      expect(throttle.pending(), 'no second announcement is queued').to.deep.equal([]);
 
-    expect(sinkTexts().length - before, 'only the result-count announcement fires').to.equal(1);
-    expect(sinkTexts().at(-1)).to.not.include('Moved');
+      expect(sinkTexts().length - before, 'only the result-count announcement fires').to.equal(1);
+      expect(sinkTexts().at(-1)).to.not.include('Moved');
+    } finally {
+      throttle.restore();
+    }
   });
 
   it('clears a pending reorder without announcing a move when the pending item is removed instead of swapped', async () => {
@@ -1451,21 +1461,27 @@ describe('reorderable', () => {
     const before = sinkTexts().length;
     const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
     await focusByKeyboard(first);
-    pressReorder(first, 'ArrowDown');
-    await el.updateComplete;
+    const throttle = probeTimers((delay) => delay === 500);
+    try {
+      pressReorder(first, 'ArrowDown');
+      await el.updateComplete;
 
-    // The host removes the pending item outright instead of ever applying the requested swap --
-    // confirmPendingReorder must find it missing from its old category group and give up quietly
-    // rather than reporting a bogus position.
-    el.items = items.filter((item) => item.type !== 'http-request');
-    await el.updateComplete;
-    // wait-reason: negative assertion, margined past the 500ms Announcer throttle so a bogus reorder confirmation would flush and be counted
-    await new Promise((r) => setTimeout(r, 600));
+      // The host removes the pending item outright instead of ever applying the requested swap --
+      // confirmPendingReorder must find it missing from its old category group and give up quietly
+      // rather than reporting a bogus position.
+      el.items = items.filter((item) => item.type !== 'http-request');
+      await el.updateComplete;
+      // The one throttled flush lands; a bogus reorder confirmation would have queued a second one.
+      await waitUntil(() => sinkTexts().length - before === 1, 'the result-count announcement flushed', { timeout: 3000 });
+      expect(throttle.pending(), 'no second announcement is queued').to.deep.equal([]);
 
-    // Exactly one announcement fires -- the ordinary filtered-result-count one from the items
-    // change itself -- and it is never the reorder-confirmation text.
-    expect(sinkTexts().length - before).to.equal(1);
-    expect(sinkTexts().at(-1)).to.not.include('Moved');
+      // Exactly one announcement fires -- the ordinary filtered-result-count one from the items
+      // change itself -- and it is never the reorder-confirmation text.
+      expect(sinkTexts().length - before).to.equal(1);
+      expect(sinkTexts().at(-1)).to.not.include('Moved');
+    } finally {
+      throttle.restore();
+    }
   });
 });
 

@@ -1,4 +1,5 @@
-import { nextFrame } from '../../../../test/frames.js';
+import { nextFrame, twoFrames } from '../../../../test/frames.js';
+import { settledTransform } from '../../../../test/svg-transform.js';
 import * as graphSupport from '../../../../test/graph-test-support.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
@@ -1169,12 +1170,10 @@ it('orders inverted zoom bounds before configuring d3 and imperative camera oper
   expect(zoomBehavior.scaleExtent()).to.deep.equal([2, 10]);
 
   expect(await el.focusNode('a', { zoom: Number.NaN })).to.equal(true);
+  const group = el.shadowRoot!.querySelector('g')!;
   el.fit({ padding: Number.POSITIVE_INFINITY });
-  // wait-reason: real fit() tween duration; the final transform is only meaningful after the tween ends and exposes no completion signal
-  await new Promise((resolve) => setTimeout(resolve, 350));
-  const transform = el
-    .shadowRoot!.querySelector('g')!
-    .getAttribute('transform')!;
+  // The final transform is only meaningful once the tween (no completion signal) has come to rest.
+  const transform = (await settledTransform(group))!;
   const scale = Number(transform.match(/scale\(([-\d.]+)\)/)?.[1]);
   expect(Number.isFinite(scale)).to.equal(true);
   expect(scale).to.be.within(2, 10);
@@ -1660,8 +1659,8 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   // ticks — a still-running simulation would keep animating a detached
   // instance indefinitely.
   const alphaAfterDisconnect = simulation.alpha();
-  // wait-reason: negative assertion, a stopped simulation must not decay alpha after disconnect
-  await aTimeout(200);
+  // Two paint frames: a still-running d3 timer would have ticked (and decayed alpha) by then.
+  await twoFrames();
   expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
 });
 

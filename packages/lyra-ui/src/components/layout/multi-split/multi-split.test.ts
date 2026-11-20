@@ -16,7 +16,6 @@ import type {
   LyraMultiSplit,
   LyraMultiSplitToggleDetail,
 } from '../../lr-multi-split.js';
-import { styles } from "./multi-split.styles.js";
 
 expectLocaleFallback('ar-EG', ['resizeDivider', 'resizeValuePercent']);
 
@@ -1517,36 +1516,27 @@ it("falls back to observed base geometry when a ResizeObserver entry omits conte
   }
 });
 
-it("wraps the internal orientation-conditional [part='divider'] rules in :where() so a consumer ::part(divider) override can win without !important (regression)", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(
-    /:host\(:where\(\[orientation='vertical'\]\)\) \[part='divider'\]/
-  );
-  expect(css).to.match(
-    /:host\(:where\(\[orientation='vertical'\]\)\) \[part='divider'\]::before/
-  );
-  expect(css).to.match(
-    /:host\(:where\(\[data-effective-orientation='vertical'\]\)\) \[part='divider'\]/
-  );
-  expect(css).to.match(
-    /:host\(:where\(\[data-effective-orientation='vertical'\]\)\) \[part='divider'\]::before/
-  );
-  expect(css).to.match(
-    /:host\(:where\(\[data-effective-orientation='horizontal'\]\)\) \[part='divider'\]/
-  );
-  expect(css).to.match(
-    /:host\(:where\(\[data-effective-orientation='horizontal'\]\)\) \[part='divider'\]::before/
-  );
-  // The old, over-specific unwrapped shapes must be gone, not merely joined by the new ones.
-  expect(css).to.not.include(
-    ":host([orientation='vertical']) [part='divider']"
-  );
-  expect(css).to.not.include(
-    ":host([data-effective-orientation='vertical']) [part='divider']"
-  );
-  expect(css).to.not.include(
-    ":host([data-effective-orientation='horizontal']) [part='divider']"
-  );
+it("keeps each divider cursor tied to its effective axis and lets a disabled divider beat it", async () => {
+  const el = (await fixture(
+    html`<lr-multi-split orientation="vertical" style="block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')!;
+  const cursor = (): string => getComputedStyle(divider).cursor;
+  const cases: Array<[string, () => void, string]> = [
+    ['authored vertical', () => el.removeAttribute('data-effective-orientation'), 'row-resize'],
+    ['effective horizontal', () => el.setAttribute('data-effective-orientation', 'horizontal'), 'col-resize'],
+    ['effective vertical', () => el.setAttribute('data-effective-orientation', 'vertical'), 'row-resize'],
+  ];
+  for (const [name, apply, expected] of cases) {
+    apply();
+    divider.removeAttribute('aria-disabled');
+    expect(cursor(), name).to.equal(expected);
+    divider.setAttribute('aria-disabled', 'true');
+    expect(cursor(), `${name}, disabled`).to.equal('default');
+  }
 });
 
 it("keeps the authored orientation and no effective marker when no breakpoint is configured", async () => {
@@ -3322,37 +3312,30 @@ for (const direction of ["ltr", "rtl"] as const) {
   });
 }
 
-it("splits :hover and :focus-visible into separate divider rules with a token-driven outline", () => {
-  const css = styles.cssText;
-
-  // The two states must no longer share one selector list.
-  expect(css).to.not.match(
-    /\[part=['"]?divider['"]?]:hover\s*,\s*\[part=['"]?divider['"]?]:focus-visible/
-  );
-
-  const hoverBlock = /\[part=['"]?divider['"]?]:hover::before\s*{([^}]*)}/.exec(
-    css
-  );
-  expect(
-    hoverBlock,
-    'expected a standalone [part="divider"]:hover::before rule'
-  ).to.not.equal(null);
-  expect(hoverBlock![1]).to.include("background");
-
-  const focusVisibleBlock =
-    /\[part=['"]?divider['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
-  expect(
-    focusVisibleBlock,
-    'expected a standalone [part="divider"]:focus-visible rule'
-  ).to.not.equal(null);
-  const focusBody = focusVisibleBlock![1];
-
-  // No more `outline: none` on focus-visible...
-  expect(focusBody).to.not.include("outline: none");
-  // ...it now uses the exact shared focus-ring tokens, not hardcoded literals.
-  expect(focusBody).to.include("var(--lr-focus-ring-width)");
-  expect(focusBody).to.include("var(--lr-focus-ring-color)");
-  expect(focusBody).to.include("outline-offset: var(--lr-focus-ring-offset)");
+it("paints a divider hover rule and a token-driven focus ring as separate states", async () => {
+  const el = (await fixture(
+    html`<lr-multi-split data-lr-theme-scope style="inline-size: 300px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3)"
+      ><div>A</div><div>B</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')!;
+  const rest = getComputedStyle(divider, '::before').backgroundColor;
+  try {
+    await hoverUntilMatched(divider, 'the divider never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(divider, '::before').backgroundColor !== rest,
+      'the divider did not repaint on :hover'
+    );
+    expect(getComputedStyle(divider).outlineStyle, 'hover alone paints no focus ring').to.equal('none');
+  } finally {
+    await resetMouse();
+  }
+  await focusByKeyboard(divider);
+  const style = getComputedStyle(divider);
+  expect(style.outlineStyle).to.not.equal('none');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
 });
 
 // -- Responsive collapse (collapse="start"/"end") -------------------------

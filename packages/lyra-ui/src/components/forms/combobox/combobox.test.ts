@@ -13,8 +13,8 @@ import "../../lr-segmented.js";
 import type { ComboboxSourceRow, LyraCombobox } from "../../lr-combobox.js";
 import type { LyraOption } from "../../lr-option.js";
 import type { LyraColorPicker } from "../../lr-color-picker.js";
-import { styles } from "./combobox.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import { chooseOption } from "../../../testing/interaction-drivers.js";
 import { RESET_OPTION_SELECTED_FROM_OWNER, SET_OPTION_SELECTED_FROM_OWNER } from "../../../internal/option-selection.js";
 import { __setAnchoredOverlayRuntimeLoaderForTesting, type AnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
@@ -1098,20 +1098,27 @@ it("uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   expect([rotation.a, rotation.b, rotation.c, rotation.d]).to.deep.equal([0, 1, -1, 0]);
 });
 
-it("keeps gap/radius defaults private and consumes inherited public hooks first", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /:host \{[^}]*--_lr-combobox-gap: var\(--lr-space-xs\);/
-  );
-  expect(css).to.match(
-    /:host \{[^}]*--_lr-combobox-radius: var\(--lr-form-control-radius\);/
-  );
-  expect(css).to.include(
-    "gap: var(--lr-combobox-gap, var(--_lr-combobox-gap));"
-  );
-  expect(css).to.include(
-    "border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));"
-  );
+it("keeps gap/radius defaults private and consumes inherited public hooks first", async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  const probe = document.createElement('div');
+  probe.style.cssText = 'padding-inline-start: var(--lr-space-xs); border-start-start-radius: var(--lr-form-control-radius)';
+  el.shadowRoot!.append(probe);
+  const expectedGap = getComputedStyle(probe).paddingInlineStart;
+  const expectedRadius = getComputedStyle(probe).borderStartStartRadius;
+  probe.remove();
+  expect(expectedGap).to.not.equal('0px');
+  expect(getComputedStyle(row).columnGap).to.equal(expectedGap);
+  expect(getComputedStyle(row).borderStartStartRadius).to.equal(expectedRadius);
+
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-combobox-gap: 13px; --lr-combobox-radius: 9px">${basic()}</div>
+  `);
+  const themed = wrapper.querySelector('lr-combobox') as LyraCombobox;
+  await themed.updateComplete;
+  const themedRow = themed.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+  expect(getComputedStyle(themedRow).columnGap).to.equal('13px');
+  expect(getComputedStyle(themedRow).borderStartStartRadius).to.equal('9px');
 });
 
 it("hides the error and hint parts when empty, shows them once populated", async () => {
@@ -1207,18 +1214,21 @@ it("still marks touched from a real blur unrelated to the control becoming disab
   expect((el as unknown as { touched: boolean }).touched).to.be.true;
 });
 
-it("applies the shared focus-ring tokens to the clear and tag-remove buttons", () => {
-  const css = styles.cssText;
-  const clearFocusBlock =
-    /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?tag__remove-button['"]?]:focus-visible\s*{([^}]*)}/.exec(
-      css
-    );
-  expect(
-    clearFocusBlock,
-    "expected a shared clear/tag-remove :focus-visible rule"
-  ).to.not.equal(null);
-  expect(clearFocusBlock![1]).to.include("var(--lr-focus-ring-width)");
-  expect(clearFocusBlock![1]).to.include("var(--lr-focus-ring-color)");
+it("applies the shared focus-ring tokens to the clear and tag-remove buttons", async () => {
+  const el = (await fixture(html`
+    <lr-combobox data-lr-theme-scope multiple with-clear style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3)">
+      <lr-option value="a" selected>Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  for (const part of ['clear-button', 'tag__remove-button']) {
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    expect(control, part).to.not.equal(null);
+    await focusByKeyboard(control);
+    const style = getComputedStyle(control);
+    expect(style.outlineWidth, part).to.equal('3px');
+    expect(style.outlineColor, part).to.equal('rgb(1, 2, 3)');
+  }
 });
 
 it("sanitizes maxOptionsVisible/maxRender to finite non-negative integers instead of poisoning the row cap/tag cap with NaN", async () => {
@@ -2721,11 +2731,15 @@ it('inherits a 20px host font into clear and tag-remove controls and their one-e
   expect(getComputedStyle(removeGlyph).height).to.equal('20px');
 });
 
-it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\[part=["']combobox-input["']\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/
-  );
+it("colors the combobox-input's placeholder text instead of leaving the UA default", async () => {
+  const el = (await fixture(html`<lr-combobox placeholder="Pick"></lr-combobox>`)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox-input"]')!;
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lr-color-text-quiet)';
+  el.shadowRoot!.append(probe);
+  const quiet = getComputedStyle(probe).color;
+  probe.remove();
+  expect(getComputedStyle(input, '::placeholder').color).to.equal(quiet);
 });
 
 describe("row state feedback on the already-selected option", () => {

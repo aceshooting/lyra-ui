@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
@@ -101,8 +102,10 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   // Give the original 'fr' resolution every chance to land. A correctly
   // token-guarded implementation recognizes it as superseded and no-ops; a
   // buggy one overwrites the cleared state with the stale flag.
-  // wait-reason: asserting a stale resolver result is ignored (no state change to await)
-  await aTimeout(200);
+  // Awaiting the same peer resolution proves the original 'fr' request has landed, then two frames
+  // let any (wrongly) accepted result render.
+  await registerLyraFlagPeer();
+  await twoFrames();
   expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
 });

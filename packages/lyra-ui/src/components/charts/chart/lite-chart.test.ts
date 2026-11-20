@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { accessibleName } from '../../../../test/accessible-name.js';
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
@@ -3306,7 +3307,7 @@ it('re-announces via onMarkFocus() instead of a redundant .focus() when the addr
     ></lr-lite-chart>
   `);
   const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
-  marks()[0]!.focus(); // real focus (unlike the synthetic-dispatch tests elsewhere in this file)
+  await focusByKeyboard(marks()[0]!); // real focus (unlike the synthetic-dispatch tests elsewhere in this file)
   expect((el.shadowRoot!.activeElement) === (marks()[0])).to.equal(true);
 
   const liveRegion = el.shadowRoot!.querySelector('lr-live-region') as any;
@@ -3573,7 +3574,7 @@ describe('lite-chart robustness regressions', () => {
     `);
     const marks = () =>
       [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
-    marks()[2]!.focus();
+    await focusByKeyboard(marks()[2]!);
     expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('2');
 
     el.labels = ['A', 'B'];
@@ -3597,7 +3598,7 @@ describe('lite-chart robustness regressions', () => {
     // "B" (index 1) is skipped (value 0, skipZero), so only 2 marks render: "A" (index 0) at array
     // position 0, and "C" (index 2) at array position 1.
     expect(marks()).to.have.length(2);
-    marks()[1]!.focus();
+    await focusByKeyboard(marks()[1]!);
     expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('2');
     expect(el.shadowRoot!.activeElement?.getAttribute('data-mark-index')).to.equal('1');
 
@@ -3621,7 +3622,7 @@ describe('lite-chart robustness regressions', () => {
       ></lr-lite-chart>
     `);
     const mark = el.shadowRoot!.querySelector('[part="bar"]') as SVGGraphicsElement;
-    mark.focus();
+    await focusByKeyboard(mark);
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('bar');
 
     el.labels = [];
@@ -3703,7 +3704,7 @@ describe('lite-chart robustness regressions', () => {
     const pointHit = line.shadowRoot!.querySelector(
       '[data-mark-hit-target="point"]',
     ) as SVGGraphicsElement;
-    point.focus();
+    await focusByKeyboard(point);
     expect(getComputedStyle(pointHit).stroke).to.not.equal('none');
 
     const bars = await mount(html`
@@ -3716,7 +3717,7 @@ describe('lite-chart robustness regressions', () => {
     const barHit = bars.shadowRoot!.querySelector(
       '[data-mark-hit-target="bar"]',
     ) as SVGGraphicsElement;
-    bar.focus();
+    await focusByKeyboard(bar);
     expect(getComputedStyle(barHit).stroke).to.not.equal('none');
   });
 
@@ -3731,7 +3732,7 @@ describe('lite-chart robustness regressions', () => {
       ></lr-lite-chart>
     `);
     const marks = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
-    marks[1]!.focus();
+    await focusByKeyboard(marks[1]!);
 
     const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
     const region = el.shadowRoot!

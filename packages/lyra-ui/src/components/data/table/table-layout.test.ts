@@ -2,7 +2,6 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-table.js';
 import '../../lr-select.js';
 import type { LyraTable, TableColumn } from '../../lr-table.js';
-import { styles } from './table.styles.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
@@ -1189,16 +1188,7 @@ describe('heat-tint mode', () => {
     expect(scoreCells[1]!.hasAttribute('data-heat')).to.be.false;
   });
 
-  it('declares the heat-tint ramp CSS with retheme-able tokens matching lr-heatmap defaults', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--_lr-table-heat-tint-lo-default: var(--lr-color-brand-quiet);');
-    expect(css).to.include('--_lr-table-heat-tint-hi-default: var(--lr-color-brand);');
-    expect(css).to.not.include('--lr-table-heat-tint-lo:');
-    expect(css).to.not.include('--lr-table-heat-tint-hi:');
-    expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
-  });
-
-  it('actually paints the color-mix() background on a rendered heat-tinted cell (not just present in the stylesheet source)', async () => {
+  it('actually paints the color-mix() background on a rendered heat-tinted cell ', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = heatColumns;
     el.rows = rows;
@@ -1208,7 +1198,7 @@ describe('heat-tint mode', () => {
     const untintedCell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="name"]') as HTMLElement;
     // A drifted [part='cell'][data-heat] selector or --lr-table-heat-t/-lo/-hi property name would
     // leave this rendering exactly like the untinted column's own (transparent) background while
-    // the cssText-regex test above kept passing -- this proves the rule reaches a live cell.
+    // this proves the rule reaches a live cell.
     expect(tintedCell.hasAttribute('data-heat')).to.be.true;
     const tintedBackground = getComputedStyle(tintedCell).backgroundColor;
     const untintedBackground = getComputedStyle(untintedCell).backgroundColor;

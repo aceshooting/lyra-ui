@@ -33,7 +33,7 @@ describe('keyboard-current datum cue', () => {
     await sendKeys({ press: 'ArrowRight' });
     await waitUntil(() => active(el) === '[[0,1]]', 'ArrowRight moves the highlight');
     expect(tooltipCount(el)).to.equal(1);
-    host.querySelector('button')!.focus();
+    await focusByKeyboard(host.querySelector('button')!);
     await waitUntil(() => active(el) === '[]', 'blur clears the highlight');
     expect(tooltipCount(el)).to.equal(0);
   });

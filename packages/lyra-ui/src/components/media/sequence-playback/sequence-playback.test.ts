@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { probeTimers } from '../../../../test/timer-probe.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
 import '../../lr-sequence-playback.js';
@@ -72,27 +73,32 @@ it('does not leak an untracked duplicate timer chain when play() is called synch
     }
   });
 
-  el.play();
-  // Let the reentrant pause()+play() cycle above happen on the very first
-  // tick, then explicitly pause from the outside.
-  await waitUntil(() => reentered, 'the first lr-sequence-step never fired');
-  el.pause();
-  const indexAfterPause = el.currentIndex;
-
-  // If a second, untracked setTimeout chain leaked out of the reentrant
-  // pause()+play() cycle, the index keeps climbing here even though pause()
-  // (and disconnectedCallback()) believe playback is fully stopped.
-  // wait-reason: asserting the index does NOT advance after pause() (a leaked chain would tick at 20ms)
-  await aTimeout(150);
-  expect(el.currentIndex).to.equal(indexAfterPause);
+  const probe = probeTimers((delay) => delay === 20);
+  try {
+    el.play();
+    // Let the reentrant pause()+play() cycle above happen on the very first
+    // tick, then explicitly pause from the outside.
+    await waitUntil(() => reentered, 'the first lr-sequence-step never fired');
+    el.pause();
+    // If a second, untracked setTimeout chain leaked out of the reentrant
+    // pause()+play() cycle, a 20ms timer would still be pending even though pause()
+    // (and disconnectedCallback()) believe playback is fully stopped.
+    expect(probe.pending()).to.deep.equal([]);
+  } finally {
+    probe.restore();
+  }
 });
 
 it('does not schedule a tick when an lr-play listener pauses reentrantly', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="10" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
   el.addEventListener('lr-play', () => el.pause());
-  el.play();
-  // wait-reason: asserting no tick is ever scheduled (several 20ms intervals pass with no advance)
-  await aTimeout(60);
+  const probe = probeTimers((delay) => delay === 20);
+  try {
+    el.play();
+    expect(probe.pending(), 'no tick is ever scheduled').to.deep.equal([]);
+  } finally {
+    probe.restore();
+  }
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(0);
 });
@@ -180,15 +186,20 @@ it('no-ops play() when length <= 1', async () => {
 });
 
 it('keeps playing read-only: a write throws, an authored attribute starts nothing and play() reflects it', async () => {
-  const el = (await fixture(
-    html`<lr-sequence-playback playing item-count="3" interval-ms="20"></lr-sequence-playback>`,
-  )) as LyraSequencePlayback;
+  const probe = probeTimers((delay) => delay === 20);
+  let el: LyraSequencePlayback;
+  try {
+    el = (await fixture(
+      html`<lr-sequence-playback playing item-count="3" interval-ms="20"></lr-sequence-playback>`,
+    )) as LyraSequencePlayback;
+    expect(probe.pending(), 'an authored playing attribute starts no timer').to.deep.equal([]);
+  } finally {
+    probe.restore();
+  }
   expect(el.playing).to.be.false;
   expect(() => {
     (el as unknown as { playing: boolean }).playing = true;
   }).to.throw(TypeError);
-  // wait-reason: asserting an authored playing attribute starts no timer (index stays put across several intervals)
-  await aTimeout(60);
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(0);
 
@@ -317,22 +328,23 @@ it('auto-pauses when length is externally reduced to <= 1 while playing', async 
   const el = (await fixture(
     html`<lr-sequence-playback item-count="3" interval-ms="20"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
-  el.play();
-  await el.updateComplete;
-  expect(el.playing).to.be.true;
+  const probe = probeTimers((delay) => delay === 20);
+  try {
+    el.play();
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(probe.pending()).to.deep.equal([20]);
 
-  el.itemCount = 1;
-  await el.updateComplete;
+    el.itemCount = 1;
+    await el.updateComplete;
 
-  expect(el.playing).to.be.false;
-  // The play button must not be left as the only control that could stop a
-  // still-running timer — confirm the timer actually stopped, not just the
-  // `playing` flag, by waiting well past interval-ms and checking the index
-  // never advances again.
-  const indexAfterPause = el.currentIndex;
-  // wait-reason: asserting the index does NOT advance after pause()
-  await aTimeout(60);
-  expect(el.currentIndex).to.equal(indexAfterPause);
+    expect(el.playing).to.be.false;
+    // The play button must not be left as the only control that could stop a still-running timer:
+    // the timer itself is gone, not just the `playing` flag.
+    expect(probe.pending()).to.deep.equal([]);
+  } finally {
+    probe.restore();
+  }
 });
 
 it('re-clamps index into range when length shrinks to a value still > 1', async () => {
@@ -418,6 +430,7 @@ it('re-reads interval-ms fresh instead of baking the original value into the tim
   const el = (await fixture(
     html`<lr-sequence-playback item-count="100" interval-ms="30"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
+  const probe = probeTimers((delay) => delay === 30 || delay === 3000);
   el.play();
 
   // First tick has fired (~30ms in) but not the second (~60ms in).
@@ -432,11 +445,13 @@ it('re-reads interval-ms fresh instead of baking the original value into the tim
   // would let several more 30ms ticks land (index climbing well past 2);
   // fixed, only the already-in-flight second tick fires and then playback
   // stalls at the new, much longer cadence.
-  // wait-reason: asserting no further ticks land at the old cadence (only the in-flight second tick)
-  await aTimeout(200);
-  expect(el.currentIndex).to.equal(2);
-
-  el.pause();
+  try {
+    await waitUntil(() => el.currentIndex === 2, 'the in-flight second tick never fired');
+    expect(probe.pending(), 'the reschedule picks up the new cadence').to.deep.equal([3000]);
+  } finally {
+    probe.restore();
+    el.pause();
+  }
 });
 
 it('is accessible', async () => {
@@ -743,14 +758,16 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
 
 it('stops the real timer when pause() is called', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="5" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
-  el.play();
-  // wait-reason: pause mid-interval before the first 20ms tick, then assert no tick follows
-  await aTimeout(15);
-  el.pause();
-  const indexAfterStop = el.currentIndex;
-  // wait-reason: asserting the index does NOT advance after pause()
-  await aTimeout(60);
-  expect(el.currentIndex).to.equal(indexAfterStop);
+  const probe = probeTimers((delay) => delay === 20);
+  try {
+    el.play();
+    expect(probe.pending()).to.deep.equal([20]);
+    el.pause();
+    expect(probe.pending(), 'pause() clears the real timer').to.deep.equal([]);
+  } finally {
+    probe.restore();
+  }
+  expect(el.currentIndex).to.equal(0);
 });
 
 it('uses one fixed development-only diagnostic for invalid intervals without exposing values', async () => {
@@ -762,12 +779,14 @@ it('uses one fixed development-only diagnostic for invalid intervals without exp
   console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
   try {
     const el = (await fixture(html`<lr-sequence-playback item-count="1000" interval-ms="11.23456789"></lr-sequence-playback>`)) as LyraSequencePlayback;
-    el.play();
-    // wait-reason: asserting the clamped interval bounds the tick count within a real 50ms window
-    await aTimeout(50);
-    // With no clamp this would have ticked dozens/hundreds of times already;
-    // clamped to a sane minimum, only a handful of ticks land in 50ms.
-    expect(el.currentIndex).to.be.lessThan(20);
+    const probe = probeTimers();
+    try {
+      el.play();
+      // With no clamp the delay would sit near zero; clamped, it never drops below one frame.
+      expect(probe.pending()).to.deep.equal([16]);
+    } finally {
+      probe.restore();
+    }
     el.pause();
 
     const small = (await fixture(
@@ -1088,12 +1107,16 @@ describe('lr-sequence-playback remediation', () => {
     const el = (await fixture(html`
       <lr-sequence-playback item-count="1000" interval-ms="50"></lr-sequence-playback>
     `)) as LyraSequencePlayback;
-    el.play();
-    el.removeAttribute('interval-ms');
-    // wait-reason: bounds real ticking; at the 16 ms floor this index would pass 15 inside the margin
-    await aTimeout(300);
-    el.pause();
-    expect(el.currentIndex).to.be.lessThan(3);
+    const probe = probeTimers((delay) => delay === 50 || delay === 900);
+    try {
+      el.play();
+      el.removeAttribute('interval-ms');
+      await waitUntil(() => el.currentIndex === 1, 'the in-flight tick never fired');
+      expect(probe.pending(), 'the next tick is scheduled at the default cadence').to.deep.equal([900]);
+    } finally {
+      probe.restore();
+      el.pause();
+    }
   });
 
   it('accepts autoplay-interval as a second spelling of interval-ms', async () => {

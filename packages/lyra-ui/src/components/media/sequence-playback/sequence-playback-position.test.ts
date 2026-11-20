@@ -1,4 +1,5 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { probeTimers } from '../../../../test/timer-probe.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -62,10 +63,14 @@ describe('non-looping replay', () => {
     `);
     const events = record(el);
     el.addEventListener('lr-play', () => el.pause());
-    el.play();
-    expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0']);
-    // wait-reason: a retired start must not advance across several real 20ms tick opportunities.
-    await aTimeout(80);
+    const probe = probeTimers((delay) => delay === 20);
+    try {
+      el.play();
+      expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0']);
+      expect(probe.pending(), 'a retired start schedules no tick').to.deep.equal([]);
+    } finally {
+      probe.restore();
+    }
     expect(el.currentIndex).to.equal(0);
     expect(el.playing).to.equal(false);
     expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0']);
@@ -101,17 +106,21 @@ describe('non-looping replay', () => {
       <lr-sequence-playback item-count="3" current-index="2" interval-ms="30" without-loop></lr-sequence-playback>
     `);
     const events = record(el);
-    el.addEventListener('lr-play', () => { el.pause(); el.play(); }, { once: true });
-    el.play();
-    expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0', 'lr-play:0']);
-    const tick = oneEvent(el, 'lr-sequence-step');
-    expect((await tick).detail).to.deep.equal({ currentIndex: 1 });
-    el.pause();
-    const stopped = events.length;
-    // wait-reason: neither the retired outer start nor the paused newer start may leak a timer.
-    await aTimeout(90);
-    expect(events.length).to.equal(stopped);
-    expect(el.currentIndex).to.equal(1);
+    const probe = probeTimers((delay) => delay === 30);
+    try {
+      el.addEventListener('lr-play', () => { el.pause(); el.play(); }, { once: true });
+      el.play();
+      expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0', 'lr-play:0']);
+      const tick = oneEvent(el, 'lr-sequence-step');
+      expect((await tick).detail).to.deep.equal({ currentIndex: 1 });
+      el.pause();
+      const stopped = events.length;
+      expect(probe.pending(), 'neither the retired outer start nor the paused newer start leaks a timer').to.deep.equal([]);
+      expect(events.length).to.equal(stopped);
+      expect(el.currentIndex).to.equal(1);
+    } finally {
+      probe.restore();
+    }
   });
 
   it('keeps a start running across a synchronous DOM move', async () => {

@@ -1,4 +1,6 @@
 import * as graphSupport from '../../../../test/graph-test-support.js';
+import { skewPerformanceClock } from '../../../../test/timer-probe.js';
+import { settledTransform } from '../../../../test/svg-transform.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
 type GraphSimulationNode = graphSupport.GraphSimulationNode;
@@ -679,9 +681,7 @@ describe('expand affordance', () => {
     svgEl.dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, cancelable: true })
     );
-    // wait-reason: real d3-zoom dblclick transition (250ms default); fit-style tweens expose no completion signal
-    await aTimeout(350);
-    expect(g.getAttribute('transform')).to.match(/scale\(/);
+    expect(await settledTransform(g, { from: '' })).to.match(/scale\(/);
   });
 
   it('double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not', async () => {
@@ -697,12 +697,15 @@ describe('expand affordance', () => {
     );
     expect(expandCount).to.equal(1);
 
-    // Outside the window: reset by waiting past EXPAND_KEY_INTERVAL_MS.
-    // wait-reason: real timing semantics, the double-Enter window (EXPAND_KEY_INTERVAL_MS) must elapse
-    await aTimeout(600);
-    nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
-    );
+    // Outside the window: the clock moves past EXPAND_KEY_INTERVAL_MS instead of sleeping through it.
+    const restoreClock = skewPerformanceClock(600);
+    try {
+      nodeEl.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      );
+    } finally {
+      restoreClock();
+    }
     expect(expandCount).to.equal(1); // first of a new pair, not yet a second
   });
 
@@ -1036,11 +1039,11 @@ describe('focus and camera fit', () => {
 
   it('fit() frames the bounding box of all visible node positions within width/height minus padding', async () => {
     const el = await mountWide();
+    const group = el.shadowRoot!.querySelector('g')!;
+    const beforeFit = group.getAttribute('transform');
     el.fit({ padding: 10 });
-    // wait-reason: real fit() tween duration; fit() returns void and exposes no completion signal
-    await aTimeout(400); // let the default (non-reduced-motion) tween settle
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    // fit() returns void and exposes no completion signal: wait for the tween to move and come to rest.
+    const transform = (await settledTransform(group, { from: beforeFit }))!;
     const match = transform.match(
       /translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/
     );
@@ -1162,9 +1165,13 @@ describe('selection', () => {
 
     el.selectedNodeIds = ['a']; // host reflects the controlled prop back, per the contract
     await el.updateComplete;
-    // wait-reason: real timing semantics, the click must land outside the 500ms double-activate window
-    await aTimeout(550); // a later click, outside the 500 ms double-activate (expand) window
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // A later click, outside the 500 ms double-activate (expand) window: move the clock, not the test.
+    const restoreClock = skewPerformanceClock(550);
+    try {
+      nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    } finally {
+      restoreClock();
+    }
     expect(detail).to.deep.equal({ selectedNodeIds: [], selectedEdgeIds: [] });
   });
 
@@ -1828,11 +1835,10 @@ describe('community hulls', () => {
 
   it('fit() bounding box accounts for hull padding when communities render', async () => {
     const el = await mountHulls();
+    const group = el.shadowRoot!.querySelector('g')!;
+    const beforeFit = group.getAttribute('transform');
     el.fit({ padding: 10 });
-    // wait-reason: real fit() tween duration; fit() returns void and exposes no completion signal
-    await aTimeout(400);
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const transform = (await settledTransform(group, { from: beforeFit }))!;
     expect(transform).to.match(
       /translate\([-\d.]+,\s*[-\d.]+\)\s*scale\([-\d.]+\)/
     );

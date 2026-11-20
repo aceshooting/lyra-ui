@@ -14,18 +14,34 @@ import "../../lr-dialog.js";
 import type { LyraDialog } from "../../lr-dialog.js";
 import { expectFocusReturnsToReshownOpener } from "../../../../test/hidden-opener.js";
 import type { LyraCommandPalette } from "../../lr-command-palette.js";
-import { styles } from "./command-palette.styles.js";
+import { setForcedColors } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 expectLocaleFallback('tr', ['clear', 'commandPaletteLabel', 'commandPalettePlaceholder', 'commandPaletteResults', 'commandPaletteResultCount']);
 
-it("provides hover feedback for enabled command rows", () => {
-  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
-  // activate browser :hover state under Web Test Runner.
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(
-    /:where\(\[part='command'\]\):hover:where\(:not\(:disabled\)\)/
-  );
+it("repaints an enabled, non-active command row on :hover", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      .commands=${[
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
+        { commandId: "off", label: "Off", disabled: true },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="command"][data-active="false"]:not(:disabled)')!;
+  const rest = getComputedStyle(row).backgroundColor;
+  try {
+    await hoverUntilMatched(row, 'the command row never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(row).backgroundColor !== rest,
+      'the command row did not repaint on :hover'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('rejects accessor-backed commands without invoking them while retaining source identity for selection', async () => {
@@ -1182,16 +1198,41 @@ it("ignores repeated hotkeys and gives one last-connected palette ownership", as
   expect(first!.open).to.be.true;
 });
 
-it("defines distinct active-plus-pressed and forced-color current-row paint", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  // The pressed arm must carry the [data-active='true'] compound at FULL specificity -- see the
-  // rendered-probe tests near the end of this file, which are what actually prove it applies.
-  expect(css).to.match(
-    /\[part='command'\]\[data-active='true'\]:active:where\(:not\(:disabled\)\)/
-  );
-  expect(css).to.match(
-    /@media \(forced-colors: active\).*\[part='command'\]\[data-active='true'\].*outline:/
-  );
+it("paints the active row distinctly while pressed and with an outline under forced colors", async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      .commands=${[
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
+        { commandId: "off", label: "Off", disabled: true },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const active = el.shadowRoot!.querySelector<HTMLElement>('[part="command"][data-active="true"]')!;
+  const resting = getComputedStyle(active).backgroundColor;
+  expect(getComputedStyle(active).outlineStyle).to.equal('none');
+  try {
+    await setForcedColors('active');
+    await waitUntil(
+      () => getComputedStyle(active).outlineStyle === 'solid',
+      'the active row has no forced-colors outline'
+    );
+  } finally {
+    await setForcedColors('none');
+  }
+  // Last: releasing the press selects the row and closes the palette.
+  try {
+    await hoverUntilMatched(active, 'the active command row never matched :hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor !== resting,
+      'the pressed active row did not take the held fill'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe("active-command cssprop", () => {
@@ -1254,17 +1295,8 @@ describe("active-command cssprop", () => {
   });
 });
 
-it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(
-    /\[part='input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/
-  );
-});
-
-it("renders the search-input's ::placeholder in the shared quiet-text token's color, opacity undone (getComputedStyle, not just source text)", async () => {
-  // The test above only proves the token string appears in the stylesheet source -- it can't
-  // catch a rule that stops matching the real DOM (wrong selector, broken specificity, a shadow-
-  // DOM part boundary issue). This reads the actual rendered pseudo-element instead.
+it("renders the search-input's ::placeholder in the shared quiet-text token's color, opacity undone", async () => {
+  // Reads the actual rendered pseudo-element, so a rule that stops matching the real DOM fails.
   const el = (await fixture(
     html`<lr-command-palette
       style="--lr-color-text-quiet: rgb(12, 34, 56)"

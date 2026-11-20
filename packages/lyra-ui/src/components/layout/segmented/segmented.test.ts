@@ -6,8 +6,6 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { html as litHtml } from "lit";
 import "../../lr-segmented.js";
 import type { LyraSegmented, LyraSegmentedItem } from "../../lr-segmented.js";
-import { styles } from "./segmented.styles.js";
-import { scrollOverflowFadeStyles } from "../../../internal/scroll-overflow.styles.js";
 import "../../lr-select.js";
 import type { LyraSelect } from "../../lr-select.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -774,13 +772,43 @@ describe("item icon", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("gives a non-disabled, non-checked segment a :hover treatment", () => {
-    const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    // :where()-wrapped (see the shadow-part-selector-specificity fix below) so a consumer's own
-    // ::part(segment):hover override can win without !important -- mirrors lr-attachment-trigger.
-    expect(css).to.match(
-      /:where\(\[part='segment'\]\):hover:where\(\s*:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\s*\)\s*\{[^}]+\}/
-    );
+  it("repaints a non-disabled, non-checked segment on :hover and lets a consumer ::part(segment):hover override win", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-segmented id="plain" .items=${items()} value="week"></lr-segmented>
+        <lr-segmented id="themed" .items=${items()} value="week"></lr-segmented>
+      </div>
+    `);
+    const plain = wrapper.querySelector<LyraSegmented>('#plain')!;
+    const themed = wrapper.querySelector<LyraSegmented>('#themed')!;
+    await Promise.all([plain.updateComplete, themed.updateComplete]);
+    const unchecked = (el: LyraSegmented): HTMLElement =>
+      el.shadowRoot!.querySelector<HTMLElement>('[part="segment"][aria-checked="false"]:not([aria-disabled="true"])')!;
+    try {
+      const segment = unchecked(plain);
+      const rest = getComputedStyle(segment).color;
+      await hoverUntilMatched(segment, 'segment never matched :hover');
+      await waitUntil(
+        () => getComputedStyle(segment).color !== rest,
+        'segment did not repaint on :hover'
+      );
+
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync('lr-segmented#themed::part(segment):hover { background-color: rgb(7, 8, 9); }');
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      try {
+        const overridden = unchecked(themed);
+        await hoverUntilMatched(overridden, 'themed segment never matched :hover');
+        await waitUntil(
+          () => getComputedStyle(overridden).backgroundColor === 'rgb(7, 8, 9)',
+          'a consumer ::part(segment):hover override must win without !important'
+        );
+      } finally {
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+      }
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("adds a themeable edge fade to the scroll container once it actually overflows", async () => {
@@ -904,16 +932,6 @@ describe("item icon", () => {
         `${direction} final end`
       ).to.be.false;
     }
-  });
-
-  it("removes the decorative edge mask under forced colors", () => {
-    const css = scrollOverflowFadeStyles.cssText.replace(/\s+/g, " ");
-    expect(css).to.contain("@media (forced-colors: active)");
-    const forcedColors = css.slice(
-      css.indexOf("@media (forced-colors: active)")
-    );
-    expect(forcedColors).to.contain("-webkit-mask-image: none");
-    expect(forcedColors).to.contain("mask-image: none");
   });
 
   it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable", async () => {

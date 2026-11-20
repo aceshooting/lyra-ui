@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
+import { twoFrames } from '../../../../test/frames.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -449,14 +450,14 @@ describe('lr-embedding-explorer engine and columns', () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div><lr-embedding-explorer engine="webgl" .pointColumns=${columns(2)}></lr-embedding-explorer></div>`);
     const el = wrapper.firstElementChild as LyraEmbeddingExplorer;
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="row"]').length === 2);
-    await aTimeout(50);
+    await twoFrames();
     const count = styleCalls;
     wrapper.setAttribute('data-unrelated', '1');
     wrapper.title = 'Unrelated';
     // A theme-attribute write that changes no resolved token re-resolves to the identical style.
     wrapper.classList.add('hovered');
     el.label = 'Renamed';
-    await aTimeout(50);
+    await twoFrames();
     expect(styleCalls).to.equal(count);
     wrapper.style.setProperty('--lr-color-brand', 'rgb(7, 11, 13)');
     await waitUntil(() => styleCalls > count);

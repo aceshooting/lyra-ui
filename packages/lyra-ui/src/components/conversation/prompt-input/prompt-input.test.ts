@@ -14,7 +14,6 @@ import type {
   LyraPromptInput,
   LyraPromptInputAttachment,
 } from "./prompt-input.class.js";
-import { styles } from "./prompt-input.styles.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
@@ -48,15 +47,17 @@ interface PromptInputEditingFacade {
   ): void;
 }
 
-it("declares a prompt-scoped control-width hook with a safe fallback", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /min-inline-size:\s*min\(100%,\s*var\(--lr-prompt-input-control-width,\s*[^)]+\)\)/
-  );
-  expect(css).to.match(
-    /flex:\s*1 1 var\(--lr-prompt-input-control-width,\s*[^)]+\)/
-  );
-  expect(css).to.not.include("var(--lr-control-width");
+it("sizes controls from a prompt-scoped control-width hook and ignores the generic one", async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input
+      style="inline-size: 900px; --lr-prompt-input-control-width: 301px; --lr-control-width: 111px"
+      .modelCatalog=${["fast", "accurate"]}
+    ></lr-prompt-input>`
+  )) as LyraPromptInput;
+  await el.updateComplete;
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"] > *')!;
+  expect(getComputedStyle(control).flexBasis).to.equal("301px");
+  expect(getComputedStyle(control).minWidth).to.equal("min(100%, 301px)");
 });
 
 it('centers the source disclosure content within its retained touch-target floor in RTL', async () => {

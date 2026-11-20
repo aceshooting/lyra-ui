@@ -1,6 +1,7 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
+import { ownedTimerPending } from '../../../../test/timer-probe.js';
 import { fixture as renderFixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import '../../lr-stream-status.js';
 import '../../lr-live-region.js';
@@ -152,9 +153,7 @@ it('treats recordActivity() as a no-op while idle or connecting -- never throws,
   el.connectionState = 'connecting';
   await el.updateComplete;
   expect(() => el.recordActivity()).to.not.throw();
-
-  // wait-reason: asserts no self-transition occurs within a window several times the 40ms stall threshold
-  await aTimeout(150);
+  expect(ownedTimerPending(el, 'stallTimer'), 'idle/connecting never arms a stall timer').to.equal(false);
   expect(el.phase, 'idle/connecting must never self-transition to stalled').to.equal('connecting');
   expect(stalled).to.be.false;
 });
@@ -231,11 +230,10 @@ it('clears the stall timer when the host reassigns connectionState away from str
   let stalled = false;
   el.addEventListener('lr-stall', () => (stalled = true));
 
+  expect(ownedTimerPending(el, 'stallTimer')).to.equal(true);
   el.connectionState = 'idle';
   await el.updateComplete;
-
-  // wait-reason: asserts a cleared timer never fires after the threshold would have elapsed
-  await aTimeout(150);
+  expect(ownedTimerPending(el, 'stallTimer'), 'the stall timer is cleared on reassignment').to.equal(false);
   expect(stalled, 'a stale timer scheduled before the reassignment must not still fire').to.be.false;
   expect(el.phase).to.equal('idle');
 });
@@ -467,9 +465,9 @@ it('clears the stall timer on disconnect so it cannot fire on a detached element
   let stalled = false;
   el.addEventListener('lr-stall', () => (stalled = true));
 
+  expect(ownedTimerPending(el, 'stallTimer')).to.equal(true);
   el.remove();
-  // wait-reason: asserts a disconnected element never stalls after the threshold would have elapsed
-  await aTimeout(150);
+  expect(ownedTimerPending(el, 'stallTimer'), 'disconnect clears the stall timer').to.equal(false);
   expect(stalled, 'a disconnected element must not still transition to stalled').to.be.false;
 });
 

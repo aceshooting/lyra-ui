@@ -10,7 +10,6 @@ import type { LyraDialog } from '../../lr-dialog.js';
 import '../../lr-popover.js';
 import type { LyraPopover } from '../../lr-popover.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { styles } from './tour.styles.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
@@ -2503,12 +2502,11 @@ describe('lr-tour', () => {
   });
 
   it('collapses the popover enter animation under prefers-reduced-motion, and runs it otherwise', async () => {
-    expect(styles.cssText).to.include('var(--lr-transition-base)');
     await setReducedMotion('no-preference');
     try {
       const el = (await fixture(
         html`<div>
-          <lr-tour .steps=${makeSteps(1)} open></lr-tour>
+          <lr-tour data-lr-theme-scope style="--lr-transition-base: 3s" .steps=${makeSteps(1)} open></lr-tour>
           ${targetButtons(1)}
         </div>`,
       )) as HTMLDivElement;
@@ -2518,7 +2516,7 @@ describe('lr-tour', () => {
 
       const fullMotion = getComputedStyle(popover);
       expect(fullMotion.animationName).to.equal('lr-tour-popover-in');
-      expect(fullMotion.animationDuration).to.not.equal('0s');
+      expect(fullMotion.animationDuration).to.equal('3s');
 
       await setReducedMotion('reduce');
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));

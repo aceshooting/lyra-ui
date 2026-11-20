@@ -8,7 +8,6 @@ import { tag } from "../../../internal/prefix.js";
 import "../../lr-dashboard-grid.js";
 import type { LyraDashboardGrid } from "../../lr-dashboard-grid.js";
 import type { LyraDashboardCell } from "./layout.js";
-import { styles } from "./dashboard-grid.styles.js";
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-dashboard-grid', 'locked');
@@ -2890,13 +2889,21 @@ describe("localized strings", () => {
   });
 });
 
-it("themes collision state independently through --lr-dashboard-grid-collision-outline-color", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  const rule =
-    css.match(/\[part='cell'\]\[data-collision\]\s*\{([^}]+)\}/)?.[1] ?? "";
-  expect(rule).to.include(
-    "var(--lr-dashboard-grid-collision-outline-color, var(--lr-color-danger))"
-  );
+it("themes collision state independently through --lr-dashboard-grid-collision-outline-color", async () => {
+  const el = (await fixture(
+    html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`
+  )) as LyraDashboardGrid;
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+  const probe = document.createElement("span");
+  probe.style.color = "var(--lr-color-danger)";
+  el.shadowRoot!.append(probe);
+  const danger = getComputedStyle(probe).color;
+  probe.remove();
+  cell.toggleAttribute("data-collision", true);
+  expect(getComputedStyle(cell).outlineColor).to.equal(danger);
+  el.style.setProperty("--lr-dashboard-grid-collision-outline-color", "rgb(11, 22, 33)");
+  expect(getComputedStyle(cell).outlineColor).to.equal("rgb(11, 22, 33)");
 });
 
 it('cascades --lr-dashboard-grid-cell-hover-outline-color onto [part="cell"]', async () => {

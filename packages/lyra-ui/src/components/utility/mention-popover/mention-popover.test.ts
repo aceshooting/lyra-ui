@@ -2,7 +2,6 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import '../../lr-mention-popover.js';
 import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from '../../lr-mention-popover.js';
-import { styles } from './mention-popover.styles.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -1929,23 +1928,19 @@ describe('active-option row cssprop indirection', () => {
 
 // -- Available-space clamping (internal/positioner.js's place()) ------------
 
-it("declares [part='listbox']'s max-block-size/max-inline-size/min-inline-size against place()'s published --lr-positioner-available-* custom properties, mirroring lr-menu's/lr-combobox's identical clamp", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const listboxBlock = /\[part=['"]?listbox['"]?\]\s*\{([^}]+)\}/.exec(css);
-  expect(listboxBlock, 'expected a [part="listbox"] rule').to.not.equal(null);
-  const body = listboxBlock![1];
-  expect(body).to.match(/max-block-size:\s*min\([^;]*var\(--lr-positioner-available-block-size/);
-  expect(body).to.match(/max-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
-  expect(body).to.match(/min-inline-size:\s*min\([^;]*var\(--lr-positioner-available-inline-size/);
-});
-
-it("actually applies place()'s available-space custom properties onto the rendered listbox once open, not just declaring them in CSS", async () => {
+it("clamps the rendered listbox to place()'s published available-space custom properties", async () => {
   const el = await openWithItems();
   await waitFor(
     () => listbox(el).style.getPropertyValue('--lr-positioner-available-block-size'),
     (v) => v !== '',
   );
   expect(listbox(el).style.getPropertyValue('--lr-positioner-available-inline-size')).to.not.equal('');
+  listbox(el).style.setProperty('--lr-positioner-available-block-size', '90px');
+  listbox(el).style.setProperty('--lr-positioner-available-inline-size', '150px');
+  const box = getComputedStyle(listbox(el));
+  expect(parseFloat(box.maxBlockSize)).to.be.at.most(90);
+  expect(parseFloat(box.maxInlineSize)).to.be.at.most(150);
+  expect(parseFloat(box.minInlineSize)).to.be.at.most(150);
 });
 
 it('clips the non-scrolling inline axis and keeps every option at the shared hit-area floor', async () => {

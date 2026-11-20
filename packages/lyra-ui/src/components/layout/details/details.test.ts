@@ -6,7 +6,6 @@ import "../../lr-accordion-item.js";
 import type { LyraDetails } from "../../lr-details.js";
 import type { LyraAccordion } from "../../lr-accordion.js";
 import type { LyraAccordionItem } from "../../lr-accordion-item.js";
-import { styles as accordionStyles } from "./accordion.styles.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
 import '../../lr-checkbox.js';
@@ -824,15 +823,25 @@ it("shrinks the summary row's height floor at the 2xs size tier instead of stayi
   expect(smallHeight).to.be.lessThan(mediumHeight);
 });
 
-it("gives lr-accordion its own stylesheet instead of reusing details.styles.ts wholesale", () => {
-  const css = accordionStyles.cssText.replace(/\s+/g, " ");
-  // details.styles.ts's [part~='base'] rule paints a border-block-end meant for <lr-details>'s
-  // own root; the accordion's [part~='base'] is a plain wrapper div, so inheriting that rule
-  // doubled up with the last panel's own border. None of details.styles.ts's <details>-shaped
-  // selectors (summary/content/disabled/reduced-motion) apply to the accordion's shadow root.
-  expect(css).to.not.include("border-block-end");
-  expect(css).to.not.include("[part='summary']");
-  expect(css).to.not.include("[part='content']");
+it("frames lr-accordion with one border, not a second block-end border stacked on the last panel", async () => {
+  const el = (await fixture(html`
+    <lr-accordion>
+      <lr-accordion-item label="One">A</lr-accordion-item>
+      <lr-accordion-item label="Two">B</lr-accordion-item>
+    </lr-accordion>
+  `)) as LyraAccordion;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const style = getComputedStyle(base);
+  const top = Number.parseFloat(style.borderTopWidth);
+  expect(top).to.be.greaterThan(0);
+  expect(Number.parseFloat(style.borderBottomWidth)).to.equal(top);
+  const items = [...el.querySelectorAll<HTMLElement>('lr-accordion-item')];
+  const last = items[items.length - 1]!;
+  expect(
+    base.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom,
+    'only the frame border sits below the last panel'
+  ).to.be.closeTo(top, 0.51);
 });
 
 describe("unified show/hide lifecycle", () => {

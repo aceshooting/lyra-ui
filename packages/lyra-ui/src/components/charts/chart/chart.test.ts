@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
 import { fixture, expect, html, waitUntil, aTimeout, nextFrame, oneEvent } from '@open-wc/testing';
@@ -984,7 +985,7 @@ it('announces keyboard datum changes through one light-DOM sink and keeps the sh
   );
 
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-  canvas.focus();
+  await focusByKeyboard(canvas);
   await el.updateComplete;
   const sink = announcementSink();
   expect(sink !== null, 'a datum announcement must acquire a light-DOM sink').to.be.true;
@@ -4872,7 +4873,7 @@ describe('effective chart contract', () => {
     el.addEventListener('lr-point-activate', (event) => {
       detail = (event as CustomEvent).detail;
     }, { once: true });
-    canvas.focus();
+    await focusByKeyboard(canvas);
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(detail).to.deep.equal({
       datasetIndex: 0,
@@ -4937,7 +4938,7 @@ describe('effective chart contract', () => {
     expect(descriptionText).to.contain('7');
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     const datumMirror = el.shadowRoot!.querySelector('.sr-only[aria-hidden="true"]')!;
     expect(datumMirror.textContent).to.contain('North cluster');
@@ -5011,7 +5012,7 @@ describe('effective chart contract', () => {
       expect(tableButton.textContent?.trim()).to.equal(localizedPointCase.expected);
 
       const canvas = el.shadowRoot!.querySelector('canvas')!;
-      canvas.focus();
+      await focusByKeyboard(canvas);
       await el.updateComplete;
       const keyboardMirror = el.shadowRoot!.querySelector('.sr-only[aria-hidden="true"]')!;
       expect(keyboardMirror.textContent).to.contain(localizedPointCase.expected);
@@ -6069,7 +6070,7 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect((el as any).keyboardDatumIndex).to.equal(0);
 
@@ -6102,7 +6103,7 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect((el as any).keyboardDatumIndex).to.equal(0);
 
@@ -6117,7 +6118,7 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect((el as any).keyboardDatumAnnouncement).to.equal('');
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -6132,7 +6133,7 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
     const canvas = el.shadowRoot!.querySelector('canvas')!;
-    canvas.focus();
+    await focusByKeyboard(canvas);
     await el.updateComplete;
     expect((el as any).keyboardDatumAnnouncement).to.equal('Series, Point 1: 10 (1 of 1)');
   });
@@ -6755,7 +6756,7 @@ describe('data-table disclosure', () => {
     expect(customTable.getAttribute('slot')).to.equal('data-table');
     expect(wrapper.getBoundingClientRect().height).to.equal(1);
 
-    button.focus();
+    await focusByKeyboard(button);
     await sendKeys({ press: 'Enter' });
     await el.updateComplete;
 
@@ -7317,7 +7318,7 @@ it('fills a compact plot while retaining accessible data, keyboard actions and e
   const activated: number[] = [];
   el.addEventListener('lr-datum-activate', event => activated.push(event.detail.index));
   const canvas = el.shadowRoot!.querySelector('canvas')!;
-  canvas.focus();
+  await focusByKeyboard(canvas);
   await sendKeys({ press: 'ArrowLeft' });
   await sendKeys({ press: 'Enter' });
   expect(activated).to.deep.equal([1]);

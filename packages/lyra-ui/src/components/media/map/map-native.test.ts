@@ -2,6 +2,7 @@ import { createMapModule, createMapModuleDemo, createMapModulePublisher } from '
 import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { sendKeys } from '@web/test-runner-commands';
+import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
@@ -823,8 +824,8 @@ describe('lr-map actual modular companion integration', function () {
     el.style.cssText = 'inline-size:480px;block-size:360px'; el.engine = 'modular'; el.mapStyle = localStyle();
     el.initialization = 'interaction'; wrapper.append(el);
     await waitUntil(() => el.shadowRoot!.querySelector('[part="initialization-activate"]') !== null);
-    // wait-reason: interaction mode must remain unconstructed after the placeholder settles without input.
-    await new Promise(resolve => setTimeout(resolve, 100)); expect(el.map).to.equal(undefined);
+    // Two frames after the placeholder rendered, interaction mode must still be unconstructed without input.
+    await twoFrames(); expect(el.map).to.equal(undefined);
     const loaded = oneEvent(el, 'lr-map-load'); await click(button(el, 'initialization-activate')); await loaded;
     expect(el.map!.getCanvas().getContext('webgl2') !== null).to.equal(true);
   });

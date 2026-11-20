@@ -5,7 +5,7 @@ import '../../lr-flow-minimap.js';
 import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -31,12 +31,13 @@ it('renders the clickable map hover treatment that matches its pointer affordanc
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const map = minimap.shadowRoot!.querySelector<SVGSVGElement>('[part="map"]')!;
-  const rect = map.getBoundingClientRect();
 
   try {
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + 4), Math.round(rect.top + 4)],
+    // The map itself ignores pointer events: the hover state lives on the base that wraps it.
+    const base = minimap.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await hoverUntilMatched(base, 'the minimap never registered :hover', () => {
+      const rect = map.getBoundingClientRect();
+      return [rect.left + 4, rect.top + 4];
     });
     await waitUntil(
       () => getComputedStyle(map).backgroundColor === 'rgb(1, 2, 3)',
@@ -1008,13 +1009,9 @@ describe('mouse-hover feedback on the viewport rectangle', () => {
     const hitArea = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport-hit-area"]')!;
     const viewport = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport"]')!;
     const restingFill = getComputedStyle(viewport).fill;
-    const rect = hitArea.getBoundingClientRect();
 
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(hitArea, 'the viewport hit area never registered :hover');
       await waitUntil(() => {
         const computed = getComputedStyle(viewport);
         return Number.parseFloat(computed.strokeWidth) === 3 && computed.fill !== restingFill;

@@ -7,7 +7,6 @@ import "../../lr-carousel.js";
 import "../../lr-carousel-item.js";
 import type { LyraCarousel } from "../../lr-carousel.js";
 import type { LyraCarouselItem } from "../../lr-carousel-item.js";
-import { styles } from "./carousel.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import {
   hoverUntilMatched,
@@ -2218,16 +2217,32 @@ it('gives the focusable slides viewport a distinct localized name', async () => 
   expect(viewport.getAttribute('aria-label')).to.equal('Diapositives');
 });
 
-it("gives indicator a hover state that recolors its dot", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(
-    /\[part~='pagination-item'\]:hover \[part='indicator-dot'\]/
-  );
-});
-
-it("gives the keyboard-focusable viewport matching hover feedback", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part~='scroll-container'\]:hover/);
+it("outlines the keyboard-focusable viewport on :hover and recolors a pagination dot", async () => {
+  const el = await carousel(html`
+    <lr-carousel pagination>
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!;
+  const item = el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="pagination-item"]')[1]!;
+  const dot = item.querySelector<HTMLElement>('[part="indicator-dot"]')!;
+  try {
+    expect(getComputedStyle(viewport).outlineStyle).to.equal('none');
+    await hoverUntilMatched(viewport, 'the carousel viewport never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(viewport).outlineStyle === 'solid' && Number.parseFloat(getComputedStyle(viewport).outlineWidth) > 0,
+      'the viewport hover outline never rendered'
+    );
+    const restDot = getComputedStyle(dot).backgroundColor;
+    await hoverUntilMatched(item, 'the pagination item never matched :hover');
+    await waitUntil(
+      () => getComputedStyle(dot).backgroundColor !== restDot,
+      'the pagination dot did not recolor on :hover'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe("indicator current-state cssprops", () => {

@@ -21,7 +21,6 @@ import "../../../translations/ar/shared.js";
 import type { LyraCodeBlock } from "../../lr-code-block.js";
 import type { ShikiHighlighter, ShikiHighlighterCore } from "./code-loader.js";
 import { __setShikiHighlighterCoreLoaderForTesting } from "./shiki-types.js";
-import { styles } from "./code-block.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
@@ -2007,22 +2006,8 @@ describe("shiki dark-theme signal", () => {
     await waitUntil(() => body.getAttribute("data-dark-theme") === "true");
   });
 
-  it('gates the shiki dark-theme override on [data-dark-theme="true"], not @media (prefers-color-scheme: dark) alone', () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(
-      /\[part='body'\]\[data-dark-theme='true'\] \[part='pre'\][^{,]*\{[^}]*--shiki-dark/
-    );
-    expect(css).to.not.match(
-      /@media \(prefers-color-scheme: dark\)[^{]*\{[^}]*--shiki-dark/
-    );
-  });
-
-  // The cssText-regex test above only proves the gating rule's *selector* exists in source -- it
-  // never proves the color substitution actually reaches a rendered highlighted line, or that it
-  // stays off for a consumer who overrides --lr-theme-color-* independently of the OS's own
-  // prefers-color-scheme setting (exactly what the two tests above already exercise for
-  // data-dark-theme itself). This one renders a real highlighted code block in both states and
-  // reads getComputedStyle() on an actual shiki token span.
+  // Renders a real highlighted code block in both states and reads getComputedStyle() on an actual
+  // shiki token span, so the gate is proven by paint rather than by stylesheet source.
   it('resolves a highlighted token span\'s computed color from --shiki-dark only once data-dark-theme="true", never merely from the OS dark-mode preference', async function () {
     this.timeout(20_000);
 

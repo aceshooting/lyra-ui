@@ -4,7 +4,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { aTimeout, fixture, expect, html, elementUpdated, oneEvent } from "@open-wc/testing";
 import "../../lr-slider.js";
 import type { LyraSlider } from "../../lr-slider.js";
-import { styles } from "./slider.styles.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import "../../../translations/ar/forms.js";
 
 expectStaleAttribute('lr-slider', 'show-value');
@@ -1428,13 +1428,16 @@ it("keeps every range handle above the 24px WCAG 2.5.8 target floor, in both ori
   }
 });
 
-it("references the shared focus-ring tokens on the thumb focus-visible outline", () => {
-  expect(styles.cssText).to.include(
-    "outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)"
-  );
-  expect(styles.cssText).to.include(
-    "outline-offset: var(--lr-focus-ring-offset)"
-  );
+it("paints the shared focus-ring tokens on the thumb focus-visible outline", async () => {
+  const el = await fixture<HTMLElement>(html`
+    <lr-slider data-lr-theme-scope min="0" max="10" value="5" style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 5px"></lr-slider>
+  `);
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+  await focusByKeyboard(control);
+  const style = getComputedStyle(control);
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
+  expect(style.outlineOffset).to.equal('5px');
 });
 
 it("keeps the full domain reachable because a crossing handle pushes its sibling", async () => {

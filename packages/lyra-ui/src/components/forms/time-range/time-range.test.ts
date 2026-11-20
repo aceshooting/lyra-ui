@@ -5,7 +5,7 @@ import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-foc
 import { fixture, expect, html } from "@open-wc/testing";
 import "../../lr-time-range.js";
 import type { LyraTimeRange, TimeRangePreset } from "../../lr-time-range.js";
-import { styles } from "./time-range.styles.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
@@ -954,13 +954,16 @@ it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
   );
 });
 
-it("references the shared focus-ring tokens on the handle focus-visible outline instead of hardcoded literals", () => {
-  expect(styles.cssText).to.include(
-    "outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)"
-  );
-  expect(styles.cssText).to.include(
-    "outline-offset: var(--lr-focus-ring-offset)"
-  );
+it("paints the shared focus-ring tokens on the handle focus-visible outline", async () => {
+  const el = await fixture<HTMLElement>(html`
+    <lr-time-range data-lr-theme-scope min="0" max="100" start="20" end="80" style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 5px"></lr-time-range>
+  `);
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  await focusByKeyboard(control);
+  const style = getComputedStyle(control);
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
+  expect(style.outlineOffset).to.equal('5px');
 });
 
 it("does not lock dragging to a fixed value when min > max", async () => {

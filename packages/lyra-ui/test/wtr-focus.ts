@@ -40,7 +40,7 @@ function sentinel(doc: Document, label: string): HTMLButtonElement {
  * `target` by script. Real Tab is the only key every engine treats as keyboard modality, and it
  * leaves the following script focus `:focus-visible`.
  */
-export async function focusByKeyboard(target: HTMLElement, scope?: Element): Promise<void> {
+export async function focusByKeyboard(target: HTMLElement | SVGElement, scope?: Element): Promise<void> {
   const host = scope ?? sentinelScope(target);
   const doc = target.ownerDocument;
   const first = sentinel(doc, 'keyboard sentinel 1');
@@ -61,7 +61,7 @@ export async function focusByKeyboard(target: HTMLElement, scope?: Element): Pro
  * Establishes pointer modality with a real click on a temporary sentinel, then focuses `target`
  * by script -- the shape of a drawer's initial focus, or focus restoration, after a tap.
  */
-export async function focusAfterPointer(target: HTMLElement, scope?: Element): Promise<void> {
+export async function focusAfterPointer(target: HTMLElement | SVGElement, scope?: Element): Promise<void> {
   const host = scope ?? sentinelScope(target);
   const button = sentinel(target.ownerDocument, 'pointer sentinel');
   host.prepend(button);

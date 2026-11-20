@@ -1,5 +1,6 @@
 import { fixture, expect, aTimeout, waitUntil, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { ownedTimerPending, probeTimers } from '../../../../test/timer-probe.js';
 import '../../lr-generation-metrics.js';
 import { LiveDerivedThroughput } from './generation-metrics.stories.js';
 import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
@@ -7,6 +8,7 @@ import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
 describe('generation metrics live example', () => {
   it('starts on mount, honors the first Stop, and restarts repeatedly without old timers', async function () {
     this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
+    const probe = probeTimers((delay) => delay === 1000);
     const root = await fixture<HTMLElement>(LiveDerivedThroughput.render!({}, null as never));
     const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
     try {
@@ -14,8 +16,9 @@ describe('generation metrics live example', () => {
       status.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!.click();
       expect(status.status).to.equal('complete');
       const stopped = status.tokenCount;
-      // wait-reason: asserts no token updates after Stop for longer than one ticker interval
-      await aTimeout(1150);
+      await status.updateComplete;
+      expect(ownedTimerPending(status, 'tickTimer'), 'Stop retires the meter ticker').to.equal(false);
+      await waitUntil(() => probe.pending().length === 0, 'the demo ticker retires after Stop', { timeout: 3000 });
       expect(status.tokenCount).to.equal(stopped);
       for (let cycle = 0; cycle < 2; cycle++) {
         root.querySelector<HTMLButtonElement>('[data-restart]')!.click();
@@ -27,18 +30,24 @@ describe('generation metrics live example', () => {
         status.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!.click();
         expect(status.status).to.equal('complete');
       }
-    } finally { root.remove(); }
+    } finally { probe.restore(); root.remove(); }
   });
 
   it('retires streaming token updates after disconnect', async () => {
-    const root = await fixture<HTMLElement>(LiveDerivedThroughput.render!({}, null as never));
-    const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
-    await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 10000 });
-    root.remove();
-    const stopped = status.tokenCount;
-    // wait-reason: asserts no token updates after disconnect for longer than one ticker interval
-    await aTimeout(1150);
-    expect(status.tokenCount).to.equal(stopped);
+    const probe = probeTimers((delay) => delay === 1000);
+    try {
+      const root = await fixture<HTMLElement>(LiveDerivedThroughput.render!({}, null as never));
+      const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
+      await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 10000 });
+      const stopped = status.tokenCount;
+      root.remove();
+      expect(ownedTimerPending(status, 'tickTimer'), 'disconnect retires the meter ticker').to.equal(false);
+      // The demo's own interval retires itself at its next tick; wait on that, not on a fixed sleep.
+      await waitUntil(() => probe.pending().length === 0, 'the demo ticker retires after disconnect', { timeout: 3000 });
+      expect(status.tokenCount).to.equal(stopped);
+    } finally {
+      probe.restore();
+    }
   });
 });
 

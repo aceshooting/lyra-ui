@@ -1,5 +1,6 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { nextFrame, twoFrames } from "../../../../test/frames.js";
 import {
   animations,
   getAnimationNames,
@@ -883,8 +884,8 @@ async function finishesInstantlyUnderReducedMotion(
     await el.updateComplete;
     // The instant finish settles within a frame or two; real playback of five 1s iterations
     // cannot finish inside this margin.
-    // wait-reason: bounds real playback; asserts a 5s animation cannot finish inside the margin
-    await aTimeout(100);
+    await twoFrames();
+    await nextFrame();
     expect(el.play).to.equal(!finished);
     return finished;
   } finally {

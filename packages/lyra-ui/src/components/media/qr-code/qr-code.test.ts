@@ -1,4 +1,5 @@
 import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { twoFrames } from '../../../../test/frames.js';
 import { LitElement, type PropertyValues } from 'lit';
 import '../../lr-qr-code.js';
 import { LyraQrCode, type LyraQrCodeErrorCorrection } from '../../lr-qr-code.js';
@@ -1823,7 +1824,7 @@ describe('lr-qr-code', () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div><lr-qr-code></lr-qr-code></div>`);
     const el = wrapper.querySelector('lr-qr-code') as LyraQrCode;
     await el.updateComplete;
-    await aTimeout(50);
+    await twoFrames();
     expect(document.querySelector(assertive) === null && document.querySelector(polite) === null, 'an empty code never announces').to.be.true;
     el.value = 'https://example.test/x';
     await waitUntil(() => document.querySelector(assertive) !== null && document.querySelector(polite) !== null, 'both regions mount when encoding starts');

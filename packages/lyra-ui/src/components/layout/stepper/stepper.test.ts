@@ -11,7 +11,6 @@ import {
 import { sendKeys } from "@web/test-runner-commands";
 import "../../lr-stepper.js";
 import type { LyraStepper } from "../../lr-stepper.js";
-import { styles } from "./stepper.styles.js";
 import {
   hoverUntilMatched,
   resetMouse,
@@ -996,17 +995,6 @@ describe("lr-stepper", () => {
     );
   });
 
-  it("gives a non-disabled step a :hover treatment, matching the click-to-jump affordance", () => {
-    const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    // :where()-wrapped (see the "step hover specificity" describe block below) -- still targets
-    // [part="step"]:hover, excluding aria-disabled="true" steps, just at zeroed specificity. The
-    // `button` type selector lives inside the same :where(), so it excludes the read-only div that
-    // renders the same part without spending any specificity on it.
-    expect(css).to.match(
-      /:where\(button\[part='step'\]\):hover:where\(:not\(\[aria-disabled='true'\]\)\)\s*\{[^}]+\}/
-    );
-  });
-
   it("crosses its orientation breakpoint without a ResizeObserver loop error", async () => {
     loopErrors.length = 0;
     const wrapper = (await fixture(html`
@@ -1470,16 +1458,6 @@ describe("lr-stepper", () => {
 });
 
 describe("horizontal step row overflow", () => {
-  it("removes both decorative masks in forced-colors mode", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.contain("@media (forced-colors: active)");
-    const forcedColors = css.slice(
-      css.indexOf("@media (forced-colors: active)")
-    );
-    expect(forcedColors).to.contain("-webkit-mask-image: none");
-    expect(forcedColors).to.contain("mask-image: none");
-  });
-
   it("pairs overflow-y with overflow-x on the horizontal (default) axis to avoid a phantom vertical scrollbar", async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${steps()}></lr-stepper>`

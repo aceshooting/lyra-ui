@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart, PointElement } from 'chart.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -239,7 +240,7 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
     });
     await waitUntil(() => activations.length === 2, 'the native pointer click should activate the point');
     const canvasElement = canvas as HTMLCanvasElement;
-    canvasElement.focus();
+    await focusByKeyboard(canvasElement);
     canvasElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     canvasElement.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
     const tableButtons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>(

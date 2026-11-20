@@ -7,9 +7,8 @@ import '../../lr-timeline.js';
 import '../../lr-timeline-item.js';
 import type { LyraTimeline } from '../../lr-timeline.js';
 import type { LyraTimelineItem } from '../../lr-timeline-item.js';
-import { styles as timelineStyles } from './timeline.styles.js';
-import { styles as itemStyles } from './timeline-item.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
@@ -616,10 +615,21 @@ it('is accessible with a realistic set of timeline items', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('uses only CSS logical properties in both stylesheets (no left/right/margin-*/padding-* physical properties)', () => {
-  for (const styles of [timelineStyles, itemStyles]) {
-    expect(styles.cssText).to.not.match(/\b(left|right|margin-left|margin-right|padding-left|padding-right)\s*:/);
-  }
+it('mirrors a vertical timeline track to the inline-end side under dir="rtl"', async () => {
+  const trackIsLeftOfContent = async (dir: 'ltr' | 'rtl'): Promise<boolean> => {
+    const el = (await fixture(html`
+      <lr-timeline dir=${dir} style="inline-size: 400px">
+        <lr-timeline-item>First</lr-timeline-item>
+        <lr-timeline-item>Second</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    const item = el.querySelector('lr-timeline-item')!;
+    const track = item.shadowRoot!.querySelector('[part="track"]')!.getBoundingClientRect();
+    const content = item.shadowRoot!.querySelector('[part="content"]')!.getBoundingClientRect();
+    return track.left < content.left;
+  };
+  expect(await trackIsLeftOfContent('ltr')).to.equal(true);
+  expect(await trackIsLeftOfContent('rtl')).to.equal(false);
 });
 
 it('mirrors a horizontal timeline under dir="rtl"', async () => {
@@ -1014,7 +1024,7 @@ describe('collision="cluster"', () => {
       const el = (await fixture(CLUSTERED)) as LyraTimeline;
       await settleClusters(el);
       const button = clusterButtons(el)[0]!;
-      button.focus();
+      await focusByKeyboard(button);
 
       const pending = oneEvent(el, 'lr-cluster-activate');
       await sendKeys({ press: key });
