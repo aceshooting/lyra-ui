@@ -627,7 +627,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     const toggles = this.toggles();
     const positions = this.orientation === 'horizontal'
       ? measureAdjacentRuns(toggles, {
-        direction: getComputedStyle(this).direction === 'rtl' ? 'rtl' : 'ltr',
+        direction: this.effectiveDirection,
         joinable: () => true,
       })
       : toggles.map((): AdjacentRunPosition => 'standalone');

@@ -156,12 +156,12 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
    *  behind a count-labeled toggle. */
   @property({ type: Boolean, attribute: 'expand-internal', reflect: true }) expandInternal = false;
 
+  private _internalPatterns = snapshotInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
+  private patternsSource: unknown = DEFAULT_INTERNAL_PATTERNS;
   /** Clone-owned file-path substrings/`RegExp`s that mark a frame as internal. Defaults to
    *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Assignment
    *  retains non-blank strings, clone-owns `RegExp`s, drops malformed entries without suppressing
    *  valid later entries, bounds the result, and freezes it. Reassign a new array after changes. */
-  private _internalPatterns = snapshotInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
-  private patternsSource: unknown = DEFAULT_INTERNAL_PATTERNS;
   @property({ attribute: false })
   get internalPatterns(): readonly (string | RegExp)[] {
     return this._internalPatterns;

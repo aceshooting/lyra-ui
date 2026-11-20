@@ -66,8 +66,7 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
   `<lr-multi-split>`'s identically-named contract, unit handling included.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
-  behavior is identical to before this property existed. `'container'` measures the stepper's own
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. `'container'` measures the stepper's own
   `[part='base']` via `ResizeObserver`, comparing strictly `<`; `'viewport'` evaluates
   `matchMedia('(max-width: <breakpoint>)')`, arms no `ResizeObserver`, and compares inclusively
   (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot

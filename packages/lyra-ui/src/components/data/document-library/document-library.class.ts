@@ -1,3 +1,4 @@
+import { activeElementIn } from '../../../internal/active-element.js';
 import { compareNullable } from '../../../internal/sort-compare.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { createInputMemo } from '../../../internal/input-memo.js';
@@ -345,7 +346,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private rehomeCursorFocus(): void {
     const table = this.renderRoot?.querySelector<HTMLElement>('[part="table"]');
-    const active = table?.shadowRoot?.activeElement;
+    const active = activeElementIn(table?.shadowRoot);
     if (active) {
       this.renderRoot.querySelector<HTMLElement>('[part="cursor-navigation"]')?.focus();
     }

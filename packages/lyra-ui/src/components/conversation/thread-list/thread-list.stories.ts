@@ -701,7 +701,9 @@ const millionThreadSource: import('./thread-list.class.js').ThreadListSource = {
   },
 };
 
-/** Pages count matching records before collapse; headers remain available on collapsed pages. */
+/** Pages count matching records before collapse; headers remain available on collapsed pages.
+ *  `lr-source-page-change` reports every page the list moves to, so a host can persist it. */
 export const MillionSource: Story = {
-  render: () => html`<p>Browse one million generated threads. Search by an exact thread number from 0 to 999999.</p><lr-thread-list searchable sticky-groups .dataSource=${millionThreadSource}></lr-thread-list>`,
+  render: () => html`<p>Browse one million generated threads. Search by an exact thread number from 0 to 999999.</p><lr-thread-list searchable sticky-groups .dataSource=${millionThreadSource}
+    @lr-source-page-change=${(event: CustomEvent<{ page: number }>) => console.log('source page', event.detail.page)}></lr-thread-list>`,
 };

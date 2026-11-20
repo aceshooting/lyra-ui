@@ -37,6 +37,7 @@ export interface LyraComparePanelEventMap {
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
  * @event lr-vote-request - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
+ *   Pressing the button of the vote already held emits nothing and announces nothing.
  * @event lr-vote-change - `detail: { vote, itemId }`. Fired after an accepted user vote is committed
  *   to `vote`; not fired for a vetoed request, a listener-written vote, or host assignments.
  * @csspart base - The outer wrapper.
@@ -116,6 +117,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private readonly syncFrame = new OwnedFrame(this);
   private voteAssignedInCommit = false;
 
+  /** Label naming the first (`a`) pane. */
   get labelA(): string {
     return this._labelA;
   }
@@ -125,6 +127,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.requestUpdate('labelA', old);
   }
 
+  /** Label naming the second (`b`) pane. */
   get labelB(): string {
     return this._labelB;
   }
@@ -134,6 +137,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.requestUpdate('labelB', old);
   }
 
+  /** The selected vote, or `null` when none is chosen. Reflects to the `vote` attribute. */
   get vote(): CompareVote | null {
     return this._vote;
   }
@@ -148,6 +152,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.requestUpdate('vote', old);
   }
 
+  /** Identifier of the item under comparison. Changing it resets both panes to the top. */
   get itemId(): string {
     return this._itemId;
   }
@@ -165,6 +170,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
    *  lossy comma-separated attribute representation. Reassign a new array after changes. */
   @property({ attribute: false }) allowedVotes: readonly CompareVote[] = ['a', 'b', 'tie', 'both-bad'];
 
+  /** Keeps the two panes scrolled to the same position. */
   get syncScroll(): boolean {
     return this._syncScroll;
   }
@@ -174,6 +180,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.requestUpdate('syncScroll', old);
   }
 
+  /** Disables voting. Reflects to the `disabled` attribute. */
   get disabled(): boolean {
     return this._disabled;
   }
@@ -229,7 +236,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     if (this.voteDispatching) return;
     this.voteDispatching = true;
     try {
-      if (this.disabled) return;
+      if (this.disabled || choice === this.vote) return;
       const itemId = this.itemId;
       const voteVersion = this.voteWriteVersion;
       const labelAText = normalizeLabel(this.labelA) ?? this.localize('compareResponseA');

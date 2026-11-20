@@ -387,10 +387,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     step: { converter: stepConverter, reflect: true, noAccessor: true },
   };
 
+  /** Visual treatment of the control row: `accent`, `filled`, `outlined`, `filled-outlined` or `plain`; unknown values use `outlined`. */
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   @property() autocomplete = '';
+  /** Gap in pixels between the field and the time picker popup. */
   @property({ type: Number, reflect: true }) distance = 0;
   @property() hint = '';
+  /** Hour display: `12`, `24`, or `auto` to follow the effective locale; unknown values use `auto`. */
   @property({ attribute: 'hour-format', converter: hourFormatConverter, reflect: true }) hourFormat: LyraTimeInputHourFormat = 'auto';
   @property() label = '';
   /**
@@ -400,10 +403,15 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /** Earliest allowed time as `HH:MM` or `HH:MM:SS`; earlier values fail validation. Empty means no lower bound. */
   @property({ reflect: true }) min = '';
+  /** Latest allowed time as `HH:MM` or `HH:MM:SS`; later values fail validation. Empty means no upper bound. */
   @property({ reflect: true }) max = '';
+  /** Rounds the control row to a full pill. */
   @property({ type: Boolean, reflect: true }) pill = false;
+  /** Popup placement relative to the field (`top`, `right`, `bottom`, `left`, each with optional `-start`/`-end`); unknown values use `bottom-start`. */
   @property({ converter: placementConverter, reflect: true }) placement: LyraTimeInputPlacement = 'bottom-start';
+  /** Visual size on the shared control ladder. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Shows the clear action while there is a value; same as `withClear`. */
   @property({ type: Boolean, reflect: true }) clearable = false;
@@ -411,6 +419,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** Shows a `Now` button in the popup footer that sets the current time, unless a `footer` slot is supplied. */
   @property({ type: Boolean, attribute: 'with-now' }) withNow = false;
   @property({ attribute: 'error-text' }) errorText = '';
 

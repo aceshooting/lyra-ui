@@ -166,7 +166,7 @@ function snapshotSegmentedItems(
  *   checked pill leaves this untouched.
  * @cssprop [--lr-segmented-hover-bg=transparent] - Background of a hovered segment that is neither
  *   checked nor disabled. Undeclared by default, so it falls back to the segment's own resting
- *   transparent background — byte-identical to before this property existed.
+ *   transparent background.
  * @cssprop [--lr-segmented-hover-shadow=none] - Box shadow of a hovered segment that is neither
  *   checked nor disabled. Undeclared by default, matching the segment's own resting absence of a
  *   shadow.

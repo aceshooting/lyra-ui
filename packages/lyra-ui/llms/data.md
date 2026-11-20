@@ -190,7 +190,7 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
-  density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
+  density, and leaving it unset keeps that default. An unsupported value normalizes to unset
   and removes the attribute.
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
@@ -1026,7 +1026,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   state again rather than replaying the announcement, and later `error` transitions announce
   either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose own
   `announce` stays unset so the failure is spoken once, not twice. Remove any host
-  `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  `role="status"`/`role="alert"` hand-added once it is set —
   otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — unset, localized `noData` (`'No data'`) when empty or `noMatches` (`'No matches'`) when filtering leaves none; supplied text including `''` is verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
@@ -2564,7 +2564,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lr-lite-chart>`'s `selectedIndices`, this component never mutates it itself. Unset (the default,
-  `null`) reproduces today's exact output.
+  `null`) draws no selection state.
 - `multiple: boolean = false` — opts into controlled multi-cell selection through `selectedCells`.
   The existing `selectedCell` is ignored while enabled and resumes when disabled. Single-cell
   behavior is unchanged when omitted.
@@ -2652,13 +2652,12 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
   instead of the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default)
-  reproduces today's exact locale-derived output.
+  uses the locale-derived name.
 - `data.monthLabelText?: (jsMonth: number, year: number) => string | undefined` (calendar branch
   only) — the month-axis analogue of `weekdayLabelText`: receives the real JS month
   index (`0` January .. `11` December) and full year for a month boundary that would otherwise
   render a label, and, when it returns a string, uses it instead of the built-in
-  `Intl.DateTimeFormat`-derived short month name. Unset (the default) reproduces today's exact
-  locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
+  `Intl.DateTimeFormat`-derived short month name. Unset (the default) uses the locale-derived name. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
   Month labels are measured before painting: overlapping labels yield to the month occupying
@@ -2668,7 +2667,7 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
-  than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
+  than 2 entries) keeps the 2-endpoint interpolation. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
 color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key rendered **instead of** the
@@ -3078,7 +3077,7 @@ categoryId, readonly marker?, readonly label?, readonly disabled? }`;
   activating it (click or Enter/Space) emits nothing, and roving Left/Right/Home/End navigation —
   including the default resting tab stop — steps past it. Above the 200-cell cap, a range cell's
   disabled state follows its own activated item, the range's first. Omitted or `false` renders the
-  item exactly as before this field existed
+  item normally
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
@@ -3896,7 +3895,7 @@ The following array admission, legacy auto-layout and complete-model snapshot ru
   navigation (arrow keys, Home/End) steps past it, it cannot be dragged even while
   `nodes-draggable`, and it is excluded from starting or receiving a new connection while
   `connectable` (an edge already touching it is left alone). Omitted or `false` renders the node
-  exactly as before this field existed.
+  normally.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
   `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
@@ -3955,7 +3954,7 @@ accepted `source` descriptor above; their scene arrays do not imply full-source 
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
 sourceNodeId, targetNodeId }`),
-`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
+`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`; only when the selection changes, so re-activating the sole selected item emits just its activate event), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-`readonly` canvas only), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -4117,8 +4116,7 @@ owns none of that.
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
   and palette previews; the border, background, shadow and the `selected`/`status="running"`
-  treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
-  before. An unsupported value normalizes to unset and removes the attribute.
+  treatments all stay. `m` and above keep the full padding, and leaving it unset keeps that default. An unsupported value normalizes to unset and removes the attribute.
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
@@ -4487,8 +4485,7 @@ boolean }[]`. `value` is an _absolute_
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
   being clipped.
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
-  legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
-  property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
+  legend row shows beside its swatch: `'label'` (the default), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
   `[part="legend-value"]` and `[part="legend-percent"]` spans. The share is the same clamped ratio
   the bar or ring paints, so the key can never disagree with the band it stands for, and both
   numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,

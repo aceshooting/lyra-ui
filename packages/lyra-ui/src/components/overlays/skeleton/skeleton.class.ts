@@ -49,8 +49,11 @@ export class LyraSkeleton extends LyraElement {
 
   /** Placeholder geometry. This is named `shape` so it cannot be confused with semantic tone. */
   @property({ reflect: true, useDefault: true }) shape: LyraSkeletonShape = 'text';
+  /** Loading animation: `pulse`, `sheen` or `none` (default). */
   @property() effect: LyraSkeletonEffect = 'none';
+  /** Placeholder width as a CSS length. Unset uses the shape's default size. */
   @property() width?: string;
+  /** Placeholder height as a CSS length. Unset uses the shape's default size. */
   @property() height?: string;
 
   /** Opts this placeholder into announcing its `label` through the shared polite sink once it

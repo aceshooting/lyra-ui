@@ -315,31 +315,46 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
   @property() name: string = 'none';
+  /** Custom Web Animations keyframes for the slotted child; when set they always win over `name`. Property-only. */
   @property({ attribute: false }) keyframes: Keyframe[] | undefined = undefined;
+  /** Plays the animation while true; reflects to the `play` attribute and resets to false when it finishes or is canceled. */
   @property({ type: Boolean, reflect: true }) play = false;
+  /** Milliseconds to wait before playback starts (default 0); may be negative. */
   @property({ type: Number }) delay = 0;
+  /** Web Animations playback direction (`normal`, `reverse`, `alternate` or `alternate-reverse`); other values read as `normal`. */
   @property() direction: PlaybackDirection = 'normal';
+  /** Duration of one iteration in milliseconds (default 1000); ignored while `timingPreset` is not `custom`. */
   @property({ type: Number }) duration = 1000;
+  /** CSS easing function for each iteration (default `linear`); an unsupported value falls back to `linear`. Ignored while `timingPreset` is not `custom`. */
   @property() easing = 'linear';
+  /** Milliseconds to wait after the last iteration before the animation ends (default 0). */
   @property({ type: Number, attribute: 'end-delay' }) endDelay = 0;
+  /** Web Animations fill mode (`none`, `forwards`, `backwards`, `both` or `auto`); other values read as `auto`. */
   @property() fill: FillMode = 'auto';
+  /** Number of times the animation repeats (default `Infinity`); an invalid or negative value reads as 1. */
   @property({ type: Number }) iterations: number = Infinity;
+  /** Iteration offset at which playback begins (default 0); non-negative. */
   @property({ type: Number, attribute: 'iteration-start' }) iterationStart = 0;
+  /** Playback speed multiplier (default 1); a non-finite value reads as 1. */
   @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
+  /** Takes `duration` and `easing` from the `--lr-transition-fast`, `-base` or `-ambient` token (`fast`, `base`, `ambient`); `custom` (default) uses the `duration` and `easing` properties. */
   @property({ attribute: 'timing-preset', reflect: true })
   timingPreset: LyraAnimationTimingPreset = 'custom';
   /** Plays normally even under `prefers-reduced-motion: reduce` instead of instantly finishing.
    *  Reserve it for genuine user-triggered feedback; see the class doc. */
   @property({ type: Boolean, attribute: 'ignore-reduced-motion', reflect: true })
   ignoreReducedMotion = false;
+  /** Starts playback when the slotted child first intersects the `root` viewport. Reflects to the `play-on-visible` attribute. */
   @property({ type: Boolean, attribute: 'play-on-visible', reflect: true })
   playOnVisible = false;
+  /** With `playOnVisible`, plays each time the child becomes visible and stops when it leaves, instead of once. Reflects to the `play-on-visible-repeat` attribute. */
   @property({
     type: Boolean,
     attribute: 'play-on-visible-repeat',
     reflect: true,
   })
   playOnVisibleRepeat = false;
+  /** CSS margin around `root` used by the `playOnVisible` intersection check (default `0px`). */
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
   private _threshold: number | readonly number[] = 0;
   private thresholdInput?: unknown;
@@ -355,6 +370,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this._threshold = snapshotVisibilityThreshold(next);
     this.requestUpdate('threshold', old);
   }
+  /** Element whose bounds the `playOnVisible` intersection check uses; `null` (default) uses the viewport. Property-only. */
   @property({ attribute: false }) root: Element | null = null;
 
   private animation?: Animation;
@@ -753,6 +769,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.emit('lr-cancel', null);
   };
 
+  /** Current playback position of the underlying animation in milliseconds; reads 0 and ignores writes while no animation exists. */
   get currentTime(): CSSNumberish {
     return this.animation?.currentTime ?? 0;
   }

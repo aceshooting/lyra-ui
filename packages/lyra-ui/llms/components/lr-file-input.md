@@ -291,7 +291,7 @@ unset, medium, or other sizes. `--lr-file-input-font-size` (default
 `--lr-file-input-dropzone-padding` (default `var(--lr-space-l)`) for the dropzone's own padding, and
 `--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
-each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
+each is re-declared per `size` tier — so an unset or default-size control keeps those defaults,
 while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The drag accept/reject
 highlight on `[part='file-input'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and

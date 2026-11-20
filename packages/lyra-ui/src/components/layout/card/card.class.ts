@@ -108,7 +108,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop --lr-card-interactive-active-overlay - Interactive pressed overlay; defaults to the
  *   former transparent active mix.
  * @cssprop --lr-card-shadow - Box shadow of the card surface. **Undeclared by default**, so
- *   `box-shadow` falls back to `none` -- byte-identical to before this property existed. Set it
+ *   `box-shadow` falls back to `none`. Set it
  *   (e.g. a raised card in a flat layout) without a `::part(base)` rule.
  * @cssprop [--lr-card-interactive-hover-shadow=var(--lr-card-shadow, none)] - Box shadow of an
  *   `actionable`/linked card's base while hovered. Falls back to `--lr-card-shadow` itself, so a
@@ -143,12 +143,16 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   /** SSR presence hints. Hydrated cards also detect populated slots automatically. */
   @property({ type: Boolean, attribute: 'with-header', reflect: true })
   withHeader = false;
+  /** SSR presence hint that the `header-actions` slot is populated. */
   @property({ type: Boolean, attribute: 'with-header-actions', reflect: true })
   withHeaderActions = false;
+  /** SSR presence hint that the `media` slot is populated. */
   @property({ type: Boolean, attribute: 'with-media', reflect: true })
   withMedia = false;
+  /** SSR presence hint that the `footer` slot is populated. */
   @property({ type: Boolean, attribute: 'with-footer', reflect: true })
   withFooter = false;
+  /** SSR presence hint that the `footer-actions` slot is populated. */
   @property({ type: Boolean, attribute: 'with-footer-actions', reflect: true })
   withFooterActions = false;
 
@@ -156,8 +160,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
    *  `[part='activation-button']` becomes the focusable native button, responds to Enter/Space,
    *  and emits `lr-card-activate`. With `href` set the stretched native `<a>` owns navigation and
-   *  `lr-card-activate` is never fired. `false` (the default) reproduces today's exact static
-   *  output: no button, no listeners, no events. */
+   *  `lr-card-activate` is never fired. `false` (the default) renders static output: no button, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) actionable = false;
 
   /** Turns the card's OWN activation off: the native `activation-button` renders `disabled`, a
@@ -186,6 +189,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   // The native activation control owns the card's interactive ARIA state.
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
+  /** Space-separated ids that describe the card; forwarded to the inner interactive element instead of the host. */
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
   /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a

@@ -173,8 +173,7 @@ canvas capability becomes available.
   LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`.
   - `stack` is a Chart.js dataset `stack` group id: series sharing one `stack` value on the same
     (stacked) axis accumulate into one stack; a different id starts an independent stack Chart.js
-    draws side by side with the first on that axis. Omitted series share one implicit group, so
-    every chart written before `stack` existed sums exactly as it always did. Only meaningful on an
+    draws side by side with the first on that axis. Omitted series share one implicit group, so a chart that never sets `stack` sums all series together. Only meaningful on an
     axis that is actually stacked — see `stacked`/`stackedAxes` below.
   `LyraChartPoint { readonly x: number; readonly y: number; readonly r?: number; readonly id?:
   string | number; readonly label?: string }`: `r` is the bubble radius, and the optional primitive
@@ -197,7 +196,7 @@ canvas capability becomes available.
     Wired to Chart.js's
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
-    empty array) emits no `segment` key at all, leaving line rendering exactly as before.
+    empty array) emits no `segment` key at all, leaving line rendering untouched.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled DOM-legend
   visibility state. Leave it `undefined` (the default) to honor each effective dataset's declarative
   `hidden` value; pass `[]` to deliberately show every dataset, or a canonical list of zero-based
@@ -371,7 +370,7 @@ canvas capability becomes available.
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
   reader activates it, the disclosure follows `withDataTable`; afterwards the reader's selected
   state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
-  same disclosure state. Unset, nothing renders and behavior is identical to before.
+  same disclosure state. Unset, nothing renders.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -827,9 +826,8 @@ legend text, and tooltip background/text respectively; `--lr-chart-tick-font-siz
 `var(--lr-font-size-xs)`, any CSS length unit) — the axis tick-label font size, same
 `getComputedStyle` resolution and same token *name* as `lr-lite-chart`'s SVG equivalent, though not
 the same default: `--lr-font-size-xs` is 12px at the standard root, matching Chart.js's own
-built-in tick font size that every canvas chart rendered before this token existed, while
-`lr-lite-chart`'s SVG axis labels default to the smaller `--lr-font-size-2xs` (10px), unchanged
-from before this token existed. Also sizes the radar/polarArea `r`-scale `pointLabels` (the spoke
+built-in tick font size that every canvas chart rendered, while
+`lr-lite-chart`'s SVG axis labels default to the smaller `--lr-font-size-2xs` (10px). Also sizes the radar/polarArea `r`-scale `pointLabels` (the spoke
 labels) once set, but NOT by default: Chart.js's `RadialLinearScale` gives `pointLabels` its own
 distinct built-in default (10px, not this token's 12px tick default), so leaving the token unset
 keeps that separate default rather than adopting the tick size; setting the token brings both the
@@ -1153,7 +1151,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   every few weeks) may grow into adjacent ticks whose resolved text is `null` or empty before it is
   ellipsized, in either `layout`: a centered tick grows symmetrically, up to half the gap to the
   nearest labelled tick on each side, so it never reaches into a labelled neighbor's slot. A tick
-  whose adjacent ticks are all labelled is ellipsized exactly as before.
+  whose adjacent ticks are all labelled is ellipsized.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
@@ -1775,8 +1773,7 @@ their structural parameter and result types are available through the function's
   `withDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. A supplied
-  `slot="data-table"` follows this same disclosure state. Unset, nothing renders and behavior is
-  identical to before.
+  `slot="data-table"` follows this same disclosure state. Unset, nothing renders.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme

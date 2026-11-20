@@ -185,7 +185,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered content in an internal `<lr-pan-zoom>`. `false` (the default)
-   *  preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must not
+   *  renders no `<lr-pan-zoom>` -- an inline thumbnail (e.g. in a chat stream) must not
    *  unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
 

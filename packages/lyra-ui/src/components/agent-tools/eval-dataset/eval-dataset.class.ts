@@ -130,6 +130,7 @@ export interface LyraEvalDatasetEventMap {
  * @customElement lr-eval-dataset
  * @event lr-example-select-request - Cancelable proposal before a row activation selects it.
  *   `detail: { exampleId, previousExampleId }`; preventing it keeps the current selection.
+ *   Activating the already-selected row emits neither event.
  * @event lr-example-select - A row was activated. `detail: { exampleId }` -- `exampleId` is `null` once the
  *   previously-selected row no longer exists in `examples` or falls outside the active filters
  *   (see `examples`' own doc).
@@ -575,6 +576,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     if (this.disabled) return;
     if (this.sourceBlocked || (this.sourceMode && !this.sourceRows.includes(e.detail.row))) return;
     const id = e.detail.row.id;
+    if (id === this.selectedId) return;
     requestThenCommit({
       requestDetail: { exampleId: id, previousExampleId: this.selectedId },
       emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-example-select-request', detail, init),

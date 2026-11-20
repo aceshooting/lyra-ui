@@ -177,7 +177,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     'lr-selection-action',
   ]);
 
+  /** Whether the toolbar is shown; it also requires a nonempty `text`. Reflects to the `open` attribute. */
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Selected text the toolbar acts on (copied by the `copy` action); the toolbar stays hidden while empty. */
   @property() text = '';
   /** Clone-owned selection anchor. Reassign a new record after changing any path segment. */
   @property({ attribute: false }) anchor: DocumentLocator | null = null;
@@ -199,6 +201,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
    *  message; an explicit empty string (`label=""` or `.label = ''`) suppresses that default and
    *  renders no label. `accessibleLabel` wins over both. */
   @property() label?: string;
+  /** Overrides the toolbar's accessible name; wins over `label` and the localized default. Reads from the `aria-label` attribute. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private copyFailed = false;
 

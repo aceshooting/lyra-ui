@@ -62,8 +62,7 @@ export type ChatComposerWrap = LyraTextWrap;
 /** Retained name for the shared native `selectionDirection` vocabulary. */
 export type ChatComposerSelectionDirection = LyraSelectionDirection;
 
-/** Arrangement of the `start`/`end` action slots relative to the textarea. `'inline'` is today's
- *  single flex row; `'stacked'` arranges them as a compact rail beside a multi-row textarea;
+/** Arrangement of the `start`/`end` action slots relative to the textarea. `'inline'` is a single flex row; `'stacked'` arranges them as a compact rail beside a multi-row textarea;
  *  `'below'` gives the textarea its own full-width line with `start` and `end` on one row under it. */
 export type ChatComposerActionsLayout = 'inline' | 'stacked' | 'below';
 
@@ -235,8 +234,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Placeholder text of the internal textarea; also the accessible-name fallback when `accessible-label` is unset. */
   @property() placeholder = '';
+  /** Minimum visible rows of the internal textarea (default `1`). */
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
+  /** Maximum rows the internal textarea grows to before scrolling (default `8`). */
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;
   private statusValue: ChatComposerStatus = 'idle';
   /** Sending state. Invalid direct or attribute writes normalize and reflect as `idle`. */
@@ -273,7 +275,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   private actionsLayoutValue: ChatComposerActionsLayout = 'inline';
   /** Arrangement of the `start`/`end` action slots relative to the textarea, on the shared
    *  literal-set pattern (`literalSetConverter`, matching `<lr-model-settings-panel>`'s `layout`).
-   *  `'inline'` (the default) keeps today's single flex row. `'stacked'` arranges `start` above
+   *  `'inline'` (the default) keeps a single flex row. `'stacked'` arranges `start` above
    *  `end` as a compact rail in one column, beside a `textarea` that spans both rows -- for a
    *  multi-row composer where the action buttons would otherwise stretch to the row's full
    *  cross-axis height. `'below'` puts the `textarea` on its own full-width line and `start` and

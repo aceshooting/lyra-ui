@@ -46,6 +46,13 @@ it('changes heading levels for the title and details, and omits empty titles', a
   await el.updateComplete;
   expect(level('heading')).to.equal(null);
   expect(level('section-heading')).to.equal(null);
+  for (const restore of [() => el.setAttribute('heading-level', 'bogus'), () => el.removeAttribute('heading-level')]) {
+    el.setAttribute('heading-level', '5');
+    await el.updateComplete;
+    restore();
+    await el.updateComplete;
+    expect([level('heading'), level('section-heading')], 'the documented default returns').to.deep.equal(['2', '3']);
+  }
   el.label = '';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="heading"]').length).to.equal(0);

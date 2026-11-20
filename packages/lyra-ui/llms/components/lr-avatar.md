@@ -40,8 +40,7 @@ values restore the image or fallback name.
 - `loading: 'eager' | 'lazy' = 'eager'` — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
-  reaches the DOM while the image tier is the one rendering; the default matches the native default,
-  so an avatar that never sets it behaves exactly as it did before the property existed.
+  reaches the DOM while the image tier is the one rendering; the default matches the native default.
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
 'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`),

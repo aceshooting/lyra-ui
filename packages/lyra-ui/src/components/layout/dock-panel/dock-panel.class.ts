@@ -206,9 +206,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  the containing element is used instead, so the panel still can't be dragged wider/taller than
    *  its container. */
   @property({ attribute: 'max-extent', converter: declaredDefaultConverter('') }) maxExtent = '';
+  /** Renders the built-in collapse/expand toggle button in the panel. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
   private readonly toggleWriteGuard = new VetoWriteGuard();
   private _collapsed = false;
+  /** Whether the panel is collapsed to its rail size, hiding the content. Setting it directly does not fire the collapse events. */
   @property({ type: Boolean, reflect: true })
   get collapsed(): boolean { return this._collapsed; }
   set collapsed(next: boolean) {

@@ -24,8 +24,7 @@ formatted percentage.
 percentage of the track; `65` while indeterminate), shared with the ring, and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
-`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
-property existed), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
+`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
 `--lr-progress-track-height`'s private default. An explicit `--lr-progress-track-height` (or the
 upstream `--track-height`/`--height` aliases) still wins over every tier.
 
@@ -58,8 +57,7 @@ inherit` picks up the same value, so retuning the track retunes both without a
 to that variant's loud fill from the shared semantic grid (`var(--lr-color-fill-loud)`), falling back
 to `var(--lr-color-brand)` on an element that has not updated yet. It sits _inside_
 `--lr-progress-indicator-color` and the upstream `--indicator-color` alias in the fallback chain, so
-setting either of those still wins outright and the indicator renders exactly as it did before
-`variant` support existed. Set the variant-color slot instead when you want to retheme one semantic
+setting either of those still wins outright. Set the variant-color slot instead when you want to retheme one semantic
 tone while leaving the rest of the grid alone.
 
 **Additional API surface:**

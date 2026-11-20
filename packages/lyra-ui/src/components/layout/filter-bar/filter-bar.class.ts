@@ -93,8 +93,7 @@ export interface LyraFilterBarOption {
    * `'checkbox-menu'` filter. The composed control already renders it as a genuinely disabled row
    * (no tab stop / roving stop, no hover or press affordance, `aria-disabled`) and already steps
    * roving/arrow-key navigation past it -- this field only forwards a value that control already
-   * knows how to honour. Omitted or `false` renders the option exactly as before this field
-   * existed.
+   * knows how to honour. Omitted or `false` renders the option enabled.
    */
   readonly disabled?: boolean;
 }
@@ -168,8 +167,7 @@ export interface LyraFilterBarCustomControl {
   readonly adapter: LyraFilterBarCustomControlAdapter;
 }
 
-/** Whether a filter's `label` renders as the composed control's own visible label -- `'visible'`,
- *  the default and the behaviour every definition had before this option existed -- is routed to
+/** Whether a filter's `label` renders as the composed control's own visible label -- `'visible'`, the default -- is routed to
  *  that control's accessible name instead (`'hidden'`), for a compact toolbar row, or is
  *  `'auto'`: rendered as the visible label while the bar's own allocation is wide enough for it,
  *  and visually clipped (never removed, so the name is unchanged) once it is not. */
@@ -327,14 +325,11 @@ export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBa
    *  committing it to `value` and emitting a single `lr-input` -- identical to `'text'`'s
    *  per-keystroke debounce and `'combobox'`'s per-selection-change debounce, and sharing the same
    *  per-`filterId` debounce-controller map, so it needs no separate wiring. Omitted, `0`, or a
-   *  non-finite value means no debounce at all: every commit lands immediately, exactly as before
-   *  this field existed. While a commit is pending, `context.value` renders that pending value
+   *  non-finite value means no debounce at all: every commit lands immediately. While a commit is pending, `context.value` renders that pending value
    *  rather than the last-committed `value` -- exactly like `'combobox'` -- so a custom control
    *  bound to it as a fully controlled `.value=` never reverts mid-delay. A pending debounce is
    *  flushed by `context.onFocusout` and cancelled outright by `reset()`, a chip removal, and
-   *  disconnection, identical to `'text'`/`'combobox'`. This closes the gap `'text'`'s own
-   *  debounce left: before this field existed, a custom free-text filter had to hand-roll the same
-   *  timer plus its flush/cancel lifecycle itself to get the same behaviour. */
+   *  disconnection, identical to `'text'`/`'combobox'`, so a custom free-text filter needs no hand-rolled timer or flush/cancel lifecycle of its own. */
   readonly debounce?: number;
 }
 
@@ -429,7 +424,7 @@ export type LyraFilterBarDefinitionValue<D extends LyraFilterBarFilterDefinition
  *
  * `readonly LyraFilterBarFilterDefinition[] extends Defs` is true only for that unnarrowed
  * default (mirroring the `boolean extends Multiple` check `LyraPickerValue` uses), so an untyped
- * `<lr-filter-bar>` -- every shipped call site -- keeps exactly today's `LyraFilterBarValue` and
+ * `<lr-filter-bar>` -- every shipped call site -- keeps the general `LyraFilterBarValue` and
  * compiles unchanged. A literal `Defs` (typically declared with `as const satisfies readonly
  * LyraFilterBarFilterDefinition[]`) instead narrows each key to its own definition's value type.
  * This is deliberately types-only: the runtime shape (`LyraFilterBarFieldValue` per key) is
@@ -786,8 +781,7 @@ const DATE_INPUT_EXPORT_PARTS = [
  * a letter -- rules out embedded whitespace and every other character that would need escaping to
  * appear in a `::part()` argument, without attempting to escape one in: `DOMTokenList` tokenizes
  * on raw ASCII whitespace, which a backslash escape cannot suppress. An id that fails this check
- * gets no per-filter handle at all; `fieldPartNames()` falls back to the bare `'field'` token,
- * identical to this component's behavior before the per-filter handle existed. */
+ * gets no per-filter handle at all; `fieldPartNames()` falls back to the bare `'field'` token. */
 const SAFE_FILTER_ID_PART = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
 
 /** The `field` wrapper's `part` attribute for one filter: the shared `field` token plus, for a
@@ -1131,8 +1125,7 @@ export class LyraFilterBar<
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** Which currently-active filters render as removable chips in the row below the fields.
-   *  `'all'` (default, and the only behaviour this component had before this property existed)
-   *  shows one chip per filter that is not empty -- including a filter sitting at its own
+   *  `'all'` (default) shows one chip per filter that is not empty -- including a filter sitting at its own
    *  `defaultValue`, since a declared default is itself a value the filter currently holds.
    *  `'changed'` shows a chip only for a filter whose current value differs from its own
    *  `defaultValue` (see `filterValueEqualsDefault`) -- so a bar whose defaults narrow the view on
@@ -1962,8 +1955,7 @@ export class LyraFilterBar<
    *  because the same hook has to be readable from a rule reaching into the composed control's own
    *  shadow root -- `[data-label-auto]::part(form-control-label)` -- where a class on the host
    *  would work equally well but an attribute matches this component's existing `data-filter-id`
-   *  marker. Absent for every other `labelVisibility`, so an unset filter renders byte-identical
-   *  markup to before this option existed. */
+   *  marker. Absent for every other `labelVisibility`, so an unset filter carries no extra attribute. */
   private labelAutoAttribute(def: LyraFilterBarComposedDefinitionBase): boolean {
     return def.labelVisibility === 'auto';
   }

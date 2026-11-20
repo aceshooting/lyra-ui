@@ -88,8 +88,7 @@ Alt, Ctrl, and Meta chords, IME composition, and previously handled key events p
   threshold would mix reference boxes against a measurement of the element's own allocation. For a
   genuinely viewport-relative breakpoint set `orientationBreakpointBasis='viewport'` instead.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
-  behavior is identical to before this property existed. `'container'` measures this component's own
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. `'container'` measures this component's own
   `[part='base']` via `ResizeObserver` and compares strictly `<`. `'viewport'` evaluates
   `matchMedia('(max-width: <breakpoint>)')` and arms no `ResizeObserver` for the orientation feature
   at all, so the shared observer stays armed only for `collapse`; its comparison is inclusive (`<=`),
@@ -153,8 +152,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   Same accepted forms, basis, and sanitization as `railBreakpoint`; an unparseable value falls back
   to the `400` default.
 - `collapseBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `collapse-breakpoint-basis`) — which box `railBreakpoint`/`floatBreakpoint` are measured against.
-  Unset, behavior is identical to before this property existed. `'container'` observes this
+  `collapse-breakpoint-basis`) — which box `railBreakpoint`/`floatBreakpoint` are measured against. `'container'` observes this
   component's own `[part='base']` inline size via `ResizeObserver` and compares strictly `<`;
   `'viewport'` evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two thresholds,
   which is inclusive (`<=`) — native `max-width` semantics, deliberately, so the crossing point
@@ -179,8 +177,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   overlay ownership, and restores focus.
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
-  renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
-  card this state rendered before `open` existed — not just visually hidden; this holds even
+  renders nothing (`hidden`, out of the accessibility tree) instead of an always-visible overlay card — not just visually hidden; this holds even
   against an author `display` rule targeting the panel directly. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
@@ -214,7 +211,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   behavior.
 - `collapsedPanels: string[] = []` (attribute: false) — the `panel-id`s of panels folded to a narrow
   rail strip by a host control, at any container width and for any panel (not only an edge one).
-  Empty (the default) leaves the split exactly as before. A collapsed panel clamps along the resize
+  Empty (the default) leaves every panel unfolded. A collapsed panel clamps along the resize
   axis to `--lr-multi-split-collapsed-panel-size` (default `var(--lr-size-2-5rem)`), carries a
   `data-panel-collapsed` marker, clips its overflow, and stays rendered: the panel's own content
   paints the strip (a rotated title, an expand control) under `[data-panel-collapsed]` and takes its
@@ -264,7 +261,7 @@ split.addEventListener('lr-multi-split-panel-collapse-change', (event) => {
 toggleButton.addEventListener('click', () => split.togglePanel(toggleButton.closest('[panel-id]')));
 ```
 
-`collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
+`collapse`'s three resulting states — `'wide'` (default, plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
 itself (absent for `'wide'`/`collapse="none"`); and the `lr-multi-split-collapse-change` event below. The
 divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while

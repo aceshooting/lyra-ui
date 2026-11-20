@@ -150,3 +150,15 @@ for (const kind of ['node', 'edge'] as const) {
     expect(changes).to.equal(0);
   });
 }
+
+it('reports no selection change when the sole selected node is activated again', async () => {
+  const element = await canvas();
+  const events: string[] = [];
+  for (const type of ['lr-node-activate', 'lr-selection-change']) element.addEventListener(type, () => events.push(type));
+  node(element, 'a').click();
+  await element.updateComplete;
+  node(element, 'a').click();
+  await element.updateComplete;
+  expect(events).to.deep.equal(['lr-node-activate', 'lr-selection-change', 'lr-node-activate']);
+  expect([...element.selectedNodeIds]).to.deep.equal(['a']);
+});

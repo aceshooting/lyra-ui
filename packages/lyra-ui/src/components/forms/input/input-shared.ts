@@ -309,6 +309,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** Rounds the control row to a full pill by swapping `--lr-input-radius` to
    *  `--lr-radius-pill`. */
   @property({ type: Boolean, reflect: true }) pill = false;
+  /** Placeholder text forwarded to the native input; also the accessible-name fallback when there is no label. */
   @property() placeholder = '';
   /** Shows a built-in clear action for non-empty `text` and `search` inputs. */
   @property({ type: Boolean, reflect: true }) clearable = false;
@@ -318,8 +319,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`,
    *  coalescing a burst of rapid edits into a single downstream commit -- the same predicate and
    *  `DebounceController` primitive `<lr-filter-bar>`'s own per-filter `debounce` uses. Omitted,
-   *  `0`, or a non-finite value means no debounce at all: `input`/`lr-input` keep firing per
-   *  keystroke exactly as before, and `lr-input-settled` never fires. A pending debounce is
+   *  `0`, or a non-finite value means no debounce at all: `input`/`lr-input` keep firing per keystroke, and `lr-input-settled` never fires. A pending debounce is
    *  flushed immediately by `change`/Enter/blur (so a blur never drops the last keystroke) and
    *  cancelled with no stray settle by disconnection, the built-in clear button, and a
    *  programmatic `value` write that changes the value -- a same-value write does not disturb it. */
@@ -353,6 +353,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
   private readonly autocorrectState = new AutocorrectState(this, true);
+  /** Native virtual-keyboard hint (`inputmode`) forwarded to the input; empty omits it. */
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
@@ -366,6 +367,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   override set autocorrect(next: boolean | 'off' | 'on') {
     this.autocorrectState.set(next);
   }
+  /** Lowercase alias of `inputMode`. */
   declare inputmode: string;
   declare enterkeyhint: string;
   /** Forwarded to the native `<input>`'s `min` for its constraint validation, for any `type`.
@@ -470,7 +472,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** Id of the internal native `<input>` (and the `for` of its paired `<label>`), so a
    *  shadow-DOM-aware password manager keys its field detection off the same id the consumer put
    *  on the host, rather than a fixed literal. Falls back to `"input"` when the host carries no
-   *  `id`, leaving the rendered output byte-identical to before this existed. `id` is a plain
+   *  `id`. `id` is a plain
    *  inherited DOM property rather than a reactive `@property`, so a host `id` set declaratively in
    *  markup is picked up on first render (the native IDL reflects the parsed attribute before Lit's
    *  own `render()` runs); mutating `el.id` after first render only takes effect on this component's
@@ -849,8 +851,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for
-   *  the same shape. Omitted, `0`, or non-finite means no debounce (today's per-keystroke
-   *  behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
+   *  the same shape. Omitted, `0`, or non-finite means no debounce (per-keystroke behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
   private get effectiveDebounceMs(): number {
     return finiteDuration(this.debounce ?? 0, 0);
   }

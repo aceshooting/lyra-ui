@@ -332,7 +332,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     const generation = this.forwardGeneration; const owner = this.ownerDocument;
     const current = (event: Event) => () => this.isConnected && this.ownerDocument === owner && this.forwardGeneration === generation && this.activeView === tab && event.currentTarget === this.activeChild();
     const notice = this.inputLimitMessage();
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const childLevel = level ? (String(Math.min(6, +level + 1)) as LyraHeadingLevel) : 'none';
     return html`<section part="base">
       <div part="heading" role=${level && visibleLabel ? 'heading' : nothing} aria-level=${level && visibleLabel ? level : nothing}>${visibleLabel}</div>

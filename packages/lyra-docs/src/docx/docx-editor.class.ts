@@ -1017,6 +1017,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.load({ kind: 'blank' }, '', options.signal);
   }
 
+  /** Whether `command` can run against the current selection, with a reason when it cannot;
+   *  reports `not-ready` until a document has loaded. */
   can(command: DocxAction) {
     return this.session?.can(command) ?? { enabled: false, reason: 'not-ready' as const };
   }

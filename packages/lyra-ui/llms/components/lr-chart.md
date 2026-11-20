@@ -119,8 +119,7 @@ canvas capability becomes available.
   LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`.
   - `stack` is a Chart.js dataset `stack` group id: series sharing one `stack` value on the same
     (stacked) axis accumulate into one stack; a different id starts an independent stack Chart.js
-    draws side by side with the first on that axis. Omitted series share one implicit group, so
-    every chart written before `stack` existed sums exactly as it always did. Only meaningful on an
+    draws side by side with the first on that axis. Omitted series share one implicit group, so a chart that never sets `stack` sums all series together. Only meaningful on an
     axis that is actually stacked — see `stacked`/`stackedAxes` below.
   `LyraChartPoint { readonly x: number; readonly y: number; readonly r?: number; readonly id?:
   string | number; readonly label?: string }`: `r` is the bubble radius, and the optional primitive
@@ -143,7 +142,7 @@ canvas capability becomes available.
     Wired to Chart.js's
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
-    empty array) emits no `segment` key at all, leaving line rendering exactly as before.
+    empty array) emits no `segment` key at all, leaving line rendering untouched.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled DOM-legend
   visibility state. Leave it `undefined` (the default) to honor each effective dataset's declarative
   `hidden` value; pass `[]` to deliberately show every dataset, or a canonical list of zero-based
@@ -317,7 +316,7 @@ canvas capability becomes available.
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
   reader activates it, the disclosure follows `withDataTable`; afterwards the reader's selected
   state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
-  same disclosure state. Unset, nothing renders and behavior is identical to before.
+  same disclosure state. Unset, nothing renders.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -773,9 +772,8 @@ legend text, and tooltip background/text respectively; `--lr-chart-tick-font-siz
 `var(--lr-font-size-xs)`, any CSS length unit) — the axis tick-label font size, same
 `getComputedStyle` resolution and same token *name* as `lr-lite-chart`'s SVG equivalent, though not
 the same default: `--lr-font-size-xs` is 12px at the standard root, matching Chart.js's own
-built-in tick font size that every canvas chart rendered before this token existed, while
-`lr-lite-chart`'s SVG axis labels default to the smaller `--lr-font-size-2xs` (10px), unchanged
-from before this token existed. Also sizes the radar/polarArea `r`-scale `pointLabels` (the spoke
+built-in tick font size that every canvas chart rendered, while
+`lr-lite-chart`'s SVG axis labels default to the smaller `--lr-font-size-2xs` (10px). Also sizes the radar/polarArea `r`-scale `pointLabels` (the spoke
 labels) once set, but NOT by default: Chart.js's `RadialLinearScale` gives `pointLabels` its own
 distinct built-in default (10px, not this token's 12px tick default), so leaving the token unset
 keeps that separate default rather than adopting the tick size; setting the token brings both the

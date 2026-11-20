@@ -298,8 +298,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
    *  user's hover tooltip, distinct from the accessible-name (`aria-label`) role.
    *  Applies to both the single-capability `[part=trigger]` button and the multi-capability
-   *  `[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from
-   *  before this property existed. */
+   *  `[part=menu-trigger]` button. Unset (the default): no `title` attribute. */
   @property({ attribute: 'trigger-title' }) triggerTitle?: string;
 
   /** Opt-in system-camera capture for the `camera` capability: `'environment'` (rear camera) or
@@ -338,6 +337,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   /** Forwarded to the hidden file input's own `multiple` attribute. */
   @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
 
+  /** Disables the trigger and its menu so no pick can start; reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** How the trigger fills itself, from the library's one shared `appearance` vocabulary. The

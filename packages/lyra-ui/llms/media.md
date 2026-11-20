@@ -1195,8 +1195,8 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
 - `legendControlRole: 'button' | 'checkbox' = 'button'` (attribute `legend-control-role`,
   reflected) — how each `legendInteractive` row's toggle presents itself to assistive tech; inert
-  while `legendInteractive` is unset, exactly like the toggle itself. `'button'` is byte-identical
-  to every legend rendered before this property existed: `<button aria-pressed>`. `'checkbox'`
+  while `legendInteractive` is unset, exactly like the toggle itself. `'button'` renders
+  `<button aria-pressed>`. `'checkbox'`
   renders the SAME `<button>` element with its implicit role overridden to `role="checkbox"` and
   `aria-checked` in place of `aria-pressed` — the swatch, the label, the click handler and the
   platform's own Enter/Space activation are unchanged, so `hiddenCategories`, the cancelable
@@ -1383,7 +1383,7 @@ countHaloColor?: string; countHaloWidth?: number; zoomOnClick?: boolean }` turns
   changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
   reconciles in place.
 
-  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — today's geometry split)
+  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — the geometry split)
   renders the source as MapLibre's own first-class `heatmap` layer instead, which the geometry split
   cannot express at all: thousands of overlapping circles read as one opaque blob rather than as
   where the data is concentrated. `heatmap?: LyraMapHeatmapOptions { weightField?: string;
@@ -3376,7 +3376,7 @@ unset, medium, or other sizes. `--lr-file-input-font-size` (default
 `--lr-file-input-dropzone-padding` (default `var(--lr-space-l)`) for the dropzone's own padding, and
 `--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
-each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
+each is re-declared per `size` tier — so an unset or default-size control keeps those defaults,
 while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The drag accept/reject
 highlight on `[part='file-input'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
@@ -3742,8 +3742,7 @@ coalesce into one update.
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — a smaller, borderless pill instead of the default bordered chip, e.g. for a
-  composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset
-  renders exactly as before. An unsupported value normalizes to unset and removes the attribute.
+  composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset keeps the standard chip. An unsupported value normalizes to unset and removes the attribute.
 
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — at the compact density,
   hides `[part='meta']` (the filename/size text) entirely for an image-mime attachment, leaving only
@@ -4305,8 +4304,7 @@ values restore the image or fallback name.
 - `loading: 'eager' | 'lazy' = 'eager'` — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
-  reaches the DOM while the image tier is the one rendering; the default matches the native default,
-  so an avatar that never sets it behaves exactly as it did before the property existed.
+  reaches the DOM while the image tier is the one rendering; the default matches the native default.
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
 'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`),

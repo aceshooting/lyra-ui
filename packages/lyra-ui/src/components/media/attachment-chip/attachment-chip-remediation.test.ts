@@ -84,3 +84,26 @@ it('paints action hover and press and sizes the thumbnail from public tokens', a
     await resetMouse();
   }
 });
+
+it('creates and revokes a thumbnail object URL through its owner document realm', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const view = frame.contentWindow!;
+  const calls: string[] = [];
+  const realm = view.URL;
+  const create = realm.createObjectURL, revoke = realm.revokeObjectURL;
+  realm.createObjectURL = (blob: Blob | MediaSource) => { calls.push('create'); return create.call(realm, blob); };
+  realm.revokeObjectURL = (url: string) => { calls.push('revoke'); revoke.call(realm, url); };
+  try {
+    const el = document.createElement('lr-attachment-chip') as LyraAttachmentChip;
+    el.file = new File(['x'], 'photo.png', { type: 'image/png' });
+    view.document.body.append(el);
+    await waitUntil(() => calls.includes('create'), 'the preview URL is created in the owner realm');
+    el.file = undefined;
+    await el.updateComplete;
+    el.remove();
+    await waitUntil(() => calls.includes('revoke'), 'the preview URL is revoked in the owner realm');
+  } finally {
+    realm.createObjectURL = create;
+    realm.revokeObjectURL = revoke;
+  }
+});

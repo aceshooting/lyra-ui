@@ -145,7 +145,7 @@ The checked fill never falls back to `--lr-switch-track-fill`: unset, it is `--l
 An explicit hover or active fill applies in both states; for a per-state value, set it from
 `lr-switch:state(checked) { --lr-switch-track-hover-fill: …; }`.
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
-renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
+renders at all — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
 `var(--lr-switch-track-border)`) varies that border only while checked, so a bordered track can
 differ by state without falling back to `lr-switch:state(checked)::part(track)`. It takes a whole

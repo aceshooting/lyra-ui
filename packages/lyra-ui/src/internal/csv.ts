@@ -52,8 +52,7 @@ export interface LyraBuildCsvOptions {
    *  ignores a downloaded file's MIME charset and decodes a BOM-less CSV with the system ANSI
    *  code page, so accented, Arabic, CJK, and typographic characters render as mojibake; the BOM
    *  makes Excel detect UTF-8 and decode correctly. Google Sheets, LibreOffice, and Numbers
-   *  already sniff UTF-8 correctly with or without it. Defaults to `false` (today's bytes,
-   *  unchanged). Never apply this to JSON -- RFC 8259 forbids a BOM there. */
+   *  already sniff UTF-8 correctly with or without it. Defaults to `false` (no BOM is written). Never apply this to JSON -- RFC 8259 forbids a BOM there. */
   readonly bom?: boolean;
 }
 

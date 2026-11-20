@@ -235,7 +235,7 @@ fill keeps its pressed step instead of snapping back to the brand default; `--lr
 (default `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`) overrides that pressed fill directly,
 matching `--lr-option-active-bg`'s equivalent hook — unset, the pressed row keeps mixing from
-`--lr-menu-item-hover-bg` exactly as before this hook existed; `--lr-menu-item-icon-color` (default
+`--lr-menu-item-hover-bg`; `--lr-menu-item-icon-color` (default
 `inherit`) recolours `[part="icon"]` without touching the label beside it, so it still follows the
 row while the row is disabled or `variant="danger"` unless you say otherwise; and
 `--lr-menu-item-min-height` (default `max(var(--lr-form-control-height), var(--lr-size-24px))`)

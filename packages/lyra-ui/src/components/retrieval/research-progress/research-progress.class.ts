@@ -167,7 +167,7 @@ export class LyraResearchProgress extends LyraElement {
     const steps = this.normalizedSteps;
     const visibleLabel = this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('researchProgressLabel'));
     const groupLabel = retrievalSemanticLabel(this, visibleLabel);
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const completed = steps.filter((step) => step.status === 'completed').length;
     const percent = steps.length === 0 ? 0 : Math.round(progressPercent(completed, steps.length));
     const formattedPercent = formatProgressPercent(this.effectiveLocale, percent);

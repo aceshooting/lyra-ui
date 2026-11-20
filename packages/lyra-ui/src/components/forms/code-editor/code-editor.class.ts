@@ -227,7 +227,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Number, useDefault: true }) cols = 20;
   /** Native minimum and maximum code-unit length constraints. */
   private _minlength?: number;
-  /** @default undefined */
+  /** Minimum value length in UTF-16 code units, enforced by validation; unset or invalid means no minimum.
+   * @default undefined */
   @property({ converter: lengthLimitConverter })
   get minlength(): number | undefined {
     return this._minlength;
@@ -238,7 +239,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.requestUpdate('minlength', previous);
   }
   private _maxlength?: number;
-  /** @default undefined */
+  /** Maximum value length in UTF-16 code units, forwarded to the native textarea; unset or invalid means no maximum.
+   * @default undefined */
   @property({ converter: lengthLimitConverter })
   get maxlength(): number | undefined {
     return this._maxlength;
@@ -264,7 +266,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  public fill and border hooks. */
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   private wrapValue: LyraCodeEditorWrap = 'off';
-  /** @default 'off' */
+  /** Native textarea `wrap` mode: `soft` or `hard` (hard also wraps the submitted value); any other value becomes `off`.
+   * @default 'off' */
   @property({ attribute: 'wrap', useDefault: true })
   get wrap(): LyraCodeEditorWrap {
     return this.wrapValue;
@@ -283,14 +286,17 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     useDefault: true,
   })
   override spellcheck = false;
+  /** Focuses the editor's textarea when it is first rendered, like the native `autofocus` attribute. */
   @property({ type: Boolean }) override autofocus = false;
+  /** Native `title` tooltip text forwarded to the textarea; empty omits it. */
   @property() override title = '';
   @property() override autocapitalize = 'off';
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   private readonly autocorrectState = new AutocorrectState(this, false);
-  /** @default false */
+  /** Native `autocorrect` toggle forwarded to the textarea as `on`/`off`; the attribute accepts `on`/`off`.
+   * @default false */
   @property({ converter: autocorrectConverter, useDefault: true })
   override get autocorrect(): boolean {
     return this.autocorrectState.value;
@@ -298,6 +304,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   override set autocorrect(next: boolean | string) {
     this.autocorrectState.set(next);
   }
+  /** Lowercase alias of `inputMode`: the native virtual-keyboard hint forwarded to the textarea; empty omits it. */
   declare inputmode: string;
   declare enterkeyhint: string;
   /** An empty aria-label attribute clears the name. Whitespace alone uses the visible label or localized editor name. */

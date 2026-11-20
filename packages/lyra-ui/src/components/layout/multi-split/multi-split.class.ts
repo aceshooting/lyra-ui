@@ -48,6 +48,7 @@ import {
 } from '../../../internal/persisted-state.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './multi-split.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -187,6 +188,12 @@ function cssBound(pixels: number | undefined, percent: number | undefined, minim
 /** Which pane (if any) participates in responsive collapse (see `collapse`). */
 export type LyraMultiSplitCollapseMode = 'start' | 'end' | 'none';
 
+// Removing an attribute, or an unknown attribute value, restores the declared default.
+const ORIENTATION = literalSetConverter<LyraOrientation>(['horizontal', 'vertical'], 'horizontal');
+const NARROW_ORIENTATION = literalSetConverter<LyraOrientation>(['horizontal', 'vertical'], 'vertical');
+const BREAKPOINT_BASIS = literalSetConverter<BreakpointBasis>(['container', 'viewport'], 'container');
+const COLLAPSE_MODE = literalSetConverter<LyraMultiSplitCollapseMode>(['start', 'end', 'none'], 'none');
+
 /** The collapsing pane's current responsive state — `'wide'` is the normal
  *  drag-resizable percent layout (identical to `collapse="none"`); `'rail'`
  *  clamps it to `railWidth`; `'floating'` lifts it out of the flex flow as an
@@ -293,8 +300,7 @@ export interface LyraMultiSplitEventMap {
  * (mirrors `<lr-app-rail>`'s mobile overlay): while `collapseState` is
  * `'floating'` and `open` is `false` (the default), the collapsing panel
  * renders nothing — `hidden`, out of the accessibility tree, not just
- * visually hidden — instead of the always-visible overlay card this state
- * rendered before `open` existed. Setting `open = true` reveals it as a
+ * visually hidden — instead of an always-visible overlay card. Setting `open = true` reveals it as a
  * focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a
  * backdrop click proposes a cancelable close before changing `open`. Every sibling pane behind the drawer is inert for the
  * same interval, while the floating pane is the shared overlay manager's modal root. `open` is preserved (not reset)
@@ -398,8 +404,7 @@ export interface LyraMultiSplitEventMap {
  *   by the panel's own width).
  * @cssprop --lr-multi-split-floating-panel-inline-size - Overrides the `'floating'` collapse
  *   state's overlay card `inline-size`, which otherwise mirrors its own live `sizes[i]` percent
- *   (i.e. what it renders at in the `'wide'` state). Unset, geometry is identical to today's
- *   behavior; set, it wins over that percent without needing `!important` against the
+ *   (i.e. what it renders at in the `'wide'` state). Unset, geometry follows that percent; set, it wins over that percent without needing `!important` against the
  *   live-synced inline style.
  * @status stable
  * @since 9.0.0
@@ -448,18 +453,20 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     },
   };
 
+  /** Live panel sizes as percentages of the container, one per panel in order. Empty until initialized. */
   @property({ attribute: false }) sizes: readonly number[] = [];
   /** Initialization-only size fallback, below valid persistence and above equal distribution. Later
-   *  assignments never overwrite live resize state. Each entry is either a plain number (percent of
-   *  the container, matching today's exact strict behavior) or a CSS length string (`'200px'`,
+   *  assignments never overwrite live resize state. Each entry is either a plain number (percent of the container) or a CSS length string (`'200px'`,
    *  `'20%'`, `'3rem'`) resolved against the measured container before percent-space validation --
    *  see `resolveDefaultSizes()`. Initialization runs on the first update (not synchronously on
    *  connection), so same-turn framework property bindings and `storageKey` persistence participate
    *  before the layout becomes live. A pure-number array is validated unchanged (an array that does
    *  not sum to ~100 is still rejected). */
   @property({ attribute: false }) defaultSizes: readonly (number | string)[] = [];
+  /** Minimum size of each panel, in percent of the container; a non-finite or negative value falls back to `10`. */
   @property({ type: Number }) min = 10;
-  @property({ reflect: true }) orientation: LyraOrientation = 'horizontal';
+  /** Direction the panels are laid out: `horizontal` places them side by side, `vertical` stacks them. */
+  @property({ reflect: true, converter: ORIENTATION }) orientation: LyraOrientation = 'horizontal';
   /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
    *  `narrowOrientation` becomes effective. Unset by default — the whole responsive-orientation
    *  feature (and its `ResizeObserver`) is off, and `effectiveOrientation` just tracks
@@ -493,10 +500,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  the transition, so no self-measured threshold can express it. `'viewport'` also lets the
    *  browser resolve a `rem` breakpoint with real `@media` semantics, keeping it in step with such
    *  a rule across browser zoom and user font-size preferences. */
-  @property({ reflect: true, attribute: 'orientation-breakpoint-basis' })
+  @property({ reflect: true, attribute: 'orientation-breakpoint-basis', converter: BREAKPOINT_BASIS })
   orientationBreakpointBasis: BreakpointBasis = 'container';
   /** Layout/resize axis used below `orientationBreakpoint`. */
-  @property({ reflect: true, attribute: 'narrow-orientation' })
+  @property({ reflect: true, attribute: 'narrow-orientation', converter: NARROW_ORIENTATION })
   narrowOrientation: LyraOrientation = 'vertical';
   /** When set, this instance's panel sizes are persisted to `localStorage`, keyed by this value
    *  plus each panel's identity (`panel-id`, falling back to DOM order), and restored on the next
@@ -521,9 +528,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  for why that already resolves to the same physical index under RTL for
    *  this component (panels are never re-`order`ed for RTL, only the drag
    *  delta sign mirrors). Default `'none'`: none of the collapse behavior
-   *  below applies, and rendering/behavior is identical to before this
-   *  property existed. */
-  @property({ reflect: true }) collapse: LyraMultiSplitCollapseMode = 'none';
+   *  below applies. */
+  @property({ reflect: true, converter: COLLAPSE_MODE }) collapse: LyraMultiSplitCollapseMode = 'none';
   /** Fixed CSS length the collapsing pane clamps to in the `'rail'` state. */
   @property({ attribute: 'rail-width' }) railWidth = '3.5rem';
   /** Width below which the collapsing pane switches from its normal percent width to the fixed
@@ -576,7 +582,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  no `ResizeObserver` round-trip — and the initial state is not announced as a transition.
    *
    *  Default: `'container'`. */
-  @property({ reflect: true, attribute: 'collapse-breakpoint-basis' })
+  @property({ reflect: true, attribute: 'collapse-breakpoint-basis', converter: BREAKPOINT_BASIS })
   collapseBreakpointBasis: BreakpointBasis = 'container';
   /** Opts a pinned `collapseState` (see that accessor's force/auto contract) in to releasing
    *  itself when the layout it was made for is gone: either the measured collapse band changes to
@@ -618,16 +624,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   @property() for = '';
   /** Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index
    *  and the total panel count (`lr-multi-split` supports N panels, so a single fixed string can't
-   *  express every divider's label; a function can). Unset (the default) keeps today's exact
-   *  localized `Resize divider between panel {a} and panel {b}` template (see `this.localize()`). */
+   *  express every divider's label; a function can). Unset (the default) uses the localized `Resize divider between panel {a} and panel {b}` template (see `this.localize()`). */
   @property({ attribute: false }) dividerLabel?: (
     index: number,
     panelCount: number
   ) => string;
 
   /** The `panel-id`s of the panels folded to a narrow rail strip, independent of container width
-   *  and of the responsive `collapse` pane. Empty by default: no panel folds and the split behaves
-   *  exactly as before this property existed.
+   *  and of the responsive `collapse` pane. Empty by default: no panel folds.
    *
    *  A collapsed panel stays rendered and in the accessibility tree; it is clamped along the
    *  resize axis to `--lr-multi-split-collapsed-panel-size` and marked `data-panel-collapsed`, so
@@ -1336,7 +1340,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   /** The two panels divider `index` resizes: the nearest open panel at or before it and the
    *  nearest open panel after it, skipping per-panel collapsed panels and an active responsive
    *  pane. `null` when one side has no open panel. Without folded panels this is always the
-   *  adjacent pair, exactly as before. */
+   *  adjacent pair. */
   private dividerPair(index: number): [number, number] | null {
     const collapsed = this.collapsedIndexes();
     if (collapsed.size === 0) return [index, index + 1];

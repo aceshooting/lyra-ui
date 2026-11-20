@@ -1,3 +1,4 @@
+import { isShadowRootNode } from '../../../internal/dom-guards.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -243,6 +244,8 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
    */
   @property({ reflect: true }) src = '';
 
+  private _mode: LyraIncludeMode = 'same-origin';
+
   /**
    * Forwarded to `fetch(url, { mode })`. Deliberately defaults to
    * `'same-origin'` rather than the `'cors'` default documented by the
@@ -252,8 +255,6 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
    * rather than letting `fetch()` throw synchronously for an invalid
    * `RequestMode`.
    */
-  private _mode: LyraIncludeMode = 'same-origin';
-
   @property({ reflect: true, converter: INCLUDE_MODE })
   get mode(): LyraIncludeMode {
     return this._mode;
@@ -460,7 +461,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
         // Resolve against the tree this element lives in first (a shadow root keeps its own ids),
         // then the owner document.
         const root = this.getRootNode();
-        const scoped = root instanceof ShadowRoot ? root.getElementById(source.fragment) : null;
+        const scoped = isShadowRootNode(root) ? root.getElementById(source.fragment) : null;
         const target = scoped ?? this.ownerDocument.getElementById(source.fragment);
         if (!target) {
           this.fail(0, 'missing-fragment');

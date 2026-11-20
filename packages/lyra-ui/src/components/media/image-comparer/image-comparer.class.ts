@@ -98,6 +98,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private readonly internals = attachInternalsSafely(this);
 
   private _position = 50;
+  /** Divider position as a percentage from 0 to 100 (default 50); out-of-range values are clamped and non-finite values read as 50. Reflects to the `position` attribute. */
   @property({ type: Number, reflect: true })
   get position(): number {
     return this._position;
@@ -109,6 +110,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   }
 
   private _orientation: LyraImageComparerOrientation = 'horizontal';
+  /** Divider axis: `horizontal` (default) or `vertical`; other values read as `horizontal`. Reflects to the `orientation` attribute. */
   @property({ reflect: true })
   get orientation(): LyraImageComparerOrientation {
     return this._orientation;
@@ -118,7 +120,9 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     this._orientation = normalizeOrientation(value);
     this.requestUpdate('orientation', old);
   }
+  /** Text shown for the before side when the `before` slot is empty. */
   @property({ attribute: 'before-label' }) beforeLabel = '';
+  /** Text shown for the after side when the `after` slot is empty. */
   @property({ attribute: 'after-label' }) afterLabel = '';
   /** A nonblank host label names the comparison and its range. Blank labels use the localized default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

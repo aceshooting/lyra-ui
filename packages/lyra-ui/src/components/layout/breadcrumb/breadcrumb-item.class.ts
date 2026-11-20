@@ -77,6 +77,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   private get resolvedRel(): string | undefined {
     return resolveGuardedRel(this.rel, this.target);
   }
+  /** Marks this item as the current page: it renders as a label with `aria-current="page"` instead of a link or button. */
   @property({ type: Boolean, reflect: true }) current = false;
   private readonly slots = new SlotPresenceController(this);
   private semanticFocusOrigin?: Element;

@@ -91,8 +91,7 @@ const calloutAppearanceConverter = {
  * Initial content is not announced as a new live update unless `announce` opts in; with it set,
  * the content present when the callout first mounts is announced once, at the same urgency the
  * later-update path derives from `variant`, and reconnection or adoption stages that content
- * again instead of replaying the announcement. A host `role="status"`/`role="alert"` hand-added as
- * a workaround before `announce` existed should be removed once `announce` is set: leaving both in
+ * again instead of replaying the announcement. A host `role="status"`/`role="alert"` hand-added as a workaround should be removed once `announce` is set: leaving both in
  * place announces the same initial text twice, once through the native role and once through the
  * shared sink. Once the first render and slot
  * distribution settle, later content updates are appended to a shared light-DOM polite sink, or
@@ -176,12 +175,12 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     styles,
   ];
 
+  private _variant: CalloutVariant = 'brand';
+
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
    *  `brand` reflects it, making the standalone default an intentional local override. Unsupported
    *  values normalize to `brand`. */
-  private _variant: CalloutVariant = 'brand';
-
   @property({ reflect: true, useDefault: true, converter: CALLOUT_VARIANT })
   get variant(): CalloutVariant {
     return this._variant;
@@ -199,11 +198,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this.requestUpdate('variant', old);
   }
 
+  private _appearance?: CalloutAppearance;
+
   /** How much of the active `variant` palette is spent on fill, border, and text. Unset preserves
    *  the established callout treatment; every explicit Web Awesome appearance is reflected and
    *  unsupported values normalize back to the omitted state. */
-  private _appearance?: CalloutAppearance;
-
   @property({ reflect: true, converter: calloutAppearanceConverter })
   get appearance(): CalloutAppearance {
     return this._appearance as CalloutAppearance;
@@ -223,11 +222,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this.requestUpdate('appearance', old);
   }
 
+  private _size: CalloutSize = 'm';
+
   /** Visual density, on the library's shared ladder. The `m` property default is not reflected,
    *  so an unset nested callout inherits its containing size context. Both Web Awesome spellings
    *  are accepted (`s`/`small`, `m`/`medium`, `l`/`large`); unsupported values normalize to `m`. */
-  private _size: CalloutSize = 'm';
-
   @property({ reflect: true, useDefault: true, converter: CALLOUT_SIZE })
   get size(): CalloutSize {
     return this._size;
@@ -240,11 +239,12 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this.requestUpdate('size', old);
   }
 
+  /** Visible heading text, rendered ahead of the `heading` slot content. */
   @property() heading = '';
-  /** Semantic level of the visible property/slotted heading. Use `none` for visual-only text;
-   *  invalid attributes and untyped writes normalize to reflected level 3. */
   private _headingLevel: LyraHeadingLevel = '3';
 
+  /** Semantic level of the visible property/slotted heading. Use `none` for visual-only text;
+   *  invalid attributes and untyped writes normalize to reflected level 3. */
   @property({
     attribute: 'heading-level',
     reflect: true,
@@ -264,7 +264,9 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this._headingLevel = normalized;
     this.requestUpdate('headingLevel', old);
   }
+  /** Shows a close button that sets `open` to `false`. Reflects to the `closable` attribute. */
   @property({ type: Boolean, reflect: true }) closable = false;
+  /** Uses the lightweight inline treatment without border, background or panel padding. Reflects to the `inline` attribute. */
   @property({ type: Boolean, reflect: true }) inline = false;
 
   /** Opts this callout into announcing the content it already carries when it first mounts,
@@ -272,12 +274,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
    *  later-update path uses. Leave unset for a callout that is part of the page a user is
    *  arriving on: its text is read in document order and repeating it is noise. This is read once,
    *  when the callout first mounts -- a later reconnection or adoption stages the existing content
-   *  again rather than replaying it, and later content updates are announced either way. Remove
-   *  any host `role="status"`/`role="alert"` hand-added before this property existed once it is
-   *  set -- otherwise the initial text is announced twice, through the native role and again
+   *  again rather than replaying it, and later content updates are announced either way. Remove any hand-added host `role="status"`/`role="alert"` once it is set -- otherwise the initial text is announced twice, through the native role and again
    *  through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
+  /** Whether the callout is shown. Defaults to `true`; `false` hides it. Reflects to the `open` attribute. */
   @property({
     type: Boolean,
     reflect: true,

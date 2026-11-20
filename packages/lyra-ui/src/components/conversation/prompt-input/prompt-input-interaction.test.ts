@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-prompt-input.js';
+import type { LyraPromptInput } from './prompt-input.class.js';
 
 async function openSuggestions() {
   const el = await fixture<HTMLElementTagNameMap['lr-prompt-input']>(html`<lr-prompt-input
@@ -206,4 +207,25 @@ it('keeps the embedded pickers\' value, request and popup events from posing as 
     }
   }
   expect(leaked).to.deep.equal([]);
+});
+
+it('tracks a composed picker commit so reassigning the held value rolls the picker back', async () => {
+  const el = await fixture<LyraPromptInput>(html`<lr-prompt-input model="a" voice="v1"
+    .modelCatalog=${['a', 'b']} .voiceCatalog=${['v1', 'v2']}
+    .sources=${[{ id: 's1', label: 'One' }, { id: 's2', label: 'Two' }]} .selectedSourceIds=${['s1']}></lr-prompt-input>`);
+  const root = el.shadowRoot!;
+  const commit = (picker: Element & { value?: string; selectedSourceIds?: readonly string[] }, type: string, detail: object): void => {
+    Object.assign(picker, 'selectedSourceIds' in detail ? detail : { value: (detail as { value: string }).value });
+    picker.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
+  };
+  const model = root.querySelector('lr-model-select')!;
+  const voice = root.querySelector('lr-voice-picker')!;
+  const sources = root.querySelector('lr-source-picker')!;
+  commit(model, 'lr-change', { value: 'b', inCatalog: true });
+  commit(voice, 'lr-change', { value: 'v2', inCatalog: true });
+  commit(sources, 'lr-selection-change', { selectedSourceIds: ['s2'] });
+  expect([el.model, el.voice, [...el.selectedSourceIds]]).to.deep.equal(['b', 'v2', ['s2']]);
+  el.model = 'a'; el.voice = 'v1'; el.selectedSourceIds = ['s1'];
+  await el.updateComplete;
+  expect([model.value, voice.value, [...sources.selectedSourceIds]]).to.deep.equal(['a', 'v1', ['s1']]);
 });

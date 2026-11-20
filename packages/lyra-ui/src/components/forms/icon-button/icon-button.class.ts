@@ -245,6 +245,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   private externalLabelLease?: ResolvedAriaRelationshipLease;
   private toolbarActionCache?: LyraToolbarAction;
 
+  /** Whether the button is disabled; reflects to the `disabled` attribute synchronously. */
   get disabled(): boolean {
     return this._disabled;
   }
@@ -276,11 +277,17 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property() library?: string;
   /** Remote SVG URL forwarded to the nested `<lr-icon>` and handled by its guarded loader. */
   @property() src?: string;
+  /** Accessible name forwarded to the internal native button or anchor; bound to the host's `aria-label` attribute. Takes precedence over `label`. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Host `aria-haspopup` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
+  /** Host `aria-keyshortcuts` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-keyshortcuts' }) private triggerKeyShortcuts: string | null = null;
+  /** Host `aria-expanded` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
+  /** Host `aria-controls` ID list, forwarded to the internal control; empty omits it. */
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
+  /** Host `aria-describedby` ID list, forwarded to the internal control; empty omits it. */
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
   /** Toggle state on the internal native button, like `<lr-button>`'s. `null` leaves it unset, or
@@ -289,6 +296,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    * @default null */
   @property({ attribute: false }) pressed: boolean | 'mixed' | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
+  /** Accessible name of the internal control when the host has no `aria-label`; empty falls back to a localized default unless slotted content names the button. */
   @property() label = '';
   /** Safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative). When valid, the
    *  native root is an anchor rather than a button; `download` drops the three handoff schemes. */

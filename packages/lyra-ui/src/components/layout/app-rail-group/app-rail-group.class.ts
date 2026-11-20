@@ -52,6 +52,8 @@ export interface LyraAppRailGroupEventMap {
  * reach through it. A nested group re-forwards in turn, so exactly one element ever writes
  * `icon-only` onto any given node and a nested group clips its own heading too.
  *
+ * @attribute icon-only - Presents the group in icon-only form, clipping its heading text and
+ *   forwarding the state to the items and nested groups it owns. The owning rail sets it.
  * @customElement lr-app-rail-group
  * @slot - The group's navigation items. `<lr-app-rail-item>` and nested `<lr-app-rail-group>`
  *   children mirror the group's `icon-only` state automatically; anything else is rendered as

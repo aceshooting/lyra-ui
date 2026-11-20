@@ -253,7 +253,7 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-xs)] - Canvas axis tick-label font size.
  *   Same token name and default as `lr-chart`'s equivalent, so theming either retunes both;
  *   `--lr-font-size-xs` (12px at the standard root) matches Chart.js's OWN built-in tick font
- *   size, which is what box-plot rendered before this token existed.
+ *   size.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - DOM legend label color.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Canvas tooltip background.
  * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Canvas tooltip text color.
@@ -332,6 +332,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private readonly canvasTokens = new ChartTokenCache(this);
   private appliedLegendVisibility?: { chart: BoxPlotChartRuntime; hidden: readonly number[] | undefined };
 
+  /** Category labels for the x axis, aligned by index with each series' summaries. Property-only; assign a new array after changes. */
   @property({ attribute: false }) labels: readonly string[] = [];
   private _datasets: readonly LyraBoxPlotSeries[] = Object.freeze([]);
   private datasetsSource: unknown = this._datasets;
@@ -373,9 +374,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     converter: { fromAttribute: normalizeChartChromeLegendPosition },
   })
   legendPosition: LyraChartChromeLegendPosition = 'bottom';
+  /** A CSS `height` for the chart surface (default `280px`); the public `--lr-chart-height` token takes precedence. */
   @property() height = '280px';
   /** Category (x) axis title, mirroring `yLabel`. Unset (the default) renders no title. */
   @property({ attribute: 'x-label' }) xLabel = '';
+  /** Value (y) axis title. Empty (the default) renders no title. */
   @property({ attribute: 'y-label' }) yLabel = '';
   /** Lets the value axis start at the data minimum instead of always including zero. */
   @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
@@ -408,7 +411,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private readonly dataTableId = nextId('box-plot-data-table');
 
   /** Whether the data table is currently visible. Identical to `withDataTable` whenever
-   *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
+   *  `dataTableToggle` is off. */
   private get dataTableVisible(): boolean {
     return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }

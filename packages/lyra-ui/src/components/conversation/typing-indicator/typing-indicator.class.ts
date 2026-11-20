@@ -27,8 +27,7 @@ export type TypingIndicatorSize = LyraSize;
 
 /**
  * Where the accessible label renders, mirroring `<lr-spinner>`'s own `labelPlacement` vocabulary.
- * `'none'` (the default) keeps `label` in the accessibility tree only, screen-reader-only, exactly
- * as this component behaved before this property existed. `'after'` also renders it visibly next
+ * `'none'` (the default) keeps `label` in the accessibility tree only, screen-reader-only. `'after'` also renders it visibly next
  * to the animated shape.
  */
 export type TypingIndicatorLabelPlacement = 'none' | 'after';
@@ -71,7 +70,7 @@ export type TypingIndicatorLabelPlacement = 'none' | 'after';
  *
  * `labelPlacement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
  * visibly next to the shape, in a `part="label"` element, mirroring `<lr-spinner>`'s own
- * `labelPlacement` vocabulary; the default `"none"` keeps today's screen-reader-only rendering,
+ * `labelPlacement` vocabulary; the default `"none"` keeps a screen-reader-only rendering,
  * a single sr-only text node with no visible twin. The visible `part="label"` node is itself
  * `aria-hidden="true"`: the host's own `aria-label` (see `accessibleLabel`) already carries the
  * identical string as this element's accessible name, so the visible copy would otherwise be
@@ -128,8 +127,7 @@ export class LyraTypingIndicator extends LyraElement {
    *  inline with a message bubble. `'m'` (the default) is the standalone status-line size. */
   @property({ reflect: true }) size: TypingIndicatorSize = 'm';
 
-  /** Where the accessible label renders. `'none'` (default) keeps it screen-reader-only, exactly
-   *  as this component rendered before this property existed. `'after'` also renders it visibly
+  /** Where the accessible label renders. `'none'` (default) keeps it screen-reader-only. `'after'` also renders it visibly
    *  next to the animated shape -- the same `labelPlacement` vocabulary as `<lr-spinner>`. */
   @property({ attribute: 'label-placement', reflect: true })
   labelPlacement: TypingIndicatorLabelPlacement = 'none';

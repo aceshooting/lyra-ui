@@ -616,10 +616,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     });
   }
 
+  /** Opens the palette, firing a cancelable `lr-show`; no-op when already open or opening. */
   openPalette(): void {
     this.requestOpen(true);
   }
 
+  /** Requests closing the palette with the given `reason` (default `api`), firing a cancelable `lr-close-request`; no-op when already closed. */
   close(reason: LyraCommandPaletteCloseReason = 'api'): void {
     this.requestOpen(false, reason);
   }

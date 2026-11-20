@@ -149,7 +149,7 @@ Three component-local properties recolor the **active** preset button independen
 palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
-to exactly the token the rule used before they existed, so the default rendering is unchanged.
+to the fallback token named above.
 `--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
 `--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
 and win over the `preset-active-*` names, so one theme can style both controls' applied preset.

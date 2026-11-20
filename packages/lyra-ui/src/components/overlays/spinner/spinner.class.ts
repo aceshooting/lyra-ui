@@ -51,6 +51,7 @@ export class LyraSpinner extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  /** Shows the slotted label `after` the spinner, or `none` (default) to hide it. Reflects to the `label-placement` attribute. */
   @property({ attribute: 'label-placement', reflect: true, converter: declaredDefaultConverter('none') }) labelPlacement: LyraSpinnerLabelPlacement = 'none';
   /** Accessible name for the busy progress indicator, forwarded from a host `aria-label`. When unset, a
    *  visible `label-placement="after"` label names it, then the localized "Loading…" fallback. */

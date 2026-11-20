@@ -137,7 +137,7 @@ Combine `.app-muted` with `lr-text-quiet`, and `.app-small` with `lr-font-medium
    has no bottom rule).
 3. In `class="lr-prose lr-typography"`, `lr-prose` keeps the measure, root type and colour, and the
    typography element looks and heading-aware spacing win. Inside a boundary, or on a named-slot
-   child, `lr-prose` applies exactly as before. Plain `lr-prose` output is unchanged.
+   child, `lr-prose` applies on its own. Plain `lr-prose` output is unchanged.
 4. `lr-utilities` beats `lr-base`, so the scope beats `lr-native` normalization, including its link,
    quote and heading colours.
 5. A layered reset (such as Tailwind's `base` preflight) loses only when you declare the documented

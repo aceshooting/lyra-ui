@@ -171,8 +171,7 @@ export interface TableColumnEditOption {
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
 
 /** `<lr-table>`'s `expansionMode` property, mirroring `TableSelectionMode` member for member:
- *  `'none'` leaves `expandedRowKeys` fully consumer-controlled (the default, and the only
- *  behaviour before it existed), `'single'` self-manages at most one expanded row at a time, and
+ *  `'none'` leaves `expandedRowKeys` fully consumer-controlled (the default), `'single'` self-manages at most one expanded row at a time, and
  *  `'multiple'` self-manages any number. */
 export type TableExpansionMode = 'none' | 'single' | 'multiple';
 
@@ -240,8 +239,7 @@ interface TableColumnCommon<T> {
    *  `label` rendering (unchanged output). Receives the column definition itself -- there is no
    *  per-row data at header scope. */
   headerCell?: (column: TableColumn<T>) => unknown;
-  /** CSS length (e.g. '120px', '20%') for this column's width. Omit for today's intrinsic/auto
-   *  sizing (unchanged). When any column defines `width`, the table switches to
+  /** CSS length (e.g. '120px', '20%') for this column's width. Omit for intrinsic/auto sizing. When any column defines `width`, the table switches to
    *  `table-layout: fixed` so declared widths are authoritative rather than advisory. */
   width?: string;
   /** CSS length for this column's minimum width (e.g. '80px'). Has no effect unless at least one

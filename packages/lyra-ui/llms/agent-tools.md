@@ -168,8 +168,7 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'success'` (reflected) — the outcome of
   the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
   (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
-  never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
-  property existed — leaves it at that default, and a later renderer that stays quiet doesn't
+  never calls `reportStatus` — including any 2-arg renderer — leaves it at that default, and a later renderer that stays quiet doesn't
   inherit a stale outcome left behind by a previous one. Same status vocabulary as
   `<lr-tool-result-dialog>`/`<lr-tool-call-chip>`.
 
@@ -1621,7 +1620,8 @@ output), and `prompt` (optional shared-input header above both panes).
 **Events:** `lr-vote-request` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
 the prior vote. `lr-vote-change` (`detail: { vote, itemId }`) follows once an accepted user vote is
-committed; it never fires for a vetoed request or a host assignment. Each pane is a tab stop only
+committed; it never fires for a vetoed request or a host assignment. Pressing the button of the vote
+already held emits neither event and announces nothing. Each pane is a tab stop only
 while its response overflows the height cap.
 
 
@@ -3011,9 +3011,9 @@ navigation and the built-in copy/download buttons.
 
 **Events:** cancelable `lr-artifact-view-change-request` (`detail: { view, previousView }`, before a toggle
 press changes `view`; `preventDefault()` keeps the current view), `lr-artifact-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
-fired when the previous/next navigation moves to a different version; not fired when a `versions`
-reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
-since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
+fired when the previous/next navigation moves to a different version, and after an update in which a
+`versions` reassignment dropped the active version id — `activeVersionId` resets to `null`, meaning "the
+latest version", and the event names that latest version; an empty `versions` list fires nothing), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button only while `hideRestore` is false; mutates
 nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
@@ -3404,7 +3404,8 @@ disconnect and adoption revoke obsolete responses; unrelated named presentation 
 the current data. No million-row snapshot or whole-source filter/index is created by this route.
 
 **Events:** cancelable `lr-example-select-request` (`detail: { exampleId, previousExampleId }`,
-before a row activation selects it; `preventDefault()` keeps the selection), `lr-example-select` (`detail: { exampleId: string | null }`),
+before a row activation selects it; `preventDefault()` keeps the selection; activating the
+already-selected row emits neither event), `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: null` — no payload; `emit()`
 normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
@@ -4236,8 +4237,7 @@ Each issue also begins with visually hidden localized severity text (`Error:`, `
 danger tokens, `warning` the warning tokens, and `info` its own pair —
 `--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
-library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
-to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
+library has no `--lr-color-info-*` token, so an `info` issue stays distinguishable from an `error`. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 

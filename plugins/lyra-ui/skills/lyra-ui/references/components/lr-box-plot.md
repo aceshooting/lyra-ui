@@ -98,8 +98,7 @@ their structural parameter and result types are available through the function's
   `withDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. A supplied
-  `slot="data-table"` follows this same disclosure state. Unset, nothing renders and behavior is
-  identical to before.
+  `slot="data-table"` follows this same disclosure state. Unset, nothing renders.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme

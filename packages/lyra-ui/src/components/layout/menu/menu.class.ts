@@ -252,8 +252,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** @internal Owner of a contained engine's open/focus-return lifecycle. */
   dropdownOwner: ContainedMenuOwner | null = null;
 
-  /** @internal Open state supplied by the containing dropdown shell. */
   private _dropdownOpen = false;
+  /** Open state supplied by the containing dropdown shell when the menu is rendered inside it. */
   @property({ type: Boolean, attribute: false })
   get dropdownOpen(): boolean {
     return this._dropdownOpen;

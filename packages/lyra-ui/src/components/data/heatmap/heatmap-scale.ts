@@ -52,7 +52,7 @@ export function linearBucket(value: number, lo: number, hi: number, steps: numbe
  * a symmetric ramp passes a symmetric `domain` (e.g. `[-28.8, 28.8]`).
  *
  * Falls back to `finiteRatio`'s plain normalization when `midpoint` sits outside `[lo, hi]` or
- * any input is non-finite, so a mis-set midpoint degrades to today's behavior rather than
+ * any input is non-finite, so a mis-set midpoint degrades to plain normalization rather than
  * producing a a division by zero.
  */
 function midpointRatio(

@@ -392,7 +392,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     const slices = derived.slices;
     const visibleLabel =
       this.label === '' ? '' : (normalizeLabel(this.label) ?? this.localize('ragEvalDashboardLabel'));
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const runsLevel = level && String(Math.min(6, +level + 1));
     const label = retrievalSemanticLabel(this, visibleLabel);
     const role = retrievalSemanticRole(this, 'region');

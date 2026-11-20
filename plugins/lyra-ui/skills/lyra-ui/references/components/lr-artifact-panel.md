@@ -57,9 +57,9 @@ navigation and the built-in copy/download buttons.
 
 **Events:** cancelable `lr-artifact-view-change-request` (`detail: { view, previousView }`, before a toggle
 press changes `view`; `preventDefault()` keeps the current view), `lr-artifact-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
-fired when the previous/next navigation moves to a different version; not fired when a `versions`
-reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
-since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
+fired when the previous/next navigation moves to a different version, and after an update in which a
+`versions` reassignment dropped the active version id — `activeVersionId` resets to `null`, meaning "the
+latest version", and the event names that latest version; an empty `versions` list fires nothing), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button only while `hideRestore` is false; mutates
 nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus

@@ -42,8 +42,7 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   **untiered** states are not interchangeable, deliberately: with no `size` this panel keeps a fixed
   gutter and inherits the ambient text size (its exact pre-ladder rendering), while an untiered
   `lr-callout` reads the ambient form-control slots and falls back to the shared `m` padding and
-  `--lr-font-size-m`. Pinning a default tier here would resize every alert that shipped before this
-  property existed. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
+  `--lr-font-size-m`. Pinning a default tier here would resize every alert that sets no `size`. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
   separating icon, message and close action (it separates three boxes rather than setting density)
   and the leading icon glyph size (a status affordance bounded by the shared tappable-target token).
   The close action also keeps the shared tappable-target floor at every tier — a WCAG 2.5.8 minimum

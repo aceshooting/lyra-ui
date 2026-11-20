@@ -116,8 +116,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   styles the same row unvirtualized. The component keeps owning windowing, measurement, spacer
   sizing, `scrollToIndex()`, the external-scroller mode and the ARIA contract either way, and
   positioning stays on the shadow-side `[part="row"]` wrapper that document CSS cannot select — so
-  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left
-  unset, the rendered output is byte-identical to before and the host's light DOM stays empty.
+  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left unset, the host's light DOM stays empty.
   See **Light-DOM row projection** below for the trade-offs it carries.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.

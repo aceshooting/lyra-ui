@@ -220,7 +220,7 @@ interface OwnedAnimationFrame {
  * (arrow keys, Home/End) steps past it instead of landing on it, it cannot be dragged even while
  * `nodes-draggable`, and it is excluded from starting or receiving a new connection while
  * `connectable` -- an edge that already touches a since-disabled node is left alone. Omitted or
- * `false` renders the node exactly as before this field existed.
+ * `false` leaves the node fully actionable.
  *
  * Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) default to the
  * `fixed` strategy, because a node is translated inside a scaled, clipped world where an `absolute`
@@ -241,7 +241,8 @@ interface OwnedAnimationFrame {
  * @event lr-node-activate - `detail: { nodeId }`.
  * @event lr-edge-activate - `detail: { edgeId, sourceNodeId, targetNodeId }`.
  *   `sourceNodeId` and `targetNodeId` are canonical; `source` and `target` remain deprecated aliases.
- * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`.
+ * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`. Fired only when the
+ *   selection changes: re-activating the sole selected item emits only its activate event.
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
  * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
  * @event lr-node-add - `detail: { type, position }`.
@@ -1817,6 +1818,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     /* read-only, derived from the live layout; direct writes are silently ignored */
   }
 
+  /** Sets the pan offset (`x`, `y`) and zoom, clamping zoom to the effective bounds, then emits `lr-viewport-change`. Ignored while `readonly`. */
   setViewport(next: { x: number; y: number; zoom: number }): void {
     if (this.readonly) return;
     this.panX = finiteNumber(next.x, this.panX);
@@ -1847,6 +1849,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.setViewport({ x: this.panX, y: this.panY, zoom: 1 });
   }
 
+  /** Pans and zooms to frame every node, with optional `padding` around the content. Ignored while `readonly`. */
   fit(options?: { padding?: number }): void {
     if (!this.readonly) this.applyFit(options?.padding);
   }
@@ -1889,6 +1892,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     });
   }
 
+  /** Centers the node with the given `id` in the viewport, optionally at `zoom`, and moves focus to it. Ignored while `readonly` or when no such node exists. */
   focusNode(id: string, options?: { zoom?: number }): void {
     if (this.readonly) return;
     const node = nodeById(this.modelNodes, id);
@@ -1906,6 +1910,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.focusActiveItem(this.spatialItemIndex('node', id));
   }
 
+  /** Converts a viewport client coordinate into content (world) coordinates using the current pan and zoom; returns `{ x: 0, y: 0 }` before the viewport renders. */
   toContentPoint(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.viewportEl?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
@@ -2399,6 +2404,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private applySelection(kind: 'node' | 'edge', id: string, additive: boolean): void {
     const current = this.sourceAuthority();
     if (!current()) return;
+    // Re-activating the sole selected item changes nothing; its activate event already fired.
+    const [own, other] = kind === 'node' ? [this.selectedNodeIds, this.selectedEdgeIds] : [this.selectedEdgeIds, this.selectedNodeIds];
+    if (!additive && own.length === 1 && own[0] === id && other.length === 0) return;
     if (kind === 'node') {
       this.selectedNodeIds = additive ? toggledSelection(this.selectedNodeIds, id) : [id];
       if (!additive) this.selectedEdgeIds = [];

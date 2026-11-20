@@ -38,8 +38,7 @@ null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
 `size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — changes the private
 fallback behind `--lr-rating-size` from a type ramp rather than the shared control ladder, since a
-rating has no control frame to size; an inherited or direct public size wins; the `m` default
-reproduces the treatment this component had before `size` existed; valid long-form spellings
+rating has no control frame to size; an inherited or direct public size wins; valid long-form spellings
 round-trip unchanged), plus two separate naming knobs:
 `accessibleLabel: string = ''` (property) and `label: string = ''` (attribute
 `label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty

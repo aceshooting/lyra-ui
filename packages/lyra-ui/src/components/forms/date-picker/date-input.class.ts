@@ -564,6 +564,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Placeholder shown in the text input while it is empty. */
   @property() placeholder = '';
   /** Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
@@ -602,9 +603,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  forwarding without setting a JS property. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() override locale = '';
+  /** Number of months shown side by side, `1` or `2`. */
   @property({ converter: monthsConverter, reflect: true }) months: 1 | 2 = 1;
+  /** First weekday column: `sun`..`sat`, or `auto` to follow the effective locale. */
   @property({ attribute: 'first-day-of-week', reflect: true })
   firstDayOfWeek: LyraDateInputFirstDayOfWeek = 'auto';
+  /** Weekday header style: `narrow`, `short` or `long`. */
   @property({
     attribute: 'weekday-format',
     converter: weekdayFormatConverter,
@@ -648,25 +652,35 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   get appliedPreset(): LyraDateRangePreset | undefined {
     return this._appliedPreset;
   }
+  /** Shows the days of adjacent months in the leading and trailing cells of the grid. */
   @property({ type: Boolean, attribute: 'with-outside-days', reflect: true })
   withOutsideDays = false;
+  /** Shows a week-number column. */
   @property({ type: Boolean, attribute: 'with-week-numbers', reflect: true })
   withWeekNumbers = false;
+  /** Dates to disable: a comma/space-separated string of ISO dates, or an array of ISO strings or `Date` objects. */
   @property({ attribute: 'disabled-dates' })
   disabledDates: LyraDatePickerDisabledDates = '';
+  /** Weekdays to disable, as comma- or space-separated names or numbers (`0` = Sunday, e.g. `sat,sun`). */
   @property({ attribute: 'disabled-days-of-week' }) disabledDaysOfWeek = '';
   /** Optional JavaScript predicate that disables matching calendar dates. */
   @property({ attribute: false }) isDateDisabled?: (date: Date) => boolean;
   /** Optional JavaScript renderer for individual calendar-day content. */
   @property({ attribute: false }) dayContent?: LyraDatePickerDayContent;
+  /** Minimum range length in inclusive days; `0` means no minimum. Range mode only. */
   @property({ type: Number, attribute: 'min-range', reflect: true })
   minRange = 0;
+  /** Maximum range length in inclusive days; `0` means no maximum. Range mode only. */
   @property({ type: Number, attribute: 'max-range', reflect: true })
   maxRange = 0;
+  /** Whether the previous/next buttons move by the number of visible `months` or by a single month. */
   @property({ converter: pageByConverter, attribute: 'page-by', reflect: true })
   pageBy: LyraDatePickerPageBy = 'months';
+  /** ISO date (`YYYY-MM-DD`) that overrides what counts as today; empty uses the system date. */
   @property({ reflect: true }) today = '';
+  /** Gap in pixels between the field and the calendar popover. */
   @property({ type: Number, reflect: true }) distance = 0;
+  /** Popover placement relative to the field (`top`, `right`, `bottom`, `left`, each with optional `-start`/`-end`). */
   @property({ converter: placementConverter, reflect: true })
   placement: LyraDateInputPlacement = 'bottom-start';
   /** Event names that mark the control as user-interacted for `:state(user-*)` styling. */
@@ -811,6 +825,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Clock seam for temporal validity and deterministic day-boundary tests. */
   private now = (): Date => new Date();
 
+  /** Selection mode: `single` date or `range` of two dates; any other value becomes `single`. */
   get mode(): 'single' | 'range' {
     return this._mode;
   }
@@ -826,6 +841,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.requestUpdate('mode', old);
   }
 
+  /** Earliest selectable date as ISO `YYYY-MM-DD`; dates before it are disabled and fail validation. Empty means no lower bound. */
   get min(): string {
     return this._min;
   }
@@ -837,6 +853,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.requestUpdate('min', old);
   }
 
+  /** Latest selectable date as ISO `YYYY-MM-DD`; dates after it are disabled and fail validation. Empty means no upper bound. */
   get max(): string {
     return this._max;
   }
@@ -871,6 +888,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.syncCustomStates();
   }
 
+  /** Disables every date before today. */
   get disablePast(): boolean {
     return this._disablePast;
   }
@@ -882,6 +900,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.requestUpdate('disablePast', old);
   }
 
+  /** Disables every date after today. */
   get disableFuture(): boolean {
     return this._disableFuture;
   }
@@ -930,6 +949,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
   }
 
+  /** The value as a `Date` in single mode, or `null` for an empty/invalid value or in range mode; setting a valid `Date` writes its ISO date to `value`, anything else clears it. */
   get valueAsDate(): Date | null {
     return this.mode === 'single' ? this.parseStrictISO(this.value) : null;
   }

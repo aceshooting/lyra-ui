@@ -325,6 +325,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   @property() override autocapitalize = 'off';
   @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
   @property() autocomplete = 'off';
+  /** Native `wrap` mode of the arguments editor textarea: `soft` (default), `hard` or `off`. */
   @property() wrap: ToolApprovalDialogWrap = 'soft';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
@@ -608,7 +609,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.localize('toolApprovalHeading', undefined, { tool: marker }),
     );
     const headingText = headingParts.join(toolName).trim();
-    const level = headingText && resolveHeadingLevel(this.headingLevel);
+    const level = headingText && resolveHeadingLevel(this.headingLevel, '2');
     const heading = headingParts.map((part, index) =>
       html`${index > 0 ? html`<span part="tool-name" dir="auto">${toolName}</span>` : nothing}${part}`,
     );

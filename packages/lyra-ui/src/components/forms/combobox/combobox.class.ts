@@ -771,6 +771,7 @@ export class LyraCombobox<
     minQueryLength: { type: Number, attribute: 'min-query-length', noAccessor: true },
   };
 
+  /** Placeholder shown in the filter input while empty; hidden once a single-select value is chosen. */
   @property() placeholder = '';
   @property() label = '';
   /**
@@ -875,7 +876,7 @@ export class LyraCombobox<
   /**
    * Copies the trigger's width, height, or both onto the listbox -- the same property
    * `<lr-dropdown>`/`<lr-popup>` spell. Unset (the default), the listbox sizes to its own content,
-   * clamped between `--lr-size-12rem` and `--lr-size-28rem`, exactly as before. Set `sync="width"`
+   * clamped between `--lr-size-12rem` and `--lr-size-28rem`. Set `sync="width"`
    * so a full-width trigger with short option labels gets a listbox that aligns to its own edges
    * instead of floating narrower in the middle -- the width clamp described above no longer
    * applies while this is set, since the anchor's own width is now the intentional bound.
@@ -982,6 +983,7 @@ export class LyraCombobox<
   /** Optional capped-list copy override. Omission localizes `comboboxOverflow`; a supplied string,
    * including the built-in English template or `""`, wins verbatim after `{n}` interpolation. */
   @property({ attribute: 'overflow-text' }) overflowText?: string;
+  /** Custom predicate `(option, query) => boolean` that replaces the built-in text match when set; `null` uses the built-in folded match. */
   @property({ attribute: false }) filter: OptionFilter | null = null;
   /** Optional bounded async row source. Receives `{ signal, limit: 2000 }`; may return a legacy
    * readonly row array or `{ rows, total? }`. Results are clone-normalized under row/text ceilings. */
@@ -3192,9 +3194,8 @@ export class LyraCombobox<
         this._sourceTotal = 0;
         this._sourceTruncated = false;
         this.activeIndex = -1;
-        // A source that cancelled its own current work (a shared fetch aborted elsewhere) settles
-        // with no rows and no failure, since nothing went wrong that a host needs to hear about.
-        if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') return;
+        // A superseded request already failed isCurrent(). An AbortError that still reaches this
+        // point left the current query unanswered, so it is a failure like any other rejection.
         this.sourceFailed = true;
         this.sourceErrorAnnouncements.announceAssertive(
           this.localize('comboboxLoadError')

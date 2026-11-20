@@ -350,7 +350,7 @@ boolean; color?: string; dash?: number[]; curvature?: number }` (source/target a
   `false`
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
   `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
-  canvas-declutter zoom threshold used before this property existed (toggled via a
+  canvas-declutter zoom threshold (toggled via a
   `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
   `withEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
   them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —
@@ -2240,7 +2240,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
   again rather than replaying the announcement, and failures added or changed after mount announce
   either way. A queue carrying no `stage="failed"` row with an `error` announces nothing. Remove
-  any host `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  any host `role="status"`/`role="alert"` hand-added once it is set —
   otherwise the initial failures are announced twice, through the native role and again through
   the shared sink
 
@@ -3189,7 +3189,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   that is part of the page a user is arriving on. Read once, when the panel first mounts: a later
   reconnection or adoption stages the existing state again rather than replaying it, and later
   transitions are announced either way. Remove any host `role="status"`/`role="alert"` hand-added
-  before this property existed once it is set — otherwise the initial state is announced twice,
+  once it is set — otherwise the initial state is announced twice,
   through the native role and again through the shared sink
 - `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
@@ -3319,7 +3319,7 @@ at the same size tier, so the toolbar row renders as one flush line.
   of the page a user is arriving on, whose visible error or empty state is already read in document
   order. Read once, when the search first mounts: a later reconnection or adoption stages the
   existing state again rather than replaying it, and later transitions are announced either way.
-  Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
+  Remove any host `role="status"`/`role="alert"` hand-added once it
   is set — otherwise the initial state is announced twice, through the native role and again
   through the shared sink
 - `placeholder?: string` — query-field placeholder. Omission uses the localized generic "Search"
@@ -3492,7 +3492,7 @@ an answer that is part of the page a user is arriving on, whose error text is al
 document order. Read once, when the answer first mounts: a later reconnection or adoption stages
 the existing error again rather than replaying it, and later `errorText` changes are announced
 either way. An answer with no error announces nothing. Remove any host
-`role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
+`role="status"`/`role="alert"` hand-added once it is set — otherwise
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details

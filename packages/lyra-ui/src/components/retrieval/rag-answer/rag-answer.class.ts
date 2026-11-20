@@ -141,8 +141,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
    *  already read in document order. Read once, when the answer first mounts: a later
    *  reconnection or adoption stages the existing error again rather than replaying it, and
    *  later `errorText` changes are announced either way. An answer with no error announces
-   *  nothing. Remove any host `role="status"`/`role="alert"` hand-added before this property
-   *  existed once it is set -- otherwise the initial error is announced twice, through the native
+   *  nothing. Remove any host `role="status"`/`role="alert"` hand-added once it
+   *  is set -- otherwise the initial error is announced twice, through the native
    *  role and again through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
   /** Omits the source section that otherwise renders when source data or slotted content exists. */

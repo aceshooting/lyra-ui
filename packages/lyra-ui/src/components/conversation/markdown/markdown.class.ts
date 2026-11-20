@@ -121,8 +121,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * Fenced code blocks are syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
  * uses (on unless `without-syntax-highlighting` — a pure upgrade gated by whether `shiki` is installed at
  * all, not a separate opt-in). `languages` supplies explicit grammars while the full loader
- * remains the fallback. The very first render of any content is always plain
- * (identical to today's output); highlighting arrives as an asynchronous upgrade one render later,
+ * remains the fallback. The very first render of any content is always plain; highlighting arrives as an asynchronous upgrade one render later,
  * once shiki resolves. Plain streaming defers highlighting until completion; progressive streaming highlights settled blocks. The
  * opt-in `streaming-render="progressive"` mode parses and sanitizes settled Markdown blocks as
  * they arrive while keeping the mutable tail as text; its settled block nodes stay stable across
@@ -351,7 +350,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.
-   *  `'_blank'` (the default) preserves today's exact output. Set to `null`
+   *  `'_blank'` (the default) emits `target="_blank"`. Set to `null`
    *  (or the empty string, e.g. via the `link-target=""` attribute) to omit
    *  `target`/`rel` entirely, so rendered links open in the same tab. */
   @property({ attribute: 'link-target' }) override linkTarget: string | null =
@@ -381,7 +380,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  (a source `######` with a positive offset stays at `<h6>` rather than
    *  overflowing past the HTML heading levels; the floor at `1` is
    *  defensive, since this property is meant to be additive-only). `0`
-   *  (the default) preserves today's exact `<h${token.depth}>` output. */
+   *  (the default) emits plain `<h${token.depth}>`. */
   @property({ type: Number, attribute: 'heading-offset' })
   override headingOffset = 0;
 
@@ -434,7 +433,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
    *  same slugs regardless of this property -- it only controls whether the `id` attribute is
-   *  emitted into the rendered DOM. `false` (the default) preserves today's exact output.
+   *  emitted into the rendered DOM. `false` (the default) emits no heading `id`.
    *
    *  When `htmlMode` is `sanitize` (the default), a slug whose *value* collides with a real
    *  `document` property name (e.g. a heading literally titled "Title", "Location", or "Forms"
@@ -448,7 +447,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. An inline `$` opens
    *  only before a non-space and closes only after a non-space when no digit follows, so prose
    *  such as `$500 and $200` stays text; `\$` escapes a literal dollar. `false` (the default)
-   *  renders `$...$` literally, unparsed -- today's exact output. */
+   *  renders `$...$` literally, unparsed. */
   @property({ type: Boolean }) override math = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the rendered document scrolls internally past this

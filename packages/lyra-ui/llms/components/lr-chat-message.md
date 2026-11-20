@@ -94,7 +94,7 @@ accepted state is committed.
 attachment chips, rendered below the message body), `failure` (only meaningful while
 `status="failed"`: host-supplied content — typically a `role="alert"` banner plus its own retry
 control — that replaces the built-in status text, retry button, and live-region announcement
-entirely; unset, `status="failed"` renders exactly as before)
+entirely; unset, `status="failed"` renders the built-in status text and retry button)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
 `collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),

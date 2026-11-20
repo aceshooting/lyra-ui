@@ -142,9 +142,9 @@ export class LyraFileIcon extends LyraElement {
   @property({ type: Number }) bytes = 0;
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
-  /** Shows only the icon or the icon together with its label and optional description. */
   private _mode: LyraFileIconMode = 'icon';
 
+  /** Shows only the icon or the icon together with its label and optional description. */
   @property({ reflect: true, converter: FILE_ICON_MODE })
   get mode(): LyraFileIconMode {
     return this._mode;

@@ -547,7 +547,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   override render(): TemplateResult {
     const decided = this.decision != null;
     const hostLabel = hostAriaLabel(this);
-    const headingLevel = resolveHeadingLevel(this.headingLevel ?? 'none');
+    const headingLevel = resolveHeadingLevel(this.headingLevel, 'none');
     return html`
       <div
         part="base"

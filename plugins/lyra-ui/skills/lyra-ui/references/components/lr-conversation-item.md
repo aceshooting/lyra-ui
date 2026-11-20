@@ -153,7 +153,7 @@ row that is both dense and active keeps the active background and the promoted e
 contrast.
 
 `--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
-`[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
+`[part='base']` and `[part='select-button']`. `flex-start` — the default — suits the
 common multi-line row (a title plus an `excerpt`): centering that layout against a single-line
 trailing action would misalign the title's own baseline. Set it to `center` for a row that is
 reliably single-line (no excerpt, no wrapping title) alongside a taller trailing action (e.g. an

@@ -203,12 +203,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** Filename, used only while `file` is unset. */
   @property() name = '';
 
+  private _bytes?: number;
   /** File size as a raw byte count, used only while `file` is unset. Named for what it holds
    *  rather than `size`, which in this library (this component included) names a size *tier*
    *  (`small`/`medium`/`large`, `xs`...`xl`). `0` is a known empty file and renders `0 B`; only
    *  omission means unknown. Non-finite/negative inputs are treated as unknown. */
-  private _bytes?: number;
-
   @property({ type: Number })
   get bytes(): number | undefined {
     return this._bytes;
@@ -263,7 +262,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    *  smaller, borderless pill instead of the default bordered chip, for an icon-only-adjacent
    *  attachment affordance (e.g. a composer's pending-attachment tray) without hand-tuning several
    *  `::part()` custom properties individually. `m` and the steps above it keep the default
-   *  density. Opt-in: with no size the chip renders exactly as before. Unsupported values
+   *  density. Opt-in: with no size the chip renders at the default density. Unsupported values
    *  normalize to the omitted state and remove the attribute. */
   @property({ reflect: true, converter: optionalSizeConverter })
   get size(): LyraSize | undefined {
@@ -287,7 +286,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    *  entirely for an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a
    *  thumbnail-only density purely through props, with no consumer-side CSS. Has no effect for a
    *  non-image chip (there is no thumbnail to fall back to showing on its own) or at the default
-   *  density. `false` (the default) reproduces today's exact output. */
+   *  density. `false` (the default) leaves it off. */
   @property({ type: Boolean, reflect: true, attribute: 'thumbnail-only' })
   thumbnailOnly = false;
 
@@ -305,14 +304,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ attribute: 'uploading-label' }) uploadingLabel?: string;
 
   /** Visible status text shown for `status="error"`. Override for
-   *  i18n/locale. Defaults to `'Upload failed'`, reproducing today's exact
-   *  text byte-for-byte. */
+   *  i18n/locale. Defaults to `'Upload failed'`. */
   @property({ attribute: 'upload-failed-label' }) uploadFailedLabel?: string;
 
   /** Override for the empty-name fallback shown (and used as the `title` tooltip) when neither
-   *  `file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,
-   *  reproducing today's exact hardcoded text byte-for-byte. A blank or whitespace-only value falls
-   *  back to the default. */
+   *  `file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`. A blank
+   *  or whitespace-only value falls back to the default. */
   @property({ attribute: 'untitled-label' }) untitledLabel?: string;
 
   // The object URL created for `file`'s image thumbnail, plus the exact
@@ -322,6 +319,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   // `ensureObjectUrl()` call because it isn't itself an image).
   private objectUrl?: string;
   private objectUrlFile?: File;
+  private objectUrlOwner?: typeof URL;
 
   /** Owns the shared assertive light-DOM region used for upload failures. */
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
@@ -394,16 +392,20 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    * image thumbnail. Called from the update lifecycle, never from `render()`,
    * so rendering stays a pure projection of already-prepared state. */
   private ensureObjectUrl(file: File): string {
-    if (this.objectUrlFile === file && this.objectUrl) return this.objectUrl;
+    const urlApi = this.ownerDocument.defaultView?.URL ?? globalThis.URL;
+    if (this.objectUrlFile === file && this.objectUrl && this.objectUrlOwner === urlApi) return this.objectUrl;
     this.revokeObjectUrl();
-    this.objectUrl = URL.createObjectURL(file);
+    // Created and later revoked through the owner document's realm, which owns the preview.
+    this.objectUrl = urlApi.createObjectURL(file);
+    this.objectUrlOwner = urlApi;
     this.objectUrlFile = file;
     return this.objectUrl;
   }
 
   private revokeObjectUrl(): void {
-    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
+    if (this.objectUrl) (this.objectUrlOwner ?? globalThis.URL).revokeObjectURL(this.objectUrl);
     this.objectUrl = undefined;
+    this.objectUrlOwner = undefined;
     this.objectUrlFile = undefined;
   }
 

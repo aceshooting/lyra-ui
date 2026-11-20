@@ -387,8 +387,7 @@ export interface ParseMarkdownOptions {
   /** Already combines `!withoutSyntaxHighlighting && !streaming` -- computed by the caller since that
    *  combination differs by call site only in name, never in meaning. */
   highlightCodeOption: boolean;
-  /** Bound LRU accessor (not the raw map): reads must go through it so a hit refreshes its
-   *  recency, exactly as before extraction. */
+  /** Bound LRU accessor (not the raw map): reads must go through it so a hit refreshes its recency. */
   getCachedHighlight: (key: string) => string | undefined;
   failedHighlightKeys: Set<string>;
   /** Shared admission set when several groups belong to the same document. */

@@ -292,14 +292,17 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
     return this._strokes.length ? (this.dataUrl ??= this.exportPng()) : '';
   }
 
+  /** The owning `<form>`, or `null` when there is none. */
   get form(): HTMLFormElement | null {
     return this.internals.form;
   }
 
+  /** The control's `ValidityState`. */
   get validity(): ValidityState {
     return this.internals.validity;
   }
 
+  /** The current validation message, or an empty string when valid. */
   get validationMessage(): string {
     return this.internals.validationMessage;
   }

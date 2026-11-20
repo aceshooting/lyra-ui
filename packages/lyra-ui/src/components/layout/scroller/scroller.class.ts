@@ -106,8 +106,10 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     () => this.renderRoot?.querySelector<HTMLElement>('[part="viewport"]') ?? null,
   );
 
+  /** Scroll axis: `horizontal` scrolls inline, `vertical` scrolls block. */
   @property({ reflect: true, converter: declaredDefaultConverter<LyraOrientation>('horizontal') })
   orientation: LyraOrientation = 'horizontal';
+  /** Renders previous/next buttons that scroll the viewport along its `orientation`. */
   @property({ type: Boolean, reflect: true }) controls = false;
   /** Hides the native scrollbar while preserving scrolling. */
   @property({ type: Boolean, attribute: 'without-scrollbar', reflect: true })
@@ -115,7 +117,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   /** Removes both visual edge cues while leaving native scrolling untouched. */
   @property({ type: Boolean, attribute: 'without-shadow', reflect: true })
   withoutShadow = false;
+  /** Distance in CSS pixels the control buttons scroll per activation; zero, negative or non-finite scrolls 80% of the viewport size. */
   @property({ type: Number, attribute: 'scroll-step' }) scrollStep = 0;
+  /** Accessible name of the scroll viewport; the host `aria-label` takes precedence. */
   @property() label = '';
   /** Accessible name of the scroll viewport. A present host aria-label takes precedence. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

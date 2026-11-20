@@ -25,7 +25,6 @@ import {
   Announcer,
   AnnouncementSinkController,
 } from '../../../internal/announcer.js';
-import { isRtl } from '../../../internal/rtl.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   isArrowKey,
@@ -753,7 +752,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const cells = this.sortedLayout;
     const index = cells.findIndex((c) => c.cellId === cell.cellId);
     if (index < 0) return;
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = index;
@@ -772,7 +771,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   private keyboardMove(cell: LyraDashboardCell, key: string): boolean {
     if (!this.cellsDraggable || this.readonly || cell.locked) return false;
-    const rtlFlip = isRtl(this) ? -1 : 1;
+    const rtlFlip = this.effectiveDirection === 'rtl' ? -1 : 1;
     let dx = 0;
     let dy = 0;
     if (key === 'ArrowRight') dx = rtlFlip;
@@ -1079,7 +1078,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
         extra: { pointermove: (event) => this.onCellPointerMove(event as PointerEvent) },
       }),
       ownerWindow,
-      rtlFlip: isRtl(this) ? -1 : 1,
+      rtlFlip: this.effectiveDirection === 'rtl' ? -1 : 1,
       layout,
       spatialIndex: createDashboardSpatialIndex(layout, this.safeColumns),
     };
@@ -1221,7 +1220,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
         extra: { pointermove: (event) => this.onResizeHandlePointerMove(event as PointerEvent) },
       }),
       ownerWindow,
-      rtlFlip: isRtl(this) ? -1 : 1,
+      rtlFlip: this.effectiveDirection === 'rtl' ? -1 : 1,
       layout,
       spatialIndex: createDashboardSpatialIndex(layout, this.safeColumns),
     };

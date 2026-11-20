@@ -71,8 +71,10 @@ readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
 localized default. A host `aria-describedby` describes the composed textarea.
 Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
-duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
-source ids use the same unique nonblank projection.
+duplicates are omitted first-wins before section gating and child forwarding. Selected source ids
+use the same unique nonblank projection. A pick in the built-in model, voice or source picker
+writes `model`, `voice` or `selectedSourceIds` before its change event, so a host rejects it by
+reassigning the previous value.
 
 Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
 nested source children and queued attachments. Mutating a previously assigned collection has no

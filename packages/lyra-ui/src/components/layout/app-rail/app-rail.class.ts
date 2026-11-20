@@ -1,3 +1,4 @@
+import { OwnedTimeout } from '../../../internal/owned-timer.js';
 import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
@@ -280,11 +281,9 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-panel-inset-block-start=0] - Block-start (top) inset shared by
  *   `[part="panel"]` and `[part="backdrop"]` -- raise it to leave room for a fixed app bar/status
  *   area above the drawer instead of the panel/scrim starting flush with the viewport top.
- * @cssprop [--lr-app-rail-panel-radius=0] - Uniform corner radius of `[part="panel"]`. `0` (the
- *   default) reproduces today's flush-edged drawer; pairs naturally with a nonzero
+ * @cssprop [--lr-app-rail-panel-radius=0] - Uniform corner radius of `[part="panel"]`. `0` (the default) renders a flush-edged drawer; pairs naturally with a nonzero
  *   `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top corners. Each per-corner
- *   token below defaults to this one, so setting only this token still rounds all four corners
- *   uniformly, exactly as before the per-corner tokens existed.
+ *   token below defaults to this one, so setting only this token still rounds all four corners uniformly.
  * @cssprop [--lr-app-rail-panel-radius-start-start=var(--lr-app-rail-panel-radius)] - Logical
  *   `border-start-start-radius` of `[part="panel"]` -- the corner at the drawer's own flush
  *   inline-start edge, block-start side.
@@ -331,13 +330,11 @@ export interface LyraAppRailEventMap {
  *   subtle border, with a stronger boundary when the resizer is present and no border for the
  *   plain frame. The plain frame keeps its system-colored boundary in forced colors.
  * @cssprop [--lr-app-rail-footer-padding=var(--lr-space-m)] - `[part="footer"]`'s padding.
- * @cssprop [--lr-app-rail-nav-padding=var(--lr-space-s)] - `[part="nav"]`'s padding, unset
- *   reproducing the value this rule hard-coded before the token existed.
+ * @cssprop [--lr-app-rail-nav-padding=var(--lr-space-s)] - `[part="nav"]`'s padding.
  * @cssprop [--lr-app-rail-nav-gap=var(--lr-space-xs)] - Gap between slotted items inside
- *   `[part="nav"]`, unset reproducing the value this rule hard-coded before the token existed.
+ *   `[part="nav"]`.
  * @cssprop [--lr-app-rail-header-min-block-size=auto] - `[part="header"]`'s minimum block size.
- *   `auto` (the default) is the property's own initial value, so unset reproduces today's exact
- *   height; set it to reserve room for header content that mounts or resizes asynchronously.
+ *   `auto` (the default) is the property's own initial value, so unset leaves the height natural; set it to reserve room for header content that mounts or resizes asynchronously.
  * @cssprop [--lr-app-rail-collapse-toggle-size=var(--lr-icon-button-size)] - Collapse-control square
  *   size. Clamped to at least 24 CSS px, with the shared icon-button floor on touch-capable or
  *   non-hovering devices.
@@ -508,8 +505,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
    *  collapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail
    *  viewport. Only consulted while `mode` isn't pinned via `forceMode` — that continues to take
-   *  full priority, unchanged. Unset (the default, `null`) reproduces today's exact
-   *  breakpoint-only behavior. */
+   *  full priority. Unset (the default, `null`) uses breakpoint-only behavior. */
   @property({ attribute: 'preferred-mode', noAccessor: true })
   preferredMode?: LyraAppRailPreferredMode | null;
 
@@ -552,7 +548,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Suppresses the built-in mobile `[part='toggle']` hamburger/OPEN button -- for a consumer that
    *  already owns an external mobile-menu trigger wired to this rail's own `open` property (see
-   *  `trigger`/`for`). `false` (the default) reproduces today's exact output; note `open` still
+   *  `trigger`/`for`). `false` (the default) renders the built-in toggle; note `open` still
    *  has no built-in external trigger of its own once this is set, since `lr-toggle` only fires
    *  from the toggle button being removed. This does NOT remove the button once the overlay is
    *  open: at that point it has been reparented inside the trapped `[part="panel"]` (see the
@@ -569,7 +565,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `persist="preferred-mode"`. `preferredMode` and `forceMode` keep their meaning; an unset
    *  `preferredMode` rests as `'icon-only'` instead of following `icon-only-breakpoint`. The mobile
    *  presentation is unchanged, and `[part="collapse-toggle"]` is not rendered while this is set
-   *  (the pin control replaces it). `false` (the default) reproduces today's exact behavior.
+   *  (the pin control replaces it). `false` (the default) leaves auto-hide off.
    *  @default false */
   @property({ type: Boolean, reflect: true, attribute: 'auto-hide' }) autoHide = false;
 
@@ -592,8 +588,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *
    *  Not rendered at all while `mode` is `'mobile'` -- there is no inline rail to collapse there,
    *  and rendering it would add a second, meaningless control to the focus-trapped overlay next to
-   *  the `[part="toggle"]` dismiss button. `false` (the default) reproduces today's exact output:
-   *  no extra element, and `[part="header"]`'s own block layout unchanged. */
+   *  the `[part="toggle"]` dismiss button. `false` (the default) renders no extra element, and `[part="header"]`'s own block layout is unchanged. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
 
   /**
@@ -682,8 +677,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  Call `preventDefault()` on `lr-rail-resize-request` to keep the current width. A request
    *  listener that disables resizing, leaves full mode, or disconnects the rail also cancels the
    *  pending proposal without overwriting listener state. `false` (the
-   *  default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token exactly
-   *  as before this property existed. */
+   *  default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token in effect. */
   @property({ type: Boolean, reflect: true }) resizable = false;
 
   /** When set, persists the fields selected by `persist` to `localStorage` under
@@ -692,7 +686,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `open` is restored only onto a mount whose breakpoint-derived mode is already `'mobile'` —
    *  `open` means nothing at a wider breakpoint (see its own doc), so a stored one is dropped
    *  there rather than left primed to throw the overlay open the moment the viewport narrows.
-   *  Unset (the default) means no persistence, exactly as before. */
+   *  Unset (the default) means no persistence. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
 
   /**
@@ -781,8 +775,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this._peeking;
   }
   @state() private _peeking = false;
-  private peekOpenTimer?: ReturnType<typeof setTimeout>;
-  private peekCloseTimer?: ReturnType<typeof setTimeout>;
+  private readonly peekOpenTimer = new OwnedTimeout(this);
+  private readonly peekCloseTimer = new OwnedTimeout(this);
   private peekPointerInside = false;
   /** Keyboard-originated focus is inside the rail: pointer-originated focus (a click) must not
    *  hold the peek open after the pointer has left. */
@@ -805,15 +799,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private clearPeekOpen(): void {
-    if (this.peekOpenTimer === undefined) return;
-    clearTimeout(this.peekOpenTimer);
-    this.peekOpenTimer = undefined;
+    this.peekOpenTimer.cancel();
   }
 
   private clearPeekClose(): void {
-    if (this.peekCloseTimer === undefined) return;
-    clearTimeout(this.peekCloseTimer);
-    this.peekCloseTimer = undefined;
+    this.peekCloseTimer.cancel();
   }
 
   private setPeeking(next: boolean, options?: { silent?: boolean }): void {
@@ -859,7 +849,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private startPeekOpen(immediate = false): void {
     this.clearPeekClose();
-    if (this._peeking || this.peekOpenTimer !== undefined || this.peekDismissed || !this.peekEligible) return;
+    if (this._peeking || this.peekOpenTimer.pending || this.peekDismissed || !this.peekEligible) return;
     const delay = immediate ? 0 : finiteDuration(this.peekOpenDelay, 150);
     const open = (): void => {
       if (this.peekPointerInside || this.peekKeyboardFocusInside) this.setPeeking(true);
@@ -868,20 +858,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       open();
       return;
     }
-    this.peekOpenTimer = setTimeout(() => {
-      this.peekOpenTimer = undefined;
-      open();
-    }, delay);
+    this.peekOpenTimer.schedule(delay, open);
   }
 
   private startPeekClose(): void {
     this.clearPeekOpen();
-    if (!this._peeking || this.peekCloseTimer !== undefined) return;
+    if (!this._peeking || this.peekCloseTimer.pending) return;
     if (this.peekPointerInside || this.peekKeyboardFocusInside) return;
-    this.peekCloseTimer = setTimeout(() => {
-      this.peekCloseTimer = undefined;
+    this.peekCloseTimer.schedule(finiteDuration(this.peekCloseDelay, 300), () => {
       if (!this.peekPointerInside && !this.peekKeyboardFocusInside) this.setPeeking(false);
-    }, finiteDuration(this.peekCloseDelay, 300));
+    });
   }
 
   private onPeekPointerEnter = (event: PointerEvent): void => {
@@ -1489,8 +1475,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Resolves the settable external open trigger -- a direct `trigger` reference, or the element
    *  `for` idrefs, in that order. `null` when neither is set or `for` doesn't resolve to a real
    *  element, in which case `activateMobileOverlay()`'s own fallback (whatever held focus when
-   *  the overlay opened -- e.g. the built-in toggle after its own click) continues to apply
-   *  exactly as before either property existed. */
+   *  the overlay opened -- e.g. the built-in toggle after its own click) continues to apply. */
   private resolveExternalTrigger(): HTMLElement | null {
     if (this.trigger) return this.trigger;
     if (!this.for) return null;

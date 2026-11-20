@@ -253,14 +253,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.requestUpdate('rows', previous);
   }
 
-  /** Column allow-list (and CSV header labels) for both export formats. Left
-   *  at its default empty array, both formats fall back to the union of the
-   *  rows' own keys instead (see `effectiveColumns()`), rather than CSV
-   *  degrading to a blank file while only JSON had a fallback. Assigning the
-   *  same array again is ignored. */
   private _columns: readonly Readonly<LyraCsvColumn>[] = Object.freeze([]);
   private columnsSource?: unknown;
 
+  /** Column allow-list (and CSV header labels) for both export formats. Left
+   *  at its default empty array, both formats fall back to the union of the
+   *  rows' own keys instead (see `effectiveColumns()`). Assigning the
+   *  same array again is ignored. */
   get columns(): readonly Readonly<LyraCsvColumn>[] {
     return this._columns;
   }
@@ -292,6 +291,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  collected has failed, and silently downloading an empty file would hide that. */
   @property({ attribute: false }) getRows?: () => readonly Record<string, unknown>[];
 
+  /** Base name of the downloaded file, without extension; the chosen format is appended (`export.csv`, `export.json`). Defaults to `export`. */
   @property() filename = 'export';
   /** Prepends a UTF-8 byte-order mark (U+FEFF) to the built-in CSV download only. Excel on
    *  Windows ignores a downloaded file's MIME charset and decodes a BOM-less CSV with the
@@ -359,6 +359,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private _appearance?: LyraExportButtonAppearance;
 
+  /** Disables the trigger and closes the menu so no export can start. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Controlled busy state for async/server-generated exports. */
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -374,6 +375,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    * When unset, a nonempty visible `label` provides the name; an empty visible label uses the
    * localized default. An explicit empty `aria-label` remains authoritative by presence. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Whether the format menu is open. Reflects to the `open` attribute; only opens when more than one format is available. */
   @property({ type: Boolean, reflect: true }) open = false;
 
   @query('[part~="trigger"]') private triggerEl?: HTMLButtonElement;

@@ -238,10 +238,10 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     writeOptionalSize(this, this._size, next, value => { this._size = value; });
   }
 
-  /** Physical direction in which the optional visual countdown empties. Unsupported values
-   *  normalize to the omitted default. */
   private _countdown: AlertCountdown;
 
+  /** Physical direction in which the optional visual countdown empties. Unsupported values
+   *  normalize to the omitted default. */
   @property({ reflect: true, converter: ALERT_COUNTDOWN })
   get countdown(): AlertCountdown {
     return this._countdown;
@@ -258,9 +258,9 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
    * Removing the attribute restores persistence. A hidden document pauses the countdown. */
   @property({ type: Number, useDefault: true }) duration: number = Infinity;
 
-  /** Semantic alert tone. Unsupported values normalize to `primary`. */
   private _variant: AlertVariant = 'primary';
 
+  /** Semantic alert tone. Unsupported values normalize to `primary`. */
   @property({ reflect: true, converter: ALERT_VARIANT })
   get variant(): AlertVariant {
     return this._variant;

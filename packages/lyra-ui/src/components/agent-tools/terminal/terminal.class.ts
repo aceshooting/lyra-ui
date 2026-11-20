@@ -311,30 +311,35 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
+  /** Text that replaces the buffer whenever it changes; use `write()` to append instead. */
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) normalize to a
    *  1..10,000 range. Retained text is additionally limited to 2,000,000 UTF-16 units, each line
    *  to 20,000 scalar columns, and each write/content commit to 1,000,000 input UTF-16 units.
    *  lr-overflow reports loss; effective retained lines also depend on their lengths. */
   @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
+  /** Keeps the view pinned to the newest output. Defaults to `true`; reflects to the `follow` attribute. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */
   @property({ type: Boolean, attribute: 'without-wrap', reflect: true }) withoutWrap = false;
   /** Hides the copy-to-clipboard toolbar button. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
+  /** Shows a download button that saves the buffer text as a file. Reflects to the `downloadable` attribute. */
   @property({ type: Boolean, reflect: true }) downloadable = false;
+  /** File name used for the downloaded buffer text; empty uses `terminal.log`. */
   @property() filename = 'terminal.log';
+  /** Announces newly written output to assistive technology through a live region. */
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
   /** Accessible name for the nested `role="log"`; a non-empty host `aria-label` is forwarded,
    *  while an empty value falls back to the localized terminal-purpose label. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  /** Last caller-assigned array: a parent re-committing the same binding is not a change. */
+  private lastHighlightsInput: unknown = this._highlights;
   /** Line-range highlights keyed by stable id. Empty/blank ids and highlights with a missing,
    *  malformed, or non-discriminated anchor are omitted (`snapshotLyraHighlights`) before
    *  duplicates normalize first-wins for range ownership, activation, and anchor lookup.
    * @default [] */
-  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
-  /** Last caller-assigned array: a parent re-committing the same binding is not a change. */
-  private lastHighlightsInput: unknown = this._highlights;
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
@@ -344,6 +349,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this._highlights = snapshotLyraHighlights(value);
     this.requestUpdate('highlights', previous);
   }
+  /** Id of the highlight currently marked active; set when a highlight is activated. */
   @property({ attribute: false }) activeHighlightId: string | null = null;
 
   private get normalizedHighlights(): readonly LyraHighlight[] {
@@ -659,6 +665,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.emitSearchChangeIfChanged(previousSearch);
   }
 
+  /** Empties the buffer and discards any pending announcement, keeping the current `content` from re-applying. */
   clear(): void {
     const previousSearch = this.searchState();
     this.cancelPendingAnnouncement();
@@ -669,6 +676,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.emitSearchChangeIfChanged(previousSearch);
   }
 
+  /** Returns the buffered output as plain text without styling, one line per buffer line. */
   getPlainText(): string {
     return this.buffer.map(plainTextOfLine).join('\n');
   }
@@ -690,6 +698,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return pieces.filter((piece) => piece !== '').join('\n');
   }
 
+  /** Scrolls to the newest line and turns `follow` back on. */
   scrollToBottom(): void {
     this.follow = true;
     const last = this.buffer[this.buffer.length - 1];
@@ -809,6 +818,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return true;
   }
 
+  /** Clears the search query and its matches, emitting a search change when the state differed. */
   clearSearch(): void {
     const previousSearch = this.searchState();
     this.searchQuery = '';
@@ -871,6 +881,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
   };
 
+  /** Scrolls to a line-range anchor or the highlight with that id, turning `follow` off. Resolves `true` once scrolled, `false` when the target is missing or outside the buffer. */
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     let start: number | undefined;
     if (typeof target === 'string') {

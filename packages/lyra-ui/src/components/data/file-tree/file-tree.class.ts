@@ -760,6 +760,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     }
   }
 
+  /** Expands every directory; resolves once the expansion has rendered. Does nothing when `treeSource` is set. */
   expandAll(): Promise<void> | void {
     if (this.treeSource !== undefined) return;
     const expandTree = (): Promise<void> | undefined =>
@@ -774,6 +775,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     return this.updateComplete.then(() => expandTree());
   }
 
+  /** Collapses every directory. Does nothing when `treeSource` is set. */
   collapseAll(): void {
     if (this.treeSource !== undefined) return;
     void this.renderRoot?.querySelector<LyraTree>(tag('tree'))?.collapseAll();

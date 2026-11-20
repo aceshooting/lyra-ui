@@ -57,7 +57,7 @@ at the same size tier, so the toolbar row renders as one flush line.
   of the page a user is arriving on, whose visible error or empty state is already read in document
   order. Read once, when the search first mounts: a later reconnection or adoption stages the
   existing state again rather than replaying it, and later transitions are announced either way.
-  Remove any host `role="status"`/`role="alert"` hand-added before this property existed once it
+  Remove any host `role="status"`/`role="alert"` hand-added once it
   is set — otherwise the initial state is announced twice, through the native role and again
   through the shared sink
 - `placeholder?: string` — query-field placeholder. Omission uses the localized generic "Search"

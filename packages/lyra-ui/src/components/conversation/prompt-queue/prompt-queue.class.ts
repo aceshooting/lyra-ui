@@ -319,12 +319,14 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   /** Renders each queued prompt as read-only text instead of an editor. */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
+  /** Disables the queue as a unit: editing, actions and paging. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Visible queue heading and accessible-name fallback. Omitting it localizes the default
    *  `promptQueueLabel` message; an explicit empty string (`label=""` or `.label = ''`) suppresses
    *  that default, rendering no visible heading (`accessibleLabel` still overrides the region's
    *  own accessible name independently). */
   @property() label?: string;
+  /** Overrides the region's accessible name; wins over `label` and the localized default. Reads from the `aria-label` attribute. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Heading level of the visible label; `none` renders it as plain text. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';

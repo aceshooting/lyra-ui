@@ -32,7 +32,7 @@ later values restore the corresponding content.
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — tighter, left-aligned rendering (less padding, a lighter heading weight) for
   use inside a constrained space like a widget body or table cell; `m` and above keep the
-  centered/spacious full-page default, and leaving it unset renders exactly as before. An
+  centered/spacious full-page default, and leaving it unset keeps that default. An
   unsupported value normalizes to unset and removes the attribute.
 - `announce: boolean = false` (reflected) — announces the heading and description this empty state
   already carries when it first mounts, through the same shared light-DOM polite sink later changes
@@ -98,7 +98,7 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   observed without turning initial distribution into a live update;
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
-  Remove any host `role="status"`/`role="alert"` hand-added before `announce` existed once it is
+  Remove any host `role="status"`/`role="alert"` hand-added as a workaround once it is
   set — otherwise the initial text is announced twice, through the native role and again through
   the shared sink.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`

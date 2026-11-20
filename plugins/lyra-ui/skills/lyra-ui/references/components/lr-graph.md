@@ -343,7 +343,7 @@ boolean; color?: string; dash?: number[]; curvature?: number }` (source/target a
   `false`
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
   `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
-  canvas-declutter zoom threshold used before this property existed (toggled via a
+  canvas-declutter zoom threshold (toggled via a
   `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
   `withEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
   them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —

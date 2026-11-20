@@ -76,7 +76,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   noise. Read once per element lifetime: a later reconnection or adoption stages the same rows
   again rather than replaying the announcement, and failures added or changed after mount announce
   either way. A queue carrying no `stage="failed"` row with an `error` announces nothing. Remove
-  any host `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  any host `role="status"`/`role="alert"` hand-added once it is set —
   otherwise the initial failures are announced twice, through the native role and again through
   the shared sink
 

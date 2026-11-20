@@ -14,7 +14,7 @@ export interface SequenceStripItem {
    * past it instead of landing on it. Above `MAX_RENDERED_CELLS`, one cell paints a whole RANGE of
    * items and activating it always resolves to that range's first item (`cell.start`, see
    * `activateCell()`), so a range cell's disabled state follows that same first item. Omitted or
-   * `false` renders the item exactly as before this field existed.
+   * `false` leaves the item fully actionable.
    */
   readonly disabled?: boolean;
 }

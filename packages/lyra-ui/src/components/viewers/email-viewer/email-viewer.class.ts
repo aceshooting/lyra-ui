@@ -437,7 +437,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
-   *  preserves today's exact body rendering. */
+   *  renders the whole body unfolded. */
   @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
   /** Shared text search and anchor-target API for message body text. Searching for text
    * inside a folded quote reveals matching quotes before navigating the active match, using the

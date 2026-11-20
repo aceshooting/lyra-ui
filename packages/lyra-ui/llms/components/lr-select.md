@@ -175,8 +175,8 @@ the normal combobox trigger continues to expose `aria-required`.
 - `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
   spelled and typed the same as on `lr-popup`/`lr-popover`/`lr-dropdown`/`lr-combobox`
   (`'width' | 'height' | 'both'`). Unset (the default), the listbox sizes to its own content,
-  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`,
-  exactly as before. `sync="width"` drops that content-based clamp so a full-width trigger with
+  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`.
+  `sync="width"` drops that content-based clamp so a full-width trigger with
   short option labels gets a listbox that aligns to its own edges instead of floating narrower in
   the middle. A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the
   space the positioner actually measured beside the trigger, which still keeps an over-wide trigger
@@ -202,7 +202,7 @@ the normal combobox trigger continues to expose `aria-required`.
   the trigger renders that same localized text in place of `placeholder`, from the same `loading`
   message key, so both halves of a pending state read the same words and one
   `registerLyraLocale()` translation reaches both. Nothing to re-localize in the consuming app.
-  With `loading` false an empty selection renders `placeholder` exactly as before. The trigger's
+  With `loading` false an empty selection renders `placeholder`. The trigger's
   accessible name never changes for this: a host `aria-label` wins, then `label`, then
   `placeholder`, then the localized `select` fallback. A value already matching a live option is
   unaffected. Never mutates `value`/`selectedOptions` itself, and does not itself disable the
@@ -447,10 +447,7 @@ changing the shared brand tokens used by other controls.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
-agree at that tier. It used to be dead code: the component declared `--lr-select-trigger-height:
-auto` on `:host`, and a _declared_ value (`auto` is one) wins over the `var()` fallback arm that
-the floor lives in, so the floor never applied and four extra specificity rules existed only to
-patch it back for four of the tiers. Those rules are gone.
+agree at that tier. 
 
 `--lr-select-trigger-height` pins an **exact** trigger height — both a floor and a cap — e.g. to
 pixel-match a sibling text field in the same toolbar row. It is **undeclared by default**, which is

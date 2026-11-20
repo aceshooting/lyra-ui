@@ -778,8 +778,8 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   hit-area floor (WCAG 2.5.8), which the panel's existing `max-block-size` and scrolling contain.
 - `legendControlRole: 'button' | 'checkbox' = 'button'` (attribute `legend-control-role`,
   reflected) — how each `legendInteractive` row's toggle presents itself to assistive tech; inert
-  while `legendInteractive` is unset, exactly like the toggle itself. `'button'` is byte-identical
-  to every legend rendered before this property existed: `<button aria-pressed>`. `'checkbox'`
+  while `legendInteractive` is unset, exactly like the toggle itself. `'button'` renders
+  `<button aria-pressed>`. `'checkbox'`
   renders the SAME `<button>` element with its implicit role overridden to `role="checkbox"` and
   `aria-checked` in place of `aria-pressed` — the swatch, the label, the click handler and the
   platform's own Enter/Space activation are unchanged, so `hiddenCategories`, the cancelable
@@ -966,7 +966,7 @@ countHaloColor?: string; countHaloWidth?: number; zoomOnClick?: boolean }` turns
   changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
   reconciles in place.
 
-  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — today's geometry split)
+  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — the geometry split)
   renders the source as MapLibre's own first-class `heatmap` layer instead, which the geometry split
   cannot express at all: thousands of overlapping circles read as one opaque blob rather than as
   where the data is concentrated. `heatmap?: LyraMapHeatmapOptions { weightField?: string;

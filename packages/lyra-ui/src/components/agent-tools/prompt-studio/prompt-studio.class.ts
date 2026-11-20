@@ -188,6 +188,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   @property({ attribute: false }) variables: readonly PromptStudioVariable[] = [];
   /** Host-controlled saved versions; a runtime non-array value renders as not-yet-loaded empty data. */
   @property({ attribute: false }) versions: readonly PromptStudioVersion[] = [];
+  /** Id of the saved version shown as selected in the versions list; `null` selects none. */
   @property({ attribute: 'selected-version-id' }) selectedVersionId: string | null = null;
   /** Accessible name for the studio region. It is independent from the visible `heading`; when
    * absent, the heading text names the region. A host `aria-label` remains authoritative. */
@@ -198,7 +199,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   /** Semantic level of the visible toolbar heading. Use `none` to keep the visual heading text
    *  without exposing it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
+  /** Marks a prompt run as in progress and disables the run action. Reflects to the `running` attribute. */
   @property({ type: Boolean, reflect: true }) running = false;
+  /** Disables editing, reordering and run controls. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Opts into native move-up/move-down buttons for each message. A move first emits the
    * cancelable `lr-message-reorder-request`, so a host that needs asynchronous persistence can
@@ -659,14 +662,14 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   /** A section title one level below the toolbar heading; `none` keeps the text without heading semantics. */
   private renderSubheading(text: string): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel ?? 'none');
+    const level = resolveHeadingLevel(this.headingLevel, 'none');
     const sub = level && String(Math.min(6, Number(level) + 1));
     return html`<div class="subheading" role=${sub ? 'heading' : nothing} aria-level=${sub || nothing}>${text}</div>`;
   }
 
   /** The toolbar heading at `headingLevel`; `none` keeps the text without heading semantics. */
   private renderHeading(text: string): TemplateResult {
-    switch (resolveHeadingLevel(this.headingLevel ?? 'none')) {
+    switch (resolveHeadingLevel(this.headingLevel, 'none')) {
       case '1':
         return html`<h1>${text}</h1>`;
       case '2':

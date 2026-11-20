@@ -3473,7 +3473,7 @@ it("silently drops a source rejection that arrives after disconnect", async () =
   }
 });
 
-it("silently settles an independent AbortError for the current source request", async () => {
+it("reports an independent AbortError for the current source request as a source failure", async () => {
   const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
   let reject!: (err: unknown) => void;
   el.source = () =>
@@ -3495,9 +3495,10 @@ it("silently settles an independent AbortError for the current source request", 
     el.addEventListener('lr-source-error', event => failures.push(event.detail.error));
     reject(error);
     await aTimeout(0);
-    expect(failures).to.deep.equal([]);
-    expect(warned).to.equal(false);
-    expect(el.shadowRoot!.querySelector(".source-error") === null).to.equal(true);
+    await el.updateComplete;
+    expect(failures.length === 1 && failures[0] === error).to.equal(true);
+    expect(warned).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="source-error-row"]') !== null).to.equal(true);
   } finally {
     console.warn = originalWarn;
   }
@@ -3519,13 +3520,19 @@ it("does not keep an earlier query's rows as the answer to a query its source ab
   await settleComboboxSource(el);
   const failures: unknown[] = [];
   el.addEventListener('lr-source-error', event => failures.push(event.detail.error));
-  requiredItem(calls, 1, 'second source call').reject(new DOMException("aborted", "AbortError"));
-  await aTimeout(0);
-  await el.updateComplete;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    requiredItem(calls, 1, 'second source call').reject(new DOMException("aborted", "AbortError"));
+    await aTimeout(0);
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
 
-  expect(failures).to.have.length(0);
+  expect(failures).to.have.length(1);
   expect(el.shadowRoot!.querySelectorAll('[part="option"][data-value="old"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector(".source-error") === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="source-error-row"]') !== null).to.equal(true);
 });
 
 it("moves the active option up with ArrowUp while the listbox is already open", async () => {

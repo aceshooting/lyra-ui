@@ -121,8 +121,7 @@ export interface LyraSwatchPickerEventMap {
  * @cssprop [--lr-swatch-picker-selected-blur=0] - Blur radius of that same ring. 0 by default
  *   (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead.
  * @cssprop [--lr-swatch-picker-shine-duration=0s] - Duration of a rhythmic brighten-and-settle
- *   "shine" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every
- *   existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under
+ *   "shine" on the selected swatch. `0s` (the default) is a no-op -- a static look. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under
  *   `prefers-reduced-motion: reduce`. Independent of `--lr-swatch-picker-selected-blur` (a separate
  *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
  *   identically for a plain color circle and an icon swatch alike.
@@ -145,8 +144,7 @@ export interface LyraSwatchPickerEventMap {
  *   `--lr-theme-swatch-picker-fill-size` on an ancestor to give every tier a shared default, or set
  *   this component hook on an ancestor/direct host to override every tier.
  * @cssprop [--lr-swatch-picker-gap=var(--lr-space-xs)] - Gap between swatches.
- * @cssprop [--lr-swatch-picker-wrap=wrap] - `flex-wrap` on the swatch row. Reproduces today's
- *   hardcoded wrapping row by default; set `nowrap` to confine every swatch to a single row (e.g.
+ * @cssprop [--lr-swatch-picker-wrap=wrap] - `flex-wrap` on the swatch row. Wraps by default; set `nowrap` to confine every swatch to a single row (e.g.
  *   inside a fixed-width popover panel whose height must not shift from a second row).
  * @status stable
  * @since 4.0.0
@@ -257,10 +255,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
-   * gemstone glyph for items with a `gemstone` key and enables its glow/shine recipe. */
   private _mode: LyraSwatchPickerMode = 'swatch';
 
+  /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
+   * gemstone glyph for items with a `gemstone` key and enables its glow/shine recipe. */
   @property({ reflect: true, converter: SWATCH_PICKER_MODE })
   get mode(): LyraSwatchPickerMode {
     return this._mode;

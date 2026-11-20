@@ -394,7 +394,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lr-lite-chart>`'s `selectedIndices`, this component never mutates it itself. Unset (the default,
-  `null`) reproduces today's exact output.
+  `null`) draws no selection state.
 - `multiple: boolean = false` — opts into controlled multi-cell selection through `selectedCells`.
   The existing `selectedCell` is ignored while enabled and resumes when disabled. Single-cell
   behavior is unchanged when omitted.
@@ -482,13 +482,12 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
   instead of the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default)
-  reproduces today's exact locale-derived output.
+  uses the locale-derived name.
 - `data.monthLabelText?: (jsMonth: number, year: number) => string | undefined` (calendar branch
   only) — the month-axis analogue of `weekdayLabelText`: receives the real JS month
   index (`0` January .. `11` December) and full year for a month boundary that would otherwise
   render a label, and, when it returns a string, uses it instead of the built-in
-  `Intl.DateTimeFormat`-derived short month name. Unset (the default) reproduces today's exact
-  locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
+  `Intl.DateTimeFormat`-derived short month name. Unset (the default) uses the locale-derived name. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
   Month labels are measured before painting: overlapping labels yield to the month occupying
@@ -498,7 +497,7 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
-  than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
+  than 2 entries) keeps the 2-endpoint interpolation. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
 color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key rendered **instead of** the

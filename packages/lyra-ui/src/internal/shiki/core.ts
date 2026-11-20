@@ -57,7 +57,7 @@ export type ShikiLanguageInput =
  *  retries a rejected load. */
 export type ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>;
 
-/** One `languages` map entry: either an already-resolved grammar (today's contract, seeded eagerly
+/** One `languages` map entry: either an already-resolved grammar (seeded eagerly
  *  into the `HighlighterCore` at creation) or a {@link ShikiLanguageLoader}, resolved and loaded
  *  into the core lazily via `HighlighterCore.loadLanguage()` the first time a fence actually
  *  requests that key -- see `resolvedShikiLanguages()` and `ensureShikiLanguageLoaded()`. */
@@ -420,7 +420,7 @@ const resolvedLanguagesCache = new WeakMap<
  *
  * When `languages` contains no loader at all, the very same object is returned unchanged --
  * preserving `loadShikiHighlighterCore()`'s own identity-keyed cache for every caller that never
- * uses a loader, unchanged from before this function existed. Otherwise the derived subset is
+ * uses a loader. Otherwise the derived subset is
  * memoized per input object identity, so a caller that re-derives it on every render for the same
  * stable `languages` object still gets the same output object back, and therefore still hits
  * `loadShikiHighlighterCore()`'s identity cache instead of rebuilding (and re-seeding) a

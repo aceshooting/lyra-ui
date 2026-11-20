@@ -696,8 +696,7 @@ function chartDatasetAxis(dataset: unknown): 'y' | 'y2' {
 }
 
 /** The Chart.js dataset `stack` group id, or `undefined` for a series that never set
- *  `LyraChartSeries.stack` -- every such series shares that one implicit group, keeping every
- *  chart written before `stack` existed summing exactly as it always did. */
+ *  `LyraChartSeries.stack` -- every such series shares that one implicit group, so a chart that never sets `stack` sums all series together. */
 function chartDatasetStack(dataset: unknown): string | undefined {
   const value = chartDatasetValue(dataset, 'stack');
   return typeof value === 'string' ? value : undefined;
@@ -813,8 +812,7 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   Resolved via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-xs)] - Axis tick-label font size, in any
  *   CSS length unit. Defaults to `--lr-font-size-xs` (12px at the standard root) because that
- *   matches Chart.js's OWN built-in tick font size, which is what every canvas chart rendered
- *   before this token existed -- leaving it unset must stay byte-identical to that, not shrink to
+ *   matches Chart.js's OWN built-in tick font size, so leaving it unset keeps that size rather than shrinking to
  *   `<lr-lite-chart>`'s SVG default. Also sizes the radar/polarArea `r`-scale `pointLabels` (the
  *   spoke labels), but ONLY once set: those default separately to Chart.js's OWN distinct
  *   `RadialLinearScale` `pointLabels` default (10px, not this token's 12px), and only adopt this
@@ -983,6 +981,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Canvas colors and lengths resolved since the last theme notification. */
   private readonly canvasTokens = new ChartTokenCache(this);
 
+  /** Chart.js chart type (`bar` by default); an unrecognized attribute value falls back to `bar`. A `config.type` overrides it. */
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'bar';
   /**
@@ -1242,7 +1241,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * around the revealed point. Zoom itself remains summary-only and never guesses an x/index map.
    */
   revealSourcePoint(id: string): Promise<boolean>;
+  /** Reveals one source point by its `{ seriesId, sourceIndex }` reference; see the string overload. */
   revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>;
+  /** Reveals one source point, given a spatial point id or a `{ seriesId, sourceIndex }` reference, as a bounded isolated overlay. Resolves `false` when the point is missing, invalid, canceled or obsolete. */
   async revealSourcePoint(ref: LyraSeriesPointRef | string): Promise<boolean> {
     if (typeof ref === 'string') return this.revealSpatialPoint(ref);
     if (!this.isConnected || !ref || typeof ref.seriesId !== 'string') return false;
@@ -1282,6 +1283,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
   }
 
+  /** Category labels for the x axis (or slice/spoke names), aligned by index with each series' `data`. Property-only; assign a new array after changes. */
   @property({ attribute: false }) labels: string[] = [];
   /** Maximum rendered records across all series, clamped to 2–1,000. The plot width may lower
    * this bound. Numeric bucket extremes and both endpoints are retained when the budget permits.
@@ -1524,9 +1526,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *  peer (loaded on first demand), and shows the `reset-zoom-button` while zoomed. */
   @property({ type: Boolean }) zoomable = false;
 
+  /** A CSS `height` for the chart surface (default `280px`); the public `--lr-chart-height` token takes precedence. */
   @property() height = '280px';
+  /** Horizontal axis title. Unset (the default) renders no title. */
   @property({ attribute: 'x-label' }) xLabel: string | null = null;
+  /** Vertical axis title. Unset (the default) renders no title. */
   @property({ attribute: 'y-label' }) yLabel: string | null = null;
+  /** Secondary (right) value axis title. Empty (the default) renders no title. */
   @property({ attribute: 'y2-label' }) y2Label = '';
   /** Lets a linear value axis start at the data minimum instead of always including zero. */
   @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
@@ -1555,7 +1561,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private readonly dataTableId = nextId('chart-data-table');
 
   /** Whether the data table is currently visible. Identical to `withDataTable` whenever
-   *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
+   *  `dataTableToggle` is off, so the unset path renders no toggle. */
   private get dataTableVisible(): boolean {
     return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }
@@ -1568,7 +1574,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /**
    * Per-value-axis override of `stacked`, keyed by `'y'`/`'y2'`. An axis absent from this record
    * -- including every axis when the whole property is unset -- falls back to the chart-wide
-   * `stacked` value, which is what keeps a chart that never sets this byte-identical to before.
+   * `stacked` value.
    * Lets a `stacked` bar series on the primary axis sit next to an unstacked overlay series on
    * `y2` (via `LyraChartSeries.axis: 'y2'`): set `stackedAxes` to `{ y2: false }` alongside
    * `stacked`, or spell out both axes explicitly. The shared categorical axis (`x` for a vertical
@@ -1603,6 +1609,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   @property({ type: Boolean, attribute: 'stack-totals' }) stackTotals = false;
 
+  private _config?: LyraChartConfiguration;
+  private configSource: unknown = undefined;
   /**
    * Raw Chart.js configuration passthrough — mirrors `wa-chart`'s `config`
    * property. Recursively deep-merged over the `LyraChartSeries`-derived
@@ -1623,8 +1631,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * model for canvas rendering, append mutation, CSV export, the accessible name/summary, keyboard
    * navigation/events, the DOM legend, and the fallback data table.
    */
-  private _config?: LyraChartConfiguration;
-  private configSource: unknown = undefined;
   @property({ attribute: false })
   get config(): LyraChartConfiguration | undefined {
     return this._config;
@@ -2973,8 +2979,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * ignores the PRIVATE `--_lr-chart-tick-font-size` fallback that `chart.styles.ts` always sets
    * (to size the adjacent tick labels at 12px): `RadialLinearScale`'s own built-in `pointLabels`
    * default is 10px, not the global 12px tick default, so an unset public token must leave
-   * `pointLabels.font` unset entirely and let Chart.js apply that scale-specific default, exactly
-   * as it did before `--lr-chart-tick-font-size` existed. When the consumer DOES set the public
+   * `pointLabels.font` unset entirely and let Chart.js apply that scale-specific default. When the consumer DOES set the public
    * token, this returns the same resolved size `theme.tickFontSize` uses for the ticks, so the
    * two stay in sync as documented.
    */
@@ -3357,8 +3362,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * over the chart-wide `stacked` default. `'x'` has no override of its own -- it mirrors the
    * resolved `'y'` value, since Chart.js's stacking contract needs the paired index and value
    * scales to agree (an unstacked value scale ignores an index scale marked `stacked`, and vice
-   * versa). Every axis falls back to `stacked` when `stackedAxes` (or its own entry) is unset,
-   * which is what keeps a chart that never sets `stackedAxes` byte-identical to before.
+   * versa). Every axis falls back to `stacked` when `stackedAxes` (or its own entry) is unset.
    */
   private axisStacked(axisId: 'x' | 'y' | 'y2'): boolean {
     if (axisId === 'y2') return this.stackedAxes?.y2 ?? this.stacked;

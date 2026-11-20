@@ -117,14 +117,18 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   protected static override readonly identityEventDetailCollectionItems =
     Object.freeze({ 'lr-intersection': Object.freeze(['entries']) });
 
+  /** Stops observing and removes any applied `intersect-class` tokens while set. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Margin around the root used to grow or shrink the intersection area (attribute `root-margin`), in CSS margin syntax. Defaults to `'0px'`. */
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
+  /** Visibility ratio or ratios (0 to 1) at which an intersection is reported: a number, an array, or a whitespace-separated string. Invalid input falls back to `0`. */
   @property({
     hasChanged: (value, old) => JSON.stringify(normalizedThreshold(value)) !== JSON.stringify(normalizedThreshold(old)),
   })
   threshold: number | number[] | string = '0';
   /** Element root or mapped element-ID string, resolved in the host's tree before the document. */
   @property() root: Element | string | null = null;
+  /** Space-separated class tokens (attribute `intersect-class`) toggled on each observed target while it intersects the root. */
   @property({ attribute: 'intersect-class' }) intersectClass = '';
   /** Stops observing each target after its first intersection. Later entries for that target are
    * ignored even within the same batch. Consumed targets stay consumed across observer rebuilds

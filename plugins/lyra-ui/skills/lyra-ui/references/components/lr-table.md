@@ -382,7 +382,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   state again rather than replaying the announcement, and later `error` transitions announce
   either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose own
   `announce` stays unset so the failure is spoken once, not twice. Remove any host
-  `role="status"`/`role="alert"` hand-added before this property existed once it is set —
+  `role="status"`/`role="alert"` hand-added once it is set —
   otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — unset, localized `noData` (`'No data'`) when empty or `noMatches` (`'No matches'`) when filtering leaves none; supplied text including `''` is verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)

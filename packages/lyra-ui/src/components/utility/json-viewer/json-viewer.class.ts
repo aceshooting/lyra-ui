@@ -13,6 +13,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { makeScrollRegionFocusable, revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { RovingTreeFocus } from '../../../internal/roving-tree-focus.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { viewerSearchDetail } from '../../../internal/viewer-search.js';
@@ -377,6 +378,11 @@ export interface LyraJsonViewerEventMap {
  * never serialized as a substitute. maxHeight constrains the source scroller; source expansion is
  * provider-owned. Removing treeSource restores the current data value.
  *
+ * Keyboard: the data tree is one Tab stop (the last focused control, else the first). ArrowUp and
+ * ArrowDown move between rows, keeping to the same kind of control where the row has one;
+ * ArrowLeft and ArrowRight move between a row's toggle and copy button (mirrored under RTL); Home
+ * and End reach the first and last row. Enter and Space activate the focused button.
+ *
  * @customElement lr-json-viewer
  * @event lr-copy - Clipboard writing from the top-level or per-node action fulfilled. The frozen
  *   shared outcome detail is `{ ok: true, text }`.
@@ -707,6 +713,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     });
   }
 
+  private treeElement: HTMLElement | null = null;
+  private readonly treeFocus = new RovingTreeFocus({
+    tree: () => (this.treeElement?.isConnected ? this.treeElement : null),
+    row: '[part~="row"]',
+    control: '[part~="toggle"], [part~="copy-button"]',
+    direction: () => this.effectiveDirection,
+  });
   private disposeScrollRegion?: () => void;
   private scrollRegionBody?: HTMLElement;
   private scrollRegionName?: string;
@@ -1068,7 +1081,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           part="toggle"
           type="button"
           ?hidden=${!toggleable}
-          tabindex=${toggleable ? nothing : -1}
           aria-hidden=${toggleable ? nothing : 'true'}
           aria-expanded=${toggleable ? (expanded ? 'true' : 'false') : nothing}
           aria-label=${toggleable
@@ -1203,6 +1215,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncScrollRegion();
+    this.treeFocus.sync();
     if (this.treeSource !== undefined) {
       const source = this.treeSource;
       const binding = this.sourceBinding;
@@ -1361,7 +1374,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               </button>
             </div>`
           : nothing}
-        <div part="tree" role="list" data-layout=${JSON_VIEWER_LAYOUT.normalize(this.layout)} aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
+        <div part="tree" role="list" ${ref(element => { this.treeElement = (element as HTMLElement | undefined) ?? null; })}
+          @focusin=${this.treeFocus.onFocusIn} @keydown=${this.treeFocus.onKeyDown} data-layout=${JSON_VIEWER_LAYOUT.normalize(this.layout)} aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
         ${limited
           ? html`<p part="limit">${this.localize('jsonViewerLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),

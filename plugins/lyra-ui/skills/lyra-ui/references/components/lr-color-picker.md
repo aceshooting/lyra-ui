@@ -115,8 +115,7 @@ and:
   raw colour string.
   `disabled` marks that one swatch non-actionable, independent of the whole control's own
   `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
-  and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
-  field existed. `icon` is an optional decorative custom shape rendered inside the swatch button
+  and clicking it commits nothing; omitted or `false` renders the swatch enabled. `icon` is an optional decorative custom shape rendered inside the swatch button
   behind the `swatch-icon` part -- inert and `aria-hidden`, matching `<lr-swatch-picker>`'s
   identical `SwatchPickerItem.icon` field. The palette container renders only while the normalized
   list is non-empty

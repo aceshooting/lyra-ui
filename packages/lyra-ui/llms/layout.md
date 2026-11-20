@@ -72,8 +72,7 @@ Alt, Ctrl, and Meta chords, IME composition, and previously handled key events p
   threshold would mix reference boxes against a measurement of the element's own allocation. For a
   genuinely viewport-relative breakpoint set `orientationBreakpointBasis='viewport'` instead.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
-  behavior is identical to before this property existed. `'container'` measures this component's own
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. `'container'` measures this component's own
   `[part='base']` via `ResizeObserver` and compares strictly `<`. `'viewport'` evaluates
   `matchMedia('(max-width: <breakpoint>)')` and arms no `ResizeObserver` for the orientation feature
   at all, so the shared observer stays armed only for `collapse`; its comparison is inclusive (`<=`),
@@ -137,8 +136,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   Same accepted forms, basis, and sanitization as `railBreakpoint`; an unparseable value falls back
   to the `400` default.
 - `collapseBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `collapse-breakpoint-basis`) — which box `railBreakpoint`/`floatBreakpoint` are measured against.
-  Unset, behavior is identical to before this property existed. `'container'` observes this
+  `collapse-breakpoint-basis`) — which box `railBreakpoint`/`floatBreakpoint` are measured against. `'container'` observes this
   component's own `[part='base']` inline size via `ResizeObserver` and compares strictly `<`;
   `'viewport'` evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two thresholds,
   which is inclusive (`<=`) — native `max-width` semantics, deliberately, so the crossing point
@@ -163,8 +161,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   overlay ownership, and restores focus.
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
-  renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
-  card this state rendered before `open` existed — not just visually hidden; this holds even
+  renders nothing (`hidden`, out of the accessibility tree) instead of an always-visible overlay card — not just visually hidden; this holds even
   against an author `display` rule targeting the panel directly. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
   proposes a cancelable close before changing `open`. While open, the floating panel is the modal root and every sibling pane
@@ -198,7 +195,7 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   behavior.
 - `collapsedPanels: string[] = []` (attribute: false) — the `panel-id`s of panels folded to a narrow
   rail strip by a host control, at any container width and for any panel (not only an edge one).
-  Empty (the default) leaves the split exactly as before. A collapsed panel clamps along the resize
+  Empty (the default) leaves every panel unfolded. A collapsed panel clamps along the resize
   axis to `--lr-multi-split-collapsed-panel-size` (default `var(--lr-size-2-5rem)`), carries a
   `data-panel-collapsed` marker, clips its overflow, and stays rendered: the panel's own content
   paints the strip (a rotated title, an expand control) under `[data-panel-collapsed]` and takes its
@@ -248,7 +245,7 @@ split.addEventListener('lr-multi-split-panel-collapse-change', (event) => {
 toggleButton.addEventListener('click', () => split.togglePanel(toggleButton.closest('[panel-id]')));
 ```
 
-`collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
+`collapse`'s three resulting states — `'wide'` (default, plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
 itself (absent for `'wide'`/`collapse="none"`); and the `lr-multi-split-collapse-change` event below. The
 divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while
@@ -588,7 +585,7 @@ position) survives the transition.
 TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   (`[part='view-toggle']`) and a `<slot name="view-${viewId}">`. An icon-only view should set
   `ariaLabel`; if both labels are omitted, the button uses `viewId` as a last-resort accessible name.
-  Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
+  Empty (the default) renders the single unnamed default slot as the sole view.
   Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
   Malformed/hostile entries are ignored without rejecting the component update.
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
@@ -701,11 +698,10 @@ _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consu
 `--lr-widget-fullscreen-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-widget-fullscreen-button-hover-color` (default `var(--lr-color-brand)`), are
 the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
-respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
-both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a
-consumer retinting those tokens upstream to change only the view toggle's hover (the reason the
-view-toggle pair above exists) also silently repainted these two buttons; each now has its own scoped
-escape hatch, independent of the other and of the view toggle.
+respectively; each button's pressed fill mixes from its own `-hover-bg` token. Without them,
+retinting the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens to change only the view
+toggle's hover (the reason the view-toggle pair above exists) would also repaint these two buttons;
+each has its own scoped escape hatch, independent of the other and of the view toggle.
 
 **Optional peer deps:** none.
 
@@ -1397,8 +1393,7 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
   `<lr-multi-split>`'s identically-named contract, unit handling included.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
-  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
-  behavior is identical to before this property existed. `'container'` measures the stepper's own
+  `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. `'container'` measures the stepper's own
   `[part='base']` via `ResizeObserver`, comparing strictly `<`; `'viewport'` evaluates
   `matchMedia('(max-width: <breakpoint>)')`, arms no `ResizeObserver`, and compares inclusively
   (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot
@@ -1985,8 +1980,7 @@ your fill;
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
 bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`
 (default `none`) style that same hovered segment's background and box shadow; both are undeclared by
-default, so they fall back to the segment's own resting values and change nothing about today's
-hover paint until set. These seven state hooks are inline `var()` fallbacks at the
+default, so they fall back to the segment's own resting values and leave the hover paint unchanged until set. These seven state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element _or on any
 ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -2157,8 +2151,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   styles the same row unvirtualized. The component keeps owning windowing, measurement, spacer
   sizing, `scrollToIndex()`, the external-scroller mode and the ARIA contract either way, and
   positioning stays on the shadow-side `[part="row"]` wrapper that document CSS cannot select — so
-  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left
-  unset, the rendered output is byte-identical to before and the host's light DOM stays empty.
+  consumer styles can never break windowing. Any other value canonicalizes to `'shadow'`. Left unset, the host's light DOM stays empty.
   See **Light-DOM row projection** below for the trade-offs it carries.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
@@ -2611,8 +2604,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `preferredMode`, so it persists through `storage-key` with `persist` including `preferred-mode`
   (the default `persist` does not, so set `persist="preferred-mode"`). The mobile presentation is
   unchanged, `[part="collapse-toggle"]` is not rendered while this is set (the pin replaces it),
-  `mode` stays `'icon-only'` while peeking, and the resizer is hidden until pinned. Unset reproduces
-  today's exact behavior.
+  `mode` stays `'icon-only'` while peeking, and the resizer is hidden until pinned. Unset leaves auto-hide off.
 - `peekOpenDelay: number = 150` (attribute `peek-open-delay`) — milliseconds a moving pointer must
   stay inside the strip before it peeks open; keyboard focus opens it at once. Non-finite values use
   the default and negative values clamp to `0`.
@@ -2696,7 +2688,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidth, maxRailWidth]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
-  exactly as before this property existed.
+  in effect.
 - `railWidth?: number | string` (attribute `rail-width`) — the rail's current width while
   `resizable`; settable/gettable directly. A CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved
   live — `rem` against the document root, `em` against the rail — or a number of pixels; a plain
@@ -2825,7 +2817,7 @@ a fixed app bar/status area above the drawer instead of the panel/scrim starting
 viewport top), `--lr-app-rail-panel-radius` (default `0` — uniform corner radius of `[part="panel"]`;
 pairs naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
 corners). Four direction-aware per-corner tokens each default to `--lr-app-rail-panel-radius`, so
-setting only the uniform token still rounds all four corners exactly as before:
+setting only the uniform token still rounds all four corners uniformly:
 `--lr-app-rail-panel-radius-start-start` and `--lr-app-rail-panel-radius-end-start` (logical
 `border-start-start-radius`/`border-end-start-radius` — the two corners at the panel's own flush
 inline-start edge, since the drawer always sits flush against `inset-inline-start: 0`) and
@@ -2847,12 +2839,8 @@ background, the mobile overlay presentation; kept separate from `--lr-app-rail-b
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
-`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
-reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
-mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default
-`var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
-existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
-previously reachable only through `::part(nav)`. Plus shared
+`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset leaves the height natural) reserves a minimum height for `[part="header"]`, for content that
+mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default `var(--lr-space-s)`/`var(--lr-space-xs)`) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm. Plus shared
 tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
@@ -3118,7 +3106,7 @@ out of default-width compact rails, or use a rail that never collapses.
 - `rel?: string` — link relationship tokens for the anchor; `opener` is dropped and a `target`
   always adds `noopener noreferrer`.
 - `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
-  reproduces exactly what an item without this property rendered before this feature existed.
+  renders the item without its children.
   Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
   below.
 
@@ -3163,8 +3151,7 @@ names the native control, which remains the sole action).
   SIBLING of the item's own link/button, never nested inside it, so the link keeps navigating on
   its own and the disclosure keeps toggling on its own — clicking one never triggers the other.
   Leaving `children` empty renders neither the disclosure nor `[part="children"]` at all: an item
-  authored without any `children` content renders byte-identically to one authored before this
-  slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
+  authored without any `children` content renders as a plain item. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
   at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
   (`Toggle {label}` in the default locale — no literal fallback, so a
   `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
@@ -3180,7 +3167,7 @@ names the native control, which remains the sole action).
   current descendant stays perceivable only through its own `current` property.
 
 Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
-renders exactly as before. While the mobile overlay is open, a click on `meta` or `end` content does
+renders no extra wrappers. While the mobile overlay is open, a click on `meta` or `end` content does
 not close it; a click elsewhere in the rail's default slot does.
 
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
@@ -3753,7 +3740,7 @@ fill keeps its pressed step instead of snapping back to the brand default; `--lr
 (default `color-mix(in oklab, var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`) overrides that pressed fill directly,
 matching `--lr-option-active-bg`'s equivalent hook — unset, the pressed row keeps mixing from
-`--lr-menu-item-hover-bg` exactly as before this hook existed; `--lr-menu-item-icon-color` (default
+`--lr-menu-item-hover-bg`; `--lr-menu-item-icon-color` (default
 `inherit`) recolours `[part="icon"]` without touching the label beside it, so it still follows the
 row while the row is disabled or `variant="danger"` unless you say otherwise; and
 `--lr-menu-item-min-height` (default `max(var(--lr-form-control-height), var(--lr-size-24px))`)
@@ -4270,8 +4257,8 @@ restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-de
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
-`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
-byte-identical to before this property existed — mirroring `--lr-button-shadow`'s pattern; set it
+`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`,
+mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
 `actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
 card given only a resting shadow keeps that exact shadow on hover.
@@ -4561,8 +4548,7 @@ from assistive technology so the trigger remains the sole action.
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
 instead of being the one fixed-density element in a compact panel. Both spellings of every tier are
 accepted — `s`/`small`, `m`/`medium`, `l`/`large` — so markup migrated from either upstream needs no
-attribute rewrite. `m` is the default and reproduces the disclosure this component had before `size`
-existed. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
+attribute rewrite. `m` is the default. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
 the ladder doesn't cover is a two-line override rather than a fork.
 
 **Methods:**
@@ -5182,8 +5168,7 @@ until something else registers it, the same trade `icon-button-register.js` docu
   values are unset.
 - `activeFiltersDisplay: 'all' | 'changed' | 'hidden' = 'all'` (reflected, attribute
   `active-filters-display`) — which currently-active filters render as removable chips in the row
-  below the fields. `'all'` (the default, and this component's only behavior before this property
-  existed) shows one chip per non-empty filter, including one sitting at its own `defaultValue`.
+  below the fields. `'all'` (the default) shows one chip per non-empty filter, including one sitting at its own `defaultValue`.
   `'changed'` shows a chip only for a filter whose value differs from its own `defaultValue` — so a
   bar whose defaults narrow the view on load does not claim the user narrowed it — and a filter with
   no declared `defaultValue` counts as changed as soon as it has any value at all. `'hidden'` never
@@ -5294,7 +5279,7 @@ Each field wrapper also carries a second, per-filter part token, `field-<filterI
 width, while `::part(field)` rules continue to match every field unchanged. The `field-<filterId>`
 token is present only when `filterId` reads as a plain CSS ident (ASCII letters/digits/`-`/`_`,
 starting with a letter); an id that doesn't (for example one containing whitespace) renders `field`
-alone, exactly as before this part existed, rather than risking a `part` attribute whose
+alone, rather than risking a `part` attribute whose
 space-separated token list fabricates an unrelated second token.
 
 A `'select'`, `'combobox'` or `'checkbox-menu'` filter's required `options` entries are
@@ -5308,7 +5293,7 @@ marks the option non-actionable: forwarded to `<lr-option disabled>` for `'selec
 and to the composed `<lr-dropdown-item disabled>` for `'checkbox-menu'`, so the row renders
 genuinely disabled (no tab/roving stop, no hover/press affordance) and arrow-key navigation already
 steps past it, since that is the composed control's own existing `disabled` behavior. Omitted or
-`false` renders the option exactly as before this field existed.
+`false` renders an ordinary option.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
@@ -5515,12 +5500,12 @@ abort stale contexts, whose callbacks become inert.
 A `'custom'` definition also accepts the same optional `debounce?: number` (ms) `'text'`/
 `'combobox'` already have: it delays committing whatever `context.onValueChange`/`onInput`/
 `onChange` reads through `adapter.valueFromEvent`, coalescing a burst of rapid commits into one.
-Omitted, `0`, or a non-finite value means no debounce, exactly as before this field existed. While
+Omitted, `0`, or a non-finite value means no debounce. While
 one is pending, `context.value` carries that pending value rather than the last-committed one, so a
 renderer binding it as a fully controlled value never reverts mid-delay; a pending commit is
 **flushed** by `context.onFocusout` and **cancelled outright** by `reset()`, removing that filter's
 chip, and disconnect — identical to `'text'`/`'combobox'`. This is what closes the gap those two
-types' own debounce left: before this field existed, a custom free-text filter had to hand-roll the
+types' own debounce left: a custom free-text filter no longer hand-rolls the
 same timer, flush, and cancellation lifecycle itself just to match `'text'`.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
@@ -5649,7 +5634,7 @@ narrow to a record keyed per `filterId`, whose value type follows that filter's 
 value is owned by a widget this component never renders). Declare the schema with `as const
 satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
 `LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
-`<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
+`<lr-filter-bar>` keeps the general `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
 string[] | boolean | undefined>>`). `LyraFilterBarValueFor<Defs>` is the standalone alias for the
 narrowed record, and `LyraFilterBarInputEvent<Defs>`/`LyraFilterBarResetEvent<Defs>` are stable
 per-event aliases so a handler can name one event's type without restating the detail shape.

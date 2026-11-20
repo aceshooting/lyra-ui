@@ -311,7 +311,8 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
  *   already-removed element closing on disconnect cannot honour a veto. Disabling the control,
  *   directly or through a fieldset, force-closes it without this vetoable lifecycle because a
- *   disabled control cannot retain an interactive popup.
+ *   disabled control cannot retain an interactive popup. A listbox that cannot be positioned
+ *   closes with a non-cancelable `lr-hide` followed by `lr-after-hide`.
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-invalid - The select failed a validity check. Cancelable: calling
@@ -607,7 +608,7 @@ export class LyraSelect<
    * Copies the trigger's width, height, or both onto the listbox -- the same property
    * `<lr-popup>`/`<lr-popover>`/`<lr-dropdown>`/`<lr-combobox>` spell, with the same values. Unset
    * (the default), the listbox sizes to its own content, clamped between `--lr-size-12rem` and
-   * `--lr-size-28rem`, exactly as before. Set `sync="width"` so a full-width trigger with short
+   * `--lr-size-28rem`. Set `sync="width"` so a full-width trigger with short
    * option labels gets a listbox that aligns to its own edges instead of floating narrower in the
    * middle -- the content clamp above no longer applies while this is set, since the trigger's own
    * width is now the intentional bound. A synced listbox is still bounded by the space actually
@@ -2072,7 +2073,13 @@ export class LyraSelect<
       if (this.cleanup !== operation || !this.open || !this.isConnected) return;
       if (!positioned) {
         this.restoreFocusOnClose = false;
+        const generation = this.openStateGeneration + 1;
         this.forceCloseOpenState();
+        // An unplaceable listbox cannot honour a veto, but the author still learns it closed.
+        emitPopupEvent(this, 'lr-hide', false);
+        void this.updateComplete.then(() => {
+          if (!this.open && this.openStateGeneration === generation) emitPopupEvent(this, 'lr-after-hide', false);
+        });
         return;
       }
       this.listboxPositioned = true;

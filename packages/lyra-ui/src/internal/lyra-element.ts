@@ -49,8 +49,7 @@ let externalLabelFactory: ExternalLabelFactory | undefined;
 /**
  * Registers the external-label bridge and form-internals capture that a form-associated component
  * needs, without `LyraElement` itself statically importing `form-control-labels.js` -- a module a
- * purely presentational component (e.g. `lr-flag`, `lr-popover`) can never reach but, before this
- * hook existed, paid for anyway (every component extends `LyraElement`, and the base class's own
+ * purely presentational component (e.g. `lr-flag`, `lr-popover`) can never reach but would otherwise pay for anyway (every component extends `LyraElement`, and the base class's own
  * constructor/`attachInternals()` referenced both symbols unconditionally).
  *
  * Installed idempotently through an explicit function call from the `FormAssociated` mixin
@@ -870,21 +869,29 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return direction;
   }
 
+  /** Registers a listener, typed against this component's own event map as well as the native
+   *  `HTMLElement` events. Runtime behavior is the native `addEventListener()`. */
   override addEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
     options?: boolean | AddEventListenerOptions
   ): void;
+  /** Registers a listener, typed against this component's own event map as well as the native
+   *  `HTMLElement` events. Runtime behavior is the native `addEventListener()`. */
   override addEventListener<K extends keyof HTMLElementEventMap>(
     type: K,
     listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions
   ): void;
+  /** Registers a listener, typed against this component's own event map as well as the native
+   *  `HTMLElement` events. Runtime behavior is the native `addEventListener()`. */
   override addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions
   ): void;
+  /** Registers a listener, typed against this component's own event map as well as the native
+   *  `HTMLElement` events. Runtime behavior is the native `addEventListener()`. */
   override addEventListener(
     type: string,
     listener: unknown,
@@ -897,21 +904,29 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     );
   }
 
+  /** Removes a listener registered with `addEventListener()`; runtime behavior is the native
+   *  `removeEventListener()`. */
   override removeEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
     options?: boolean | EventListenerOptions
   ): void;
+  /** Removes a listener registered with `addEventListener()`; runtime behavior is the native
+   *  `removeEventListener()`. */
   override removeEventListener<K extends keyof HTMLElementEventMap>(
     type: K,
     listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
     options?: boolean | EventListenerOptions
   ): void;
+  /** Removes a listener registered with `addEventListener()`; runtime behavior is the native
+   *  `removeEventListener()`. */
   override removeEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions
   ): void;
+  /** Removes a listener registered with `addEventListener()`; runtime behavior is the native
+   *  `removeEventListener()`. */
   override removeEventListener(
     type: string,
     listener: unknown,

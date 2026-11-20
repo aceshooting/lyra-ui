@@ -446,8 +446,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Poster image for `<video>`; validated with `safeMediaSrc` and omitted when unsafe. Ignored for
    *  `<audio>`. */
   @property() poster = '';
+  /** Restarts playback from the beginning when the media ends. */
   @property({ type: Boolean }) loop = false;
+  /** Mutes the audio; stays in sync with the player's own mute control. */
   @property({ type: Boolean }) muted = false;
+  /** How much media the browser fetches before playback: `none`, `metadata` (default) or `auto`; other values read as `metadata`. */
   @property() preload: LyraAvPreload = 'metadata';
   private _playbackRate = 1;
   private _volume = 1;

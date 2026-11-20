@@ -222,14 +222,15 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   /** Visual density, on the library's shared ladder. Both spellings of every tier are accepted
    *  (`s`/`small`, `m`/`medium`, `l`/`large`), so markup migrated from Web Awesome or Shoelace
-   *  needs no attribute rewrite. `m` reproduces the disclosure this component had before `size`
-   *  existed. */
+   *  needs no attribute rewrite. `m` is the default tier. */
   @property({ reflect: true }) size: LyraDetailsSize = 'm';
 
   /** Accessible name of the summary. A present host aria-label takes precedence. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Space-separated ids that describe the details; forwarded to the native summary element instead of the host. */
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
+  /** Summary text shown in the header; the `summary` slot overrides it, and an empty value falls back to the localized default. */
   @property() summary = '';
 
   @state() private hasSummarySlot = false;

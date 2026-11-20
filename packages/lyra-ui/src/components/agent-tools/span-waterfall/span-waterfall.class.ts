@@ -331,12 +331,14 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
    *  The controlled `activeSpanId` reserves a position inside the projected window. Foreign
    *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
+  /** Controlled id of the active span; `null` means none. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
    *  `LyraSpan.startMs`/`endMs` -- never a wall-clock timestamp). Both `null` (the default) fits
    *  the whole trace; a non-null NaN (e.g. an unparsable attribute) is normalized the same way as
    *  `null` by `viewWindow()` rather than poisoning the axis/bar math with NaN. */
   @property({ type: Number, attribute: 'view-start-ms' }) viewStartMs: number | null = null;
+  /** End of the visible time window in trace-relative milliseconds; `null` fits the whole trace. */
   @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
   /** Hides the time-ruler row (`[part="axis"]`). */
   @property({ type: Boolean, attribute: 'without-axis' }) withoutAxis = false;

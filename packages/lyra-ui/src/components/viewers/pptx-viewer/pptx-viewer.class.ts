@@ -9,7 +9,7 @@ import {
   type LyraSearchChangeDetail,
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
-import { isAbortError, LyraUserFacingError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { LyraUserFacingError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
@@ -509,12 +509,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     try {
       await viewer.goToSlide(index);
     } catch (error) {
-      if (
-        isAbortError(error)
-        || !this.isConnected
-        || generation !== this.generation
-        || viewer !== this.viewer
-      ) return;
+      // Superseded work is recognised by ownership alone: an AbortError from the current renderer
+      // is a failure like any other rejection.
+      if (!this.isConnected || generation !== this.generation || viewer !== this.viewer) return;
       this.teardown();
       this.phase = 'error';
       this.slideCount = 0;

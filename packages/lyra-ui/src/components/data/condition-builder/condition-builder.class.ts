@@ -458,6 +458,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     this.valueSnapshot.assign(this, 'value', next);
   }
 
+  /** Disables every editing control and blocks add, remove and edit actions. Reflects to the `disabled` attribute. */
   get disabled(): boolean {
     return this._disabled;
   }

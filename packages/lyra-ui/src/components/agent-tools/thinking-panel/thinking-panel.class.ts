@@ -200,11 +200,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  reasoning sets this `true` itself to stream it in view as it arrives. */
   @property({ type: Boolean, reflect: true }) expanded = false;
 
+  private _mode: ThinkingPanelMode = 'live';
+
   /** `'live'` while reasoning is actively streaming in right now; `'post-hoc'`
    *  once it's complete and being reviewed after the fact. See the class doc
    *  for the concrete behavior differences this drives. */
-  private _mode: ThinkingPanelMode = 'live';
-
   @property({ reflect: true, converter: THINKING_PANEL_MODE })
   get mode(): ThinkingPanelMode {
     return this._mode;

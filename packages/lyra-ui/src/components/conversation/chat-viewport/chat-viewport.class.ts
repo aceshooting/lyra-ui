@@ -174,6 +174,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   
+  /** Whether the viewport stays pinned to the end as content grows (default `true`); a user scroll away releases it and reaching the end re-engages it. Reflects to the `follow` attribute. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
   /** Shows a down chevron in place of the visible jump label. The button keeps its localized
@@ -617,8 +618,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private onPointerDown = (event: PointerEvent): void => {
     const scroll = this.scrollEl;
-    if (!scroll || event.button !== 0 || event.target !== scroll) return;
-    const computed = getComputedStyle(scroll);
+    const view = this.ownerDocument.defaultView;
+    if (!scroll || !view || event.button !== 0 || event.target !== scroll) return;
+    const computed = view.getComputedStyle(scroll);
     const borderLeft = Number.parseFloat(computed.borderLeftWidth) || 0;
     const borderRight = Number.parseFloat(computed.borderRightWidth) || 0;
     const gutter = scroll.offsetWidth - scroll.clientWidth - borderLeft - borderRight;

@@ -765,8 +765,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  spoken. Read once, on the first update: a later reconnection or adoption stages the same
    *  state again rather than replaying the announcement, and later `error` transitions announce
    *  either way. Deliberately not forwarded to the composed `[part='error']` `<lr-empty>`, whose
-   *  own `announce` stays unset so the failure is spoken once, not twice. Remove any host
-   *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
+   *  own `announce` stays unset so the failure is spoken once, not twice. Remove any hand-added host `role="status"`/`role="alert"` once it is set --
    *  otherwise the failure is announced a third time, through the native role as well. */
   @property({ type: Boolean, reflect: true }) announce = false;
   /** Empty-state heading override. Omitted, it localizes `noData` for a table with no rows and
@@ -923,7 +922,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private readonly resizeWriteGuard = new VetoWriteGuard();
 
   /** Accessor-backed purely so every write marks `resizeWriteGuard`; the map itself is replaced,
-   *  never mutated in place, exactly as before. */
+   *  never mutated in place. */
   @state()
   private get resizedColumnWidths(): Map<string, number> {
     return this._resizedColumnWidths;
@@ -2896,10 +2895,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   /** ArrowLeft/ArrowRight roving between a row's own tab stop and its editable cells -- the
    *  smallest addition that keeps the row's existing ArrowUp/ArrowDown/Home/End roving (above)
-   *  fully authoritative: this only ever moves focus sideways, within the current row, and a row
-   *  with no editable cell keeps its pre-existing behavior exactly (neither arrow key did anything
-   *  at the row level before this method existed, so `cells.length === 0` intentionally leaves the
-   *  key unhandled rather than calling `preventDefault()`).
+   *  fully authoritative: this only ever moves focus sideways, within the current row, and a row with no editable cell leaves the key unhandled (`cells.length === 0` deliberately skips `preventDefault()`).
    *
    *  Direction is visual, not literal, matching `onHeaderKeyDown`'s own `isRtl()` mirroring: under
    *  RTL, ArrowLeft moves toward the visual end (forward) and ArrowRight toward the visual start

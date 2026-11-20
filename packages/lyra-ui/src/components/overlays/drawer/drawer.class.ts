@@ -39,8 +39,7 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * `<lr-dialog>`'s `[part="body"]` grows to fill the panel once a consumer sets
  * `--lr-dialog-height`, because that panel is otherwise content-sized. A drawer's panel is
  * unconditionally a definite size for every `placement`, so this component opts back out of that
- * growth — `body` keeps its natural content size and `footer` follows immediately after it,
- * exactly as before `--lr-dialog-height` existed, instead of always being pushed to the panel's
+ * growth — `body` keeps its natural content size and `footer` follows immediately after it, instead of always being pushed to the panel's
  * far edge.
  * The `size` property, inherited unchanged from `<lr-dialog>`, caps the panel's `max-inline-size`
  * for `start`/`end` placements on the same six-step ladder documented there (`'m'`'s 32rem cap

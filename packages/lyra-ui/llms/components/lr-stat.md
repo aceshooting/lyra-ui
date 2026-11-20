@@ -85,7 +85,7 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
-  density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
+  density, and leaving it unset keeps that default. An unsupported value normalizes to unset
   and removes the attribute.
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its

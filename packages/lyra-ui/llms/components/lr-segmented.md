@@ -135,8 +135,7 @@ your fill;
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
 bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`
 (default `none`) style that same hovered segment's background and box shadow; both are undeclared by
-default, so they fall back to the segment's own resting values and change nothing about today's
-hover paint until set. These seven state hooks are inline `var()` fallbacks at the
+default, so they fall back to the segment's own resting values and leave the hover paint unchanged until set. These seven state hooks are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element _or on any
 ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector

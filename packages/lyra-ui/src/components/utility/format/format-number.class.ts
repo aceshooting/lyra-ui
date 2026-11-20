@@ -29,21 +29,30 @@ const optionalPrecision = (value: string | null): number | undefined => value ==
  */
 export class LyraFormatNumber extends LyraElement {
   static override styles = [LyraElement.styles, styles];
+  /** Number to format. A non-finite value renders the default slot instead. */
   @property({ type: Number }) value = 0;
+  /** Formatting style: `'decimal'` (default), `'currency'` or `'percent'`. */
   @property() type: LyraFormatNumberType = 'decimal';
   /** ISO currency code. Removed or blank attributes format with the existing USD fallback. */
   @property() currency = 'USD';
+  /** How the currency is shown when `type="currency"` (attribute `currency-display`): `'symbol'` (default), `'narrowSymbol'`, `'code'` or `'name'`. */
   @property({ attribute: 'currency-display' }) currencyDisplay: LyraFormatCurrencyDisplay = 'symbol';
   /** Web Awesome grouping alias. When both grouping aliases are false, `Intl` keeps the locale's
    * default grouping policy rather than being forced on. */
   @property({ type: Boolean, attribute: 'without-grouping' }) withoutGrouping = false;
   /** Shoelace grouping alias; equivalent to `withoutGrouping`. */
   @property({ type: Boolean, attribute: 'no-grouping' }) noGrouping = false;
+  /** Number notation: `'standard'` (default), `'scientific'`, `'engineering'` or `'compact'`. */
   @property() notation: LyraFormatNumberNotation = 'standard';
+  /** Minimum integer digits (attribute `minimum-integer-digits`), clamped to 1-21; unset leaves the `Intl` default. */
   @property({ attribute: 'minimum-integer-digits', type: Number, converter: optionalPrecision }) minimumIntegerDigits?: number;
+  /** Minimum fraction digits (attribute `minimum-fraction-digits`), clamped to 0-100; unset leaves the `Intl` default. Swapped with the maximum when larger. */
   @property({ attribute: 'minimum-fraction-digits', type: Number, converter: optionalPrecision }) minimumFractionDigits?: number;
+  /** Maximum fraction digits (attribute `maximum-fraction-digits`), clamped to 0-100; unset leaves the `Intl` default. Swapped with the minimum when smaller. */
   @property({ attribute: 'maximum-fraction-digits', type: Number, converter: optionalPrecision }) maximumFractionDigits?: number;
+  /** Minimum significant digits (attribute `minimum-significant-digits`), clamped to 1-21; unset leaves the `Intl` default. Swapped with the maximum when larger. */
   @property({ attribute: 'minimum-significant-digits', type: Number, converter: optionalPrecision }) minimumSignificantDigits?: number;
+  /** Maximum significant digits (attribute `maximum-significant-digits`), clamped to 1-21; unset leaves the `Intl` default. Swapped with the minimum when smaller. */
   @property({ attribute: 'maximum-significant-digits', type: Number, converter: optionalPrecision }) maximumSignificantDigits?: number;
 
   override render(): TemplateResult {

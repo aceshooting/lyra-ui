@@ -184,10 +184,10 @@ export class LyraTimelineItem extends LyraElement {
    *  `<lr-relative-time>` to forward onto in that case. */
   @property({ type: Boolean }) sync = false;
 
+  private _variant: LyraVariant = 'neutral';
   /** Tone of the marker. `'neutral'` (default) is a plain past event; `'brand'` is highlighted/
    *  informational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs
    *  attention; `'danger'` is a failed/error event. The library-wide `LyraVariant` set. */
-  private _variant: LyraVariant = 'neutral';
   @property({ reflect: true, converter: timelineItemVariantConverter })
   get variant(): LyraVariant {
     return this._variant;

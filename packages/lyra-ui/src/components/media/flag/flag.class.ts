@@ -225,6 +225,8 @@ export class LyraFlag extends LyraElement {
     this.requestUpdate('shape', old);
   }
 
+  private _fidelity: LyraFlagFidelity = 'standard';
+
   /**
    * Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a
    * coat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe
@@ -237,8 +239,6 @@ export class LyraFlag extends LyraElement {
    *
    * Has no effect when `src` is set — a pre-resolved URL is used as-is regardless.
    */
-  private _fidelity: LyraFlagFidelity = 'standard';
-
   @property({ reflect: true })
   get fidelity(): LyraFlagFidelity {
     return this._fidelity;

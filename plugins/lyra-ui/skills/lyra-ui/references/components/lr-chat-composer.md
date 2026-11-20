@@ -55,7 +55,7 @@ clears the touched presentation.
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
-  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps today's single flex row.
+  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps a single flex row.
   `'stacked'` arranges the `start` and `end` action slots as a compact one-column rail (`start`
   above `end`) beside a `textarea` that spans both rows — for a multi-row composer (a taller
   `min-rows`) where stretching the action buttons across the row's full height would otherwise look

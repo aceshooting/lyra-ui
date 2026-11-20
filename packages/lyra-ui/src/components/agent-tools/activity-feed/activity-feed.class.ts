@@ -124,7 +124,7 @@ function variantDotPart(variant: LyraVariant): string {
  * convention `<lr-thinking-panel>` and `<lr-confirm-bar>` already establish. The card's own paint
  * is retunable without a `::part(base)` override through `--lr-activity-feed-bg`,
  * `--lr-activity-feed-border-color` and `--lr-activity-feed-radius`; each is an inline `var()`
- * fallback at its point of use, so an unset feed renders exactly as before and any of the three can
+ * fallback at its point of use, so an unset feed renders with its built-in styling and any of the three can
  * be set on the feed or on an ancestor transcript.
  *
  * Focus is repaired, not merely dropped, when the currently focused control disappears from under
@@ -224,10 +224,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  virtualization, and rendering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) entries: readonly ActivityEntry[] = [];
 
-  /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count
-   *  summary and never scrolls. */
   private _mode: ActivityFeedMode = 'live';
 
+  /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count
+   *  summary and never scrolls. */
   @property({ reflect: true, converter: ACTIVITY_FEED_MODE })
   get mode(): ActivityFeedMode {
     return this._mode;

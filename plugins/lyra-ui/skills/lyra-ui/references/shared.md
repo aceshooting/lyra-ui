@@ -2392,7 +2392,7 @@ Combine `.app-muted` with `lr-text-quiet`, and `.app-small` with `lr-font-medium
    has no bottom rule).
 3. In `class="lr-prose lr-typography"`, `lr-prose` keeps the measure, root type and colour, and the
    typography element looks and heading-aware spacing win. Inside a boundary, or on a named-slot
-   child, `lr-prose` applies exactly as before. Plain `lr-prose` output is unchanged.
+   child, `lr-prose` applies on its own. Plain `lr-prose` output is unchanged.
 4. `lr-utilities` beats `lr-base`, so the scope beats `lr-native` normalization, including its link,
    quote and heading colours.
 5. A layered reset (such as Tailwind's `base` preflight) loses only when you declare the documented
@@ -7442,7 +7442,7 @@ the deepening anchor keeps (the rest is black), so raising it lifts dark Glass c
 surface. It inherits, so set it on `:root` for the whole app or on any container for that subtree;
 values outside 0% to 100% clamp. It is deliberately not registered with `@property` (a registered
 inherited property slows every re-theme in Chromium), so a value that is not a percentage voids the
-dark fill; the development build warns about one set on `:root`. The default paints exactly as before. For a softer grey dark mode:
+dark fill; the development build warns about one set on `:root`. For a softer grey dark mode:
 
 ```css
 :root {

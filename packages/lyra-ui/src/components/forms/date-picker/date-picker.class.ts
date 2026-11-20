@@ -378,12 +378,18 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** ISO value: `YYYY-MM-DD` or `YYYY-MM-DD/YYYY-MM-DD`. */
   @property({ reflect: true }) value = '';
+  /** Selection mode: `single` date or `range` of two dates; any other value becomes `single`. */
   @property({ converter: modeConverter, reflect: true }) mode: CalendarMode =
     'single';
+  /** Earliest selectable date as ISO `YYYY-MM-DD`; earlier dates are disabled. Empty means no lower bound. */
   @property({ reflect: true }) min = '';
+  /** Latest selectable date as ISO `YYYY-MM-DD`; later dates are disabled. Empty means no upper bound. */
   @property({ reflect: true }) max = '';
+  /** Disables the whole calendar; no date or navigation control can be activated. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Keeps the calendar navigable but prevents the user from changing the selection. */
   @property({ type: Boolean, reflect: true }) readonly = false;
+  /** Number of months shown side by side, `1` or `2`. */
   @property({ converter: monthsConverter, reflect: true }) months: 1 | 2 = 1;
   /** Visual size — scales the private default behind `--lr-date-picker-cell-size` proportionally; not pixel-matched to
    *  `lr-input`'s row-height scale (a calendar cell isn't a text row). The Web Awesome / Shoelace spellings
@@ -391,37 +397,46 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
   @property({ reflect: true }) override locale = '';
+  /** First weekday column: `sun`..`sat`, or `auto` to follow the effective locale. */
   @property({ attribute: 'first-day-of-week', reflect: true })
   firstDayOfWeek: LyraDatePickerFirstDayOfWeek = 'auto';
+  /** Weekday header style: `narrow`, `short` or `long`. */
   @property({
     attribute: 'weekday-format',
     converter: weekdayFormatConverter,
     reflect: true,
   })
   weekdayFormat: WeekdayFormat = 'short';
+  /** Disables every date before today. */
   @property({ type: Boolean, attribute: 'disable-past', reflect: true })
   disablePast = false;
+  /** Disables every date after today. */
   @property({ type: Boolean, attribute: 'disable-future', reflect: true })
   disableFuture = false;
+  /** Shows the days of adjacent months in the leading and trailing cells of the grid. */
   @property({ type: Boolean, attribute: 'with-outside-days', reflect: true })
   withOutsideDays = false;
+  /** Shows a week-number column. */
   @property({ type: Boolean, attribute: 'with-week-numbers', reflect: true })
   withWeekNumbers = false;
+  /** Dates to disable: a comma/space-separated string of ISO dates, or an array of ISO strings or `Date` objects. */
   @property({ attribute: 'disabled-dates' })
   disabledDates: LyraDatePickerDisabledDates = '';
+  /** Weekdays to disable, as comma- or space-separated names or numbers (`0` = Sunday, e.g. `sat,sun`). */
   @property({ attribute: 'disabled-days-of-week' }) disabledDaysOfWeek = '';
   /** Optional JavaScript predicate that disables matching calendar dates. */
   @property({ attribute: false }) isDateDisabled?: (date: Date) => boolean;
   /** Optional JavaScript renderer for individual calendar-day content. */
   @property({ attribute: false }) dayContent?: LyraDatePickerDayContent;
 
+  private _presets: readonly LyraDateRangePreset[] = Object.freeze([]);
   /**
    * Quick-range options rendered as a `[part="presets"]` button row above the calendar, for the
    * dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
    *
    * Range mode only — a preset names two dates, so it has no meaning for a single-date picker and
    * is ignored there rather than rendering a row that cannot do anything. Unset renders nothing at
-   * all, so an existing picker is unchanged. Non-array runtime assignments normalize to the same
+   * all. Non-array runtime assignments normalize to the same
    * empty collection instead of reaching the render path. Blank labels are omitted; inadmissible
    * ranges render disabled. Interior days do not all need to be enabled.
    *
@@ -429,9 +444,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * then admitted against endpoint and inclusive `minRange`/`maxRange` constraints before
    * `input` followed by `change`), so a consumer's existing change handling needs no special
    * case. The active preset carries `aria-pressed="true"` and `data-active`, mirroring
-   * `<lr-time-range>`'s already-shipped preset row. Assign a new array to update: mutating an array and assigning it again does not.
+   * `<lr-time-range>`'s preset row. Assign a different array to update: mutating an array and assigning it again does not.
    */
-  private _presets: readonly LyraDateRangePreset[] = Object.freeze([]);
   @property({ attribute: false })
   get presets(): readonly LyraDateRangePreset[] {
     return this._presets;
@@ -484,14 +498,20 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (to < from) [from, to] = [to, from];
     return this.admitsRange(from, to, min, max, this.resolvedToday()) ? { from, to } : null;
   }
+  /** Minimum range length in inclusive days; `0` means no minimum. Range mode only. */
   @property({ type: Number, attribute: 'min-range', reflect: true })
   minRange = 0;
+  /** Maximum range length in inclusive days; `0` means no maximum. Range mode only. */
   @property({ type: Number, attribute: 'max-range', reflect: true })
   maxRange = 0;
+  /** Whether the previous/next buttons move by the number of visible `months` or by a single month. */
   @property({ attribute: 'page-by', reflect: true, converter: pageByConverter })
   pageBy: LyraDatePickerPageBy = 'months';
+  /** ISO date (`YYYY-MM-DD`) that overrides what counts as today; empty uses the system date. */
   @property({ reflect: true }) today = '';
+  /** ISO date (`YYYY-MM-DD`) of the day that holds the roving focus and anchors the visible month; empty uses the selection or the first enabled date. */
   @property({ attribute: 'focused-date', reflect: true }) focusedDate = '';
+  /** Active calendar view: `days`, `months`, `years` or `decades`. */
   @property({ reflect: true, converter: viewConverter })
   view: LyraDatePickerView = 'days';
   /** Accessible label for the previous-page button. Omitted copy localizes ("Previous month", or

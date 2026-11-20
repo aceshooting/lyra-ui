@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { applyComponentMetadataToManifest } from './scripts/component-metadata.mjs';
 import { assembleComponentMetadata, readComponentMetadataSources } from './scripts/component-metadata-source.mjs';
 import { sourceEventTypeContracts } from './scripts/check-event-contracts.mjs';
+import { applyMemberVocabulary } from './scripts/manifest-member-vocabulary.mjs';
 
 const componentMetadata = assembleComponentMetadata(
   readComponentMetadataSources(fileURLToPath(new URL('.', import.meta.url)))
@@ -1075,7 +1076,10 @@ export default {
           },
           validationMessage: { type: 'string', readonly: true },
           validity: { type: 'ValidityState', readonly: true },
-          value: { type: 'string' },
+          value: {
+            type: 'string',
+            description: 'Current value submitted with the owning form.',
+          },
           willValidate: { type: 'boolean', readonly: true },
         };
         const MIXIN_METHODS = {
@@ -1122,7 +1126,12 @@ export default {
         // The checked family (`CheckedFormAssociated`) overrides the string-value surface: `value` is
         // the content attribute with a default of `'on'`, and `defaultValue` is its native alias.
         const CHECKED_MIXIN_FIELDS = {
-          checked: { type: 'boolean', default: 'false' },
+          checked: {
+            type: 'boolean',
+            default: 'false',
+            description:
+              'Live checked state. The control submits its `value` with the owning form only while checked.',
+          },
           defaultChecked: {
             type: 'boolean',
             attribute: 'checked',
@@ -1131,7 +1140,11 @@ export default {
             description:
               'Reflected current reset default; changing it never overwrites dirty live `checked` state.',
           },
-          defaultValue: { type: 'string', default: "'on'" },
+          defaultValue: {
+            type: 'string',
+            default: "'on'",
+            description: 'Native alias of `value`, the value submitted while checked.',
+          },
           effectiveDisabled: {
             type: 'boolean',
             readonly: true,
@@ -1143,6 +1156,8 @@ export default {
             attribute: 'value',
             reflects: true,
             default: "'on'",
+            description:
+              'Value submitted with the owning form while the control is checked.',
           },
         };
         const CHECKED_MIXIN_METHODS = {
@@ -2328,6 +2343,16 @@ export default {
           target.cssParts = parts;
           target.lyraCssPartsComplete = true;
         }
+      },
+    },
+    {
+      name: 'lr-native-member-vocabulary',
+      // Members whose meaning the platform fixes (form lifecycle callbacks, constraint validation,
+      // focus/selection passthroughs, native editing hints) share one description library-wide.
+      // Runs after every projection above so inherited and synthesized members are covered too;
+      // a member's own JSDoc always wins. See `scripts/manifest-member-vocabulary.mjs`.
+      packageLinkPhase({ customElementsManifest }) {
+        applyMemberVocabulary(customElementsManifest);
       },
     },
     {

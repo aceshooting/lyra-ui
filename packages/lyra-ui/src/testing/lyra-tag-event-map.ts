@@ -648,7 +648,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-test-results': { 'lr-filter-request': true, 'lr-toggle-request': true },
   'lr-textarea': { 'lr-invalid': true },
   'lr-thinking-panel': { 'lr-toggle-request': true },
-  'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry-request': true },
+  'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry-request': true, 'lr-source-page-change-request': true },
   'lr-time-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-time-range': { 'lr-invalid': true },
   'lr-time-zone-picker': { 'lr-invalid': true, 'lr-show': true },

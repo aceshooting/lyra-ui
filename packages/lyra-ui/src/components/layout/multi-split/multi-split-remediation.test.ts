@@ -301,3 +301,15 @@ describe('multi-split divider contract', () => {
     expect(issues).to.be.at.most(1);
   });
 });
+
+it('restores declared enum defaults when an attribute is removed or invalid', async () => {
+  const element = await fixture<LyraMultiSplit>(html`<lr-multi-split orientation="vertical" narrow-orientation="horizontal"
+    collapse="start" orientation-breakpoint-basis="viewport" collapse-breakpoint-basis="viewport"><div></div><div></div></lr-multi-split>`);
+  for (const name of ['orientation', 'narrow-orientation', 'collapse', 'orientation-breakpoint-basis', 'collapse-breakpoint-basis']) element.removeAttribute(name);
+  await element.updateComplete;
+  expect([element.orientation, element.effectiveOrientation, element.narrowOrientation, element.collapse,
+    element.orientationBreakpointBasis, element.collapseBreakpointBasis]).to.deep.equal(['horizontal', 'horizontal', 'vertical', 'none', 'container', 'container']);
+  element.setAttribute('orientation', 'diagonal');
+  await element.updateComplete;
+  expect(element.orientation).to.equal('horizontal');
+});

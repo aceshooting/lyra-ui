@@ -129,8 +129,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `preferredMode`, so it persists through `storage-key` with `persist` including `preferred-mode`
   (the default `persist` does not, so set `persist="preferred-mode"`). The mobile presentation is
   unchanged, `[part="collapse-toggle"]` is not rendered while this is set (the pin replaces it),
-  `mode` stays `'icon-only'` while peeking, and the resizer is hidden until pinned. Unset reproduces
-  today's exact behavior.
+  `mode` stays `'icon-only'` while peeking, and the resizer is hidden until pinned. Unset leaves auto-hide off.
 - `peekOpenDelay: number = 150` (attribute `peek-open-delay`) — milliseconds a moving pointer must
   stay inside the strip before it peeks open; keyboard focus opens it at once. Non-finite values use
   the default and negative values clamp to `0`.
@@ -214,7 +213,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
   state, exposing a `[part='resizer']` handle clamped to `[minRailWidth, maxRailWidth]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
-  exactly as before this property existed.
+  in effect.
 - `railWidth?: number | string` (attribute `rail-width`) — the rail's current width while
   `resizable`; settable/gettable directly. A CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved
   live — `rem` against the document root, `em` against the rail — or a number of pixels; a plain
@@ -343,7 +342,7 @@ a fixed app bar/status area above the drawer instead of the panel/scrim starting
 viewport top), `--lr-app-rail-panel-radius` (default `0` — uniform corner radius of `[part="panel"]`;
 pairs naturally with a nonzero `--lr-app-rail-panel-inset-block-start`, which exposes the panel's top
 corners). Four direction-aware per-corner tokens each default to `--lr-app-rail-panel-radius`, so
-setting only the uniform token still rounds all four corners exactly as before:
+setting only the uniform token still rounds all four corners uniformly:
 `--lr-app-rail-panel-radius-start-start` and `--lr-app-rail-panel-radius-end-start` (logical
 `border-start-start-radius`/`border-end-start-radius` — the two corners at the panel's own flush
 inline-start edge, since the drawer always sits flush against `inset-inline-start: 0`) and
@@ -365,12 +364,8 @@ background, the mobile overlay presentation; kept separate from `--lr-app-rail-b
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
-`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
-reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
-mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default
-`var(--lr-space-s)`/`var(--lr-space-xs)`, the values this rule hard-coded before either token
-existed) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm,
-previously reachable only through `::part(nav)`. Plus shared
+`--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset leaves the height natural) reserves a minimum height for `[part="header"]`, for content that
+mounts or resizes asynchronously. `--lr-app-rail-nav-padding` and `--lr-app-rail-nav-gap` (default `var(--lr-space-s)`/`var(--lr-space-xs)`) retune `[part="nav"]`'s own padding and inter-item gap — the rail's vertical rhythm. Plus shared
 tokens (`--lr-color-border`, `--lr-color-border-subtle`,
 `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`, `--lr-color-brand-quiet`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow-l` (the mobile overlay panel's default elevation, while
@@ -636,7 +631,7 @@ out of default-width compact rails, or use a rail that never collapses.
 - `rel?: string` — link relationship tokens for the anchor; `opener` is dropped and a `target`
   always adds `noopener noreferrer`.
 - `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
-  reproduces exactly what an item without this property rendered before this feature existed.
+  renders the item without its children.
   Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
   below.
 
@@ -681,8 +676,7 @@ names the native control, which remains the sole action).
   SIBLING of the item's own link/button, never nested inside it, so the link keeps navigating on
   its own and the disclosure keeps toggling on its own — clicking one never triggers the other.
   Leaving `children` empty renders neither the disclosure nor `[part="children"]` at all: an item
-  authored without any `children` content renders byte-identically to one authored before this
-  slot existed. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
+  authored without any `children` content renders as a plain item. The disclosure carries `aria-expanded` (both states) and `aria-controls` pointing
   at `[part="children"]`'s id, and a localized accessible name interpolating this item's own label
   (`Toggle {label}` in the default locale — no literal fallback, so a
   `registerLyraLocale()` translation or a `.strings` override always reaches it). `<lr-app-rail-group>`
@@ -698,7 +692,7 @@ names the native control, which remains the sole action).
   current descendant stays perceivable only through its own `current` property.
 
 Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
-renders exactly as before. While the mobile overlay is open, a click on `meta` or `end` content does
+renders no extra wrappers. While the mobile overlay is open, a click on `meta` or `end` content does
 not close it; a click elsewhere in the rail's default slot does.
 
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered

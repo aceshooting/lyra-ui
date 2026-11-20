@@ -450,8 +450,8 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  /** Clone-owned, bounded pickable relationship types offered by the "add" picker. */
   private readonly relationshipTypeOptionsSnapshot = new SnapshotProperty(EMPTY_OPTIONS, normalizeTypeOptions);
+  /** Clone-owned, bounded pickable relationship types offered by the "add" picker. */
   @property({ attribute: false })
   get relationshipTypeOptions(): readonly GraphQueryTypeOption[] {
     return this.relationshipTypeOptionsSnapshot.read();
@@ -459,8 +459,8 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   set relationshipTypeOptions(value: readonly GraphQueryTypeOption[]) {
     this.relationshipTypeOptionsSnapshot.assign(this, 'relationshipTypeOptions', value);
   }
-  /** Clone-owned, bounded pickable node types offered by the node-type "add" picker. */
   private readonly nodeTypeOptionsSnapshot = new SnapshotProperty(EMPTY_OPTIONS, normalizeTypeOptions);
+  /** Clone-owned, bounded pickable node types offered by the node-type "add" picker. */
   @property({ attribute: false })
   get nodeTypeOptions(): readonly GraphQueryTypeOption[] {
     return this.nodeTypeOptionsSnapshot.read();
@@ -468,11 +468,11 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   set nodeTypeOptions(value: readonly GraphQueryTypeOption[]) {
     this.nodeTypeOptionsSnapshot.assign(this, 'nodeTypeOptions', value);
   }
+  private readonly savedQueriesSnapshot = new SnapshotProperty(EMPTY_SAVED, normalizeSavedQueries);
   /** Clone-owned, bounded host-persisted saved queries. Controlled -- this component never mutates
    *  this array itself; accepted `lr-query-save`/`lr-query-delete` notifications tell the host when
    *  to act. Applying an accepted deletion from the focused row restores focus to the nearest
    *  survivor or save input. */
-  private readonly savedQueriesSnapshot = new SnapshotProperty(EMPTY_SAVED, normalizeSavedQueries);
   @property({ attribute: false })
   get savedQueries(): readonly GraphQuerySavedItem[] {
     return this.savedQueriesSnapshot.read();
@@ -1063,7 +1063,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     const supporting = { idPrefix: this.supportingId, presence: this.slotPresence, hint: this.hint, errorText: this.errorText };
     const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     const hopNumber = getNumberFormat(this.effectiveLocale);
-    const savedHeadingLevel = resolveHeadingLevel(this.headingLevel ?? '3');
+    const savedHeadingLevel = resolveHeadingLevel(this.headingLevel);
 
     return html`
       <div

@@ -285,11 +285,11 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
-   *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`).
-   *  Unsupported attributes and untyped writes normalize to reflected `unified`. */
   private _layout: LyraDiffViewLayout = 'unified';
 
+  /** `'unified'` (the default) renders a single interleaved `<pre>`; `'split'` renders two
+   *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`).
+   *  Unsupported attributes and untyped writes normalize to reflected `unified`. */
   @property({ reflect: true, converter: DIFF_VIEW_LAYOUT })
   get layout(): LyraDiffViewLayout {
     return this._layout;
@@ -324,7 +324,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
 
   /** How many unchanged lines to keep visible immediately before/after each change. Default
-   *  `undefined` renders every line unconditionally, exactly like before this property existed. Set
+   *  `undefined` renders every line unconditionally. Set
    *  to a finite number `>= 0` to collapse a longer run of unchanged lines behind a single fold
    *  marker reporting how many lines it hides -- the same context-window convention unified diffs
    *  and `git diff`'s `-U<n>` use. A negative or non-finite value is treated as unset (no folding). */

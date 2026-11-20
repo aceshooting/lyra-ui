@@ -77,7 +77,7 @@ export interface LyraLocaleEntry {
   readonly label?: string;
   /** ISO 3166-1 alpha-2 or alpha-3 country code (e.g. `'lb'` or `'lbn'`) overriding this row's `<lr-flag>` derivation
    *  -- when given, the row renders `<lr-flag country={country}>` instead of the default
-   *  `<lr-flag language={tag}>`. Unset (the default) keeps today's tag-derived flag. Ignored
+   *  `<lr-flag language={tag}>`. Unset (the default) keeps the tag-derived flag. Ignored
    *  while `withoutFlags` is `true`. */
   readonly country?: string;
 }
@@ -444,7 +444,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   @property({ attribute: 'trigger-display', converter: declaredDefaultConverter('flag-label') })
   triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label';
 
-  /** Option-row content. The default `label-tag` keeps today's two-line row: the locale's label
+  /** Option-row content. The default `label-tag` keeps a two-line row: the locale's label
    * above its raw BCP-47 tag. `label` renders the label alone and OMITS the `option-tag` part
    * rather than hiding it -- a visually hidden tag still joins the row's accessible name and still
    * matches a consumer's own `::part(option-tag)` rule, so hiding is not omitting. The trigger,

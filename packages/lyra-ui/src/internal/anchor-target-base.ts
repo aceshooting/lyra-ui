@@ -258,7 +258,7 @@ export function DocumentAnchorTargetBase(
      * `await`); an overriding subclass's call omits it and gets a freshly bumped one here instead,
      * matching this method's pre-split behavior exactly -- `lr-ebook-viewer`'s own override is
      * therefore unaffected in every other respect (retry timing, generation-guard semantics,
-     * announcements, event emission all still happen exactly as before).
+     * announcements, event emission all still happen).
      */
     protected async performScrollToAnchor(
       target: LyraAnchor | string,

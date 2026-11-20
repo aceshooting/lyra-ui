@@ -79,6 +79,8 @@ const LIVE_REGION_MODE = literalSetConverter<LyraLiveRegionMode>(
 export class LyraLiveRegion extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  private _mode: LyraLiveRegionMode = 'polite';
+
   /** `polite` (role="status") waits for the user to be idle; `assertive`
    *  (role="alert") interrupts. Mirrors native `aria-live` semantics.
    *
@@ -89,8 +91,6 @@ export class LyraLiveRegion extends LyraElement {
    *  transition -- gets the new urgency and the new text landing together,
    *  rather than the text beating Lit's re-render to the DOM. Unsupported values normalize to
    *  reflected `polite`. */
-  private _mode: LyraLiveRegionMode = 'polite';
-
   @property({ reflect: true, converter: LIVE_REGION_MODE })
   get mode(): LyraLiveRegionMode {
     return this._mode;

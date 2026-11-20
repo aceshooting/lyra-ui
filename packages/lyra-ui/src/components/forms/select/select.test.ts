@@ -2591,6 +2591,7 @@ for (const path of ['initial markup', 'reposition'] as const) {
     let failing = path === 'initial markup';
     let attempts = 0;
     let afterShows = 0;
+    const closes: string[] = [];
     __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({
       place: (...args) => {
         attempts++;
@@ -2602,7 +2603,8 @@ for (const path of ['initial markup', 'reposition'] as const) {
     try {
       const el = await fixture<LyraSelect>(html`
         <lr-select ?open=${failing} @lr-after-show=${() => afterShows++}
-          @lr-hide=${(event: Event) => event.preventDefault()}>
+          @lr-hide=${(event: Event) => { closes.push(`hide:${event.cancelable}`); event.preventDefault(); }}
+          @lr-after-hide=${() => closes.push('after-hide')}>
           <lr-option value="a">A</lr-option>
         </lr-select>`);
       if (path === 'reposition') {
@@ -2619,6 +2621,8 @@ for (const path of ['initial markup', 'reposition'] as const) {
       expect(rows(el).length).to.equal(0);
       const successes = path === 'reposition' ? 1 : 0;
       expect(afterShows).to.equal(successes);
+      await waitUntil(() => closes.length === 2, 'the forced close is reported');
+      expect(closes).to.deep.equal(['hide:false', 'after-hide']);
       failing = false;
       await el.show();
       expect(el.open).to.equal(true);

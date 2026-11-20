@@ -1203,8 +1203,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  no way to make an already-rendered graph reproducible after the fact. */
   @property({ type: Number }) seed?: number;
   /** Draws each resolved (non-dangling) edge's `label` as visible SVG text at the segment
-   *  midpoint. Off by default — `LyraGraphEdge.label` stays spoken/tooltip-only, matching today's
-   *  behavior, unless this is set. */
+   *  midpoint. Off by default — `LyraGraphEdge.label` stays spoken/tooltip-only unless this is set. */
   @property({ type: Boolean, attribute: 'with-edge-labels' }) withEdgeLabels =
     false;
   /** Below this zoom scale, every drawn edge label is hidden (a `data-edge-labels-hidden`
@@ -1283,7 +1282,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private lastPositionById = new Map<string, { x: number; y: number }>();
   /** The `hiddenNodeCount` computed by the most recent `rebuildSimulation()` -- lets that method
    *  tell "nothing has ever been hidden" (never touch `graphLiveText`, so a consumer that never
-   *  sets `hiddenTypes` keeps today's exact live-region output) apart from "a hide was just
+   *  sets `hiddenTypes` gets no extra live-region output) apart from "a hide was just
    *  cleared" (still announce the resulting "0 of N" count). */
   private lastHiddenNodeCount = 0;
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
@@ -4399,7 +4398,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  property-driven pass, then never get a chance to correct it once the real simNodes became
    *  available. Only ever touches graphLiveText when there's something to say -- a node is
    *  currently hidden, or one just stopped being hidden -- so a consumer that never sets
-   *  hiddenTypes keeps today's exact live-region output. */
+   *  hiddenTypes gets no extra live-region output. */
   private announceHiddenNodeCount(visibleNodeCount: number): void {
     const totalNodeCount = this.graphModel.nodes.length;
     const hiddenNodeCount = totalNodeCount - visibleNodeCount;

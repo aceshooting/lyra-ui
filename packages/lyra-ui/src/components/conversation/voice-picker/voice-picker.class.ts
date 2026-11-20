@@ -107,8 +107,7 @@ export interface LyraVoicePickerEventMap {
  * (click or keyboard) commits nothing and changes no state, and arrow-key/Home/End
  * active-descendant navigation steps past it instead of landing on it. It does not affect that
  * row's own `[part="option-preview"]`, a separate affordance -- a disabled voice remains
- * previewable so a listener can hear why it is excluded. Omitted or `false` renders the row exactly
- * as before this field existed.
+ * previewable so a listener can hear why it is excluded. Omitted or `false` leaves the row fully actionable.
  *
  * A catalog row can also include a literal `icon` (for example, an emoji), rendered decoratively
  * as the leading `[part="option-icon"]`, matching `lr-model-select`'s identical

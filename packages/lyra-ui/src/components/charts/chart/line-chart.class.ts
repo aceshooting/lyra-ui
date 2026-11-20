@@ -13,6 +13,7 @@ import { LyraChart, type LyraChartType } from './chart.class.js';
  * @since 4.0.0
  */
 export class LyraLineChart extends LyraChart {
+  /** Chart type. Defaults to `line`; a `type` attribute or property write changes it, and an unrecognized value falls back to `bar`. */
   override type: LyraChartType = 'line';
 }
 

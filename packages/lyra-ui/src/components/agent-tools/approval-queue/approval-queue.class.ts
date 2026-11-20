@@ -390,7 +390,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   }
 
   override render(): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const label = this.label == null ? this.localize('approvalQueueLabel') : this.label;
     const request = this.selectedRequest;
     const requests = this.normalizedRequests;

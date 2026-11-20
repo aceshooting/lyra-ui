@@ -174,10 +174,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     });
   }
 
+  /** Commit hash. The first seven characters display and the copy button copies the full value. */
   @property() hash = '';
   /** Commit subject and optional body. Removing the attribute clears both displayed sections. */
   @property() message = '';
+  /** Commit author name, shown in the meta row when non-empty. */
   @property() author = '';
+  /** Commit time as epoch milliseconds. Unset, negative or non-finite values hide the time. */
   @property({ type: Number, attribute: false }) timestamp?: number;
   /** File changes keyed by path. Empty/blank paths are omitted and duplicates normalize
    *  first-wins before diffstat and events. */

@@ -302,6 +302,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Placeholder shown in the draft input while it is empty. */
   @property() placeholder = '';
   /** Native autocomplete hint forwarded to both token editors. */
   @property({ useDefault: true }) autocomplete = '';
@@ -341,14 +342,15 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    *  single override of `--lr-token-input-radius`, which the tokens share with the row, so the
    *  chips round with it. */
   @property({ type: Boolean, reflect: true }) pill = false;
+  /** Allows the same token text to be added more than once; when `false`, a duplicate is rejected. */
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates =
     false;
+  private _editable = false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders
    *  exactly as it does without this feature and stays non-focusable. Own or fieldset-cascaded
    *  disablement removes every edit trigger from focus and marks it `aria-disabled="true"`; one
    *  roving stop is restored when the control becomes enabled again. */
-  private _editable = false;
   @property({ attribute: 'editable', type: Boolean, reflect: true })
   get editable(): boolean {
     return this._editable;

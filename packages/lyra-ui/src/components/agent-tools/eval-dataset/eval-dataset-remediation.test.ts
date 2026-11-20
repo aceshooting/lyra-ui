@@ -35,6 +35,17 @@ describe('lr-eval-dataset remediation', () => {
     expect(remove.disabled).to.equal(false);
   });
 
+  it('emits nothing when the already-selected row is activated again', async () => {
+    const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`);
+    const events: string[] = [];
+    for (const type of ['lr-example-select-request', 'lr-example-select']) el.addEventListener(type, () => events.push(type));
+    rows(el)[0]!.click();
+    await el.updateComplete;
+    rows(el)[0]!.click();
+    await el.updateComplete;
+    expect(events).to.deep.equal(['lr-example-select-request', 'lr-example-select']);
+  });
+
   it('formats tag lists for the effective locale', async () => {
     const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset lang="ja" .examples=${examples()}></lr-eval-dataset>`);
     const expected = new Intl.ListFormat('ja', { type: 'unit', style: 'short' }).format(['alpha', 'beta']);

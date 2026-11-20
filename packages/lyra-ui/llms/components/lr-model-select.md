@@ -71,7 +71,7 @@ focus move.
   vocabulary. `disabled` marks a row non-actionable: `aria-disabled="true"` replaces its
   selected/active affordances, activating it (click or keyboard) commits nothing and changes no
   state, and arrow-key/Home/End active-descendant navigation steps past it instead of landing on
-  it. Omitted or `false` renders the row exactly as before this field existed.
+  it. Omitted or `false` renders the row normally.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids

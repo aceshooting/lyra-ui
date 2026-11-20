@@ -48,8 +48,8 @@ await preloadMarkdown();
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, on unless `without-syntax-highlighting` is set. This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
-peer sees byte-identical output to before this property existed. The very first render of any content
-is always plain text/code (identical to today's output); highlighting arrives as an asynchronous
+peer sees plain output. The very first render of any content
+is always plain text/code; highlighting arrives as an asynchronous
 upgrade one render later once shiki resolves and the block's language is tokenized. No highlighting
 is attempted while `streaming` is `true` — it applies once a stream settles, adding no per-chunk cost
 while content is still arriving.
@@ -670,7 +670,7 @@ accepted state is committed.
 attachment chips, rendered below the message body), `failure` (only meaningful while
 `status="failed"`: host-supplied content — typically a `role="alert"` banner plus its own retry
 control — that replaces the built-in status text, retry button, and live-region announcement
-entirely; unset, `status="failed"` renders exactly as before)
+entirely; unset, `status="failed"` renders the built-in status text and retry button)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
 `collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
@@ -843,8 +843,7 @@ Removing `label` restores the localized thinking name while preserving an explic
 
 `label-placement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
 visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
-`labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
-screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
+`labelPlacement` vocabulary. The default, `"none"`, is screen-reader-only rendering: a single `.sr-only` text node, no
 visible twin. That visible `part="label"` node is itself `aria-hidden="true"`: the host's own
 `aria-label` already carries the identical string as the accessible name, so the visible copy is
 never exposed as a second, redundant accessibility-tree node for the same text.
@@ -857,8 +856,7 @@ never exposed as a second, redundant accessibility-tree node for the same text.
   The status is not re-announced on every animation frame, only on mount and on later label changes
 - `labelPlacement: TypingIndicatorLabelPlacement = 'none'` (`'none' | 'after'`, attribute
   `label-placement`, reflected) — where the accessible label renders. `'none'` (default) keeps
-  `label` screen-reader-only, exactly as this component rendered before this property
-  existed. `'after'` also renders it visibly next to the animated shape.
+  `label` screen-reader-only. `'after'` also renders it visibly next to the animated shape.
 - `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
   `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
   `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully
@@ -977,7 +975,7 @@ clears the touched presentation.
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
-  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps today's single flex row.
+  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps a single flex row.
   `'stacked'` arranges the `start` and `end` action slots as a compact one-column rail (`start`
   above `end`) beside a `textarea` that spans both rows — for a multi-row composer (a taller
   `min-rows`) where stretching the action buttons across the row's full height would otherwise look
@@ -1443,7 +1441,7 @@ row that is both dense and active keeps the active background and the promoted e
 contrast.
 
 `--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
-`[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
+`[part='base']` and `[part='select-button']`. `flex-start` — the default — suits the
 common multi-line row (a title plus an `excerpt`): centering that layout against a single-line
 trailing action would misalign the title's own baseline. Set it to `center` for a row that is
 reliably single-line (no excerpt, no wrapping title) alongside a taller trailing action (e.g. an
@@ -1567,7 +1565,7 @@ focus move.
   vocabulary. `disabled` marks a row non-actionable: `aria-disabled="true"` replaces its
   selected/active affordances, activating it (click or keyboard) commits nothing and changes no
   state, and arrow-key/Home/End active-descendant navigation steps past it instead of landing on
-  it. Omitted or `false` renders the row exactly as before this field existed.
+  it. Omitted or `false` renders the row normally.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
@@ -1888,8 +1886,7 @@ left-to-right direction inside mixed-direction content.
   reuses its combined map until either property receives a new map object.
 
 The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
-exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
-properties existed:
+exactly `<lr-markdown>`'s own default so leaving it unset renders with `<lr-markdown>`'s defaults:
 
 - `tabSize: number = 4` (attribute `tab-size`) — forwarded to the composed `<lr-markdown>`'s own
   `tabSize`.
@@ -3560,6 +3557,11 @@ fails visibly; setting `undefined` restores the current legacy data/slotted prec
 current-query record count before group collapse, or `null` before success and without a source.
 Query/page-size changes reset page zero; collapse changes preserve the current record page.
 An out-of-range page receives at most one corrective last-page request.
+The built-in pager proposes a page with cancelable `lr-source-page-change-request` (`detail: { page }`,
+zero-based); `preventDefault()` skips the write. Every component-owned `sourcePage` write (an
+accepted pager request, the page-zero reset, the provider's last-page correction, or the jump to
+the page holding `activeConversationId`) then fires `lr-source-page-change` (`detail: { page }`), so
+a controlled `.sourcePage=${state.page}` binding can follow it; host assignments never fire it.
 
 ```ts
 import type { ThreadListSource, ThreadListSourceQuery } from
@@ -3672,8 +3674,7 @@ collapsed state for both date and custom groups, **self-managed by default**: ac
 built-in group toggle updates this array directly. A collapsed group's header remains in the
 virtual list while its conversation rows are removed from the virtual-list item/measurement set.
 Prevent the default of the cancelable `lr-group-toggle-request` event (see **Events** below) to
-veto that write and keep this property fully controlled instead — the only behavior it had before
-self-management existed. Group headers and threads use separate
+veto that write and keep this property fully controlled instead. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
@@ -3690,7 +3691,7 @@ pushing it off as the next group's header arrives. Group headers are ordinary vi
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
 the real row keeps the `role="heading"`/`aria-level` semantics and its interactive toggle. The
 pinned copy is inert, pointer-transparent presentation content: its toggle and adornments do not
-receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
+receive interaction, and it adds no second tab stop. Default `false` pins no header; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
 list unnamed. `error: boolean = false` (reflected) — data mode only: reports a failed thread-list
@@ -3778,7 +3779,9 @@ assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — r
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead.
+`preventDefault()` leaves it set instead. `dataSource` only: `lr-source-page-change-request`
+(`detail: { page }`, cancelable) and `lr-source-page-change` (`detail: { page }`), described under
+**Full-source paging**.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
@@ -4957,8 +4960,10 @@ readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
 localized default. A host `aria-describedby` describes the composed textarea.
 Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
-duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
-source ids use the same unique nonblank projection.
+duplicates are omitted first-wins before section gating and child forwarding. Selected source ids
+use the same unique nonblank projection. A pick in the built-in model, voice or source picker
+writes `model`, `voice` or `selectedSourceIds` before its change event, so a host rejects it by
+reassigning the previous value.
 
 Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
 nested source children and queued attachments. Mutating a previously assigned collection has no

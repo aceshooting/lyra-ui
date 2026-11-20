@@ -282,6 +282,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  silent while this host or a composed ancestor is excluded from the accessibility tree. */
   @property({ attribute: 'with-count', type: Boolean, reflect: true })
   withCount = false;
+  /** Placeholder text forwarded to the native textarea; also the accessible-name fallback when there is no label. */
   @property() placeholder = '';
   /** Forwards native read-only behavior to the internal textarea. The value remains focusable,
    *  selectable, copyable, and form-submittable; constraint validation is suspended until the
@@ -360,7 +361,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  coalescing a burst of rapid edits into a single downstream commit -- the same predicate and
    *  `DebounceController` primitive `<lr-filter-bar>`'s own per-filter `debounce` uses, and shared
    *  with `<lr-input>`'s identical property. Omitted, `0`, or a non-finite value means no debounce
-   *  at all: `input`/`lr-input` keep firing per keystroke exactly as before, and `lr-input-settled`
+   *  at all: `input`/`lr-input` keep firing per keystroke, and `lr-input-settled`
    *  never fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never
    *  drops the last keystroke) and cancelled with no stray settle by disconnection and a
    *  programmatic `value` write that changes the value -- a same-value write does not disturb it. */
@@ -674,8 +675,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for
-   *  the same shape. Omitted, `0`, or non-finite means no debounce (today's per-keystroke
-   *  behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
+   *  the same shape. Omitted, `0`, or non-finite means no debounce (per-keystroke behavior); `finiteDuration()` also caps it at the platform's own timer ceiling. */
   private get effectiveDebounceMs(): number {
     return finiteDuration(this.debounce ?? 0, 0);
   }

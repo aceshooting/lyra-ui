@@ -337,7 +337,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered image (image format only) in an internal `<lr-pan-zoom>`. `false`
-   *  (the default) preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must
+   *  (the default) renders no `<lr-pan-zoom>` -- an inline thumbnail (e.g. in a chat stream) must
    *  not unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
 
@@ -362,7 +362,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this._regionHighlights = this.projectRegionHighlights(this._highlights);
     this.requestUpdate('highlights', previous);
   }
+  /** Id of the region highlight drawn as active (image format only); `null` (the default) marks none. */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
+  /** Highlight anchor kinds this viewer resolves; only `region` anchors. */
   readonly anchorKinds: LyraAnchor['kind'][] = ['region'];
 
   @state() private hasUnsupportedSlot = false;

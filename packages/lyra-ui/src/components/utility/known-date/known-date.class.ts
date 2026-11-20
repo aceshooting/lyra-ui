@@ -428,6 +428,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.externalDescriptionLease = undefined;
   }
 
+  /** Earliest accepted date as an ISO `YYYY-MM-DD` string (reflects to `min`); an earlier value fails validation with `rangeUnderflow`. Empty means no lower bound. */
   get min(): string {
     return this._min;
   }
@@ -439,6 +440,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.requestUpdate('min', old);
   }
 
+  /** Latest accepted date as an ISO `YYYY-MM-DD` string; a later value fails validation with `rangeOverflow`. Empty means no upper bound. */
   get max(): string {
     return this._max;
   }

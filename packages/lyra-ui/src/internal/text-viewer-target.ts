@@ -47,8 +47,13 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
   /** Resolves the retained match count. Inspect `lr-search-change.matchCountExact` to distinguish
    * an exact total from a lower bound when a resource ceiling is reached. */
   search(query: string): Promise<number>;
+  /** Moves the active match to the next retained match, wrapping at the end, and scrolls it
+   * into view. Resolves `false` when there is no match. */
   searchNext(): Promise<boolean>;
+  /** Moves the active match to the previous retained match, wrapping at the start, and
+   * scrolls it into view. Resolves `false` when there is no match. */
   searchPrevious(): Promise<boolean>;
+  /** Clears the query and every painted match, then emits `lr-search-change` with no matches. */
   clearSearch(): void;
 }
 
@@ -371,6 +376,8 @@ export function TextViewerTarget(
       return this.searchMatches.length;
     }
 
+    /** Moves the active match to the next retained match, wrapping at the end, and scrolls it
+     *  into view. Resolves `false` when there is no match. */
     async searchNext(): Promise<boolean> {
       const recomputed = this.recomputeSearchSynchronouslyIfStale();
       if (!this.searchMatches.length) {
@@ -384,6 +391,8 @@ export function TextViewerTarget(
       return true;
     }
 
+    /** Moves the active match to the previous retained match, wrapping at the start, and
+     *  scrolls it into view. Resolves `false` when there is no match. */
     async searchPrevious(): Promise<boolean> {
       const recomputed = this.recomputeSearchSynchronouslyIfStale();
       if (!this.searchMatches.length) {
@@ -397,6 +406,7 @@ export function TextViewerTarget(
       return true;
     }
 
+    /** Clears the query and every painted match, then emits `lr-search-change` with no matches. */
     clearSearch(): void {
       this.searchQuery = '';
       this.lastSearchGeneration = this.observedContentGeneration;

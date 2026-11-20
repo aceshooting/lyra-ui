@@ -1623,6 +1623,7 @@ export type {
   ThreadGroupToggleDetail,
   ThreadListGrouping,
   ThreadListSource,
+  ThreadListSourcePageChangeDetail,
   ThreadListSourceQuery,
   ThreadRowAction,
 } from './components/conversation/thread-list/thread-list.class.js';

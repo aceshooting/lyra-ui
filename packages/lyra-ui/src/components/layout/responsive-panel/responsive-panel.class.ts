@@ -191,10 +191,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this._open = value;
   }
 
-  /** `'auto'` (default) tracks `overlay-breakpoint` against this element's allocation;
-   * `'inline'`/`'overlay'` force that presentation. */
   private _mode: LyraResponsivePanelMode = 'auto';
 
+  /** `'auto'` (default) tracks `overlay-breakpoint` against this element's allocation;
+   * `'inline'`/`'overlay'` force that presentation. */
   @property({ reflect: true, converter: RESPONSIVE_PANEL_MODE })
   get mode(): LyraResponsivePanelMode {
     return this._mode;
@@ -265,6 +265,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private readonly headerObserver = new OwnedMutationObserver(this, () => {
     this.headingText = this.detectHeadingText();
   });
+  /** Space-separated ids that describe the panel; forwarded to the modal panel only while it is open as an overlay. */
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
   private ownerRealmGeneration = 0;
   /** Whether the overlay-only mechanics (scroll-lock and shared overlay registration) are currently

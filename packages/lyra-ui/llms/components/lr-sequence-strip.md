@@ -162,7 +162,7 @@ categoryId, readonly marker?, readonly label?, readonly disabled? }`;
   activating it (click or Enter/Space) emits nothing, and roving Left/Right/Home/End navigation —
   including the default resting tab stop — steps past it. Above the 200-cell cap, a range cell's
   disabled state follows its own activated item, the range's first. Omitted or `false` renders the
-  item exactly as before this field existed
+  item normally
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,

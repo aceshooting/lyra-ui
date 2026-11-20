@@ -79,8 +79,7 @@ export const FALLBACK_TOOLTIP_BG = '#fff';
 export const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
 /** Mirrors Chart.js's OWN built-in tick font size (`defaults.font.size`, 12px, unrelated to any
  *  `--lr-*` token) -- reached only if `getComputedStyle` can't resolve
- *  `--lr-chart-tick-font-size`/`--_lr-chart-tick-font-size` at all. The canvas charts never set a
- *  font size before `--lr-chart-tick-font-size` existed, so an unset token must keep resolving to
+ *  `--lr-chart-tick-font-size`/`--_lr-chart-tick-font-size` at all. The canvas charts set no font size of their own, so an unset token resolves to
  *  Chart.js's own default rather than a library token -- unlike `<lr-lite-chart>`'s SVG
  *  `[part='axis-label']`, which already hardcoded `--lr-font-size-2xs` and keeps that default. */
 export const FALLBACK_TICK_FONT_SIZE = 12;

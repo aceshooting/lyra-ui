@@ -357,10 +357,12 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   }
 
   /** Create and append a toast item programmatically. The object form shares the canonical
-   * `LyraToastOptions` contract with `toast()`; the legacy string form remains supported. A
+   * `LyraToastOptions` contract with `toast()`; a message string plus options is also accepted. A
    * detached region rejects immediately rather than returning an update promise that cannot run. */
   create(options: LyraToastOptions): Promise<LyraToastItem>;
+  /** Creates and appends a toast item from a message string and optional per-toast options. */
   create(message: string, options?: LyraToastCreateOptions): Promise<LyraToastItem>;
+  /** Creates and appends a toast item, accepting an options object or a message string with options. Rejects when the region is not connected. */
   async create(
     messageOrOptions: string | LyraToastOptions,
     legacyOptions: LyraToastCreateOptions = {}

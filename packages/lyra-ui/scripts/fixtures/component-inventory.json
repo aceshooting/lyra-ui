@@ -22504,7 +22504,7 @@
                 "parameters": [
                   {
                     "name": "ref",
-                    "type": "LyraSeriesPointRef | string",
+                    "type": "LyraSeriesPointRef",
                     "optional": false,
                     "hasDefault": false
                   }
@@ -22515,7 +22515,7 @@
                 "parameters": [
                   {
                     "name": "ref",
-                    "type": "LyraSeriesPointRef",
+                    "type": "LyraSeriesPointRef | string",
                     "optional": false,
                     "hasDefault": false
                   }
@@ -95809,17 +95809,6 @@
                     "type": "string",
                     "optional": false,
                     "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              },
-              {
-                "parameters": [
-                  {
-                    "name": "replacement",
-                    "type": "string",
-                    "optional": false,
-                    "hasDefault": false
                   },
                   {
                     "name": "start",
@@ -95866,6 +95855,17 @@
                     "name": "selectMode",
                     "type": "SelectionMode",
                     "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
                     "hasDefault": false
                   }
                 ],
@@ -146446,7 +146446,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "locale",
@@ -149548,6 +149549,18 @@
             "name": "lr-select",
             "type": "CustomEvent<{ conversationId: string }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-source-page-change",
+            "type": "CustomEvent<ThreadListSourcePageChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-source-page-change-request",
+            "type": "CustomEvent<ThreadListSourcePageChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -167567,17 +167580,6 @@
                     "type": "string",
                     "optional": false,
                     "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              },
-              {
-                "parameters": [
-                  {
-                    "name": "replacement",
-                    "type": "string",
-                    "optional": false,
-                    "hasDefault": false
                   },
                   {
                     "name": "start",
@@ -167624,6 +167626,17 @@
                     "name": "selectMode",
                     "type": "SelectionMode",
                     "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
                     "hasDefault": false
                   }
                 ],

@@ -81,6 +81,7 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
   /** Error text below the field (overridden by slotted `error` content). Unset (the default): no
    *  error chrome renders. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Text shown in the trigger while no value is selected; also the accessible-name fallback when no label is set. */
   @property() placeholder = '';
   /** Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,
    *  matching the native element's own default. No effect in closed-dropdown mode (no native text

@@ -60,9 +60,10 @@ export interface LyraArtifactPanelEventMap {
  *   that assigns a different `view` keeps its own assignment.
  * @event lr-artifact-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
  * @event lr-version-change - `detail: { versionId }`. Fired when the previous/next
- *   navigation moves to a different version. Not fired when a `versions` reassignment drops the
- *   currently-active version id: `activeVersionId` resets to `null` silently, since `null` is
- *   already a documented steady state ("the latest version"), not itself a selection.
+ *   navigation moves to a different version, and after an update in which a `versions`
+ *   reassignment dropped the active version id: `activeVersionId` then resets to `null` ("the
+ *   latest version") and the event names the latest version now shown, so a host binding
+ *   `activeVersionId` can follow. An empty `versions` list shows no version and fires nothing.
  * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button only
  *   while `hideRestore` is false; mutates nothing itself — `versions` and the resulting content stay host-owned state.
  * @event lr-copy - `detail: { ok: true, text }`. Fired after the clipboard write fulfills.
@@ -182,6 +183,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   private versionsCache?: { source: unknown; versions: ArtifactVersion[] };
   private viewCoerced = false;
+  private versionCoerced = false;
 
   private get normalizedVersions(): ArtifactVersion[] {
     const source = this.versions;
@@ -207,6 +209,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     ) {
       this.activeVersionId = null;
       this.removeAttribute('active-version-id');
+      this.versionCoerced = this.hasUpdated;
     }
   }
 
@@ -224,6 +227,11 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     if (this.viewCoerced) {
       this.viewCoerced = false;
       this.emit('lr-artifact-view-change', { view: this.view });
+    }
+    if (this.versionCoerced) {
+      this.versionCoerced = false;
+      const latest = this.normalizedVersions.at(-1);
+      if (this.activeVersionId === null && latest) this.emit('lr-version-change', { versionId: latest.id });
     }
   }
 

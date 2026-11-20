@@ -168,6 +168,7 @@ export class LyraAccordionItem extends LyraElement {
   @property({ reflect: true })
   appearance: LyraAccordionAppearance = 'outlined';
 
+  /** Space-separated ids that describe the item; forwarded to the inner trigger button instead of the host. */
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
   /** @internal Roving-tabindex state controlled by the owning accordion. */

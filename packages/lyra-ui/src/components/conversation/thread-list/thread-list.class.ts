@@ -89,7 +89,15 @@ export interface ThreadGroupToggleDetail {
   expanded?: boolean;
 }
 
+/** Payload shared by the `lr-source-page-change-request`/`lr-source-page-change` pair. */
+export interface ThreadListSourcePageChangeDetail {
+  /** Zero-based source record page: proposed on the request, applied on the change. */
+  page: number;
+}
+
 export interface LyraThreadListEventMap {
+  'lr-source-page-change-request': CustomEvent<ThreadListSourcePageChangeDetail>;
+  'lr-source-page-change': CustomEvent<ThreadListSourcePageChangeDetail>;
   'lr-select': CustomEvent<{ conversationId: string }>;
   'lr-thread-pin': CustomEvent<{ conversationId: string; pinned: boolean }>;
   'lr-thread-archive': CustomEvent<{
@@ -212,6 +220,14 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   shadow boundary can observe it.
  * @event {FocusEvent} focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
  *   for the same reason as `blur`.
+ * @event lr-source-page-change-request - `detail: { page }` (zero-based) is a cancelable proposal
+ *   from the built-in `[part='source-pagination']` before `sourcePage` changes. Calling
+ *   `preventDefault()` skips the built-in `sourcePage` write and the following
+ *   `lr-source-page-change`, leaving the page fully controlled.
+ * @event lr-source-page-change - `detail: { page }` (zero-based) -- `sourcePage` was changed by
+ *   the component rather than by the host: an accepted pagination request, the reset to page 0
+ *   after a query input changes, the provider's correction of an out-of-range page, or the jump
+ *   to the page holding `activeConversationId`. A host assignment never fires it.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
@@ -393,6 +409,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private _dataSource?: ThreadListSource;
   private sourceEpoch = 0;
   private sourceSyncing = false;
+  /** Set by a component-owned `sourcePage` correction; `updated()` reports it once. */
+  private sourcePageChangePending = false;
   private sourceInputs?: readonly unknown[];
   private readonly sourceQueryInputs = new SourceQueryInputs();
   private sourceRequestVersion = 0;
@@ -435,7 +453,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       const size = normalizeSourcePageSize(this.sourcePageSize);
       let page = normalizeSourcePage(this.sourcePage, size);
       const queryInputs = [this.searchText, this.withArchived, this.grouping, this.filter, this.groupBy, this.getGroupLabel, this.groupOrder, size];
-      if (this.sourceQueryInputs.changed(queryInputs) && this.hasUpdated) { page = 0; this.sourcePage = 0; }
+      if (this.sourceQueryInputs.changed(queryInputs) && this.hasUpdated) {
+        if (this.sourcePage !== 0) this.sourcePageChangePending = true;
+        page = 0; this.sourcePage = 0;
+      }
       const revision = source.revision;
       const inputs = [source, revision, this.sourceEpoch, this.effectiveLocale, ...queryInputs, this.collapsedGroupIds, page];
       if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
@@ -457,6 +478,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (!result || !this.sourcePages.acceptPage(result)) return;
     if (this.sourcePage !== this.sourcePages.state.page) {
       this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+      this.sourcePageChangePending = true;
       this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page] : undefined;
     }
     const intent = this.sourceFilterIntent;
@@ -491,7 +513,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       if (index === null || !this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.dataSource !== source || this.activeConversationId !== id || this.sourceRequestVersion !== version) return;
       const page = sourcePageOfRecord(index, this.sourcePageSize);
       if (page === this.sourcePage) { this.revealSourceActive(id, version); return; }
-      this.sourcePage = page;
+      this.sourcePage = page; this.sourcePageChangePending = true;
       this.sourceActiveReveal = { id, version: this.sourceRequestVersion };
     });
   }
@@ -515,7 +537,19 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return !(this.sourceMode || this.sourcePages.sourceGroupIdentities.has(item)) || (this.sourceMode && !this.sourceBlocked && this.model().items.includes(item));
   }
   private onSourcePage = (event: CustomEvent<{ page: number }>): void => {
-    event.stopPropagation(); if (this.sourceMode && !this.sourceBlocked) this.sourcePage = event.detail.page - 1;
+    event.stopPropagation();
+    if (!this.sourceMode || this.sourceBlocked) return;
+    const detail: ThreadListSourcePageChangeDetail = { page: event.detail.page - 1 };
+    requestThenCommit({
+      requestDetail: detail,
+      emitRequest: (requestDetail, init: { cancelable: true }) =>
+        this.emit('lr-source-page-change-request', requestDetail, init),
+      commit: () => {
+        if (!this.sourceMode || this.sourceBlocked) return;
+        this.sourcePage = detail.page;
+        this.emit('lr-source-page-change', detail);
+      },
+    });
   };
   private currentSourceRetry(source: ThreadListSource | undefined, state: SourcePageState<LyraChatThread>): boolean {
     return this.isConnected && this.sourceMode && this.dataSource === source && this.sourcePages.state === state && (this.error || this.sourceFailed);
@@ -584,8 +618,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Data mode: ids of date/custom groups whose rows are omitted from virtualization.
    *  Self-managed by default -- activating the built-in group toggle updates this array directly.
    *  Prevent the default of the cancelable `lr-group-toggle-request` event to veto that write and
-   *  keep this property fully controlled instead, the only behavior it had before self-management
-   *  existed. */
+   *  keep this property fully controlled instead. */
   @property({ attribute: false }) collapsedGroupIds: readonly string[] = [];
 
   /** Data mode only: built-in icon buttons rendered into each row's `actions` slot, in display order. */
@@ -816,6 +849,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.sourcePageChangePending) {
+      this.sourcePageChangePending = false;
+      if (this.sourceMode) this.emit('lr-source-page-change', { page: this.sourcePage });
+    }
     this.childRegistration = loadLazyChildren(THREAD_LIST_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.syncInputLimitAnnouncement();
     const status = this.sourceMode && this.sourcePages.state.pending ? this.localize('loading')

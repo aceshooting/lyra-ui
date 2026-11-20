@@ -85,7 +85,7 @@ export class LyraEmpty extends LyraElement {
    *  inside a constrained space (e.g. a widget body or table cell) rather than as a full-page
    *  state: left-aligned, tighter padding, and a lighter heading weight instead of the
    *  centered/spacious default. `m` and the steps above it keep the default density. Opt-in: with
-   *  no size the empty state renders exactly as before. Unsupported values normalize to the
+   *  no size the empty state renders at the default density. Unsupported values normalize to the
    *  omitted state and remove the attribute. */
   @property({ reflect: true, converter: optionalSizeConverter })
   get size(): LyraSize | undefined {
@@ -101,8 +101,7 @@ export class LyraEmpty extends LyraElement {
    *  document order and repeating it is noise. Set it where the empty state replaces a result set
    *  the user just asked for. This is read once, when the component first mounts -- a later
    *  reconnection or adoption stages the existing content again rather than replaying it, and
-   *  later heading/description changes are announced either way. Remove any host
-   *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
+   *  later heading/description changes are announced either way. Remove any hand-added host `role="status"`/`role="alert"` once it is set --
    *  otherwise the initial text is announced twice, through the native role and again through the
    *  shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;

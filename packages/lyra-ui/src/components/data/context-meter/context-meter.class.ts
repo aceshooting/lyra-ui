@@ -326,7 +326,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    * Opt-in filter mode: every band, and every legend row, becomes a real button that emits the
    * cancelable `lr-segment-activate-request`.
    *
-   * Off by default, and off is unchanged from before this property existed -- a pure part-to-whole
+   * Off by default, a pure part-to-whole
    * visualization whose visible parts are all `aria-hidden`. On, the bands are `<button>`s (the
    * ring's arcs carry `role="button"`, since an SVG shape cannot be a native one), the legend
    * leaves the accessibility tree's shadow and its rows become buttons too, and both carry explicit
@@ -366,6 +366,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     markVetoGuardWrite(this.selectedIndicesGuard);
     this.requestUpdate('selectedIndices', previous);
   }
+  /** Accessible name taken from the host `aria-label`; it takes precedence over `label` for the meter's semantic name. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   private projectedSegmentsSource: unknown;

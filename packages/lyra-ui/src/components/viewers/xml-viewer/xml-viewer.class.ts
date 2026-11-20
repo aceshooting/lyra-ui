@@ -29,6 +29,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { RovingTreeFocus } from '../../../internal/roving-tree-focus.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField } from '../../../internal/hierarchy-source-controller.js';
@@ -322,6 +323,11 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
  * matching. Every document type declaration is rejected before `DOMParser`, preventing both
  * external-entity access and browser-specific internal-entity expansion.
+ *
+ * Keyboard: the parsed-document tree is one Tab stop (the last focused control, else the first).
+ * ArrowUp and ArrowDown move between element rows, keeping to the same kind of control where the
+ * row has one; ArrowLeft and ArrowRight move between a row's toggle, highlight action and copy
+ * button (mirrored under RTL); Home and End reach the first and last row.
  *
  * @customElement lr-xml-viewer
  * @event lr-copy - The clipboard write fulfilled. `detail: { ok: true, text }`.
@@ -776,8 +782,17 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.lastSearchLocale = locale;
   }
 
+  private treeElement: HTMLElement | null = null;
+  private readonly treeFocus = new RovingTreeFocus({
+    tree: () => (this.treeElement?.isConnected ? this.treeElement : null),
+    row: '[part~="node"]',
+    control: '[part~="toggle"], [part~="highlight-action"], [part~="copy-button"]',
+    direction: () => this.effectiveDirection,
+  });
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.treeFocus.sync();
     if (this.treeSource !== undefined) {
       const source = this.treeSource;
       const binding = this.sourceBinding;
@@ -1210,6 +1225,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     return true;
   }
 
+  /** Clears the search query, active match and highlights, cancels any pending anchor, and emits the search-change event. */
   clearSearch(): void {
     this.cancelPendingAnchor();
     if (this.treeSource !== undefined) {
@@ -1471,7 +1487,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private buildLoadedTree(doc: Document): TemplateResult {
     const budget: RenderBudget = { remaining: this.effectiveMaxRows, truncated: false };
     const tree = this.renderNode(doc.documentElement, [], 0, budget);
-    return html`<div part="tree">${tree}</div>${budget.truncated
+    return html`<div part="tree" ${ref(element => { this.treeElement = (element as HTMLElement | undefined) ?? null; })}
+      @focusin=${this.treeFocus.onFocusIn} @keydown=${this.treeFocus.onKeyDown}>${tree}</div>${budget.truncated
       ? html`<p part="limit">${this.localize('xmlViewerLimit', undefined, {
           count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxRows),
         })}</p>`

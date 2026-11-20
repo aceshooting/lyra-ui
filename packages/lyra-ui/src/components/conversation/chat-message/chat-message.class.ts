@@ -114,7 +114,7 @@ export interface LyraChatMessageEventMap {
  * @slot actions - Action controls (e.g. copy, retry), rendered at the end of the footer.
  * @slot attachments - File/image attachment chips, rendered below the message body by default; see `attachments-placement`.
  * @slot failure - Only ever rendered while `status="failed"`. Empty (the default), the footer keeps
- *   its built-in `[part="status-text"]`/`[part="retry-button"]` exactly as before. The moment this
+ *   its built-in `[part="status-text"]`/`[part="retry-button"]`. The moment this
  *   slot has assigned content, that built-in status text and retry button are suppressed — the host
  *   is now fully responsible for presenting its own failure UI, and the built-in `chatFailedAnnounce`
  *   live-region announcement is suppressed too (see `@event lr-message-retry` below for the effect on that
@@ -253,7 +253,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   @property({ type: Boolean, reflect: true }) collapsed = false;
 
   /** Where the `attachments` slot renders relative to the message body.
-   *  `'after'` (the default) reproduces today's exact DOM order. `'before'`
+   *  `'after'` (the default) keeps attachments after the body. `'before'`
    *  renders attachments immediately above the body -- both DOM and visual
    *  order move together (no CSS `order` trick), so reading/focus order
    *  always matches what's on screen. */

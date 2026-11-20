@@ -157,7 +157,7 @@ export interface LyraSequenceStripEventMap {
  * emits nothing, and roving Left/Right/Home/End navigation -- including the default resting tab
  * stop -- steps past it instead of landing on it. Above the cell cap, a range cell's disabled state
  * follows its own activated item, the range's first (see `lr-item-activate` above). Omitted or
- * `false` renders the item exactly as before this field existed.
+ * `false` leaves the item fully actionable.
  *
  * A non-null source supplies complete indexed access instead of the bounded items snapshot.
  * Source summaries partition the full logical sequence into at most 200 proportional ranges,

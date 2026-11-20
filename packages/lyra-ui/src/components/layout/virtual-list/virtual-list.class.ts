@@ -559,20 +559,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   @property({ attribute: 'row-height', converter: rowHeightConverter })
   rowHeight: LyraVirtualListRowHeight = 'auto';
 
-  /** `'listitem'` (default) preserves today's `role="list"`/`role="listitem"` mapping with
+  /** `'listitem'` (default) maps to `role="list"`/`role="listitem"` with
    *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
    *  `aria-rowindex` instead -- for a consumer composing a virtualized `role="table"` (see
    *  `<lr-dataset-viewer>`). */
   @property({ attribute: 'item-role' }) itemRole: LyraVirtualListItemRole =
     'listitem';
 
+  private _rowProjection: LyraVirtualListRowProjection = 'shadow';
+
   /** Where `renderItem`'s output is instantiated: `'shadow'` (the default) inside this component's
    *  shadow root, or `'light'` as a child of the host itself so ordinary document CSS reaches it.
    *  See the class doc's "Light-DOM row projection" section for the full contract. Unsupported
    *  attribute values and untyped property writes normalize back to `'shadow'`; the property is
    *  deliberately not reflected, matching `itemRole`. */
-  private _rowProjection: LyraVirtualListRowProjection = 'shadow';
-
   @property({ attribute: 'row-projection', converter: ROW_PROJECTION })
   get rowProjection(): LyraVirtualListRowProjection {
     return this._rowProjection;
@@ -601,6 +601,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * strings; assign the property for a numeric key. */
   @property({ attribute: 'active-item-id' }) activeItemId: VirtualListKey | '' = ''; // oxlint-disable-line typescript/no-redundant-type-constituents -- `''` is the documented "no active item" value
 
+  /** Marks the list as busy: sets `aria-busy` and suppresses `lr-load-more`. */
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** When true, scrolling near the bottom fires `lr-load-more`. */

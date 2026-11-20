@@ -26,7 +26,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 `label: string = ''` (the mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
-`2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
+`2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`),
 `3rem` (`l`/`large`), `3.5rem` (`xl`) — each value feeds `--lr-progress-ring-size`'s private
 default. An explicit `--lr-progress-ring-size` (or the upstream `--size` alias) still wins over
 every tier. Matching sibling `lr-progress-bar`'s own `size`, this ladder scales exactly one

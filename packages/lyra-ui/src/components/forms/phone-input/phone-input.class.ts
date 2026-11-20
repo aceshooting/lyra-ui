@@ -243,9 +243,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    */
   @property({ type: Boolean, reflect: true }) flags = false;
 
-  /** Formatting and validation implementation. No metadata is bundled by default. */
   private _adapter?: LyraPhoneNumberAdapter;
   private adapterCountries: readonly LyraPhoneCountry[] = Object.freeze([]);
+  /** Formatting and validation implementation. No metadata is bundled by default. */
   @property({ attribute: false })
   get adapter(): LyraPhoneNumberAdapter | undefined { return this._adapter; }
   set adapter(next: LyraPhoneNumberAdapter | undefined) {
@@ -254,9 +254,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.adapterCountries = normalizeCountryCatalog(next?.countries);
     this.requestUpdate('adapter', previous);
   }
+  private _countries?: readonly LyraPhoneCountry[];
   /** Explicit country rows. `undefined` discovers `adapter.countries`; every supplied array,
    * including an empty one, is authoritative. Malformed runtime rows are skipped. */
-  private _countries?: readonly LyraPhoneCountry[];
   @property({ attribute: false })
   get countries(): readonly LyraPhoneCountry[] | undefined { return this._countries; }
   set countries(next: readonly LyraPhoneCountry[] | undefined) {
@@ -280,6 +280,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
   /** SSR slot-presence hint for hint content that cannot be inspected before hydration. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
+  /** Placeholder shown in the national-number input while it is empty. */
   @property() placeholder = '';
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
@@ -471,8 +472,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  same *digit* offset it held before reformatting -- assigning `.value` unconditionally moves
    *  the caret to the end (native `<input>` behavior), which makes mid-string edits impossible
    *  once an adapter reformats the text differently from what was typed. A no-op (no reassignment,
-   *  no selection change) when the reformat didn't actually change the string, which keeps the
-   *  no-adapter path exactly as before. */
+   *  no selection change) when the reformat didn't actually change the string, which leaves the no-adapter path untouched. */
   private syncFormattedValue(input: HTMLInputElement, digitsBeforeCaret: number | null): void {
     if (input.value === this.editableValue) return;
     input.value = this.editableValue;

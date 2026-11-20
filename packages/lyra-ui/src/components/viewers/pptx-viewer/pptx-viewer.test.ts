@@ -2082,7 +2082,21 @@ it('ignores invalid slide indices before and after loading without changing the 
   } finally { restore(); }
 });
 
-for (const retirement of ['aborted', 'replaced', 'disconnected'] as const) {
+it('reports an AbortError from the current navigation as a render failure', async () => {
+  const fake = fakeModule(2), restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/aborted-navigation.pptx', fake.calls);
+    fake.viewer.goToSlide = () => Promise.reject(new DOMException('Renderer stopped', 'AbortError'));
+    const failed = oneEvent(el, 'lr-render-error');
+    await el.goToSlide(1);
+    await failed;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'the error state renders');
+  } finally { restore(); }
+});
+
+for (const retirement of ['replaced', 'disconnected'] as const) {
   it(`contains an ${retirement} navigation rejection without damaging the current presentation`, async () => {
     const old = fakeModule(2), fresh = fakeModule(3), restore = stubFetch();
     const gate = deferred<void>(); let entered = false;
@@ -2100,7 +2114,7 @@ for (const retirement of ['aborted', 'replaced', 'disconnected'] as const) {
       } else if (retirement === 'disconnected') {
         el.remove(); await waitUntil(() => old.calls.destroy === 1, 'removed presentation releases its renderer');
       }
-      gate.reject(retirement === 'aborted' ? new DOMException('Cancelled slide', 'AbortError') : new Error('Retired slide failure'));
+      gate.reject(new DOMException('Cancelled slide', 'AbortError'));
       await pending; await el.updateComplete;
       expect(errors).to.equal(0);
       if (retirement === 'disconnected') {

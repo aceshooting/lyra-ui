@@ -4,6 +4,7 @@
  * boundaries and de-duplication of an unchanged range. A leaf below the anchor-target mixins, so a
  * selection-only consumer pulls neither the element base nor the text-quote resolver.
  */
+import { isShadowRootNode } from './dom-guards.js';
 import { listenUntilPointerEnd } from './document-pointer.js';
 import type { TextSelectRect } from '../components/viewers/document-viewer/anchors.js';
 import { boundedSelectionRects, boundedSelectionText } from './text-selection.js';
@@ -160,11 +161,10 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
 
 /** Shadow roots through which a selection inside `contentRoot` must be read for `host`. */
 export function textSelectionShadowRoots(host: Element, contentRoot: Element): ShadowRoot[] {
-  const ShadowRootCtor = contentRoot.ownerDocument.defaultView?.ShadowRoot;
-  if (!ShadowRootCtor) return [];
+  // Structural, not `instanceof`: an adopted host's shadow root belongs to its original realm.
   const roots = [host.shadowRoot, contentRoot.getRootNode()];
   return roots.filter((root, index): root is ShadowRoot =>
-    root instanceof ShadowRootCtor && roots.indexOf(root) === index);
+    isShadowRootNode(root) && roots.indexOf(root) === index);
 }
 
 export interface TextSelectionObserverOptions {

@@ -221,6 +221,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   /** SSR slot-presence hint for hint content unavailable before hydration. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Accessible name of the group, bound to the host's `aria-label` attribute; used instead of the visible `label` when set. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Whether the user has acted on this group yet, which gates `user-valid`/`user-invalid`, the
    *  `data-invalid` hook and intrinsic `aria-invalid`: toggling a child checkbox is an interaction

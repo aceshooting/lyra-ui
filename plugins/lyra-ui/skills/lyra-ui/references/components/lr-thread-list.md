@@ -62,6 +62,11 @@ fails visibly; setting `undefined` restores the current legacy data/slotted prec
 current-query record count before group collapse, or `null` before success and without a source.
 Query/page-size changes reset page zero; collapse changes preserve the current record page.
 An out-of-range page receives at most one corrective last-page request.
+The built-in pager proposes a page with cancelable `lr-source-page-change-request` (`detail: { page }`,
+zero-based); `preventDefault()` skips the write. Every component-owned `sourcePage` write (an
+accepted pager request, the page-zero reset, the provider's last-page correction, or the jump to
+the page holding `activeConversationId`) then fires `lr-source-page-change` (`detail: { page }`), so
+a controlled `.sourcePage=${state.page}` binding can follow it; host assignments never fire it.
 
 ```ts
 import type { ThreadListSource, ThreadListSourceQuery } from
@@ -174,8 +179,7 @@ collapsed state for both date and custom groups, **self-managed by default**: ac
 built-in group toggle updates this array directly. A collapsed group's header remains in the
 virtual list while its conversation rows are removed from the virtual-list item/measurement set.
 Prevent the default of the cancelable `lr-group-toggle-request` event (see **Events** below) to
-veto that write and keep this property fully controlled instead — the only behavior it had before
-self-management existed. Group headers and threads use separate
+veto that write and keep this property fully controlled instead. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
@@ -192,7 +196,7 @@ pushing it off as the next group's header arrives. Group headers are ordinary vi
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
 the real row keeps the `role="heading"`/`aria-level` semantics and its interactive toggle. The
 pinned copy is inert, pointer-transparent presentation content: its toggle and adornments do not
-receive interaction, and it adds no second tab stop. Default `false` renders exactly as before; `grouping="none"` has no
+receive interaction, and it adds no second tab stop. Default `false` pins no header; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
 Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
 list unnamed. `error: boolean = false` (reflected) — data mode only: reports a failed thread-list
@@ -280,7 +284,9 @@ assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — r
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead.
+`preventDefault()` leaves it set instead. `dataSource` only: `lr-source-page-change-request`
+(`detail: { page }`, cancelable) and `lr-source-page-change` (`detail: { page }`), described under
+**Full-source paging**.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,

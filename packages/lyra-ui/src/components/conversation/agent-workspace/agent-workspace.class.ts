@@ -283,8 +283,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Controlled value of the built-in composer. */
   @property({ attribute: 'composer-value' }) composerValue = '';
 
-  /** Status of the built-in composer. */
   private composerStatusValue: ChatComposerStatus = 'idle';
+  /** Status of the built-in composer (`idle`, busy states); unrecognized values fall back to `idle`. */
   @property({ attribute: 'composer-status' })
   get composerStatus(): ChatComposerStatus {
     return this.composerStatusValue;
@@ -300,6 +300,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   /** Minimum and maximum rows for the built-in composer. */
   @property({ type: Number, attribute: 'composer-min-rows' }) composerMinRows = 1;
+  /** Maximum rows the built-in composer grows to before scrolling (default 8). */
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'composer-max-rows' }) composerMaxRows = 8;
 
   /** Gates the built-in Send action without disabling its textarea or busy Stop action. */
@@ -316,11 +317,14 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   /** Native editing constraints forwarded to the built-in composer. */
   @property({ type: Boolean, attribute: 'composer-readonly' }) composerReadOnly = false;
+  /** Minimum character count forwarded to the built-in composer's textarea. */
   @property({ converter: lengthLimitConverter, attribute: 'composer-minlength' }) composerMinLength?: number;
+  /** Maximum character count forwarded to the built-in composer's textarea. */
   @property({ converter: lengthLimitConverter, attribute: 'composer-maxlength' }) composerMaxLength?: number;
 
   /** Native editing hints forwarded to the built-in composer's textarea. */
   @property({ converter: trueDefaultBooleanConverter, attribute: 'composer-spellcheck' }) composerSpellcheck = true;
+  /** Native `autocapitalize` hint forwarded to the built-in composer's textarea; empty leaves it unset. */
   @property({ attribute: 'composer-autocapitalize' }) composerAutocapitalize = '';
   private composerAutocorrectValue = true;
   /** Native autocorrect state for the built-in composer.
@@ -334,9 +338,13 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     this.composerAutocorrectValue = normalizeAutocorrect(next);
     this.requestUpdate('composerAutocorrect', previous);
   }
+  /** Native textarea `wrap` mode (`soft` or `hard`) for the built-in composer. */
   @property({ attribute: 'composer-wrap' }) composerWrap: ChatComposerWrap = 'soft';
+  /** Native `autocomplete` value forwarded to the built-in composer's textarea; empty leaves it unset. */
   @property({ attribute: 'composer-autocomplete' }) composerAutocomplete = '';
+  /** Native `inputmode` hint forwarded to the built-in composer's textarea; empty leaves it unset. */
   @property({ attribute: 'composer-inputmode' }) composerInputMode = '';
+  /** Native `enterkeyhint` value forwarded to the built-in composer's textarea; empty leaves it unset. */
   @property({ attribute: 'composer-enterkeyhint' }) composerEnterKeyHint = '';
 
   private readonly inputAnnouncements = new AnnouncementSinkController(this);
@@ -547,7 +555,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   private renderHeading(text: string, section = false): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`<div part=${section ? 'section-heading' : 'heading'} role=${level ? 'heading' : nothing}
       aria-level=${level ? Math.min(6, Number(level) + Number(section)) : nothing}>${text}</div>`;
   }

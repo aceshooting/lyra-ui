@@ -40,21 +40,33 @@ export class LyraFormatDate extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   /** Construction-time instant by default. Removing the date attribute restores that instant. */
   @property({ converter: dateSourceConverter, useDefault: true }) date: string | number | Date = new Date();
+  /** Weekday style: `'narrow'`, `'short'` or `'long'`. Ignored when `date-style` or `time-style` is set. */
   @property() weekday?: LyraFormatDateText;
+  /** Era style: `'narrow'`, `'short'` or `'long'`. Ignored when `date-style` or `time-style` is set. */
   @property() era?: LyraFormatDateText;
+  /** Year style: `'numeric'` or `'2-digit'`. Ignored when `date-style` or `time-style` is set. */
   @property() year?: LyraFormatDateNumeric;
+  /** Month style: `'numeric'`, `'2-digit'`, `'narrow'`, `'short'` or `'long'`. Ignored when `date-style` or `time-style` is set. */
   @property() month?: LyraFormatDateMonth;
+  /** Day style: `'numeric'` or `'2-digit'`. Ignored when `date-style` or `time-style` is set. */
   @property() day?: LyraFormatDateNumeric;
+  /** Hour style: `'numeric'` or `'2-digit'`. Ignored when `date-style` or `time-style` is set. */
   @property() hour?: LyraFormatDateNumeric;
+  /** Minute style: `'numeric'` or `'2-digit'`. Ignored when `date-style` or `time-style` is set. */
   @property() minute?: LyraFormatDateNumeric;
+  /** Second style: `'numeric'` or `'2-digit'`. Ignored when `date-style` or `time-style` is set. */
   @property() second?: LyraFormatDateNumeric;
+  /** Time-zone name style (attribute `time-zone-name`): `'short'` or `'long'`. Ignored when `date-style` or `time-style` is set. */
   @property({ attribute: 'time-zone-name' })
   timeZoneName?: LyraFormatDateTimeZoneName;
+  /** Preset date style (attribute `date-style`): `'full'`, `'long'`, `'medium'` or `'short'`. When set, it replaces the granular field options. */
   @property({ attribute: 'date-style' }) dateStyle?: LyraFormatDateStyle;
+  /** Preset time style (attribute `time-style`): `'full'`, `'long'`, `'medium'` or `'short'`. When set, it replaces the granular field options. */
   @property({ attribute: 'time-style' }) timeStyle?: LyraFormatDateStyle;
   /** IANA time-zone name forwarded to `Intl.DateTimeFormat` (attribute `time-zone`). */
   @property({ attribute: 'time-zone' })
   timeZone?: Intl.DateTimeFormatOptions['timeZone'];
+  /** Hour cycle (attribute `hour-format`): `'auto'` (default) follows the locale, `'12'` forces a 12-hour clock, `'24'` a 24-hour clock. */
   @property({ attribute: 'hour-format' }) hourFormat: LyraFormatDateHour = 'auto';
 
   override render(): TemplateResult {

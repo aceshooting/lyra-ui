@@ -14,6 +14,7 @@ import { LyraChart, type LyraChartType } from './chart.class.js';
  * @since 4.0.0
  */
 export class LyraBarChart extends LyraChart {
+  /** Chart type. Defaults to `bar`; a `type` attribute or property write changes it, and an unrecognized value falls back to `bar`. */
   override type: LyraChartType = 'bar';
 }
 

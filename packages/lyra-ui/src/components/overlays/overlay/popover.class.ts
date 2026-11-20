@@ -311,6 +311,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (normalized) void this.show();
     else void this.hide();
   }
+  /** Preferred side and alignment of the popup relative to its anchor; flips when space is short and mirrors under RTL. Defaults to `top`. */
   @property({ reflect: true, converter: declaredDefaultConverter('top') })
   placement: Placement = 'top';
   private readonly strategy = new PositioningStrategyState(this, this.defaultPositioningStrategy);
@@ -373,13 +374,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   @property({ type: Number }) distance = 8;
   /** Offset along the anchor's edge, in pixels — Floating UI's cross-axis offset. */
   @property({ type: Number }) skidding = 0;
+  private _for = '';
   /**
    * Id of an element elsewhere in this popover's own root. It participates in positioning behind
    * a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, that
    * element also owns click and ARIA. A slotted trigger still wins interaction ownership, and a
    * `showAt()` virtual anchor wins positioning while suppressing every DOM interaction owner.
    */
-  private _for = '';
   @property({ reflect: true, converter: omittedEmptyStringConverter })
   get for(): string {
     return this._for;

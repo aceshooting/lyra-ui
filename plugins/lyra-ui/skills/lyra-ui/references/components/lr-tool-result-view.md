@@ -54,8 +54,7 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'success'` (reflected) — the outcome of
   the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
   (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
-  never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
-  property existed — leaves it at that default, and a later renderer that stays quiet doesn't
+  never calls `reportStatus` — including any 2-arg renderer — leaves it at that default, and a later renderer that stays quiet doesn't
   inherit a stale outcome left behind by a previous one. Same status vocabulary as
   `<lr-tool-result-dialog>`/`<lr-tool-call-chip>`.
 

@@ -364,6 +364,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.checked = state === 'checked';
   }
 
+  /** Whether the radio counts as required: its own `required`, or the `required` state projected by its owning group. */
   get effectiveRequired(): boolean {
     return this.required || (this.currentGroup() ? this._groupRequired : false);
   }

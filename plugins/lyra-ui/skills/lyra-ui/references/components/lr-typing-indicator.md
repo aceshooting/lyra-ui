@@ -30,8 +30,7 @@ Removing `label` restores the localized thinking name while preserving an explic
 
 `label-placement="after"` additionally renders `label` (or its localized "Thinking…" fallback)
 visibly next to the animated shape, in a new `part="label"` element, mirroring `<lr-spinner>`'s own
-`labelPlacement` vocabulary. The default, `"none"`, is unchanged from this component's
-screen-reader-only rendering before this property existed: a single `.sr-only` text node, no
+`labelPlacement` vocabulary. The default, `"none"`, is screen-reader-only rendering: a single `.sr-only` text node, no
 visible twin. That visible `part="label"` node is itself `aria-hidden="true"`: the host's own
 `aria-label` already carries the identical string as the accessible name, so the visible copy is
 never exposed as a second, redundant accessibility-tree node for the same text.
@@ -44,8 +43,7 @@ never exposed as a second, redundant accessibility-tree node for the same text.
   The status is not re-announced on every animation frame, only on mount and on later label changes
 - `labelPlacement: TypingIndicatorLabelPlacement = 'none'` (`'none' | 'after'`, attribute
   `label-placement`, reflected) — where the accessible label renders. `'none'` (default) keeps
-  `label` screen-reader-only, exactly as this component rendered before this property
-  existed. `'after'` also renders it visibly next to the animated shape.
+  `label` screen-reader-only. `'after'` also renders it visibly next to the animated shape.
 - `size: TypingIndicatorSize = 'm'` (reflected) — visual size on the library-wide ladder;
   `TypingIndicatorSize` is an alias of the shared `LyraSize`, so it accepts `2xs`/`xs`/`s`/`m`/`l`/
   `xl` plus the `small`/`medium`/`large` spellings of `s`/`m`/`l`. A presence cue has three usefully

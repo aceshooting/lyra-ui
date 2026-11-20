@@ -181,7 +181,7 @@ export class LyraBudgetMeter extends LyraElement {
         : { maximumFractionDigits: ratio > 0.99 && ratio < 1 ? 16 : 0 }),
     }).format(ratio) : '';
     const ariaValueNow = Math.min(used, limit);
-    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`
       <section part="base" role="group" aria-label=${ifDefined(hostLabel)}>
         ${visibleLabel === '' ? nothing : html`<div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>`}

@@ -602,6 +602,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     return this.childItems();
   }
 
+  /** Read-only: `true` when the item has children to disclose -- a lazy item, a data-model `item` with `children`, or declarative child items. Always `false` past the maximum render depth. */
   get hasChildren(): boolean {
     const context = this.ownerContext;
     if (context.depth >= TREE_MAX_RENDER_DEPTH) return false;

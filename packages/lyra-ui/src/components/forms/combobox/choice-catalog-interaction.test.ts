@@ -206,7 +206,7 @@ it('honors a listener withdrawing creation while proposing the new row', async (
   expect(combo.querySelectorAll('lr-option').length).to.equal(0);
 });
 
-it('settles an independently aborted source without leaving the value loading', async () => {
+it('fails an independently aborted source without leaving the value loading', async () => {
   const combo = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" value="missing" multiple open></lr-combobox>`);
   let reject!: (reason: Error) => void;
   combo.source = () => new Promise((_resolve, fail) => { reject = fail; });
@@ -217,9 +217,8 @@ it('settles an independently aborted source without leaving the value loading', 
   try {
     const error = new DOMException('Canceled', 'AbortError');
     reject(error);
-    await waitUntil(() => !!combo.shadowRoot!.querySelector('[part~="unknown-value"]'), 'the settled source reports the unmatched selection');
-    expect(combo.shadowRoot!.querySelector('[part="source-error-row"]') === null).to.equal(true);
-    expect(warnings).to.deep.equal([]);
+    await waitUntil(() => !!combo.shadowRoot!.querySelector('[part="source-error-row"]'), 'the settled source reports its failure');
+    expect(warnings.includes(error)).to.equal(true);
   } finally {
     console.warn = originalWarn;
   }

@@ -100,8 +100,7 @@ until something else registers it, the same trade `icon-button-register.js` docu
   values are unset.
 - `activeFiltersDisplay: 'all' | 'changed' | 'hidden' = 'all'` (reflected, attribute
   `active-filters-display`) — which currently-active filters render as removable chips in the row
-  below the fields. `'all'` (the default, and this component's only behavior before this property
-  existed) shows one chip per non-empty filter, including one sitting at its own `defaultValue`.
+  below the fields. `'all'` (the default) shows one chip per non-empty filter, including one sitting at its own `defaultValue`.
   `'changed'` shows a chip only for a filter whose value differs from its own `defaultValue` — so a
   bar whose defaults narrow the view on load does not claim the user narrowed it — and a filter with
   no declared `defaultValue` counts as changed as soon as it has any value at all. `'hidden'` never
@@ -212,7 +211,7 @@ Each field wrapper also carries a second, per-filter part token, `field-<filterI
 width, while `::part(field)` rules continue to match every field unchanged. The `field-<filterId>`
 token is present only when `filterId` reads as a plain CSS ident (ASCII letters/digits/`-`/`_`,
 starting with a letter); an id that doesn't (for example one containing whitespace) renders `field`
-alone, exactly as before this part existed, rather than risking a `part` attribute whose
+alone, rather than risking a `part` attribute whose
 space-separated token list fabricates an unrelated second token.
 
 A `'select'`, `'combobox'` or `'checkbox-menu'` filter's required `options` entries are
@@ -226,7 +225,7 @@ marks the option non-actionable: forwarded to `<lr-option disabled>` for `'selec
 and to the composed `<lr-dropdown-item disabled>` for `'checkbox-menu'`, so the row renders
 genuinely disabled (no tab/roving stop, no hover/press affordance) and arrow-key navigation already
 steps past it, since that is the composed control's own existing `disabled` behavior. Omitted or
-`false` renders the option exactly as before this field existed.
+`false` renders an ordinary option.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
@@ -433,12 +432,12 @@ abort stale contexts, whose callbacks become inert.
 A `'custom'` definition also accepts the same optional `debounce?: number` (ms) `'text'`/
 `'combobox'` already have: it delays committing whatever `context.onValueChange`/`onInput`/
 `onChange` reads through `adapter.valueFromEvent`, coalescing a burst of rapid commits into one.
-Omitted, `0`, or a non-finite value means no debounce, exactly as before this field existed. While
+Omitted, `0`, or a non-finite value means no debounce. While
 one is pending, `context.value` carries that pending value rather than the last-committed one, so a
 renderer binding it as a fully controlled value never reverts mid-delay; a pending commit is
 **flushed** by `context.onFocusout` and **cancelled outright** by `reset()`, removing that filter's
 chip, and disconnect — identical to `'text'`/`'combobox'`. This is what closes the gap those two
-types' own debounce left: before this field existed, a custom free-text filter had to hand-roll the
+types' own debounce left: a custom free-text filter no longer hand-rolls the
 same timer, flush, and cancellation lifecycle itself just to match `'text'`.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
@@ -567,7 +566,7 @@ narrow to a record keyed per `filterId`, whose value type follows that filter's 
 value is owned by a widget this component never renders). Declare the schema with `as const
 satisfies readonly LyraFilterBarFilterDefinition[]` and type the element as
 `LyraFilterBar<typeof FILTERS>` to pick it up. Types only; the runtime is unchanged, and an untyped
-`<lr-filter-bar>` keeps today's `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
+`<lr-filter-bar>` keeps the general `LyraFilterBarValue` (`Readonly<Record<string, string | readonly
 string[] | boolean | undefined>>`). `LyraFilterBarValueFor<Defs>` is the standalone alias for the
 narrowed record, and `LyraFilterBarInputEvent<Defs>`/`LyraFilterBarResetEvent<Defs>` are stable
 per-event aliases so a handler can name one event's type without restating the detail shape.

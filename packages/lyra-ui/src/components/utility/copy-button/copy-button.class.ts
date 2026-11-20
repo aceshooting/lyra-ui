@@ -254,6 +254,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // group role also makes that host-level attribute valid ARIA when the copy button is nested
     // inside another component's axe-tested subtree; the actual activation role remains on the
     // native button (or on the consumer's custom trigger).
+    /** Default ARIA role of the host, `'group'`; an author-supplied `role` attribute is preserved. */
     this.internals.role = 'group';
   }
 

@@ -159,8 +159,7 @@ export class LyraFlowNode extends LyraElement {
    *  card padding and row gap, including the header's own icon-to-heading gap, for the dense
    *  canvases and palette previews these cards usually render in. `m` and the steps above it keep
    *  the full card padding. Purely a density knob: the border, background and shadow stay, as do
-   *  the `selected` and `status="running"` treatments. Opt-in: with no size the card renders
-   *  exactly as before. Unsupported values normalize to the omitted state and remove the
+   *  the `selected` and `status="running"` treatments. Opt-in: with no size the card renders at the default density. Unsupported values normalize to the omitted state and remove the
    *  attribute. */
   @property({ reflect: true, converter: optionalSizeConverter })
   get size(): LyraSize | undefined {
@@ -321,7 +320,7 @@ export class LyraFlowNode extends LyraElement {
     const clampedProgress = this.safeProgress;
     // A removed `heading-level` attribute arrives as null; it restores the plain-text default
     // rather than falling through to the invalid-value level.
-    const headingLevel = this.heading ? resolveHeadingLevel(this.headingLevel ?? 'none') : undefined;
+    const headingLevel = this.heading ? resolveHeadingLevel(this.headingLevel, 'none') : undefined;
     return html`<div part="base">
       <div class="handles handles-input" ?hidden=${this.inputs.length === 0}>${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>

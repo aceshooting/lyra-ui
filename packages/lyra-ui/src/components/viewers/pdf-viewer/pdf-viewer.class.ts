@@ -932,9 +932,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (!this.isLoadStale(token)) this.emit('lr-render-error', { error });
   }
 
+  /** Advances to the next page; the page stays clamped to the last page. */
   nextPage(): void { this.scrollDrivenPage = false; this.setPage(this.page + 1); }
+  /** Goes back to the previous page; the page stays clamped to the first page. */
   previousPage(): void { this.scrollDrivenPage = false; this.setPage(this.page - 1); }
+  /** Increases `zoom` by one step (0.25), clamped to the maximum zoom of 4. */
   zoomIn(): void { this.setZoom(this.zoom + ZOOM_STEP); }
+  /** Decreases `zoom` by one step (0.25), clamped to the minimum zoom of 0.25. */
   zoomOut(): void { this.setZoom(this.zoom - ZOOM_STEP); }
 
   /** Sets `page` and resolves once the target page's canvas has actually mounted inside the

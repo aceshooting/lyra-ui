@@ -119,6 +119,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   static override styles = [LyraElement.styles, styles];
 
   private _state: RealtimeConnectionState = 'disconnected';
+  /** Connection state shown by the status badge and gating the connect/disconnect actions; unrecognized values fall back to `disconnected`. Reflects to the `state` attribute. */
   @property({ reflect: true, converter: CONNECTION_STATE })
   get state(): RealtimeConnectionState {
     return this._state;
@@ -132,6 +133,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   }
 
   private _voiceState: AudioVisualizerState = 'idle';
+  /** Assistant activity (`idle`, `listening`, `thinking`, `speaking`) forwarded to the activity visualizer; unrecognized values fall back to `idle`. */
   @property({ attribute: 'voice-state', converter: VOICE_STATE })
   get voiceState(): AudioVisualizerState {
     return this._voiceState;
@@ -143,7 +145,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     this._voiceState = normalized;
     this.requestUpdate('voiceState', old);
   }
+  /** Externally computed amplitude in `[0, 1]` forwarded to the visualizer; `null` (the default) means no external level. */
   @property({ converter: blankNumberConverter(null) }) level: number | null = null;
+  /** Live `MediaStream` forwarded to the activity visualizer; `null` (the default) means no stream. */
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Disables the built-in session actions and microphone capture. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -160,7 +164,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   /** Stable identity forwarded to the transcript feed. Changing it resets finalized-entry
    *  announcement history so reused entry ids in a new session remain unambiguous. */
   @property({ attribute: 'session-id' }) sessionId = '';
+  /** Transcript entries forwarded to the transcript feed. */
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
+  /** Mutes microphone capture and shows the unmute action; the host is told through `lr-mute-change`. Reflects to the `muted` attribute. */
   @property({ type: Boolean, reflect: true }) muted = false;
   /** Hides native push-to-talk capture, cancelling a take in progress (`lr-record-cancel`). Hiding a
    *  focused capture transfers focus to the current connect/disconnect action; hiding it while

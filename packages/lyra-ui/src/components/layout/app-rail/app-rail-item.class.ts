@@ -87,6 +87,8 @@ export interface LyraAppRailItemEventMap {
  * group containing the current item, so none is invented here either -- a current descendant
  * stays perceivable only through its own `current` property, exactly as an unnested item would.
  *
+ * @attribute icon-only - Presents the item as an icon tile with its label visually clipped and
+ *   shown in a tooltip. The owning rail or parent item sets it; it is not reflected from a property.
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
  * @slot start - The leading decorative icon. Its flattened subtree is inert and hidden from
@@ -121,8 +123,7 @@ export interface LyraAppRailItemEventMap {
  * @csspart current-indicator - A decorative inline indicator rendered only while the item is
  *   `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s shipped
  *   `active-indicator` part.
- * @csspart meta - The wrapper around the `meta` slot. Hidden while nothing is slotted into it, so
- *   an item without secondary text renders exactly as before the slot existed.
+ * @csspart meta - The wrapper around the `meta` slot. Hidden while nothing is slotted into it, so an item without secondary text renders no meta wrapper.
  * @csspart end - The wrapper around the `end` slot, following `[part="meta"]`. Hidden while empty
  *   for the same reason.
  * @csspart toggle - The disclosure control, hidden in icon-only and rendered only with content in
@@ -248,7 +249,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
    *  the parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,
    *  documented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`
    *  composition. No effect outside icon-only mode, since the label is already visible there.
-   *  `false` (the default) reproduces today's exact output. */
+   *  `false` (the default) shows no tooltip. */
   @property({ type: Boolean, reflect: true }) tooltip = false;
 
   /**
@@ -284,8 +285,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   }
 
   /** Whether this item's `children` are shown. `false` by default -- a nested list expanding
-   *  itself on first paint would be a surprising default, and it reproduces exactly what an item
-   *  with no `expanded` property rendered before this feature existed. Mirrors
+   *  itself on first paint would be a surprising default. Mirrors
    *  `<lr-app-rail-group>`'s `collapsed` accessor: every write, including one that assigns the
    *  value already held, marks the veto guard so a synchronous `lr-toggle-request` listener
    *  resolving this itself is observed correctly (see {@link VetoWriteGuard}). */

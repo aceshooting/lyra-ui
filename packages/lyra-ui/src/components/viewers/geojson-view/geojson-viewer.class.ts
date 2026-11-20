@@ -589,6 +589,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       : this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
   );
 
+  /** URL of the GeoJSON document to fetch and render; empty shows the idle state. */
   @property() src = '';
   /** Accessible-name fallback for the current region owner: the root in non-map states, or the
    * loaded map canvas when the optional peer is available. */

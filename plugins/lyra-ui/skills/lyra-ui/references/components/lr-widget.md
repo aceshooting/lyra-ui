@@ -49,7 +49,7 @@ position) survives the transition.
 TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   (`[part='view-toggle']`) and a `<slot name="view-${viewId}">`. An icon-only view should set
   `ariaLabel`; if both labels are omitted, the button uses `viewId` as a last-resort accessible name.
-  Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
+  Empty (the default) renders the single unnamed default slot as the sole view.
   Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
   Malformed/hostile entries are ignored without rejecting the component update.
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
@@ -162,11 +162,10 @@ _hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consu
 `--lr-widget-fullscreen-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-widget-fullscreen-button-hover-color` (default `var(--lr-color-brand)`), are
 the same inline-`var()`-fallback shape for `[part="collapse-button"]` and `[part="fullscreen-button"]`
-respectively; each button's pressed fill mixes from its own `-hover-bg` token. Before these existed,
-both buttons read the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens directly, so a
-consumer retinting those tokens upstream to change only the view toggle's hover (the reason the
-view-toggle pair above exists) also silently repainted these two buttons; each now has its own scoped
-escape hatch, independent of the other and of the view toggle.
+respectively; each button's pressed fill mixes from its own `-hover-bg` token. Without them,
+retinting the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens to change only the view
+toggle's hover (the reason the view-toggle pair above exists) would also repaint these two buttons;
+each has its own scoped escape hatch, independent of the other and of the view toggle.
 
 **Optional peer deps:** none.
 

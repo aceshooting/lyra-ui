@@ -50,8 +50,7 @@ boolean }[]`. `value` is an _absolute_
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
   being clipped.
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
-  legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
-  property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
+  legend row shows beside its swatch: `'label'` (the default), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
   `[part="legend-value"]` and `[part="legend-percent"]` spans. The share is the same clamped ratio
   the bar or ring paints, so the key can never disagree with the band it stands for, and both
   numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,

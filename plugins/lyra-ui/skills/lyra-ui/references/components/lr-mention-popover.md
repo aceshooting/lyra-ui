@@ -55,7 +55,7 @@ preserving null readback; an explicitly empty query remains empty.
   selected/active affordances, activating it (click, or Enter/Tab while highlighted) commits
   nothing and emits no `lr-mention-select`, and ArrowDown/ArrowUp highlighting -- including the
   default pre-highlighted first row -- steps past it instead of landing on it. Omitted or `false`
-  renders the row exactly as before this field existed.
+  renders the row normally.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
@@ -114,7 +114,8 @@ icon?: string; disabled?: boolean }`; `LyraMentionFilter = (item: LyraMentionIte
 the assigned `items` collection before filtering and disambiguates repeated `suggestionId` values),
 `lr-mention-close` (no detail payload —
 `this.emit('lr-mention-close')` is called with no second argument, so `event.detail` is `null`,
-not `undefined`; fires on Escape or any other `open: true -> false` transition, but never for the
+not `undefined`; fires on Escape, on a popup that cannot be positioned against its anchor, or on any
+other `open: true -> false` transition, but never for the
 close that immediately follows a `lr-mention-select` commit, and never for markup that simply
 renders `open="false"` on first paint)
 

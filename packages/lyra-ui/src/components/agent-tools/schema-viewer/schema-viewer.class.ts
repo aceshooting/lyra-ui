@@ -236,6 +236,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     this.schemaValue = snapshotSchema(value);
     this.requestUpdate('schema', previous);
   }
+  /** Validation issues rendered in an issues list; the rendered count is capped. */
   @property({ attribute: false }) issues: readonly SchemaValidationIssue[] = [];
   /** Controlled JSON Pointer selection. `null` means no selection; the empty
    *  string is the valid JSON Pointer for the schema root. */

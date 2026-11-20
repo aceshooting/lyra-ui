@@ -115,6 +115,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
+  /** Transcript entries to render, in order. */
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   /** Stick-to-bottom state. Setting it from `false` to `true` scrolls to the latest entry at once,
    *  like `scrollToBottom()`; a user scroll away from the tail releases it. */

@@ -165,7 +165,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       return { file, hunks: retained };
     });
     const label = this.label ?? this.localize('changeReviewLabel');
-    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`<div part="base" role="group" aria-label=${ifDefined(resolveAccessibleName(this, label))}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${visible.length === 0 ? html`<p part="empty">${this.localize('changeReviewEmpty')}</p>` : repeat(visible, ({ file }) => file.id, ({ file, hunks }) => html`

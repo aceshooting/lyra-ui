@@ -323,6 +323,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** Delay (ms) before an interaction closes the tooltip again. `0` by default, so leaving the
    *  trigger closes it at once. */
   @property({ type: Number, attribute: 'hide-delay' }) hideDelay = 0;
+  /** Preferred side and alignment of the tooltip relative to its anchor; flips when space is short and mirrors under RTL. Defaults to `top`. */
   @property({ reflect: true, converter: declaredDefaultConverter('top') })
   placement: Placement = 'top';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical
@@ -330,13 +331,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ type: Number }) distance = 8;
   /** Offset along the anchor's edge, in pixels — Floating UI's cross-axis offset. */
   @property({ type: Number }) skidding = 0;
+  private _for = '';
   /**
    * Id of an element elsewhere in this tooltip's own root. It participates in positioning behind
    * a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, that
    * element also owns the configured interactions and label-mode relationship. A slotted trigger wins
    * interaction ownership, while `showAt()` wins positioning and suppresses every DOM owner.
    */
-  private _for = '';
   @property({ reflect: true, converter: omittedEmptyStringConverter })
   get for(): string {
     return this._for;
@@ -418,6 +419,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    *  Whitespace-only text there (template indentation around a `slot="trigger"` element) counts as
    *  nothing, so this text still paints and describes the trigger. */
   @property() content = '';
+  /** Accessible name for the tooltip and its trigger description; a host `aria-label` wins, and empty falls back to the tooltip content. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private triggerElement?: HTMLElement;
   private slottedTriggerElement?: HTMLElement;

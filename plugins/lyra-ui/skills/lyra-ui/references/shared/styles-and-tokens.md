@@ -1379,7 +1379,7 @@ the deepening anchor keeps (the rest is black), so raising it lifts dark Glass c
 surface. It inherits, so set it on `:root` for the whole app or on any container for that subtree;
 values outside 0% to 100% clamp. It is deliberately not registered with `@property` (a registered
 inherited property slows every re-theme in Chromium), so a value that is not a percentage voids the
-dark fill; the development build warns about one set on `:root`. The default paints exactly as before. For a softer grey dark mode:
+dark fill; the development build warns about one set on `:root`. For a softer grey dark mode:
 
 ```css
 :root {

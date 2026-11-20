@@ -201,7 +201,7 @@ The following array admission, legacy auto-layout and complete-model snapshot ru
   navigation (arrow keys, Home/End) steps past it, it cannot be dragged even while
   `nodes-draggable`, and it is excluded from starting or receiving a new connection while
   `connectable` (an edge already touching it is left alone). Omitted or `false` renders the node
-  exactly as before this field existed.
+  normally.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
   `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
@@ -260,7 +260,7 @@ accepted `source` descriptor above; their scene arrays do not imply full-source 
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
 sourceNodeId, targetNodeId }`),
-`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
+`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`; only when the selection changes, so re-activating the sole selected item emits just its activate event), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-`readonly` canvas only), `lr-viewport-change` (`detail: { x, y, zoom }`),

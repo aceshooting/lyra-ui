@@ -50,8 +50,7 @@ left-to-right direction inside mixed-direction content.
   reuses its combined map until either property receives a new map object.
 
 The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
-exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
-properties existed:
+exactly `<lr-markdown>`'s own default so leaving it unset renders with `<lr-markdown>`'s defaults:
 
 - `tabSize: number = 4` (attribute `tab-size`) — forwarded to the composed `<lr-markdown>`'s own
   `tabSize`.

@@ -71,16 +71,22 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
       'lr-mutation': Object.freeze(['records', 'mutationList']),
     });
 
+  /** Stops observing while set. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Reports additions and removals of child nodes (attribute `child-list`) on the slotted elements. Reflects to the attribute. */
   @property({ type: Boolean, attribute: 'child-list', reflect: true }) childList = false;
   /** Mapped attribute selector: `*` observes all attributes; otherwise use space-separated names. */
   @property({ reflect: true }) attr: string | null = null;
+  /** Includes each attribute's previous value in the records (attribute `attr-old-value`); also enables attribute observation. Reflects to the attribute. */
   @property({ type: Boolean, attribute: 'attr-old-value', reflect: true }) attrOldValue = false;
+  /** Reports changes to text-node content (attribute `char-data`). Reflects to the attribute. */
   @property({ type: Boolean, attribute: 'char-data', reflect: true }) charData = false;
+  /** Includes each text node's previous content in the records (attribute `char-data-old-value`); also enables character-data observation. Reflects to the attribute. */
   @property({ type: Boolean, attribute: 'char-data-old-value', reflect: true }) charDataOldValue = false;
   /** Observes only the slotted elements themselves, not their descendants (the native
    *  `subtree: false` option). */
   @property({ type: Boolean, attribute: 'without-subtree' }) withoutSubtree = false;
+  /** Attribute names to observe as an array; observing is limited to these names. Ignored while `attr` is set. */
   @property({
     attribute: false,
     hasChanged: (value, old) => normalizedAttributeFilter(value).join() !== normalizedAttributeFilter(old).join(),

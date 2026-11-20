@@ -421,7 +421,7 @@ later values restore the corresponding content.
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — tighter, left-aligned rendering (less padding, a lighter heading weight) for
   use inside a constrained space like a widget body or table cell; `m` and above keep the
-  centered/spacious full-page default, and leaving it unset renders exactly as before. An
+  centered/spacious full-page default, and leaving it unset keeps that default. An
   unsupported value normalizes to unset and removes the attribute.
 - `announce: boolean = false` (reflected) — announces the heading and description this empty state
   already carries when it first mounts, through the same shared light-DOM polite sink later changes
@@ -487,7 +487,7 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   observed without turning initial distribution into a live update;
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
-  Remove any host `role="status"`/`role="alert"` hand-added before `announce` existed once it is
+  Remove any host `role="status"`/`role="alert"` hand-added as a workaround once it is
   set — otherwise the initial text is announced twice, through the native role and again through
   the shared sink.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
@@ -661,7 +661,7 @@ panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so
 no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
 override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
-after a short body exactly as it did before `--lr-dialog-height` existed. The drawer's own
+after a short body. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
@@ -720,7 +720,7 @@ read, and neither is deprecated.
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
   'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
-  (`s`/`small`), `32rem` (`m`/`medium`, unchanged from before this property existed), `38rem`
+  (`s`/`small`), `32rem` (`m`/`medium`), `38rem`
   (`l`/`large`), `48rem` (`xl`) — each value feeds `--lr-dialog-max-width`'s private default. An
   explicit `--lr-dialog-width`/`--lr-dialog-max-width` still wins over every tier.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
@@ -837,8 +837,7 @@ Restyle it through `::part(body)` as usual; do not remove the outline without re
 
 It never steals initial focus from real content: an `[autofocus]` element wins, then the first
 focusable control _inside_ the body, and the body itself is used only when there is nothing else to
-focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
-scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
+focus. So a dialog full of form controls focuses its first control, and a dialog full of text is scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
 
 **Border reaches the composed close control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
@@ -867,7 +866,7 @@ default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the tier default — so an assertive width isn't silently clipped;
 the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
-shrink-wraps to content on the block axis, same as before this property existed; always capped at
+shrink-wraps to content on the block axis; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
 `[part="header"]` and `[part="footer"]` keep their natural size and only `[part="body"]` grows or
@@ -1714,7 +1713,7 @@ track ancestor scroll/resize against — pass `rect.contextElement` (a real, sti
 near the virtual point) when one is available to give it something to observe; otherwise, or when
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
-`showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
+`showAt()` anchors to its slotted/`for` element. Non-finite coordinates or dimensions are a no-op and leave
 the current open/anchor state unchanged. While virtual anchoring is active, no slotted/`for` DOM
 element owns click or generated ARIA. Optional `interactionBoundary` includes a connected element
 and its composed descendants in light-dismiss containment, so its own click handler can toggle
@@ -1800,7 +1799,7 @@ the same colour.
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
 placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
-every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
+every default in place. Precedence: an explicit `positioning-strategy`/`hoist` on the
 instance always wins; otherwise this inherited custom property; otherwise `fixed` inside
 `lr-virtual-list` rows and `lr-flow-canvas` nodes; otherwise the component's own mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
 theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset
@@ -2554,8 +2553,7 @@ formatted percentage.
 percentage of the track; `65` while indeterminate), shared with the ring, and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
-`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
-property existed), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
+`0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
 `--lr-progress-track-height`'s private default. An explicit `--lr-progress-track-height` (or the
 upstream `--track-height`/`--height` aliases) still wins over every tier.
 
@@ -2588,8 +2586,7 @@ inherit` picks up the same value, so retuning the track retunes both without a
 to that variant's loud fill from the shared semantic grid (`var(--lr-color-fill-loud)`), falling back
 to `var(--lr-color-brand)` on an element that has not updated yet. It sits _inside_
 `--lr-progress-indicator-color` and the upstream `--indicator-color` alias in the fallback chain, so
-setting either of those still wins outright and the indicator renders exactly as it did before
-`variant` support existed. Set the variant-color slot instead when you want to retheme one semantic
+setting either of those still wins outright. Set the variant-color slot instead when you want to retheme one semantic
 tone while leaving the rest of the grid alone.
 
 **Additional API surface:**
@@ -2608,7 +2605,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 `label: string = ''` (the mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
-`2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
+`2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`),
 `3rem` (`l`/`large`), `3.5rem` (`xl`) — each value feeds `--lr-progress-ring-size`'s private
 default. An explicit `--lr-progress-ring-size` (or the upstream `--size` alias) still wins over
 every tier. Matching sibling `lr-progress-bar`'s own `size`, this ladder scales exactly one
@@ -2861,8 +2858,7 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   **untiered** states are not interchangeable, deliberately: with no `size` this panel keeps a fixed
   gutter and inherits the ambient text size (its exact pre-ladder rendering), while an untiered
   `lr-callout` reads the ambient form-control slots and falls back to the shared `m` padding and
-  `--lr-font-size-m`. Pinning a default tier here would resize every alert that shipped before this
-  property existed. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
+  `--lr-font-size-m`. Pinning a default tier here would resize every alert that sets no `size`. Two things deliberately do not vary by tier, also matching `lr-callout`: the gap
   separating icon, message and close action (it separates three boxes rather than setting density)
   and the leading icon glyph size (a status affordance bounded by the shared tappable-target token).
   The close action also keeps the shared tappable-target floor at every tier — a WCAG 2.5.8 minimum
@@ -3119,8 +3115,7 @@ null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
 `size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — changes the private
 fallback behind `--lr-rating-size` from a type ramp rather than the shared control ladder, since a
-rating has no control frame to size; an inherited or direct public size wins; the `m` default
-reproduces the treatment this component had before `size` existed; valid long-form spellings
+rating has no control frame to size; an inherited or direct public size wins; valid long-form spellings
 round-trip unchanged), plus two separate naming knobs:
 `accessibleLabel: string = ''` (property) and `label: string = ''` (attribute
 `label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty

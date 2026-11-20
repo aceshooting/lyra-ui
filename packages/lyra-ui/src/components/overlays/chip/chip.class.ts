@@ -218,12 +218,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   static override styles = [LyraElement.styles, variants, styles];
 
+  private _size: ChipSize = 'm';
+
   /** Visual density. `m` preserves the original chip dimensions and is the fallback for
    *  unsupported values. Both Web Awesome spellings are accepted for the shared `s`/`m`/`l`
    *  steps (`small`/`medium`/`large`), matching `<lr-badge>`/`<lr-callout>`; `3xs` has no
    *  long-form alias. */
-  private _size: ChipSize = 'm';
-
   @property({ reflect: true, converter: CHIP_SIZE })
   get size(): ChipSize {
     return this._size;
@@ -236,10 +236,10 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.requestUpdate('size', old);
   }
 
-  /** Status/emphasis color. `neutral` (the default and unsupported-value fallback) reads as
-   *  plain/unstyled. */
   private _variant: ChipVariant = 'neutral';
 
+  /** Status/emphasis color. `neutral` (the default and unsupported-value fallback) reads as
+   *  plain/unstyled. */
   @property({ reflect: true, converter: CHIP_VARIANT })
   get variant(): ChipVariant {
     return this._variant;
@@ -288,8 +288,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   @property() value?: string;
 
   /** Wraps a long label onto multiple lines instead of ellipsis-truncating it to one, matching
-   *  `<lr-suggestion-chips>`'s identical opt-in. `false` (the default) reproduces today's exact
-   *  single-line, ellipsis-truncated `[part="label"]`. */
+   *  `<lr-suggestion-chips>`'s identical opt-in. `false` (the default) renders a single-line, ellipsis-truncated `[part="label"]`. */
   @property({ type: Boolean, reflect: true }) wrap = false;
 
   // A `[part]` always contains a literal `<slot>` child regardless of assigned content, so

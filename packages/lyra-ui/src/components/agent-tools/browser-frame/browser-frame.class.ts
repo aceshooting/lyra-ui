@@ -142,6 +142,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   private _frameSrc = '';
 
+  /** Source URL of the embedded page frame. An unsafe or empty value renders no frame. */
   @property({ attribute: 'frame-src' })
   get frameSrc(): string {
     return this._frameSrc;
@@ -154,10 +155,11 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.requestUpdate('frameSrc', old);
   }
 
+  /** Address text shown in the read-only address bar and used in the frame's accessible description. */
   @property({ useDefault: true }) url = '';
-  /** The browser session's connection/streaming lifecycle phase. */
   private _phase: LyraStreamPhase = 'idle';
 
+  /** The browser session's connection/streaming lifecycle phase. */
   @property({ reflect: true, converter: BROWSER_FRAME_PHASE })
   get phase(): LyraStreamPhase {
     return this._phase;

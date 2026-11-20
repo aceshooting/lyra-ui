@@ -85,7 +85,7 @@ export interface LyraModelSelectEventMap {
  * A catalog row may also set `disabled`, marking it non-actionable: `aria-disabled="true"`
  * replaces its selected/active affordances, activating it (click or keyboard) commits nothing and
  * changes no state, and arrow-key/Home/End active-descendant navigation steps past it instead of
- * landing on it. Omitted or `false` renders the row exactly as before this field existed.
+ * landing on it. Omitted or `false` leaves the row fully actionable.
  *
 
  * Ships the standard label/hint/error form-control chrome: properties, matching named slots, and

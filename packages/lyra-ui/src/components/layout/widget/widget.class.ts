@@ -360,6 +360,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Secondary header copy. Removed or empty attributes render no fallback text. */
   @property() sublabel = '';
+  /** Renders a header button that collapses and expands the widget body. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
   /** Whether the body is collapsed. Reflects to the `collapsed` attribute. Also settable from
    *  outside (attribute or property) to restore a previously-persisted `storageKey` preference --
@@ -373,6 +374,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  persisted" guarantee as `lr-app-rail`'s and `lr-table`'s `storage-key` restores, which share
    *  this one's write-tracking mechanism. Unset (the default) touches storage not at all. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
+  /** Renders a header button that toggles the widget's fullscreen presentation. */
   @property({ type: Boolean, reflect: true }) expandable = false;
   /** Displays the widget as a fullscreen dialog.
    * @default false */
@@ -402,7 +404,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  snapshot (except `icon`, preserved by reference -- see `snapshotWidgetViews`'s doc); mutate a
    *  copy and reassign it to update. For example, a chart/table toggle inside the same card
    *  chrome. Each entry gets a header toggle button and a `<slot name="view-${viewId}">`. Empty (the
-   *  default) renders today's single unnamed default slot as the sole view, unchanged. An entry's
+   *  default) renders the single unnamed default slot as the sole view. An entry's
    *  `label` is optional -- see `LyraWidgetView`'s own doc for the icon-only (`ariaLabel`) case. */
   @property({ attribute: false })
   get views(): readonly LyraWidgetView[] {
@@ -442,6 +444,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private readonly bodyId = nextId('widget-body');
   private focusedViewIdBeforeUpdate?: string;
   private collapseHadFocus = false;
+  /** Space-separated ids that describe the widget; forwarded to the fullscreen dialog only while it is fullscreen. */
   @property({ attribute: 'aria-describedby' }) private hostDescribedBy: string | null = null;
 
   private get storageFullKey(): string | undefined {

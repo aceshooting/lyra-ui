@@ -125,10 +125,14 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this.emit('lr-render-error', { error: new Error('The image failed to load.') });
   }
 
+  /** Current zoom multiplier (default 1), clamped to `minZoom`-`maxZoom`; reflects to the `zoom` attribute. */
   @property({ type: Number, reflect: true }) zoom = 1;
   private pendingZoomChange?: number;
+  /** Smallest allowed zoom multiplier (default 0.5). */
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
+  /** Largest allowed zoom multiplier (default 4). */
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
+  /** Zoom change applied by each zoom-in or zoom-out action (default 0.25). */
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
   private _fit: LyraImageFit = 'actual';
   /** Base image sizing policy. The default preserves the natural-size behavior of this frame. */
@@ -141,7 +145,9 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this._fit = normalizeImageFit(value, 'actual');
     this.requestUpdate('fit', old);
   }
+  /** URL of an image to inspect inside the frame; empty (default) shows only the slotted content. */
   @property() src = '';
+  /** Alternative text for the `src` image. Empty (default) marks it decorative. */
   @property() alt = '';
   /** Names the focusable viewport, like a host `aria-label` (an empty or blank value uses the default); defaults to a localized purpose name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -173,20 +179,24 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this.zoom = next;
   }
 
+  /** Raises `zoom` by one `zoomStep`, snapped to the step grid and clamped to `maxZoom`. */
   zoomIn(): void {
     this.setZoom(this.safeZoom + this.safeZoomStep);
   }
 
+  /** Lowers `zoom` by one `zoomStep`, snapped to the step grid and clamped to `minZoom`. */
   zoomOut(): void {
     this.setZoom(this.safeZoom - this.safeZoomStep);
   }
 
+  /** Sets `zoom` back to 1 (within `minZoom`-`maxZoom`) and keeps the current scroll offset. */
   resetZoom(): void {
     // Reset is a semantic 100% destination, not another relative zoom step. It remains bounded by
     // min/max, but a step such as 0.3 must not quantize 1 down to 0.9.
     this.setZoom(1, false);
   }
 
+  /** Sets `zoom` back to 1 and scrolls the viewport to its origin. */
   resetView(): void {
     this.resetZoom();
     this.viewportEl?.scrollTo({ left: 0, top: 0 });

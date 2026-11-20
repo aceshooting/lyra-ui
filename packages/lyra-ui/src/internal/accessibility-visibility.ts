@@ -50,7 +50,7 @@ export interface ComposedAccessibilityTextOptions {
    *  `hidden` are indistinguishable from computed style once a container is hidden, and an absent
    *  accessible name is the worse of the two failures. Unlike `skipRootAncestorValidation` this
    *  keeps full composed-ancestor validation, so `aria-hidden`, `inert`, `hidden` and
-   *  `display: none` still prune exactly as before. */
+   *  `display: none` still prune. */
   ignoreInheritedVisibility?: boolean;
 }
 

@@ -38,7 +38,7 @@ renderer-owned ids are not a stable Lyra navigation contract. Use `page`/`goToSl
 text-quote anchor instead.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
-renderer's zero-based index. A current renderer rejection is contained, enters the localized error
+renderer's zero-based index. A current renderer rejection, `AbortError` included, is contained, enters the localized error
 state, emits `lr-render-error`, and does not escape as an unhandled promise rejection.
 `renderPageThumbnailToContainer(page, container, options?)` renders a
 one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned disposable handle (or

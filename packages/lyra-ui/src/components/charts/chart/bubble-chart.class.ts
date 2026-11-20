@@ -16,6 +16,7 @@ import { LyraChart, type LyraChartType } from './chart.class.js';
  * @since 4.0.0
  */
 export class LyraBubbleChart extends LyraChart {
+  /** Chart type. Defaults to `bubble`; a `type` attribute or property write changes it, and an unrecognized value falls back to `bar`. */
   override type: LyraChartType = 'bubble';
 }
 

@@ -90,8 +90,10 @@ export class LyraHistogram extends LyraChart {
   // `withDataTable` is false.
   static override styles = [LyraElement.styles, specialistTokens, chartSurfaceStyles, styles, srOnly, bidiStyles];
 
+  /** Chart type. Locked to `bar`; attribute and property writes are ignored. */
   override type = 'bar' as const;
 
+  /** Number of equal-width buckets, floored and clamped to 0-1,000 (default 10); a non-numeric value reads as 0. */
   @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
   bins = 10;
   /** Raw samples to bin: a bounded, clone-owned readonly snapshot. An array longer than 10,000

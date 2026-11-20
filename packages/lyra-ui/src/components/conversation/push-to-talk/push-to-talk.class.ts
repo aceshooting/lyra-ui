@@ -186,6 +186,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private _mode: PushToTalkMode = 'hold';
+  /** Interaction model: `hold` records while pressed, `toggle` starts and stops on successive presses; unrecognized values fall back to `hold`. Reflects to the `mode` attribute. */
   @property({ reflect: true, converter: PUSH_TO_TALK_MODE })
   get mode(): PushToTalkMode {
     return this._mode;
@@ -205,7 +206,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   /** Emit chunks without retaining a final recording. The stop event carries an empty Blob.
    * A stream-only take requests one-second chunks unless timeslice-ms specifies a positive interval. */
   @property({ type: Boolean, attribute: 'stream-only' }) streamOnly = false;
+  /** Recording MIME type passed to `MediaRecorder`; empty picks the first supported of WebM/Opus, WebM or MP4. */
   @property({ attribute: 'mime-type' }) mimeType = '';
+  /** Input device id requested exactly from `getUserMedia`; empty uses the browser's default microphone. */
   @property({ attribute: 'device-id' }) deviceId = '';
   /** Additional audio constraints (`echoCancellation`, …). `deviceId` has one authority: the
    *  top-level `deviceId` property. */
@@ -224,6 +227,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  recording. */
   @property({ type: Boolean, attribute: 'without-timer' }) withoutTimer = false;
 
+  /** Disables capture, cancelling a take in progress and blocking new ones. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @state() private elapsedMs = 0;

@@ -48,8 +48,8 @@ await preloadMarkdown();
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
 uses, on unless `without-syntax-highlighting` is set. This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
-peer sees byte-identical output to before this property existed. The very first render of any content
-is always plain text/code (identical to today's output); highlighting arrives as an asynchronous
+peer sees plain output. The very first render of any content
+is always plain text/code; highlighting arrives as an asynchronous
 upgrade one render later once shiki resolves and the block's language is tokenized. No highlighting
 is attempted while `streaming` is `true` — it applies once a stream settles, adding no per-chunk cost
 while content is still arriving.

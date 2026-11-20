@@ -120,7 +120,7 @@ hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`.
+opt out.
 `--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
 `--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
 corner radius without a `::part(trigger)` rule. Plus shared

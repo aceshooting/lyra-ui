@@ -5,10 +5,14 @@ export type LyraResolvedHeadingLevel = Exclude<LyraHeadingLevel, 'none'>;
 
 /**
  * Resolves the public heading vocabulary to ARIA's positive level. `none` is the explicit
- * semantic opt-out; untyped or attribute callers that provide another value retain the established
- * level-three fallback used by the accordion family.
+ * semantic opt-out. Any other value -- a removed attribute (`null`), `undefined` or an unknown
+ * string -- resolves the component's own declared default `fallback`, so removing the attribute
+ * restores the documented level.
  */
-export function resolveHeadingLevel(value: string): LyraResolvedHeadingLevel | undefined {
+export function resolveHeadingLevel(
+  value: string | null | undefined,
+  fallback: LyraHeadingLevel = '3',
+): LyraResolvedHeadingLevel | undefined {
   switch (value) {
     case '1':
     case '2':
@@ -20,7 +24,7 @@ export function resolveHeadingLevel(value: string): LyraResolvedHeadingLevel | u
     case 'none':
       return undefined;
     default:
-      return '3';
+      return fallback === 'none' ? undefined : fallback;
   }
 }
 

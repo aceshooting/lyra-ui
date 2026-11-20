@@ -113,7 +113,7 @@ export class LyraResultCard extends LyraElement {
     const hasHeading = heading !== undefined;
     const hasActions = this.withActions || this.hasActionsSlot;
     const hasHeader = hasHeading || hasActions;
-    const headingLevel = resolveHeadingLevel(this.headingLevel ?? 'none');
+    const headingLevel = resolveHeadingLevel(this.headingLevel, 'none');
     return html`
       <div part="base">
         <div part="header" ?hidden=${!hasHeader}>

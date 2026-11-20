@@ -19,3 +19,10 @@ it('lets a set heading-level token win and otherwise validates the host aria-lev
     expect(fallback).to.equal(aria !== null && LEVELS.includes(aria) ? aria : '3');
   }), propertyRuns());
 });
+
+it('resolves a removed, unset or unknown value to the declared fallback', () => {
+  fc.assert(fc.property(fc.option(fc.string().filter(value => !LEVELS.includes(value) && value !== 'none'), { nil: null }),
+    fc.constantFrom('1', '2', '3', '4', '5', '6', 'none' as const), (value, fallback) => {
+      expect(resolveHeadingLevel(value, fallback)).to.equal(fallback === 'none' ? undefined : fallback);
+    }), propertyRuns());
+});

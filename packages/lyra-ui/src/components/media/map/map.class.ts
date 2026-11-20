@@ -2307,8 +2307,8 @@ export interface LyraMapEventMap {
  *   of `popup-close-button`.
  *
  * The legend is read-only unless `legendInteractive` is set, which is opt-in for a reason: an
- * unset map renders exactly the key it rendered before, with no button, no extra attribute and no
- * extra MapLibre paint key. Only a row that carries its own `value` becomes a toggle -- the key is
+ * unset map renders a static key with no button, no extra attribute and no extra MapLibre paint
+ * key. Only a row that carries its own `value` becomes a toggle -- the key is
  * never derived from an `icon` record's `value`, which would silently make a row operable the
  * author never marked. Each toggle is a native `button`, so it is one independent tab stop per row
  * (a 100-row legend contributes 100, exactly as a 100-series `lr-chart` legend does) and it grows
@@ -8933,8 +8933,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /**
    * The swatch-plus-label pair every legend row renders: directly inside the row when the row is
    * inert, and inside the row's toggle button when `legendInteractive` has made it operable. One
-   * source of truth, so the two branches can never drift, and an unset map keeps rendering exactly
-   * the markup it rendered before the toggle existed.
+   * source of truth, so the two branches can never drift, and an unset map renders the plain
+   * inert row markup.
    */
   private renderLegendRowContent(entry: LyraMapLegendEntry): TemplateResult {
     const paint = sanitizeCssColor(entry.color);
@@ -9035,8 +9035,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /**
    * The row list's children: bare rows when no admitted entry carries a `group`, and otherwise one
    * `role="group"` per CONSECUTIVE run sharing a group name, with ungrouped rows left exactly where
-   * they were declared. The ungrouped branch is literally the expression this list has always been,
-   * so a legend that uses no sections keeps rendering the markup it rendered before they existed.
+   * they were declared. A legend that uses no sections renders one flat
+   * list of rows with no group wrappers.
    *
    * `group` is caller-supplied data: the heading renders it verbatim and never resolves it through
    * the locale catalog.

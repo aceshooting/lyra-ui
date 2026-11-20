@@ -87,7 +87,7 @@ export interface LyraColorPickerSwatch {
    * Marks this swatch non-actionable: it renders a genuinely disabled `<button>` (no tab stop, no
    * hover/press affordance) and clicking it commits nothing. Independent of the whole control's own
    * `disabled`/`effectiveDisabled` -- this swatch alone stays inert even while every other swatch
-   * remains pickable. Omitted or `false` renders the swatch exactly as before this field existed.
+   * remains pickable. Omitted or `false` leaves the swatch fully actionable.
    */
   disabled?: boolean;
   /** Optional decorative custom shape rendered in place of the plain filled circle -- e.g. a gem
@@ -273,7 +273,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * A `swatches` entry may also set `disabled`, marking that one palette swatch non-actionable
  * independent of the whole control's own `disabled`: it renders a genuinely disabled `<button>`
  * (no tab stop, no hover/press affordance) and clicking it commits nothing. Omitted or `false`
- * renders the swatch exactly as before this field existed.
+ * leaves the swatch fully actionable.
  *
  * @customElement lr-color-picker
  * @slot label - Custom label content.
@@ -458,6 +458,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   /** Server-rendering hint that the `hint` slot is populated before client slot observation. */
   @property({ type: Boolean, attribute: 'with-hint', reflect: true }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
+  /** Accessible name of the picker, bound to the host's `aria-label` attribute; used instead of the visible `label` when set. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private _readonly = false;
   /** Forwards native read-only behavior to the internal value field and blocks every other

@@ -3,6 +3,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { normalizeCatalog } from '../../../internal/catalog-picker.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -137,14 +138,17 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   @property({ type: Boolean, attribute: 'allow-custom' }) allowCustom = false;
   /** The current sampling temperature. */
   @property({ converter: blankNumberConverter(DEFAULT_TEMPERATURE), useDefault: true }) temperature = DEFAULT_TEMPERATURE;
+  /** Lowest selectable temperature on the slider (default `0`). */
   @property({ attribute: 'temperature-min', converter: blankNumberConverter(DEFAULT_TEMPERATURE_MIN), useDefault: true }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
+  /** Highest selectable temperature on the slider (default `2`); an empty attribute uses the default. */
   @property({ attribute: 'temperature-max', converter: blankNumberConverter(DEFAULT_TEMPERATURE_MAX), useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
+  /** Slider increment for the temperature (default `0.1`). */
   @property({ attribute: 'temperature-step', converter: blankNumberConverter(DEFAULT_TEMPERATURE_STEP), useDefault: true }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
+  private _layout: ModelSettingsPanelLayout = 'vertical';
+
   /** `vertical` stacks full-width rows with visible labels; `compact` runs
    *  the same two rows side by side with a smaller temperature caption, for
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */
-  private _layout: ModelSettingsPanelLayout = 'vertical';
-
   @property({ reflect: true, converter: MODEL_SETTINGS_PANEL_LAYOUT })
   get layout(): ModelSettingsPanelLayout {
     return this._layout;
@@ -288,7 +292,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             exportparts="form-control-label:model-label"
             .provider=${this.provider}
             .catalog=${this.catalog}
-            .value=${this.model}
+            .value=${live(this.model)}
             .label=${modelLabel}
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
@@ -308,7 +312,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .min=${domain.min}
             .max=${domain.max}
             .step=${domain.step}
-            .valueAsNumber=${this.temperature}
+            .valueAsNumber=${live(this.temperature)}
             .valueFormatter=${this.formatTemperature}
             .withValue=${false}
             .disabled=${this.disabled}

@@ -271,6 +271,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   get slides(): number {
     return this._slides;
   }
+  /** Accessible name for the carousel region; falls back to the localized default when unset. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
     | null = null;

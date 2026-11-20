@@ -147,6 +147,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Suppresses the metric trend chart. */
   @property({ type: Boolean, attribute: 'without-chart', reflect: true }) withoutChart = false;
+  /** Height of the metric trend chart, as a CSS length. Defaults to `220px`. */
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. The
    *  first N runs in input order are kept, so pass newest-first history to chart the most recent runs. */
@@ -227,7 +228,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   private renderRuns(runs: AgentEvaluationDashboardRun[]): TemplateResult {
     if (!runs.length) return html`<p part="empty">${this.localize('evaluationDashboardNoRuns')}</p>`;
     const active = this.activeMetric;
-    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const runsLevel = level && String(Math.min(6, Number(level) + 1));
     return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')} @keydown=${this.runFocus.onKeyDown}><div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('evaluationDashboardRunsLabel')}</div>${repeat(runs, (run) => run.id, (run) => {
       const kind = agentStatusKind(run.status);
@@ -247,7 +248,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     const runs = this.slicedFor.runs;
     this.projectedRunsTruncated = allRuns.length > runs.length;
     const metrics = this.normalizedMetrics;
-    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`<section part="base" aria-label=${semanticLabel ?? nothing}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${metrics.length

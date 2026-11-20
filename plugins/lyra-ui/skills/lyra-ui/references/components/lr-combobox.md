@@ -473,8 +473,9 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. A current request that rejects with `AbortError` settles silently, with no rows: the previous
-query's results are not kept as its answer.
+never shows the raw error. A current request that rejects with `AbortError` (one this component did
+not abort itself) is a failure like any other rejection; the previous query's results are not kept
+as its answer.
 Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps

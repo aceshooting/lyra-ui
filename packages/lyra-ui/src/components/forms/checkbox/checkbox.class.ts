@@ -308,6 +308,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
     return isLiveDisabled(this);
   }
 
+  /** Whether the checkbox shows the mixed state; reflects to `indeterminate` and is independent of `checked`. */
   get indeterminate(): boolean {
     return this._indeterminate;
   }

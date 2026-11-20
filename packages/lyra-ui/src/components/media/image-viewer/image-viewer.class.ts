@@ -370,9 +370,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @property() name = '';
   /** Image alt text. Unset falls back to `name`; explicitly `""` marks the image decorative. */
   @property() alt?: string;
+  private _fit: LyraImageFit = 'contain';
   /** Base scale at `zoom = 1`: `contain` fits the whole image in the frame, `width` fills the
    *  frame's inline size, `actual` shows the image at its natural pixel dimensions. */
-  private _fit: LyraImageFit = 'contain';
   @property({ reflect: true })
   get fit(): LyraImageFit {
     return this._fit;
@@ -401,8 +401,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
    *  `<lr-lightbox>`'s own `zoomStep`. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
-  /** Clockwise rotation in 90-degree steps. */
   private _rotation: LyraImageRotation = 0;
+  /** Clockwise rotation in 90-degree steps. */
   // numeric-guard-exempt: the setter immediately normalizes every write with finiteNumber and a bounded four-step wrap
   @property({ type: Number, reflect: true })
   get rotation(): LyraImageRotation {
@@ -496,6 +496,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
   }
 
+  /** Rotates the image 90 degrees clockwise by advancing `rotation`, wrapping from 270 back to 0. */
   rotate(): void {
     this.rotation = ((this.rotation + 90) % 360) as LyraImageRotation;
   }

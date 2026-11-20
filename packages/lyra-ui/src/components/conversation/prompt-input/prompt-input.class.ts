@@ -11,6 +11,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
+import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import {
@@ -177,9 +178,10 @@ type LyraPromptInputCustomEventName = Exclude<
  * @event lr-attachments-add - Files were selected. `detail: { files, capability, rejected,
  *   remainingFiles, remainingTotalSize }`, forwarded from `lr-attachment-trigger`'s `lr-files`.
  * @event lr-attachment-remove - Attachment removal was requested. `detail: { attachmentId }`.
- * @event lr-model-change - Model selection changed. `detail: { value, inCatalog }`.
- * @event lr-voice-change - Voice selection changed. `detail: { value, inCatalog }`.
- * @event lr-sources-change - Retrieval source selection changed. `detail: { selectedSourceIds }`.
+ * @event lr-model-change - Model selection changed; `model` already holds it. `detail: { value, inCatalog }`.
+ * @event lr-voice-change - Voice selection changed; `voice` already holds it. `detail: { value, inCatalog }`.
+ * @event lr-sources-change - Retrieval source selection changed; `selectedSourceIds` already holds
+ *   it. `detail: { selectedSourceIds }`.
  * @event lr-queue-change - The queued prompts changed.
  * @event lr-send-now - Immediate submission of a queued prompt was requested. `detail: { item }`.
  * @event lr-camera-request - Camera capture was requested.
@@ -270,6 +272,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
   private suggestionCaretGeneration = 0;
   private _value = '';
+  /** Current text of the composed composer (controlled; reflects edits and suggestion insertions). */
   @property()
   get value(): string {
     return this._value;
@@ -292,11 +295,16 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.statusValue = normalizeChatComposerStatus(value);
     this.requestUpdate('status', previous);
   }
+  /** Placeholder text forwarded to the composed composer. */
   @property() placeholder = '';
+  /** Disables editing, suggestions and actions in the composed composer and its controls. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Makes the composed textarea read-only; suggestion insertion is also blocked. Reflects to the `readonly` attribute. */
   @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =
     false;
+  /** Minimum character count forwarded to the composed textarea. */
   @property({ converter: lengthLimitConverter, attribute: 'minlength' }) minLength?: number;
+  /** Maximum character count forwarded to the composed textarea. */
   @property({ converter: lengthLimitConverter, attribute: 'maxlength' }) maxLength?: number;
   /** Forwarded to the composed composer: plain Enter inserts a newline instead of submitting. */
   @property({ type: Boolean, attribute: 'without-enter-submit' }) withoutEnterSubmit = false;
@@ -313,8 +321,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ attribute: 'toolbar-placement' }) toolbarPlacement: ChatComposerToolbarPlacement = 'above';
   /** Forwarded toolbar alignment. `'end'` places a bottom-row toolbar beside the end actions. */
   @property({ attribute: 'toolbar-align' }) toolbarAlign: ChatComposerToolbarAlign = 'start';
+  /** Minimum visible rows forwarded to the composed composer (default `1`). */
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
+  /** Maximum rows forwarded to the composed composer before it scrolls (default `8`). */
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;
 
@@ -348,22 +358,31 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** Attachment chips keyed by unique, nonempty `attachmentId`; the first duplicate wins. */
   @property({ attribute: false })
   attachments: readonly LyraPromptInputAttachment[] = [];
+  /** Attachment kinds the attach control offers (`files`, `image`, `audio`); defaults to all three. */
   @property({ attribute: false })
   attachmentCapabilities: readonly LyraAttachmentCapability[] = [
     'files',
     'image',
     'audio',
   ];
+  /** Suggestions offered after an `@` trigger in the textarea. */
   @property({ attribute: false }) mentionItems: readonly LyraPromptSuggestion[] = [];
+  /** Suggestions offered after a `/` trigger in the textarea. */
   @property({ attribute: false }) commandItems: readonly LyraPromptSuggestion[] = [];
+  /** Model catalog for the model picker shown above the composer; no picker renders while unset or empty. */
   @property({ attribute: false }) modelCatalog?: LyraCatalog<LyraModelCatalogEntry>;
+  /** Selected model id. A pick in the built-in model picker updates it before `lr-model-change`,
+   * so reassigning the previous id rolls the picker back. */
   @property() model = '';
+  /** Voice catalog for the voice picker shown above the composer; no picker renders while unset or empty. */
   @property({ attribute: false }) voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>;
+  /** Selected voice id. A pick in the built-in voice picker updates it before `lr-voice-change`. */
   @property() voice = '';
   /** Retrieval sources keyed by unique nonblank `id`; malformed and later duplicate roots are
    * omitted before controls are rendered or forwarded. */
   @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
-  /** Controlled source identities, normalized to unique nonblank values before forwarding. */
+  /** Selected source identities, normalized to unique nonblank values before forwarding. A
+   * selection in the built-in source picker updates it before `lr-sources-change`. */
   @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
   /** Queued prompts keyed by unique nonblank `id`; malformed and later duplicate rows are omitted
    * before section gating or forwarding. */
@@ -372,6 +391,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
    *  `promptInputLabel` message; an explicit empty string (`label=""` or `.label = ''`)
    *  suppresses that default and renders no label. `accessibleLabel` wins over both. */
   @property() label?: string;
+  /** Accessible name for the prompt section; takes precedence over `label` and the localized default. Reads from the `aria-label` attribute. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private activeSuggestion: ActiveSuggestion | null = null;
@@ -845,6 +865,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     ></lr-attachment-trigger>`;
   }
 
+  /** Whether a composed picker's commit may update `model`, `voice` or `selectedSourceIds`. */
+  private get acceptsPickerCommit(): boolean {
+    return !this.disabled && !this.readOnly;
+  }
+
   private reemit<K extends LyraPromptInputCustomEventName>(
     event: LyraPromptInputEventMap[K] & CustomEvent<unknown>,
     name: K
@@ -921,22 +946,28 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         ? html`<lr-model-select
             .readonly=${this.readOnly}
             .catalog=${this.modelCatalog}
-            .value=${this.model}
+            .value=${live(this.model)}
             .disabled=${this.disabled}
             @lr-change=${(
               event: CustomEvent<{ value: string; inCatalog: boolean }>
-            ) => this.reemit(event, 'lr-model-change')}
+            ) => {
+              if (this.acceptsPickerCommit) this.model = event.detail.value;
+              this.reemit(event, 'lr-model-change');
+            }}
           ></lr-model-select>`
         : nothing}
       ${voiceCatalog.length
         ? html`<lr-voice-picker
             .readonly=${this.readOnly}
             .catalog=${this.voiceCatalog}
-            .value=${this.voice}
+            .value=${live(this.voice)}
             .disabled=${this.disabled}
             @lr-change=${(
               event: CustomEvent<{ value: string; inCatalog: boolean }>
-            ) => this.reemit(event, 'lr-voice-change')}
+            ) => {
+              if (this.acceptsPickerCommit) this.voice = event.detail.value;
+              this.reemit(event, 'lr-voice-change');
+            }}
           ></lr-voice-picker>`
         : nothing}
       ${sources.length
@@ -956,7 +987,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               .selectedSourceIds=${this.effectiveSelectedSourceIds}
               @lr-selection-change=${(
                 event: CustomEvent<{ selectedSourceIds: string[] }>
-              ) => this.reemit(event, 'lr-sources-change')}
+              ) => {
+                if (this.acceptsPickerCommit) this.selectedSourceIds = event.detail.selectedSourceIds;
+                this.reemit(event, 'lr-sources-change');
+              }}
             ></lr-source-picker>
           </details>`
         : nothing}

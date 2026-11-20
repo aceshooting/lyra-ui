@@ -25,8 +25,7 @@ export interface AggregateFileAllowance {
  * -- the running total a retaining component already holds (its own internal file list) plus any
  * externally held baseline the host reports (e.g. `heldFileCount`/`heldTotalSize`), added
  * together by the caller *before* normalizing the externally supplied half through
- * {@linkcode finiteCount}. Passing `0`/`0` (or omitting both arguments) reproduces the exact
- * arithmetic both components shipped before an externally held baseline existed.
+ * {@linkcode finiteCount}. Passing `0`/`0` (or omitting both arguments) reproduces plain arithmetic with no externally held baseline.
  */
 export class AggregateFileLimitTracker {
   private count: number;

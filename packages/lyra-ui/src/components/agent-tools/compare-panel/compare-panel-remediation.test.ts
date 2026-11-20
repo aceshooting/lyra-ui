@@ -94,3 +94,15 @@ describe('lr-compare-panel vote commit and pane tab stops', () => {
     el.remove();
   });
 });
+
+it('emits nothing when the vote already held is pressed again', async () => {
+  const el = await fixture<LyraComparePanel>(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`);
+  const events: string[] = [];
+  for (const type of ['lr-vote-request', 'lr-vote-change']) el.addEventListener(type, () => events.push(type));
+  const button = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="vote-button"]')!;
+  button().click();
+  await el.updateComplete;
+  button().click();
+  await el.updateComplete;
+  expect(events).to.deep.equal(['lr-vote-request', 'lr-vote-change']);
+});

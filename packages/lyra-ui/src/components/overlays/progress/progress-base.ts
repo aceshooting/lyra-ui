@@ -17,10 +17,13 @@ export type LyraProgressVariant = LyraVariant;
 
 /** State and label plumbing the bar and the ring share, so they cannot disagree about the same numbers. */
 export abstract class LyraProgressBase extends LyraElement {
+  /** Current progress, clamped to `0` through `max`. Reflects to the `value` attribute. */
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
+  /** Value at which progress is complete. Non-positive or non-finite values fall back to `100`. */
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number }) max = 100;
+  /** Shows an indeterminate busy state instead of a measured value. Reflects to the `indeterminate` attribute. */
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   /** Semantic palette, read from the library's shared semantic-tone vocabulary. Recolors the
    *  indicator via the variant's loud fill from the shared semantic grid. */

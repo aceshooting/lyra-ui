@@ -63,8 +63,7 @@ coalesce into one update.
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — a smaller, borderless pill instead of the default bordered chip, e.g. for a
-  composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset
-  renders exactly as before. An unsupported value normalizes to unset and removes the attribute.
+  composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset keeps the standard chip. An unsupported value normalizes to unset and removes the attribute.
 
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — at the compact density,
   hides `[part='meta']` (the filename/size text) entirely for an image-mime attachment, leaving only

@@ -92,7 +92,7 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * - `{ kind: "calendar", days, firstDayOfWeek?, columnX?, rowY?, ... }`: a GitHub-style
  *   weekday x week grid. `scale` governs its
  *   bucketing too: the default `"linear"` buckets by `quartileBucket()`
- *   (today's original behavior, unchanged); `"sqrt"` instead compresses via
+ *   ; `"sqrt"` instead compresses via
  *   the same `sqrtStep()` magnitude compression matrix mode uses, so one
  *   heavy day doesn't wash out the rest. As in matrix mode, a cell whose
  *   `value` is negative or non-finite is treated as "no data" rather than
@@ -198,8 +198,7 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * `matrixGeometry`.
  *
  * `cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar
- * mode's per-cell size: unset, calendar mode keeps today's original 11px
- * cell size unchanged; explicitly set, the same fixed size (or, with
+ * mode's per-cell size: unset, calendar mode keeps its 11px cell size; explicitly set, the same fixed size (or, with
  * `fitToWidth`, the same host-width-derived size matrix mode already
  * supports) governs calendar mode's grid too.
  *
@@ -465,8 +464,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   colLabelHeight?: number | 'auto';
 
   /**
-   * Rotation, in degrees, applied to matrix column labels. Unset (or `0`) paints them horizontally
-   * exactly as before. A horizontal label is truncated with an ellipsis to its own column (to its
+   * Rotation, in degrees, applied to matrix column labels. Unset (or `0`) paints them horizontally. A horizontal label is truncated with an ellipsis to its own column (to its
    * `colLabelInterval` columns, at most to the canvas edge), so in a dense matrix labels shorten or
    * drop rather than overprint their neighbours; `45` or `90` is the standard remedy.
    *
@@ -489,8 +487,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Freezes a matrix label band against the grid's own scrolling, instead of leaving it baked into
    * the scrolling bitmap. `'rows'` pins the row-label gutter so it survives horizontal scrolling,
    * `'cols'` pins the column-label band so it survives vertical scrolling, `'both'` pins both, and
-   * the default `'none'` renders exactly what this component rendered before the option existed:
-   * one canvas, no scrollport, no extra elements.
+   * the default `'none'` renders one canvas, no scrollport, no extra elements.
    *
    * Labels and cells share one bitmap, so a band cannot be `position: sticky` on its own; a tall
    * matrix therefore scrolled its column header away and left the columns unidentifiable. Setting
@@ -920,8 +917,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   @property({ type: Boolean, attribute: 'without-legend', reflect: true }) withoutLegend = false;
   /**
    * `"linear"` (default) maps values linearly to the color ramp in matrix
-   * mode, and buckets calendar-mode values via `quartileBucket()` — both
-   * unchanged from before this property governed calendar mode too.
+   * mode, and buckets calendar-mode values via `quartileBucket()`.
    * `"sqrt"` compresses via `sqrtStep()`'s square-root magnitude compression
    * instead, in *both* modes, so one heavy cell/day doesn't wash out the
    * rest of a skewed dataset.
@@ -946,7 +942,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /**
    * Pins the color ramp's input domain to `[min, max]` instead of deriving it from the data's own
-   * extremes. Unset (the default) keeps today's behavior exactly: the ramp spans the data's own
+   * extremes. Unset (the default): the ramp spans the data's own
    * min-max, so two heatmaps of comparable data each normalize to their own extremes and cannot be
    * read against each other. Setting it also opts the component into **signed data** (see
    * `signedDomain`), because declaring a domain is what disambiguates a negative value from the
@@ -1027,7 +1023,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * remaining host width unfilled (the canvas simply ends early) rather than stretching to fill it
    * — position it with normal CSS on the host if you want it centered or end-aligned.
    *
-   * Unset (the default) reproduces today's exact fit-to-width behavior. Clamped to at least the
+   * Unset (the default) fits to the width. Clamped to at least the
    * built-in `4`px floor; a non-finite value (or an empty attribute) means unset rather than `0`.
    * When both clamps are set and `maxCellSize < minCellSize`, the ceiling wins — the same
    * precedence `finiteRange()` itself applies.
@@ -1055,7 +1051,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * hit-testable cells and overflows its host instead of collapsing to hairlines.
    *
    * Can only raise that floor, never lower it: a value below `4` normalizes to `4`. Unset (the
-   * default) reproduces today's exact fit-to-width behavior, and a non-finite value (or an empty
+   * default) fits to the width, and a non-finite value (or an empty
    * attribute) means unset.
    */
   @property({
@@ -1077,8 +1073,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * a different weekday instead of always Sunday — `0`-`6`, same numbering
    * as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday, matching
    * `CalendarCell.weekday`'s existing convention). Threaded into
-   * `buildCalendarGrid()`. Defaults to `0` (Sunday), unchanged from before
-   * this property existed. Normalized into `[0, 6]` via modulo wrap (not
+   * `buildCalendarGrid()`. Defaults to `0` (Sunday). Normalized into `[0, 6]` via modulo wrap (not
    * clamp) -- mirrors `buildCalendarGrid()`'s own `(x + 7) % 7` weekday-wrapping
    * convention (already used elsewhere in this file), so e.g. `7` wraps to `0`
    * (Sunday) and `-1` wraps to `6` (Saturday) rather than being clamped to the
@@ -1132,7 +1127,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * the stops. Reassigning stops whose supported fields are unchanged does not schedule a redraw;
    * every assignment is still clone-owned, so mutating and reassigning the caller's array is
    * detected without exposing that mutation in place. Unset (the default) or an empty array
-   * reproduces today's exact gradient legend.
+   * shows the gradient legend.
    */
   @property({ attribute: false, hasChanged: legendStopsChanged })
   legendStops?: readonly HeatmapLegendStop[];
@@ -1143,7 +1138,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * wires it up from `lr-cell-activate` (or any other source) to build a toggle-select
    * interaction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text
    * to the host's `aria-label`, and adds no selected suffix to the keyboard announcement,
-   * reproducing today's exact output.
+   * 
    */
   @property({ attribute: false }) selectedCell: HeatmapSelectedCell | null =
     null;
@@ -1197,8 +1192,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  a consumer omit a future/out-of-range date from interaction, or mark a zero-value cell as
    *  non-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. In calendar
    *  mode the position carries its resolved ISO `date`, so "everything after today" is a direct
-   *  string comparison. Unset (the default) keeps every cell interactive, unchanged from before
-   *  this property existed. */
+   *  string comparison. Unset (the default) keeps every cell interactive. */
   @property({ attribute: false }) cellInteractive?: (
     pos: MatrixCellPos | CalendarCellPos,
     value: number
@@ -1211,8 +1205,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  outside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from
    *  both "no data" and the ramp's own lightest step) without a prepended synthetic ramp color,
    *  which can't safely reserve an exact value on a skewed dataset (the bucket selectors round by
-   *  continuous ratio, with no equality-based reservation). Unset (the default) reproduces today's
-   *  exact ramp/no-data behavior for every cell. A returned value containing a CSS custom property
+   *  continuous ratio, with no equality-based reservation). Unset (the default) uses the ramp/no-data behavior for every cell. A returned value containing a CSS custom property
    *  (e.g. `var(--x)`) or other browser-resolvable color syntax (e.g. `color-mix(...)`,
    *  `currentColor`) is automatically resolved in this element's own theme scope before being used
    *  as a canvas fill color; one that does not resolve paints the no-data fill. */
@@ -1223,8 +1216,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Overrides the weekday-axis label text in calendar mode -- receives the real JS weekday index
    *  (`0` Sunday .. `6` Saturday) for a row that would otherwise render a label (today, only rows
    *  1/3/5 relative to `firstDayOfWeek` ever do) and, when it returns a string, uses it instead of
-   *  the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) reproduces
-   *  today's exact locale-derived output. */
+   *  the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) uses the locale-derived name. */
   private get calendarWeekdayLabelText():
     | ((jsWeekday: number) => string | undefined)
     | undefined {
@@ -1244,8 +1236,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  (`0` January .. `11` December) and full year for a month boundary that would otherwise
    *  render a label and, when it returns a string, uses it instead of the built-in
    *  `Intl.DateTimeFormat`-derived short month name. Mirrors `weekdayLabelText`'s exact
-   *  override-with-fallback shape -- unset (the default) reproduces today's exact
-   *  `toLocaleString(effectiveLocale, ...)`-derived output. */
+   *  override-with-fallback shape -- unset (the default) uses the `toLocaleString(effectiveLocale, ...)`-derived name. */
   private get calendarMonthLabelText():
     | ((jsMonth: number, year: number) => string | undefined)
     | undefined {
@@ -1256,7 +1247,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
    *  `mode`s and both `scale` values, discretizing whichever scale would otherwise interpolate
    *  continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer than 2
-   *  entries) keeps today's 2-endpoint interpolation exactly. Invalid entries use the canvas
+   *  entries) keeps the 2-endpoint interpolation. Invalid entries use the canvas
    *  fallback color and prevent the custom legend gradient from being assigned. */
   @property({ attribute: false }) colorSteps?: readonly string[];
   /**
@@ -1287,7 +1278,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * height, mirroring how `columnX` is consulted at `week = weekCount` to
    * size its width — so a function that spaces rows out further than the
    * default formula still gets a canvas tall enough to paint every row.
-   * Unset (the default) keeps today's evenly-spaced `CAL_LABEL_H + weekday *
+   * Unset (the default) uses the evenly-spaced `CAL_LABEL_H + weekday *
    * (cellSize + gap)` formula, where `gap` is the original 2px unless `cellGapY` was set
    * explicitly. Ignored in matrix mode.
    */
@@ -2497,7 +2488,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Effective per-cell size in calendar mode — mirrors `matrixCellSize()`
    * exactly: `fitToWidth` derives it from the host's measured width,
    * otherwise it's the (possibly explicitly-set) `cellSize` property, which
-   * itself falls back to today's original 11px calendar default when left
+   * itself falls back to its 11px calendar default when left
    * unset (see `cellSize`'s accessor doc comment). Shared by `columnXFor()`,
    * `rowYFor()`, `drawCalendar()`, and the navigation/cell-rectangle helpers so they agree on the same
    * geometry as what's actually painted.
@@ -2555,8 +2546,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Applies the optional `minCellSize`/`maxCellSize` clamps to a width-derived cell size. Only
    * ever reached from the `fitToWidth` branch of `calendarCellSize()`/`matrixCellSize()` — an
    * explicitly-set `cellSize` is an exact request and is never clamped. With both clamps unset
-   * this is exactly the `Math.max(FIT_MIN_CELL, …)` floor both call sites applied before they
-   * existed, so an untouched consumer's geometry is unchanged.
+   * this is exactly the `Math.max(FIT_MIN_CELL, …)` floor.
    *
    * The floor and ceiling are applied as two sequential clamps — raise to `minCellSize` first,
    * then cap to `maxCellSize` — rather than a single `finiteRange(size, fallback, min, max)` call.
@@ -2686,7 +2676,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /**
    * Locale-derived weekday-axis labels for the 7 rows drawn down the left of
    * the calendar grid. The labeled weekdays are always Monday, Wednesday, and
-   * Friday — matching today's sparse every-other-day label density — the
+   * Friday — a sparse every-other-day label density — the
    * rest stay blank. Which *row* each one lands on depends on
    * `firstDayOfWeek`, since `buildCalendarGrid()` anchors `firstWeekStart`
    * (and therefore row 0) at that weekday. For each target weekday (using
@@ -3723,7 +3713,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Steps from `(row, col)` by `(dRow, dCol)` repeatedly, skipping non-interactive cells, until
    *  an interactive cell is found or the grid edge is reached (in which case the original
-   *  position is returned unchanged, matching today's clamp-at-edge behavior). Bounded: each
+   *  position is returned unchanged, clamping at the edge). Bounded: each
    *  iteration strictly approaches the edge, so this always terminates. */
   private nextInteractiveMatrixCell(
     row: number,
@@ -3953,7 +3943,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /** Dispatches to the host-provided `cellInteractive` predicate when set, otherwise `true`
-   *  (every cell interactive, today's unchanged default). */
+   *  (every cell interactive by default). */
   private isCellInteractive(pos: CellPos): boolean {
     return this.cellInteractive?.(pos, this.valueAt(pos)) ?? true;
   }
@@ -4891,7 +4881,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *
    * `dir` is carried explicitly because the scrollport pins `direction: ltr` for the physically
    * non-mirrored grid geometry, and the tooltip is the one thing in there that is prose rather
-   * than geometry -- it keeps the host's own direction it inherited before the scrollport existed.
+   * than geometry -- it keeps the host's own inherited direction.
    * That direction sets the box's inline start; the text's own base direction comes from its first
    * strong character (`unicode-bidi: plaintext` in the stylesheet), so a number-first formatted
    * value is never reordered by an RTL host.

@@ -35,9 +35,13 @@ export class LyraRelativeTime extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   /** Construction-time instant by default. Removing the date attribute restores that instant. */
   @property({ converter: dateSourceConverter, useDefault: true }) date: string | number | Date = new Date();
+  /** Unit of the relative phrase (`'second'` through `'year'`); `'auto'` (default) picks the largest fitting unit. */
   @property() unit: LyraRelativeTimeUnit | 'auto' = 'auto';
+  /** Phrase style passed to `Intl.RelativeTimeFormat` as `style`: `'long'` (default), `'short'` or `'narrow'`. */
   @property() format: LyraFormatDisplay = 'long';
+  /** Whether to always use numbers (`'always'`) or allow phrases such as "yesterday" (`'auto'`, the default). */
   @property() numeric: LyraRelativeTimeNumeric = 'auto';
+  /** When set, the text refreshes itself at the moment the displayed phrase would change. Off by default. */
   @property({ type: Boolean, attribute: 'sync' }) sync = false;
   private timer?: number;
   private timerOwner?: Window;

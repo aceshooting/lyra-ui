@@ -8,8 +8,7 @@
  *
  * Parameterizing the two components on `Multiple` lets the declared type follow the flag. The
  * default parameter is `boolean`, and `boolean extends Multiple` is true only for that unnarrowed
- * default, so an untyped `<lr-select>` — which is every shipped call site — keeps exactly today's
- * union and compiles unchanged. This is deliberately a types-only change: the runtime, the
+ * default, so an untyped `<lr-select>` — which is every shipped call site — keeps the full union and compiles unchanged. This is deliberately a types-only change: the runtime, the
  * reflected attributes, and the mirrored Web Awesome/Shoelace surface are all untouched.
  *
  * ```ts
@@ -18,7 +17,7 @@
  * declare const unknown: LyraSelect;
  * single.value.trim();          // string
  * many.value.length;            // string[]
- * unknown.value;                // string | string[], exactly as before
+ * unknown.value;                // string | string[]
  * ```
  */
 export type LyraPickerValue<Multiple extends boolean> = boolean extends Multiple

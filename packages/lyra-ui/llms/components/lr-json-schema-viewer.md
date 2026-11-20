@@ -46,8 +46,7 @@ Each issue also begins with visually hidden localized severity text (`Error:`, `
 danger tokens, `warning` the warning tokens, and `info` its own pair —
 `--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
-library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
-to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
+library has no `--lr-color-info-*` token, so an `info` issue stays distinguishable from an `error`. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 

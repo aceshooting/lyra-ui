@@ -214,7 +214,7 @@ track ancestor scroll/resize against — pass `rect.contextElement` (a real, sti
 near the virtual point) when one is available to give it something to observe; otherwise, or when
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
-`showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
+`showAt()` anchors to its slotted/`for` element. Non-finite coordinates or dimensions are a no-op and leave
 the current open/anchor state unchanged. While virtual anchoring is active, no slotted/`for` DOM
 element owns click or generated ARIA. Optional `interactionBoundary` includes a connected element
 and its composed descendants in light-dismiss containment, so its own click handler can toggle
@@ -300,7 +300,7 @@ the same colour.
 **`--lr-positioning-strategy` (16.0.0)** — a cascading `absolute`/`fixed` override for
 `positioningStrategy`, read from computed style each time the popup is (re)positioned (open, or a
 placement/anchor change while open — never per animation frame). Setting nothing anywhere leaves
-every default exactly as before. Precedence: an explicit `positioning-strategy`/`hoist` on the
+every default in place. Precedence: an explicit `positioning-strategy`/`hoist` on the
 instance always wins; otherwise this inherited custom property; otherwise `fixed` inside
 `lr-virtual-list` rows and `lr-flow-canvas` nodes; otherwise the component's own mirrored default. Because it is a plain cascading custom property, one declaration on `:root`, a
 theme, or a single clipping ancestor (an `overflow: hidden` card or a scroller) changes every unset

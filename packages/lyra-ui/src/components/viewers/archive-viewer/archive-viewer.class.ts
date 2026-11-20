@@ -131,6 +131,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return this.archiveSearchMatches.length;
   }
 
+  /** Moves to the next path match, wrapping from the last to the first; resolves `false` when there are no matches. */
   override async searchNext(): Promise<boolean> {
     if (!this.archiveSearchMatches.length) return false;
     this.archiveSearchActiveIndex =
@@ -141,6 +142,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return true;
   }
 
+  /** Moves to the previous path match, wrapping from the first to the last; resolves `false` when there are no matches. */
   override async searchPrevious(): Promise<boolean> {
     if (!this.archiveSearchMatches.length) return false;
     this.archiveSearchActiveIndex =
@@ -152,6 +154,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return true;
   }
 
+  /** Clears the search query and matches and emits the search-change event. */
   override clearSearch(): void {
     this.archiveSearchQuery = '';
     this.archiveSearchMatches = [];

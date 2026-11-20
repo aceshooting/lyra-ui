@@ -13,7 +13,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { isRtl } from '../../../internal/rtl.js';
 import {
   finiteAdd,
   finiteInterpolate,
@@ -244,10 +243,15 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
 
+  /** Lower bound of the selectable domain, in the caller's own numeric units. */
   @property({ converter: blankNumberConverter(0) }) min = 0;
+  /** Upper bound of the selectable domain, in the caller's own numeric units. */
   @property({ converter: blankNumberConverter(100) }) max = 100;
+  /** Current range start, clamped to the domain and never above `end`; the declared value is restored on form reset. */
   @property({ converter: blankNumberConverter(0) }) start = 0;
+  /** Current range end, clamped to the domain and never below `start`; the declared value is restored on form reset. */
   @property({ converter: blankNumberConverter(100) }) end = 100;
+  /** Increment of pointer and keyboard changes, in the same units as `min` and `max`. */
   @property({ converter: blankNumberConverter(1) }) step = 1;
   /** Visual size — proportionally scales the handle, track, and preset buttons via a single
    *  multiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to
@@ -264,6 +268,8 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
    *  unset preserves the numeric-only slider contract. Return `null`/`undefined` to omit
    *  `aria-valuetext` for a handle. */
   @property({ attribute: false }) valueFormatter?: TimeRangeValueFormatter;
+  private _presets: readonly TimeRangePreset[] = Object.freeze([]);
+  private presetSource?: WeakRef<readonly TimeRangePreset[]>;
   /**
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
@@ -271,8 +277,6 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
    * holds the caller's own valid entries. Rebinding the same array with unchanged admitted rows
    * preserves `appliedPreset`. Replacing the array or changing admitted rows clears the selection.
    */
-  private _presets: readonly TimeRangePreset[] = Object.freeze([]);
-  private presetSource?: WeakRef<readonly TimeRangePreset[]>;
   @property({ attribute: false })
   get presets(): readonly TimeRangePreset[] { return this._presets; }
   set presets(next: readonly TimeRangePreset[]) {
@@ -792,7 +796,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     };
     // Mirror the same left/right swap as onPointerMove: under RTL, physical
     // ArrowRight moves toward inset-inline-start, i.e. a lower value.
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     if (e.key === forwardKey || e.key === 'ArrowUp') {
@@ -852,7 +856,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
     if (!base || base.ownerDocument.defaultView !== captureTarget.ownerDocument.defaultView) return undefined;
     return this.dragController.begin(e, {
-      handle, changed: false, captureTarget, rect: base.getBoundingClientRect(), rtl: isRtl(this),
+      handle, changed: false, captureTarget, rect: base.getBoundingClientRect(), rtl: this.effectiveDirection === 'rtl',
     });
   }
 
@@ -889,7 +893,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     if (!base) return;
     const rect = base.getBoundingClientRect();
     if (rect.width === 0) return;
-    const target = this.valueAtPointer(e.clientX, rect, isRtl(this));
+    const target = this.valueAtPointer(e.clientX, rect, this.effectiveDirection === 'rtl');
     const handle = this.nearestHandle(target);
     const handleEl = this.renderRoot.querySelector(
       `[part="handle-${handle}"]`,

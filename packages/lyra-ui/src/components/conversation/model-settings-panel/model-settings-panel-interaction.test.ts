@@ -60,3 +60,13 @@ it('keeps the internal model picker request and popup lifecycle inside the panel
   for (const name of names) picker.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
   expect(leaked).to.deep.equal([]);
 });
+
+it('rolls the model picker back when an lr-change listener reassigns the held model', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-model-settings-panel']>(html`<lr-model-settings-panel model="a" .catalog=${['a', 'b']}
+    @lr-change=${(event: Event) => { (event.currentTarget as HTMLElementTagNameMap['lr-model-settings-panel']).model = 'a'; }}></lr-model-settings-panel>`);
+  const picker = el.shadowRoot!.querySelector('lr-model-select')!;
+  picker.value = 'b';
+  picker.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true, detail: { value: 'b', inCatalog: true } }));
+  await el.updateComplete;
+  expect([el.model, picker.value]).to.deep.equal(['a', 'a']);
+});

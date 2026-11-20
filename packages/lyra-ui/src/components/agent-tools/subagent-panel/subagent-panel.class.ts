@@ -158,7 +158,9 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     'lr-run-retry',
   ]);
 
+  /** Subagent runs shown as a tree; `parentId` links a run to its parent. */
   @property({ attribute: false }) runs: readonly SubagentRun[] = [];
+  /** Id of the selected run; `null` selects none. */
   @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
   /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
    *  default; any supplied string, including `''`, is rendered verbatim. */

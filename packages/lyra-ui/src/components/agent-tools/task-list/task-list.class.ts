@@ -903,7 +903,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
       completed: number.format(completed),
       total: number.format(total),
     });
-    const headingLevel = resolveHeadingLevel(this.headingLevel);
+    const headingLevel = resolveHeadingLevel(this.headingLevel, 'none');
     const header = !this.withoutCollapse
       ? html`
           <button

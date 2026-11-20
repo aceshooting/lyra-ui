@@ -104,8 +104,8 @@ type ReorderReconciliation = {
  * action becomes disabled, and no other move
  * can start anywhere in this list -- until the host calls `finalizePendingMove()` to apply it or
  * `revertPendingMove()` to discard it and restore the prior order. Uncanceled (the default), the
- * move applies synchronously in the same tick when `controlled` is unset, unchanged from every
- * release before this option existed; while `controlled` is set it instead waits for a matching
+ * move applies synchronously in the same tick when `controlled` is unset;
+ * while `controlled` is set it instead waits for a matching
  * host re-render, per that property's own doc comment.
  * @csspart base - The list's root wrapper (`role="list"`).
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
@@ -151,7 +151,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   /** Opt-in controlled mode. Unset (the default), an uncanceled `lr-reorder-request` (or a
    *  `finalizePendingMove()` call) moves this list's own slotted `<lr-reorder-item>` light-DOM
-   *  nodes itself, exactly as before this property existed. Set, this list stops moving anything
+   *  nodes itself. Set, this list stops moving anything
    *  itself -- the host is expected to reorder its OWN backing data and re-render the slotted
    *  items in the new order, the same controlled request `<lr-tree>`'s `reorderable` already
    *  establishes for its `data`-driven children. This list still has no `data` array prop (its

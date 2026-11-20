@@ -155,8 +155,7 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  * @cssprop [--lr-switch-track-active-fill=color-mix(...)] - Track fill while pressed in either
  *   state. When unset, the current state's fill is mixed toward the color-mix partner.
  * @cssprop --lr-switch-track-border - Border of `[part='track']`, and the checked-state fallback
- *   when `--lr-switch-checked-track-border` is unset. Undeclared by default (no border renders at
- *   all), matching today's chrome.
+ *   when `--lr-switch-checked-track-border` is unset. Undeclared by default (no border renders at all).
  * @cssprop [--lr-switch-checked-track-border=var(--lr-switch-track-border)] - Border of
  *   `[part='track']` while checked, independently themeable from the unchecked border, so a
  *   bordered track can differ by state without reaching for `::part(track)` plus the `checked`

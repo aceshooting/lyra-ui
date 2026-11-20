@@ -94,7 +94,7 @@ the surrounding UI already says what the field is, set `label-display="hidden"` 
 part yourself. The label box leaves the layout and the screen but stays in the accessibility tree, so
 it remains the control's accessible name (a native `<label for>` association, plus the required
 marker that rides on it). The `hint` and `error` parts, the `required` semantics and validation are
-unaffected, and an unset control renders exactly as before.
+unaffected, and an unset control keeps its visible label.
 
 ```html
 <lr-select label="Sort order" label-display="hidden"> … </lr-select>
@@ -634,8 +634,9 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. A current request that rejects with `AbortError` settles silently, with no rows: the previous
-query's results are not kept as its answer.
+never shows the raw error. A current request that rejects with `AbortError` (one this component did
+not abort itself) is a failure like any other rejection; the previous query's results are not kept
+as its answer.
 Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
@@ -1139,8 +1140,8 @@ the normal combobox trigger continues to expose `aria-required`.
 - `sync?: PlaceSync` (reflected) — copies the trigger's width, height, or both onto the listbox,
   spelled and typed the same as on `lr-popup`/`lr-popover`/`lr-dropdown`/`lr-combobox`
   (`'width' | 'height' | 'both'`). Unset (the default), the listbox sizes to its own content,
-  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`,
-  exactly as before. `sync="width"` drops that content-based clamp so a full-width trigger with
+  clamped between `--lr-size-12rem` and `min(--lr-popover-viewport-clamp, --lr-size-28rem)`.
+  `sync="width"` drops that content-based clamp so a full-width trigger with
   short option labels gets a listbox that aligns to its own edges instead of floating narrower in
   the middle. A synced listbox is capped on `--lr-positioner-available-inline-size` **alone** — the
   space the positioner actually measured beside the trigger, which still keeps an over-wide trigger
@@ -1166,7 +1167,7 @@ the normal combobox trigger continues to expose `aria-required`.
   the trigger renders that same localized text in place of `placeholder`, from the same `loading`
   message key, so both halves of a pending state read the same words and one
   `registerLyraLocale()` translation reaches both. Nothing to re-localize in the consuming app.
-  With `loading` false an empty selection renders `placeholder` exactly as before. The trigger's
+  With `loading` false an empty selection renders `placeholder`. The trigger's
   accessible name never changes for this: a host `aria-label` wins, then `label`, then
   `placeholder`, then the localized `select` fallback. A value already matching a live option is
   unaffected. Never mutates `value`/`selectedOptions` itself, and does not itself disable the
@@ -1411,10 +1412,7 @@ changing the shared brand tokens used by other controls.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
-agree at that tier. It used to be dead code: the component declared `--lr-select-trigger-height:
-auto` on `:host`, and a _declared_ value (`auto` is one) wins over the `var()` fallback arm that
-the floor lives in, so the floor never applied and four extra specificity rules existed only to
-patch it back for four of the tiers. Those rules are gone.
+agree at that tier. 
 
 `--lr-select-trigger-height` pins an **exact** trigger height — both a floor and a cap — e.g. to
 pixel-match a sibling text field in the same toolbar row. It is **undeclared by default**, which is
@@ -2166,7 +2164,7 @@ uses `autocorrect="on"` / `autocorrect="off"`.
 
 `validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
 (from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
-`maxlength` unset constrains nothing, exactly as before they existed.
+`maxlength` unset constrains nothing.
 
 While `readonly`, all three constraint flags are suspended and `checkValidity()` succeeds, matching
 native textarea behavior. The value remains a successful form value and is restored by form reset;
@@ -4274,7 +4272,7 @@ Three component-local properties recolor the **active** preset button independen
 palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
-to exactly the token the rule used before they existed, so the default rendering is unchanged.
+to the fallback token named above.
 `--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
 `--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
 and win over the `preset-active-*` names, so one theme can style both controls' applied preset.
@@ -5070,7 +5068,7 @@ The checked fill never falls back to `--lr-switch-track-fill`: unset, it is `--l
 An explicit hover or active fill applies in both states; for a per-state value, set it from
 `lr-switch:state(checked) { --lr-switch-track-hover-fill: …; }`.
 `--lr-switch-track-border` is `[part='track']`'s border; **undeclared by default**, so no border
-renders at all, matching today's chrome — set it to add a rim (e.g. for a themed high-contrast
+renders at all — set it to add a rim (e.g. for a themed high-contrast
 look) without affecting any other switch. `--lr-switch-checked-track-border` (default
 `var(--lr-switch-track-border)`) varies that border only while checked, so a bordered track can
 differ by state without falling back to `lr-switch:state(checked)::part(track)`. It takes a whole
@@ -6593,8 +6591,7 @@ and:
   raw colour string.
   `disabled` marks that one swatch non-actionable, independent of the whole control's own
   `disabled`: it renders a genuinely disabled `<button>` (no tab stop, no hover/press affordance)
-  and clicking it commits nothing; omitted or `false` renders the swatch exactly as before this
-  field existed. `icon` is an optional decorative custom shape rendered inside the swatch button
+  and clicking it commits nothing; omitted or `false` renders the swatch enabled. `icon` is an optional decorative custom shape rendered inside the swatch button
   behind the `swatch-icon` part -- inert and `aria-hidden`, matching `<lr-swatch-picker>`'s
   identical `SwatchPickerItem.icon` field. The palette container renders only while the normalized
   list is non-empty

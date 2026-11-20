@@ -39,8 +39,7 @@ export interface LyraChatSuggestion {
   /**
    * Marks this suggestion non-actionable: its chip renders a genuinely disabled `<button>` (no
    * roving tab stop, no hover/press affordance, no `lr-suggestion-select`), and arrow-key/Home/End
-   * roving navigation steps past it instead of landing on it. Omitted or `false` renders the chip
-   * exactly as before this field existed.
+   * roving navigation steps past it instead of landing on it. Omitted or `false` renders the chip enabled.
    */
   disabled?: boolean;
 }
@@ -71,8 +70,7 @@ interface PendingSuggestionFocus {
  * A suggestion may also set `disabled`, marking it non-actionable: its chip renders a genuinely
  * disabled `<button>` (no roving tab stop, no hover/press affordance) and activating it -- by click
  * or keyboard -- emits nothing and changes no state. Arrow-key/Home/End roving navigation steps
- * past it instead of landing on it. Omitted or `false` renders the chip exactly as before this
- * field existed.
+ * past it instead of landing on it. Omitted or `false` renders the chip enabled.
  *
  * Each chip can show a decorative icon before its text, in increasing precedence: `icon` (literal
  * text such as an emoji), `iconName` (+ optional `iconLibrary`, rendered as an `<lr-icon>`), or a

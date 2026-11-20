@@ -6,7 +6,7 @@ import { styles } from './mention-popover.styles.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import type { DeferredOperationHandle } from '../../../internal/anchored-overlay-runtime.js';
+import { __setAnchoredOverlayRuntimeLoaderForTesting, type DeferredOperationHandle } from '../../../internal/anchored-overlay-runtime.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 
 // Several tests here mount an <iframe> (to exercise cross-document anchors) and then remove it in
@@ -2080,4 +2080,20 @@ it('filters the candidate set once per query change', async () => {
   el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
   await el.updateComplete;
   expect(calls).to.equal(items.length);
+});
+
+it('reports a close caused by a placement failure with lr-mention-close', async () => {
+  const el = await openWithItems();
+  const hostClose = oneEvent(el, 'lr-mention-close');
+  el.open = false;
+  await hostClose;
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.reject(new Error('Positioning chunk unavailable')));
+  try {
+    const closed = oneEvent(el, 'lr-mention-close');
+    el.open = true;
+    await closed;
+    expect(el.open).to.equal(false);
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
 });

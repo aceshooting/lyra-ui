@@ -324,7 +324,9 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     required: { type: Boolean, reflect: true, noAccessor: true },
   };
 
+  /** Lets the user pick or drop more than one file. Forwarded to the hidden file input's `multiple` attribute and reflects to the `multiple` attribute. */
   @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
+  /** Comma-separated file types the picker offers and the intake accepts (extensions, MIME types or wildcards such as `image/*`), like the native `accept` attribute. Empty (default) accepts any type. */
   @property({ useDefault: true }) accept = '';
   /** Mobile capture hint forwarded to the native file picker. */
   @property() capture: LyraFileInputCapture = '';
@@ -421,6 +423,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   /** SSR slot-presence hint for rich error content. */
   @property({ type: Boolean, attribute: 'with-error' }) withError = false;
+  /** Control size tier on the shared size ladder (default `m`); reflects to the `size` attribute. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Additional JavaScript validators run after the intrinsic `required` constraint — the same
    * contract `lr-date-input` and `lr-combobox` implement. Accepts a function, an object with
@@ -600,6 +603,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     this.requestUpdate('required', old);
   }
 
+  /** True when the control is disabled by its own `disabled` property or by an ancestor disabled `<fieldset>`. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled;
   }
@@ -815,6 +819,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     this.requestUpdate();
   }
 
+  /** Clears any custom validity message set through `setCustomValidity()` and re-evaluates the built-in constraints. */
   resetValidity(): void {
     this.validityController.setCustomValidity('');
     this.updateValidity();

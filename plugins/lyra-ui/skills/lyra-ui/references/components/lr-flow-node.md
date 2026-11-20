@@ -45,8 +45,7 @@ owns none of that.
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
   and palette previews; the border, background, shadow and the `selected`/`status="running"`
-  treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
-  before. An unsupported value normalizes to unset and removes the attribute.
+  treatments all stay. `m` and above keep the full padding, and leaving it unset keeps that default. An unsupported value normalizes to unset and removes the attribute.
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins

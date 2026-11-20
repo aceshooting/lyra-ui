@@ -178,8 +178,7 @@ function starSolid(): SVGTemplateResult {
  * @cssprop [--lr-rating-empty-color=var(--lr-color-border)] - Unfilled-symbol color, retained during
  * hover preview.
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Its private default follows each
- * `size` step; an inherited or direct public value wins. The `m` default reproduces the treatment
- * this component had before `size` existed.
+ * `size` step; an inherited or direct public value wins. The `m` default uses the base symbol size.
  * @cssprop [--lr-rating-gap=var(--symbol-spacing,var(--lr-space-xs))] - Gap between symbols. It
  * takes precedence over the `--symbol-spacing` compatibility hook while preserving that hook and
  * the shared spacing token as fallbacks.
@@ -257,6 +256,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
+  /** Step between selectable values, such as `0.5` for half stars. Non-positive values fall back to `1`. */
   @property({ type: Number }) precision = 1;
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Accessible-name property override. A host `aria-label` attribute has higher priority, and an

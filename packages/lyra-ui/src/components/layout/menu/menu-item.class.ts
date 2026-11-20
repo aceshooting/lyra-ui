@@ -118,8 +118,7 @@ export interface LyraMenuItemEventMap {
  * `lr-menu-item-change-request` with the proposed next `checked` value, then mutates
  * `checked` unless a listener prevents the event or writes `checked` during dispatch. It fires
  * the owning menu's canonical `lr-select` afterwards either way. `type="normal"` (the default) renders and
- * behaves exactly as before this option existed — no role, rendering, or
- * event differences.
+ * behaves as a plain action item — no checked role, checked state, or change-request event.
  *
  * `type="radio"` renders `role="menuitemradio"` instead, reusing the same
  * `aria-checked` reflection and checkmark glyph as `checkbox`, but with
@@ -201,8 +200,8 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-danger-active-bg=color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of an enabled danger row while pressed.
  * Checked-state hooks are also inline fallbacks, matching `<lr-option>`/`<lr-select>`/
  * `<lr-combobox>`/`<lr-tree-item>`'s equivalent row-chrome hooks; all three default to no visual
- * change, so a `type="checkbox"`/`type="radio"` item's checked row paints identically to before
- * these existed unless a consumer sets one.
+ * change, so a `type="checkbox"`/`type="radio"` item's checked row paints with no extra chrome
+ * unless a consumer sets one.
  * @cssprop [--lr-menu-item-checked-bg=transparent] - Background of a checked (`type="checkbox"
  * checked` or `type="radio" checked`) row.
  * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
@@ -212,13 +211,12 @@ export interface LyraMenuItemEventMap {
  * its pressed step instead of snapping back to the brand default.
  * @cssprop [--lr-menu-item-active-bg=color-mix(in oklab,var(--lr-menu-item-hover-bg,var(--lr-color-brand-quiet)),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  * Background of an enabled row while pressed, matching `--lr-option-active-bg`'s equivalent hook.
- * Left unset, the pressed fill keeps mixing from `--lr-menu-item-hover-bg` as before this hook
- * existed.
+ * Left unset, the pressed fill keeps mixing from `--lr-menu-item-hover-bg`.
  * @cssprop [--lr-menu-item-icon-color=inherit] - Foreground of the leading icon wrapper. Unset it
  * inherits the row's colour, including the danger variant's.
  * @cssprop [--lr-menu-item-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))] -
  * Minimum block size of the visual row. Unset it is the shared form-control ladder floored at the
- * WCAG 2.2 SC 2.5.8 minimum, exactly as before this hook existed.
+ * WCAG 2.2 SC 2.5.8 minimum.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.

@@ -284,7 +284,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     const requestId = this.requestId;
     const defaultLabel = this.localize('agentQuestionLabel');
     const label = this.label === '' ? '' : normalizeLabel(this.label) ?? defaultLabel;
-    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`<div part="base" role="group" aria-label=${ifDefined(resolveAccessibleName(this, label, defaultLabel))}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${this.requester ? html`<p part="requester">${this.requester}</p>` : nothing}

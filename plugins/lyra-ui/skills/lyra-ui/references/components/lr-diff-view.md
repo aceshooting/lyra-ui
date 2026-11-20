@@ -52,8 +52,7 @@ over each rendered line's own text, one match per line ordered by that same op i
   `false` (the default) renders no button.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   view scrolls internally past this height instead of growing the page. Invalid values are ignored.
-- `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
-  single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
+- `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders a single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
   reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this

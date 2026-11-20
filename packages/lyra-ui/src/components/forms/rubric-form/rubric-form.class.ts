@@ -607,6 +607,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     setFormOwner(this, owner);
   }
 
+  /** Rubric fields to render; each admitted key becomes a composed control and the value is an object keyed by them. */
   get keys(): readonly RubricKey[] {
     return this._keys;
   }
@@ -672,6 +673,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.requestUpdate('value', old);
   }
 
+  /** Identifier of the item being rubric-scored, reflected to `item-id` and echoed in `lr-submit` and `lr-skip`. Changing it resets the touched state and moves focus to the first field. */
   get itemId(): string {
     return this._itemId;
   }
@@ -695,6 +697,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.requestUpdate('itemId', old);
   }
 
+  /** Whether another item follows in the queue; the submit button then reads `Submit & next`. Reflects to `has-next`. */
   get hasNext(): boolean {
     return this._hasNext;
   }
@@ -705,6 +708,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.requestUpdate('hasNext', old);
   }
 
+  /** Shows a Skip button that emits `lr-skip` without validating. */
   get skippable(): boolean {
     return this._skippable;
   }

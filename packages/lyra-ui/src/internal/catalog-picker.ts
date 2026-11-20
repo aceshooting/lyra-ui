@@ -21,7 +21,7 @@ export interface LyraCatalogEntry {
    * Marks this row non-actionable: it cannot be selected by pointer or keyboard, `aria-disabled`
    * replaces the row's stateful selected/active affordances, and active-descendant navigation
    * (arrow keys, Home/End) steps over it instead of landing on it. Omitted or `false` renders the
-   * row exactly as before this field existed. Does not affect any other affordance a specific
+   * row normally. Does not affect any other affordance a specific
    * catalog-backed control renders on the same row (for example `<lr-voice-picker>`'s independent
    * preview control), only the row's own selection.
    */

@@ -78,8 +78,7 @@ from assistive technology so the trigger remains the sole action.
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
 instead of being the one fixed-density element in a compact panel. Both spellings of every tier are
 accepted — `s`/`small`, `m`/`medium`, `l`/`large` — so markup migrated from either upstream needs no
-attribute rewrite. `m` is the default and reproduces the disclosure this component had before `size`
-existed. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
+attribute rewrite. `m` is the default. The tier drives two custom properties (below) rather than any `::part()` rule, so a tier
 the ladder doesn't cover is a two-line override rather than a fork.
 
 **Methods:**

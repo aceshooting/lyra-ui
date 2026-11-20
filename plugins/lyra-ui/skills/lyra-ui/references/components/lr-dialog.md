@@ -58,7 +58,7 @@ read, and neither is deprecated.
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
   'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
-  (`s`/`small`), `32rem` (`m`/`medium`, unchanged from before this property existed), `38rem`
+  (`s`/`small`), `32rem` (`m`/`medium`), `38rem`
   (`l`/`large`), `48rem` (`xl`) — each value feeds `--lr-dialog-max-width`'s private default. An
   explicit `--lr-dialog-width`/`--lr-dialog-max-width` still wins over every tier.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
@@ -175,8 +175,7 @@ Restyle it through `::part(body)` as usual; do not remove the outline without re
 
 It never steals initial focus from real content: an `[autofocus]` element wins, then the first
 focusable control _inside_ the body, and the body itself is used only when there is nothing else to
-focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
-scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
+focus. So a dialog full of form controls focuses its first control, and a dialog full of text is scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
 
 **Border reaches the composed close control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
@@ -205,7 +204,7 @@ default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the tier default — so an assertive width isn't silently clipped;
 the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
-shrink-wraps to content on the block axis, same as before this property existed; always capped at
+shrink-wraps to content on the block axis; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
 `[part="header"]` and `[part="footer"]` keep their natural size and only `[part="body"]` grows or

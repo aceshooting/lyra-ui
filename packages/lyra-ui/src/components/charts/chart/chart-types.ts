@@ -31,7 +31,7 @@ export interface LyraChartSeries {
    * Chart.js dataset `stack` group id. Series sharing the same `stack` value on the same axis
    * accumulate into one stack; a different id starts an independent stack that Chart.js draws
    * side by side with the first on that same (stacked) axis. Omitted series default to Chart.js's
-   * own ungrouped stack, matching every series's behavior before this existed. Only meaningful on
+   * own ungrouped stack. Only meaningful on
    * an axis that is actually stacked -- see `LyraChart.stacked`/`LyraChart.stackedAxes`.
    */
   readonly stack?: string;

@@ -107,7 +107,7 @@ uses `autocorrect="on"` / `autocorrect="off"`.
 
 `validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
 (from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
-`maxlength` unset constrains nothing, exactly as before they existed.
+`maxlength` unset constrains nothing.
 
 While `readonly`, all three constraint flags are suspended and `checkValidity()` succeeds, matching
 native textarea behavior. The value remains a successful form value and is restored by form reset;

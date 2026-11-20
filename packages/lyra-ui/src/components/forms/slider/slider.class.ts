@@ -24,7 +24,6 @@ import { falseDefaultBooleanConverter, literalSetConverter } from '../../../inte
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
-import { isRtl } from '../../../internal/rtl.js';
 import {
   finiteInterpolate,
   finiteNumber,
@@ -481,6 +480,7 @@ export class LyraSlider extends LyraSliderBase {
     this.requestUpdate('disabled', old);
   }
 
+  /** Whether the slider is disabled, either through its own `disabled` or an ancestor disabled `<fieldset>`. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled;
   }
@@ -1283,7 +1283,7 @@ export class LyraSlider extends LyraSliderBase {
     // ArrowUp/ArrowDown are never swapped (direction only affects the
     // horizontal inline axis), which also makes them the stable primary keys
     // for orientation="vertical".
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     const bounds = this.reachableBounds(handle);
@@ -1362,7 +1362,7 @@ export class LyraSlider extends LyraSliderBase {
 
   private onPointerDown = (handle: SliderHandle, e: PointerEvent): void => {
     if (!this.interactive || e.button !== 0) return;
-    this.beginDrag(e, handle, e.target as HTMLElement, this.trackRect(), isRtl(this));
+    this.beginDrag(e, handle, e.target as HTMLElement, this.trackRect(), this.effectiveDirection === 'rtl');
   };
 
   /** A pointerdown anywhere on `[part="base"]` other than a thumb itself (the
@@ -1379,7 +1379,7 @@ export class LyraSlider extends LyraSliderBase {
     if (thumbs.length === 0 || thumbs.includes(e.target as HTMLElement)) return;
     const rect = this.trackRect();
     if (!rect) return;
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const { lo, hi } = this.domain();
     const target = finiteInterpolate(lo, hi, this.ratioFromPointer(e, rect, rtl));
     const handle: SliderHandle = this.range ? this.nearestHandle(target) : 'value';

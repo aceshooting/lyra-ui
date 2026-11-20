@@ -194,7 +194,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   every few weeks) may grow into adjacent ticks whose resolved text is `null` or empty before it is
   ellipsized, in either `layout`: a centered tick grows symmetrically, up to half the gap to the
   nearest labelled tick on each side, so it never reaches into a labelled neighbor's slot. A tick
-  whose adjacent ticks are all labelled is ellipsized exactly as before.
+  whose adjacent ticks are all labelled is ellipsized.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no

@@ -102,7 +102,8 @@ disconnect and adoption revoke obsolete responses; unrelated named presentation 
 the current data. No million-row snapshot or whole-source filter/index is created by this route.
 
 **Events:** cancelable `lr-example-select-request` (`detail: { exampleId, previousExampleId }`,
-before a row activation selects it; `preventDefault()` keeps the selection), `lr-example-select` (`detail: { exampleId: string | null }`),
+before a row activation selects it; `preventDefault()` keeps the selection; activating the
+already-selected row emits neither event), `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: null` — no payload; `emit()`
 normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {

@@ -830,7 +830,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   private renderCategory(group: ToolGroup, selectedIds: ReadonlySet<string>): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const headingId = this.categoryId(group.category);
     const formattedCount = getNumberFormat(this.effectiveLocale).format(group.tools.length);
     return html`
@@ -855,7 +855,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   override render(): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = resolveHeadingLevel(this.headingLevel, '2');
     const projection = this.projection;
     const groups = projection.groups;
     const tools = this.canonicalTools;

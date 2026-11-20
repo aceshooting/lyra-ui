@@ -253,8 +253,8 @@ export interface LyraDialogEventMap {
  *   `48rem` at `xl`, `32rem` unchanged at the `m` default) -- an inherited or direct value here
  *   still wins outright over every tier.
  * @cssprop [--lr-dialog-height=auto] - Assertive block size for the panel, mirroring
- *   `--lr-dialog-width` on the other axis. Left at `auto` the panel shrink-wraps to its content,
- *   unchanged from before this property existed; always capped at `100%` (the viewport) like
+ *   `--lr-dialog-width` on the other axis. Left at `auto` the panel shrink-wraps to its content;
+ *   always capped at `100%` (the viewport) like
  *   every other panel dimension. With it set, `body`'s own `flex: 1 1 auto` is what actually gives
  *   slotted content a definite, fillable block size -- `header` and `footer` keep their natural
  *   size and only `body` grows or shrinks into the remaining space.

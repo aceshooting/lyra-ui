@@ -103,12 +103,14 @@ export class LyraAudioVisualizer extends LyraElement {
     return [...new Set([...super.observedAttributes, 'role'])];
   }
 
+  /** Live `MediaStream` whose audio drives the visualization; `null` (the default) means no stream. Property only, no attribute. */
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
    *  (e.g. `lr-push-to-talk`'s `lr-level`). `null` (the default) means "no external signal" --
    *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
   @property({ converter: blankNumberConverter(null) }) level: number | null = null;
   private _state: AudioVisualizerState = 'idle';
+  /** Activity state: `idle`, `listening`, `thinking` or `speaking`; unrecognized values fall back to `idle`. Reflects to the `state` attribute. */
   @property({ reflect: true, converter: AUDIO_VISUALIZER_STATE })
   get state(): AudioVisualizerState {
     return this._state;
@@ -133,6 +135,7 @@ export class LyraAudioVisualizer extends LyraElement {
     this._mode = normalized;
     this.requestUpdate('mode', old);
   }
+  /** Number of bars drawn in `bars` mode (default `5`). */
   @property({ attribute: 'bar-count', converter: blankNumberConverter(5) }) barCount = 5;
   /** Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`. */
   @property({ converter: blankNumberConverter(1) }) gain = 1;

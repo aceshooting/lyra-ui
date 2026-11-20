@@ -169,21 +169,21 @@ describe('lr-artifact-panel', () => {
     );
   });
 
-  it('clears a removed active version id without emitting a user navigation event', async () => {
+  it('clears a removed active version id and reports the latest version it now shows', async () => {
     const el = await fixture<LyraArtifactPanel>(html`
       <lr-artifact-panel
         active-version-id="v1"
         .versions=${[{ id: 'v1', label: 'Initial' }, { id: 'v2', label: 'Latest' }]}
       ></lr-artifact-panel>
     `);
-    let changes = 0;
-    el.addEventListener('lr-version-change', () => changes++);
+    const changes: string[] = [];
+    el.addEventListener('lr-version-change', (event) => changes.push(event.detail.versionId));
 
     el.versions = [{ id: 'v2', label: 'Latest' }];
     await el.updateComplete;
     expect(el.activeVersionId).to.equal(null);
     expect(el.hasAttribute('active-version-id')).to.equal(false);
-    expect(changes).to.equal(0);
+    expect(changes).to.deep.equal(['v2']);
 
     el.versions = [{ id: 'v1', label: 'Reintroduced' }, { id: 'v2', label: 'Latest' }];
     await el.updateComplete;

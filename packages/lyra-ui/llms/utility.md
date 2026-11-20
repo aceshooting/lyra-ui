@@ -104,7 +104,7 @@ hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out. Before 18.4.0 none of these existed and the only lever was `::part(trigger)`.
+opt out.
 `--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
 `--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
 corner radius without a `::part(trigger)` rule. Plus shared
@@ -1099,7 +1099,7 @@ preserving null readback; an explicitly empty query remains empty.
   selected/active affordances, activating it (click, or Enter/Tab while highlighted) commits
   nothing and emits no `lr-mention-select`, and ArrowDown/ArrowUp highlighting -- including the
   default pre-highlighted first row -- steps past it instead of landing on it. Omitted or `false`
-  renders the row exactly as before this field existed.
+  renders the row normally.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
@@ -1158,7 +1158,8 @@ icon?: string; disabled?: boolean }`; `LyraMentionFilter = (item: LyraMentionIte
 the assigned `items` collection before filtering and disambiguates repeated `suggestionId` values),
 `lr-mention-close` (no detail payload —
 `this.emit('lr-mention-close')` is called with no second argument, so `event.detail` is `null`,
-not `undefined`; fires on Escape or any other `open: true -> false` transition, but never for the
+not `undefined`; fires on Escape, on a popup that cannot be positioned against its anchor, or on any
+other `open: true -> false` transition, but never for the
 close that immediately follows a `lr-mention-select` commit, and never for markup that simply
 renders `open="false"` on first paint)
 
@@ -1351,8 +1352,7 @@ over each rendered line's own text, one match per line ordered by that same op i
   `false` (the default) renders no button.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   view scrolls internally past this height instead of growing the page. Invalid values are ignored.
-- `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
-  single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
+- `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders a single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
   reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this

@@ -198,11 +198,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
+  private _orientation: LyraOrientation = 'vertical';
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
-  private _orientation: LyraOrientation = 'vertical';
   @property({ reflect: true, converter: TIMELINE_ORIENTATION })
   get orientation(): LyraOrientation {
     return this._orientation;
@@ -215,10 +215,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this.requestUpdate('orientation', previous);
   }
 
+  private _scale: LyraTimelineScale = 'flow';
   /**
    * How items are distributed along the main axis.
    *
-   * `'flow'` (the default) is today's behavior exactly: an evenly-spaced sequence, where
+   * `'flow'` (the default) is an evenly-spaced sequence, where
    * `timestamp` is rendered as text but carries no positional meaning. `'time'` positions each item
    * at its true proportion of the time range, so a gap of weeks and a gap of decades no longer look
    * identical — the shape of the history becomes visible.
@@ -232,7 +233,6 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * from the `timestamp` slot, which carries no machine-readable instant) keeps document order and
    * is distributed evenly, so a partially-timestamped list degrades rather than collapsing.
    */
-  private _scale: LyraTimelineScale = 'flow';
   @property({ reflect: true, converter: TIMELINE_SCALE })
   get scale(): LyraTimelineScale {
     return this._scale;
@@ -245,10 +245,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this.requestUpdate('scale', previous);
   }
 
+  private _collision: LyraTimelineCollision = 'overlap';
   /**
    * What `scale="time"` does with items that land on (nearly) the same position.
    *
-   * `'overlap'` (the default, and the only previous behavior) leaves them stacked on top of one
+   * `'overlap'` (the default) leaves them stacked on top of one
    * another. `'stack'` offsets each colliding item along the **cross** axis instead, so a dense
    * chronology with many same-period events stays readable. `'cluster'` represents each group of
    * overlapping items with one author-ordered member's count marker. Its collision window grows
@@ -258,7 +259,6 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * emits `lr-cluster-activate` with the member elements but does not select or expand them. Ignored
    * unless `scale="time"`.
    */
-  private _collision: LyraTimelineCollision = 'overlap';
   @property({ reflect: true, converter: TIMELINE_COLLISION })
   get collision(): LyraTimelineCollision {
     return this._collision;

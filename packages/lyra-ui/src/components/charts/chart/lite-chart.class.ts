@@ -568,6 +568,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
+  /** Rendering type: `bar` (default) or `line`; any other value falls back to `bar`. */
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
   /**
@@ -716,6 +717,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return [this.description, ...domains, summary].filter(Boolean).join(this.localize('chartSummarySeparator'));
   }
 
+  /** Category labels for the x axis, aligned by index with each series' `data`. Property-only; assign a new array after changes. */
   @property({ attribute: false }) labels: readonly string[] = [];
   /** Maximum sampled records across all series, bounded to 2–1,000 (default 1,000).
    * Fit layouts also respect the measured width. Sampling retains endpoints and bucket extrema;
@@ -811,8 +813,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private readonly dataTableId = nextId('lite-chart-data-table');
 
-  /** Identical to `withDataTable` whenever `dataTableToggle` is off, keeping the unset path
-   *  byte-identical to before. */
+  /** Identical to `withDataTable` whenever `dataTableToggle` is off, so the unset path renders no toggle. */
   private get dataTableVisible(): boolean {
     return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }
@@ -820,13 +821,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private toggleDataTable(): void {
     this.dataTableExpandedOverride = !this.dataTableVisible;
   }
-  /** `'fit'` (default) squeezes the plot into the measured host width, unchanged from before this
-   *  property existed. `'scroll'` gives every bar a fixed `barWidth` instead, letting the plot's
-   *  content width exceed the host's — the host becomes horizontally scrollable
-   *  (`overflow-x: auto`) so every bar stays exactly `barWidth` wide regardless of category count.
-   *  Reflects to the `layout` attribute (e.g. for `:host([layout='scroll'])` host styling). */
   private _layout: LyraLiteChartLayout = 'fit';
 
+  /** `'fit'` (default) squeezes the plot into the measured host width. `'scroll'` gives every bar
+   *  a fixed `barWidth` instead, letting the plot's content width exceed the host's — the host
+   *  becomes horizontally scrollable (`overflow-x: auto`) so every bar stays exactly `barWidth`
+   *  wide regardless of category count. Reflects to the `layout` attribute (e.g. for
+   *  `:host([layout='scroll'])` host styling). */
   @property({ reflect: true, converter: LITE_CHART_LAYOUT })
   get layout(): LyraLiteChartLayout {
     return this._layout;
@@ -838,8 +839,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this._layout = normalized;
     this.requestUpdate('layout', old);
   }
-  /** Fixed per-category bar width in px, used only when `layout="scroll"`. Ignored (as before this
-   *  property existed) in `layout="fit"`, the default. Scroll content is capped at 1,000,000px,
+  /** Fixed per-category bar width in px, used only when `layout="scroll"`. Ignored in `layout="fit"`, the
+   *  default. Scroll content is capped at 1,000,000px,
    *  so an excessive requested width is reduced as needed to keep SVG and CSS geometry finite. */
   @property({ type: Number, attribute: 'bar-width' }) barWidth = 32;
   /** Fixed per-category slot width (the category pitch) in px for `type="bar"` in `layout="fit"`,
@@ -861,15 +862,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  deterministic cap from the resolved plot width and widest rendered category label using the
    *  same width estimate as label ellipsis. Bars themselves always render regardless — only the
    *  axis text is decimated. An explicit number is authoritative. Unset (the default) renders every
-   *  label, unchanged from before this property existed. Works in either `layout` mode. */
+   *  label. Works in either `layout` mode. */
   @property({ converter: autoNumberConverter, attribute: 'max-labels' })
   maxLabels?: number | 'auto';
   /** Overrides the x-origin `renderBars()`/the category labels would otherwise compute internally
    *  for a given category index, for `type="bar"` only (bars and their axis labels stay
    *  consistent with each other either way). Lets a consumer pixel-align this chart's bars with,
    *  e.g., a sibling `lr-heatmap`'s calendar columns by handing both components the same
-   *  coordinate function. Unset (the default) uses the existing internal per-category slot math,
-   *  unchanged from before this property existed. The callback resolves once per rendered category
+   *  coordinate function. Unset (the default) uses the internal per-category slot math. The
+   *  callback resolves once per rendered category
    *  per render and its finite result is shared by bars and labels; a non-finite result falls back
    *  to normal slot placement. */
   @property({ attribute: false }) barX?: (index: number) => number;
@@ -879,7 +880,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ attribute: false }) pointText?: (label: string, value: number, datasetIndex: number) => string;
   /** Formats extra per-item text appended after a series' label in the built-in legend row (e.g. a
    *  value or percentage share) — receives the series label and its dataset index. Falls back to
-   *  rendering the label alone when unset (today's exact legend output), mirroring `pointText`'s and
+   *  rendering the label alone when unset, mirroring `pointText`'s and
    *  `tickFormat`'s existing opt-in-hook convention. Has no effect while `withLegend` is `false`. */
   @property({ attribute: false }) legendText?: (label: string, datasetIndex: number) => string;
   /**
@@ -891,7 +892,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * export, so blanking a tick here never blanks the same category anywhere a reader or a
    * spreadsheet needs it. That separation is the whole point — folding the same intent into
    * `labels` (passing `''` for the categories that should carry no tick) empties the table row
-   * header too, which is what made boundary-aligned ticks impossible before this hook existed.
+   * header too, so boundary-aligned ticks need this separate display hook.
    *
    * Complements `maxLabels` rather than replacing it: `maxLabels` decimates evenly to prevent
    * label collision and is applied FIRST, so a category it already dropped never reaches this
@@ -903,19 +904,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * `null` falls back to the source label rather than reaching the DOM. A sparse tick may first
    * grow into adjacent ticks whose resolved text is `null` or empty (in either `layout`): a centered
    * tick grows symmetrically, up to half the gap to the nearest labelled tick on each side, so it
-   * never reaches into a labelled neighbor's slot. A tick whose adjacent ticks are all labelled is
-   * ellipsized exactly as before.
+   * never reaches into a labelled neighbor's slot. A tick whose adjacent ticks are all labelled is ellipsized.
    */
   @property({ attribute: false }) axisLabelText?: (
     label: string,
     index: number,
   ) => string | null;
   /** `type="bar"` only: draws each bar as a rounded-top-corner shape instead of the default
-   *  square-cornered rect. Default `false` renders exactly today's plain `<rect>`. */
+   *  square-cornered rect. Default `false` renders a plain `<rect>`. */
   @property({ type: Boolean, attribute: 'rounded-bars' }) roundedBars = false;
   /** `type="bar"` only: omits a bar entirely (no mark, no `tabindex`, no tooltip) for a value that
    *  is exactly `0` — `null`/non-finite values are always skipped regardless of this flag. Default
-   *  `false` preserves today's behavior of a zero-height but focusable/titled bar. */
+   *  `false` keeps a zero-height but focusable/titled bar. */
   @property({ type: Boolean, attribute: 'skip-zero' }) skipZero = false;
   /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant, or accepts `'auto'` to size the
    *  gutter from the exact formatted tick strings rendered in the current pass. Automatic sizing
@@ -944,21 +944,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   get scaleType(): LyraLiteChartScale { return this.scale; }
   set scaleType(value: LyraLiteChartScale) { this.scale = value; }
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
-   *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
+   *  labels (rendered separately) are unaffected. Default `false` keeps the value axis. */
   @property({ type: Boolean, attribute: 'without-value-axis' }) withoutValueAxis = false;
   /** A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would
    *  otherwise round to sub-pixel and become visually indistinguishable from absent (while still
    *  being focusable/tab-stoppable/announced) — a real accessibility/visibility gap for
    *  heterogeneous-magnitude stacked data. `type="bar"` only; a value of exactly `0` is unaffected
    *  (that's `skipZero`'s job, not this one's). Finite values are capped at 1,000,000px to keep
-   *  derived SVG geometry practical. Unset (the default) reproduces today's `Math.max(0, y2 - y1)`
-   *  exactly, with no floor. Authored floors can exceed the available plot height. Linear and
+   *  derived SVG geometry practical. Unset (the default) uses `Math.max(0, y2 - y1)` exactly, with no floor. Authored floors can exceed the available plot height. Linear and
    *  logarithmic stacks push subsequent segments along their signed pixel cursor. */
   @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
   /** Category indexes to mark `data-selected` and `aria-pressed="true"` on every bar/point at
    *  that index, across every
-   *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the
-   *  default) reproduces today's exact output: no mark carries `data-selected`. Style the highlight
+   *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the default): no mark carries `data-selected`. Style the highlight
    *  via the `--lr-lite-chart-selected-outline-color` and
    *  `--lr-lite-chart-selected-outline-width` custom properties -- selectors such as
    *  `::part(bar)[data-selected]` and `::part(point)[data-selected]` are invalid CSS (Shadow Parts

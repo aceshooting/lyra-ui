@@ -132,6 +132,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Page-thumbnail source wired directly by property; takes precedence over `for`, and `null` (the default) leaves the rail in mediated mode unless `for` resolves. */
   @property({ attribute: false }) viewer: PageThumbnailSource | null = null;
   /** Id of a `PageThumbnailSource` in the same root, the label/`htmlFor`-style alternative to
    *  `viewer`. */

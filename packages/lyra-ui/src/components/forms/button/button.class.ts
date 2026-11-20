@@ -281,7 +281,7 @@ export interface LyraButtonEventMap {
  * i.e. its rendered glyph box. Relative to the button's own font size, so it follows every `size`
  * tier without a per-tier rule.
  * @cssprop --lr-button-shadow - Box shadow of the internal button. **Undeclared by default**, so
- * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
+ * `box-shadow` falls back to `none`. Set it (e.g.
  * an elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always
  * renders with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
  * @cssstate disabled - The button is disabled directly, by a fieldset, or by `loading`.
@@ -420,10 +420,13 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
    *  `aria-label` content attribute so changing or removing that attribute after mount keeps the
    *  actual focused control synchronized. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Host `aria-haspopup` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup:
     | string
     | null = null;
+  /** Host `aria-keyshortcuts` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-keyshortcuts' }) private triggerKeyShortcuts: string | null = null;
+  /** Host `aria-expanded` value, forwarded to the internal native button or anchor; `null` omits it. */
   @property({ attribute: 'aria-expanded' }) private triggerExpanded:
     | string
     | null = null;
@@ -434,9 +437,11 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
    * @default null */
   @property({ attribute: false }) pressed: ButtonPressedState = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
+  /** Host `aria-controls` ID list, forwarded to the internal control (resolved to elements when they live in the host's root); empty omits it. */
   @property({ attribute: 'aria-controls' }) private triggerControls:
     | string
     | null = null;
+  /** Host `aria-describedby` ID list, forwarded to the internal control; empty omits it. */
   @property({ attribute: 'aria-describedby' }) private triggerDescribedBy:
     | string
     | null = null;

@@ -29,8 +29,8 @@ export type LyraPluralMessage = Partial<
 };
 
 /**
- * Either a plain message — the shape the overwhelming majority of keys use and
- * the only shape that existed before 8.0.0 — or a pluralized one.
+ * Either a plain message — the shape the overwhelming majority of keys use —
+ * or a pluralized one.
  */
 export type LyraMessage = string | LyraPluralMessage;
 
@@ -1781,7 +1781,7 @@ export type LyraLocaleDirection = 'ltr' | 'rtl';
 /**
  * Optional catalog metadata, supplied as `registerLyraLocale()`'s third argument. Everything here
  * describes the *locale*, never a message: nothing in it is rendered by a component, and omitting
- * it entirely keeps the two-argument call working exactly as before.
+ * it entirely keeps the two-argument call working.
  */
 export interface LyraLocaleMeta {
   /** The locale's writing direction. Declared because no component may infer it: components read

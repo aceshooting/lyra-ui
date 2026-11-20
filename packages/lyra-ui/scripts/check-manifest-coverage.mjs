@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Reports every component-scoped `--lr-<component>-*` custom property a component's own stylesheet
 // reads, every consumer hook a shared stylesheet it composes reads on its behalf, and every
-// `part="…"` its template renders, that `custom-elements.json` does not declare.
+// `part="…"` its template renders, that `custom-elements.json` does not declare; and every public
+// member or attribute of a custom element that reaches the manifest with no description.
 // The manifest is generated from JSDoc, so an undeclared token or part is invisible to
 // `vscode-css-data.json`, `web-types.json`, every manifest-driven editor integration, and to
 // `check-llms-freshness.mjs` — which is how 60 custom properties and 15 parts came to be documented
@@ -37,6 +38,28 @@ const isSharedToken = (token) => baseTokens.has(token) ||
   /^--lr-(color|space|radius|shadow|font|transition|opacity|focus-ring|size|layer|line-height|border-width|safe-area|no-data)/.test(token);
 
 const findings = [];
+
+/** Public members and attributes with no description. Editor hover data, `web-types.json` and the
+ * generated reference pages all read `description`, so an empty one documents the member nowhere.
+ * Each entry names the member's declaring class, which is where the missing JSDoc belongs. */
+function undescribedMembers(decl) {
+  const described = (entry) => typeof entry.description === 'string' && entry.description.trim() !== '';
+  const owner = (entry) => entry.inheritedFrom?.name ?? decl.name;
+  const missing = [];
+  const reported = new Set();
+  for (const member of decl.members ?? []) {
+    if (member.static || (member.privacy && member.privacy !== 'public')) continue;
+    if (/^[_#]/.test(member.name) || described(member)) continue;
+    reported.add(member.name);
+    missing.push(`${owner(member)}.${member.name}${member.kind === 'method' ? '()' : ''}`);
+  }
+  for (const attribute of decl.attributes ?? []) {
+    // An attribute backed by an undescribed public field is already reported through that field.
+    if (described(attribute) || reported.has(attribute.fieldName)) continue;
+    missing.push(`${owner(attribute)}[${attribute.name}]`);
+  }
+  return missing.sort();
+}
 
 const scanned = [
   ...(manifest.modules ?? []).map((module) => ({ module, root: packageDir, companion: false })),
@@ -113,33 +136,42 @@ for (const { module: mod, root, companion } of scanned) {
 
     const missingProps = [...usedProps].filter((p) => !declaredProps.has(p)).sort();
     const missingParts = [...usedParts].filter((p) => !declaredParts.has(p)).sort();
-    if (missingProps.length || missingParts.length) {
-      findings.push({ tag: decl.tagName, module: mod.path, missingProps, missingParts });
+    const missingDescriptions = undescribedMembers(decl);
+    if (missingProps.length || missingParts.length || missingDescriptions.length) {
+      findings.push({ tag: decl.tagName, module: mod.path, missingProps, missingParts, missingDescriptions });
     }
   }
 }
 
 if (findings.length === 0) {
   console.log(
-    'Manifest coverage verified: every component-scoped custom property and static CSS part is declared.',
+    'Manifest coverage verified: every component-scoped custom property and static CSS part is declared, ' +
+      'and every public member and attribute is described.',
   );
   process.exit(0);
 }
 
 const totalProps = findings.reduce((a, f) => a + f.missingProps.length, 0);
 const totalParts = findings.reduce((a, f) => a + f.missingParts.length, 0);
+const totalDescriptions = findings.reduce((a, f) => a + f.missingDescriptions.length, 0);
 const out = listOnly ? console.log : console.error;
 out(
   `${totalProps} custom propert${totalProps === 1 ? 'y' : 'ies'} and ${totalParts} CSS part${
     totalParts === 1 ? '' : 's'
-  } are used but not declared in custom-elements.json, across ${findings.length} component(s):\n`,
+  } are used but not declared in custom-elements.json, and ${totalDescriptions} public member${
+    totalDescriptions === 1 ? '' : 's'
+  } or attribute${totalDescriptions === 1 ? '' : 's'} have no description, across ${findings.length} component(s):\n`,
 );
 for (const finding of findings) {
   out(`  ${finding.tag}  (${finding.module})`);
   if (finding.missingProps.length) out(`      @cssprop  ${finding.missingProps.join(', ')}`);
   if (finding.missingParts.length) out(`      @csspart  ${finding.missingParts.join(', ')}`);
+  if (finding.missingDescriptions.length) out(`      undescribed  ${finding.missingDescriptions.join(', ')}`);
 }
 if (!listOnly) {
-  out('\nAdd the missing @cssprop/@csspart JSDoc lines, then re-run `pnpm manifest`.');
+  out(
+    '\nAdd the missing @cssprop/@csspart JSDoc lines, put a JSDoc comment directly above each ' +
+      'undescribed member (above its decorator), then re-run `pnpm manifest`.',
+  );
   process.exit(1);
 }

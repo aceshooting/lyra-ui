@@ -13508,6 +13508,8 @@ export interface LyraComponentTypeMap {
       | 'lr-query-change'
       | 'lr-retry-request'
       | 'lr-select'
+      | 'lr-source-page-change'
+      | 'lr-source-page-change-request'
       | 'lr-thread-archive'
       | 'lr-thread-delete'
       | 'lr-thread-pin'

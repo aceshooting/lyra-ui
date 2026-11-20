@@ -3284,6 +3284,18 @@ export type LyraSourceDeleteEvent =
 export type LyraSourceErrorEvent = LyraComboboxEventMap['lr-source-error'];
 
 /**
+ * `lr-source-page-change` — dispatched by `<lr-thread-list>`; detail
+ * `LyraThreadListEventMap['lr-source-page-change']`.
+ */
+export type LyraSourcePageChangeEvent = LyraThreadListEventMap['lr-source-page-change'];
+
+/**
+ * `lr-source-page-change-request` — dispatched by `<lr-thread-list>`; detail
+ * `LyraThreadListEventMap['lr-source-page-change-request']`.
+ */
+export type LyraSourcePageChangeRequestEvent = LyraThreadListEventMap['lr-source-page-change-request'];
+
+/**
  * `lr-source-pause` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
  * `<lr-knowledge-base>`; detail union of 2, e.g.
  * `LyraKnowledgeBaseAdminEventMap['lr-source-pause']`.
@@ -4265,6 +4277,8 @@ export interface LyraGlobalEventMap {
   'lr-source-create': LyraSourceCreateEvent;
   'lr-source-delete': LyraSourceDeleteEvent;
   'lr-source-error': LyraSourceErrorEvent;
+  'lr-source-page-change': LyraSourcePageChangeEvent;
+  'lr-source-page-change-request': LyraSourcePageChangeRequestEvent;
   'lr-source-pause': LyraSourcePauseEvent;
   'lr-source-point-select': LyraSourcePointSelectEvent;
   'lr-source-selection-change': LyraSourceSelectionChangeEvent;

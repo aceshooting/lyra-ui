@@ -47,7 +47,7 @@ export interface LyraMentionItem {
    * Marks this row non-actionable: `aria-disabled="true"` replaces its selected/active
    * affordances, activating it (click, or Enter/Tab while highlighted) commits nothing and emits
    * no `lr-mention-select`, and ArrowDown/ArrowUp highlighting steps past it instead of landing on
-   * it. Omitted or `false` renders the row exactly as before this field existed.
+   * it. Omitted or `false` leaves the row fully actionable.
    */
   readonly disabled?: boolean;
 }
@@ -310,13 +310,14 @@ export interface LyraMentionPopoverEventMap {
  * replaces its selected/active affordances, activating it (click, or Enter/Tab while highlighted)
  * commits nothing and emits no `lr-mention-select`, and ArrowDown/ArrowUp highlighting steps past
  * it instead of landing on it -- including the default pre-highlighted first row. Omitted or
- * `false` renders the row exactly as before this field existed.
+ * `false` leaves the row fully actionable.
  *
  * @customElement lr-mention-popover
  * @event lr-mention-select - An item was committed (Enter/Tab/click).
  *   `detail: { suggestionId, index, label }`; `index` disambiguates repeated business ids.
- * @event lr-mention-close - The popover was dismissed with no selection — Escape, or `open`
- * transitioning to `false` by any other means (a direct host assignment included). Never fires
+ * @event lr-mention-close - The popover was dismissed with no selection — Escape, a popup that
+ * cannot be positioned against its anchor, or `open` transitioning to `false` by any other means (a
+ * direct host assignment included). Never fires
  * for a close that followed a `lr-mention-select` commit.
  * @csspart listbox - The popover's root element (`role="listbox"`).
  * @csspart limit - Candidate admission limit notice.
@@ -1227,7 +1228,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       this.cleanup = placement;
       void placement.ready.then((positioned) => {
         if (positioned || this.cleanup !== placement || !this.open) return;
-        this._silentClose = true;
+        // An unplaceable popup is a dismissal without a selection: lr-mention-close reports it.
         this.open = false;
       });
     }

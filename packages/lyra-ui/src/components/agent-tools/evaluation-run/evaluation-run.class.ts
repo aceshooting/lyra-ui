@@ -513,7 +513,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   }
 
   private sectionHeading(text: string): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel ?? '4');
+    const level = resolveHeadingLevel(this.headingLevel, '4');
     return html`<div part="section-heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${text}</div>`;
   }
 

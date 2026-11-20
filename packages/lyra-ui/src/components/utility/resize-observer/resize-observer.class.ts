@@ -37,7 +37,9 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   protected static override readonly identityEventDetailCollectionItems =
     Object.freeze({ 'lr-resize': Object.freeze(['entries']) });
 
+  /** Stops observing while set. Reflects to the `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Box model whose size is reported: `'content-box'` (default), `'border-box'` or `'device-pixel-content-box'`. */
   @property({ reflect: true }) box: ResizeObserverBox = 'content-box';
 
   // @renderController SlottedObserverController

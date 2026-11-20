@@ -128,8 +128,8 @@ restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-de
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
-`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
-byte-identical to before this property existed — mirroring `--lr-button-shadow`'s pattern; set it
+`--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`,
+mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
 `actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
 card given only a resting shadow keeps that exact shadow on hover.

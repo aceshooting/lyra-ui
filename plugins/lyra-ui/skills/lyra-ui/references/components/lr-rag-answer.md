@@ -36,7 +36,7 @@ an answer that is part of the page a user is arriving on, whose error text is al
 document order. Read once, when the answer first mounts: a later reconnection or adoption stages
 the existing error again rather than replaying it, and later `errorText` changes are announced
 either way. An answer with no error announces nothing. Remove any host
-`role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
+`role="status"`/`role="alert"` hand-added once it is set — otherwise
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details

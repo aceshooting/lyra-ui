@@ -242,9 +242,15 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   static override styles = [LyraElement.styles, styles];
   /** Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) events: readonly CalendarEvent[] = [];
+  /** Selected date as an ISO `YYYY-MM-DD` string; empty when no date is selected. Activating a day sets it. */
+  /** Selected date as an ISO `YYYY-MM-DD` string; empty when no date is selected. Activating a day sets it. */
+  /** Selected date as an ISO `YYYY-MM-DD` string; empty when no date is selected. Activating a day sets it. */
+  /** Selected date as an ISO `YYYY-MM-DD` string; empty when no date is selected. Activating a day sets it. */
   @property() value = '';
+  /** First day of the visible month as an ISO date string (attribute `view-date`). Defaults to the first day of the current month; month navigation updates it. */
   @property({ attribute: 'view-date' }) viewDate: string = formatISO(new Date()).slice(0, 7) + '-01';
   private _view: CalendarView = 'month';
+  /** Presentation of the events: `'month'` (default) renders a day grid, `'agenda'` renders a chronological event list. Unsupported values normalize to `'month'`. */
   @property({ reflect: true, converter: CALENDAR_VIEW })
   get view(): CalendarView { return this._view; }
   set view(value: CalendarView) {
@@ -254,8 +260,10 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     this._view = normalized;
     this.requestUpdate('view', previous);
   }
+  /** First day of the week: `'auto'` (default) derives it from the effective locale; `'sun'` through `'sat'` pins it explicitly. */
   @property({ attribute: 'first-day-of-week' })
   firstDayOfWeek: LyraCalendarFirstDayOfWeek = 'auto';
+  /** Accessible name of the calendar (attribute `aria-label`). A host `aria-label` wins; when absent, the localized default label is used. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private focusedDate = '';
   private get viewStart(): Date { const parsed = parseISO(this.viewDate); return parsed ? monthStart(parsed) : monthStart(new Date()); }

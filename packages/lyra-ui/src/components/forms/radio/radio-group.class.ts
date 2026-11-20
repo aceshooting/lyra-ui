@@ -279,6 +279,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     this.requestUpdate('name', old);
   }
 
+  /** Value of the selected radio; empty when none is selected. Setting it selects the matching radio and unselects the others. */
   get value(): string { return this._value ?? ''; }
   set value(next: string | null) {
     // Unconditional, including the value already held: the guard records that a write happened.
@@ -340,6 +341,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     this.requestUpdate('disabled', old);
   }
 
+  /** Whether the group is disabled, either through its own `disabled` or an ancestor disabled `<fieldset>`. */
   get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
   get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }

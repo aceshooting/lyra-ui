@@ -160,9 +160,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
    *  most the pool size -- see `clampedCount()`. */
   @property({ type: Number }) items = 1;
 
-  /** Selection algorithm — see `randomize()`. */
   private _mode: LyraRandomContentMode = 'unique';
 
+  /** Selection algorithm — see `randomize()`: `'unique'` (default), `'random'` or `'sequence'`. Unsupported values normalize to `'unique'`. */
   @property({ reflect: true, converter: RANDOM_CONTENT_MODE })
   get mode(): LyraRandomContentMode {
     return this._mode;

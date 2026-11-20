@@ -113,7 +113,7 @@ panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so
 no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
 override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
-after a short body exactly as it did before `--lr-dialog-height` existed. The drawer's own
+after a short body. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.

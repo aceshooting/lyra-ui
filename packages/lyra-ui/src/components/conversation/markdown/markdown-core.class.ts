@@ -336,7 +336,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.
-   *  `'_blank'` (the default) preserves today's exact output. Set to `null`
+   *  `'_blank'` (the default) emits `target="_blank"`. Set to `null`
    *  (or the empty string, e.g. via the `link-target=""` attribute) to omit
    *  `target`/`rel` entirely, so rendered links open in the same tab. */
   @property({ attribute: 'link-target' }) override linkTarget: string | null =
@@ -366,7 +366,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  (a source `######` with a positive offset stays at `<h6>` rather than
    *  overflowing past the HTML heading levels; the floor at `1` is
    *  defensive, since this property is meant to be additive-only). `0`
-   *  (the default) preserves today's exact `<h${token.depth}>` output. */
+   *  (the default) emits plain `<h${token.depth}>`. */
   @property({ type: Number, attribute: 'heading-offset' })
   override headingOffset = 0;
 
@@ -418,7 +418,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
    *  same slugs regardless of this property -- it only controls whether the `id` attribute is
-   *  emitted into the rendered DOM. `false` (the default) preserves today's exact output.
+   *  emitted into the rendered DOM. `false` (the default) emits no heading `id`.
    *
    *  When `htmlMode` is `sanitize` (the default), a slug whose *value* collides with a real
    *  `document` property name (e.g. a heading literally titled "Title", "Location", or "Forms"
@@ -432,7 +432,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. An inline `$` opens
    *  only before a non-space and closes only after a non-space when no digit follows, so prose
    *  such as `$500 and $200` stays text; `\$` escapes a literal dollar. `false` (the default)
-   *  renders `$...$` literally, unparsed -- today's exact output. */
+   *  renders `$...$` literally, unparsed. */
   @property({ type: Boolean }) override math = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the rendered document scrolls internally past this
