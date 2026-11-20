@@ -18,7 +18,7 @@ export interface EngineStyleOptions {
   readonly probe?: Element | null;
 }
 
-export { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, engineStyle } from './engine-admission.js';
+export { ENGINE_CHART_PALETTE, ENGINE_STYLE_MEDIA_QUERIES, engineStyle } from './engine-admission.js';
 
 interface ResolvedEngineStyle {
   readonly key: string;

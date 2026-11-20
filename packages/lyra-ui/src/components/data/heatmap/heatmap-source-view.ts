@@ -175,10 +175,10 @@ export async function revealSource(h: HeatmapSourceHost, row: number, col: numbe
   if (current()) h.announcements.announcePolite(label);
   return Boolean(control) && current();
 }
-export function sourceCurrent(h: HeatmapSourceHost, source: LyraHeatmapMatrixSource | null, epoch: number): boolean {
+function sourceCurrent(h: HeatmapSourceHost, source: LyraHeatmapMatrixSource | null, epoch: number): boolean {
   return h.isConnected && h.matrixSource === source && h.matrixController!.requests.epoch === epoch;
 }
-export function configureSource(h: HeatmapSourceHost): void {
+function configureSource(h: HeatmapSourceHost): void {
   const controller = h.matrixController!;
   if (!h.matrixSource || !controller) return;
   const width = Math.floor(Math.min(MAX_CANVAS_DIMENSION, Math.max(0, h.getBoundingClientRect().width)));
@@ -191,11 +191,11 @@ export function configureSource(h: HeatmapSourceHost): void {
     Math.min(h.cellBudget, Math.max(1, width * width)));
   h.sourceViewportExplicit = false;
 }
-export function sourceValueLabel(h: HeatmapSourceHost, value: number | null): string {
+function sourceValueLabel(h: HeatmapSourceHost, value: number | null): string {
   return value === null ? h.localize('heatmapNoDataValue') : h.formatNumericValue(value);
 }
 
-export function sourceRangeLabel(h: HeatmapSourceHost, tile: LyraHeatmapTile): string {
+function sourceRangeLabel(h: HeatmapSourceHost, tile: LyraHeatmapTile): string {
   const number = getNumberFormat(h.effectiveLocale);
   return h.localize('heatmapSourceRangeLabel', undefined, {
     rowStart: number.format(tile.rowStart + 1),
@@ -210,7 +210,7 @@ export function sourceRangeLabel(h: HeatmapSourceHost, tile: LyraHeatmapTile): s
     value: sourceValueLabel(h, sourceTileValue(h, tile)),
   });
 }
-export function sourceHover(h: HeatmapSourceHost, event: MouseEvent): void {
+function sourceHover(h: HeatmapSourceHost, event: MouseEvent): void {
   const controller = h.matrixController!;
   const viewport = controller.viewport;
   if (!viewport || controller.loading || controller.error) return;
@@ -227,18 +227,18 @@ export function sourceHover(h: HeatmapSourceHost, event: MouseEvent): void {
     y: canvas.offsetTop + fy * canvas.offsetHeight,
   } : null;
 }
-export function sourceReducerLabel(h: HeatmapSourceHost): string {
+function sourceReducerLabel(h: HeatmapSourceHost): string {
   return h.localize(h.matrixReducer === 'min' ? 'heatmapSourceMin' : h.matrixReducer === 'max' ? 'heatmapSourceMax' : 'heatmapSourceMean');
 }
-export function sourceTileValue(h: HeatmapSourceHost, tile: LyraHeatmapTile): number | null {
+function sourceTileValue(h: HeatmapSourceHost, tile: LyraHeatmapTile): number | null {
   return tile.validCount === 0 ? null : h.matrixReducer === 'mean' ? tile.sum / tile.validCount : tile[h.matrixReducer];
 }
-export function sourceRange(h: HeatmapSourceHost, tile: LyraHeatmapTile): void {
+function sourceRange(h: HeatmapSourceHost, tile: LyraHeatmapTile): void {
   const controller = h.matrixController!;
   if (!h.matrixSource || controller.error || controller.loading || controller.revision === undefined) return;
   h.emit('lr-matrix-range-select', Object.freeze({ ...tile, revision: controller.revision }));
 }
-export async function sourceActivate(h: HeatmapSourceHost, row: number, col: number, origin: HeatmapSelectionSource = 'keyboard'): Promise<void> {
+async function sourceActivate(h: HeatmapSourceHost, row: number, col: number, origin: HeatmapSelectionSource = 'keyboard'): Promise<void> {
   const controller = h.matrixController!;
   const source = h.matrixSource, epoch = controller.requests.epoch;
   if (!source) return;
@@ -259,10 +259,10 @@ export async function sourceActivate(h: HeatmapSourceHost, row: number, col: num
   }
   h.emit('lr-cell-activate', Object.freeze({ row, col, value: cell.value ?? Number.NaN }));
 }
-export function sourceTileAt(h: HeatmapSourceHost, row: number, col: number): LyraHeatmapTile | undefined {
+function sourceTileAt(h: HeatmapSourceHost, row: number, col: number): LyraHeatmapTile | undefined {
   return h.matrixController!.tiles.find(tile => row >= tile.rowStart && row < tile.rowEnd && col >= tile.columnStart && col < tile.columnEnd);
 }
-export function sourceClick(h: HeatmapSourceHost, event: MouseEvent): void {
+function sourceClick(h: HeatmapSourceHost, event: MouseEvent): void {
   const controller = h.matrixController!, viewport = controller.viewport;
   if (!viewport || controller.loading || controller.error) return;
   const bounds = (event.currentTarget as HTMLCanvasElement).getBoundingClientRect();
@@ -272,7 +272,7 @@ export function sourceClick(h: HeatmapSourceHost, event: MouseEvent): void {
   if (tile?.count === 1) void sourceActivate(h, row, col, 'pointer');
   else if (tile) sourceRange(h, tile);
 }
-export async function sourceKeydown(h: HeatmapSourceHost, event: KeyboardEvent): Promise<void> {
+async function sourceKeydown(h: HeatmapSourceHost, event: KeyboardEvent): Promise<void> {
   if (ignoresGridKey(event)) return;
   const controller = h.matrixController!, viewport = controller.viewport;
   const source = h.matrixSource, epoch = controller.requests.epoch, navigation = ++h.sourceNavigationIntent;
@@ -304,7 +304,7 @@ export async function sourceKeydown(h: HeatmapSourceHost, event: KeyboardEvent):
     if (!dr && !dc) return;
   }
 }
-export function sourceCellLabel(h: HeatmapSourceHost, cell: MatrixExactRecord, current: () => boolean): string {
+function sourceCellLabel(h: HeatmapSourceHost, cell: MatrixExactRecord, current: () => boolean): string {
   const cellText = h.cellText;
   if (!current()) return '';
   return cellText?.call(h, { row: cell.row, col: cell.col }, cell.value ?? Number.NaN) ??

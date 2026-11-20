@@ -1,9 +1,9 @@
 import { finiteInteger } from './numbers.js';
 
 /** Provider rows per page when `sourcePageSize` is unset or unusable. */
-export const DEFAULT_SOURCE_PAGE_SIZE = 100;
+const DEFAULT_SOURCE_PAGE_SIZE = 100;
 /** Largest provider page a host requests. */
-export const MAX_SOURCE_PAGE_SIZE = 500;
+const MAX_SOURCE_PAGE_SIZE = 500;
 
 /** A host's `sourcePageSize`, normalized to 1..500 (100 when not a finite number). */
 export function normalizeSourcePageSize(value: number): number {

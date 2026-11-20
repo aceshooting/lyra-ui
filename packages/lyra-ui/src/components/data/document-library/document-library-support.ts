@@ -1,7 +1,7 @@
 import type { LyraPageSource, LyraCursorSource } from '../../../data-sources.js';
 import { cursorQueryText } from './document-library-cursor.js';
 import type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
-export type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
+export type { LibraryDocument, LibraryDocumentFreshness } from './document-library-types.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
@@ -81,7 +81,7 @@ export const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
 export const MAX_LIBRARY_COLLECTION_ENTRIES = 10_000;
 export const MAX_TAG_FACETS = 500;
 export const documentKey = (document: LibraryDocument): string => document.id;
-export const INVALID_DOCUMENT_DATE = Symbol('invalid-document-date');
+const INVALID_DOCUMENT_DATE = Symbol('invalid-document-date');
 export const FRESHNESS_TONE: Record<
   LibraryDocumentFreshness,
   'success' | 'warning' | 'danger'
@@ -91,7 +91,7 @@ export const FRESHNESS_TONE: Record<
   stale: 'danger',
 };
 
-export function projectLibraryStringArray(value: unknown): readonly string[] | undefined {
+function projectLibraryStringArray(value: unknown): readonly string[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
     const length = readOwnArrayLength(value);
@@ -113,7 +113,7 @@ export function projectLibraryStringArray(value: unknown): readonly string[] | u
   }
 }
 
-export function projectLibraryDate(value: unknown): Date | string | typeof INVALID_DOCUMENT_DATE {
+function projectLibraryDate(value: unknown): Date | string | typeof INVALID_DOCUMENT_DATE {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return new Date(value);
   try {

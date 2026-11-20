@@ -13,7 +13,7 @@ import {
 } from '../../internal/overlay-surface.styles.js';
 
 /** The provider badge and truncating label every catalog-picker trigger shares. */
-export const catalogPickerTriggerLabel = css`
+const catalogPickerTriggerLabel = css`
   [part='provider-badge'] {
     flex: 0 1 auto;
     min-inline-size: 0;

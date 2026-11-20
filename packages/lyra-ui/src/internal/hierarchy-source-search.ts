@@ -9,7 +9,7 @@ type SearchResult = LyraSourceSearchResult<{ readonly key: string }>;
 export type HierarchySourceHits = Extract<HierarchyCapabilityResult<SearchResult>, { status: 'ready' }>;
 
 /** The provider capabilities whole-source search drives (a `HierarchySourceController`). */
-export interface HierarchySourceSearchControl {
+interface HierarchySourceSearchControl {
   search(): Promise<HierarchyCapabilityResult<SearchResult>>;
   reveal(key: string): Promise<boolean>;
   cancelSearch(): void;
@@ -139,7 +139,7 @@ export class HierarchySourceSearchController {
 }
 
 /** The provider copy capability (a `HierarchySourceController`). */
-export interface HierarchySourceCopyControl {
+interface HierarchySourceCopyControl {
   readonly epoch: number;
   copy(key: string | null, scope: HierarchyCopyScope, maxBytes: number): Promise<HierarchyCapabilityResult<string>>;
 }

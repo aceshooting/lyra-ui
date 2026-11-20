@@ -81,7 +81,7 @@ export function keySet(values: Iterable<string | number>, limit = MAX_TABLE_COLL
   return snapshot;
 }
 
-export function readonlyKeySet(snapshot: ReadonlySet<string | number>): ReadonlySet<string | number> {
+function readonlyKeySet(snapshot: ReadonlySet<string | number>): ReadonlySet<string | number> {
   let facade: ReadonlySet<string | number>;
   facade = {
     get size() {
@@ -102,7 +102,7 @@ export function readonlyKeySet(snapshot: ReadonlySet<string | number>): Readonly
 /** One read facade per stored key set. The stored sets are replaced, never mutated, so a facade
  *  stays a correct snapshot for as long as its set is current; reading the same facade back keeps
  *  Lit from treating every rebind of an unchanged selection as a change. */
-export const keySetFacades = new WeakMap<ReadonlySet<string | number>, ReadonlySet<string | number>>();
+const keySetFacades = new WeakMap<ReadonlySet<string | number>, ReadonlySet<string | number>>();
 
 export function storedKeySetFacade(values: ReadonlySet<string | number>): ReadonlySet<string | number> {
   let facade = keySetFacades.get(values);
@@ -147,7 +147,7 @@ export interface TableRowEntry<T> {
 }
 
 /** The steps of the shared size ladder that render the built-in empty state compact. */
-export const COMPACT_EMPTY_SIZES: ReadonlySet<LyraSizeStep> = new Set<LyraSizeStep>(['2xs', 'xs', 's']);
+const COMPACT_EMPTY_SIZES: ReadonlySet<LyraSizeStep> = new Set<LyraSizeStep>(['2xs', 'xs', 's']);
 export const isCompactEmptySize = (size: LyraSize): boolean => COMPACT_EMPTY_SIZES.has(normalizeSize(size));
 
 /** Which inline-start/inline-end edge a column aligns or sticks to. */
@@ -398,7 +398,7 @@ export type TableColumn<T> =
  *  actions-column button). Clicks/keydowns landing on one of these — or
  *  bubbling up through one — must not be re-interpreted as row/column
  *  activation by the table's own delegated listeners. */
-export const INTERACTIVE_SELECTOR =
+const INTERACTIVE_SELECTOR =
   'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
 
 /** Normalizes a `cellPart(row)` result to space-separated, de-duplicated part names, dropping the
@@ -418,8 +418,8 @@ export function stickyDirection(sticky: TableEdgeAlign | undefined): TableEdgeAl
 
 /** A cell style repeats the same few declarations on every row of every render; remember each
  *  verdict (bounded) instead of re-validating it. */
-export const cellDeclarationVerdicts = new Map<string, string>();
-export const CELL_DECLARATION_CACHE_LIMIT = 1_000;
+const cellDeclarationVerdicts = new Map<string, string>();
+const CELL_DECLARATION_CACHE_LIMIT = 1_000;
 
 export function sanitizeCellStyle(cellStyle: Record<string, unknown> | undefined): Record<string, string> {
   const safe: Record<string, string> = {};
@@ -438,7 +438,7 @@ export function sanitizeCellStyle(cellStyle: Record<string, unknown> | undefined
   return safe;
 }
 
-export function normalizeStyleProperty(property: string): string {
+function normalizeStyleProperty(property: string): string {
   if (property.startsWith('--')) return property;
   return property.replace(/[A-Z]/g, '-$&').toLowerCase();
 }
@@ -508,7 +508,7 @@ export function createFilterStringifier(): (row: unknown) => string {
 
 /** Returns an Element across owner-document realms without relying on the current global's
  * `Element` constructor. */
-export function asElement(value: EventTarget): Element | null {
+function asElement(value: EventTarget): Element | null {
   if (typeof value !== 'object' || !('nodeType' in value) || value.nodeType !== 1 || !('matches' in value)) {
     return null;
   }

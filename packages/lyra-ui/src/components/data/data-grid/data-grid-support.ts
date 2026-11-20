@@ -53,7 +53,7 @@ export interface PendingVirtualScroll {
   readonly align: NonNullable<DataGridScrollOptions['align']> | 'nearest';
 }
 
-export const displayKeys = new WeakMap<object, string>();
+const displayKeys = new WeakMap<object, string>();
 
 /** A typed, stable DOM/cache key. `row:1` and `group:1` must never share a measured height. */
 export function displayItemKey<Row>(item: DisplayItem<Row>): string {
@@ -65,7 +65,7 @@ export function displayItemKey<Row>(item: DisplayItem<Row>): string {
   return key;
 }
 
-export const DATA_GRID_COLUMN_PROPERTIES = [
+const DATA_GRID_COLUMN_PROPERTIES = [
   'id',
   'field',
   'label',
@@ -97,7 +97,7 @@ export const DATA_GRID_COLUMN_PROPERTIES = [
   'aggregatedFormatter',
 ] as const satisfies readonly (keyof DataGridColumn<unknown>)[];
 
-export const DATA_GRID_COLUMN_CALLBACK_PROPERTIES = new Set<string>([
+const DATA_GRID_COLUMN_CALLBACK_PROPERTIES = new Set<string>([
   'formatter',
   'cellTitle',
   'value',
@@ -106,7 +106,7 @@ export const DATA_GRID_COLUMN_CALLBACK_PROPERTIES = new Set<string>([
   'aggregatedFormatter',
 ]);
 
-export const DATA_GRID_SORT_ALGORITHMS = new Set<string>([
+const DATA_GRID_SORT_ALGORITHMS = new Set<string>([
   'alphanumeric',
   'alphanumericCaseSensitive',
   'text',
@@ -115,7 +115,7 @@ export const DATA_GRID_SORT_ALGORITHMS = new Set<string>([
   'basic',
 ]);
 
-export const DATA_GRID_FILTER_TYPES = new Set<string>([
+const DATA_GRID_FILTER_TYPES = new Set<string>([
   'text',
   'equals',
   'number-range',
@@ -125,7 +125,7 @@ export const DATA_GRID_FILTER_TYPES = new Set<string>([
   'includes-all',
 ]);
 
-export const DATA_GRID_AGGREGATIONS = new Set<string>([
+const DATA_GRID_AGGREGATIONS = new Set<string>([
   'sum',
   'min',
   'max',
@@ -137,10 +137,10 @@ export const DATA_GRID_AGGREGATIONS = new Set<string>([
   'extent',
 ]);
 
-export type DataGridColumnProperty = (typeof DATA_GRID_COLUMN_PROPERTIES)[number];
+type DataGridColumnProperty = (typeof DATA_GRID_COLUMN_PROPERTIES)[number];
 
 /** Returns whether an admitted own data value can reach every later column use safely. */
-export function isSafeColumnPropertyValue(
+function isSafeColumnPropertyValue(
   property: DataGridColumnProperty,
   value: unknown
 ): boolean {
@@ -316,8 +316,8 @@ export const VIRTUALIZATION_THRESHOLD = 80;
 export const VIRTUAL_OVERSCAN = 5;
 export const DATA_GRID_TREE_NODE_LIMIT = 10_000;
 export const DATA_GRID_TREE_DEPTH_LIMIT = 64;
-export const MAX_DATA_GRID_KEY_ENTRIES = 100_000;
-export const MAX_DATA_GRID_COLUMN_ENTRIES = 10_000;
+const MAX_DATA_GRID_KEY_ENTRIES = 100_000;
+const MAX_DATA_GRID_COLUMN_ENTRIES = 10_000;
 export const DATA_GRID_DRAG_TYPE = 'application/x-lyra-data-grid-column';
 /** Sentinel for `isRebind()` when a property has no stored snapshot to compare against. */
 export const REBIND_NO_SNAPSHOT = Symbol('no snapshot');
@@ -453,7 +453,7 @@ export function sameKeySet(left: readonly DataGridKey[], right: readonly DataGri
 /** Membership sets for the frozen key snapshots this grid holds (`selectedRowKeys`,
  *  `expandedRowKeys`). A snapshot never changes, so its set is built once and every row-loop
  *  membership test is O(1) instead of a scan over every key. */
-export const frozenKeyIndexes = new WeakMap<readonly DataGridKey[], ReadonlySet<string>>();
+const frozenKeyIndexes = new WeakMap<readonly DataGridKey[], ReadonlySet<string>>();
 
 export function arrayHasKey(keys: readonly DataGridKey[], key: DataGridKey): boolean {
   let index = frozenKeyIndexes.get(keys);
@@ -494,7 +494,7 @@ export function checkableControl(
   return value as HTMLInputElement;
 }
 
-export function dateText(value: object): string | undefined {
+function dateText(value: object): string | undefined {
   try {
     const timestamp = Date.prototype.getTime.call(value);
     return Number.isFinite(timestamp)

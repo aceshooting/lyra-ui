@@ -3,7 +3,7 @@ import { safeFetchUrl } from './safe-url.js';
 
 /** Default cap in bytes (25 MiB) for a remote resource before a viewer hands it to a parser. */
 export const DEFAULT_MAX_RESOURCE_BYTES = 26214400;
-export const MAX_RESOURCE_BYTES_CEILING = 250 * 1024 * 1024;
+const MAX_RESOURCE_BYTES_CEILING = 250 * 1024 * 1024;
 
 /** Clamps a viewer's configurable byte budget to one byte through 250 MiB. */
 export function resolveMaxResourceBytes(value: number): number {

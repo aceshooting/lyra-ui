@@ -22,7 +22,7 @@ const literal = (node) => {
 };
 
 /** One authored message literal (a string or a flat plural record) as order-insensitive JSON. */
-export function messageValue(text) {
+function messageValue(text) {
   const program = parseProgram('message.ts', `(${text});`);
   let node = program.body[0]?.expression;
   while (node?.type === 'ParenthesizedExpression') node = node.expression;

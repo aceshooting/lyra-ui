@@ -24,7 +24,7 @@ const FENCE_DEPTH = 256;
  * hosts included), in `start`'s owner window. Returns the disposer; no callback runs after it, or
  * while `start` is disconnected.
  */
-export function observeAncestorAttributes(start: Element, attributes: readonly string[], onChange: () => void): () => void {
+function observeAncestorAttributes(start: Element, attributes: readonly string[], onChange: () => void): () => void {
   const view = start.ownerDocument.defaultView;
   if (!view?.MutationObserver) return () => {};
   let active = true;

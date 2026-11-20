@@ -1,5 +1,4 @@
 import { addCount, array, counts, field, number, preparedMetadata, readPreparedSeries, sample, type PreparedChartSeries } from './chart-prepared-series.js';
-export type { PreparedChartSeries } from './chart-prepared-series.js';
 import type {
   LyraPreparedSeriesData, LyraPreparedCategoryData, LyraObservationCounts,
   LyraSeriesSample, LyraSeriesObservation, LyraSeriesPointRef, LyraSourceValue, LyraSeriesRangeRequest,

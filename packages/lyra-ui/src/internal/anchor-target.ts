@@ -15,7 +15,7 @@ export {
   prioritizedHighlightCandidates,
 } from './anchor-target-base.js';
 export type { DocumentAnchorTargetHooks, LyraAnchorTarget, LyraAnchorTargetEventMap } from './anchor-target-base.js';
-export { observeTextSelection, type TextSelectionObserverOptions } from './text-selection-observer.js';
+export { observeTextSelection } from './text-selection-observer.js';
 
 type PublicConstructor<T> = new (...args: never[]) => T;
 type InternalMixinConstructor<T> = new (...args: any[]) => T;

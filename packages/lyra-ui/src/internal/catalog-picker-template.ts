@@ -23,7 +23,7 @@ export function renderCatalogLabel(controlId: string, label: string, visible: bo
 }
 
 /** Native editing state a catalog picker host forwards to its free-text input. */
-export interface CatalogInputHost extends Element {
+interface CatalogInputHost extends Element {
   readonly autocomplete: string;
   readonly spellcheck: boolean;
   readonly autocapitalize: string;

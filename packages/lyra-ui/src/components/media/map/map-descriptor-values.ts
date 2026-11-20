@@ -13,7 +13,7 @@ import {
 /** Upper bound on rendered gradient stops, matching the deterministic-truncation pattern
  *  the marker/data-layer collection bounds use below. A ramp needs a handful of stops; anything
  *  past this is a data bug, and an unbounded loop here would build a pathological gradient. */
-export const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
+const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
 
 /**
  * Array and record admission is deliberately separate from projection. A value can revoke between

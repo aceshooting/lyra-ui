@@ -1,5 +1,5 @@
 /** The side of the real slides a looping clone set sits on. */
-export type CarouselLoopSide = 'before' | 'after';
+type CarouselLoopSide = 'before' | 'after';
 
 /** Elements whose copy would duplicate a resource, a form control or live media. */
 const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
@@ -38,7 +38,7 @@ const LOOP_CLONE_STRIPPED_ATTRIBUTES = [
  * the slide holds content that cannot be copied safely (custom elements, foreign namespaces,
  * media, embedded documents or form controls).
  */
-export function prepareLoopClone(
+function prepareLoopClone(
   original: HTMLElement,
   index: number,
   side: CarouselLoopSide

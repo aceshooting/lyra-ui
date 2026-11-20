@@ -130,9 +130,9 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
   return options;
 }
 
-export { byteFormat, byteUnitIndex, safeByteUnitStep, type ByteFormatResult } from '../../../internal/bytes.js';
+export { byteFormat, byteUnitIndex } from '../../../internal/bytes.js';
 export type { LyraFormatDisplay, LyraFormatBytesUnit } from '../../../internal/bytes.js';
 export {
   RELATIVE_TIME_UNITS, relativeTimeDivisor, relativeTimeFormatOptions, resolveDateSource, resolveRelativeTimeState,
-  type LyraRelativeTimeNumeric, type LyraRelativeTimeUnit, type RelativeTimeState,
+  type LyraRelativeTimeNumeric, type LyraRelativeTimeUnit,
 } from '../../../internal/locale-date.js';

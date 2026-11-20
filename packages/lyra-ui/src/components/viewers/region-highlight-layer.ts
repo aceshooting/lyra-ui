@@ -53,8 +53,6 @@ export function renderRegionHighlightLayer<T extends RegionHighlightItem>(
   </div>`;
 }
 
-export { highlightHitAreasOverlap } from '../../internal/region-hit-targets.js';
-
 /** Structural equality of two region anchors' `page` and `rect`. */
 export function sameRegionRect(
   a: { readonly page?: number; readonly rect: RegionRect },
