@@ -261,6 +261,7 @@ export const styles = css`
   }
   [part='label'] {
     min-inline-size: 0;
+    unicode-bidi: plaintext;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

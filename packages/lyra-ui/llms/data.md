@@ -555,7 +555,9 @@ The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagi
 `drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
 content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
 `error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
-built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`
+(the tree/detail/group disclosure, named `Toggle row {row}` in both states; the expanded state is
+reported once, on the owning row in a tree grid and otherwise on the button),
 `filter-button`, `filter-panel`,
 `filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
 glyph the component resets; rendered only while it has a value), `first-button`,
@@ -767,8 +769,9 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
   `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
   throwing); `editLabel(row) => string`, read once per row exactly like `editValue`/`cellTitle`,
-  overrides that editor's accessible name — omit it and every editor in the column shares the same
-  interpolated `tableEditCell` name instead (see the accessibility note under `editTrigger` below)
+  overrides that editor's accessible name — omit it and each editor takes the localized
+  `tableEditCellInRow` name (`Edit {column}, row {row}`) instead, or `tableEditCell` while only one
+  row renders (see the accessibility note under `editTrigger` below)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -811,10 +814,10 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   - **Re-sorts/pages.** Keyed rows move the existing input with its draft; focus is restored to the
     same logical cell after sorting. If filtering/pagination removes that row from the page, focus
     is lost rather than moved to an unrelated replacement row.
-  - **Accessible names.** `editLabel(row)` overrides the default localized `tableEditCell`
-    (`Edit {column}`), which has no row context. The default is adequate for the single transient
-    editor. Always define `editLabel` for persistent editors: repeated identical names (e.g. fifty
-    “Edit Status” comboboxes) fail WCAG 2.4.6 and 1.3.1; each row needs a distinct editor name.
+  - **Accessible names.** `editLabel(row)` overrides the default localized `tableEditCellInRow`
+    (`Edit {column}, row {row}`), whose `{row}` is the `rowKey` value or else the row's 1-based
+    rendered position; a single rendered row keeps `tableEditCell` (`Edit {column}`). Define
+    `editLabel` when a row has a more meaningful name than its key or position.
 - `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
   computed/read-only and true only while a priority column is actually hidden. It becomes false
   when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
@@ -972,7 +975,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default includes the row key through `dataGridExpandRow` or `dataGridCollapseRow`. Supply a callback for a more descriptive row name.
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default is the constant `dataGridToggleRow` name (`Toggle row {row}`) in both states, where `{row}` is the `rowKey` value or else the row's 1-based rendered position; `aria-expanded` carries the state, so a callback should not encode it either. Supply a callback for a more descriptive row name.
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -1041,7 +1044,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) label the reveal button for showing or hiding additional columns; read `aria-expanded` for its state. Supplying a `tableAdditionalColumns` string (through `strings` or a registered locale override) opts into one constant visible name in both states, and the two labels then become the action tooltip; an explicit empty string omits that tooltip.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) are the reveal button's action tooltip for showing or hiding additional columns (localizing `showAllColumns`/`showFewerColumns` when omitted; an explicit empty string omits the tooltip). The button's visible name is the constant `tableAdditionalColumns` string in both states; read `aria-expanded` for its state.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -1501,7 +1504,12 @@ directional glyph while leaving its localized accessible name on the owning cont
 **CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
 `controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
 `first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
-`page-count`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+
+`page-error` is the visible correction message (`paginationInvalidPage`, or
+`paginationInvalidPageUnknownTotal` in indeterminate mode) rendered while the page-jump draft is
+out of range or not a whole number; it describes the input, and committing that draft (Enter or
+`change`) also announces it politely once.
 
 `pages` is the `role="list"` wrapper, `page` one numbered control inside it (a `<button>`, or an
 `<a>` under `href-template`), and `ellipsis` an accessible interactive control that jumps several
@@ -1907,8 +1915,9 @@ shown when `stages` exceeds the 500-stage render ceiling or the 10,000-position 
 - **Malformed stage entries are omitted independently.** Non-record entries and records without a
   string `label` cannot suppress valid neighbors in either series. Accessor properties are never
   invoked; the caller's arrays are never rewritten.
-- **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
-  take the chart with it.
+- **A missing or non-finite `value` renders the localized `noData` text** in place of the number, with
+  no share, drop-off or bar, so one bad row cannot take the chart with it and is never read as a
+  measured zero.
 - Values, shares and drop-off percentages all format through the component's effective locale
   (`locale` attribute, or an inherited one) — never a hardcoded `en`.
 - Bars grow from the inline-start edge and every dimension is a logical property, so `dir="rtl"`

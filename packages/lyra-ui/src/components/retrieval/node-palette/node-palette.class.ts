@@ -548,14 +548,19 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
       const count = this.filtered.length;
       const countText = getNumberFormat(this.effectiveLocale).format(count);
-      this.announcer.announce(
-        this.localize('nodePaletteResultCount', undefined, {
-          count: countText,
-          pluralCount: count,
-        })
-      );
+      const text = this.localize('nodePaletteResultCount', undefined, {
+        count: countText,
+        pluralCount: count,
+      });
+      // A same-size reassignment or a keystroke that keeps the count says nothing new.
+      if (text !== this.lastAnnouncedCount) {
+        this.lastAnnouncedCount = text;
+        this.announcer.announce(text);
+      }
     }
   }
+
+  private lastAnnouncedCount = '';
 
   private onFieldKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;

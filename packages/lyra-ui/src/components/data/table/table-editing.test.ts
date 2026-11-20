@@ -467,14 +467,26 @@ describe("editTrigger: 'always'", () => {
     expect(values).to.deep.equal(['3', '1']);
   });
 
-  it('falls back to the same tableEditCell name for every row in the column when editLabel is unset', async () => {
+  it('names each persistent editor with its row identity when editLabel is unset', async () => {
     const el = await alwaysTable();
     const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
       input.getAttribute('aria-label')
     );
-    // Column-only naming: both rows' editors read identically -- this is the gap `editLabel` exists
-    // to close (see the next test), not a claim that these controls are distinguishable.
-    expect(labels).to.deep.equal(['Edit Score', 'Edit Score']);
+    expect(labels).to.deep.equal(['Edit Score, row a', 'Edit Score, row b']);
+    el.rowKey = undefined;
+    await el.updateComplete;
+    const positional = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label')
+    );
+    expect(positional).to.deep.equal(['Edit Score, row 1', 'Edit Score, row 2']);
+  });
+
+  it('keeps the unqualified tableEditCell name while only one row renders', async () => {
+    const el = await alwaysTable(alwaysColumns, rows.slice(0, 1));
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
+      input.getAttribute('aria-label')
+    );
+    expect(labels).to.deep.equal(['Edit Score']);
   });
 
   it('names each persistent editor individually per row when the column defines editLabel', async () => {
@@ -893,7 +905,7 @@ describe("editTrigger: 'always'", () => {
 
   it('localizes every persistent editor through a strings override', async () => {
     const el = (await fixture(
-      html`<lr-table aria-label="Scores" .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`
+      html`<lr-table aria-label="Scores" .strings=${{ tableEditCellInRow: 'Modifier {column}, ligne {row}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = alwaysColumns;
     el.rows = rows;
@@ -902,7 +914,7 @@ describe("editTrigger: 'always'", () => {
     const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) =>
       input.getAttribute('aria-label')
     );
-    expect(labels).to.deep.equal(['Modifier Score', 'Modifier Score']);
+    expect(labels).to.deep.equal(['Modifier Score, ligne a', 'Modifier Score, ligne b']);
   });
 });
 
@@ -1070,7 +1082,7 @@ describe("editType: 'select'", () => {
     cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
     await el.updateComplete;
     const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
-    expect(select.getAttribute('aria-label')).to.equal('Edit Name');
+    expect(select.getAttribute('aria-label')).to.equal('Edit Name, row a');
   });
 
   it('names a select editor per row when the column defines editLabel', async () => {

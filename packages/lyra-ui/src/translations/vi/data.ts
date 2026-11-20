@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items} mục trong {ranges} khoảng',
   noColumns: 'Chưa cấu hình cột nào',
   dataGridColumnMenu: 'Tùy chọn cho {label}',
-  dataGridCollapseRow: 'Thu gọn {row}',
   dataGridPinStart: 'Ghim {label} vào đầu',
   dataGridPinEnd: 'Ghim {label} vào cuối',
   dataGridUnpin: 'Bỏ ghim {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'Đang tải hàng…',
   tableLoadingMore: 'Đang tải thêm hàng…',
   tableEditCell: 'Chỉnh sửa {column}',
+  tableEditCellInRow: 'Chỉnh sửa {column}, hàng {row}',
   showAllColumns: 'Hiện tất cả cột',
   dataGridColumns: 'Cột',
   showFewerColumns: 'Hiện ít cột hơn',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Tháng sau',
   paginationPage: 'Trang',
   paginationJumpToPage: 'Đi đến trang {page}',
+  paginationInvalidPage: 'Nhập một trang từ 1 đến {max}.',
+  paginationInvalidPageUnknownTotal: 'Nhập số trang nguyên từ 1 trở lên.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Trang {page}',
   trendOf: 'Xu hướng của {count} giá trị, gần nhất {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
   },
-  dataGridExpandRow: 'Mở rộng {row}',
+  dataGridToggleRow: 'Bật/tắt hàng {row}',
   dataGridFilterColumn: 'Lọc {column}',
   dataGridSelectPage: 'Chọn tất cả hàng trên trang này',
   tableRowLimit: {

@@ -22,8 +22,8 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueInputLimit, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_remove } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueInputLimit, LYRA_DEFAULT_promptQueueItemAttachments, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueItemRemoved, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_remove, LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface PromptQueueItem {
@@ -223,7 +223,9 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * ignored before rendering or proposing a mutation, so every `itemId` remains unambiguous.
  * When the host accepts a removal while that row's action owns focus, the equivalent action on
  * the nearest surviving row receives focus; an emptied queue focuses its stable region instead.
- * An accepted reorder keeps focus on the moved row's action, or its nearest enabled one.
+ * An accepted reorder keeps focus on the moved row's action, or its nearest enabled one. Once the
+ * host's reassigned `items` applies a requested move or removal, the new position
+ * (`reorderItemMoved`) or the removal (`promptQueueItemRemoved`) is announced politely.
  * Controlled updates never steal focus when the removed row did not own it.
  *
  * Public item sequences are bounded, frozen snapshots. Admitted item identities remain opaque only
@@ -253,7 +255,8 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * @csspart item - One queued prompt.
  * @csspart value - Read-only prompt text while `readonly`.
  * @csspart editor - A queued prompt editor.
- * @csspart attachments - The visible attachment-name list for one prompt.
+ * @csspart attachments - The visible attachment-name list for one prompt, named
+ *   `Attachments for prompt {index}` (`promptQueueItemAttachments`) while several prompts are queued.
  * @csspart attachment - One attachment name.
  * @csspart actions - One item's action row.
  * @csspart action - Every item action.
@@ -280,10 +283,13 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     promptQueueAttachmentLimit: LYRA_DEFAULT_promptQueueAttachmentLimit,
     promptQueueEmpty: LYRA_DEFAULT_promptQueueEmpty,
     promptQueueInputLimit: LYRA_DEFAULT_promptQueueInputLimit,
+    promptQueueItemAttachments: LYRA_DEFAULT_promptQueueItemAttachments,
     promptQueueItemLabel: LYRA_DEFAULT_promptQueueItemLabel,
+    promptQueueItemRemoved: LYRA_DEFAULT_promptQueueItemRemoved,
     promptQueueLabel: LYRA_DEFAULT_promptQueueLabel,
     promptQueueSendNow: LYRA_DEFAULT_promptQueueSendNow,
     remove: LYRA_DEFAULT_remove,
+    reorderItemMoved: LYRA_DEFAULT_reorderItemMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   private regionLabel?: ResolvedAriaRelationshipLease;
@@ -335,6 +341,10 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly inputLossByItems = new WeakSet<readonly CanonicalPromptQueueItem[]>();
   private readonly drafts = new Map<string, { sourceValue: string; value: string }>();
+
+  /** The move or removal this queue last requested, awaiting the host's controlled `items`. */
+  private requestedChange?: { id: string; reason: 'remove' | 'reorder'; toIndex: number };
+  private changeAnnouncement = '';
 
   private pendingRemovalFocus?: {
     editor: boolean;
@@ -391,6 +401,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       }
       if (this.hasUpdated && this.inputTruncated)
         this.announcements.announcePolite(this.localize('promptQueueInputLimit'));
+      this.resolveRequestedChange(currentItems);
     }
     if (!changed.has('items') && !changed.has('readonly') && !changed.has('disabled') && !changed.has('page')) return;
     const focusedControl = shadowFocusTarget(this) as HTMLElement | null;
@@ -431,8 +442,32 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     };
   }
 
+  /** Confirms a user-requested move or removal once the host's reassigned `items` applies it, so
+   *  the outcome is spoken; a host that rejects or reshapes the request stays silent. */
+  private resolveRequestedChange(items: readonly CanonicalPromptQueueItem[]): void {
+    const requested = this.requestedChange;
+    this.requestedChange = undefined;
+    if (!requested || !this.hasUpdated) return;
+    const index = items.findIndex((item) => item.id === requested.id);
+    const format = getNumberFormat(this.effectiveLocale);
+    if (requested.reason === 'remove' && index < 0) {
+      this.changeAnnouncement = this.localize('promptQueueItemRemoved', undefined, {
+        count: format.format(items.length),
+      });
+    } else if (requested.reason === 'reorder' && index === requested.toIndex) {
+      this.changeAnnouncement = this.localize('reorderItemMoved', undefined, {
+        index: format.format(index + 1),
+        total: format.format(items.length),
+      });
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.changeAnnouncement) {
+      this.announcements.announcePolite(this.changeAnnouncement);
+      this.changeAnnouncement = '';
+    }
     if (this.pendingRemovalFocus?.pageAction) {
       this.scheduleAfterUpdate(() => this.restoreQueueFocus(), 'page-focus');
     } else {
@@ -499,7 +534,12 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     this.hostDescription.adopted();
     this.announcements.adopted();
   }
-  override disconnectedCallback(): void { this.pendingRemovalFocus = undefined; super.disconnectedCallback(); }
+  override disconnectedCallback(): void {
+    this.pendingRemovalFocus = undefined;
+    this.requestedChange = undefined;
+    this.changeAnnouncement = '';
+    super.disconnectedCallback();
+  }
 
   private get inputTruncated(): boolean {
     return Boolean(publicCollectionTruncation(this, 'items')) || this.inputLossByItems.has(this.effectiveItems);
@@ -548,6 +588,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   private removeItem(item: CanonicalPromptQueueItem): void {
     if (this.disabled) return;
+    this.requestedChange = { id: item.id, reason: 'remove', toIndex: -1 };
     this.emitChange(
       this.effectiveItems
         .filter((candidate) => candidate.id !== item.id)
@@ -567,6 +608,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const [moved] = next.splice(index, 1);
     if (!moved) return;
     next.splice(target, 0, moved);
+    this.requestedChange = { id: item.id, reason: 'reorder', toIndex: target };
     this.emitChange(next.map((candidate) => toPromptQueueItem(candidate)), 'reorder', item.id);
   }
 
@@ -615,7 +657,9 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           ></lr-textarea>`
         : html`<span part="value">${item.value}</span>`}
       ${item.attachments?.length
-        ? html`<ul part="attachments" aria-label=${this.localize('promptInputAttachments')}>
+        ? html`<ul part="attachments" aria-label=${itemCount > 1
+            ? this.localize('promptQueueItemAttachments', undefined, { index: getNumberFormat(this.effectiveLocale).format(index + 1) })
+            : this.localize('promptInputAttachments')}>
             ${item.attachments.slice(0, ATTACHMENT_PREVIEW_SIZE).map((attachment) => html`
               <li part="attachment">${attachment.name || this.localize('attachmentUntitledFile')}</li>
             `)}

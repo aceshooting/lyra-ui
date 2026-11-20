@@ -2,12 +2,12 @@
   "locale": "ro",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:bd0bfcdb1c7a6a1d2717451a8b0547b20a33b8b6a8f8d10e7d4ebaaf34dae184"
+    "keyCount": 1717,
+    "sha256": "sha256:e52c354c046b12748643d7e8c09e20a5f9a201eef9e2f18134985ff38a9cffe5"
   },
   "translator": {
     "status": "complete-original",
@@ -125,6 +125,10 @@
     {
       "messagePath": "commitCardLabel",
       "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

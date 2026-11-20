@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items} รายการใน {ranges} ช่วง',
   noColumns: 'ยังไม่ได้กำหนดค่าคอลัมน์',
   dataGridColumnMenu: 'ตัวเลือกสำหรับ {label}',
-  dataGridCollapseRow: 'ยุบ {row}',
   dataGridPinStart: 'ตรึง {label} ไว้ต้นรายการ',
   dataGridPinEnd: 'ตรึง {label} ไว้ท้ายรายการ',
   dataGridUnpin: 'เลิกตรึง {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'กำลังโหลดแถว…',
   tableLoadingMore: 'กำลังโหลดแถวเพิ่มเติม…',
   tableEditCell: 'แก้ไข {column}',
+  tableEditCellInRow: 'แก้ไข {column} แถว {row}',
   showAllColumns: 'แสดงคอลัมน์ทั้งหมด',
   dataGridColumns: 'คอลัมน์',
   showFewerColumns: 'แสดงคอลัมน์น้อยลง',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'เดือนถัดไป',
   paginationPage: 'หน้า',
   paginationJumpToPage: 'ไปยังหน้า {page}',
+  paginationInvalidPage: 'กรอกหน้าตั้งแต่ 1 ถึง {max}',
+  paginationInvalidPageUnknownTotal: 'กรอกหมายเลขหน้าเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'หน้า {page}',
   trendOf: 'แนวโน้มของ {count} ค่า ค่าล่าสุด {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
   },
-  dataGridExpandRow: 'ขยาย {row}',
+  dataGridToggleRow: 'สลับแถว {row}',
   dataGridFilterColumn: 'กรอง {column}',
   dataGridSelectPage: 'เลือกทุกแถวในหน้านี้',
   tableRowLimit: {

@@ -1598,24 +1598,38 @@ describe("aria-label localization", () => {
     const handle = el.shadowRoot!.querySelector('[part="handle"]')!;
     const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;
     expect(handle.getAttribute("aria-label")).to.equal("Resize panel");
-    expect(toggle.getAttribute("aria-label")).to.equal("Collapse panel");
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle panel");
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
 
     el.collapsed = true;
     await elementUpdated(el);
-    expect(toggle.getAttribute("aria-label")).to.equal("Expand panel");
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle panel");
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
   });
 
-  it("honors a strings override for dockPanelResize/dockPanelCollapse/dockPanelExpand", async () => {
+  it("qualifies the constant collapse-toggle name with the host's accessible name", async () => {
+    const wrapper = (await fixture(
+      html`<div style="position: relative; height: 20rem; display: flex;">
+        <lr-dock-panel collapsible aria-label="Filters"></lr-dock-panel>
+      </div>`
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+    await elementUpdated(el);
+    const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle Filters");
+    el.collapsed = true;
+    await elementUpdated(el);
+    expect(toggle.getAttribute("aria-label")).to.equal("Toggle Filters");
+  });
+
+  it("honors a strings override for dockPanelResize/panelToggle", async () => {
     const wrapper = (await fixture(
       html`<div style="position: relative; height: 20rem; display: flex;">
         <lr-dock-panel
           collapsible
           .strings=${{
             dockPanelResize: "Redimensionner le panneau",
-            dockPanelCollapse: "Réduire le panneau",
-            dockPanelExpand: "Agrandir le panneau",
+            panelToggle: "Basculer le panneau",
           }}
         ></lr-dock-panel>
       </div>`
@@ -1627,11 +1641,11 @@ describe("aria-label localization", () => {
     expect(handle.getAttribute("aria-label")).to.equal(
       "Redimensionner le panneau"
     );
-    expect(toggle.getAttribute("aria-label")).to.equal("Réduire le panneau");
+    expect(toggle.getAttribute("aria-label")).to.equal("Basculer le panneau");
 
     el.collapsed = true;
     await elementUpdated(el);
-    expect(toggle.getAttribute("aria-label")).to.equal("Agrandir le panneau");
+    expect(toggle.getAttribute("aria-label")).to.equal("Basculer le panneau");
   });
 
   it('localizes the handle pixel value while retaining its numeric ARIA value', async () => {

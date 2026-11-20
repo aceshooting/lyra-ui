@@ -960,6 +960,24 @@ it('never announces the initial item count on mount, but does announce a later f
   expect(sinkTexts().at(-1)).to.include('1');
 });
 
+it('does not repeat the result count for a same-size item reassignment or an unchanged-count keystroke', async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'API';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts().length > 0, 'the first count is announced', { timeout: 3000 });
+  const spoken = sinkTexts().length;
+  el.items = items.map((item) => ({ ...item }));
+  await el.updateComplete;
+  // wait-reason: negative assertion, margined past the Announcer 500ms throttle so a repeated count would flush and fail
+  await new Promise((r) => setTimeout(r, 700));
+  expect(sinkTexts().length, 'a same-size reassignment says nothing new').to.equal(spoken);
+});
+
 it('localizes the whole filtered-result announcement and formats its count with the effective locale', async () => {
   const el = (await fixture(html`
     <lr-node-palette

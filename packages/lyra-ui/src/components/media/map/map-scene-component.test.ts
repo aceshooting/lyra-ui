@@ -55,6 +55,9 @@ async function expand(element: SceneElement) {
   const toggle = part<HTMLButtonElement>(element, 'scene-toggle');
   if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
   await element.updateComplete;
+  // One constant visible name in both states; aria-expanded alone reports the state.
+  expect(toggle.textContent?.trim()).to.equal('Scene objects');
+  expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 }
 function rowButtons(element: Element): HTMLButtonElement[] {
   return [...part(element, 'scene-list').querySelectorAll<HTMLButtonElement>('button')];

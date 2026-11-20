@@ -45,7 +45,7 @@ import { renderDataState } from '../../../internal/data-state-renderer.js';
 import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableColumn, type LyraTableEventMap } from './table-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_dataGridToggleRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableEditCellInRow, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -145,6 +145,8 @@ const DEFAULT_PAGE_SIZE = 100;
  * @csspart sort-icon-active - The active direction chevron; also carries sort-icon.
  * @csspart sort-icon-inactive - The muted bidirectional indicator when sortIndicators is all; also carries sort-icon.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
+ *   Its visible name is the constant `tableAdditionalColumns` string; `aria-expanded` carries the
+ *   state and the state-specific action label is its tooltip.
  * @csspart expand-toggle-cell - Each body row's leading chevron-toggle cell, rendered only
  *   when `expandedContent` is set. Its column header uses `header-cell` and a localized name.
  * @csspart row-expand-toggle - The `<button>` inside `expand-toggle-cell`,
@@ -304,8 +306,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
-    dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
-    dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
+    dataGridToggleRow: LYRA_DEFAULT_dataGridToggleRow,
     details: LYRA_DEFAULT_details,
     loadMore: LYRA_DEFAULT_loadMore,
     loading: LYRA_DEFAULT_loading,
@@ -322,6 +323,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
     tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,
     tableEditCell: LYRA_DEFAULT_tableEditCell,
+    tableEditCellInRow: LYRA_DEFAULT_tableEditCellInRow,
     tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
     tableFilterPlaceholder: LYRA_DEFAULT_tableFilterPlaceholder,
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
@@ -676,7 +678,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  exactly like a column's `editLabel`/`cellTitle`. Consumer-owned text: it is used verbatim and
    *  never passed through the localization runtime.
    *
-   *  The default localized name includes the row key. */
+   *  The default is the constant localized `dataGridToggleRow` name (`Toggle row {row}`), where
+   *  `{row}` is the `rowKey` value or else the row's 1-based rendered position; `aria-expanded`
+   *  carries the state, so a callback should not encode it in the name either. */
   @property({ attribute: false }) rowExpandLabel?: (row: T, expanded: boolean) => string;
   private _expandedKeys = new Set<string | number>();
 
@@ -2686,21 +2690,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   }
 
 
-  /** The visible text names the action for the current state, as the reveal button always has.
-   *  Supplying a `tableAdditionalColumns` string opts into one constant visible name, with the
-   *  state-specific labels moved to the tooltip. */
+  /** One constant visible name (`tableAdditionalColumns`) in both states, with `aria-expanded`
+   *  carrying the state; the state-specific action labels are the tooltip. */
   private renderRevealColumnsButton(): TemplateResult {
     const actionLabel = this.priorityColumnsVisible
       ? this.localizedOverride('showFewerColumns', this.columnsHideLabel)
       : this.localizedOverride('showAllColumns', this.revealColumnsLabel);
-    const stableName = this.strings.tableAdditionalColumns !== undefined;
     return html`<button
       part="reveal-columns-button"
       type="button"
       aria-expanded=${this.priorityColumnsVisible ? 'true' : 'false'}
-      title=${stableName && actionLabel ? actionLabel : nothing}
+      title=${actionLabel || nothing}
       @click=${this.toggleColumns}
-    >${stableName ? this.localize('tableAdditionalColumns') : actionLabel}</button>`;
+    >${this.localize('tableAdditionalColumns')}</button>`;
   }
   private toggleColumns = (): void => {
     this.priorityColumnsVisible = !this.priorityColumnsVisible;
@@ -3000,10 +3002,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     }
   }
 
-  private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
+  /** A row's identity for its per-row control names: the caller's `rowKey` value, else the row's
+   *  1-based position among the rendered rows, formatted for the effective locale. */
+  private rowIdentity(key: string | number, entryIndex: number): string {
+    return this.rowKey ? String(key) : getNumberFormat(this.effectiveLocale).format(entryIndex + 1);
+  }
+
+  private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean, rowName?: string): TemplateResult {
     const type = col.editType ?? 'text';
     const value = this.editorValue(row, col);
-    const label = this.callbackLabel(() => col.editLabel?.(row)) ?? this.localize('tableEditCell', undefined, { column: this.columnName(col) });
+    const column = this.columnName(col);
+    const label = this.callbackLabel(() => col.editLabel?.(row)) ?? (rowName === undefined
+      ? this.localize('tableEditCell', undefined, { column })
+      : this.localize('tableEditCellInRow', undefined, { column, row: rowName }));
     const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
     const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     if (type === 'select') {
@@ -3330,6 +3341,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                     (entry) => entry.key,
                     (entry, entryIndex) => {
                       const { row, key, token } = entry;
+                      const rowName = this.rowIdentity(key, entryIndex);
                       const selected = this._selectedKeys.has(key);
                       const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
                       const rowExpanded = canExpandRow && this._expandedKeys.has(key);
@@ -3363,7 +3375,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                                       part="row-expand-toggle"
                                       aria-expanded=${String(rowExpanded)}
                                       aria-label=${this.callbackLabel(() => this.rowExpandLabel?.(row, rowExpanded)) ??
-                                      this.localize(rowExpanded ? 'dataGridCollapseRow' : 'dataGridExpandRow', undefined, { row: String(key) })}
+                                      this.localize('dataGridToggleRow', undefined, { row: rowName })}
                                       @click=${this.onExpandToggleClick}
                                     >
                                       <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
@@ -3415,7 +3427,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               title=${cellTitle || nothing}
                               style=${tintedStyle && Object.keys(tintedStyle).length ? styleMap(tintedStyle) : nothing}
                             >
-                              ${editing ? this.renderCellEditor(row, col, token, alwaysOn) : this.renderCellContent(col, row)}
+                              ${editing ? this.renderCellEditor(row, col, token, alwaysOn, renderedEntries.length > 1 ? rowName : undefined) : this.renderCellContent(col, row)}
                             </td>`;
                           })}
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}

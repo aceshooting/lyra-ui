@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Dhoorkame',
   statusIncomplete: 'Hin xumuramne',
   restore: 'Deebisi',
+  fileTypeAudio: 'Sagalee',
   navigation: 'Sochii',
   attachmentUntitledFile: 'Faayila maqaa hin qabne',
   chartTrendIncreasing: 'dabalaa jira',

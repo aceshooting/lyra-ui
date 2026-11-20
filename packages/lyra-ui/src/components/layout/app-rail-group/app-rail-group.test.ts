@@ -468,21 +468,18 @@ describe('<lr-app-rail-group>', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('honors a strings override for the collapsed group toggle name', async () => {
+  it('keeps one constant name for an unnamed group toggle in both states', async () => {
     const el = (await fixture<LyraAppRailGroup>(html`
-      <lr-app-rail-group
-        collapsible
-        .strings=${{ collapse: 'Replier', expand: 'Déplier' }}
-      ></lr-app-rail-group>
+      <lr-app-rail-group collapsible></lr-app-rail-group>
     `)) as LyraAppRailGroup;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Replier');
+    expect(toggle.getAttribute('aria-label')).to.equal('Navigation group');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     el.collapsed = true;
     await el.updateComplete;
-    expect(
-      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
-    ).to.equal('Déplier');
+    expect(toggle.getAttribute('aria-label')).to.equal('Navigation group');
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
   });
 });
 

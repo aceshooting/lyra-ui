@@ -56,7 +56,7 @@ import type { LyraChatThread, ThreadBucketKey, ThreadListGrouping } from './thre
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -258,7 +258,8 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   `group-label`, and `group-icon` visuals but is `aria-hidden`, inert, and pointer-transparent;
  *   the real row remains the sole `group-toggle`. Style this part for the pinned band itself, e.g.
  *   a shadow or a border under the band.
- * @csspart group-toggle - The controlled group expand/collapse button.
+ * @csspart group-toggle - The controlled group expand/collapse button, named by its visible group
+ *   label while `aria-expanded` reports the state.
  * @csspart group-label - The group label inside `group-toggle`.
  * @csspart group-adornment - Optional rich `renderGroupAdornment` output beside the toggle.
  * @csspart group-icon - The decorative expand/collapse glyph.
@@ -365,8 +366,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     searchThreads: LYRA_DEFAULT_searchThreads,
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     threadGroupArchived: LYRA_DEFAULT_threadGroupArchived,
-    threadGroupCollapse: LYRA_DEFAULT_threadGroupCollapse,
-    threadGroupExpand: LYRA_DEFAULT_threadGroupExpand,
     threadGroupPinned: LYRA_DEFAULT_threadGroupPinned,
     threadGroupPrevious30Days: LYRA_DEFAULT_threadGroupPrevious30Days,
     threadGroupPrevious7Days: LYRA_DEFAULT_threadGroupPrevious7Days,
@@ -1520,13 +1519,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 type="button"
                 part="group-toggle"
                 aria-expanded=${item.collapsed ? 'false' : 'true'}
-                aria-label=${this.localize(
-                  item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse',
-                  undefined,
-                  {
-                    label: item.label,
-                  }
-                )}
                 @click=${() =>
                   this.toggleGroupCollapsed(item, nextCollapsed)}
               >

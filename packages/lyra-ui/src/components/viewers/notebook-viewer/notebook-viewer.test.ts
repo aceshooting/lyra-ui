@@ -1450,17 +1450,17 @@ describe('output collapsing', () => {
       nbformat: 4, nbformat_minor: 5,
       cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
     };
-    const el = (await fixture(html`<lr-notebook-viewer .strings=${{ notebookViewerShowAllOutput: 'Show lines', notebookViewerCollapseOutput: 'Hide lines' }} .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const el = (await fixture(html`<lr-notebook-viewer .strings=${{ notebookViewerFullOutput: 'All lines' }} .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
     const toggle = rowRoot(el).querySelector('[part="output-toggle"]') as HTMLButtonElement;
     expect((toggle) != null).to.equal(true);
-    expect(toggle.textContent?.trim()).to.equal('Show lines');
+    expect(toggle.textContent?.trim()).to.equal('All lines');
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
     toggle.click();
     await el.updateComplete;
     expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).to.include('line 59');
     const expanded = rowRoot(el).querySelector('[part="output-toggle"]')!;
-    expect(expanded.textContent?.trim()).to.equal('Hide lines');
+    expect(expanded.textContent?.trim()).to.equal('All lines');
     expect(expanded.getAttribute('aria-expanded')).to.equal('true');
   });
 

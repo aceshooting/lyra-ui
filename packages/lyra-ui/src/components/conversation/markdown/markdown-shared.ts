@@ -1419,13 +1419,19 @@ export function markdownHasTableWrappers(root: ParentNode | null): boolean {
   return root?.nodeType === 1 && (root as Element).matches(MARKDOWN_TABLE_WRAPPER_SELECTOR) || root?.querySelector(MARKDOWN_TABLE_WRAPPER_SELECTOR) != null;
 }
 
-/** Names only the exact styled wrapper whose group role allows an accessible name. */
-export function labelMarkdownTableWrappers(root: ParentNode | null, label: string): void {
+/** Names only the exact styled wrapper whose group role allows an accessible name. A function
+ *  label receives each wrapper's 1-based position and the wrapper count under `root`, so several
+ *  tables can carry their own identity. */
+export function labelMarkdownTableWrappers(
+  root: ParentNode | null,
+  label: string | ((index: number, total: number) => string),
+): void {
   if (!root) return;
   const wrappers = [...(root?.nodeType === 1 && (root as Element).matches(MARKDOWN_TABLE_WRAPPER_SELECTOR) ? [root as Element] : []), ...root.querySelectorAll<HTMLElement>(MARKDOWN_TABLE_WRAPPER_SELECTOR)];
-  for (const wrapper of wrappers) {
-    if (wrapper.getAttribute('aria-label') !== label) wrapper.setAttribute('aria-label', label);
-  }
+  wrappers.forEach((wrapper, index) => {
+    const name = typeof label === 'string' ? label : label(index + 1, wrappers.length);
+    if (wrapper.getAttribute('aria-label') !== name) wrapper.setAttribute('aria-label', name);
+  });
 }
 
 export interface MarkdownContentOptions {

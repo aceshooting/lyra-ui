@@ -328,6 +328,8 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     if (!timerWindow) return;
     const id = timerWindow.setTimeout(() => {
       if (this.timer !== id || this.timerWindow !== timerWindow) return;
+      // A hidden document advances nothing; playback stays on its frame until the page is visible.
+      if (this.ownerDocument.visibilityState === 'hidden') { this.resumeWhenVisible(id); return; }
       this.tick();
       if (this.playing && this.timer === id && this.timerWindow === timerWindow) {
         this.scheduleTick();
@@ -337,7 +339,25 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     this.timerWindow = timerWindow;
   }
 
+  private releaseVisibilityResume?: () => void;
+
+  private resumeWhenVisible(id: number): void {
+    this.releaseVisibilityResume?.();
+    const doc = this.ownerDocument;
+    const onVisibility = (): void => {
+      if (doc.visibilityState === 'hidden') return;
+      this.releaseVisibilityResume?.();
+      if (this.timer === id && this._playing && !this.boundCommands) this.scheduleTick();
+    };
+    doc.addEventListener('visibilitychange', onVisibility);
+    this.releaseVisibilityResume = () => {
+      doc.removeEventListener('visibilitychange', onVisibility);
+      this.releaseVisibilityResume = undefined;
+    };
+  }
+
   private clearTimer(): void {
+    this.releaseVisibilityResume?.();
     if (this.timer !== undefined) this.timerWindow?.clearTimeout(this.timer);
     this.timer = undefined;
     this.timerWindow = undefined;

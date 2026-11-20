@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: 'Àwọn ohun {items} nínú ààlà {ranges}',
   noColumns: 'A kò ṣètò ọ̀wọ̀n kankan',
   dataGridColumnMenu: 'Àwọn àṣàyàn fún {label}',
-  dataGridCollapseRow: 'Kó {row} jọ',
   dataGridPinStart: 'So {label} mọ́ ìbẹ̀rẹ̀',
   dataGridPinEnd: 'So {label} mọ́ òpin',
   dataGridUnpin: 'Yọ {label} kúrò ní ibi tí a so mọ́',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'Ó ń gbé àwọn ìlà wọlé',
   tableLoadingMore: 'Ó ń gbé àwọn ìlà sí i wọlé',
   tableEditCell: 'Ṣàtúnṣe {column}',
+  tableEditCellInRow: 'Ṣàtúnṣe {column}, ìlà {row}',
   showAllColumns: 'Fi gbogbo àwọn ọ̀wọ̀n hàn',
   dataGridColumns: 'Àwọn ọ̀wọ̀n',
   showFewerColumns: 'Fi àwọn ọ̀wọ̀n díẹ̀ hàn',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Oṣù tó ń bọ̀',
   paginationPage: 'Ojúewé',
   paginationJumpToPage: 'Lọ sí ojúewé {page}',
+  paginationInvalidPage: 'Tẹ ojúewé láti 1 sí {max}.',
+  paginationInvalidPageUnknownTotal: 'Tẹ nọ́mbà ojúewé odidi tó jẹ́ 1 tàbí jù bẹ́ẹ̀ lọ.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Ojúewé {page}',
   trendOf: 'Àṣà ìyípadà iye {count}, èyí tó kẹ́yìn {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'Awọn ori ila {count} akọkọ nikan ni o han.',
   },
-  dataGridExpandRow: 'Fẹ {row} sí i',
+  dataGridToggleRow: 'Fi hàn/Fi ìlà {row} pamọ́',
   dataGridFilterColumn: 'Ṣàlẹ̀mọ́ {column}',
   dataGridSelectPage: 'Yan gbogbo àwọn ìlà lójú ìwé yìí',
   tableRowLimit: {

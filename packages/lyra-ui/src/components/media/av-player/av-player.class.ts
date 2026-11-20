@@ -1,5 +1,6 @@
 import { AvCueSourceController } from './av-player-cue-source-controller.js';
 import type { LyraAvCueSource } from './av-cue-source.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { SourceWindowSlot } from '../../../internal/source-window-controller.js';
 export type { LyraAvCueSource, LyraAvActiveCue, LyraAvCueSearch } from './av-cue-source.js';
 import { AvCueIndex } from './av-cue-index.js';
@@ -1526,7 +1527,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   };
 
   private onTimelineKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     if (!(this.duration > 0)) return;
     const delta = event.shiftKey ? 15 : 5;
     const page = Math.max(15, this.duration / 10);

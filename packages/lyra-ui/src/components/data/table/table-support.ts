@@ -337,14 +337,12 @@ interface TableColumnCommon<T> {
    *  `value` -- match one entry of `editOptions`, or none of them renders selected. */
   editValue?: (row: T) => string | number;
   /** Accessible name (`aria-label`) for this row's inline editor, read once per row exactly like
-   *  `editValue`/`cellTitle`. When omitted, every editor in the column shares the same interpolated
-   *  `tableEditCell` name (`Edit {column}`) -- indistinguishable from its column siblings, which is
-   *  harmless for `editTrigger: 'double-click'` (only one editor is ever open at a time) but not for
-   *  `editTrigger: 'always'`, where each row's editor is a permanent, individually focusable Tab
-   *  stop: an unset `editLabel` there leaves a keyboard or screen-reader user with no way to tell
-   *  which row a given editor belongs to (WCAG 2.4.6, 1.3.1). Return the row's own full name (e.g.
-   *  combining the column label with a row identifier) -- this is consumer-owned text like
-   *  `cellTitle`/`editValue`, not passed through the table's own localization. */
+   *  `editValue`/`cellTitle`. When omitted, the editor takes the localized `tableEditCellInRow`
+   *  name (`Edit {column}, row {row}`), where `{row}` is the `rowKey` value or else the row's
+   *  1-based rendered position; a table rendering a single row keeps `tableEditCell`
+   *  (`Edit {column}`). Return the row's own full name for a more descriptive label -- this is
+   *  consumer-owned text like `cellTitle`/`editValue`, not passed through the table's own
+   *  localization. */
   editLabel?: (row: T) => string;
   /** Native editor type used when `editTrigger` is set. `'select'` renders a native `<select>`
    *  populated from `editOptions`, one `<option>` per entry in order; a `'select'` column with no

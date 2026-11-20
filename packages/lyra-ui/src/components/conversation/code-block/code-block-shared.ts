@@ -622,7 +622,6 @@ export interface LyraCodeBlockToggleDetail {
 interface CodeBlockHeaderOptions {
   collapsible: boolean;
   collapsed: boolean;
-  stableToggleName: boolean;
   /** `id` of `[part="body"]`, for the toggle's `aria-controls`. */
   bodyId: string;
   filename: string;
@@ -667,7 +666,7 @@ function renderCodeBlockHeader(
                 type="button"
                 aria-expanded=${options.collapsed ? 'false' : 'true'}
                 aria-controls=${options.bodyId}
-                aria-label=${options.localize(options.stableToggleName ? 'codeBlockToggle' : options.collapsed ? 'expandCode' : 'collapseCode')}
+                aria-label=${options.localize('codeBlockToggle')}
                 @click=${options.onToggle}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -713,7 +712,6 @@ export interface CodeBlockShellOptions {
   hasHeaderActions: boolean;
   collapsible: boolean;
   collapsed: boolean;
-  stableToggleName: boolean;
   justCopied: boolean;
   copyFailed: boolean;
   bodyId: string;

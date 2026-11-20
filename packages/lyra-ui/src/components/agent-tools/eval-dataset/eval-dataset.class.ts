@@ -22,11 +22,11 @@ import type { LyraExportFormatOption, LyraExportButtonEventMap } from '../../uti
 import { styles } from './eval-dataset.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';
-import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { AnnouncementSinkController, Announcer } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_tagFacetLimit, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -115,7 +115,9 @@ export interface LyraEvalDatasetEventMap {
  *
  * Tag facets show at most 500 locale-sorted distinct tags, keeping selected tags visible and
  * filling the remaining places with the earliest tags. A localized note counts omitted tags.
- * Search and filtering continue to use the complete admitted dataset.
+ * Search and filtering continue to use the complete admitted dataset. After a search or tag-filter
+ * change the matching count (the provider's sourceTotal once it settles, with dataSource) is
+ * announced politely, coalesced while typing.
  *
  * With dataSource, the provider owns global text filtering, OR-tag filtering and server sorting.
  * Zero-based sourcePage and sourcePageSize (1..500) address the complete source; sourceTotal is
@@ -189,6 +191,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
     tagFacetLimit: LYRA_DEFAULT_tagFacetLimit,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -199,6 +202,11 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
   private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  /** Coalesces the result count spoken while the search text or tag filter changes. */
+  private readonly resultAnnouncer = new Announcer({
+    onFlush: (text) => { this.limitAnnouncements.announcePolite(text); },
+  });
+  private resultCountPending = false;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
   private examplesTruncated = false;
@@ -206,11 +214,21 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.sourceMode && this.selectedId !== null) this.clearSelection();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.resultAnnouncer.setTimerHost(ownerWindow);
+  }
+
+  override disconnectedCallback(): void {
+    this.resultAnnouncer.cancel();
+    this.resultCountPending = false;
+    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) this.resultAnnouncer.setTimerHost(ownerWindow);
     this.sourcePages.adopted();
   }
 
@@ -231,8 +249,23 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         count: getNumberFormat(this.effectiveLocale).format(truncation.retained),
       }));
     }
+    if (this.limitAnnouncementInitialized && (changed.has('searchText') || changed.has('activeTags'))) this.resultCountPending = true;
+    if (this.resultCountPending) this.announceResultCount();
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.examplesTruncated;
+  }
+
+  /** Speaks how many examples the current search and tag filter match, once that count is known
+   *  (immediately for `examples`, after the provider settles for a `dataSource`). */
+  private announceResultCount(): void {
+    if (this.sourceMode && this.sourcePages.state.pending) return;
+    this.resultCountPending = false;
+    const count = this.sourceMode ? this.sourceTotal : this.visibleExamples.length;
+    if (count === null) return;
+    this.resultAnnouncer.announce(this.localize('viewerSearchMatchCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(count),
+      pluralCount: count,
+    }));
   }
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-import-request',

@@ -873,3 +873,12 @@ it('draws the open-button and toggle focus rings inside the chunk row', async ()
     expect(parseFloat(getComputedStyle(control).outlineOffset), part).to.be.lessThan(0);
   }
 });
+
+it('isolates only the caller title inside the localized page suffix under RTL', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector dir="rtl" .chunks=${[chunks[0]!]}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="title"]') !== null);
+  const title = el.shadowRoot!.querySelector('[part="title"]')!;
+  const node = title.querySelector('bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:curie-bio.pdf');
+  expect(title.textContent!.includes('3')).to.equal(true);
+});

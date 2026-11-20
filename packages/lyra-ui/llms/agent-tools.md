@@ -884,8 +884,6 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 
 The internal-frame disclosure keeps the same count-based name while `aria-expanded` reports
 its state. Customize that name with `stackTraceInternalFrames` and its `{count}` placeholder.
-Existing per-instance `stackTraceShowFrames` and `stackTraceHideFrames` overrides take effect
-when a stable per-instance label is absent.
 
 Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
@@ -2501,7 +2499,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 **Toggle request and colours:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the file list folds; preventing it keeps the list as is. File rows, the copy button and the per-file counts follow `--lr-color-text`, `--lr-color-success` and `--lr-color-danger`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
-`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
+`deletions`, `files-toggle` (its visible name is the constant `commitCardChangedFiles` count,
+`{count} changed files`, while `aria-expanded` reports the state), `file` (carries `data-status`), `file-path`, `file-status`,
 `file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`),
 `limit` (shown when the expanded file list exceeds the render cap), and `actions`.
 
@@ -2644,10 +2643,10 @@ and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
-repeated row controls remain distinguishable. The name follows the action (`testResultsExpandTest`
-/ `testResultsCollapseTest`) while `aria-expanded` carries the state, and the visible label reads
-`expand`/`collapse`; override the visible action and its contextual name together so the visible
-words stay inside the accessible name. Provider rows of one suite share a single named list.
+repeated row controls remain distinguishable. The name is the constant `testResultsToggleTest`
+(`Details: {name}`) in both states while `aria-expanded` carries the state, and the visible label
+reads `details`; override the visible word and its contextual name together so the visible words
+stay inside the accessible name. Provider rows of one suite share a single named list.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.
@@ -3337,6 +3336,8 @@ The default entry registers the search field's `lr-input` the first time `search
 `updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
+After a search or tag-filter change, the matching count (`viewerSearchMatchCount`; the provider's
+`sourceTotal` once it settles with `dataSource`) is announced politely, coalesced while typing.
 
 **Properties:**
 
@@ -3926,7 +3927,8 @@ selection and dialog state before another activation can use it; a request that 
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
 stale request. An open request with unchanged arguments keeps its draft and pending decision across
 new arrays. A resolved decision is announced, and focus lost with it moves to the next pending row
-(else the `count` part). Rows are keyed by request id.
+(else the `count` part). Newly arriving pending requests (after the first render) announce the
+updated `approvalQueuePendingCount` politely. Rows are keyed by request id.
 
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
@@ -4203,9 +4205,8 @@ is required.
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.
-The remove button uses `promptStudioRemoveMessage` for its name and describes the message number
-with `promptStudioRemoveMessageNumbered`. Set only `.strings.promptStudioRemoveMessageNumbered`
-to use the numbered message as its name.
+The remove button is named `promptStudioRemoveMessageNumbered` (`Remove message {index}`) while
+several messages exist and `promptStudioRemoveMessage` for a single message.
 
 **Slots:** none. **Optional peer deps:** none.
 
@@ -5103,6 +5104,9 @@ Import `@aceshooting/lyra-ui/components/lr-change-review.js`. Experimental multi
 already-separated hunks. Bind `.files` to `ChangeReviewFile[]`: `{ id, path, previousPath?, hunks }`,
 where each hunk is `{ id, label?, before, after, decision?: 'pending' | 'keep' | 'discard' }`.
 Files and per-file hunks need nonblank, unique ids; malformed duplicates normalize first-wins.
+An unlabeled hunk shows `changeReviewHunk` (`Change {index}`); while several files render, its
+region and keep/discard names use `changeReviewHunkInFile` (`Change {index} in {file}`) so they
+stay distinguishable across files.
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 
@@ -5353,7 +5357,8 @@ that the host has already localized. Assign a new `.connectors` array after host
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
 keyed by id. `disabled` gates every action. Host `aria-label` names the internal group. An acted-on
 connector's status changes are announced, and focus on its vanished action waits on `status` until
-the next action appears.
+the next action appears. A host-driven loss on any other existing connector (`connected` to
+`disconnected`, or into `error`) is announced politely with its name (`connectorManagerStatusChanged`).
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string

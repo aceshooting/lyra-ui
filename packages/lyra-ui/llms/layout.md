@@ -727,8 +727,13 @@ panel space for a persistent sidebar/toolbar while the default backdrop still co
 viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
 `size="s"` for tighter header/body padding.
 
-The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
-panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
+The collapse-button `aria-label` is one constant name in both states, with `aria-expanded`
+carrying the state: `appRailItemToggle` (`'Toggle {label}'`) with the widget's `aria-label`,
+`label` or slotted label text, or `panelToggle` (`'Toggle panel'`) for an unlabeled widget. The
+fullscreen button is qualified the same way through `widgetExpandToFullscreenWithLabel` (`'Expand
+{label} to fullscreen'`) and `widgetExitFullscreenWithLabel` (`'Exit fullscreen: {label}'`),
+falling back to `widgetExpandToFullscreen`/`widgetExitFullscreen` without a label, so several
+widgets on one dashboard expose distinguishable controls.
 
 **Known gotchas:**
 
@@ -744,11 +749,6 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
   `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
-- prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
-  own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
-  registered against those keys specifically to target `lr-widget`'s collapse button should move
-  to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
-  itself is unaffected.
 
 **Additional API surface:**
 
@@ -2789,9 +2789,9 @@ default 24px, at least `--lr-icon-button-size` for coarse or hover-less pointers
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse` or `appRailExpand` key) and `collapse-icon` (the decorative glyph wrapper),
+constant `toggleNavigation` key in both states) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from `appRailUnpin` while pinned and `appRailPin` otherwise, and it
+while pinned and `"false"` otherwise, the constant name comes from `appRailPin` in both states, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -3069,9 +3069,8 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
 
-Use `openNavigation` and `closeNavigation` for the mobile toggle and `appRailItemExpand` and
-`appRailItemCollapse` for an item disclosure. Set `.strings.appRailItemToggle` on an item to
-use one name for both disclosure states.
+The mobile toggle takes the constant `toggleNavigation` name and an item disclosure takes
+`appRailItemToggle` (`Toggle {label}`) in both states; `aria-expanded` carries the state.
 
 Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
 
@@ -3265,8 +3264,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 ### `lr-app-rail-group`
 
-A group with no heading uses the localized `expand` and `collapse` actions. Set
-`.strings.appRailGroupToggle` on the group to use one name in both states.
+A collapsible group with no heading names its toggle with the constant `appRailGroupToggle`
+string (`Navigation group`) in both states; `aria-expanded` carries the state.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can
@@ -4072,8 +4071,9 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle's accessible name is the action it performs (`dockPanelCollapse` while expanded,
-`dockPanelExpand` while collapsed) and `aria-expanded` reports the state. A slotted glyph keeps its orientation.
+icons). The toggle's accessible name is constant in both states and `aria-expanded` reports the state:
+`appRailItemToggle` (`Toggle {label}`) with the host's own accessible name, or `panelToggle`
+(`Toggle panel`) when the host has none. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
@@ -5716,7 +5716,8 @@ trapping, stacking, reconnect suspension, and focus return. Modal inerting is sc
 drawer root, so header/main/footer siblings inside the Page become inert without inerting the
 drawer itself. Every custom `navigation-toggle` and the composed descendant that actually receives
 focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
-a localized label when unnamed; any available assigned control opens the same Page-owned drawer,
+the constant localized `toggleNavigation` label (`Toggle navigation`) when unnamed, the same name
+the built-in toggle keeps in both states; any available assigned control opens the same Page-owned drawer,
 while disabled, `aria-disabled`, hidden, and inert controls remain non-actions. The component
 supplies the real drawer to the shared controls owner; current browsers normalize that inward
 private relationship to the public Page host. Generated whole-value state remains authoritative

@@ -27,7 +27,7 @@ import { RovingListController } from '../../../internal/roving-list-controller.j
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
@@ -98,6 +98,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     evaluationDashboardMetricUnavailable: LYRA_DEFAULT_evaluationDashboardMetricUnavailable,
     evaluationDashboardNoRuns: LYRA_DEFAULT_evaluationDashboardNoRuns,
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
+    noData: LYRA_DEFAULT_noData,
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
@@ -198,7 +199,9 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     return agentStatusLabel(status) ?? agentStatusText(this.localize.bind(this), agentStatusKind(status));
   }
   private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string {
-    const safe = Number.isFinite(value) ? value : 0;
+    // An unmeasured value is no data, never a measured zero.
+    if (!Number.isFinite(value)) return this.localize('noData');
+    const safe = value;
     const tiny = safe !== 0 && Math.abs(safe) < 0.01;
     const digits = (fractionDigits: number): Intl.NumberFormatOptions =>
       tiny ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: fractionDigits };

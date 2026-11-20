@@ -18,7 +18,7 @@ import { finiteCount, finiteInteger, finiteNumber, finiteRange, minMax } from '.
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from '../../../internal/pointer-capture.js';
 import { watchDevicePixelRatio } from '../../../internal/owned-observer.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
@@ -4090,7 +4090,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private selectionKeyDown(event: KeyboardEvent, pos: CellPos | null): boolean {
-    if (!this.multiple || event.isComposing || event.keyCode === 229 || event.altKey) return false;
+    if (!this.multiple || isHandledOrComposingKey(event) || event.altKey) return false;
     if (event.key === 'Escape' && this.selectionGesture && !shouldIgnoreNavigationKey(event)) {
       event.preventDefault();
       this.cancelSelectionGesture();
@@ -4459,6 +4459,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.selectionKeyDown(e, this.focusedCell)) return;
     if (ignoresGridKey(e)) return;
+    this.navigateGridKey(e);
+  };
+
+  /** Moves the focused cell for a grid key the caller already admitted (and may have claimed). */
+  private navigateGridKey(e: KeyboardEvent): void {
     const previous = this.focusedCell;
     const edge = this.edgeCell(e);
     if (edge) {
@@ -4481,7 +4486,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         proposedKeys?.has(this.accessibleCellKey(this.focusedCell))
       );
     }
-  };
+  }
 
   private onMatrixKeyDown(e: KeyboardEvent): void {
     const rows = this.matrixRowLabels.length;
@@ -4678,7 +4683,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!GRID_KEYS.has(e.key) || ignoresGridKey(e)) return;
     e.preventDefault();
     this.focusedCell = pos;
-    this.onKeyDown(e);
+    this.navigateGridKey(e);
     this.focusAccessibleCell(this.focusedCell);
   };
 

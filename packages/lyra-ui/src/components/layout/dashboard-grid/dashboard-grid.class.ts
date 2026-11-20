@@ -25,6 +25,7 @@ import {
   Announcer,
   AnnouncementSinkController,
 } from '../../../internal/announcer.js';
+import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   isArrowKey,
@@ -745,7 +746,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   private onCellKeyDown(e: KeyboardEvent, cell: LyraDashboardCell): void {
     const owner = e.currentTarget as HTMLElement;
-    if (e.composedPath()[0] !== owner) return;
+    if (e.composedPath()[0] !== owner || isHandledOrComposingKey(e)) return;
     const isMod = e.ctrlKey || e.metaKey;
     if (isMod && isArrowKey(e.key)) {
       const handled = e.shiftKey
@@ -754,7 +755,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       if (handled) e.preventDefault();
       return;
     }
-    if (e.altKey || isMod || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+    if (e.altKey || isMod || e.shiftKey) return;
     const cells = this.sortedLayout;
     const index = cells.findIndex((c) => c.cellId === cell.cellId);
     if (index < 0) return;

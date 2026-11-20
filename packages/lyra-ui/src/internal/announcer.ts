@@ -222,14 +222,16 @@ export class AnnouncementSinkController implements ReactiveController {
   /** A host's adoptedCallback calls this when it moves to another document. */
   adopted(): void { this.syncSinks(); }
 
-  /** First observation is silent; later changed states produce one announcement. */
+  /** First observation is silent; later changed states produce one announcement. With `stateOnly`,
+   *  a changed `message` under an unchanged `state` (a running count) does not re-announce. */
   transition(
     channel: string,
     state: string,
     message = '',
     politeness?: AnnouncementPoliteness,
+    stateOnly = false,
   ): void {
-    const fingerprint = `${state}\0${message}`;
+    const fingerprint = stateOnly ? state : `${state}\0${message}`;
     const previous = this.states.get(channel);
     this.states.set(channel, fingerprint);
     if (previous === undefined || previous === fingerprint) return;

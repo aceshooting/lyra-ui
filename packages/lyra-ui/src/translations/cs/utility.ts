@@ -22,8 +22,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'objekt',
   jsonValue: 'hodnota',
   jsonCopyLabel: 'Kopírovat {label}',
-  jsonExpandLabel: 'Rozbalit {label}',
-  jsonCollapseLabel: 'Sbalit {label}',
+  jsonToggleLabel: 'Přepnout {label}',
   jsonItemCount: {
     few: '{count} položky',
     many: '{count} položky',

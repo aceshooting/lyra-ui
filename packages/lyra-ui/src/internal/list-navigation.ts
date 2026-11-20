@@ -13,9 +13,27 @@ export interface ListMoveOptions {
   backwardFromMissing?: 'first' | 'last';
 }
 
-/** Navigation yields to composition and to browser or system shortcuts. */
+/** Whether a keydown belongs to an input method composition (or carries the legacy 229 marker). */
+export function isComposingKey(event: KeyboardEvent): boolean {
+  return event.isComposing || event.keyCode === 229;
+}
+
+/** Whether a keydown was already claimed by an earlier listener or belongs to a composition. Text
+ *  editing keys use this where Alt, Ctrl or Meta are part of the key's own meaning. */
+export function isHandledOrComposingKey(event: KeyboardEvent): boolean {
+  return event.defaultPrevented || isComposingKey(event);
+}
+
+/** Navigation yields to a key an earlier listener already claimed (`preventDefault()`), to
+ *  composition, and to browser or system shortcuts. */
 export function shouldIgnoreNavigationKey(event: KeyboardEvent): boolean {
-  return event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey;
+  return event.defaultPrevented || isModifiedOrComposingKey(event);
+}
+
+/** Composition or an Alt/Ctrl/Meta chord, without the already-handled check: for key helpers a
+ *  handler calls after it has claimed the key itself. */
+export function isModifiedOrComposingKey(event: KeyboardEvent): boolean {
+  return isComposingKey(event) || event.altKey || event.ctrlKey || event.metaKey;
 }
 
 /** Whether a keydown is the browser's auto-repeat of a held key. */
@@ -31,7 +49,9 @@ export function shouldIgnoreActivationKey(event: KeyboardEvent): boolean {
 
 /** Resolves a list's next index without owning its focus, selection, or activation policy. */
 export function resolveListMove(event: KeyboardEvent | string, options: ListMoveOptions): number | null {
-  if (typeof event !== 'string' && shouldIgnoreNavigationKey(event)) return null;
+  // The caller owns the already-handled check: many claim the key (`preventDefault()`) before
+  // resolving where it moves.
+  if (typeof event !== 'string' && isModifiedOrComposingKey(event)) return null;
   const key = typeof event === 'string' ? event : event.key;
   const { count, current, orientation, direction = 'ltr', wrap = true } = options;
   if (!Number.isSafeInteger(count) || count <= 0) return null;

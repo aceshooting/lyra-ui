@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Imekataliwa',
   statusIncomplete: 'Haijakamilika',
   restore: 'Rejesha',
+  fileTypeAudio: 'Sauti',
   navigation: 'Urambazaji',
   attachmentUntitledFile: 'Faili lisilo na jina',
   chartTrendIncreasing: 'inaongezeka',

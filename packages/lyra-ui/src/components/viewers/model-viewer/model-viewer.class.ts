@@ -1,4 +1,5 @@
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -519,7 +520,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   }
 
   private keydown(event: KeyboardEvent): void {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.currentTarget !== event.target || this.closest('[inert]')) return;
+    if (shouldIgnoreNavigationKey(event) || event.currentTarget !== event.target || this.closest('[inert]')) return;
     const action = Object.hasOwn(KEY_ACTIONS, event.key) ? KEY_ACTIONS[event.key] : undefined;
     if (!action || this.status !== 'ready') return;
     event.preventDefault();

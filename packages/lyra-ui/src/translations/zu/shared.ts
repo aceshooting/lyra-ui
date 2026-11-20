@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Yenqatshiwe',
   statusIncomplete: 'Akuqedwanga',
   restore: 'Buyisela',
+  fileTypeAudio: 'Umsindo',
   navigation: 'Ukuzulazula',
   attachmentUntitledFile: 'Ifayela elingenasihloko',
   chartTrendIncreasing: 'iyakhula',

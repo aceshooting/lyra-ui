@@ -20,7 +20,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_commitCardChangedFiles, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardLabel } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -106,7 +106,8 @@ export interface LyraCommitCardEventMap {
  * @csspart diffstat - The aggregate `+N -M` summary.
  * @csspart additions - The additions count.
  * @csspart deletions - The deletions count.
- * @csspart files-toggle - The file-list fold toggle.
+ * @csspart files-toggle - The file-list fold toggle, named by the constant `commitCardChangedFiles`
+ *   count while `aria-expanded` reports the state.
  * @csspart file - A file row; carries `data-status`.
  * @csspart file-path - A file row's path text.
  * @csspart file-status - The one-letter git-status badge inside `[part="file-path"]`, present only
@@ -134,12 +135,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    commitCardChangedFiles: LYRA_DEFAULT_commitCardChangedFiles,
     commitCardCopyHash: LYRA_DEFAULT_commitCardCopyHash,
     commitCardDiffSummary: LYRA_DEFAULT_commitCardDiffSummary,
     commitCardFilesLimit: LYRA_DEFAULT_commitCardFilesLimit,
-    commitCardHideFiles: LYRA_DEFAULT_commitCardHideFiles,
     commitCardLabel: LYRA_DEFAULT_commitCardLabel,
-    commitCardShowFiles: LYRA_DEFAULT_commitCardShowFiles,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
@@ -374,9 +374,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 aria-expanded=${this.filesExpanded ? 'true' : 'false'}
                 @click=${this.toggleFiles}
               >
-                ${this.filesExpanded
-                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatLocaleNumber(files.length), pluralCount: files.length })
-                  : this.localize('commitCardShowFiles', undefined, { count: this.formatLocaleNumber(files.length), pluralCount: files.length })}
+                ${this.localize('commitCardChangedFiles', undefined, { count: this.formatLocaleNumber(files.length), pluralCount: files.length })}
               </button>
               ${this.filesExpanded
                 ? files.slice(0, MAX_RENDERED_FILES).map((f) => {

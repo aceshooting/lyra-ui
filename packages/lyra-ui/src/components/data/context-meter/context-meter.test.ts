@@ -129,7 +129,7 @@ it('clamps the aria-label summary to total, not the raw segment sum, when segmen
   expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('100 of 100 used');
 });
 
-it('normalizes a negative or NaN segment value once for geometry and semantic text', async () => {
+it('normalizes a negative segment to zero and shows a NaN segment as no data, with zero geometry for both', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: -10 },
@@ -142,10 +142,10 @@ it('normalizes a negative or NaN segment value once for geometry and semantic te
     const basis = parseFloat((s as HTMLElement).style.flexBasis);
     expect(basis).to.equal(0);
   });
-  expect([...segments].map((segment) => segment.getAttribute('title'))).to.deep.equal(['a: 0', 'b: 0']);
+  expect([...segments].map((segment) => segment.getAttribute('title'))).to.deep.equal(['a: 0', 'b: No data']);
   expect(
     [...el.shadowRoot!.querySelectorAll('[part="segment-item"]')].map((item) => item.textContent?.trim()),
-  ).to.deep.equal(['a: 0', 'b: 0']);
+  ).to.deep.equal(['a: 0', 'b: No data']);
 });
 
 it('computes a "used of total" aria-label summary from the segment sum, ignoring negative entries', async () => {
@@ -984,4 +984,10 @@ it('canonicalizes the selection once across renders until the selection or segme
   el.selectedIndices = [2];
   await el.updateComplete;
   expect(calls).to.equal(1);
+});
+
+it('isolates caller legend labels under an RTL host', async () => {
+  const el = (await fixture(html`<lr-context-meter dir="rtl" with-legend total="100" .segments=${[{ label: 'C++', value: 40 }]}></lr-context-meter>`)) as LyraContextMeter;
+  const node = el.shadowRoot!.querySelector('[part="legend-label"] > bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:C++');
 });

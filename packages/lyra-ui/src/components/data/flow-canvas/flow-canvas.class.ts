@@ -4,7 +4,7 @@ import { layoutScale } from '../../../internal/layout-scale.js';
 import { CollectionSourceTracker, SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { HostChildrenObserver, OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import type { LyraGraphSource, LyraGraphScene, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraGraphOverview, LyraSourceRecord, LyraSourceBounds } from '../../../data-sources.js';
-import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { SourceRequestController, sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
@@ -2509,7 +2509,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onItemKeyDown(e: KeyboardEvent, index: number, activate: (additive: boolean) => void): void {
-    if (e.altKey || e.isComposing || e.keyCode === 229) return;
+    if (e.altKey || isHandledOrComposingKey(e)) return;
     const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (!this.sourceMode && this.nodesDraggable && !this.readonly && (e.ctrlKey || e.metaKey) && arrowKeys.includes(e.key)) {
       const item = this.rovingItems()[index];

@@ -44,10 +44,10 @@ it('chooses the file wording from the numeric file count', async () => {
   const summary = () => card.shadowRoot!.querySelector('[part="diffstat"] .sr-only')?.textContent;
   const toggle = () => card.shadowRoot!.querySelector('[part="files-toggle"]')?.textContent?.trim();
   expect(summary()).to.equal('+3 -2 in 1 file');
-  expect(toggle()).to.equal('Show 1 changed file');
+  expect(toggle()).to.equal('1 changed file');
   card.filesExpanded = true;
   await card.updateComplete;
-  expect(toggle()).to.equal('Hide 1 changed file');
+  expect(toggle()).to.equal('1 changed file');
   card.files = [
     { path: 'one.ts', additions: 3, deletions: 2, status: 'modified' },
     { path: 'two.ts', additions: 1, deletions: 0, status: 'added' },
@@ -55,8 +55,8 @@ it('chooses the file wording from the numeric file count', async () => {
   card.filesExpanded = false;
   await card.updateComplete;
   expect(summary()).to.equal('+4 -2 in 2 files');
-  expect(toggle()).to.equal('Show 2 changed files');
-  card.strings = { commitCardShowFiles: { one: 'one entry', other: 'several entries' } };
+  expect(toggle()).to.equal('2 changed files');
+  card.strings = { commitCardChangedFiles: { one: 'one entry', other: 'several entries' } };
   await card.updateComplete;
   expect(toggle()).to.equal('several entries');
 });

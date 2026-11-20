@@ -97,7 +97,8 @@ control — that replaces the built-in status text, retry button, and live-regio
 entirely; unset, `status="failed"` renders the built-in status text and retry button)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
-`collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
+`collapse-button` (only rendered when `collapsible`; named by the constant `toggleMessage` string,
+`Toggle message`, while `aria-expanded` reports the state), `body` (hidden while `collapsed`),
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the

@@ -37,7 +37,7 @@ import { styles } from './markdown.styles.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionIndexed, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_codeRegionWithLanguageIndexed, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyCodeIndexed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -248,10 +248,13 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @csspart task-item-checked - Additional state token on a completed task item.
  * @csspart task-checkbox - The disabled checkbox of a task list item.
  * @csspart table-wrapper - The keyboard-focusable inline scroller around every rendered `<table>`
- *   (`role="group"`, named by the localized `markdownTableRegion` string, default "Table"). A
+ *   (`role="group"`, named by the localized `markdownTableRegion` string, default "Table";
+ *   with several tables each takes `markdownTableRegionIndexed`, "Table {index}"). A
  *   table wider than the component scrolls here instead of splitting words.
  * @cssprop [--lr-markdown-task-checkbox-size=var(--lr-size-0-875em)] - Checkbox size, including its aligned list gutter.
- * @csspart code-block-frame - The named group around a code header and its code block.
+ * @csspart code-block-frame - The named group around a code header and its code block. With
+ *   several blocks, the group and its copy button carry the block's ordinal
+ *   (`codeRegionIndexed`/`codeRegionWithLanguageIndexed`, `copyCodeIndexed`).
  * @csspart code-block-copy-success - Additional copy-button token during successful confirmation.
  * @csspart code-block-copy-error - Additional copy-button token during failed confirmation.
  * @cssprop [--lr-markdown-code-header-bg=var(--lr-color-surface)] - Code header background.
@@ -282,9 +285,12 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     codeRegion: LYRA_DEFAULT_codeRegion,
+    codeRegionIndexed: LYRA_DEFAULT_codeRegionIndexed,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    codeRegionWithLanguageIndexed: LYRA_DEFAULT_codeRegionWithLanguageIndexed,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copyCode: LYRA_DEFAULT_copyCode,
+    copyCodeIndexed: LYRA_DEFAULT_copyCodeIndexed,
     copyFailed: LYRA_DEFAULT_copyFailed,
     markdownTableRegion: LYRA_DEFAULT_markdownTableRegion,
   };

@@ -14,7 +14,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_expandMessage } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_toggleMessage } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -138,7 +138,8 @@ export interface LyraChatMessageEventMap {
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot. Inside `header` by default; a column of `bubble` beside the body when `avatar-placement` is `start` or `end`.
  * @csspart badges - The wrapper around the `badges` slot.
- * @csspart collapse-button - The built-in collapse/expand toggle (only rendered when `collapsible`).
+ * @csspart collapse-button - The built-in collapse/expand toggle (only rendered when `collapsible`),
+ *   named by the constant `toggleMessage` string while `aria-expanded` reports the state.
  * @csspart body - The wrapper around the default slot (the message content). Hidden while `collapsed`.
  * @csspart attachments - The wrapper around the `attachments` slot.
  * @csspart failure - The `failure` slot itself (`display: contents` — it contributes no box of its
@@ -207,13 +208,12 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     chatFailedToSend: LYRA_DEFAULT_chatFailedToSend,
     chatResponding: LYRA_DEFAULT_chatResponding,
     chatSending: LYRA_DEFAULT_chatSending,
-    collapseMessage: LYRA_DEFAULT_collapseMessage,
     conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
-    expandMessage: LYRA_DEFAULT_expandMessage,
     promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
     promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
     promptStudioRoleUser: LYRA_DEFAULT_promptStudioRoleUser,
     retry: LYRA_DEFAULT_retry,
+    toggleMessage: LYRA_DEFAULT_toggleMessage,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -483,7 +483,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-controls=${this.bodyId}
-                aria-label=${this.localize(this.collapsed ? 'expandMessage' : 'collapseMessage')}
+                aria-label=${this.localize('toggleMessage')}
                 @click=${this.toggleCollapsed}
               >
                 <span class="chevron">${chevronIcon()}</span>

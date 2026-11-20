@@ -2,12 +2,12 @@
   "locale": "uz",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:5cd327dbd37866dcc2909b6b8f16e59da3a55a59f3990433eaaf223b2c249ee9"
+    "keyCount": 1717,
+    "sha256": "sha256:9c7cd4c7b28cb1d63547fc1de5c6ed0d95fbbc0c11e40e5654218525600efce1"
   },
   "translator": {
     "status": "complete-original",
@@ -97,6 +97,10 @@
     {
       "messagePath": "commitCardLabel",
       "rationale": "This is a short, established technical/product term or commonly used Uzbek loanword retained for concise interface labeling; it does not form English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

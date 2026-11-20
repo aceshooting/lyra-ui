@@ -31,7 +31,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-sear
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerFullOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -568,7 +568,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @csspart output-image - Raster image output; shrinks to the cell width.
  * @csspart output-loading - Visually hidden loading text shown while sanitized output resolves.
  * @csspart output-stream-label - Visually hidden "Error output" prefix on a stderr stream.
- * @csspart output-toggle - Expands/collapses a long text output.
+ * @csspart output-toggle - Expands/collapses a long text output; its visible name stays
+ *   constant (`notebookViewerFullOutput`) while `aria-expanded` reports the state.
  * @csspart error - The error region.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @cssprop [--lr-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
@@ -606,15 +607,14 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     notebookViewerCodeCell: LYRA_DEFAULT_notebookViewerCodeCell,
-    notebookViewerCollapseOutput: LYRA_DEFAULT_notebookViewerCollapseOutput,
     notebookViewerErrorOutput: LYRA_DEFAULT_notebookViewerErrorOutput,
+    notebookViewerFullOutput: LYRA_DEFAULT_notebookViewerFullOutput,
     notebookViewerInPrompt: LYRA_DEFAULT_notebookViewerInPrompt,
     notebookViewerInPromptEmpty: LYRA_DEFAULT_notebookViewerInPromptEmpty,
     notebookViewerInvalid: LYRA_DEFAULT_notebookViewerInvalid,
     notebookViewerLabel: LYRA_DEFAULT_notebookViewerLabel,
     notebookViewerMarkdownCell: LYRA_DEFAULT_notebookViewerMarkdownCell,
     notebookViewerRawCell: LYRA_DEFAULT_notebookViewerRawCell,
-    notebookViewerShowAllOutput: LYRA_DEFAULT_notebookViewerShowAllOutput,
     notebookViewerTooManyCells: LYRA_DEFAULT_notebookViewerTooManyCells,
     notebookViewerUnrenderedOutput: LYRA_DEFAULT_notebookViewerUnrenderedOutput,
     notebookViewerUnsupportedVersion: LYRA_DEFAULT_notebookViewerUnsupportedVersion,
@@ -1091,7 +1091,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             type="button"
             aria-expanded=${expanded ? 'true' : 'false'}
             @click=${() => this.toggleOutput(index)}
-          >${this.localize(expanded ? 'notebookViewerCollapseOutput' : 'notebookViewerShowAllOutput')}</button>`
+          >${this.localize('notebookViewerFullOutput')}</button>`
         : nothing}</div
     >`;
   }

@@ -1513,7 +1513,7 @@ it("lets listeners veto a collapse request without changing or persisting the st
   }
 });
 
-it("reflects the collapse-button aria-expanded and aria-label with the collapsed state", async () => {
+it("keeps one collapse-button name in both states while aria-expanded carries the state", async () => {
   const el = (await fixture(
     html`<lr-widget label="x" collapsible>content</lr-widget>`
   )) as LyraWidget;
@@ -1521,19 +1521,41 @@ it("reflects the collapse-button aria-expanded and aria-label with the collapsed
     '[part="collapse-button"]'
   ) as HTMLButtonElement;
   expect(btn.getAttribute("aria-expanded")).to.equal("true");
-  expect(btn.getAttribute("aria-label")).to.equal("Collapse panel");
+  expect(btn.getAttribute("aria-label")).to.equal("Toggle x");
 
   btn.click();
   await el.updateComplete;
 
   expect(btn.getAttribute("aria-expanded")).to.equal("false");
-  expect(btn.getAttribute("aria-label")).to.equal("Expand panel");
+  expect(btn.getAttribute("aria-label")).to.equal("Toggle x");
 });
 
-it("a registered locale supplies widgetCollapse/widgetExpand for the collapse-button aria-label", async () => {
+it("qualifies each widget's header controls with its own label, and keeps the generic names unlabeled", async () => {
+  const host = await fixture(html`<div>
+    <lr-widget label="Revenue" collapsible expandable>a</lr-widget>
+    <lr-widget label="Costs" collapsible expandable>b</lr-widget>
+    <lr-widget collapsible expandable>c</lr-widget>
+  </div>`);
+  const widgets = [...host.querySelectorAll("lr-widget")] as LyraWidget[];
+  await Promise.all(widgets.map((widget) => widget.updateComplete));
+  const names = (part: string) => widgets.map((widget) =>
+    widget.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute("aria-label"));
+  expect(names("collapse-button")).to.deep.equal(["Toggle Revenue", "Toggle Costs", "Toggle panel"]);
+  expect(names("fullscreen-button")).to.deep.equal([
+    "Expand Revenue to fullscreen",
+    "Expand Costs to fullscreen",
+    "Expand to fullscreen",
+  ]);
+  (widgets[0]!.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  await widgets[0]!.updateComplete;
+  expect(names("fullscreen-button")[0]).to.equal("Exit fullscreen: Revenue");
+  widgets[0]!.fullscreen = false;
+  await widgets[0]!.updateComplete;
+});
+
+it("a registered locale supplies the constant collapse-button name", async () => {
   registerLyraLocale("fr-test-widget-collapse", {
-    widgetCollapse: "Réduire",
-    widgetExpand: "Développer",
+    appRailItemToggle: "Basculer {label}",
   });
   const el = (await fixture(
     html`<lr-widget label="x" collapsible locale="fr-test-widget-collapse"
@@ -1544,11 +1566,11 @@ it("a registered locale supplies widgetCollapse/widgetExpand for the collapse-bu
   const btn = el.shadowRoot!.querySelector(
     '[part="collapse-button"]'
   ) as HTMLButtonElement;
-  expect(btn.getAttribute("aria-label")).to.equal("Réduire");
+  expect(btn.getAttribute("aria-label")).to.equal("Basculer x");
 
   btn.click();
   await el.updateComplete;
-  expect(btn.getAttribute("aria-label")).to.equal("Développer");
+  expect(btn.getAttribute("aria-label")).to.equal("Basculer x");
 });
 
 it('rotates the wrapping [part="collapse-button"] itself, not the inner svg, per the icons.ts rotation contract', async () => {
@@ -1757,13 +1779,13 @@ it("names the fullscreen-button for the action it performs, without aria-pressed
     '[part="fullscreen-button"]'
   ) as HTMLButtonElement;
   expect(btn.hasAttribute("aria-pressed")).to.equal(false);
-  expect(btn.getAttribute("aria-label")).to.equal("Expand to fullscreen");
+  expect(btn.getAttribute("aria-label")).to.equal("Expand x to fullscreen");
 
   btn.click();
   await el.updateComplete;
 
   expect(btn.hasAttribute("aria-pressed")).to.equal(false);
-  expect(btn.getAttribute("aria-label")).to.equal("Exit fullscreen");
+  expect(btn.getAttribute("aria-label")).to.equal("Exit fullscreen: x");
 });
 
 it("localizes the collapse/fullscreen/view-group aria-labels and the fullscreen dialog fallback via .strings", async () => {
@@ -1773,8 +1795,7 @@ it("localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
       expandable
       .views=${[{ viewId: "chart", ariaLabel: "Chart view" }]}
       .strings=${{
-        widgetCollapse: "Réduire",
-        widgetExpand: "Développer",
+        panelToggle: "Basculer le panneau",
         widgetExitFullscreen: "Quitter le plein écran",
         widgetExpandToFullscreen: "Passer en plein écran",
         widgetViewGroup: "Vue du panneau",
@@ -1794,10 +1815,10 @@ it("localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
   const collapseBtn = el.shadowRoot!.querySelector(
     '[part="collapse-button"]'
   ) as HTMLButtonElement;
-  expect(collapseBtn.getAttribute("aria-label")).to.equal("Réduire");
+  expect(collapseBtn.getAttribute("aria-label")).to.equal("Basculer le panneau");
   collapseBtn.click();
   await el.updateComplete;
-  expect(collapseBtn.getAttribute("aria-label")).to.equal("Développer");
+  expect(collapseBtn.getAttribute("aria-label")).to.equal("Basculer le panneau");
 
   const fullscreenBtn = el.shadowRoot!.querySelector(
     '[part="fullscreen-button"]'

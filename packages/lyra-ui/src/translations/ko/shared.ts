@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: '거부',
   statusIncomplete: '미완료',
   restore: '복원',
+  fileTypeAudio: '오디오',
   navigation: '탐색',
   attachmentUntitledFile: '제목 없는 파일',
   chartTrendIncreasing: '증가 중',

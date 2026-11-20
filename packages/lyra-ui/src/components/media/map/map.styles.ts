@@ -136,14 +136,14 @@ export const styles = css`
   [part='drawing-vertex']:where(:not(:disabled):active) > span { background: var(--lr-map-drawing-vertex-active-bg, ${activeFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
   [part='drawing-measurements'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
   [part='drawing-measurement'] {
-    position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
+    position: absolute; transform: translate(-50%, -50%); white-space: nowrap; unicode-bidi: plaintext;
     padding: 0 var(--lr-space-2xs); border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface); color: var(--lr-color-text); font-size: var(--lr-font-size-sm);
     box-shadow: var(--lr-shadow-s);
   }
   [part='drawing-measurement'][data-kind='length'] { transform: translate(-50%, calc(var(--lr-space-s) + 50%)); }
   [part='drawing-measurement'][data-kind='area'] { font-weight: var(--lr-font-weight-semibold); }
-  [part='drawing-summary'] { position: relative; align-self: center; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
+  [part='drawing-summary'] { position: relative; align-self: center; unicode-bidi: plaintext; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
   [part='drawing-vertex']:focus-visible { ${focusRing} }
   [part='drawing-vertex']:where(:disabled) { ${disabledControl} }
   [part='drawing-status'] { position: relative; border-radius: var(--lr-radius-button); color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }

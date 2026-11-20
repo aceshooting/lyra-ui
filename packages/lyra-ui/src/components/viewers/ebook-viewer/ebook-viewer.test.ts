@@ -2256,6 +2256,27 @@ describe("lr-ebook-viewer search", () => {
     }
   });
 
+  it('does not announce a later relocation after a toolbar navigation that did not move', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'one', 'ch2.xhtml': 'two' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await waitUntil(() => !el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!.disabled);
+      const spoken = (): string => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent ?? '';
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!.click();
+      // The navigation settles without a relocation (already at the edge); a later relocation of
+      // another origin must not be announced as if the toolbar caused it.
+      await twoFrames();
+      fake.relocate({ start: { cfi: 'epubcfi(/6/4!)', href: 'ch2.xhtml' } });
+      // wait-reason: negative assertion, margined past the announcer throttle so an armed flag would flush and fail
+      await aTimeout(700);
+      expect(spoken()).not.to.include('Showing Chapter 2');
+    } finally {
+      restore();
+    }
+  });
+
   it("leaves search-result speech to an event-driven find bar", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
     __setEpubJsForTesting(fake.factory as never);

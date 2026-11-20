@@ -742,3 +742,9 @@ it('keeps the visible toggle text first in the accessible name and appends the s
   await el.updateComplete;
   expect(toggle.getAttribute('aria-label')).to.equal('Show less: a.pdf');
 });
+
+it('isolates the caller title under an RTL host', async () => {
+  const el = (await fixture(html`<lr-source-card dir="rtl" heading=".env (draft)"></lr-source-card>`)) as LyraSourceCard;
+  const node = el.shadowRoot!.querySelector('[part="title"] > bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:.env (draft)');
+});

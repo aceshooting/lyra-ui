@@ -29,6 +29,8 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import { DEFAULT_SCORE_THRESHOLDS, resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { bdi } from '../../../internal/bidi.js';
+import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -468,7 +470,11 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               ...(chunk.anchor ? { anchor: chunk.anchor } : {}),
             })}
         >
-          <span part="title">${titleWithPage}</span>
+          <span part="title">${formattedPage == null || formattedPage === ''
+            ? bdi(titleText)
+            : resolveLocalizedParts(this.localize('sourcePageSuffix'), (marker) =>
+                this.localize('sourcePageSuffix', undefined, { base: marker, page: formattedPage })
+              ).map((piece, index, pieces) => index < pieces.length - 1 ? html`${piece}${bdi(titleText)}` : piece)}</span>
         </button>
         ${!this.dense
           ? html`<p

@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Elutasítva',
   statusIncomplete: 'Befejezetlen',
   restore: 'Visszaállítás',
+  fileTypeAudio: 'Hang',
   navigation: 'Navigáció',
   attachmentUntitledFile: 'Névtelen fájl',
   chartTrendIncreasing: 'növekvő',

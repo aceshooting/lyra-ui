@@ -273,12 +273,17 @@ backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<
 inline or block math span, carrying `data-display="inline"|"block"`), and, when
 `code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
 `code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
-CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+CSS-generated content, so headers add no text to selection or text-quote anchoring. With more than
+one fenced block, each frame's group name and copy button carry the block's locale-formatted
+ordinal (`codeRegionIndexed` "Code {index}", `codeRegionWithLanguageIndexed` "{language} code
+{index}", `copyCodeIndexed` "Copy code {index}"); a single block keeps `codeRegion`,
+`codeRegionWithLanguage` and `copyCode`. Each header
 adds at most eight elements toward the normal 20,000-node traversal bound.
 The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
 Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
-`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+`markdownTableRegion` (English: "Table"), or by `markdownTableRegionIndexed` ("Table {index}")
+when the document holds several tables. The label follows locale and `.strings` changes without
 reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
@@ -673,7 +678,8 @@ control — that replaces the built-in status text, retry button, and live-regio
 entirely; unset, `status="failed"` renders the built-in status text and retry button)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
-`collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
+`collapse-button` (only rendered when `collapsible`; named by the constant `toggleMessage` string,
+`Toggle message`, while `aria-expanded` reports the state), `body` (hidden while `collapsed`),
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
@@ -2353,8 +2359,8 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
-The collapse control uses `collapseCode` or `expandCode` and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
+The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) in both states and
+reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -2596,8 +2602,8 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
-The collapse control uses `collapseCode` or `expandCode` and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
+The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) in both states and
+reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -3796,7 +3802,8 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
-button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
+button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
+by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
 the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
@@ -5061,6 +5068,9 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus. An accepted Move up/down keeps focus on
 the moved row's action, or its nearest enabled action once that one is disabled at the queue's edge.
+Once the host applies a requested move or removal, the outcome is announced politely through the
+shared live region: the new position (`reorderItemMoved`) or the removal and remaining count
+(`promptQueueItemRemoved`). A host that rejects or reshapes the request is not announced.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
 (reflected) — renders each queued prompt as read-only text instead of an editor;
@@ -5094,7 +5104,8 @@ these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
 `actions`, `action`, `empty`, `input-limit`, `attachment-limit`, `pagination`, `page-status`,
-`page-button`. Initial input-limit notes are quiet; later changed omissions and user page changes
+`page-button`. Each `attachments` list is named `Attachments` for a single queued prompt and
+`Attachments for prompt {index}` (`promptQueueItemAttachments`) while several are queued. Initial input-limit notes are quiet; later changed omissions and user page changes
 are politely announced.
 
 **Slots:** none. **Optional peer deps:** none.

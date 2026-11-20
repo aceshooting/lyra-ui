@@ -96,6 +96,7 @@ import {
   normalizeSelectionValues,
 } from '../../../internal/option-selection.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow } from '../../../internal/default-strings/forms.generated.js';
@@ -3429,8 +3430,8 @@ export class LyraCombobox<
               ></span>`
             : ''}
           <span part="option-label">
-            <span>${o.label}</span>
-            ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
+            <span>${bdi(o.label)}</span>
+            ${o.sub ? html`<span part="option-sub">${bdi(o.sub)}</span>` : ''}
           </span>
           ${o.badge != null
             ? html`<span part="option-badge">${o.badge}</span>`

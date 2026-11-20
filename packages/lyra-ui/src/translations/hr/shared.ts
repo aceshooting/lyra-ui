@@ -75,6 +75,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Odbijeno',
   statusIncomplete: 'Nedovršeno',
   restore: 'Vrati',
+  fileTypeAudio: 'Zvuk',
   navigation: 'Navigacija',
   attachmentUntitledFile: 'Datoteka bez naziva',
   chartTrendIncreasing: 'rastući',

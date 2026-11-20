@@ -612,7 +612,8 @@ Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-vie
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
-remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
+remain available without DOMPurify. Header values, attachment filenames and plain-text bodies use
+`dir="auto"`, so caller text keeps its own direction under an RTL host. Attachments are listed as filename and size only (the parsed
 `mimeType` never reaches the DOM) and their content is never rendered by this component. Each
 attachment row is a real `<button>` that emits `lr-attachment-open` with an immutable Blob snapshot
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
@@ -646,7 +647,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
+localized quoted-text disclosure whose visible name (`emailViewerQuotedText`, `Quoted text`) stays
+constant while `aria-expanded` reports the state. `false` (the default) preserves the full body rendering. A nonempty
 host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
 through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
@@ -687,7 +689,7 @@ when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
 those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
-show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
+quoted-text disclosure button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
 spoken copy is appended to the shared document-level polite sink only while the viewer and its
 composed ancestors are exposed to the accessibility tree).
@@ -998,7 +1000,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes; the new "Slide X of Y"
+  position is also announced politely through the shared live region (never for the initial load).
 - `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
@@ -1517,6 +1520,7 @@ nonnegative dimensions.
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }` — fired for `zoom` assignments as well as
   `zoomIn()`/`zoomOut()`. Never fired for the initial `1`, only for a transition away from it.
+  While the document is ready the applied percentage is also announced politely.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
   the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
@@ -1580,7 +1584,8 @@ combinator after `::part()` never matches; all four controls are borderless text
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `page-error`, `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
+`search-match`), `page-error` (names the failed page with `pdfViewerPageFailed`, announced politely
+once per page and document), `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
 aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended
 to the shared document-level polite sink only while the viewer and its composed ancestors are
 exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
@@ -2349,7 +2354,8 @@ an error output), `output-stream-label` (visually hidden "Error output" prefix o
 `output-loading` (visually hidden loading text while sanitized output resolves),
 `output-image` (raster image output, shrinks to the cell width),
 `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
+`output-toggle` (a long text output's disclosure, named by the constant `notebookViewerFullOutput`
+string while `aria-expanded` reports the state), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
 of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
 sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
 highlight/active state variants are separate part _names_ rather than attribute selectors, because
@@ -2576,7 +2582,8 @@ pointing at one attribute value of a multi-attribute element stays identifiable 
 tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `attribute-more` (a localized `+N` count when an
 element has more than the 256 attributes rendered on its row), `text` (`data-match`), `comment`, `cdata`, `pi`,
-`toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
+`toggle` (an element's expand/collapse button on nodes with renderable children, named by the
+constant `xmlViewerToggleNode` string `Toggle {name}` while `aria-expanded` reports the state; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
 leaf rows), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of

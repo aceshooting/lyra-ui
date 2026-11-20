@@ -275,7 +275,9 @@ The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagi
 `drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
 content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
 `error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
-built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`
+(the tree/detail/group disclosure, named `Toggle row {row}` in both states; the expanded state is
+reported once, on the owning row in a tree grid and otherwise on the button),
 `filter-button`, `filter-panel`,
 `filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
 glyph the component resets; rendered only while it has a value), `first-button`,

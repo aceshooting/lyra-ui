@@ -53,7 +53,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes; the new "Slide X of Y"
+  position is also announced politely through the shared live region (never for the initial load).
 - `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of

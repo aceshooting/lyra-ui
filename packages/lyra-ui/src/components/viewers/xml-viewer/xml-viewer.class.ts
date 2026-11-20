@@ -59,7 +59,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_MATCH_L
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerLimit, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerLimit, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerToggleNode, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -369,7 +369,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart cdata - A CDATA section leaf.
  * @csspart pi - A processing-instruction leaf.
  * @csspart toggle - An element's expand/collapse button (only on elements with renderable
- *   children). Its collapsed chevron mirrors with effective RTL direction; the expanded chevron
+ *   children), named `Toggle {name}` in both states while `aria-expanded` reports the state. Its collapsed chevron mirrors with effective RTL direction; the expanded chevron
  *   points down in either direction.
  * @csspart toggle-placeholder - A non-interactive alignment spacer in place of `toggle` on an
  *   empty element. It is accessibility-hidden and cannot be revealed into a phantom control by
@@ -449,13 +449,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     xmlViewerChildCount: LYRA_DEFAULT_xmlViewerChildCount,
-    xmlViewerCollapseNode: LYRA_DEFAULT_xmlViewerCollapseNode,
     xmlViewerCopyDocument: LYRA_DEFAULT_xmlViewerCopyDocument,
     xmlViewerCopyNode: LYRA_DEFAULT_xmlViewerCopyNode,
-    xmlViewerExpandNode: LYRA_DEFAULT_xmlViewerExpandNode,
     xmlViewerLabel: LYRA_DEFAULT_xmlViewerLabel,
     xmlViewerLimit: LYRA_DEFAULT_xmlViewerLimit,
     xmlViewerParseError: LYRA_DEFAULT_xmlViewerParseError,
+    xmlViewerToggleNode: LYRA_DEFAULT_xmlViewerToggleNode,
     xmlViewerTooManyNodes: LYRA_DEFAULT_xmlViewerTooManyNodes,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -1423,11 +1422,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
               part="toggle"
               type="button"
               aria-expanded=${expanded ? 'true' : 'false'}
-              aria-label=${this.localize(
-                expanded ? 'xmlViewerCollapseNode' : 'xmlViewerExpandNode',
-                undefined,
-                { name: toggleLabel },
-              )}
+              aria-label=${this.localize('xmlViewerToggleNode', undefined, { name: toggleLabel })}
               @click=${() => this.toggleNode(pathKey, expanded)}
             >
               <span class="chevron">${chevronIcon()}</span>

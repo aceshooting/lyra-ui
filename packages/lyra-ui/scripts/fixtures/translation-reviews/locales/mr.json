@@ -2,12 +2,12 @@
   "locale": "mr",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:ee6e94b0b054bfe4cac58c9bbade895e00e97135474e07b461313aa8c8c20df5"
+    "keyCount": 1717,
+    "sha256": "sha256:15ecd57453457fa0a4881c57bb15a328ce0bbe1f2b58e9fbbc2df6a59c24d6ec"
   },
   "translator": {
     "status": "complete-original",
@@ -81,6 +81,10 @@
     {
       "messagePath": "chartValuePercentageLabel",
       "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

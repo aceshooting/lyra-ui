@@ -1561,3 +1561,9 @@ describe('.strings overrides (every localize() key)', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent!.trim()).to.equal('ST-LIMIT 10,000/10,001');
   });
 });
+
+it('isolates the caller label under an RTL host', async () => {
+  const el = (await fixture(html`<lr-stat dir="rtl" label="C++ (beta)" value="3"></lr-stat>`)) as LyraStat;
+  const node = el.shadowRoot!.querySelector('[part="label"] > bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:C++ (beta)');
+});

@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Eboyi',
   statusIncomplete: 'Esili te',
   restore: 'Zongisa',
+  fileTypeAudio: 'Audio',
   navigation: 'Nzela ya kotambola',
   attachmentUntitledFile: 'Fichier ezangi titre',
   chartTrendIncreasing: 'Emati',

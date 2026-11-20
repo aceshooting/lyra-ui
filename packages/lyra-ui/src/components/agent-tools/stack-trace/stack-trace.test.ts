@@ -797,16 +797,14 @@ it('keeps the internal frames disclosure name stable when expanded', async () =>
   expect(button.textContent!.trim()).to.equal('2 internal frames');
 });
 
-it('honors existing state-specific message overrides until a stable label is supplied', async () => {
+it('keeps a localized stackTraceInternalFrames override constant in both states', async () => {
   const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}
-    .strings=${{ stackTraceShowFrames: 'Inspect {count}', stackTraceHideFrames: 'Close {count}' }}></lr-stack-trace>`);
+    .strings=${{ stackTraceInternalFrames: 'Library frames ({count})' }}></lr-stack-trace>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="internal-toggle"]')!;
-  expect(button.textContent!.trim()).to.equal('Inspect 2');
+  expect(button.textContent!.trim()).to.equal('Library frames (2)');
   button.click();
   await el.updateComplete;
-  expect(button.textContent!.trim()).to.equal('Close 2');
-  el.strings = { ...el.strings, stackTraceInternalFrames: 'Library frames ({count})' };
-  await el.updateComplete;
+  expect(button.getAttribute('aria-expanded')).to.equal('true');
   expect(button.textContent!.trim()).to.equal('Library frames (2)');
 });
 

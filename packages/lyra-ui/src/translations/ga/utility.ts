@@ -23,8 +23,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'réad',
   jsonValue: 'luach',
   jsonCopyLabel: 'Cóipeáil {label}',
-  jsonExpandLabel: 'Leathnaigh {label}',
-  jsonCollapseLabel: 'Laghdaigh {label}',
+  jsonToggleLabel: 'Scoránaigh {label}',
   jsonItemCount: {
     few: '{count} mhír',
     many: '{count} mír',

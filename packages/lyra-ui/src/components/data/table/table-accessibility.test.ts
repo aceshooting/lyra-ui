@@ -719,7 +719,7 @@ describe('localization', () => {
       { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
     ];
     const el = (await fixture(
-      html`<lr-table .strings=${{ dataGridExpandRow: 'Développer {row}', dataGridCollapseRow: 'Réduire {row}' }}></lr-table>`
+      html`<lr-table .strings=${{ dataGridToggleRow: 'Basculer {row}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -728,19 +728,19 @@ describe('localization', () => {
     await el.updateComplete;
 
     const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
-    expect(toggle.getAttribute('aria-label')).to.equal('Développer a');
+    expect(toggle.getAttribute('aria-label')).to.equal('Basculer a');
 
     // `expandedRowKeys` is a controlled prop -- the toggle button only emits
     // lr-row-expand-toggle, it doesn't mutate state itself (see the
     // `emits lr-row-expand-toggle` test above).
     el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
-    expect(toggle.getAttribute('aria-label')).to.equal('Réduire a');
+    expect(toggle.getAttribute('aria-label')).to.equal('Basculer a');
   });
 
   it('localizes the inline cell editor aria-label, interpolating the column label', async () => {
     const el = (await fixture(
-      html`<lr-table .strings=${{ tableEditCell: 'Modifier {column}' }}></lr-table>`
+      html`<lr-table .strings=${{ tableEditCellInRow: 'Modifier {column}, ligne {row}' }}></lr-table>`
     )) as LyraTable<Row>;
     el.columns = editableColumns;
     el.rows = rows;
@@ -751,7 +751,7 @@ describe('localization', () => {
     cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
     await el.updateComplete;
     const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
-    expect(input.getAttribute('aria-label')).to.equal('Modifier Name');
+    expect(input.getAttribute('aria-label')).to.equal('Modifier Name, ligne a');
   });
 
   it('gives a double-click cell editor a per-row accessible name when the column defines editLabel', async () => {
@@ -855,10 +855,11 @@ describe('localization', () => {
     await main.updateComplete;
     await waitUntil(() => main.hasHiddenPriorityColumns === true);
     const reveal = main.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
-    const revealText = reveal.textContent!.trim();
+    // The visible name is constant; the explicit reveal/hide labels are the action tooltip.
+    const revealText = reveal.title;
     reveal.click();
     await main.updateComplete;
-    const hideText = reveal.textContent!.trim();
+    const hideText = reveal.title;
 
     const loading = (await fixture(
       html`<lr-table loading .strings=${strings}></lr-table>`

@@ -15,7 +15,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceInternalFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_stackTraceInternalFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -107,7 +107,8 @@ export interface LyraStackTraceEventMap {
  *   non-activatable raw row when the source location is malformed or unsafe.
  * @csspart frame-function - The frame's function name.
  * @csspart frame-location - The frame's `file:line:col` text.
- * @csspart internal-toggle - The collapse/expand toggle for a run of internal frames.
+ * @csspart internal-toggle - The collapse/expand toggle for a run of internal frames, named by the
+ *   constant `stackTraceInternalFrames` count while `aria-expanded` reports the state.
  * @csspart raw - The verbatim `<pre>` fallback when zero structured frames parsed.
  * @csspart limit - Localized notice rendered when a parser resource ceiling omitted input.
  * @csspart copy-button - The copy-to-clipboard button, not rendered while `without-copy-button`.
@@ -141,11 +142,9 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    stackTraceHideFrames: LYRA_DEFAULT_stackTraceHideFrames,
     stackTraceInternalFrames: LYRA_DEFAULT_stackTraceInternalFrames,
     stackTraceLabel: LYRA_DEFAULT_stackTraceLabel,
     stackTraceLimit: LYRA_DEFAULT_stackTraceLimit,
-    stackTraceShowFrames: LYRA_DEFAULT_stackTraceShowFrames,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -295,8 +294,6 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       if (run.length === 1) {
         rendered.push(this.renderFrame(run[0]!));
       } else {
-        const legacyKey = expanded ? 'stackTraceHideFrames' : 'stackTraceShowFrames';
-        const useLegacy = this.strings.stackTraceInternalFrames === undefined && this.strings[legacyKey] !== undefined;
         const count = getNumberFormat(this.effectiveLocale).format(run.length);
         rendered.push(html`
           <button
@@ -305,13 +302,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
             aria-expanded=${expanded ? 'true' : 'false'}
             @click=${() => this.toggleInternalRun(runKey)}
           >
-            ${this.localize(
-              useLegacy
-                ? (expanded ? 'stackTraceHideFrames' : 'stackTraceShowFrames')
-                : 'stackTraceInternalFrames',
-              undefined,
-              { count },
-            )}
+            ${this.localize('stackTraceInternalFrames', undefined, { count })}
           </button>
           ${expanded ? run.map((frame) => this.renderFrame(frame)) : nothing}
         `);

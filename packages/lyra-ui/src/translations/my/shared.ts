@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'ငြင်းပယ်ခံရသည်',
   statusIncomplete: 'မပြီးဆုံးပါ',
   restore: 'ပြန်လည်ရယူရန်',
+  fileTypeAudio: 'အသံ',
   navigation: 'လမ်းညွှန်မှု',
   attachmentUntitledFile: 'ခေါင်းစဉ်မရှိသော ဖိုင်',
   chartTrendIncreasing: 'တိုးလာနေသည်',

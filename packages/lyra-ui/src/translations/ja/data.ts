@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items} 件を {ranges} 区間に集約',
   noColumns: '列が設定されていません',
   dataGridColumnMenu: '{label} のオプション',
-  dataGridCollapseRow: '{row} を折りたたむ',
   dataGridPinStart: '{label} を先頭に固定',
   dataGridPinEnd: '{label} を末尾に固定',
   dataGridUnpin: '{label} の固定を解除',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: '行を読み込み中',
   tableLoadingMore: '追加の行を読み込み中',
   tableEditCell: '{column} を編集',
+  tableEditCellInRow: '{column} を編集、{row} 行目',
   showAllColumns: 'すべての列を表示',
   dataGridColumns: '列',
   showFewerColumns: '列の表示を減らす',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '次の月',
   paginationPage: 'ページ',
   paginationJumpToPage: '{page}ページに移動',
+  paginationInvalidPage: '1 から {max} までのページを入力してください。',
+  paginationInvalidPageUnknownTotal: '1 以上の整数のページ番号を入力してください。',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: '{page} ページ目',
   trendOf: '{count} 件の値の推移、最新は {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: '最初の {count} 行のみが表示されます。',
   },
-  dataGridExpandRow: '{row} を展開',
+  dataGridToggleRow: '{row} 行の表示を切り替える',
   dataGridFilterColumn: '{column} を絞り込む',
   dataGridSelectPage: 'このページのすべての行を選択',
   tableRowLimit: {

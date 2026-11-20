@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Απορρίφθηκε',
   statusIncomplete: 'Ελλιπές',
   restore: 'Επαναφορά',
+  fileTypeAudio: 'Ήχος',
   navigation: 'Πλοήγηση',
   attachmentUntitledFile: 'Αρχείο χωρίς τίτλο',
   chartTrendIncreasing: 'αυξητική',

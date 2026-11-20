@@ -1,4 +1,4 @@
-import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { isModifiedOrComposingKey } from './list-navigation.js';
 import { capturePointer, releasePointer, togglePointerGesture } from './pointer-capture.js';
 
 /** Shared interaction math for vertical column separators. The component owns its width storage
@@ -27,7 +27,7 @@ export function columnResizeKeyboardWidth(
   rtl: boolean,
   allowBounds = true,
 ): number | undefined {
-  if (shouldIgnoreNavigationKey(event)) return undefined;
+  if (isModifiedOrComposingKey(event)) return undefined;
   if (allowBounds && event.key === 'Home') return minimum;
   if (allowBounds && event.key === 'End' && Number.isFinite(maximum)) return maximum;
   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return undefined;

@@ -564,6 +564,7 @@ describe("lr-pdf-viewer", () => {
       expect(
         el.shadowRoot!.querySelector('[part="zoom-indicator"]')!.textContent
       ).to.equal("125%");
+      expect(announcementTexts(document, 'polite').at(-1)).to.equal("125%");
       el.zoom = 0.1;
       await el.updateComplete;
       expect(el.zoom).to.equal(0.25);
@@ -884,7 +885,8 @@ describe("lr-pdf-viewer", () => {
       );
       expect(
         listShadowRoot(el).querySelector('[part~="page-error"]')!.textContent
-      ).to.equal("Failed to load document.");
+      ).to.equal("Page 1 failed to load.");
+      expect(announcementTexts(document, 'polite').filter((text) => text === "Page 1 failed to load.").length).to.equal(1);
     } finally {
       restore();
     }
@@ -6726,9 +6728,9 @@ describe('lr-pdf-viewer remediation', () => {
       el.src = 'https://example.test/failing.pdf';
       await waitFor(el, '[part="toolbar"]');
       await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]') !== null);
-      el.strings = { documentPreviewFailedToLoad: 'Seite fehlgeschlagen' };
+      el.strings = { pdfViewerPageFailed: 'Seite {page} fehlgeschlagen' };
       await el.updateComplete;
-      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]')?.textContent === 'Seite fehlgeschlagen');
+      await waitUntil(() => listShadowRoot(el).querySelector('[part~="page-error-visible"]')?.textContent === 'Seite 1 fehlgeschlagen');
     } finally {
       restore();
     }

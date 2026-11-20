@@ -8079,6 +8079,239 @@
           "direct": true,
           "summary": "The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener."
         }
+      ],
+      "globals": [
+        {
+          "kind": "locale-key",
+          "from": "appRailCollapse",
+          "to": "toggleNavigation",
+          "summary": "lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "appRailExpand",
+          "to": "toggleNavigation",
+          "summary": "lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "appRailItemCollapse",
+          "to": "appRailItemToggle",
+          "summary": "lr-app-rail-item names its disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "appRailItemExpand",
+          "to": "appRailItemToggle",
+          "summary": "lr-app-rail-item names its disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "appRailUnpin",
+          "to": "appRailPin",
+          "summary": "lr-app-rail names its pin button with one constant key while aria-pressed reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "closeNavigation",
+          "to": "toggleNavigation",
+          "summary": "lr-page and lr-app-rail name their navigation toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "collapseCode",
+          "to": "codeBlockToggle",
+          "summary": "lr-code-block names its collapse toggle with the constant codeBlockToggle key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "collapseMessage",
+          "to": "toggleMessage",
+          "summary": "lr-chat-message names its collapse button with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "commitCardHideFiles",
+          "to": "commitCardChangedFiles",
+          "summary": "lr-commit-card names its file-list toggle with one constant count key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "commitCardShowFiles",
+          "to": "commitCardChangedFiles",
+          "summary": "lr-commit-card names its file-list toggle with one constant count key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "dataGridCollapseRow",
+          "to": "dataGridToggleRow",
+          "summary": "lr-table and lr-data-grid name their row disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "dataGridExpandRow",
+          "to": "dataGridToggleRow",
+          "summary": "lr-table and lr-data-grid name their row disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "dockPanelCollapse",
+          "to": "panelToggle",
+          "summary": "lr-dock-panel names its collapse toggle with one constant key (appRailItemToggle with a host label) while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "dockPanelExpand",
+          "to": "panelToggle",
+          "summary": "lr-dock-panel names its collapse toggle with one constant key (appRailItemToggle with a host label) while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "emailViewerHideQuoted",
+          "to": "emailViewerQuotedText",
+          "summary": "lr-email-viewer names its quoted-text toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "emailViewerShowQuoted",
+          "to": "emailViewerQuotedText",
+          "summary": "lr-email-viewer names its quoted-text toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "expandCode",
+          "to": "codeBlockToggle",
+          "summary": "lr-code-block names its collapse toggle with the constant codeBlockToggle key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "expandMessage",
+          "to": "toggleMessage",
+          "summary": "lr-chat-message names its collapse button with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "jsonCollapseLabel",
+          "to": "jsonToggleLabel",
+          "summary": "lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "jsonExpandLabel",
+          "to": "jsonToggleLabel",
+          "summary": "lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "mapSceneHide",
+          "to": "mapScene",
+          "summary": "lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "mapSceneShow",
+          "to": "mapScene",
+          "summary": "lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "notebookViewerCollapseOutput",
+          "to": "notebookViewerFullOutput",
+          "summary": "lr-notebook-viewer names its output toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "notebookViewerShowAllOutput",
+          "to": "notebookViewerFullOutput",
+          "summary": "lr-notebook-viewer names its output toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "openNavigation",
+          "to": "toggleNavigation",
+          "summary": "lr-page and lr-app-rail name their navigation toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "stackTraceHideFrames",
+          "to": "stackTraceInternalFrames",
+          "summary": "lr-stack-trace names its internal-frame toggle with the constant stackTraceInternalFrames key; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "stackTraceShowFrames",
+          "to": "stackTraceInternalFrames",
+          "summary": "lr-stack-trace names its internal-frame toggle with the constant stackTraceInternalFrames key; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "testResultsCollapseTest",
+          "to": "testResultsToggleTest",
+          "summary": "lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "testResultsExpandTest",
+          "to": "testResultsToggleTest",
+          "summary": "lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "widgetCollapse",
+          "to": "panelToggle",
+          "summary": "lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "widgetExpand",
+          "to": "panelToggle",
+          "summary": "lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "xmlViewerCollapseNode",
+          "to": "xmlViewerToggleNode",
+          "summary": "lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "xmlViewerExpandNode",
+          "to": "xmlViewerToggleNode",
+          "summary": "lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        }
       ]
     }
   ]

@@ -752,3 +752,16 @@ describe('.strings overrides (every localize() key)', () => {
     expect(tree.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('FT-EMPTY');
   });
 });
+
+it('renders dotfile and directory names in a bidi-isolated label under RTL', async () => {
+  const el = (await fixture(html`<lr-file-tree dir="rtl"></lr-file-tree>`)) as LyraFileTree;
+  el.nodes = [{ path: '.gitignore' }];
+  await el.updateComplete;
+  const tree = el.shadowRoot!.querySelector('lr-tree')!;
+  await tree.updateComplete;
+  const row = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+  await row.updateComplete;
+  const label = row.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(label.textContent).to.equal('.gitignore');
+  expect(getComputedStyle(label).unicodeBidi).to.equal('plaintext');
+});

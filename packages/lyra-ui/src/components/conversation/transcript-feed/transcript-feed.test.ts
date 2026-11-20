@@ -1,5 +1,5 @@
 import { sinkTexts } from '../../../../test/announcements.js';
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import '../../lr-transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from '../../lr-transcript-feed.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -797,19 +797,23 @@ it('isolates caller-authored speaker names with dir="auto"', async () => {
   expect(el.shadowRoot!.querySelector('[part="speaker"]')!.getAttribute('dir')).to.equal('auto');
 });
 
-it('shows and announces the number omitted by the render window', async () => {
+it('shows the number omitted by the render window and announces the window once, not per count change', async () => {
   const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed></lr-transcript-feed>`);
   el.entries = ['one', 'two', 'three'].map(id => ({ id, text: id }));
-  el.maxRenderedEntries = 1;
   await el.updateComplete;
   const notice = () => el.shadowRoot!.querySelector<HTMLElement>('[part="window-notice"]');
-  expect(notice()?.dataset['omitted']).to.equal('2');
-  expect(notice()?.textContent).to.equal('Earlier captions hidden: 2.');
+  expect(notice() === null).to.equal(true);
   el.strings = { transcriptFeedWindowNotice: 'Hidden: {count}' };
+  el.maxRenderedEntries = 1;
+  await el.updateComplete;
+  expect(notice()?.dataset['omitted']).to.equal('2');
+  expect(notice()?.textContent).to.equal('Hidden: 2');
+  await waitUntil(() => sinkTexts('polite').includes('Hidden: 2'));
   el.maxRenderedEntries = 2;
   await el.updateComplete;
   expect(notice()?.textContent).to.equal('Hidden: 1');
-  await waitUntil(() => sinkTexts('polite').includes('Hidden: 1'));
+  await aTimeout(50);
+  expect(sinkTexts('polite').includes('Hidden: 1'), 'a changed count is not announced again').to.equal(false);
   el.maxRenderedEntries = 0;
   await el.updateComplete;
   expect(notice() === null).to.equal(true);

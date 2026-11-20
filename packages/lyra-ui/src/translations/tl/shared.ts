@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Tinanggihan',
   statusIncomplete: 'Hindi kumpleto',
   restore: 'Ibalik',
+  fileTypeAudio: 'Audio',
   navigation: 'Pag-navigate',
   attachmentUntitledFile: 'File na walang pamagat',
   chartTrendIncreasing: 'tumataas',

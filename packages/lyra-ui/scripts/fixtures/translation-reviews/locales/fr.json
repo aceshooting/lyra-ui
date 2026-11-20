@@ -2,12 +2,12 @@
   "locale": "fr",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:7b5210677ea1eecb9bc30cd39b43bb22261977509947e181ee8c2f7debff5ea5"
+    "keyCount": 1717,
+    "sha256": "sha256:e8f82dad473cd98fbdcec825e580dfa69aa31208076d8508502d541474915a37"
   },
   "translator": {
     "status": "complete-original",
@@ -113,6 +113,10 @@
     {
       "messagePath": "codeRegion",
       "rationale": "'Code' names a source-code region or artifact type; French uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "codeRegionIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (codeRegionIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "commitCardLabel",

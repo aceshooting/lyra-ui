@@ -1,5 +1,5 @@
 import { isElementNode } from '../../../internal/dom-guards.js';
-import { isRovingTargetAvailable } from '../../../internal/list-navigation.js';
+import { isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
@@ -519,7 +519,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   };
 
   private handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     const current = this.#itemFor(event);
     if (
       !current ||

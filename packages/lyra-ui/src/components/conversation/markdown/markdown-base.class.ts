@@ -25,6 +25,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { Slugger } from '../../../internal/slugger.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { MarkdownCodeHeaderController, renderMarkdownCodeHeader, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';
 import type {
   LyraAnchor,
@@ -76,7 +77,7 @@ import {
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionIndexed, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_codeRegionWithLanguageIndexed, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyCodeIndexed, LYRA_DEFAULT_markdownTableRegion, LYRA_DEFAULT_markdownTableRegionIndexed } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -184,11 +185,15 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     codeRegion: LYRA_DEFAULT_codeRegion,
+    codeRegionIndexed: LYRA_DEFAULT_codeRegionIndexed,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
+    codeRegionWithLanguageIndexed: LYRA_DEFAULT_codeRegionWithLanguageIndexed,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copyCode: LYRA_DEFAULT_copyCode,
+    copyCodeIndexed: LYRA_DEFAULT_copyCodeIndexed,
     copyFailed: LYRA_DEFAULT_copyFailed,
     markdownTableRegion: LYRA_DEFAULT_markdownTableRegion,
+    markdownTableRegionIndexed: LYRA_DEFAULT_markdownTableRegionIndexed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 }
@@ -269,6 +274,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   private readonly boundLocalize = this.localize.bind(this);
   private tableRegionLabel: string | undefined;
+  private tableRegionStrings: unknown;
   private hasTableWrappers = false;
   private readonly fallbackCode = new MarkdownFallbackCodeScanner();
   private deps?: MarkdownDeps;
@@ -314,6 +320,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       contentVersion: () => this.progressiveSession ? this.progressiveRevision : this.renderedHtml,
       getContentRoot: () => this.contentRoot(),
       localize: this.boundLocalize,
+      formatIndex: (index) => getNumberFormat(this.effectiveLocale).format(index),
       buildHeader: (frame, language) => renderMarkdownCodeHeader(frame, language),
       emit: (name: 'lr-copy' | 'lr-error' | 'lr-copy-error', detail) => this.emit(name, detail ?? null),
     });
@@ -533,10 +540,17 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       this.tableRegionLabel = undefined;
     } else {
       const tableLabel = markdownTableRegionLabel(this.boundLocalize);
-      if (renderedChanged || tableLabel !== this.tableRegionLabel) {
-        const roots = tableLabel !== this.tableRegionLabel ? [this.contentRoot()] : changedRoots;
-        this.tableRegionLabel = tableLabel;
-        for (const root of roots) labelMarkdownTableWrappers(root, tableLabel);
+      // Ordinals depend on every table in the document, so the whole content root is relabeled,
+      // but only when the label text changed or a changed root actually holds a table.
+      const labelKey = `${tableLabel}\n${this.effectiveLocale}`;
+      const tablesChanged = renderedChanged && changedRoots.some(root => markdownHasTableWrappers(root));
+      if (tablesChanged || labelKey !== this.tableRegionLabel || this.strings !== this.tableRegionStrings) {
+        this.tableRegionLabel = labelKey;
+        this.tableRegionStrings = this.strings;
+        const format = getNumberFormat(this.effectiveLocale);
+        labelMarkdownTableWrappers(this.contentRoot(), (index, total) => total > 1
+          ? this.localize('markdownTableRegionIndexed', undefined, { index: format.format(index) })
+          : tableLabel);
       }
     }
     const remembered = this.rememberedFocus;

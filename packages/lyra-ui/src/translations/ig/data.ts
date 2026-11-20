@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: 'Ihe {items} n’ime oke {ranges}',
   noColumns: 'Ahazighị kọlụm ọ bụla',
   dataGridColumnMenu: 'Nhọrọ maka {label}',
-  dataGridCollapseRow: 'Kpọkọọ {row}',
   dataGridPinStart: 'Tụnye {label} na mbido',
   dataGridPinEnd: 'Tụnye {label} na njedebe',
   dataGridUnpin: 'Wepụ ntụnye {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'A na-ebunye ahịrị',
   tableLoadingMore: 'A na-ebunye ahịrị ndị ọzọ',
   tableEditCell: 'Dezie kọlụm {column}',
+  tableEditCellInRow: 'Dezie {column}, ahịrị {row}',
   showAllColumns: 'Gosi kọlụm niile',
   dataGridColumns: 'Ogidi',
   showFewerColumns: 'Gosi kọlụm ole na ole',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Ọnwa na-abịa',
   paginationPage: 'Peeji',
   paginationJumpToPage: 'Gaa na peeji {page}',
+  paginationInvalidPage: 'Tinye peeji site na 1 ruo {max}.',
+  paginationInvalidPageUnknownTotal: 'Tinye nọmba peeji zuru ezu nke 1 ma ọ bụ karịa.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Peeji {page}',
   trendOf: 'Ọnọdụ uru {count}, nke ikpeazụ {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'Naanị ahịrị {count} mbụ ka egosiri.',
   },
-  dataGridExpandRow: 'Mụbaa {row}',
+  dataGridToggleRow: 'Gbanwee ahịrị {row}',
   dataGridFilterColumn: 'Nyochaa {column}',
   dataGridSelectPage: 'Họrọ ahịrị niile dị na ibe a',
   tableRowLimit: {

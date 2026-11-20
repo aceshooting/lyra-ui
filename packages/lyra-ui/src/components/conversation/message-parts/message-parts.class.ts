@@ -54,7 +54,7 @@ import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_messagePartsWindowNotice, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -314,6 +314,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     ...super.defaultStrings,
     conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
+    fileTypeAudio: LYRA_DEFAULT_fileTypeAudio,
     loading: LYRA_DEFAULT_loading,
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
@@ -595,7 +596,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
-    this.announcements.transition('render-window', 'window', this.windowNotice, 'polite');
+    this.announcements.transition('render-window', this.windowNotice ? 'window' : 'none', this.windowNotice, 'polite', true);
     this.suppressNextErrorAnnouncement = false;
   }
 
@@ -797,10 +798,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       }
       case 'audio': {
         const src = safeMediaSrc(part.src);
+        const transcriptId = `audio-transcript-${this.renderWindow.items.indexOf(part)}`;
         return html`${src
-          ? html`<audio part="audio-control" controls src=${src}></audio>`
+          ? html`<audio part="audio-control" controls src=${src} aria-label=${this.localize('fileTypeAudio')}
+              aria-describedby=${part.transcript ? transcriptId : nothing}></audio>`
           : nothing}
-        ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
+        ${part.transcript ? html`<p part="audio-transcript" id=${transcriptId}>${part.transcript}</p>` : nothing}`;
       }
       case 'error':
         if (part.retryable && !this.rendererReady('button')) return html`<span>${part.message || this.localize('messagePartError')}</span> ${this.rendererFallback('button')}`;

@@ -2,12 +2,12 @@
   "locale": "es",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:86182aac1d88de5c0364a27e44ea21fa1f331e91341c737a834ff3ff849bf0af"
+    "keyCount": 1717,
+    "sha256": "sha256:3ae85caa4de5afae1cdbc9dfb2c04cf0d6cd78fa629a5e8e651cbc1df8026764"
   },
   "translator": {
     "status": "complete-original",
@@ -85,6 +85,10 @@
     {
       "messagePath": "commitCardLabel",
       "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Spanish uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

@@ -171,15 +171,14 @@ it('uses semantic landmarks and per-instance skip/navigation targets', async () 
   );
 });
 
-it('localizes the skip link, navigation landmark, and open/close toggle names', async () => {
+it('localizes the skip link, navigation landmark, and the constant toggle name', async () => {
   const page = (await fixture(html`
     <lr-page
       style="inline-size:320px"
       .strings=${{
         skipToContent: 'Aller au contenu',
         navigation: 'Navigation principale',
-        openNavigation: 'Ouvrir la navigation',
-        closeNavigation: 'Fermer la navigation',
+        toggleNavigation: 'Basculer la navigation',
       }}
     ></lr-page>
   `)) as LyraPage;
@@ -193,11 +192,12 @@ it('localizes the skip link, navigation landmark, and open/close toggle names', 
   expect(navigation.getAttribute('aria-label')).to.equal(
     'Navigation principale'
   );
-  expect(toggle.getAttribute('aria-label')).to.equal('Ouvrir la navigation');
+  expect(toggle.getAttribute('aria-label')).to.equal('Basculer la navigation');
 
   page.showNavigation();
   await page.updateComplete;
-  expect(toggle.getAttribute('aria-label')).to.equal('Fermer la navigation');
+  expect(toggle.getAttribute('aria-label')).to.equal('Basculer la navigation');
+  expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 });
 
 it('relates the internal role="dialog" mobile drawer to the host aria-describedby target', async () => {
@@ -863,7 +863,7 @@ it('keeps generated custom-toggle ARIA authoritative and restores late author st
     'author-navigation',
     page.id,
   ]);
-  expect(custom.getAttribute('aria-label')).to.equal('Close navigation');
+  expect(custom.getAttribute('aria-label')).to.equal('Toggle navigation');
 
   page.hideNavigation();
   await page.updateComplete;
@@ -872,7 +872,7 @@ it('keeps generated custom-toggle ARIA authoritative and restores late author st
     'author-navigation',
     page.id,
   ]);
-  expect(custom.getAttribute('aria-label')).to.equal('Open navigation');
+  expect(custom.getAttribute('aria-label')).to.equal('Toggle navigation');
 
   page.remove();
   expect(custom.getAttribute('aria-expanded')).to.equal('mixed');

@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'ଅବଜେକ୍ଟ',
   jsonValue: 'ମୂଲ୍ୟ',
   jsonCopyLabel: '{label} ନକଲ କରନ୍ତୁ',
-  jsonExpandLabel: '{label} ପ୍ରସାରଣ କରନ୍ତୁ',
-  jsonCollapseLabel: '{label} ସଙ୍କୁଚିତ କରନ୍ତୁ',
+  jsonToggleLabel: '{label} ଟୋଗଲ୍ କରନ୍ତୁ',
   jsonItemCount: {
     one: '{count}ଟି ବସ୍ତୁ',
     other: '{count}ଟି ବସ୍ତୁ',

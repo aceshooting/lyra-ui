@@ -23,6 +23,8 @@ The default entry registers the search field's `lr-input` the first time `search
 `updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
+After a search or tag-filter change, the matching count (`viewerSearchMatchCount`; the provider's
+`sourceTotal` once it settles with `dataSource`) is announced politely, coalesced while typing.
 
 **Properties:**
 

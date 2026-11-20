@@ -7,6 +7,7 @@ import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 
@@ -495,6 +496,27 @@ it('filters by the built-in search field across input, expected output, and tags
   await typeSearch(el, 'bonjour');
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(1);
+});
+
+it('announces the coalesced match count after search and tag-filter changes, never on mount', async () => {
+  const before = sinkTexts().length;
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  await el.updateComplete;
+  const spoken = (): string[] => sinkTexts().slice(before);
+  await typeSearch(el, 'b');
+  await el.updateComplete;
+  await typeSearch(el, 'bonjour');
+  await el.updateComplete;
+  await waitUntil(() => spoken().length > 0, 'the search result count is announced');
+  expect(spoken()).to.deep.equal(['1 match']);
+  await typeSearch(el, '');
+  await el.updateComplete;
+  ([...el.shadowRoot!.querySelectorAll('lr-chip')] as LyraChip[]).find((chip) => chip.value === 'math')!.click();
+  await el.updateComplete;
+  await waitUntil(() => spoken().length > 1, 'the tag-filter result count is announced');
+  expect(spoken()).to.deep.equal(['1 match', '2 matches']);
 });
 
 it('clears selection and emits null when a search filter hides the selected example', async () => {

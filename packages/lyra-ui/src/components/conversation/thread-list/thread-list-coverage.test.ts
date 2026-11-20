@@ -5,7 +5,6 @@ import type { LyraThreadList } from '../../lr-thread-list.js';
 
 expectLocaleFallback('de-DE', [
   'threadGroupPrevious7Days',
-  'threadGroupCollapse',
   'threadListLabel',
   'rename',
 ]);

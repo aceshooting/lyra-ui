@@ -20,6 +20,9 @@ Import `@aceshooting/lyra-ui/components/lr-change-review.js`. Experimental multi
 already-separated hunks. Bind `.files` to `ChangeReviewFile[]`: `{ id, path, previousPath?, hunks }`,
 where each hunk is `{ id, label?, before, after, decision?: 'pending' | 'keep' | 'discard' }`.
 Files and per-file hunks need nonblank, unique ids; malformed duplicates normalize first-wins.
+An unlabeled hunk shows `changeReviewHunk` (`Change {index}`); while several files render, its
+region and keep/discard names use `changeReviewHunkInFile` (`Change {index} in {file}`) so they
+stay distinguishable across files.
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 

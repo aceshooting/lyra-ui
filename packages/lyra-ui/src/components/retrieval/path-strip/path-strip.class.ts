@@ -17,9 +17,6 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
-import {
-  AnnouncementSinkController,
-} from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationForward, LYRA_DEFAULT_pathRelationReverse, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings/retrieval.generated.js';
@@ -101,9 +98,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   @property() label?: string;
 
   @state() private activeIndex = 0;
-  @state() private liveText = '';
   private restoreFocusAfterPathChange = false;
-  private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private pathOccurrenceSource?: readonly LyraPathElement[];
   private pathOccurrenceSnapshot: readonly PathOccurrence[] = [];
   private pathOccurrenceTotal = 0;
@@ -194,22 +189,6 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   private onElementFocus(index: number): void {
     this.activeIndex = index;
-    const el = this.pathOccurrences[index]?.element;
-    const total = this.pathOccurrences.length;
-    const numberFormat = getNumberFormat(this.effectiveLocale);
-    this.liveText =
-      el?.kind === 'node'
-        ? this.localize('pathNodeStatus', undefined, {
-            label: el.node.label || el.node.id,
-            position: numberFormat.format(index + 1),
-            total: numberFormat.format(total),
-          })
-        : el
-        ? this.localize('pathRelationStatus', undefined, {
-            relation: el.relation,
-          })
-        : '';
-    this.announcementSink.announcePolite(this.liveText);
   }
 
   private focusIndex(index: number): void {
@@ -257,9 +236,15 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   };
 
   private renderNode(node: LyraEntity, index: number, activate: () => void): TemplateResult {
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`<button
       part="node"
       type="button"
+      aria-label=${this.localize('pathNodeStatus', undefined, {
+        label: node.label || node.id,
+        position: numberFormat.format(index + 1),
+        total: numberFormat.format(this.pathOccurrences.length),
+      })}
       tabindex=${this.activeIndex === index ? '0' : '-1'}
       @click=${activate}
       @focus=${() => this.onElementFocus(index)}
@@ -278,6 +263,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       <button
         part="relation"
         type="button"
+        aria-label=${el.directed ? nothing : this.localize('pathRelationStatus', undefined, { relation: el.relation })}
         tabindex=${this.activeIndex === index ? '0' : '-1'}
         @click=${activate}
         @focus=${() => this.onElementFocus(index)}
@@ -329,7 +315,6 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
               total: this.formatLocaleNumber(this.pathOccurrenceTotal),
             })}</p>`
           : nothing}
-        <div class="sr-only" aria-hidden="true">${this.liveText}</div>
       </div>
     `;
   }

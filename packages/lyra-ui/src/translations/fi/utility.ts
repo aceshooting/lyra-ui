@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'objekti',
   jsonValue: 'arvo',
   jsonCopyLabel: 'Kopioi: {label}',
-  jsonExpandLabel: 'Laajenna: {label}',
-  jsonCollapseLabel: 'Tiivistä: {label}',
+  jsonToggleLabel: 'Näytä tai piilota: {label}',
   jsonItemCount: {
     one: '{count} kohde',
     other: '{count} kohdetta',

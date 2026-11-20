@@ -2,12 +2,12 @@
   "locale": "hu",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:d8f1d3b7b59a7375e1ace14b630fa2ae2f7b8533fe5140827e8914d649e48fea"
+    "keyCount": 1717,
+    "sha256": "sha256:626b7740d47475b18e81194a60f4d821cb59c7347700e91549f041b4fa9fec89"
   },
   "translator": {
     "status": "complete-original",
@@ -89,6 +89,10 @@
     {
       "messagePath": "commitCardLabel",
       "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Hungarian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerTypeFax",

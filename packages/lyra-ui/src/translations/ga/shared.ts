@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Diúltaithe',
   statusIncomplete: 'Neamhiomlán',
   restore: 'Athchóirigh',
+  fileTypeAudio: 'Fuaim',
   navigation: 'Nascleanúint',
   attachmentUntitledFile: 'Comhad gan teideal',
   chartTrendIncreasing: 'ag méadú',

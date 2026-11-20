@@ -75,6 +75,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'נדחה',
   statusIncomplete: 'לא הושלם',
   restore: 'שחזר',
+  fileTypeAudio: 'שמע',
   navigation: 'ניווט',
   attachmentUntitledFile: 'קובץ ללא שם',
   chartTrendIncreasing: 'עולה',

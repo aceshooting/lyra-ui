@@ -82,7 +82,8 @@ trapping, stacking, reconnect suspension, and focus return. Modal inerting is sc
 drawer root, so header/main/footer siblings inside the Page become inert without inerting the
 drawer itself. Every custom `navigation-toggle` and the composed descendant that actually receives
 focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
-a localized label when unnamed; any available assigned control opens the same Page-owned drawer,
+the constant localized `toggleNavigation` label (`Toggle navigation`) when unnamed, the same name
+the built-in toggle keeps in both states; any available assigned control opens the same Page-owned drawer,
 while disabled, `aria-disabled`, hidden, and inert controls remain non-actions. The component
 supplies the real drawer to the shared controls owner; current browsers normalize that inward
 private relationship to the public Page host. Generated whole-value state remains authoritative

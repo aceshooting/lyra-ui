@@ -11,7 +11,7 @@ import '../../lr-sequence-playback.js';
 import { requireWebgl2 } from '../../../../test/webgl2.js';
 
 // The story localizes its own copy only; composed controls keep their English defaults in Arabic.
-expectLocaleFallback('ar', ['mapScene', 'mapSceneShow', 'mapSceneHide', 'mapSceneUnavailable', 'mapScenePartial', 'loading',
+expectLocaleFallback('ar', ['mapScene', 'mapSceneUnavailable', 'mapScenePartial', 'loading',
   'mapSceneMarker', 'mapScenePath', 'zoomIn',
   'zoomOut', 'mapResetNorth', 'play', 'pause', 'playbackPosition', 'playbackStepPosition']);
 const text = (root: HTMLElement, selector: string): string => root.querySelector(selector)?.textContent?.trim() ?? '';

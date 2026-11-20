@@ -2,12 +2,12 @@
   "locale": "tl",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:44b075ba78757ce83049100f224503a82197993761f2a47feeee71f480349005"
+    "keyCount": 1717,
+    "sha256": "sha256:3b2f0c6bb69f7cc10865e0cc64cfe7f88d275f4974f46c1e219c6192755b555f"
   },
   "translator": {
     "status": "complete-original",
@@ -135,6 +135,10 @@
       "rationale": "A standalone conventional software/domain label or cross-language cognate for this specific UI concept is commonly retained in this locale; it is a term, not untranslated English sentence copy."
     },
     {
+      "messagePath": "codeRegionIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (codeRegionIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "colorPickerOpacity",
       "rationale": "A standalone conventional software/domain label or cross-language cognate for this specific UI concept is commonly retained in this locale; it is a term, not untranslated English sentence copy."
     },
@@ -145,6 +149,10 @@
     {
       "messagePath": "connectorManagerKindMcp",
       "rationale": "MCP names the protocol and 'server' is the established technical loanword in Tagalog for this service role."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

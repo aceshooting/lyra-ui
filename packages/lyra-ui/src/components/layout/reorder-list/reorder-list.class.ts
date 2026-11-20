@@ -6,6 +6,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { tag } from '../../../internal/prefix.js';
+import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedContains } from '../../../internal/composed-tree.js';
@@ -568,6 +569,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (
+      isHandledOrComposingKey(e) ||
       !(e.ctrlKey || e.metaKey) ||
       e.altKey ||
       e.shiftKey ||

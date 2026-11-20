@@ -60,6 +60,7 @@ nonnegative dimensions.
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }` — fired for `zoom` assignments as well as
   `zoomIn()`/`zoomOut()`. Never fired for the initial `1`, only for a transition away from it.
+  While the document is ready the applied percentage is also announced politely.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
   the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
@@ -123,7 +124,8 @@ combinator after `::part()` never matches; all four controls are borderless text
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `page-error`, `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
+`search-match`), `page-error` (names the failed page with `pdfViewerPageFailed`, announced politely
+once per page and document), `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
 aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended
 to the shared document-level polite sink only while the viewer and its composed ancestors are
 exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized

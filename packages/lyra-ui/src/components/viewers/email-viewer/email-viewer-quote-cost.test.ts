@@ -24,13 +24,14 @@ it('folds many expanded quotes with linear membership work and retains quote ord
     expect(blocks.every((block) => !block.hasAttribute('hidden'))).to.equal(true);
     expect(Array.from(viewer.shadowRoot!.querySelectorAll('[part="quote-toggle"]'), (toggle) => toggle.getAttribute('aria-expanded')))
       .to.deep.equal(Array<string>(128).fill('true'));
-    viewer.strings = { emailViewerHideQuoted: 'Hide this quote', emailViewerShowQuoted: 'Show this quote' };
+    viewer.strings = { emailViewerQuotedText: 'This quote' };
     await viewer.updateComplete;
-    expect(viewer.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent).to.equal('Hide this quote');
+    expect(viewer.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent).to.equal('This quote');
     viewer.shadowRoot!.querySelector<HTMLButtonElement>('[data-quote-toggle="7"]')!.click();
     await viewer.updateComplete;
     expect(viewer.shadowRoot!.querySelector('[data-quote-index="7"]')!.hasAttribute('hidden')).to.equal(true);
-    expect(viewer.shadowRoot!.querySelector('[data-quote-toggle="7"]')!.textContent).to.equal('Show this quote');
+    expect(viewer.shadowRoot!.querySelector('[data-quote-toggle="7"]')!.textContent).to.equal('This quote');
+    expect(viewer.shadowRoot!.querySelector('[data-quote-toggle="7"]')!.getAttribute('aria-expanded')).to.equal('false');
     expect(viewer.shadowRoot!.querySelector('[data-quote-index="8"]')!.hasAttribute('hidden')).to.equal(false);
     const cached = measureArrayProbeReads((array) => array === seam.expandedHtmlQuoteIndices, () => element.render());
     expect(cached.reads).to.equal(0);

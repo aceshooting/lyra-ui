@@ -69,7 +69,7 @@ export const LocalizedFailureDetailControl: Story = {
       .suites=${mixedSuites}
       .strings=${{
         accessibleLabelSeparator: ' / ',
-        testResultsExpandTest: 'Open {name}',
+        testResultsToggleTest: 'Details: {name}',
       }}
     ></lr-test-results>
   `,

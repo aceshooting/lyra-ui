@@ -110,8 +110,8 @@ it('defines the copy-to-clipboard confirmation label', () => {
   expect(LYRA_DEFAULT_STRINGS.copiedToClipboard).to.equal('Copied to clipboard');
 });
 
-it('includes openNavigation and resizeNavigation in the default English strings', () => {
-  expect(LYRA_DEFAULT_STRINGS.openNavigation).to.equal('Open navigation');
+it('includes toggleNavigation and resizeNavigation in the default English strings', () => {
+  expect(LYRA_DEFAULT_STRINGS.toggleNavigation).to.equal('Toggle navigation');
   expect(LYRA_DEFAULT_STRINGS.resizeNavigation).to.equal('Resize navigation');
 });
 

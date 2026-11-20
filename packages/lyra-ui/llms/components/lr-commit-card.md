@@ -56,7 +56,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 **Toggle request and colours:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the file list folds; preventing it keeps the list as is. File rows, the copy button and the per-file counts follow `--lr-color-text`, `--lr-color-success` and `--lr-color-danger`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
-`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
+`deletions`, `files-toggle` (its visible name is the constant `commitCardChangedFiles` count,
+`{count} changed files`, while `aria-expanded` reports the state), `file` (carries `data-status`), `file-path`, `file-status`,
 `file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`),
 `limit` (shown when the expanded file list exceeds the render cap), and `actions`.
 

@@ -75,6 +75,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Noraidīts',
   statusIncomplete: 'Nepabeigts',
   restore: 'Atjaunot',
+  fileTypeAudio: 'Audio',
   navigation: 'Navigācija',
   attachmentUntitledFile: 'Nenosaukts fails',
   chartTrendIncreasing: 'augoša',

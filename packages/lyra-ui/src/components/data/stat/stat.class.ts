@@ -20,6 +20,7 @@ import {
 } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './stat.styles.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statRowsInputLimit, LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
@@ -411,7 +412,7 @@ export class LyraStat extends LyraElement {
         ><slot name="start" @slotchange=${this.onIconSlotChange}></slot
         ></span
       >
-      <span part="label" id=${this.labelId} role=${this.label ? 'term' : nothing} ?hidden=${!this.label}>${this.label}</span>
+      <span part="label" id=${this.labelId} role=${this.label ? 'term' : nothing} ?hidden=${!this.label}>${bdi(this.label)}</span>
       <div part="value-row">
         <span
           part="value"

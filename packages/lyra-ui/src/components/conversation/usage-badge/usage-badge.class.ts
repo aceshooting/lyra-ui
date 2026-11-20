@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hasSlotContent } from '../../../internal/slot-content.js';
+import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { reserveOverlayOrder, type OverlayOrderReservation } from '../../../internal/overlay-order.js';
@@ -360,7 +361,7 @@ export class LyraUsageBadge extends LyraElement {
     this.hideTooltip();
   };
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return;
+    if (e.key !== 'Escape' || isHandledOrComposingKey(e)) return;
     if (this.tooltipOpening) this.cancelTooltipOpening();
     if (this.tooltipOpen && this.tooltipOverlay?.isTopmost()) {
       e.preventDefault();

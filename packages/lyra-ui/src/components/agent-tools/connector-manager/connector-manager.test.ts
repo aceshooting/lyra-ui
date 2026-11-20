@@ -71,10 +71,18 @@ describe('lr-connector-manager', () => {
     expect(rowPart(el, 'files', 'action')?.textContent).to.contain('Disconnect');
     expect(politeAnnouncements().slice(before)).to.deep.equal(['Connecting', 'Connected']);
 
-    // A settled connector's later, unrelated status changes stay silent.
-    el.connectors = el.connectors.map((item) => (item.id === 'files' ? { ...item, status: 'disconnected' as const } : item));
+    // A settled connector's later host-driven reconnect stays silent; a dropped connection or a
+    // failure is named, since nothing on screen tells the user which row changed.
+    el.connectors = el.connectors.map((item) => (item.id === 'pending' ? { ...item, status: 'connected' as const } : item));
     await el.updateComplete;
     expect(politeAnnouncements().slice(before)).to.deep.equal(['Connecting', 'Connected']);
+    el.connectors = el.connectors.map((item) => (item.id === 'files' ? { ...item, status: 'disconnected' as const } : item));
+    await el.updateComplete;
+    el.connectors = el.connectors.map((item) => (item.id === 'calendar' ? { ...item, status: 'error' as const, error: 'Session expired.' } : item));
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal([
+      'Connecting', 'Connected', 'Project files: Disconnected', 'Calendar: Session expired.',
+    ]);
   });
 
   it('announces the host-localized error of a failed connection', async () => {

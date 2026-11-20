@@ -46,7 +46,7 @@ import { sanitizeCssInset } from '../../../internal/safe-css.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailItemToggle, LYRA_DEFAULT_panelToggle, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExitFullscreenWithLabel, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetExpandToFullscreenWithLabel, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraWidgetView {
@@ -243,8 +243,10 @@ export interface LyraWidgetEventMap {
  * @csspart view-icon - Decorative icon content inside a view toggle; its subtree is inert and
  *   hidden from assistive technology.
  * @csspart view-label - Visible label text inside a view toggle.
- * @csspart collapse-button - The collapse/expand toggle button.
- * @csspart fullscreen-button - The fullscreen toggle button.
+ * @csspart collapse-button - The collapse/expand toggle button. One constant name in both states
+ *   (`Toggle {label}` with the widget's name, else `Toggle panel`); `aria-expanded` carries the state.
+ * @csspart fullscreen-button - The fullscreen toggle button, qualified by the widget's name when it
+ *   has one.
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
  * @cssprop [--lr-widget-bg=var(--lr-color-surface)] - Background. Fullscreen falls back to the shared
@@ -302,10 +304,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    widgetCollapse: LYRA_DEFAULT_widgetCollapse,
+    appRailItemToggle: LYRA_DEFAULT_appRailItemToggle,
+    panelToggle: LYRA_DEFAULT_panelToggle,
     widgetExitFullscreen: LYRA_DEFAULT_widgetExitFullscreen,
-    widgetExpand: LYRA_DEFAULT_widgetExpand,
+    widgetExitFullscreenWithLabel: LYRA_DEFAULT_widgetExitFullscreenWithLabel,
     widgetExpandToFullscreen: LYRA_DEFAULT_widgetExpandToFullscreen,
+    widgetExpandToFullscreenWithLabel: LYRA_DEFAULT_widgetExpandToFullscreenWithLabel,
     widgetFullscreenPanel: LYRA_DEFAULT_widgetFullscreenPanel,
     widgetViewGroup: LYRA_DEFAULT_widgetViewGroup,
   };
@@ -830,6 +834,32 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     });
   }
 
+  /** The widget's own name for qualifying its header controls, so every widget on a dashboard
+   *  exposes distinguishable buttons. */
+  private controlContext(): string | undefined {
+    return normalizeLabel(this.accessibleLabel) ?? normalizeLabel(this.label) ?? normalizeLabel(this.labelSlotText);
+  }
+
+  /** One constant name for both states; `aria-expanded` carries the state. */
+  private collapseButtonName(): string {
+    const label = this.controlContext();
+    return label === undefined
+      ? this.localize('panelToggle')
+      : this.localize('appRailItemToggle', undefined, { label });
+  }
+
+  private fullscreenButtonName(): string {
+    const label = this.controlContext();
+    if (this.fullscreen) {
+      return label === undefined
+        ? this.localize('widgetExitFullscreen')
+        : this.localize('widgetExitFullscreenWithLabel', undefined, { label });
+    }
+    return label === undefined
+      ? this.localize('widgetExpandToFullscreen')
+      : this.localize('widgetExpandToFullscreenWithLabel', undefined, { label });
+  }
+
   override render(): TemplateResult {
     const hasLabel = (this.label ?? '').length > 0;
     const hasSublabel = (this.sublabel ?? '').length > 0;
@@ -919,9 +949,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 part="collapse-button"
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
-                aria-label=${this.collapsed
-                  ? this.localize('widgetExpand')
-                  : this.localize('widgetCollapse')}
+                aria-label=${this.collapseButtonName()}
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >
@@ -934,9 +962,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="fullscreen-button"
                 type="button"
-                aria-label=${this.fullscreen
-                  ? this.localize('widgetExitFullscreen')
-                  : this.localize('widgetExpandToFullscreen')}
+                aria-label=${this.fullscreenButtonName()}
                 @click=${this.toggleFullscreen}
               >
                 ${renderInertPresentation(html`

@@ -68,12 +68,12 @@ import { styles } from './data-grid.styles.js';
 import type { DataGridAppearance, DataGridCellContextMenuDetail, DataGridColumn, DataGridCopyOptions, DataGridCsvOptions, DataGridExportOptions, DataGridFacets, DataGridFilter, DataGridKey, DataGridPinSide, DataGridRequest, DataGridResponse, DataGridScrollOptions, DataGridSelectable, DataGridSize, DataGridSortingState, DataGridState, LyraDataGridEventMap, SortingState } from './data-grid-types.js';
 import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
-import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 export * from './data-grid-types.js';
 import { selectableConverter, displayItemKey, snapshotColumns, VIRTUALIZATION_THRESHOLD, VIRTUAL_OVERSCAN, DATA_GRID_TREE_NODE_LIMIT, DATA_GRID_TREE_DEPTH_LIMIT, DATA_GRID_DRAG_TYPE, REBIND_NO_SNAPSHOT, freezeSnapshot, sameFilterState, sameSortState, serializableFilterValue, isKey, snapshotKeys, keysEqual, typedKey, sameKeySet, arrayHasKey, isElementValue, valueControl, checkableControl, humanizeIdentifier, safeText, normalizePinSide, normalizedGroupBy, type DataDisplayRow, type DataDisplayGroup, type DisplayItem, type DataGridViewportAnchor, type PendingVirtualScroll, type ResizeSession, type ColumnDragSession } from './data-grid-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridColumns, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_dataGridFilterColumn, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridSelectPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridColumns, LYRA_DEFAULT_dataGridFilterColumn, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridSelectPage, LYRA_DEFAULT_dataGridToggleRow, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -220,7 +220,9 @@ const DATA_GRID_CHILDREN = {
  * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
  * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part.
  * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
- * @csspart expand-button - A tree/detail/group expand control.
+ * @csspart expand-button - A tree/detail/group expand control, named by the constant
+ *   `dataGridToggleRow` string (`Toggle row {row}`) in both states. The expanded state is reported
+ *   once: on the owning `row`/`group-row` in a tree grid, otherwise on this button.
  * @csspart filter-button - A column filter trigger.
  * @csspart filter-panel - The active column filter editor.
  * @csspart filter-panel-clear - The button that clears the active column filter editor's value,
@@ -320,16 +322,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     clear: LYRA_DEFAULT_clear,
     copied: LYRA_DEFAULT_copied,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
     dataGridColumnMenu: LYRA_DEFAULT_dataGridColumnMenu,
     dataGridColumns: LYRA_DEFAULT_dataGridColumns,
-    dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
     dataGridFilterColumn: LYRA_DEFAULT_dataGridFilterColumn,
     dataGridPinEnd: LYRA_DEFAULT_dataGridPinEnd,
     dataGridPinStart: LYRA_DEFAULT_dataGridPinStart,
     dataGridRowLimit: LYRA_DEFAULT_dataGridRowLimit,
     dataGridRowsPerPage: LYRA_DEFAULT_dataGridRowsPerPage,
     dataGridSelectPage: LYRA_DEFAULT_dataGridSelectPage,
+    dataGridToggleRow: LYRA_DEFAULT_dataGridToggleRow,
     dataGridTreeLimitReached: LYRA_DEFAULT_dataGridTreeLimitReached,
     dataGridUnpin: LYRA_DEFAULT_dataGridUnpin,
     loading: LYRA_DEFAULT_loading,
@@ -4597,8 +4598,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     ) {
       return;
     }
-    // An IME composition owns its keys; a held Enter/Space activates once.
-    if (event.isComposing || event.keyCode === 229) return;
+    // An earlier listener's claim and an IME composition own their keys; a held Enter/Space
+    // activates once.
+    if (isHandledOrComposingKey(event)) return;
     if (isRepeatedActivationKey(event) && ['Enter', ' '].includes(event.key)) return;
     const rtlMultiplier = this.effectiveDirection === 'rtl' ? -1 : 1;
     if (
@@ -5148,8 +5150,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         part="expand-button"
         type="button"
         style=${styleMap({ '--depth': String(item.depth) })}
-        aria-label=${this.localize(expanded ? 'dataGridCollapseRow' : 'dataGridExpandRow', undefined, { row })}
-        aria-expanded=${expanded ? 'true' : 'false'}
+        aria-label=${this.localize('dataGridToggleRow', undefined, { row })}
+        aria-expanded=${this.childRows ? nothing : expanded ? 'true' : 'false'}
         tabindex="-1"
         @click=${() => this.toggleRowExpanded(item, true)}
       >
@@ -5323,8 +5325,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             part="expand-button"
             type="button"
             style=${styleMap({ '--depth': String(item.depth) })}
-            aria-label=${this.localize(expanded ? 'dataGridCollapseRow' : 'dataGridExpandRow', undefined, { row: safeText(item.value) })}
-            aria-expanded=${expanded ? 'true' : 'false'}
+            aria-label=${this.localize('dataGridToggleRow', undefined, { row: safeText(item.value) })}
             tabindex="-1"
             @click=${() => this.toggleGroupExpanded(item)}
           >

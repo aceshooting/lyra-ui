@@ -521,3 +521,18 @@ it('admits a document above the default on request and enforces the absolute max
     expect(el.shadowRoot!.querySelectorAll('[part="contact"]').length).to.equal(0);
   } finally { window.fetch = originalFetch; }
 });
+
+it('isolates only the caller value inside the localized typed-value template under RTL', async () => {
+  const originalFetch = window.fetch;
+  window.fetch = async () => response(CARD);
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer dir="rtl" src="https://example.test/a.vcf"></lr-contact-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
+    const isolated = (selector: string): string[] =>
+      [...el.shadowRoot!.querySelectorAll(selector)].map((node) => `${node.getAttribute('dir')}:${node.textContent}`);
+    expect(isolated('[part="contact-tel"] li > bdi')).to.deep.equal(['auto:+1-404']);
+    expect(isolated('[part="contact-email"] li > bdi')).to.deep.equal(['auto:john@example.com']);
+    expect(isolated('[part="contact-org"] > bdi')).to.deep.equal(['auto:ABC, Inc.']);
+    expect(el.shadowRoot!.querySelector('[part="contact-tel"] li')!.textContent).to.equal('+1-404 (Work)');
+  } finally { window.fetch = originalFetch; }
+});

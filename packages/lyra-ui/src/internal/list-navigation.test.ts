@@ -1,13 +1,30 @@
 import { expect } from '@open-wc/testing';
 import {
   isCatalogOptionAvailable,
+  isHandledOrComposingKey,
   isRepeatedActivationKey,
   isRovingTargetAvailable,
   resolveListMove,
   shouldIgnoreActivationKey,
+  shouldIgnoreNavigationKey,
 } from './list-navigation.js';
 
 describe('list navigation', () => {
+  it('yields a key an earlier listener claimed, while a claiming caller can still resolve its move', () => {
+    const claimed = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+    claimed.preventDefault();
+    const composing = new KeyboardEvent('keydown', { key: 'Enter', isComposing: true });
+    const modified = new KeyboardEvent('keydown', { key: 'Backspace', ctrlKey: true });
+    expect(shouldIgnoreNavigationKey(claimed)).to.equal(true);
+    expect(shouldIgnoreActivationKey(claimed)).to.equal(true);
+    expect(isHandledOrComposingKey(claimed)).to.equal(true);
+    expect(isHandledOrComposingKey(composing)).to.equal(true);
+    expect(isHandledOrComposingKey(modified)).to.equal(false);
+    expect(shouldIgnoreNavigationKey(modified)).to.equal(true);
+    expect(shouldIgnoreNavigationKey(new KeyboardEvent('keydown', { key: 'ArrowDown' }))).to.equal(false);
+    expect(resolveListMove(claimed, { count: 3, current: 0, orientation: 'vertical' })).to.equal(1);
+  });
+
   it('maps inline arrows through RTL and block arrows independently', () => {
     const options = { count: 3, current: 0, orientation: 'horizontal' as const, direction: 'rtl' as const };
     expect(resolveListMove('ArrowLeft', options)).to.equal(1);

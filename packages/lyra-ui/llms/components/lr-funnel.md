@@ -133,8 +133,9 @@ shown when `stages` exceeds the 500-stage render ceiling or the 10,000-position 
 - **Malformed stage entries are omitted independently.** Non-record entries and records without a
   string `label` cannot suppress valid neighbors in either series. Accessor properties are never
   invoked; the caller's arrays are never rewritten.
-- **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
-  take the chart with it.
+- **A missing or non-finite `value` renders the localized `noData` text** in place of the number, with
+  no share, drop-off or bar, so one bad row cannot take the chart with it and is never read as a
+  measured zero.
 - Values, shares and drop-off percentages all format through the component's effective locale
   (`locale` attribute, or an inherited one) — never a hardcoded `en`.
 - Bars grow from the inline-start edge and every dimension is a logical property, so `dir="rtl"`

@@ -136,3 +136,12 @@ it('revalidates the selected value synchronously when replacing the catalog', as
   el.timeZones = undefined;
   expect(el.validity.valid).to.equal(true);
 });
+
+it('isolates zone identifiers in an RTL listbox', async () => {
+  const el = await fixture<LyraTimeZonePicker>(html`<lr-time-zone-picker dir="rtl" label="Time zone" .timeZones=${['Etc/GMT+5']}></lr-time-zone-picker>`);
+  el.click();
+  const select = el.shadowRoot!.querySelector('lr-select')!;
+  await waitUntil(() => select.shadowRoot!.querySelector('[part="option-label"] bdi') !== null);
+  const label = select.shadowRoot!.querySelector('[part="option-label"] bdi')!;
+  expect(`${label.getAttribute('dir')}:${label.textContent}`).to.equal('auto:Etc/GMT+5');
+});

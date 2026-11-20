@@ -1,5 +1,6 @@
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { AutocorrectState, installNativeInputModeAliases } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -557,7 +558,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (isLiveDisabled(this) || event.isComposing || event.keyCode === 229) return;
+    if (isLiveDisabled(this) || isHandledOrComposingKey(event)) return;
     if (event.key === 'Escape') {
       this.tabBypassArmed = true;
       return;

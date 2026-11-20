@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Bị từ chối',
   statusIncomplete: 'Chưa hoàn tất',
   restore: 'Khôi phục',
+  fileTypeAudio: 'Âm thanh',
   navigation: 'Điều hướng',
   attachmentUntitledFile: 'Tệp chưa có tiêu đề',
   chartTrendIncreasing: 'tăng',

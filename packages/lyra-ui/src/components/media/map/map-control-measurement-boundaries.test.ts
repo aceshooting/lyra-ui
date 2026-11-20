@@ -230,6 +230,17 @@ describe('lr-map rendered measurements and legend snapshots', () => {
     });
   }
 
+  it('lets rendered measurement labels take their own direction under an RTL host', async () => {
+    const { element, peer } = await mapFixture(el => {
+      el.dir = 'rtl'; el.drawMode = 'line'; el.drawingMeasurements = true;
+    });
+    await waitUntil(() => element.shadowRoot?.querySelector<HTMLButtonElement>('[part="drawing-add"]')?.disabled === false);
+    await vertex(element, peer, [0, 0]); await vertex(element, peer, [0.05, 0]);
+    await waitUntil(() => (element.shadowRoot?.querySelectorAll('[part="drawing-measurement"]').length ?? 0) > 0);
+    const bidi = (part: string): string => getComputedStyle(element.shadowRoot!.querySelector(`[part="${part}"]`)!).unicodeBidi;
+    expect([bidi('drawing-summary'), bidi('drawing-measurement')]).to.deep.equal(['plaintext', 'plaintext']);
+  });
+
   for (const [side, unit] of [[0.001, 'm2'], [0.02, 'km2']] as const) {
     it(`uses the caller's ${unit} area label in a rendered polygon summary`, async () => {
       const { element, peer } = await mapFixture(el => {

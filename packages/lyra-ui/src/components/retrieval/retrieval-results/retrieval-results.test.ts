@@ -2333,3 +2333,15 @@ it('keeps focus inside the component when the focused Load more button is replac
   const active = el.shadowRoot!.activeElement ?? (document.activeElement === el ? el : null);
   expect(active, 'focus is not dropped to body').to.not.equal(null);
 });
+
+it('isolates caller metadata keys and values under an RTL host', async () => {
+  const el = (await fixture(html`<lr-retrieval-results dir="rtl"></lr-retrieval-results>`)) as LyraRetrievalResults;
+  el.chunks = [chunks[1]!];
+  await el.updateComplete;
+  const isolated = (part: string): string | null => {
+    const node = el.shadowRoot!.querySelector(`[part="${part}"] > bdi`);
+    return node ? `${node.getAttribute('dir')}:${node.textContent}` : null;
+  };
+  expect(isolated('metadata-term')).to.equal('auto:author');
+  expect(isolated('metadata-value')).to.equal('auto:M. Curie');
+});

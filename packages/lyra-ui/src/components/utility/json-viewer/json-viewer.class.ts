@@ -48,7 +48,7 @@ import { copyOutcome, KeyedCopyFeedback, reportCopyOutcome } from '../../../inte
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLabel, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonToggleLabel, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLabel, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type JsonPathSegment = string | number;
@@ -408,7 +408,8 @@ export interface LyraJsonViewerEventMap {
  * @csspart key - An object property key or array index label.
  * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, `data-match` while it matches `query`, and `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position.
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
- * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
+ * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes),
+ *   named `Toggle {label}` (`jsonToggleLabel`) in both states while `aria-expanded` reports the state.
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
  * @csspart source-list - Source-only bounded virtual scroller.
  * @csspart source-row - Source-only flat tree item with logical hierarchy metadata.
@@ -458,12 +459,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     copyJson: LYRA_DEFAULT_copyJson,
     expand: LYRA_DEFAULT_expand,
     jsonArray: LYRA_DEFAULT_jsonArray,
-    jsonCollapseLabel: LYRA_DEFAULT_jsonCollapseLabel,
     jsonCopyLabel: LYRA_DEFAULT_jsonCopyLabel,
-    jsonExpandLabel: LYRA_DEFAULT_jsonExpandLabel,
     jsonItemCount: LYRA_DEFAULT_jsonItemCount,
     jsonKeyCount: LYRA_DEFAULT_jsonKeyCount,
     jsonObject: LYRA_DEFAULT_jsonObject,
+    jsonToggleLabel: LYRA_DEFAULT_jsonToggleLabel,
     jsonValue: LYRA_DEFAULT_jsonValue,
     jsonViewerLabel: LYRA_DEFAULT_jsonViewerLabel,
     jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
@@ -1088,7 +1088,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               // order stays translatable -- same rationale as renderCopyButton()'s
               // "Copy {label}" above; toggleLabel is either caller data (a JSON
               // key/index) or an already-localized type noun.
-              this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: toggleLabel })
+              this.localize('jsonToggleLabel', undefined, { label: toggleLabel })
             : nothing}
           @click=${() => toggleable && this.toggleNode(pathKey, expanded)}
         >

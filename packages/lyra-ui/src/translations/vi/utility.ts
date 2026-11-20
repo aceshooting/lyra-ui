@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'đối tượng',
   jsonValue: 'giá trị',
   jsonCopyLabel: 'Sao chép {label}',
-  jsonExpandLabel: 'Mở rộng {label}',
-  jsonCollapseLabel: 'Thu gọn {label}',
+  jsonToggleLabel: 'Bật/tắt {label}',
   jsonItemCount: {
     other: '{count} mục',
   },

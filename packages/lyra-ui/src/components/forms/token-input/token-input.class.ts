@@ -9,7 +9,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -1058,7 +1058,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     relayNativeEvent(this, event);
   };
   private onEditKeyDown = (event: KeyboardEvent): void => {
-    if (event.isComposing || event.keyCode === 229) return;
+    if (isHandledOrComposingKey(event)) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       this.commitEdit(true);
@@ -1097,7 +1097,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.draft = (event.target as HTMLInputElement).value;
   };
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.isComposing || event.keyCode === 229) return;
+    if (isHandledOrComposingKey(event)) return;
     if (isLiveDisabled(this)) return;
     if (
       event.key === 'Enter' ||
@@ -1119,6 +1119,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     else if (
       event.key === 'Backspace' &&
       !event.repeat &&
+      !event.altKey && !event.ctrlKey && !event.metaKey &&
       !this.draft &&
       this.value.length &&
       this.editingIndex < 0

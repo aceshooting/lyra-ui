@@ -75,6 +75,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Negado',
   statusIncomplete: 'Incompleto',
   restore: 'Restaurar',
+  fileTypeAudio: 'Áudio',
   navigation: 'Navegação',
   attachmentUntitledFile: 'Arquivo sem título',
   chartTrendIncreasing: 'de alta',

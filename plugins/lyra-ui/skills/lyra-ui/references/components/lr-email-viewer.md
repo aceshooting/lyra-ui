@@ -20,7 +20,8 @@ Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-vie
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
-remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
+remain available without DOMPurify. Header values, attachment filenames and plain-text bodies use
+`dir="auto"`, so caller text keeps its own direction under an RTL host. Attachments are listed as filename and size only (the parsed
 `mimeType` never reaches the DOM) and their content is never rendered by this component. Each
 attachment row is a real `<button>` that emits `lr-attachment-open` with an immutable Blob snapshot
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
@@ -54,7 +55,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
+localized quoted-text disclosure whose visible name (`emailViewerQuotedText`, `Quoted text`) stays
+constant while `aria-expanded` reports the state. `false` (the default) preserves the full body rendering. A nonempty
 host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
 through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
@@ -95,7 +97,7 @@ when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
 those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
-show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
+quoted-text disclosure button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
 spoken copy is appended to the shared document-level polite sink only while the viewer and its
 composed ancestors are exposed to the accessibility tree).

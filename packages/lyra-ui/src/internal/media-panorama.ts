@@ -263,6 +263,7 @@ export class PanoramaController {
       ${this.hotspots.slice(start, end).map((hotspot, offset) => { const index = start + offset; return html`<button part="panorama-hotspot" type="button" data-panorama-index=${index} tabindex=${index === this.cursor ? '0' : '-1'}
         @focus=${() => move(index)} @click=${() => { if (current()) this.activate(index); }}
         @keydown=${(event: KeyboardEvent) => {
+          if (shouldIgnoreNavigationKey(event)) return;
           const forward = this.options.direction() === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
           const backward = this.options.direction() === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
           let next = index;

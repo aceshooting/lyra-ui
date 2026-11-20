@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Atmesta',
   statusIncomplete: 'Neužbaigta',
   restore: 'Atkurti',
+  fileTypeAudio: 'Garsas',
   navigation: 'Naršymas',
   attachmentUntitledFile: 'Failas be pavadinimo',
   chartTrendIncreasing: 'didėjanti',

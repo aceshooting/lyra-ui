@@ -185,14 +185,16 @@ it('announces the accepted server match count after a search', async () => {
   await waitUntil(() => sinkTexts().includes('Server returned 37'), 'accepted result total');
 });
 
-it('includes the row key in disclosure names when the first visible value is blank', async () => {
+it('includes the row key in the constant disclosure name when the first visible value is blank', async () => {
   const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" .columns=${[{ field: 'name' }]}
     .data=${[{ id: 17, name: ' ' }]} .rowDetail=${() => 'Details'}></lr-data-grid>`);
   const button = grid.shadowRoot!.querySelector<HTMLButtonElement>('[part="expand-button"]')!;
-  expect(button.getAttribute('aria-label')).to.equal('Expand 17');
+  expect(button.getAttribute('aria-label')).to.equal('Toggle row 17');
+  expect(button.getAttribute('aria-expanded')).to.equal('false');
   button.click();
   await grid.updateComplete;
-  expect(button.getAttribute('aria-label')).to.equal('Collapse 17');
+  expect(button.getAttribute('aria-label')).to.equal('Toggle row 17');
+  expect(button.getAttribute('aria-expanded')).to.equal('true');
 });
 
 it('publishes an empty primary sort when the final sorted column is cleared', async () => {

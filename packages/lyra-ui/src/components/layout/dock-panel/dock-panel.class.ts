@@ -17,7 +17,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailItemToggle, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_panelToggle } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -115,6 +115,9 @@ interface DragState {
  * Collapsing while focus is inside moves it to the built-in toggle, else to the first focusable rail
  * item, else to the host; expanding while focus is on a rail item moves it to the toggle or the host.
  *
+ * The collapse toggle keeps one name in both states (`Toggle {label}` with the host's accessible
+ * name, else `Toggle panel`) while `aria-expanded` reports the state.
+ *
  * @customElement lr-dock-panel
  * @slot - The panel's own content.
  * @slot rail - Shown in the collapsed rail only while `collapsed`, after the collapse toggle.
@@ -171,9 +174,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
-    dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
+    appRailItemToggle: LYRA_DEFAULT_appRailItemToggle,
     dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+    panelToggle: LYRA_DEFAULT_panelToggle,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -805,6 +808,15 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     ></div>`;
   }
 
+  /** One constant name for both states (`aria-expanded` carries the state), qualified by the
+   *  host's own accessible name when it has one so several docked panels stay distinguishable. */
+  private collapseToggleName(): string {
+    const label = resolveAccessibleName(this);
+    return label === undefined
+      ? this.localize('panelToggle')
+      : this.localize('appRailItemToggle', undefined, { label });
+  }
+
   private collapseToggleTemplate(): TemplateResult | typeof nothing {
     if (!this.collapsible) return nothing;
     return html`<button
@@ -812,9 +824,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       type="button"
       aria-expanded=${this.collapsed ? 'false' : 'true'}
       aria-controls=${this.contentId}
-      aria-label=${this.collapsed
-        ? this.localize('dockPanelExpand')
-        : this.localize('dockPanelCollapse')}
+      aria-label=${this.collapseToggleName()}
       @click=${this.toggleCollapsed}
     >
       <slot name=${this.collapsed ? 'expand-icon' : 'collapse-icon'}

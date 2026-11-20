@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -168,7 +168,12 @@ directional glyph while leaving its localized accessible name on the owning cont
 **CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
 `controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
 `first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
-`page-count`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+
+`page-error` is the visible correction message (`paginationInvalidPage`, or
+`paginationInvalidPageUnknownTotal` in indeterminate mode) rendered while the page-jump draft is
+out of range or not a whole number; it describes the input, and committing that draft (Enter or
+`change`) also announces it politely once.
 
 `pages` is the `role="list"` wrapper, `page` one numbered control inside it (a `<button>`, or an
 `<a>` under `href-template`), and `ellipsis` an accessible interactive control that jumps several

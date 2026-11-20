@@ -1816,3 +1816,16 @@ it('paints and sizes its multiple-mode chips like lr-combobox tags at every size
   const tag = getComputedStyle(themed.shadowRoot!.querySelector('[part~="tag"]')!);
   expect([tag.backgroundColor, tag.color, tag.borderTopLeftRadius]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)', '3px']);
 });
+
+it('isolates caller option and selected labels from an RTL host direction', async () => {
+  const el = (await fixture(html`<lr-select dir="rtl" value="a"><lr-option value="a" sub="(beta)">C++</lr-option></lr-select>`)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const isolated = (selector: string): string | null => {
+    const node = el.shadowRoot!.querySelector(`${selector} bdi`);
+    return node ? `${node.getAttribute('dir')}:${node.textContent}` : null;
+  };
+  expect(isolated('[part="option-label"] > span:first-child')).to.equal('auto:C++');
+  expect(isolated('[part="option-sub"]')).to.equal('auto:(beta)');
+  expect(isolated('[part="display-input"]')).to.equal('auto:C++');
+});

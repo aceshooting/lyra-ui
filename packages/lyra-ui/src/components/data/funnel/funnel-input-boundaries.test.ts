@@ -11,7 +11,7 @@ function text(node: Element | null | undefined): string {
 }
 
 describe('<lr-funnel> untrusted stage input', () => {
-  it('keeps only records with a text label and reads a non-numeric value as zero', async () => {
+  it('keeps only records with a text label and reads a non-numeric value as no data', async () => {
     const stages = [
       'not a record',
       [{ label: 'Nested', value: 1 }],
@@ -23,7 +23,7 @@ describe('<lr-funnel> untrusted stage input', () => {
     ] as unknown as LyraFunnelStage[];
     const el = await fixture<LyraFunnel>(html`<lr-funnel label="Checkout" .stages=${stages}></lr-funnel>`);
     expect(parts(el, 'stage-label').map(text)).to.deep.equal(['Visited', 'Signed up', 'Paid', 'Refunded']);
-    expect(parts(el, 'stage-value').map(text)).to.deep.equal(['100', '0', '20', '5']);
+    expect(parts(el, 'stage-value').map(text)).to.deep.equal(['100', 'No data', '20', '5']);
     const bars = parts(el, 'bar');
     expect(getComputedStyle(bars[2]!).backgroundColor).to.equal('rgb(255, 99, 71)');
     // A stage without a usable color keeps the funnel's own bar color.

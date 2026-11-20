@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Ajụla',
   statusIncomplete: 'Emechaghị',
   restore: 'Weghachite',
+  fileTypeAudio: 'Ọdịyo',
   navigation: 'Nnyagharị',
   attachmentUntitledFile: 'Faịlụ enweghị aha',
   chartTrendIncreasing: 'na-abawanye',

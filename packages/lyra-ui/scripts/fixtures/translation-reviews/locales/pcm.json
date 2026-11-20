@@ -2,12 +2,12 @@
   "locale": "pcm",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:8914db65b9c14ff935cf4d6d9d5bade3cd92fc9f2e5d126904b466428d1fb32e"
+    "keyCount": 1717,
+    "sha256": "sha256:007856bf67e54dec7d0d2b93e0b9016c234160c79ba0b6ddc74267b71ee18cf1"
   },
   "translator": {
     "status": "complete-original",
@@ -211,8 +211,16 @@
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for codeRegion is \"Code\"."
     },
     {
+      "messagePath": "codeRegionIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (codeRegionIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "codeRegionWithLanguage",
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for codeRegionWithLanguage is \"{language} code\"."
+    },
+    {
+      "messagePath": "codeRegionWithLanguageIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (codeRegionWithLanguageIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "colorPickerHueValue",
@@ -245,6 +253,10 @@
     {
       "messagePath": "connectorManagerLabel",
       "rationale": "Nigerian Pidgin uses 'Connectors' as the established technical name for the integration category; the manager's explanatory and action messages use Pidgin grammar."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",
@@ -287,12 +299,20 @@
       "rationale": "The supplied locale allowlist confirms that the shared wording for conversationActionWithTitle is appropriate for the pcm catalog's UI register."
     },
     {
+      "messagePath": "copyCodeIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (copyCodeIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "csvViewerLabel",
       "rationale": "This is a standardized file-format/media label or notebook prompt convention; the format name is intentionally shared across locales. The retained value for csvViewerLabel is \"CSV document\"."
     },
     {
       "messagePath": "dashboardGridLabel",
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for dashboardGridLabel is \"Dashboard grid\"."
+    },
+    {
+      "messagePath": "dataGridToggleRow",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (dataGridToggleRow); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "datasetViewerCaption",
@@ -627,6 +647,10 @@
       "rationale": "This is a programming/data format name or standard notebook convention, kept in its recognized form across locales. The retained value for jsonObject is \"object\"."
     },
     {
+      "messagePath": "jsonToggleLabel",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (jsonToggleLabel); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "jsonValue",
       "rationale": "This is a programming/data format name or standard notebook convention, kept in its recognized form across locales. The retained value for jsonValue is \"value\"."
     },
@@ -791,6 +815,10 @@
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for map is \"Map\"."
     },
     {
+      "messagePath": "mapCloseWithLabel",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (mapCloseWithLabel); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "mapDrawingArea",
       "rationale": "This locale uses the same everyday word (area) as English, or the English loanword unchanged."
     },
@@ -835,6 +863,10 @@
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for markdownTableRegion is \"Table\"."
     },
     {
+      "messagePath": "markdownTableRegionIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (markdownTableRegionIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "mentionResultCount.one",
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for mentionResultCount.one is \"{count} suggestion\"."
     },
@@ -873,6 +905,10 @@
     {
       "messagePath": "notebookViewerCodeCell",
       "rationale": "This is a programming/data format name or standard notebook convention, kept in its recognized form across locales. The retained value for notebookViewerCodeCell is \"Code cell {index}\"."
+    },
+    {
+      "messagePath": "notebookViewerFullOutput",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (notebookViewerFullOutput); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "notebookViewerInPrompt",
@@ -937,6 +973,10 @@
     {
       "messagePath": "promptInputLabel",
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for promptInputLabel is \"AI prompt\"."
+    },
+    {
+      "messagePath": "promptQueueItemAttachments",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (promptQueueItemAttachments); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "promptStudioLabel",
@@ -1107,6 +1147,10 @@
       "rationale": "This is a standardized file-format/media label or notebook prompt convention; the format name is intentionally shared across locales. The retained value for svgViewerLabel is \"SVG image\"."
     },
     {
+      "messagePath": "tableEditCellInRow",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (tableEditCellInRow); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "tagFacetLimit.one",
       "rationale": "A verbless count caption, not an English explanatory sentence: more and tags are ordinary English-origin Nigerian Pidgin words. The plus sign and count preserve its compact additional-tag meaning."
     },
@@ -1121,6 +1165,10 @@
     {
       "messagePath": "temperature",
       "rationale": "This is a short established software/technical label or cognate used in this locale’s UI; the identical value is not a sentence or an untranslated explanatory message. The retained value for temperature is \"Temperature\"."
+    },
+    {
+      "messagePath": "testResultsToggleTest",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (testResultsToggleTest); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "textareaCharacterCount.one",
@@ -1217,6 +1265,10 @@
     {
       "messagePath": "xmlViewerChildCount.one",
       "rationale": "This is a programming/data format name or standard notebook convention, kept in its recognized form across locales. The retained value for xmlViewerChildCount.one is \"{count} child\"."
+    },
+    {
+      "messagePath": "xmlViewerToggleNode",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (xmlViewerToggleNode); the exact English match reflects shared vocabulary, not leftover English prose."
     }
   ],
   "reviewTier": "ai-assisted"

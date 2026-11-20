@@ -5,6 +5,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { styles } from './source-card.styles.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -260,9 +261,7 @@ export class LyraSourceCard extends LyraSourceCardBase {
           aria-current=${current}
           ?disabled=${this.disabled}
           @click=${this.onTitleClick}
-        >
-          ${this.titleText}
-        </button>
+        >${bdi(this.titleText)}</button>
         <div part="excerpt" ?hidden=${!this.hasExcerptSlot}>
           <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
         </div>

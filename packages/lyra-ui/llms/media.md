@@ -1971,7 +1971,7 @@ which only reaches rows projected from `legend`.
 | Scene part | Description |
 | --- | --- |
 | `scene-panel` | Accessible section containing accepted scene text controls and status. |
-| `scene-toggle` | Native button that expands or collapses the scene object list. |
+| `scene-toggle` | Native button that expands or collapses the scene object list; its visible name stays `mapScene` (`Scene objects`) while `aria-expanded` reports the state. |
 | `scene-list` | List containing the current page of accepted scene objects. |
 | `scene-item` | An object's interactive native button or noninteractive text row. |
 | `scene-pagination` | Previous/next page buttons and localized page summary, present when more than one page exists. |
@@ -1995,7 +1995,8 @@ as the installed controls, so the swap does not change their fill. For `initiali
 Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
 `drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
-`drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
+`drawing-summary` with `drawingMeasurements`; after the controls first render, later changes to
+either are announced politely, coalesced while a vertex is dragged), vertex editing renders `drawing-handles` containing
 one `drawing-vertex` per editable vertex, and `drawingMeasurements` renders `drawing-measurements`
 holding the `drawing-measurement` labels.
 Configuration problems (hash, control, export, data-layer, feature-state and drawing messages) render as stacked
@@ -2131,7 +2132,8 @@ renumbering the key.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
-content size. `popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
+content size. `popup-close-button` is the generated close control on an open marker popup, named `Close {label}`
+(`mapCloseWithLabel`) with the marker's label so several open popups stay distinguishable. `error` is ordinary localized visible
 text rendered in place of `container` for four distinct states: explicit style required, optional
 peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
 appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
@@ -2839,7 +2841,9 @@ with a development warning while it is open, and `focusContent()` returns `false
   `[longitude, latitude]`. Compared by identity like the map's `anchorLngLat`, so assign a new array
   to move it. A missing or invalid coordinate hides the panel without closing it.
 - `closable: boolean = false` (attribute `closable`, reflected) — adds the localized close button
-  and nonmodal Escape ownership. `close()` works either way.
+  and nonmodal Escape ownership. `close()` works either way. The button is named `Close {label}`
+  (`mapCloseWithLabel`) with the anchor's name, so several open anchors stay distinguishable, and
+  plain `Close` without one.
 - `label?: string` (attribute `label`) — names the panel, which then becomes a `role="group"`. A host
   `aria-label` wins. Without a name the content owns its semantics; for dialog semantics, put
   `role="dialog"` and its labelling on your content root.

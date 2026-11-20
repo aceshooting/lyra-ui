@@ -1120,6 +1120,18 @@ it('localizes the root toggle\'s "array"/"object" fallback label via this.locali
   expect(objectToggle.getAttribute("aria-label")).to.contain("objet");
 });
 
+it('keeps one toggle name in both states while aria-expanded reports the state', async () => {
+  const el = await withData({ a: 1 });
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  const before = [toggle.getAttribute('aria-label'), toggle.getAttribute('aria-expanded')];
+  toggle.click();
+  await el.updateComplete;
+  const after = [toggle.getAttribute('aria-label'), toggle.getAttribute('aria-expanded')];
+  expect(before[0]!.startsWith('Toggle ')).to.equal(true);
+  expect(after[0]).to.equal(before[0]);
+  expect(after[1]).to.equal(before[1] === 'true' ? 'false' : 'true');
+});
+
 it('defaults to English "array"/"object" when no strings override is set', async () => {
   const arrayEl = await withData([1, 2]);
   const arrayToggle = arrayEl.shadowRoot!.querySelector(

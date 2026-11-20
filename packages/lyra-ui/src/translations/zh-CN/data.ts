@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items}项，合并为{ranges}个区间',
   noColumns: '未配置任何列',
   dataGridColumnMenu: '{label} 的选项',
-  dataGridCollapseRow: '收起{row}',
   dataGridPinStart: '将 {label} 固定到开头',
   dataGridPinEnd: '将 {label} 固定到末尾',
   dataGridUnpin: '取消固定 {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: '正在加载行',
   tableLoadingMore: '正在加载更多行',
   tableEditCell: '编辑{column}',
+  tableEditCellInRow: '编辑{column}，第 {row} 行',
   showAllColumns: '显示所有列',
   dataGridColumns: '列',
   showFewerColumns: '减少显示的列',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '下个月',
   paginationPage: '页',
   paginationJumpToPage: '跳转到第 {page} 页',
+  paginationInvalidPage: '请输入 1 到 {max} 之间的页码。',
+  paginationInvalidPageUnknownTotal: '请输入 1 或更大的整数页码。',
   paginationEmptySummary: '共{total}{itemLabel}',
   paginationAppliedUnknownTotal: '第{page}页',
   trendOf: '{count}个值的趋势，最新值为{value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: '仅显示前 {count} 行。',
   },
-  dataGridExpandRow: '展开{row}',
+  dataGridToggleRow: '切换第 {row} 行',
   dataGridFilterColumn: '筛选{column}',
   dataGridSelectPage: '选择此页上的所有行',
   tableRowLimit: {

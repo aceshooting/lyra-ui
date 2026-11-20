@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Ditolak',
   statusIncomplete: 'Tidak lengkap',
   restore: 'Pulihkan',
+  fileTypeAudio: 'Audio',
   navigation: 'Navigasi',
   attachmentUntitledFile: 'Fail tanpa tajuk',
   chartTrendIncreasing: 'meningkat',

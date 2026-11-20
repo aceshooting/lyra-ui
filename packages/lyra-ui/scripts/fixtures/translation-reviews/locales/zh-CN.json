@@ -2,12 +2,12 @@
   "locale": "zh-CN",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:9db8c7506885a1aa0db731062f46e22e1ca04e7811eb39c256ecd7fb2aa00f86"
+    "keyCount": 1717,
+    "sha256": "sha256:147221900f4ec4237b7ca78ed2ce8c2263b73737f6aeb6bec9110a67ab0bef43"
   },
   "translator": {
     "status": "complete-original",
@@ -49,6 +49,10 @@
     {
       "messagePath": "chart3dZAxis",
       "rationale": "Coordinate axis letter kept as the conventional Latin symbol, as this catalog does for other axis labels."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

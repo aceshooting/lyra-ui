@@ -3707,6 +3707,7 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
     expect(popup.getAttribute('part')?.split(/\s+/).includes('popup')).to.be.true;
     expect(popupContent.getAttribute('part')?.split(/\s+/).includes('popup-content')).to.be.true;
     expect(popupClose.getAttribute('part')?.split(/\s+/).includes('popup-close-button')).to.be.true;
+    expect(popupClose.getAttribute('aria-label')).to.equal('Close Station A');
     expect(getComputedStyle(popup).position).to.equal('absolute');
     expect(getComputedStyle(popup).display).to.equal('flex');
     expect(getComputedStyle(popup).pointerEvents).to.equal('none');
@@ -4377,7 +4378,7 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
   expect(getComputedStyle(popupClose).minBlockSize).to.equal('36px');
   expect(
     popupClose.getAttribute('aria-label'),
-  ).to.equal('Fermer');
+  ).to.equal('Fermer Gare centrale');
 
   marker.click();
   await waitUntil(() => marker.getAttribute('aria-expanded') === 'false', 'marker never collapsed');

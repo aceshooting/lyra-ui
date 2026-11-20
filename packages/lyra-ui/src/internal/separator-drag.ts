@@ -1,5 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { isModifiedOrComposingKey } from './list-navigation.js';
 import { capturePointer, releasePointer, togglePointerGesture } from './pointer-capture.js';
 
 export type SeparatorAxis = 'inline' | 'block';
@@ -26,7 +26,7 @@ export function separatorArrowDirection(
   axis: SeparatorAxis,
   rtl: boolean,
 ): -1 | 0 | 1 {
-  if (shouldIgnoreNavigationKey(event)) return 0;
+  if (isModifiedOrComposingKey(event)) return 0;
   if (axis === 'block') {
     if (event.key === 'ArrowDown') return 1;
     if (event.key === 'ArrowUp') return -1;

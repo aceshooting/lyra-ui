@@ -360,6 +360,17 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     expect(log.requests).to.deep.equal([{ reason: 'close-button' }]);
   });
 
+  it('qualifies each named anchor close button with that anchor name', async () => {
+    const { map } = await mountMap();
+    const first = addAnchor(map, { closable: true, label: 'Harbor' });
+    const second = addAnchor(map, { closable: true, label: 'Station' });
+    await placed(first); await placed(second);
+    expect([closeButton(first), closeButton(second)].map(button => button.getAttribute('aria-label')))
+      .to.deep.equal(['Close Harbor', 'Close Station']);
+    second.strings = { mapCloseWithLabel: 'Fermer {label}' }; await second.updateComplete;
+    expect(closeButton(second).getAttribute('aria-label')).to.equal('Fermer Station');
+  });
+
   it('gives the close button the icon hit area, interaction states and the inherited popup close properties', async () => {
     const { map } = await mountMap(element => {
       element.style.setProperty('--lr-map-popup-close-button-hover-bg', 'rgb(1, 2, 3)');

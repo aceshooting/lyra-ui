@@ -111,8 +111,8 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
-The collapse control uses `collapseCode` or `expandCode` and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
+The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) in both states and
+reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string

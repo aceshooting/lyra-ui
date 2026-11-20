@@ -51,7 +51,8 @@ selection and dialog state before another activation can use it; a request that 
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
 stale request. An open request with unchanged arguments keeps its draft and pending decision across
 new arrays. A resolved decision is announced, and focus lost with it moves to the next pending row
-(else the `count` part). Rows are keyed by request id.
+(else the `count` part). Newly arriving pending requests (after the first render) announce the
+updated `approvalQueuePendingCount` politely. Rows are keyed by request id.
 
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,

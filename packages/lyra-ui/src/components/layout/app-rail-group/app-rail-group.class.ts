@@ -14,7 +14,6 @@ import { styles } from './app-rail-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_appRailGroupToggle } from '../../../internal/default-strings/layout.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailGroupToggleDetail {
@@ -120,8 +119,6 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     appRailGroupToggle: LYRA_DEFAULT_appRailGroupToggle,
-    collapse: LYRA_DEFAULT_collapse,
-    expand: LYRA_DEFAULT_expand,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -335,9 +332,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
                   aria-controls=${this.contentId}
                   aria-label=${named
                     ? nothing
-                    : this.localize(this.strings.appRailGroupToggle !== undefined
-                      ? 'appRailGroupToggle'
-                      : this._collapsed ? 'expand' : 'collapse')}
+                    : this.localize('appRailGroupToggle')}
                   @click=${this.onToggleClick}
                 >
                   <span part="toggle-icon" aria-hidden="true">${chevronIcon()}</span>${headingContent}

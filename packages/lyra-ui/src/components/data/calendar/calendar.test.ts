@@ -1212,3 +1212,15 @@ describe('.strings overrides (every localize() key)', () => {
     expect(text(el.shadowRoot!, '[part="empty"]')).to.equal('EMPTY-MARKER');
   });
 });
+
+it('isolates caller event titles in RTL month and agenda views', async () => {
+  const events = [{ id: 'a', date: '2026-07-15', title: 'v2 - (draft)' }];
+  const month = (await fixture(html`<lr-calendar dir="rtl" view-date="2026-07-01" .events=${events}></lr-calendar>`)) as LyraCalendar;
+  const agenda = (await fixture(html`<lr-calendar dir="rtl" view="agenda" view-date="2026-07-01" .events=${events}></lr-calendar>`)) as LyraCalendar;
+  const isolated = (el: LyraCalendar, part: string): string | null => {
+    const node = el.shadowRoot!.querySelector(`[part="${part}"] > bdi`);
+    return node ? `${node.getAttribute('dir')}:${node.textContent}` : null;
+  };
+  expect(isolated(month, 'event')).to.equal('auto:v2 - (draft)');
+  expect(isolated(agenda, 'agenda-event')).to.equal('auto:v2 - (draft)');
+});

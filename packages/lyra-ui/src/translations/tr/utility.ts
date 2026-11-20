@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'nesne',
   jsonValue: 'değer',
   jsonCopyLabel: '{label} öğesini kopyala',
-  jsonExpandLabel: '{label} öğesini genişlet',
-  jsonCollapseLabel: '{label} öğesini daralt',
+  jsonToggleLabel: '{label} öğesini aç/kapat',
   jsonItemCount: {
     one: '{count} öğe',
     other: '{count} öğe',

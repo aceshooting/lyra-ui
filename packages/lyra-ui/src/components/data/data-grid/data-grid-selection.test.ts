@@ -1216,6 +1216,9 @@ it("keeps computed object-valued group keys stable across render projections", a
     "true",
     "false",
   ]);
+  // The group row alone reports the state; its button keeps one constant name.
+  expect(groupRows.map((row) => row.querySelector('[part="expand-button"]')!.hasAttribute("aria-expanded"))).to.deep.equal([false, false]);
+  expect(groupRows.map((row) => row.querySelector('[part="expand-button"]')!.getAttribute("aria-label")!.startsWith("Toggle row "))).to.deep.equal([true, true]);
   expect(
     element.shadowRoot!.querySelectorAll('[part~="row"]:not([part~="group-row"])')
   ).to.have.length(1);

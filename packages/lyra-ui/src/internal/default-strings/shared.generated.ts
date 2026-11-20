@@ -46,6 +46,7 @@ export const LYRA_DEFAULT_engine3dUnsupported: LyraMessage = 'This browser canno
 export const LYRA_DEFAULT_envListValueHidden: LyraMessage = 'Value hidden';
 export const LYRA_DEFAULT_expand: LyraMessage = 'Expand';
 export const LYRA_DEFAULT_fieldRequired: LyraMessage = 'This field is required.';
+export const LYRA_DEFAULT_fileTypeAudio: LyraMessage = 'Audio';
 export const LYRA_DEFAULT_flowItemAnnouncement: LyraMessage = '{item} ({index} of {total})';
 export const LYRA_DEFAULT_gitStatusAdded: LyraMessage = 'Added';
 export const LYRA_DEFAULT_gitStatusConflicted: LyraMessage = 'Conflicted';

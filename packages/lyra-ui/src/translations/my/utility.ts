@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'အရာဝတ္ထု',
   jsonValue: 'တန်ဖိုး',
   jsonCopyLabel: '{label} ကို ကူးယူရန်',
-  jsonExpandLabel: '{label} ကို ချဲ့ရန်',
-  jsonCollapseLabel: '{label} ကို ခေါက်သိမ်းရန်',
+  jsonToggleLabel: '{label} ကို ဖွင့်/ပိတ်ရန်',
   jsonItemCount: {
     other: 'အရာ {count} ခု',
   },

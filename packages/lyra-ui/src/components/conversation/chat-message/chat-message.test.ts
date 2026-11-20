@@ -213,7 +213,7 @@ it("emits a cancelable collapse request followed by lr-toggle only after commit"
   expect(el.collapsed).to.be.true;
   expect(detail).to.deep.equal({ expanded: false });
   expect(button.getAttribute('aria-expanded')).to.equal('false');
-  expect(button.getAttribute('aria-label')).to.equal('Expand message');
+  expect(button.getAttribute('aria-label')).to.equal('Toggle message');
   expect(button.hasAttribute('aria-pressed')).to.equal(false);
 
   button.click();
@@ -221,7 +221,7 @@ it("emits a cancelable collapse request followed by lr-toggle only after commit"
   expect(el.collapsed).to.be.false;
   expect(detail).to.deep.equal({ expanded: true });
   expect(button.getAttribute('aria-expanded')).to.equal('true');
-  expect(button.getAttribute('aria-label')).to.equal('Collapse message');
+  expect(button.getAttribute('aria-label')).to.equal('Toggle message');
 });
 
 it("honors preventDefault on lr-toggle-request without mutating collapse state", async () => {

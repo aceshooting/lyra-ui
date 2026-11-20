@@ -1,3 +1,4 @@
+import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { adoptChartSyncStyles } from './chart-sync-style-adoption.js';
 
 /** Peer-neutral, document-scoped coordination for categorical chart interaction. */
@@ -35,6 +36,8 @@ export class ChartSyncController {
   private scrollTargets: EventTarget[] = [];
   /** Whether a presentation (and so a renderer highlight that `reset` must clear) is showing. */
   private shown = false;
+  /** Owns document-level Escape while a presentation is showing, so a pointer-only user can dismiss it. */
+  private escapeOverlay?: OverlayHandle;
   constructor(
     private readonly host: HTMLElement,
     private readonly project: (label: string, sourceIndex?: number) => ChartSyncPresentation | undefined,
@@ -173,9 +176,13 @@ export class ChartSyncController {
     this.clear();
   };
 
-  private hide(reset = true): void {
+  private hide(reset = true, keepEscape = false): void {
     const wasShown = this.shown;
     this.shown = false;
+    if (!keepEscape) {
+      this.escapeOverlay?.deactivate({ restoreFocus: false });
+      this.escapeOverlay = undefined;
+    }
     this.crosshair?.remove();
     this.tooltip?.remove();
     this.crosshair = undefined;
@@ -205,13 +212,19 @@ export class ChartSyncController {
 
   private show(presentation: ChartSyncPresentation | undefined, containerWidth = presentation?.container.clientWidth ?? 0): (() => (() => void)) | undefined {
     const wasShown = this.shown;
-    this.hide(false);
+    this.hide(false, true);
     if (!presentation) {
+      this.hide(false);
       if (wasShown) this.resetRenderer();
       return;
     }
     // Projecting already highlighted the renderer, even if the overlay cannot be placed below.
     this.shown = true;
+    this.escapeOverlay ??= activateNonmodalOverlay({
+      host: this.host,
+      panel: () => this.tooltip ?? this.crosshair ?? null,
+      onEscape: () => { if (this.group?.active) this.group.active.owner.clear(); else this.hide(); },
+    });
     const { container, x, top, height } = presentation;
     if (![x, top, height].every(Number.isFinite) || height <= 0 || containerWidth <= 0) return;
     const doc = this.host.ownerDocument;

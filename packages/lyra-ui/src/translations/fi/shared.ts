@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Estetty',
   statusIncomplete: 'Keskeneräinen',
   restore: 'Palauta',
+  fileTypeAudio: 'Ääni',
   navigation: 'Navigointi',
   attachmentUntitledFile: 'Nimetön tiedosto',
   chartTrendIncreasing: 'nouseva',

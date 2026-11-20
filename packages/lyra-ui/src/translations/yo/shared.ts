@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'A kọ̀ ọ́',
   statusIncomplete: 'Kò pé',
   restore: 'Mú padà',
+  fileTypeAudio: 'Ohùn',
   navigation: 'Ìtọ́sọ́nà',
   attachmentUntitledFile: 'Fáìlì tí kò ní àkọlé',
   chartTrendIncreasing: 'Ń pọ̀ sí i',

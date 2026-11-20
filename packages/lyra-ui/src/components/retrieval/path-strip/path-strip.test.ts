@@ -346,26 +346,24 @@ it('skips entries that are not keyed path elements while keeping original occurr
   ]);
 });
 
-it('never announces a removed entry when focus lands on its stale control and settles on the survivor', async () => {
+it('settles focus on the surviving control when the focused entry is removed, announcing nothing', async () => {
   const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
   const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]')];
   const stale = controls[2]!;
   const before = sinkTexts().length;
 
   // The replacement lands before Lit re-renders, so the old third control can still take focus.
-  // Moving focus is itself the subject, and it has to happen in the same task as the assignment.
   el.path = path.slice(0, 1);
   stale.focus();
   await el.updateComplete;
-  await waitUntil(() => sinkTexts().length > before, 'the surviving node is announced');
-
-  expect(sinkTexts().slice(before), 'only the surviving node is announced').to.deep.equal(['Marie Curie, node 1 of 1']);
   const survivors = el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]');
+  await waitUntil(() => el.shadowRoot!.activeElement === survivors[0], 'focus settles on the surviving control');
   expect(survivors.length).to.equal(1);
-  expect(el.shadowRoot!.activeElement === survivors[0], 'focus settles on the surviving control').to.equal(true);
+  expect(survivors[0]!.getAttribute('aria-label')).to.equal('Marie Curie, node 1 of 1');
+  expect(sinkTexts().slice(before), 'focus moves speak through the button name, not a live region').to.deep.equal([]);
 });
 
-it('announces node focus through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
+it('names each node with its position through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
   const el = (await fixture(
     html`<lr-path-strip
       .strings=${{ pathNodeStatus: '{label}, nœud {position} sur {total}' }}
@@ -373,18 +371,13 @@ it('announces node focus through a .strings override for pathNodeStatus, interpo
   )) as LyraPathStrip;
   el.path = path;
   await el.updateComplete;
-
-  (
-    el.shadowRoot!.querySelectorAll('[part="node"]')[0] as HTMLButtonElement
-  ).focus();
+  const node = el.shadowRoot!.querySelector<HTMLElement>('[part="node"]')!;
+  const before = sinkTexts().length;
+  node.focus();
   await el.updateComplete;
-
-  const mirror = el.shadowRoot!.querySelector('div.sr-only')!;
-  expect(mirror.textContent).to.equal('Marie Curie, nœud 1 sur 3');
-  expect(mirror.getAttribute('role')).to.equal(null);
-  expect(mirror.getAttribute('aria-live')).to.equal(null);
-  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
-  expect(sinkTexts().at(-1)).to.equal('Marie Curie, nœud 1 sur 3');
+  expect(node.getAttribute('aria-label')).to.equal('Marie Curie, nœud 1 sur 3');
+  expect(el.shadowRoot!.querySelector('div.sr-only') === null, 'no duplicate live mirror').to.equal(true);
+  expect(sinkTexts().length, 'no live announcement duplicates the name').to.equal(before);
 });
 
 it('gives both node and relation pills the shared minimum hit area', async () => {
@@ -447,27 +440,24 @@ it('paints node and relation hover feedback under a real pointer', async () => {
   }
 });
 
-it('formats announced positions with the effective locale', async () => {
+it('formats the positions in a node name with the effective locale', async () => {
   const el = (await fixture(
     html`<lr-path-strip lang="ar-u-nu-arab" .path=${path}></lr-path-strip>`
   )) as LyraPathStrip;
-  (el.shadowRoot!.querySelector('[part="node"]') as HTMLButtonElement).focus();
-  await el.updateComplete;
-  expect(sinkTexts().at(-1)).to.contain('١');
-  expect(sinkTexts().at(-1)).to.contain('٣');
+  const name = el.shadowRoot!.querySelector('[part="node"]')!.getAttribute('aria-label')!;
+  expect(name).to.contain('١');
+  expect(name).to.contain('٣');
 });
 
-it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
+it('keeps no shared announcement sink, as it announces nothing', async () => {
   const el = (await fixture(
-    html`<lr-path-strip></lr-path-strip>`
+    html`<lr-path-strip .path=${path}></lr-path-strip>`
   )) as LyraPathStrip;
-  expect(sinkElement() !== null).to.be.true;
-  el.remove();
   expect(sinkElement() === null).to.be.true;
+  el.remove();
   document.body.append(el);
-  expect(sinkElement() !== null).to.be.true;
-  el.remove();
   expect(sinkElement() === null).to.be.true;
+  el.remove();
 });
 
 it('moves focus to a surviving path control when the focused item is removed', async () => {
@@ -577,15 +567,13 @@ it('mirrors a reverse directed edge in both logical directions', async () => {
   expect(getComputedStyle(rtl!.shadowRoot!.querySelector('[part="arrow"]')!).transform).to.equal('none');
 });
 
-it('announces an unlabeled node by its id', async () => {
+it('names an unlabeled node by its id', async () => {
   const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${[
     { kind: 'node', node: { id: 'unlabeled-node', label: '' } },
     { kind: 'edge', relation: 'cites' },
     { kind: 'node', node: { id: 'e2', label: 'Polonium' } },
   ] as LyraPathElement[]}></lr-path-strip>`);
-  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node"]')!.focus();
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('unlabeled-node, node 1 of 3');
+  expect(el.shadowRoot!.querySelector('[part="node"]')!.getAttribute('aria-label')).to.equal('unlabeled-node, node 1 of 3');
   expect(el.shadowRoot!.querySelector('[part="node"]')!.textContent).to.contain('unlabeled-node');
 });
 

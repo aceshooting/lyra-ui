@@ -4243,7 +4243,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 556,
+              "line": 557,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11702,7 +11702,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 316,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11915,7 +11915,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 316,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12598,7 +12598,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2704,
+              "line": 2705,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16317,7 +16317,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2442,
+              "line": 2443,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23188,7 +23188,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -23244,9 +23243,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/file-tree/file-tree.test.ts",
+              "test": "renders dotfile and directory names in a bidi-isolated label under RTL",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -23341,7 +23345,6 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -24365,7 +24368,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -24420,9 +24422,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/flow-node/flow-node.test.ts",
+              "test": "isolates the caller heading under an RTL host",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -24518,7 +24525,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -39037,7 +39043,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2704,
+              "line": 2705,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40352,7 +40358,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 5457,
+              "line": 5459,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40449,7 +40455,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 1673,
+              "line": 1686,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42622,7 +42628,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
-              "line": 202,
+              "line": 203,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46297,7 +46303,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 361,
+              "line": 362,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46495,7 +46501,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 361,
+              "line": 362,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56113,7 +56119,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 479,
+              "line": 478,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56769,7 +56775,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 870,
+              "line": 869,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57249,7 +57255,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -57293,9 +57298,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/time-zone-picker/time-zone-picker.test.ts",
+              "test": "isolates zone identifiers in an RTL listbox",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -57386,7 +57396,6 @@
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -61259,8 +61268,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree-navigation.test.ts",
-              "test": "swaps which arrow key expands/collapses under dir=\"rtl\"",
+              "file": "src/components/data/tree/tree-item.test.ts",
+              "test": "isolates the label so leading and trailing punctuation keep their sides under RTL",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -61502,8 +61511,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree-navigation.test.ts",
-              "test": "swaps which arrow key expands/collapses under dir=\"rtl\"",
+              "file": "src/components/data/tree/tree-item.test.ts",
+              "test": "isolates the label so leading and trailing punctuation keep their sides under RTL",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -64246,7 +64255,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 433,
+              "line": 434,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'kitu',
   jsonValue: 'thamani',
   jsonCopyLabel: 'Nakili {label}',
-  jsonExpandLabel: 'Panua {label}',
-  jsonCollapseLabel: 'Kunja {label}',
+  jsonToggleLabel: 'Badilisha mwonekano wa {label}',
   jsonItemCount: {
     one: 'kipengee {count}',
     other: 'vipengee {count}',

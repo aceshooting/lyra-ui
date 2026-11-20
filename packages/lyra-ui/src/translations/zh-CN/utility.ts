@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: '对象',
   jsonValue: '值',
   jsonCopyLabel: '复制{label}',
-  jsonExpandLabel: '展开{label}',
-  jsonCollapseLabel: '收起{label}',
+  jsonToggleLabel: '切换{label}',
   jsonItemCount: {
     other: '{count}项',
   },

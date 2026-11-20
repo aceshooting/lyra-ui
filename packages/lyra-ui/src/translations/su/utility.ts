@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'object',
   jsonValue: 'nilai',
   jsonCopyLabel: 'Salin {label}',
-  jsonExpandLabel: 'Kembangkeun {label}',
-  jsonCollapseLabel: 'Ciutkeun {label}',
+  jsonToggleLabel: 'Ganti {label}',
   jsonItemCount: {
     other: '{count} barang',
   },

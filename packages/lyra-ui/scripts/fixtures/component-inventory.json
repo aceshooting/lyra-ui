@@ -106741,6 +106741,10 @@
             "deprecated": null
           },
           {
+            "name": "page-error",
+            "deprecated": null
+          },
+          {
             "name": "page-field",
             "deprecated": null
           },

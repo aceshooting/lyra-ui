@@ -3,6 +3,7 @@ import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/loca
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { MapDrawing, type LyraMapDrawingSnapshot } from './map-drawing.js';
 import '../../lr-map.js';
@@ -138,6 +139,18 @@ describe('lr-map drawing integration', () => {
     element.strings = { mapDrawingControls: 'Shape actions', mapDrawingVertices: 'Points = {count}', mapDrawingTooFewVertices: 'Need {count} accepted points' };
     await element.updateComplete; expect(group.getAttribute('aria-label')).to.equal('Shape actions'); expect(element.shadowRoot!.textContent).to.include('Need 2 accepted points');
     await vertex(element, peer, 1, 2); expect(element.shadowRoot!.querySelector('[part="drawing-status"]')!.textContent).to.equal('Points = 1');
+  });
+  it('announces later vertex-count and measured-total changes politely, never the armed initial state', async () => {
+    const before = sinkTexts().length;
+    const { element, peer } = await drawing('line', map => { map.drawingMeasurements = true; });
+    const spoken = (): string[] => sinkTexts().slice(before);
+    await vertex(element, peer, 1, 2); await vertex(element, peer, 2, 3);
+    await waitUntil(() => spoken().some(text => text.startsWith('Length')), 'the measured total is announced');
+    await waitUntil(() => spoken().includes('Vertices: 2'), 'the coalesced vertex count is announced');
+    expect(spoken().includes('Vertices: 0')).to.equal(false);
+    const count = spoken().length;
+    element.strings = { mapDrawingVertices: 'Points = {count}' }; await element.updateComplete;
+    expect(spoken().length).to.equal(count);
   });
   it('rejects duplicate and invalid native vertices without changing the accepted snapshot', async () => {
     const { element, peer } = await drawing(); const changes = capture(element, 'lr-map-draw-change'); await vertex(element, peer, 0, 0);

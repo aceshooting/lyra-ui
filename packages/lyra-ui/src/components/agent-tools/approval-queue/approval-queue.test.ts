@@ -229,6 +229,22 @@ describe('lr-approval-queue', () => {
     expect(politeAnnouncements().slice(before)).to.deep.equal(['Approved', 'Denied']);
   });
 
+  it('announces newly arriving pending requests, but not the initial queue or a status-only change', async () => {
+    const first: ToolApprovalRequest = { id: 'call-1', toolName: 'web_search', args: { query: 'first' } };
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${[first]}></lr-approval-queue>`);
+    const before = politeAnnouncements().length;
+    el.requests = [{ ...first, status: 'approved' }];
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal([]);
+    el.requests = [
+      { ...first, status: 'approved' },
+      { id: 'call-2', toolName: 'read_file', args: { path: 'a.md' } },
+      { id: 'call-3', toolName: 'read_file', args: { path: 'b.md' } },
+    ];
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['2 pending approvals']);
+  });
+
   it('lets a host finalize or revert a vetoed decision through the queue', async () => {
     const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`);
     rowFor(el, 'call-1').click();

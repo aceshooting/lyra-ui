@@ -2,12 +2,12 @@
   "locale": "de-CH",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:3ceaadb1bb1c72af7822edadaac6df713a0d8e54b71a869b7e66cba91e49b4e5"
+    "keyCount": 1717,
+    "sha256": "sha256:5cf8867f90f0058421dec575e9b2d77468d75f85c1bf397fa4f2b67b56d94b59"
   },
   "translator": {
     "status": "complete-original",
@@ -123,8 +123,16 @@
       "rationale": "'Code' names a source-code region or artifact type; Swiss Standard German uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
     },
     {
+      "messagePath": "codeRegionIndexed",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (codeRegionIndexed); the exact English match reflects shared vocabulary, not leftover English prose."
+    },
+    {
       "messagePath": "commitCardLabel",
       "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Swiss Standard German uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerTypeFax",
@@ -409,6 +417,10 @@
     {
       "messagePath": "taskListStepIncompleteAnnounce",
       "rationale": "Formatting template only: {label} and {status} are supplied values, with a punctuation separator and no natural-language words; the identical text preserves the status announcement format."
+    },
+    {
+      "messagePath": "testResultsToggleTest",
+      "rationale": "The message is an accessible label whose wording is the shared loanword/term used unchanged in this language (testResultsToggleTest); the exact English match reflects shared vocabulary, not leftover English prose."
     },
     {
       "messagePath": "textareaLabel",

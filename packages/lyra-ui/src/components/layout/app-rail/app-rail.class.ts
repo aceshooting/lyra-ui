@@ -51,7 +51,7 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_appRailUnpin, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_toggleNavigation } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_navigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -212,14 +212,16 @@ export interface LyraAppRailEventMap {
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart pin-button - The `auto-hide` pin control, rendered inside `[part="header"]` while the rail
  *   is peeking or pinned (docked at full width), never in the resting strip. Renders `aria-pressed`
- *   as `"true"` while pinned and `"false"` otherwise, with the localized pin/unpin name; it takes
+ *   as `"true"` while pinned and `"false"` otherwise, with one constant localized name
+ *   (`appRailPin`); it takes
  *   the shared `--lr-icon-button-size` hit area. Replaces `[part="collapse-toggle"]` while
  *   `auto-hide` is set.
  * @csspart pin-icon - The wrapper around `[part="pin-button"]`'s glyph.
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
  * @csspart footer - The wrapper around the `footer` slot.
- * @csspart toggle - The mobile hamburger/close toggle button. Hidden via
+ * @csspart toggle - The mobile hamburger/close toggle button, named by the constant
+ *   `toggleNavigation` string while `aria-expanded` carries the state. Hidden via
  *   CSS outside `'mobile'` mode, or -- while it is not also serving as the panel's only in-panel
  *   dismiss control (see below) -- entirely via `withoutToggle`; it inherits the rail's typography
  *   and its glyph scales at 1em. Reparented to be the first child of `[part="panel"]` for exactly
@@ -235,7 +237,7 @@ export interface LyraAppRailEventMap {
  * @csspart backdrop - The mobile overlay's scrim. Visible while open.
  * @csspart collapse-toggle - The opt-in desktop collapse control, rendered inside
  *   `[part="header"]` only while `collapsible` is set and `mode` is not `'mobile'`. Carries the
- *   localized action name and renders `aria-expanded` in both states, so a
+ *   constant localized name `toggleNavigation` and renders `aria-expanded` in both states, so a
  *   screen reader announces the rail's current presentation rather than only its label.
  *   `aria-expanded` is deliberate even though collapsing removes nothing from the accessibility
  *   tree: `'icon-only'` only clips each item's `[part="label"]`/`[part="meta"]` visually, so a
@@ -419,15 +421,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    appRailCollapse: LYRA_DEFAULT_appRailCollapse,
-    appRailExpand: LYRA_DEFAULT_appRailExpand,
     appRailPin: LYRA_DEFAULT_appRailPin,
-    appRailUnpin: LYRA_DEFAULT_appRailUnpin,
-    closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
-    openNavigation: LYRA_DEFAULT_openNavigation,
     resizeNavigation: LYRA_DEFAULT_resizeNavigation,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
+    toggleNavigation: LYRA_DEFAULT_toggleNavigation,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -2149,7 +2147,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         type="button"
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.navId}
-        aria-label=${this.open ? this.localize('closeNavigation') : this.localize('openNavigation')}
+        aria-label=${this.localize('toggleNavigation')}
         @click=${this.onToggleClick}
       >
         ${this.open ? closeIcon() : menuIcon()}
@@ -2182,7 +2180,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-controls=${this.navRegionId}
-                aria-label=${expanded ? this.localize('appRailCollapse') : this.localize('appRailExpand')}
+                aria-label=${this.localize('toggleNavigation')}
                 @click=${this.onCollapseToggleClick}
               ><span part="collapse-icon" aria-hidden="true"
                 ><slot name="collapse-icon" @slotchange=${this.onCollapseIconSlotChange}>${chevronIcon()}</slot></span
@@ -2193,7 +2191,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                 part="pin-button"
                 type="button"
                 aria-pressed=${pinned ? 'true' : 'false'}
-                aria-label=${pinned ? this.localize('appRailUnpin') : this.localize('appRailPin')}
+                aria-label=${this.localize('appRailPin')}
                 @click=${this.onPinClick}
               ><span part="pin-icon" aria-hidden="true"
                 ><slot name="pin-icon">${pinIcon()}</slot></span

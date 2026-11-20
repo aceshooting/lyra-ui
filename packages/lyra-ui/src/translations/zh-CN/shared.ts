@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: '已拒绝',
   statusIncomplete: '未完成',
   restore: '还原',
+  fileTypeAudio: '音频',
   navigation: '导航',
   attachmentUntitledFile: '未命名文件',
   chartTrendIncreasing: '上升',

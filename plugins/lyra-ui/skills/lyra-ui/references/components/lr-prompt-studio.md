@@ -92,9 +92,8 @@ is required.
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.
-The remove button uses `promptStudioRemoveMessage` for its name and describes the message number
-with `promptStudioRemoveMessageNumbered`. Set only `.strings.promptStudioRemoveMessageNumbered`
-to use the numbered message as its name.
+The remove button is named `promptStudioRemoveMessageNumbered` (`Remove message {index}`) while
+several messages exist and `promptStudioRemoveMessage` for a single message.
 
 **Slots:** none. **Optional peer deps:** none.
 

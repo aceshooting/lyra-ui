@@ -203,7 +203,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.announcements.transition('render-window', 'window', this.windowNotice, 'polite');
+    this.announcements.transition('render-window', this.windowNotice ? 'window' : 'none', this.windowNotice, 'polite', true);
     const inputNotice = this.inputLimitMessage();
     if (!this._isFirstUpdate && inputNotice && inputNotice !== this.lastInputNotice) this.announcements.announcePolite(inputNotice);
     this.lastInputNotice = inputNotice;

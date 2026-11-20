@@ -37,7 +37,8 @@ that the host has already localized. Assign a new `.connectors` array after host
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
 keyed by id. `disabled` gates every action. Host `aria-label` names the internal group. An acted-on
 connector's status changes are announced, and focus on its vanished action waits on `status` until
-the next action appears.
+the next action appears. A host-driven loss on any other existing connector (`connected` to
+`disconnected`, or into `error`) is announced politely with its name (`connectorManagerStatusChanged`).
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string

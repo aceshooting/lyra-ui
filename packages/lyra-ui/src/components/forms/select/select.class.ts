@@ -95,6 +95,7 @@ import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../form-validator.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings/forms.generated.js';
@@ -2600,8 +2601,8 @@ export class LyraSelect<
               ></span>`
             : ''}
           <span part="option-label">
-            <span>${o.label || o.value}</span>
-            ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
+            <span>${bdi(o.label || o.value)}</span>
+            ${o.sub ? html`<span part="option-sub">${bdi(o.sub)}</span>` : ''}
           </span>
           ${unknown
             ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>`
@@ -2771,7 +2772,7 @@ export class LyraSelect<
               ?data-multiple-value=${this.multiple && hasValue}
               ?data-unknown-value=${singleValueUnknown}
               >${hasValue && !this.multiple
-                ? selectedLabel
+                ? bdi(selectedLabel)
                 : this.multiple && hasValue
                 ? this.selectedLabels
                 : emptyDisplayText}${singleValueUnknown

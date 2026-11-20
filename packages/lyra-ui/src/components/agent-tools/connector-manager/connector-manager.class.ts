@@ -14,7 +14,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusChanged, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -92,7 +92,8 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * `kind` omits `[part="kind"]`. Collections are detached snapshots;
  * blank ids are skipped, duplicate ids retain the first valid item, and at most 100 rows render.
  * Rows are keyed by id. An acted-on connector's status changes are announced, and focus on its
- * vanished action waits on its `status` until the next action appears.
+ * vanished action waits on its `status` until the next action appears. A host-driven loss on any
+ * other existing connector (`connected` to `disconnected`, or into `error`) is announced with its name.
  *
  * @customElement lr-connector-manager
  * @event lr-connector-action - A connector action was requested. `detail: { connectorId, action }`.
@@ -139,6 +140,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     connectorManagerLabel: LYRA_DEFAULT_connectorManagerLabel,
     connectorManagerLimit: LYRA_DEFAULT_connectorManagerLimit,
     connectorManagerRetryFor: LYRA_DEFAULT_connectorManagerRetryFor,
+    connectorManagerStatusChanged: LYRA_DEFAULT_connectorManagerStatusChanged,
     connectorManagerStatusConnected: LYRA_DEFAULT_connectorManagerStatusConnected,
     connectorManagerStatusConnecting: LYRA_DEFAULT_connectorManagerStatusConnecting,
     connectorManagerStatusDisconnected: LYRA_DEFAULT_connectorManagerStatusDisconnected,
@@ -169,6 +171,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private actedConnectorId: string | null = null;
   private pendingAnnouncement = '';
+  private hostAnnouncements: string[] = [];
   private focusedRowId: string | null = null;
 
   override connectedCallback(): void {
@@ -179,6 +182,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     super.disconnectedCallback();
     this.actedConnectorId = null;
     this.pendingAnnouncement = '';
+    this.hostAnnouncements = [];
   }
 
   private rowPart(connectorId: string, part: 'status' | 'action'): HTMLElement | null {
@@ -193,6 +197,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     if (!this.hasUpdated || !changed.has('connectors')) return;
     this.focusedRowId = shadowFocusTarget(this)?.closest<HTMLElement>('[part~="connector"]')?.dataset['connectorId'] ?? null;
     const acted = this.actedConnectorId;
+    this.queueHostStatusAnnouncements(changed.get('connectors') as readonly AgentConnector[] | undefined, acted);
     if (acted === null) return;
     const previous = this.normalizedConnectorsFrom(changed.get('connectors')).find((item) => item.id === acted);
     const current = this.normalizedConnectors.find((item) => item.id === acted);
@@ -203,8 +208,26 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     }
   }
 
+  /** A host-driven loss on a connector nobody acted on here -- a connection dropping to
+   *  `disconnected`, or any change into `error` -- is named and spoken; other transitions stay silent. */
+  private queueHostStatusAnnouncements(source: readonly AgentConnector[] | undefined, acted: string | null): void {
+    const previous = new Map(this.normalizedConnectorsFrom(source ?? []).map((item) => [item.id, item]));
+    for (const current of this.normalizedConnectors) {
+      const before = previous.get(current.id);
+      if (current.id === acted || !before) continue;
+      if (before.status === current.status && before.error === current.error) continue;
+      const lost = current.status === 'error' || (before.status === 'connected' && current.status === 'disconnected');
+      if (!lost) continue;
+      this.hostAnnouncements.push(this.localize('connectorManagerStatusChanged', undefined, {
+        name: current.name,
+        status: current.status === 'error' && current.error ? current.error : this.localize(STATUS_LABEL_KEY[current.status]),
+      }));
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    for (const text of this.hostAnnouncements.splice(0)) this.sink.announcePolite(text);
     const id = this.focusedRowId;
     this.focusedRowId = null;
     if (id !== null) {

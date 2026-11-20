@@ -37,7 +37,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { styles } from './page.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_skipToContent } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_skipToContent, LYRA_DEFAULT_toggleNavigation } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_navigation } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -208,10 +208,9 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
-    openNavigation: LYRA_DEFAULT_openNavigation,
     skipToContent: LYRA_DEFAULT_skipToContent,
+    toggleNavigation: LYRA_DEFAULT_toggleNavigation,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -641,9 +640,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       this.customToggleOwnership.delete(host);
     }
 
-    const localizedLabel = this.localize(
-      this.navOpen ? 'closeNavigation' : 'openNavigation'
-    );
+    const localizedLabel = this.localize('toggleNavigation');
     const drawer = this.drawerElement;
 
     for (const host of nextToggles) {
@@ -908,9 +905,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
                 aria-haspopup="dialog"
                 aria-expanded=${this.navOpen ? 'true' : 'false'}
                 aria-controls=${this.drawerId}
-                aria-label=${this.localize(
-                  this.navOpen ? 'closeNavigation' : 'openNavigation'
-                )}
+                aria-label=${this.localize('toggleNavigation')}
                 @click=${this.onDefaultToggleClick}
               >
                 <span part="navigation-toggle-icon" aria-hidden="true" inert>

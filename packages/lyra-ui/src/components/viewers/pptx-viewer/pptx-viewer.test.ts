@@ -1,4 +1,5 @@
 import { twoFrames } from '../../../../test/frames.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import {
   aTimeout,
   expect,
@@ -2093,6 +2094,20 @@ it('reports an AbortError from the current navigation as a render failure', asyn
     await el.goToSlide(1);
     await failed;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'the error state renders');
+  } finally { restore(); }
+});
+
+it('announces each accepted slide change politely, but not the initial load', async () => {
+  const fake = fakeModule(3), restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    const before = sinkTexts().length;
+    await loadDeck(el, 'https://example.test/announced-navigation.pptx', fake.calls);
+    expect(sinkTexts().slice(before).filter((text) => text.startsWith('Slide'))).to.deep.equal([]);
+    await el.goToSlide(1);
+    await el.goToSlide(1);
+    expect(sinkTexts().slice(before).filter((text) => text.startsWith('Slide'))).to.deep.equal(['Slide 2 of 3']);
   } finally { restore(); }
 });
 

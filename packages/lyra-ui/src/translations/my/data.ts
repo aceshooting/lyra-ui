@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: 'အပိုင်းအခြား {ranges} ခုတွင် အရာ {items} ခု',
   noColumns: 'ကော်လံများ မသတ်မှတ်ရသေးပါ',
   dataGridColumnMenu: '{label} အတွက် ရွေးချယ်စရာများ',
-  dataGridCollapseRow: '{row} ကို ခေါက်သိမ်းရန်',
   dataGridPinStart: '{label} ကို အစတွင် ချိတ်ထားရန်',
   dataGridPinEnd: '{label} ကို အဆုံးတွင် ချိတ်ထားရန်',
   dataGridUnpin: '{label} ကို ချိတ်ဖြုတ်ရန်',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'အတန်းများ တင်နေသည်',
   tableLoadingMore: 'နောက်ထပ် အတန်းများ တင်နေသည်',
   tableEditCell: '{column} ကို တည်းဖြတ်ရန်',
+  tableEditCellInRow: '{column} ကို တည်းဖြတ်ရန်၊ အတန်း {row}',
   showAllColumns: 'ကော်လံအားလုံး ပြရန်',
   dataGridColumns: 'ကော်လံများ',
   showFewerColumns: 'ကော်လံနည်းနည်းသာ ပြရန်',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'နောက်လ',
   paginationPage: 'စာမျက်နှာ',
   paginationJumpToPage: 'စာမျက်နှာ {page} သို့ သွားရန်',
+  paginationInvalidPage: '1 မှ {max} အတွင်း စာမျက်နှာတစ်ခု ထည့်ပါ။',
+  paginationInvalidPageUnknownTotal: '1 နှင့်အထက် စာမျက်နှာ ကိန်းပြည့်နံပါတ်တစ်ခု ထည့်ပါ။',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'စာမျက်နှာ {page}',
   trendOf: 'တန်ဖိုး {count} ခု၏ လမ်းကြောင်း၊ နောက်ဆုံး {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
   },
-  dataGridExpandRow: '{row} ကို ချဲ့ရန်',
+  dataGridToggleRow: 'အတန်း {row} ကို ဖွင့်/ပိတ်ရန်',
   dataGridFilterColumn: '{column} ကို စစ်ထုတ်ရန်',
   dataGridSelectPage: 'ဤစာမျက်နှာရှိ အတန်းအားလုံးကို ရွေးရန်',
   tableRowLimit: {

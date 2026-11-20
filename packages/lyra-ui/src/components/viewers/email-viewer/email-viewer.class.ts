@@ -38,7 +38,7 @@ import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_showMoreCollapsed } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerQuotedText, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -291,8 +291,7 @@ const QUOTE_SELECTOR = 'blockquote[type="cite" i], div.gmail_quote, div.yahoo_qu
 function foldHtmlQuotes(
   body: EmailHtml,
   expandedIndices: readonly number[],
-  show: string,
-  hide: string,
+  label: string,
 ): ChildNode[] {
   if (!body.folded) {
     const template = body.template.cloneNode(true) as HTMLTemplateElement;
@@ -319,7 +318,7 @@ function foldHtmlQuotes(
     const open = expanded.has(index);
     block.toggleAttribute('hidden', !open);
     button.setAttribute('aria-expanded', String(open));
-    button.textContent = open ? hide : show;
+    button.textContent = label;
   });
   return body.folded.nodes;
 }
@@ -390,7 +389,8 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @csspart attachment-size - An attachment's formatted file size, inside `attachment-button`.
  * @csspart attachments-limit - Localized note when more than the first 200 retained attachments exist.
  * @csspart quoted - A folded quoted-text block (hidden until expanded).
- * @csspart quote-toggle - The show/hide-quoted-text toggle button.
+ * @csspart quote-toggle - The quoted-text disclosure button: one constant visible name
+ *   (`emailViewerQuotedText`) in both states, with `aria-expanded` carrying the state.
  * @csspart error - The error region.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @cssprop --lr-email-viewer-action-background - Resting background of viewer actions.
@@ -420,12 +420,11 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerEmptyBody: LYRA_DEFAULT_emailViewerEmptyBody,
     emailViewerFrom: LYRA_DEFAULT_emailViewerFrom,
     emailViewerGroupAddress: LYRA_DEFAULT_emailViewerGroupAddress,
-    emailViewerHideQuoted: LYRA_DEFAULT_emailViewerHideQuoted,
     emailViewerLabel: LYRA_DEFAULT_emailViewerLabel,
     emailViewerMissingParser: LYRA_DEFAULT_emailViewerMissingParser,
     emailViewerNoSubject: LYRA_DEFAULT_emailViewerNoSubject,
     emailViewerOpenAttachment: LYRA_DEFAULT_emailViewerOpenAttachment,
-    emailViewerShowQuoted: LYRA_DEFAULT_emailViewerShowQuoted,
+    emailViewerQuotedText: LYRA_DEFAULT_emailViewerQuotedText,
     emailViewerSubject: LYRA_DEFAULT_emailViewerSubject,
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
     emailViewerUnnamedAttachment: LYRA_DEFAULT_emailViewerUnnamedAttachment,
@@ -510,8 +509,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   private foldedHtmlCache: {
     body: EmailHtml;
     expanded: readonly number[];
-    showLabel: string;
-    hideLabel: string;
+    label: string;
     result: ChildNode[];
   } | null = null;
 
@@ -722,7 +720,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
                 : undefined,
             },
           })}
-        ><span part="attachment-name">${filename}</span> <span part="attachment-size">${size}</span></button></li>`;
+        ><span part="attachment-name">${bdi(filename)}</span> <span part="attachment-size">${size}</span></button></li>`;
       })}
     </ul>${shown.length < attachments.length
       ? html`<p part="attachments-limit" role="note">${this.localize('promptQueueAttachmentLimit', undefined, {
@@ -734,17 +732,17 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   private renderTextBody(text: string): TemplateResult {
     const split = this.foldQuotes ? splitTrailingQuoteBlock(text) : null;
-    if (!split) return html`<pre part="body-text">${text}</pre>`;
+    if (!split) return html`<pre part="body-text" dir="auto">${text}</pre>`;
     return html`
-      <pre part="body-text">${split.visible}</pre>
+      <pre part="body-text" dir="auto">${split.visible}</pre>
       <button
         type="button"
         part="quote-toggle"
         data-email-chrome="quote-toggle"
         aria-expanded=${this.textQuoteExpanded ? 'true' : 'false'}
         @click=${() => { this.textQuoteExpanded = !this.textQuoteExpanded; }}
-      >${this.localize(this.textQuoteExpanded ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted')}</button>
-      <pre part="quoted" ?hidden=${!this.textQuoteExpanded}>${split.quoted}</pre>
+      >${this.localize('emailViewerQuotedText')}</button>
+      <pre part="quoted" dir="auto" ?hidden=${!this.textQuoteExpanded}>${split.quoted}</pre>
     `;
   }
 
@@ -761,21 +759,19 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   };
 
   private getFoldedHtml(body: EmailHtml): ChildNode[] {
-    const showLabel = this.localize('emailViewerShowQuoted');
-    const hideLabel = this.localize('emailViewerHideQuoted');
+    const label = this.localize('emailViewerQuotedText');
     const expanded = this.expandedHtmlQuoteIndices;
     const cache = this.foldedHtmlCache;
     if (
       cache
       && cache.body === body
       && cache.expanded === expanded
-      && cache.showLabel === showLabel
-      && cache.hideLabel === hideLabel
+      && cache.label === label
     ) {
       return cache.result;
     }
-    const result = foldHtmlQuotes(body, expanded, showLabel, hideLabel);
-    this.foldedHtmlCache = { body, expanded, showLabel, hideLabel, result };
+    const result = foldHtmlQuotes(body, expanded, label);
+    this.foldedHtmlCache = { body, expanded, label, result };
     return result;
   }
 

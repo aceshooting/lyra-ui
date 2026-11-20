@@ -2,12 +2,12 @@
   "locale": "ca",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:7ee830ef8b5c6f8262a5a9c7a74dd564e64c01c8737b12315942121de4e154c7"
+    "keyCount": 1717,
+    "sha256": "sha256:eed02a6b79a350e1991f5bef187641723982b3930136e5b8ab795e4775444bb3"
   },
   "translator": {
     "status": "complete-original",
@@ -105,6 +105,10 @@
     {
       "messagePath": "connectorManagerLabel",
       "rationale": "“Connectors” is the plural category name for integration connections; Catalan writes this term with the identical spelling, so the match is shared vocabulary rather than leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerTypeFax",

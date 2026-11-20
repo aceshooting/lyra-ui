@@ -15,7 +15,6 @@ const regionalOverrideKeys = [
   'calendarViewerMissingParser',
   'chartMissingLibrary',
   'close',
-  'closeNavigation',
   'closeWithContext',
   'closeWithTruncatedContext',
   'datasetViewerMissingParser',

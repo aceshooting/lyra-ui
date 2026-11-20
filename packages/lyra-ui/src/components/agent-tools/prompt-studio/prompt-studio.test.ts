@@ -1162,16 +1162,13 @@ it('names each per-message action with its message number', async () => {
   const names = (part: string) => [...el.shadowRoot!.querySelectorAll(`[part="${part}"]`)].map((node) => node.getAttribute('aria-label'));
   expect(names('move-message-up')).to.deep.equal(['Move message 1 up', 'Move message 2 up', 'Move message 3 up']);
   expect(names('move-message-down')).to.deep.equal(['Move message 1 down', 'Move message 2 down', 'Move message 3 down']);
-  const descriptions = () => [...el.shadowRoot!.querySelectorAll('[part="remove-message"]')].map(node => node.getAttribute('aria-description'));
-  expect(names('remove-message')).to.deep.equal(Array(3).fill('Remove message'));
-  expect(descriptions()).to.deep.equal(['Remove message 1', 'Remove message 2', 'Remove message 3']);
-  el.strings = { promptStudioRemoveMessage: 'Retirer' };
-  await el.updateComplete;
-  expect(names('remove-message')).to.deep.equal(Array(3).fill('Retirer'));
+  expect(names('remove-message')).to.deep.equal(['Remove message 1', 'Remove message 2', 'Remove message 3']);
   el.strings = { promptStudioRemoveMessageNumbered: 'Retirer {index}' };
   await el.updateComplete;
   expect(names('remove-message')).to.deep.equal(['Retirer 1', 'Retirer 2', 'Retirer 3']);
-  expect(descriptions()).to.deep.equal([null, null, null]);
+  el.messages = reorderMessages.slice(0, 1);
+  await el.updateComplete;
+  expect(names('remove-message')).to.deep.equal(['Remove message']);
 });
 
 it('keeps keyboard focus inside the studio when the focused message is removed', async () => {

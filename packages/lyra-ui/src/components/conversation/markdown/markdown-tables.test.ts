@@ -30,6 +30,19 @@ describe('GFM table wrapper', () => {
       expect(root.querySelector('table') === table).to.equal(true);
       await expect(el).to.be.accessible();
     });
+    it(`${name} gives each of several tables its own ordinal name`, async () => {
+      const host = await fixture<HTMLElement>(html`<div></div>`);
+      const el = document.createElement(name) as LyraMarkdown;
+      el.content = '| A |\n| - |\n| 1 |\n\ntext\n\n| B |\n| - |\n| 2 |';
+      host.append(el);
+      await waitUntil(() => el.shadowRoot?.querySelectorAll('table').length === 2);
+      await el.updateComplete;
+      const names = () => [...el.shadowRoot!.querySelectorAll('[part="table-wrapper"]')].map((wrapper) => wrapper.getAttribute('aria-label'));
+      expect(names()).to.deep.equal(['Table 1', 'Table 2']);
+      el.strings = { markdownTableRegionIndexed: 'Tableau {index}' };
+      await el.updateComplete;
+      expect(names()).to.deep.equal(['Tableau 1', 'Tableau 2']);
+    });
     it(`${name} leaves unwrapped tables and forged generic wrappers unchanged`, async () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;

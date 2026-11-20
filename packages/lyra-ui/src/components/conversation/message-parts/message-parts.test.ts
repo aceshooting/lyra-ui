@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type {
   CitationSelectEventDetail,
   MessagePart,
@@ -544,6 +544,22 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
   expect(audio[0]!.getAttribute("src")).to.equal("data:audio/wav;base64,UklGRg==");
   expect(audio[0]!.querySelector("source") === null).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[part="audio-transcript"]').length).to.equal(0);
+  expect(audio[0]!.getAttribute("aria-label")).to.equal("Audio");
+  expect(audio[0]!.hasAttribute("aria-describedby")).to.equal(false);
+});
+
+it("describes a named audio player by its transcript", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts
+      content-mode="plain"
+      .parts=${[{ id: "a", type: "audio", src: "data:audio/wav;base64,UklGRg==", transcript: "Spoken answer" }] as MessagePart[]}
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  const audio = el.shadowRoot!.querySelector('audio[part="audio-control"]')!;
+  const transcript = el.shadowRoot!.querySelector('[part="audio-transcript"]')!;
+  expect(audio.getAttribute("aria-label")).to.equal("Audio");
+  expect(transcript.id).to.not.equal("");
+  expect(audio.getAttribute("aria-describedby")).to.equal(transcript.id);
 });
 
 it("renders discriminated tool failures separately from an optional partial result", async () => {
@@ -1579,19 +1595,23 @@ it('rejects a stale retry after its part is replaced before the button rerenders
   expect(requests).to.equal(1);
 });
 
-it('shows and announces the number omitted by the render window', async () => {
+it('shows the number omitted by the render window and announces the window once, not per count change', async () => {
   const el = await fixture<LyraMessageParts>(html`<lr-message-parts></lr-message-parts>`);
   el.parts = ['one', 'two', 'three'].map(id => ({ id, type: 'text', text: id }));
-  el.maxRenderedParts = 1;
   await el.updateComplete;
   const notice = () => el.shadowRoot!.querySelector<HTMLElement>('[part="window-notice"]');
-  expect(notice()?.dataset['omitted']).to.equal('2');
-  expect(notice()?.textContent).to.equal('Earlier parts hidden: 2.');
+  expect(notice() === null).to.equal(true);
   el.strings = { messagePartsWindowNotice: 'Hidden: {count}' };
+  el.maxRenderedParts = 1;
+  await el.updateComplete;
+  expect(notice()?.dataset['omitted']).to.equal('2');
+  expect(notice()?.textContent).to.equal('Hidden: 2');
+  await waitUntil(() => sinkTexts('polite').includes('Hidden: 2'));
   el.maxRenderedParts = 2;
   await el.updateComplete;
   expect(notice()?.textContent).to.equal('Hidden: 1');
-  await waitUntil(() => sinkTexts('polite').includes('Hidden: 1'));
+  await aTimeout(50);
+  expect(sinkTexts('polite').includes('Hidden: 1'), 'a changed count is not announced again').to.equal(false);
   el.maxRenderedParts = 0;
   await el.updateComplete;
   expect(notice() === null).to.equal(true);

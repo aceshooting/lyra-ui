@@ -2,6 +2,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { splitLines } from '../../../internal/text-lines.js';
 import { bdi } from '../../../internal/bidi.js';
+import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -239,12 +240,20 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     return key ? this.localize(key) : type;
   }
 
-  private formatTypedValue(value: string, types: string[]): string {
-    if (!types.length) return value;
-    return this.localize('contactViewerTypedValue', undefined, {
-      value,
+  /** The caller value isolated inside the localized typed-value template, so its own direction
+   *  cannot reorder the translated type list or its punctuation. */
+  private renderTypedValue(value: string, types: string[]): TemplateResult {
+    if (!types.length) return bdi(value);
+    return this.renderIsolatedValue('contactViewerTypedValue', value, {
       types: this.formatList(types.map((type) => this.formatType(type))),
     });
+  }
+
+  private renderIsolatedValue(key: 'contactViewerTypedValue' | 'contactViewerOrganization', value: string,
+    values: Record<string, string> = {}): TemplateResult {
+    const pieces = resolveLocalizedParts(this.localize(key), (marker) =>
+      this.localize(key, undefined, { ...values, value: marker }));
+    return html`${pieces.map((piece, index) => index < pieces.length - 1 ? html`${piece}${bdi(value)}` : piece)}`;
   }
 
   private renderContact(contact: VCardContact): TemplateResult {
@@ -255,10 +264,10 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
         role=${headingLevel ? 'heading' : nothing}
         aria-level=${headingLevel ?? nothing}
       >${bdi(contact.fn || this.localize('contactViewerUnnamedContact'))}</div>
-      ${contact.org.length ? html`<p part="contact-org">${bdi(this.localize('contactViewerOrganization', undefined, { value: this.formatList(contact.org) }))}</p>` : nothing}
-      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${bdi(this.formatTypedValue(tel.value, tel.types))}</li>`)}</ul>` : nothing}
-      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${bdi(this.formatTypedValue(email.value, email.types))}</li>`)}</ul>` : nothing}
-      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${bdi(this.formatTypedValue(this.formatAddress(address), address.types))}</li>`)}</ul>` : nothing}
+      ${contact.org.length ? html`<p part="contact-org">${this.renderIsolatedValue('contactViewerOrganization', this.formatList(contact.org))}</p>` : nothing}
+      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${this.renderTypedValue(tel.value, tel.types)}</li>`)}</ul>` : nothing}
+      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${this.renderTypedValue(email.value, email.types)}</li>`)}</ul>` : nothing}
+      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${this.renderTypedValue(this.formatAddress(address), address.types)}</li>`)}</ul>` : nothing}
     </article>`;
   }
 

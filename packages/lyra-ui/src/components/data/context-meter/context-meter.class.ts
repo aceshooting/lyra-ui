@@ -25,9 +25,11 @@ import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js'
 import { statePart } from '../../../internal/state-part.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_contextMeterInputLimit, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
@@ -256,6 +258,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     contextMeterSegmentLabel: LYRA_DEFAULT_contextMeterSegmentLabel,
     contextMeterUsed: LYRA_DEFAULT_contextMeterUsed,
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
+    noData: LYRA_DEFAULT_noData,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -444,8 +447,13 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private segmentTitle(segment: Readonly<ContextMeterSegment>, value = this.normalizedSegmentValue(segment)): string {
     return this.localize('contextMeterSegmentLabel', undefined, {
       label: segment.label,
-      count: this.formatCount(value),
+      count: this.formatSegmentCount(segment, value),
     });
+  }
+
+  /** A missing or non-finite segment value reads as no data, not as a measured zero. */
+  private formatSegmentCount(segment: Readonly<ContextMeterSegment>, value = this.normalizedSegmentValue(segment)): string {
+    return Number.isFinite(segment.value) ? this.formatCount(value) : this.localize('noData');
   }
 
   private segmentColor(segment: ContextMeterSegment): string | undefined {
@@ -671,10 +679,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
           // The visible text is the row's accessible name in interactive mode, so the count and
           // share a filter row shows are the ones it announces.
           const content = html`${swatch}
-            <span part="legend-label">${segment.label}</span>
+            <span part="legend-label">${bdi(segment.label)}</span>
             ${showsValue
               ? html`<span part="legend-value"
-                  >${this.formatCount(this.normalizedSegmentValue(segment))}</span
+                  >${this.formatSegmentCount(segment)}</span
                 >`
               : nothing}
             ${showsPercent

@@ -11,6 +11,7 @@ import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesInputLimit, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
@@ -45,7 +46,8 @@ function validStages(value: unknown): readonly LyraFunnelStage[] {
     if (typeof label !== 'string') continue;
     stages.push({
       label,
-      value: typeof stageValue === 'number' ? finiteNumber(stageValue, 0) : 0,
+      // NaN marks a missing or non-finite value; it renders as no data, never as a measured zero.
+      value: typeof stageValue === 'number' && Number.isFinite(stageValue) ? stageValue : Number.NaN,
       ...(typeof color === 'string' ? { color } : {}),
     });
   }
@@ -54,7 +56,8 @@ function validStages(value: unknown): readonly LyraFunnelStage[] {
 
 interface ResolvedStage {
   readonly stage: LyraFunnelStage;
-  readonly value: number;
+  /** `null` when the stage value is missing or non-finite. */
+  readonly value: number | null;
   /** Share of the FIRST stage, or null when the first stage cannot define one. */
   readonly share: number | null;
   /** Change from the previous stage, or null for the first stage / a non-positive predecessor. */
@@ -202,29 +205,29 @@ export class LyraFunnel extends LyraElement {
   private computeStages(): ResolvedStage[] {
     const stages = validStages(this.stages);
     const comparison = validStages(this.comparison);
-    const values = stages.map((stage) => finiteNumber(stage.value, 0));
+    const values = stages.map((stage) => (Number.isFinite(stage.value) ? stage.value : null));
     const base = values[0] ?? 0;
     // A zero or negative first stage cannot define "share of the first stage" at all: every ratio
     // would be infinite, undefined, or sign-flipped. Reporting no share is the truthful answer.
     const hasBase = base > 0;
-    const comparisonValues = comparison.map((stage) => finiteNumber(stage.value, 0));
+    const comparisonValues = comparison.map((stage) => (Number.isFinite(stage.value) ? stage.value : null));
     const comparisonBase = comparisonValues[0] ?? 0;
     const hasComparisonBase = comparisonBase > 0;
 
     return stages.map((stage, index) => {
-      const value = values[index] ?? 0;
+      const value = values[index] ?? null;
       const previous = values[index - 1];
       const comparisonValue = comparisonValues[index];
       return {
         stage,
         value,
-        share: hasBase ? value / base : null,
+        share: hasBase && value !== null ? value / base : null,
         change:
-          index > 0 && previous !== undefined && previous > 0
+          index > 0 && value !== null && previous !== undefined && previous !== null && previous > 0
             ? (value - previous) / previous
             : null,
         comparisonShare:
-          hasComparisonBase && comparisonValue !== undefined
+          hasComparisonBase && comparisonValue !== undefined && comparisonValue !== null
             ? comparisonValue / comparisonBase
             : null,
       };
@@ -254,8 +257,8 @@ export class LyraFunnel extends LyraElement {
         ? html`<span part="dropoff">${this.changeText(change)}</span>`
         : nothing}
       <span part="stage-header">
-        <span part="stage-label">${stage.label}</span>
-        <span part="stage-value">${this.formatAbsoluteValue(value)}</span>
+        <span part="stage-label">${bdi(stage.label)}</span>
+        <span part="stage-value">${value === null ? this.localize('noData') : this.formatAbsoluteValue(value)}</span>
         ${share === null
           ? nothing
           : html`<span part="stage-share">${this.formatShare(share)}</span>`}

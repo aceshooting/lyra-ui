@@ -19,7 +19,7 @@ async function settleClipboard(el: LyraCommitCard): Promise<void> {
 expectLocaleFallback('ar-EG', [
   'commitCardLabel',
   'commitCardDiffSummary',
-  'commitCardHideFiles',
+  'commitCardChangedFiles',
 ]);
 describe('lr-commit-card', () => {
   it('uses one tab stop for expanded file rows and clamps arrow navigation at the ends', async () => {
@@ -484,7 +484,7 @@ describe('lr-commit-card', () => {
         .strings=${{
           commitCardLabel: 'Fiche de commit',
           commitCardCopyHash: 'Copier le hash',
-          commitCardShowFiles: 'Afficher {count} fichiers',
+          commitCardChangedFiles: '{count} fichiers modifiés',
         }}
       ></lr-commit-card>
     `)) as LyraCommitCard;
@@ -494,7 +494,7 @@ describe('lr-commit-card', () => {
       'Copier le hash',
     );
     expect(el.shadowRoot!.querySelector('[part="files-toggle"]')!.textContent!.trim()).to.equal(
-      'Afficher 1 fichiers',
+      '1 fichiers modifiés',
     );
   });
 

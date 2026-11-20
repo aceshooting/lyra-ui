@@ -110,6 +110,33 @@ it('advances the index on each tick and wraps by default', async () => {
   expect(el.currentIndex).to.be.greaterThan(0);
 });
 
+it('holds its frame while the document is hidden and resumes when it is visible again', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-playback item-count="3" interval-ms="20"></lr-sequence-playback>`,
+  )) as LyraSequencePlayback;
+  const original = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+  const setVisibility = (state: DocumentVisibilityState): void => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+  try {
+    setVisibility('hidden');
+    const steps: number[] = [];
+    el.addEventListener('lr-sequence-step', () => steps.push(el.currentIndex));
+    el.play();
+    await aTimeout(120);
+    expect(steps, 'no step while hidden').to.deep.equal([]);
+    expect(el.currentIndex).to.equal(0);
+    expect(el.playing).to.equal(true);
+    setVisibility('visible');
+    await waitUntil(() => steps.length > 0, 'playback resumes once visible');
+    el.pause();
+  } finally {
+    if (original) Object.defineProperty(document, 'visibilityState', original);
+    else delete (document as unknown as Record<string, unknown>)['visibilityState'];
+  }
+});
+
 it('stops at the last index when withoutLoop is set and the end is reached', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="2" interval-ms="20"></lr-sequence-playback>`,

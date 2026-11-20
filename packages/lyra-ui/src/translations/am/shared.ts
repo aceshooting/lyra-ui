@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'ተከልክሏል',
   statusIncomplete: 'ያልተጠናቀቀ',
   restore: 'መልስ',
+  fileTypeAudio: 'ድምጽ',
   navigation: 'ዳሰሳ',
   attachmentUntitledFile: 'ርዕስ የሌለው ፋይል',
   chartTrendIncreasing: 'እየጨመረ',

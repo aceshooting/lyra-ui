@@ -56,7 +56,7 @@ export type { LyraMapPosition, LyraMapQuaternion, LyraMapModelFormat, LyraMapMod
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chartValueFractionDigits, formatChartValue } from '../../../internal/chart-number-format.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
-import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { AnnouncementSinkController, Announcer } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -217,7 +217,7 @@ import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocu
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapScene, LYRA_DEFAULT_mapSceneArc, LYRA_DEFAULT_mapSceneEmpty, LYRA_DEFAULT_mapSceneHide, LYRA_DEFAULT_mapSceneInvalid, LYRA_DEFAULT_mapSceneLimit, LYRA_DEFAULT_mapSceneMarker, LYRA_DEFAULT_mapSceneModel, LYRA_DEFAULT_mapSceneNext, LYRA_DEFAULT_mapScenePage, LYRA_DEFAULT_mapScenePartial, LYRA_DEFAULT_mapScenePath, LYRA_DEFAULT_mapScenePrevious, LYRA_DEFAULT_mapSceneShow, LYRA_DEFAULT_mapSceneUnavailable, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCloseWithLabel, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapScene, LYRA_DEFAULT_mapSceneArc, LYRA_DEFAULT_mapSceneEmpty, LYRA_DEFAULT_mapSceneInvalid, LYRA_DEFAULT_mapSceneLimit, LYRA_DEFAULT_mapSceneMarker, LYRA_DEFAULT_mapSceneModel, LYRA_DEFAULT_mapSceneNext, LYRA_DEFAULT_mapScenePage, LYRA_DEFAULT_mapScenePartial, LYRA_DEFAULT_mapScenePath, LYRA_DEFAULT_mapScenePrevious, LYRA_DEFAULT_mapSceneUnavailable, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -2277,7 +2277,8 @@ export interface LyraMapEventMap {
  *   when a peer/custom marker has no intrinsic content size.
  * @csspart popup - A MapLibre-generated marker popup.
  * @csspart popup-content - The content container inside a MapLibre-generated marker popup.
- * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
+ * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup,
+ *   named `Close {label}` (`mapCloseWithLabel`) with the marker's label, else `Close`.
  * @csspart attribution - MapLibre-generated map attribution.
  * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control with a decorative information glyph.
  * @csspart attribution-content - Native attribution credits, independently positionable from the compact disclosure control.
@@ -2358,6 +2359,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapActivate: LYRA_DEFAULT_mapActivate,
     mapCancelDrawing: LYRA_DEFAULT_mapCancelDrawing,
     mapCancelPick: LYRA_DEFAULT_mapCancelPick,
+    mapCloseWithLabel: LYRA_DEFAULT_mapCloseWithLabel,
     mapCompleteDrawing: LYRA_DEFAULT_mapCompleteDrawing,
     mapControlUnavailable: LYRA_DEFAULT_mapControlUnavailable,
     mapDrawAtCenter: LYRA_DEFAULT_mapDrawAtCenter,
@@ -2400,7 +2402,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapScene: LYRA_DEFAULT_mapScene,
     mapSceneArc: LYRA_DEFAULT_mapSceneArc,
     mapSceneEmpty: LYRA_DEFAULT_mapSceneEmpty,
-    mapSceneHide: LYRA_DEFAULT_mapSceneHide,
     mapSceneInvalid: LYRA_DEFAULT_mapSceneInvalid,
     mapSceneLimit: LYRA_DEFAULT_mapSceneLimit,
     mapSceneMarker: LYRA_DEFAULT_mapSceneMarker,
@@ -2410,7 +2411,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapScenePartial: LYRA_DEFAULT_mapScenePartial,
     mapScenePath: LYRA_DEFAULT_mapScenePath,
     mapScenePrevious: LYRA_DEFAULT_mapScenePrevious,
-    mapSceneShow: LYRA_DEFAULT_mapSceneShow,
     mapSceneUnavailable: LYRA_DEFAULT_mapSceneUnavailable,
     mapSquareKilometers: LYRA_DEFAULT_mapSquareKilometers,
     mapSquareMeters: LYRA_DEFAULT_mapSquareMeters,
@@ -2691,7 +2691,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return html`<section part="scene-panel" aria-label=${this.localize('mapScene')}>
       <button type="button" part="scene-toggle" aria-expanded=${String(this.scenePanelOpen)} aria-controls="scene-objects-list"
         ?disabled=${blocked}
-        @click=${() => { if (this.sceneInteractionAllowed(owner)) this.scenePanelOpen = !this.scenePanelOpen; }}>${this.localize(this.scenePanelOpen ? 'mapSceneHide' : 'mapSceneShow')}</button>
+        @click=${() => { if (this.sceneInteractionAllowed(owner)) this.scenePanelOpen = !this.scenePanelOpen; }}>${this.localize('mapScene')}</button>
       ${view.status && view.status.state !== 'ready' ? html`<div part="scene-status">${this.sceneStatusMessage(view.status)}</div>` : nothing}
       <div id="scene-objects-list" ?hidden=${!this.scenePanelOpen}>
         <ul part="scene-list">${repeat(objects.slice(page * 100, (page + 1) * 100), object => object.id, object => html`<li>
@@ -3984,11 +3984,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * a polygon's closing segment and its area at the centroid, and a line's total length beside its
    * last vertex. Lengths and areas are great-circle measurements, as in the drawing metrics,
    * formatted in metric units with the component locale. The same total also appears, for
-   * assistive technology, beside the vertex count. Default `false`. */
+   * assistive technology, beside the vertex count. Default `false`. While the drawing controls are
+   * shown, later vertex-count and total changes are announced politely, coalesced while dragging. */
   @property({ type: Boolean, attribute: 'drawing-measurements', reflect: true }) drawingMeasurements = false;
   @state() private drawingIssue?: MapDrawingError;
   /** Bumped whenever a rendered value owned by the drawing controller changes. */
   @state() private drawingRevision = 0;
+  /** Coalesced polite progress for the drawing controls: the vertex count and the measured total
+   *  are separate messages, so each keeps its own throttle window while a vertex is dragged. */
+  private readonly drawingProgressAnnouncers = [0, 1].map(() => new Announcer({
+    onFlush: (text) => { this.announcements.announcePolite(text); },
+  }));
+  /** Last observed vertex count and vertex signature; `undefined` while no drawing controls render.
+   *  State, not text, so a strings or locale change alone never re-announces. */
+  private drawingProgressState: [string | undefined, string | undefined] = [undefined, undefined];
   /** Sessions, editing and temporary resources, once the drawing runtime has loaded. */
   private drawingController?: MapDrawingController;
   /** `loading` while the drawing runtime imports; `failed` until drawing is requested again. */
@@ -5410,6 +5419,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) for (const announcer of this.drawingProgressAnnouncers) announcer.setTimerHost(ownerWindow);
     const generation = ++this._connectGeneration;
     this.observeMapInteractionState();
     this.unregisterCameraSession?.();
@@ -5500,6 +5511,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    for (const announcer of this.drawingProgressAnnouncers) announcer.cancel();
+    this.drawingProgressState = [undefined, undefined];
     this.releaseCanvasAllocation();
     this.stopObservingMapInteractionState();
     this.interruptCameraSession('disconnect', false);
@@ -5653,6 +5666,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
     this.announcements.adopted();
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow) for (const announcer of this.drawingProgressAnnouncers) announcer.setTimerHost(ownerWindow);
     if (this._map && this.containerEl && this.isConnected) {
       this.observeMapAllocation(this._map, this.containerEl);
     }
@@ -6063,9 +6078,32 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     applyComposedFocusRepair(repair, [...survivors, canvas, activate, this.containerEl]);
   }
 
+  /** Speaks vertex-count and measured-total changes after the drawing controls first render; the
+   *  first observation of a session is silent. */
+  private announceDrawingProgress(): void {
+    const drawing = this.drawingController;
+    const shown = (this.drawMode === 'line' || this.drawMode === 'polygon' || drawing?.editing === true)
+      && !this.pickMode && !this.failure && !this.loading;
+    const vertices = drawing?.snapshot?.vertices ?? [];
+    const next: [string | undefined, string | undefined] = shown
+      ? [String(vertices.length), JSON.stringify(vertices)]
+      : [undefined, undefined];
+    const [count, signature] = this.drawingProgressState;
+    this.drawingProgressState = next;
+    if (!shown) return;
+    if (count !== undefined && count !== next[0]) {
+      this.drawingProgressAnnouncers[0]!.announce(this.localize('mapDrawingVertices', undefined, {
+        count: this.formatLocaleNumber(vertices.length),
+      }));
+    }
+    const summary = this.drawingMeasurements ? this.drawingSummary(drawing?.snapshot) : undefined;
+    if (summary && signature !== undefined && signature !== next[1]) this.drawingProgressAnnouncers[1]!.announce(summary);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.repairActionBarFocus();
+    this.announceDrawingProgress();
     if (changed.has('failure')) this.syncGeographicSceneStatus();
     if (this.sceneRepairFocus) {
       this.sceneRepairFocus = false;
@@ -8845,7 +8883,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (popupContent) addPartToken(popupContent, 'popup-content');
     const closeButton = popupElement.querySelector('.maplibregl-popup-close-button');
     if (closeButton) addPartToken(closeButton, 'popup-close-button');
-    closeButton?.setAttribute('aria-label', this.localize('close'));
+    const markerLabel = this._markerLabels.get(key);
+    closeButton?.setAttribute('aria-label', markerLabel
+      ? this.localize('mapCloseWithLabel', undefined, { label: markerLabel })
+      : this.localize('close'));
   }
 
   private syncMapSemantics(markers = true): void {

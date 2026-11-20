@@ -14,7 +14,7 @@ import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscardHunk, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKeepHunk, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscardHunk, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewHunkInFile, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKeepHunk, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -56,7 +56,8 @@ const MAX_CHANGES = 200;
  * @csspart file - A file disclosure.
  * @csspart file-header - The file disclosure summary.
  * @csspart previous-path - Previous file path for renames.
- * @csspart hunk - One change region.
+ * @csspart hunk - One change region. An unlabeled hunk is named `Change {index}`, or
+ *   `Change {index} in {file}` while several files render.
  * @csspart hunk-header - Change label and decision state.
  * @csspart status - The localized current decision.
  * @csspart actions - Hunk decision actions.
@@ -80,6 +81,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
     changeReviewDiscarded: LYRA_DEFAULT_changeReviewDiscarded,
     changeReviewEmpty: LYRA_DEFAULT_changeReviewEmpty,
     changeReviewHunk: LYRA_DEFAULT_changeReviewHunk,
+    changeReviewHunkInFile: LYRA_DEFAULT_changeReviewHunkInFile,
     changeReviewKeep: LYRA_DEFAULT_changeReviewKeep,
     changeReviewKeepHunk: LYRA_DEFAULT_changeReviewKeepHunk,
     changeReviewKept: LYRA_DEFAULT_changeReviewKept,
@@ -134,13 +136,18 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       this.decisionDispatching = false;
     }
   }
-  private renderHunk(file: ChangeReviewFile, hunk: ChangeReviewHunk, index: number): TemplateResult {
+  private renderHunk(file: ChangeReviewFile, hunk: ChangeReviewHunk, index: number, multipleFiles: boolean): TemplateResult {
     const decision = this.decision(hunk);
-    const label = normalizeLabel(hunk.label) ?? this.localize('changeReviewHunk', undefined, {
-      index: getNumberFormat(this.effectiveLocale).format(index + 1),
-    });
+    const authored = normalizeLabel(hunk.label);
+    const ordinal = getNumberFormat(this.effectiveLocale).format(index + 1);
+    const visibleLabel = authored ?? this.localize('changeReviewHunk', undefined, { index: ordinal });
+    // With several files, a generated hunk name also carries its file so the regions and their
+    // decision buttons stay distinguishable across files.
+    const label = authored ?? (multipleFiles
+      ? this.localize('changeReviewHunkInFile', undefined, { index: ordinal, file: file.path })
+      : visibleLabel);
     return html`<section part="hunk" aria-label=${label}>
-      <div part="hunk-header"><span>${label}</span><span part="status">${this.localize(
+      <div part="hunk-header"><span>${visibleLabel}</span><span part="status">${this.localize(
         decision === 'keep' ? 'changeReviewKept' : decision === 'discard' ? 'changeReviewDiscarded' : 'changeReviewPending',
       )}</span></div>
       <lr-diff-view .oldText=${typeof hunk.before === 'string' ? hunk.before : ''}
@@ -171,7 +178,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       ${visible.length === 0 ? html`<p part="empty">${this.localize('changeReviewEmpty')}</p>` : repeat(visible, ({ file }) => file.id, ({ file, hunks }) => html`
         <details part="file" open>
           <summary part="file-header">${bdi(file.path)}${file.previousPath ? html`<span part="previous-path">${bdi(file.previousPath)}</span>` : nothing}</summary>
-          ${repeat(hunks, (hunk) => hunk.id, (hunk, index) => this.renderHunk(file, hunk, index))}
+          ${repeat(hunks, (hunk) => hunk.id, (hunk, index) => this.renderHunk(file, hunk, index, visible.length > 1))}
         </details>`)}
       ${limited ? html`<p part="limit" role="note">${this.localize('changeReviewLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(MAX_CHANGES) })}</p>` : nothing}
     </div>`;

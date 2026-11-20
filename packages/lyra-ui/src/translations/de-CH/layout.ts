@@ -7,7 +7,6 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  closeNavigation: 'Navigation schliessen',
   resizeNavigation: 'Navigationsgrösse ändern',
   dockPanelResize: 'Bereichsgrösse ändern',
   widgetExpandToFullscreen: 'Auf Vollbild vergrössern',

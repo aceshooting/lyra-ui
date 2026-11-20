@@ -153,3 +153,15 @@ it('names each hunk decision button with its hunk, falls back for a blank hunk l
   expect(names).to.deep.equal(['Keep Change 1', 'Discard Change 1', 'Keep Header', 'Discard Header']);
   expect(el.shadowRoot!.querySelector('[part="file-header"] bdi') != null).to.equal(true);
 });
+
+it('qualifies generated hunk names with their file while several files render', async () => {
+  const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${[
+    { id: 'a', path: 'src/a.ts', hunks: [{ id: 'h1', before: 'a', after: 'b' }] },
+    { id: 'b', path: 'src/b.ts', hunks: [{ id: 'h1', before: 'c', after: 'd' }] },
+  ] as unknown as ChangeReviewFile[]}></lr-change-review>`);
+  const sections = [...el.shadowRoot!.querySelectorAll('[part="hunk"]')];
+  expect(sections.map((section) => section.getAttribute('aria-label'))).to.deep.equal(['Change 1 in src/a.ts', 'Change 1 in src/b.ts']);
+  expect(sections.map((section) => section.querySelector('[part="hunk-header"] span')!.textContent)).to.deep.equal(['Change 1', 'Change 1']);
+  const names = [...el.shadowRoot!.querySelectorAll('[part="decision"]')].map((button) => button.getAttribute('aria-label'));
+  expect(names).to.deep.equal(['Keep Change 1 in src/a.ts', 'Discard Change 1 in src/a.ts', 'Keep Change 1 in src/b.ts', 'Discard Change 1 in src/b.ts']);
+});

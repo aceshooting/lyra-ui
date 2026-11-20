@@ -104,7 +104,7 @@ describe('lr-test-results', () => {
           statusSuccess: 'Réussi',
           statusError: 'Échec',
           statusSkipped: 'Ignoré',
-          collapse: 'Réduire',
+          details: 'Détails',
           durationMilliseconds: '{value} ms!',
         }}
       ></lr-test-results>
@@ -125,12 +125,12 @@ describe('lr-test-results', () => {
     )].map((node) => node.textContent?.trim() ?? '');
     expect(decorativeStatusGlyphs).to.deep.equal(['✓', '×', '–']);
     expect(decorativeStatusGlyphs.join('')).not.to.match(/[PFS]/);
-    // The failed test auto-expands by default, so its toggle shows the localized "collapse" text.
+    // The failed test's toggle keeps the constant localized "details" text in both states.
     expect(
       el.shadowRoot!
         .querySelector('[part="test"][data-status="failed"] [part="test-expand-toggle"]')!
         .textContent!.trim(),
-    ).to.equal('Réduire');
+    ).to.equal('Détails');
     expect(
       el.shadowRoot!
         .querySelector('[part="test"][data-status="passed"] [part="test-duration"]')!
@@ -289,7 +289,7 @@ describe('lr-test-results', () => {
         .withoutAutoExpandFailures=${true}
         .strings=${{
           accessibleLabelSeparator: ' / ',
-          testResultsExpandTest: 'Open {name}',
+          testResultsToggleTest: 'Open {name}',
         }}
       ></lr-test-results>
     `);
@@ -298,6 +298,11 @@ describe('lr-test-results', () => {
     )!;
 
     expect(toggle.getAttribute('aria-label')).to.equal('Open math.test.ts / subtracts numbers');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    expect(toggle.getAttribute('aria-label')).to.equal('Open math.test.ts / subtracts numbers');
+    expect(toggle.textContent!.trim()).to.equal('Details');
   });
 
   it('emits lr-toggle when a failure row is manually collapsed/expanded', async () => {

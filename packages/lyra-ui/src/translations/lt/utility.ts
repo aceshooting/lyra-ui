@@ -22,8 +22,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'objektas',
   jsonValue: 'reikšmė',
   jsonCopyLabel: 'Kopijuoti {label}',
-  jsonExpandLabel: 'Išskleisti {label}',
-  jsonCollapseLabel: 'Suskleisti {label}',
+  jsonToggleLabel: 'Perjungti {label}',
   jsonItemCount: {
     few: '{count} elementai',
     many: '{count} elemento',

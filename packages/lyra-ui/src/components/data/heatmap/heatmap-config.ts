@@ -1,7 +1,7 @@
 import type { ComplexAttributeConverter } from 'lit';
 import { finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { formatRgb } from './heatmap-colors.js';
 import { DEFAULT_BUCKET_COUNT, normalizeBucketCount } from './heatmap-limits.js';
 import type { HeatmapMatrixData, LyraHeatmapStickyLabels } from './heatmap-model.js';
@@ -99,7 +99,7 @@ export const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRi
 
 export function ignoresGridKey(event: KeyboardEvent): boolean {
   if (event.key === 'Home' || event.key === 'End') {
-    return event.isComposing || event.keyCode === 229 || event.altKey;
+    return isHandledOrComposingKey(event) || event.altKey;
   }
   return shouldIgnoreNavigationKey(event);
 }

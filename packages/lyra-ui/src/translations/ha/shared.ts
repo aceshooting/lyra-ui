@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'An hana',
   statusIncomplete: 'Bai cika ba',
   restore: 'Mayar',
+  fileTypeAudio: 'Sauti',
   navigation: 'Kewayawa',
   attachmentUntitledFile: 'Fayil marar suna',
   chartTrendIncreasing: 'ƙaruwa',

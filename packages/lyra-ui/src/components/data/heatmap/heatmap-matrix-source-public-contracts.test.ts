@@ -248,6 +248,19 @@ it('revokes exact activation when a multiple-selection listener replaces the sou
   expect(el.shadowRoot!.querySelector('[part="source-error"]') === null).to.equal(true);
 });
 
+it('dismisses the hovered source-mode tooltip with Escape while the canvas is not focused', async () => {
+  const { source } = matrixSource(20, 20);
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px" .matrixSource=${source}></lr-heatmap>`);
+  await sourceReady(el);
+  const canvas = el.shadowRoot!.querySelector('canvas')!, bounds = canvas.getBoundingClientRect();
+  canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: bounds.left + 10, clientY: bounds.top + 10 }));
+  await el.updateComplete;
+  expect(Boolean(el.shadowRoot!.querySelector('[part="tooltip"]')?.textContent)).to.equal(true);
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]') === null).to.equal(true);
+});
+
 it('clears aggregate hover outside the source viewport without selecting or reading an exact cell', async () => {
   const { source, reads } = matrixSource(20, 20);
   const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px" .matrixSource=${source}></lr-heatmap>`);

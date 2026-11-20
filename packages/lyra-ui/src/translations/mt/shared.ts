@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Miċħud',
   statusIncomplete: 'Mhux komplut',
   restore: 'Irrestawra',
+  fileTypeAudio: 'Awdjo',
   navigation: 'Navigazzjoni',
   attachmentUntitledFile: 'Fajl bla titlu',
   chartTrendIncreasing: 'qed tiżdied',

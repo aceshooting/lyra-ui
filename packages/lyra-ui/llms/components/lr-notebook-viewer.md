@@ -102,7 +102,8 @@ an error output), `output-stream-label` (visually hidden "Error output" prefix o
 `output-loading` (visually hidden loading text while sanitized output resolves),
 `output-image` (raster image output, shrinks to the cell width),
 `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
+`output-toggle` (a long text output's disclosure, named by the constant `notebookViewerFullOutput`
+string while `aria-expanded` reports the state), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
 of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
 sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
 highlight/active state variants are separate part _names_ rather than attribute selectors, because

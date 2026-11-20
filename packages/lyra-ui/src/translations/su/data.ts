@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items} item dina {ranges} rentang',
   noColumns: 'Can aya kolom nu dikonpigurasi',
   dataGridColumnMenu: 'Pilihan pikeun {label}',
-  dataGridCollapseRow: 'Ciutkeun {row}',
   dataGridPinStart: 'Pin {label} di awal',
   dataGridPinEnd: 'Pin {label} di ahir',
   dataGridUnpin: 'Leupaskeun pin {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'Ngamuat baris',
   tableLoadingMore: 'Ngamuat leuwih loba baris',
   tableEditCell: 'Édit {column}',
+  tableEditCellInRow: 'Édit {column}, baris {row}',
   showAllColumns: 'Témbongkeun kabéh kolom',
   dataGridColumns: 'Kolom',
   showFewerColumns: 'Témbongkeun kolom leuwih saeutik',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Bulan salajengna',
   paginationPage: 'Kaca',
   paginationJumpToPage: 'Lompat ka kaca {page}',
+  paginationInvalidPage: 'Lebetkeun kaca ti 1 nepi ka {max}.',
+  paginationInvalidPageUnknownTotal: 'Lebetkeun nomer kaca bulat 1 atawa leuwih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Kaca {page}',
   trendOf: 'Tren {count} nilai, panungtung {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'Ngan {count} baris kahiji anu dipidangkeun.',
   },
-  dataGridExpandRow: 'Kembangkeun {row}',
+  dataGridToggleRow: 'Ganti baris {row}',
   dataGridFilterColumn: 'Saring {column}',
   dataGridSelectPage: 'Pilih sakabéh baris dina kaca ieu',
   tableRowLimit: {

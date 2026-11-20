@@ -384,6 +384,10 @@ export const styles = css`
   [part="page-input"]:where([aria-invalid="true"]) {
     border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
   }
+  [part="page-error"] {
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+  }
   [part="live-region"].sr-only {
     ${visuallyHidden}
   }

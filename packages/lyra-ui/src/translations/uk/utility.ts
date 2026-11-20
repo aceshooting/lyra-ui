@@ -22,8 +22,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'об’єкт',
   jsonValue: 'значення',
   jsonCopyLabel: 'Копіювати {label}',
-  jsonExpandLabel: 'Розгорнути {label}',
-  jsonCollapseLabel: 'Згорнути {label}',
+  jsonToggleLabel: 'Перемкнути {label}',
   jsonItemCount: {
     one: '{count} елемент',
     few: '{count} елементи',

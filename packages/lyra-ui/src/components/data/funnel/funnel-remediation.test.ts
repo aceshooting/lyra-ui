@@ -23,7 +23,7 @@ for (const direction of ['ltr', 'rtl']) {
     element.comparison = [{ label: 'Base', value: 10 }, { label: 'Overflow', value: 20 }, { label: 'Nonfinite', value: Infinity }];
     await element.updateComplete;
     expect([...element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="bar"]')].map((bar) => bar.style.inlineSize)).to.deep.equal(['100%', '100%', '0%']);
-    expect([...element.shadowRoot!.querySelectorAll<HTMLElement>('[part="comparison-bar"]')].map((bar) => bar.style.inlineSize)).to.deep.equal(['100%', '100%', '0%']);
+    expect([...element.shadowRoot!.querySelectorAll<HTMLElement>('[part="comparison-bar"]')].map((bar) => bar.style.inlineSize)).to.deep.equal(['100%', '100%']);
     element.stages = [{ label: 'Base', value: 0 }, { label: 'Value', value: 20 }];
     element.comparison = [{ label: 'Base', value: -1 }, { label: 'Value', value: 20 }];
     await element.updateComplete;

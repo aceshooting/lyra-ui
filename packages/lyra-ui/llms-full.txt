@@ -16701,7 +16701,9 @@ The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagi
 `drag-ghost`, `ellipsis`, `empty`, `error-row` (the single full-width row that replaces the body
 content while `error` is set), `error-cell`, `error` (the built-in `<lr-empty>` host), `error-base`,
 `error-icon`, `error-heading`, `error-description`, `error-actions` (all four exported from the
-built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`,
+built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry control), `expand-button`
+(the tree/detail/group disclosure, named `Toggle row {row}` in both states; the expanded state is
+reported once, on the owning row in a tree grid and otherwise on the button),
 `filter-button`, `filter-panel`,
 `filter-panel-clear` (clears the active column filter editor, replacing the native search-cancel
 glyph the component resets; rendered only while it has a value), `first-button`,
@@ -16913,8 +16915,9 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   from `editOptions: { value: string; label: string }[]`, one `<option>` per entry in order; a
   `'select'` column with no `editOptions` renders an empty, valueless `<select>` instead of
   throwing); `editLabel(row) => string`, read once per row exactly like `editValue`/`cellTitle`,
-  overrides that editor's accessible name — omit it and every editor in the column shares the same
-  interpolated `tableEditCell` name instead (see the accessibility note under `editTrigger` below)
+  overrides that editor's accessible name — omit it and each editor takes the localized
+  `tableEditCellInRow` name (`Edit {column}, row {row}`) instead, or `tableEditCell` while only one
+  row renders (see the accessibility note under `editTrigger` below)
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -16957,10 +16960,10 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   - **Re-sorts/pages.** Keyed rows move the existing input with its draft; focus is restored to the
     same logical cell after sorting. If filtering/pagination removes that row from the page, focus
     is lost rather than moved to an unrelated replacement row.
-  - **Accessible names.** `editLabel(row)` overrides the default localized `tableEditCell`
-    (`Edit {column}`), which has no row context. The default is adequate for the single transient
-    editor. Always define `editLabel` for persistent editors: repeated identical names (e.g. fifty
-    “Edit Status” comboboxes) fail WCAG 2.4.6 and 1.3.1; each row needs a distinct editor name.
+  - **Accessible names.** `editLabel(row)` overrides the default localized `tableEditCellInRow`
+    (`Edit {column}, row {row}`), whose `{row}` is the `rowKey` value or else the row's 1-based
+    rendered position; a single rendered row keeps `tableEditCell` (`Edit {column}`). Define
+    `editLabel` when a row has a more meaningful name than its key or position.
 - `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
   computed/read-only and true only while a priority column is actually hidden. It becomes false
   when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
@@ -17118,7 +17121,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   rendered panel anyway, `expandedContentElement(rowKey)` (below) resolves that `<td>`;
   `rowElement(rowKey)` does not, because the panel is a sibling `<tr>` rather than part of the row
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default includes the row key through `dataGridExpandRow` or `dataGridCollapseRow`. Supply a callback for a more descriptive row name.
+- `rowExpandLabel?: (row: T, expanded: boolean) => string | undefined` (property only) supplies the name for a row's disclosure. The default is the constant `dataGridToggleRow` name (`Toggle row {row}`) in both states, where `{row}` is the `rowKey` value or else the row's 1-based rendered position; `aria-expanded` carries the state, so a callback should not encode it either. Supply a callback for a more descriptive row name.
 - `expansionMode: 'none'|'single'|'multiple' = 'none'` (attribute `expansion-mode`, reflected) —
   mirrors `selectionMode` member for member, for expansion. The default `'none'` keeps
   `expandedRowKeys` fully consumer-controlled: an activation only reports `lr-row-expand-toggle`.
@@ -17187,7 +17190,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) label the reveal button for showing or hiding additional columns; read `aria-expanded` for its state. Supplying a `tableAdditionalColumns` string (through `strings` or a registered locale override) opts into one constant visible name in both states, and the two labels then become the action tooltip; an explicit empty string omits that tooltip.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) are the reveal button's action tooltip for showing or hiding additional columns (localizing `showAllColumns`/`showFewerColumns` when omitted; an explicit empty string omits the tooltip). The button's visible name is the constant `tableAdditionalColumns` string in both states; read `aria-expanded` for its state.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -17647,7 +17650,12 @@ directional glyph while leaving its localized accessible name on the owning cont
 **CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
 `controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
 `first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
-`page-count`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+
+`page-error` is the visible correction message (`paginationInvalidPage`, or
+`paginationInvalidPageUnknownTotal` in indeterminate mode) rendered while the page-jump draft is
+out of range or not a whole number; it describes the input, and committing that draft (Enter or
+`change`) also announces it politely once.
 
 `pages` is the `role="list"` wrapper, `page` one numbered control inside it (a `<button>`, or an
 `<a>` under `href-template`), and `ellipsis` an accessible interactive control that jumps several
@@ -18053,8 +18061,9 @@ shown when `stages` exceeds the 500-stage render ceiling or the 10,000-position 
 - **Malformed stage entries are omitted independently.** Non-record entries and records without a
   string `label` cannot suppress valid neighbors in either series. Accessor properties are never
   invoked; the caller's arrays are never rewritten.
-- **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
-  take the chart with it.
+- **A missing or non-finite `value` renders the localized `noData` text** in place of the number, with
+  no share, drop-off or bar, so one bad row cannot take the chart with it and is never read as a
+  measured zero.
 - Values, shares and drop-off percentages all format through the component's effective locale
   (`locale` attribute, or an inherited one) — never a hardcoded `en`.
 - Bars grow from the inline-start edge and every dimension is a logical property, so `dir="rtl"`
@@ -23031,8 +23040,13 @@ panel space for a persistent sidebar/toolbar while the default backdrop still co
 viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
 `size="s"` for tighter header/body padding.
 
-The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
-panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
+The collapse-button `aria-label` is one constant name in both states, with `aria-expanded`
+carrying the state: `appRailItemToggle` (`'Toggle {label}'`) with the widget's `aria-label`,
+`label` or slotted label text, or `panelToggle` (`'Toggle panel'`) for an unlabeled widget. The
+fullscreen button is qualified the same way through `widgetExpandToFullscreenWithLabel` (`'Expand
+{label} to fullscreen'`) and `widgetExitFullscreenWithLabel` (`'Exit fullscreen: {label}'`),
+falling back to `widgetExpandToFullscreen`/`widgetExitFullscreen` without a label, so several
+widgets on one dashboard expose distinguishable controls.
 
 **Known gotchas:**
 
@@ -23048,11 +23062,6 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
   `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
-- prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
-  own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
-  registered against those keys specifically to target `lr-widget`'s collapse button should move
-  to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
-  itself is unaffected.
 
 **Additional API surface:**
 
@@ -25092,9 +25101,9 @@ default 24px, at least `--lr-icon-button-size` for coarse or hover-less pointers
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
-`appRailCollapse` or `appRailExpand` key) and `collapse-icon` (the decorative glyph wrapper),
+constant `toggleNavigation` key in both states) and `collapse-icon` (the decorative glyph wrapper),
 `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]` while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
-while pinned and `"false"` otherwise, the name comes from `appRailUnpin` while pinned and `appRailPin` otherwise, and it
+while pinned and `"false"` otherwise, the constant name comes from `appRailPin` in both states, and it
 takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
@@ -25372,9 +25381,8 @@ page and rail navigation landmarks nest. This recipe uses the page's default sta
 
 The flyout panel paints from the shared overlay-surface family: `--lr-overlay-surface` (fill), `--lr-overlay-border` (edge) and `--lr-overlay-radius` (corner radius).
 
-Use `openNavigation` and `closeNavigation` for the mobile toggle and `appRailItemExpand` and
-`appRailItemCollapse` for an item disclosure. Set `.strings.appRailItemToggle` on an item to
-use one name for both disclosure states.
+The mobile toggle takes the constant `toggleNavigation` name and an item disclosure takes
+`appRailItemToggle` (`Toggle {label}`) in both states; `aria-expanded` carries the state.
 
 Icon-only tooltips use the shared overlay surface, border, radius, anchored shadow, and viewport clamp.
 
@@ -25568,8 +25576,8 @@ Logical, so it mirrors under `dir="rtl"` with no separate rule.
 
 ### `lr-app-rail-group`
 
-A group with no heading uses the localized `expand` and `collapse` actions. Set
-`.strings.appRailGroupToggle` on the group to use one name in both states.
+A collapsible group with no heading names its toggle with the constant `appRailGroupToggle`
+string (`Navigation group`) in both states; `aria-expanded` carries the state.
 
 Titles, and optionally collapses, a section of `<lr-app-rail-item>`s. Grouping is by composition —
 the group holds whatever it is given; there is no items array and no renderer callback, so it can
@@ -26375,8 +26383,9 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle's accessible name is the action it performs (`dockPanelCollapse` while expanded,
-`dockPanelExpand` while collapsed) and `aria-expanded` reports the state. A slotted glyph keeps its orientation.
+icons). The toggle's accessible name is constant in both states and `aria-expanded` reports the state:
+`appRailItemToggle` (`Toggle {label}`) with the host's own accessible name, or `panelToggle`
+(`Toggle panel`) when the host has none. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),
@@ -28019,7 +28028,8 @@ trapping, stacking, reconnect suspension, and focus return. Modal inerting is sc
 drawer root, so header/main/footer siblings inside the Page become inert without inerting the
 drawer itself. Every custom `navigation-toggle` and the composed descendant that actually receives
 focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
-a localized label when unnamed; any available assigned control opens the same Page-owned drawer,
+the constant localized `toggleNavigation` label (`Toggle navigation`) when unnamed, the same name
+the built-in toggle keeps in both states; any available assigned control opens the same Page-owned drawer,
 while disabled, `aria-disabled`, hidden, and inert controls remain non-actions. The component
 supplies the real drawer to the shared controls owner; current browsers normalize that inward
 private relationship to the public Page host. Generated whole-value state remains authoritative
@@ -36793,7 +36803,7 @@ which only reaches rows projected from `legend`.
 | Scene part | Description |
 | --- | --- |
 | `scene-panel` | Accessible section containing accepted scene text controls and status. |
-| `scene-toggle` | Native button that expands or collapses the scene object list. |
+| `scene-toggle` | Native button that expands or collapses the scene object list; its visible name stays `mapScene` (`Scene objects`) while `aria-expanded` reports the state. |
 | `scene-list` | List containing the current page of accepted scene objects. |
 | `scene-item` | An object's interactive native button or noninteractive text row. |
 | `scene-pagination` | Previous/next page buttons and localized page summary, present when more than one page exists. |
@@ -36817,7 +36827,8 @@ as the installed controls, so the swap does not change their fill. For `initiali
 Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
 `drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
-`drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
+`drawing-summary` with `drawingMeasurements`; after the controls first render, later changes to
+either are announced politely, coalesced while a vertex is dragged), vertex editing renders `drawing-handles` containing
 one `drawing-vertex` per editable vertex, and `drawingMeasurements` renders `drawing-measurements`
 holding the `drawing-measurement` labels.
 Configuration problems (hash, control, export, data-layer, feature-state and drawing messages) render as stacked
@@ -36953,7 +36964,8 @@ renumbering the key.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
-content size. `popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
+content size. `popup-close-button` is the generated close control on an open marker popup, named `Close {label}`
+(`mapCloseWithLabel`) with the marker's label so several open popups stay distinguishable. `error` is ordinary localized visible
 text rendered in place of `container` for four distinct states: explicit style required, optional
 peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
 appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
@@ -37661,7 +37673,9 @@ with a development warning while it is open, and `focusContent()` returns `false
   `[longitude, latitude]`. Compared by identity like the map's `anchorLngLat`, so assign a new array
   to move it. A missing or invalid coordinate hides the panel without closing it.
 - `closable: boolean = false` (attribute `closable`, reflected) — adds the localized close button
-  and nonmodal Escape ownership. `close()` works either way.
+  and nonmodal Escape ownership. `close()` works either way. The button is named `Close {label}`
+  (`mapCloseWithLabel`) with the anchor's name, so several open anchors stay distinguishable, and
+  plain `Close` without one.
 - `label?: string` (attribute `label`) — names the panel, which then becomes a `role="group"`. A host
   `aria-label` wins. Without a name the content owns its semantics; for dialog semantics, put
   `role="dialog"` and its labelling on your content root.
@@ -44856,7 +44870,8 @@ Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-vie
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
-remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
+remain available without DOMPurify. Header values, attachment filenames and plain-text bodies use
+`dir="auto"`, so caller text keeps its own direction under an RTL host. Attachments are listed as filename and size only (the parsed
 `mimeType` never reaches the DOM) and their content is never rendered by this component. Each
 attachment row is a real `<button>` that emits `lr-attachment-open` with an immutable Blob snapshot
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
@@ -44890,7 +44905,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
+localized quoted-text disclosure whose visible name (`emailViewerQuotedText`, `Quoted text`) stays
+constant while `aria-expanded` reports the state. `false` (the default) preserves the full body rendering. A nonempty
 host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
 through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
@@ -44931,7 +44947,7 @@ when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
 those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
-show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
+quoted-text disclosure button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
 spoken copy is appended to the shared document-level polite sink only while the viewer and its
 composed ancestors are exposed to the accessibility tree).
@@ -45242,7 +45258,8 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
 **Events:**
 
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
-- `lr-slide-change` carries `{ index, count }` when the active slide changes.
+- `lr-slide-change` carries `{ index, count }` when the active slide changes; the new "Slide X of Y"
+  position is also announced politely through the shared live region (never for the initial load).
 - `lr-page-change` carries `{ page, pageCount }` when `page` changes while a presentation is shown.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
@@ -45761,6 +45778,7 @@ nonnegative dimensions.
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }` — fired for `zoom` assignments as well as
   `zoomIn()`/`zoomOut()`. Never fired for the initial `1`, only for a transition away from it.
+  While the document is ready the applied percentage is also announced politely.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
   the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
@@ -45824,7 +45842,8 @@ combinator after `::part()` never matches; all four controls are borderless text
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `page-error`, `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
+`search-match`), `page-error` (names the failed page with `pdfViewerPageFailed`, announced politely
+once per page and document), `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
 aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended
 to the shared document-level polite sink only while the viewer and its composed ancestors are
 exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
@@ -46594,7 +46613,8 @@ an error output), `output-stream-label` (visually hidden "Error output" prefix o
 `output-loading` (visually hidden loading text while sanitized output resolves),
 `output-image` (raster image output, shrinks to the cell width),
 `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
+`output-toggle` (a long text output's disclosure, named by the constant `notebookViewerFullOutput`
+string while `aria-expanded` reports the state), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
 of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
 sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
 highlight/active state variants are separate part _names_ rather than attribute selectors, because
@@ -46821,7 +46841,8 @@ pointing at one attribute value of a multi-attribute element stays identifiable 
 tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `attribute-more` (a localized `+N` count when an
 element has more than the 256 attributes rendered on its row), `text` (`data-match`), `comment`, `cdata`, `pi`,
-`toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
+`toggle` (an element's expand/collapse button on nodes with renderable children, named by the
+constant `xmlViewerToggleNode` string `Toggle {name}` while `aria-expanded` reports the state; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
 leaf rows), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of
@@ -48125,12 +48146,17 @@ backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<
 inline or block math span, carrying `data-display="inline"|"block"`), and, when
 `code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
 `code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
-CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+CSS-generated content, so headers add no text to selection or text-quote anchoring. With more than
+one fenced block, each frame's group name and copy button carry the block's locale-formatted
+ordinal (`codeRegionIndexed` "Code {index}", `codeRegionWithLanguageIndexed` "{language} code
+{index}", `copyCodeIndexed` "Copy code {index}"); a single block keeps `codeRegion`,
+`codeRegionWithLanguage` and `copyCode`. Each header
 adds at most eight elements toward the normal 20,000-node traversal bound.
 The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
 Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
-`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+`markdownTableRegion` (English: "Table"), or by `markdownTableRegionIndexed` ("Table {index}")
+when the document holds several tables. The label follows locale and `.strings` changes without
 reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore
@@ -48525,7 +48551,8 @@ control — that replaces the built-in status text, retry button, and live-regio
 entirely; unset, `status="failed"` renders the built-in status text and retry button)
 
 **CSS parts:** `bubble`, `header` (hidden entirely when nothing is in it), `avatar`, `badges`,
-`collapse-button` (only rendered when `collapsible`), `body` (hidden while `collapsed`),
+`collapse-button` (only rendered when `collapsible`; named by the constant `toggleMessage` string,
+`Toggle message`, while `aria-expanded` reports the state), `body` (hidden while `collapsed`),
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
@@ -50205,8 +50232,8 @@ through an activatable gutter reuses the source lines and updates the previous a
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
   Copy/Copied/failure string to the control's accessible name
 
-The collapse control uses `collapseCode` or `expandCode` and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
+The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) in both states and
+reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -50448,8 +50475,8 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
 
-The collapse control uses `collapseCode` or `expandCode` and reports its state through
-`aria-expanded`. Set `.strings.codeBlockToggle` to use the same name in both states.
+The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) in both states and
+reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
@@ -51648,7 +51675,8 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
-button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
+button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
+by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
 the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
@@ -52912,6 +52940,9 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus. An accepted Move up/down keeps focus on
 the moved row's action, or its nearest enabled action once that one is disabled at the queue's edge.
+Once the host applies a requested move or removal, the outcome is announced politely through the
+shared live region: the new position (`reorderItemMoved`) or the removal and remaining count
+(`promptQueueItemRemoved`). A host that rejects or reshapes the request is not announced.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
 (reflected) — renders each queued prompt as read-only text instead of an editor;
@@ -52945,7 +52976,8 @@ these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
 `actions`, `action`, `empty`, `input-limit`, `attachment-limit`, `pagination`, `page-status`,
-`page-button`. Initial input-limit notes are quiet; later changed omissions and user page changes
+`page-button`. Each `attachments` list is named `Attachments` for a single queued prompt and
+`Attachments for prompt {index}` (`promptQueueItemAttachments`) while several are queued. Initial input-limit notes are quiet; later changed omissions and user page changes
 are politely announced.
 
 **Slots:** none. **Optional peer deps:** none.
@@ -54446,8 +54478,6 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 
 The internal-frame disclosure keeps the same count-based name while `aria-expanded` reports
 its state. Customize that name with `stackTraceInternalFrames` and its `{count}` placeholder.
-Existing per-instance `stackTraceShowFrames` and `stackTraceHideFrames` overrides take effect
-when a stable per-instance label is absent.
 
 Direction: function names (`::part(frame-function)`) and locations (`::part(frame-location)`) carry `dir="ltr"`, so `Object.<anonymous>` and file paths read left-to-right inside a right-to-left document; the frame button itself follows the page direction.
 
@@ -56061,7 +56091,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 **Toggle request and colours:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the file list folds; preventing it keeps the list as is. File rows, the copy button and the per-file counts follow `--lr-color-text`, `--lr-color-success` and `--lr-color-danger`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
-`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
+`deletions`, `files-toggle` (its visible name is the constant `commitCardChangedFiles` count,
+`{count} changed files`, while `aria-expanded` reports the state), `file` (carries `data-status`), `file-path`, `file-status`,
 `file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`),
 `limit` (shown when the expanded file list exceeds the render cap), and `actions`.
 
@@ -56204,10 +56235,10 @@ and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
-repeated row controls remain distinguishable. The name follows the action (`testResultsExpandTest`
-/ `testResultsCollapseTest`) while `aria-expanded` carries the state, and the visible label reads
-`expand`/`collapse`; override the visible action and its contextual name together so the visible
-words stay inside the accessible name. Provider rows of one suite share a single named list.
+repeated row controls remain distinguishable. The name is the constant `testResultsToggleTest`
+(`Details: {name}`) in both states while `aria-expanded` carries the state, and the visible label
+reads `details`; override the visible word and its contextual name together so the visible words
+stay inside the accessible name. Provider rows of one suite share a single named list.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.
@@ -56896,6 +56927,8 @@ The default entry registers the search field's `lr-input` the first time `search
 `updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
+After a search or tag-filter change, the matching count (`viewerSearchMatchCount`; the provider's
+`sourceTotal` once it settles with `dataSource`) is announced politely, coalesced while typing.
 
 **Properties:**
 
@@ -57483,7 +57516,8 @@ selection and dialog state before another activation can use it; a request that 
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
 stale request. An open request with unchanged arguments keeps its draft and pending decision across
 new arrays. A resolved decision is announced, and focus lost with it moves to the next pending row
-(else the `count` part). Rows are keyed by request id.
+(else the `count` part). Newly arriving pending requests (after the first render) announce the
+updated `approvalQueuePendingCount` politely. Rows are keyed by request id.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`
@@ -57759,9 +57793,8 @@ is required.
 Each message's role select and content editor has a localized contextual accessible name containing
 its one-based message index and purpose (plus the current role for content), so repeated controls do
 not collapse to indistinguishable generic names.
-The remove button uses `promptStudioRemoveMessage` for its name and describes the message number
-with `promptStudioRemoveMessageNumbered`. Set only `.strings.promptStudioRemoveMessageNumbered`
-to use the numbered message as its name.
+The remove button is named `promptStudioRemoveMessageNumbered` (`Remove message {index}`) while
+several messages exist and `promptStudioRemoveMessage` for a single message.
 
 **Slots:** none. **Optional peer deps:** none.
 
@@ -58659,6 +58692,9 @@ Import `@aceshooting/lyra-ui/components/lr-change-review.js`. Experimental multi
 already-separated hunks. Bind `.files` to `ChangeReviewFile[]`: `{ id, path, previousPath?, hunks }`,
 where each hunk is `{ id, label?, before, after, decision?: 'pending' | 'keep' | 'discard' }`.
 Files and per-file hunks need nonblank, unique ids; malformed duplicates normalize first-wins.
+An unlabeled hunk shows `changeReviewHunk` (`Change {index}`); while several files render, its
+region and keep/discard names use `changeReviewHunkInFile` (`Change {index} in {file}`) so they
+stay distinguishable across files.
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 
@@ -58905,7 +58941,8 @@ that the host has already localized. Assign a new `.connectors` array after host
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
 keyed by id. `disabled` gates every action. Host `aria-label` names the internal group. An acted-on
 connector's status changes are announced, and focus on its vanished action waits on `status` until
-the next action appears.
+the next action appears. A host-driven loss on any other existing connector (`connected` to
+`disconnected`, or into `error`) is announced politely with its name (`connectorManagerStatusChanged`).
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string

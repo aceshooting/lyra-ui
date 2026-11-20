@@ -1987,15 +1987,14 @@ it('does not stringify a path per hidden element when loading and searching a wi
   } finally { JSON.stringify = stringify; }
 });
 
-it('names each disclosure action and its XML element in both states', async () => {
-  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer expand-depth="0" .xml=${'<orders><order/></orders>'}
-    .strings=${{ xmlViewerExpandNode: 'Show {name}', xmlViewerCollapseNode: 'Hide {name}' }}></lr-xml-viewer>`);
+it('keeps one disclosure name naming its XML element in both states', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer expand-depth="0" .xml=${'<orders><order/></orders>'}></lr-xml-viewer>`);
   const toggle = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
-  expect(toggle().getAttribute('aria-label')).to.equal('Show orders');
+  expect(toggle().getAttribute('aria-label')).to.equal('Toggle orders');
   expect(toggle().getAttribute('aria-expanded')).to.equal('false');
   toggle().click();
   await el.updateComplete;
-  expect(toggle().getAttribute('aria-label')).to.equal('Hide orders');
+  expect(toggle().getAttribute('aria-label')).to.equal('Toggle orders');
   expect(toggle().getAttribute('aria-expanded')).to.equal('true');
 });
 

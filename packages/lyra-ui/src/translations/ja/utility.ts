@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'オブジェクト',
   jsonValue: '値',
   jsonCopyLabel: '{label} をコピー',
-  jsonExpandLabel: '{label} を展開',
-  jsonCollapseLabel: '{label} を折りたたむ',
+  jsonToggleLabel: '{label} の表示を切り替える',
   jsonItemCount: {
     other: '{count} 件',
   },

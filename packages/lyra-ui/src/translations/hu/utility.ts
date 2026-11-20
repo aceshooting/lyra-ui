@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'objektum',
   jsonValue: 'érték',
   jsonCopyLabel: 'Másolás: {label}',
-  jsonExpandLabel: 'Kibontás: {label}',
-  jsonCollapseLabel: 'Összecsukás: {label}',
+  jsonToggleLabel: 'Megjelenítés/elrejtés: {label}',
   jsonItemCount: {
     one: '{count} elem',
     other: '{count} elem',

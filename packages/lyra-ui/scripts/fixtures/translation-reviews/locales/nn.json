@@ -2,12 +2,12 @@
   "locale": "nn",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:5630d00312af3a8079d35666ba9f869c322ee36ca85045db39334990dddc73d2"
+    "keyCount": 1717,
+    "sha256": "sha256:9941e0da4fb827962a254063af811e74193d45dfca18706ae69f053abe25cec7"
   },
   "translator": {
     "status": "complete-original",
@@ -105,6 +105,10 @@
     {
       "messagePath": "chartValuePercentageLabel",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':  ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerTypedValue",

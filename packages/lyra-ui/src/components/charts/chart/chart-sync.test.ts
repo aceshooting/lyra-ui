@@ -733,6 +733,29 @@ describe('chart synchronization controller boundaries', () => {
     }
   });
 
+  it('dismisses a shown presentation with Escape while focus is elsewhere, in every peer', async () => {
+    const first = stage();
+    const second = stage();
+    const a = new ChartSyncController(first.host, () => ({ container: first.container, x: 10, top: 0, height: 50 }));
+    const b = new ChartSyncController(second.host, () => ({ container: second.container, x: 10, top: 0, height: 50 }));
+    try {
+      a.update('escape-group', true);
+      b.update('escape-group', true);
+      a.publish('Q1', 0);
+      await waitUntil(() => parts(second.container, 'sync-crosshair') === 1, 'the peer presents');
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
+      expect(parts(first.container, 'sync-crosshair')).to.equal(0);
+      expect(parts(second.container, 'sync-crosshair')).to.equal(0);
+      a.publish('Q2', 1);
+      await waitUntil(() => parts(second.container, 'sync-crosshair') === 1, 'a later category presents again');
+    } finally {
+      a.disconnect();
+      b.disconnect();
+      first.release();
+      second.release();
+    }
+  });
+
   it('draws no overlay when the projected geometry cannot be placed', async () => {
     const { host, container, release } = stage();
     let presentation: ChartSyncPresentation = { container, x: 10, top: 0, height: 50 };

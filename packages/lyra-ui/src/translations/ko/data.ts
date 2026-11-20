@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '범위 {ranges}개에 항목 {items}개',
   noColumns: '구성된 열 없음',
   dataGridColumnMenu: '{label} 옵션',
-  dataGridCollapseRow: '{row} 접기',
   dataGridPinStart: '시작 위치에 {label} 고정',
   dataGridPinEnd: '끝에 {label} 고정',
   dataGridUnpin: '{label} 고정 해제',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: '행 로드 중',
   tableLoadingMore: '행을 더 불러오는 중',
   tableEditCell: '{column} 편집',
+  tableEditCellInRow: '{column} 편집, {row}행',
   showAllColumns: '모든 열 표시',
   dataGridColumns: '열',
   showFewerColumns: '열 개수 줄이기',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '다음 달',
   paginationPage: '페이지',
   paginationJumpToPage: '페이지로 이동 {page}',
+  paginationInvalidPage: '1에서 {max} 사이의 페이지를 입력하세요.',
+  paginationInvalidPageUnknownTotal: '1 이상의 정수 페이지 번호를 입력하세요.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: '페이지 {page}',
   trendOf: '마지막 값이 {value}인 {count}개 값의 추세',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: '처음 {count}개 행만 표시됩니다.',
   },
-  dataGridExpandRow: '{row} 확장',
+  dataGridToggleRow: '{row}행 전환',
   dataGridFilterColumn: '{column} 필터링',
   dataGridSelectPage: '이 페이지의 모든 행 선택',
   tableRowLimit: {

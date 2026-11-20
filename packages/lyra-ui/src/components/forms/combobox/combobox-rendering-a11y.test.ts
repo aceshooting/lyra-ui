@@ -3109,3 +3109,15 @@ describe('shared row content-aware decoration', () => {
     }
   });
 });
+
+it('isolates caller option labels from an RTL host direction', async () => {
+  const el = (await fixture(html`<lr-combobox dir="rtl"><lr-option value="a" sub="(beta)">C++</lr-option></lr-combobox>`)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const isolated = (selector: string): string | null => {
+    const node = el.shadowRoot!.querySelector(`${selector} bdi`);
+    return node ? `${node.getAttribute('dir')}:${node.textContent}` : null;
+  };
+  expect(isolated('[part="option-label"] > span:first-child')).to.equal('auto:C++');
+  expect(isolated('[part="option-sub"]')).to.equal('auto:(beta)');
+});

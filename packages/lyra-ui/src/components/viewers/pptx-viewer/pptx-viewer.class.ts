@@ -92,7 +92,8 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
  * @event lr-page-change - Fired when `page` changes while a presentation is shown, with the
  *   same `detail: { page, pageCount }` shape as `<lr-pdf-viewer>`.
- * @event lr-slide-change - Fired when the active slide changes.
+ * @event lr-slide-change - Fired when the active slide changes; the new "Slide X of Y" position is
+ *   also announced through the shared polite region (the initial load is not).
  * @event lr-render-error - Fired for terminal fetch/open/render failures and rejected public slide
  *   navigation. Navigation rejection enters the localized error state. Recoverable post-load
  *   slide/node/search events use `lr-viewer-diagnostic` without also posing as terminal errors.
@@ -588,7 +589,14 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.currentSlideIndex = index;
     this.page = index + 1;
     this.publishPageViewerSnapshot('ready', this.slideCount);
-    if (changed) this.emit('lr-slide-change', { index, count: this.slideCount });
+    if (!changed) return;
+    this.emit('lr-slide-change', { index, count: this.slideCount });
+    // The visible "Slide X of Y" text is not live; speak each accepted transition like pdf-viewer's page.
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    this.announcements.announce(this.localize('pptxViewerSlideOf', undefined, {
+      current: numberFormat.format(index + 1),
+      total: numberFormat.format(this.slideCount),
+    }));
   }
 
   private publishPageViewerSnapshot(

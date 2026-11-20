@@ -66,7 +66,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageHighlights, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageFailed, LYRA_DEFAULT_pdfViewerPageHighlights, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -408,7 +408,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-zoom-change - Fired when the zoom multiplier changes, on the same state-broadcast
  *   contract as `lr-page-change`: a programmatic `zoom` write announces exactly like a toolbar
  *   click. Not fired for the initial value, only for a transition away from it, and not for a
- *   write that clamps back onto the zoom already applied.
+ *   write that clamps back onto the zoom already applied. While the document is ready the applied
+ *   percentage is also announced politely.
  * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
  * @event lr-highlight-activate - A highlight was activated. `detail: { highlightId }`.
  * @event lr-text-select - A text selection ended inside a page's text layer. `detail: { text,
@@ -434,8 +435,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart pages - The virtualized page list.
  * @csspart page - One rendered page wrapper.
  * @csspart page-canvas - The canvas a page's content is painted onto.
- * @csspart page-error - A visible, page-local fallback when one page fails without invalidating
- *   the rest of the document.
+ * @csspart page-error - A visible, page-local fallback naming the page that failed (announced once per
+ *   page and document) without invalidating the rest of the document.
  * @csspart page-error-visible - A currently visible page-local fallback (also carries
  *   `page-error`).
  * @csspart text-layer - Selectable text positioned over a page canvas.
@@ -482,6 +483,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     pdfViewerLabel: LYRA_DEFAULT_pdfViewerLabel,
     pdfViewerMissingLibrary: LYRA_DEFAULT_pdfViewerMissingLibrary,
     pdfViewerNextPage: LYRA_DEFAULT_pdfViewerNextPage,
+    pdfViewerPageFailed: LYRA_DEFAULT_pdfViewerPageFailed,
     pdfViewerPageHighlights: LYRA_DEFAULT_pdfViewerPageHighlights,
     pdfViewerPageOf: LYRA_DEFAULT_pdfViewerPageOf,
     pdfViewerPreviousPage: LYRA_DEFAULT_pdfViewerPreviousPage,
@@ -563,6 +565,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly pageTextTruncated = new Set<number>();
   private readonly pageSearchIndexes = new Map<number, PdfPageTextIndex>();
   private readonly failedPageFallbacks = new Set<HTMLElement>();
+  /** Page numbers whose current-document failure has already been announced. */
+  private readonly announcedPageFailures = new Set<number>();
   /** Raw page text kept for search across queries; getPageText()'s own 64-page cache is not. */
   private readonly searchCorpus = new Map<number, { readonly text: string; readonly truncated: boolean }>();
   private searchCorpusCodeUnits = 0;
@@ -666,7 +670,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
           this.failedPageFallbacks.delete(fallback);
           continue;
         }
-        fallback.textContent = this.localize('documentPreviewFailedToLoad');
+        fallback.textContent = this.pageFailedText(Number(fallback.dataset['page']));
       }
     }
     this.announcements.transition(
@@ -679,6 +683,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         void this.load();
       }, 'pdf-load');
       this.pageHighlightItems.clear();
+      this.announcedPageFailures.clear();
       // getPageText() caches by page number alone -- without clearing it here, a page-1 lookup
       // from the previous document would still resolve to a cache hit, silently returning stale
       // text (and misdirecting any in-flight text-quote anchor scan) once the new document loads.
@@ -717,7 +722,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       changed.has('zoom')
       && changed.get('zoom') !== undefined
       && changed.get('zoom') !== this.zoom
-    ) this.emit('lr-zoom-change', { zoom: this.zoom });
+    ) {
+      // The zoom indicator is not live; speak the applied percentage like the page indicator.
+      if (this.loadState.kind === 'ready') {
+        this.announcements.announce(this.localize('pdfViewerCurrentZoom', undefined, {
+          percent: getNumberFormat(this.effectiveLocale).format(Math.round(this.zoom * 100)),
+        }));
+      }
+      this.emit('lr-zoom-change', { zoom: this.zoom });
+    }
     if (changed.has('highlights') || changed.has('activeHighlightId') || localeChanged) {
       this.resolveMountedPageHighlights();
     }
@@ -2196,6 +2209,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         || this.pageCanvases.get(pageNumber) !== canvas
       ) return;
       this.setPageError(canvas, false);
+      this.announcedPageFailures.delete(pageNumber);
     } catch (error) {
       if (
         this.isConnected
@@ -2204,7 +2218,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         && this.pageRenderVersions.get(pageNumber) === version
         && this.pageCanvases.get(pageNumber) === canvas
       ) {
-        this.setPageError(canvas, true);
+        this.setPageError(canvas, true, pageNumber);
+        // Announce a page's failure once; re-renders of the same failing page (zoom, scrolling it
+        // back into view) keep the visible note without repeating the announcement.
+        if (!this.announcedPageFailures.has(pageNumber)) {
+          this.announcedPageFailures.add(pageNumber);
+          this.announcements.announcePolite(this.pageFailedText(pageNumber));
+        }
         this.emit('lr-render-error', { error });
       }
     } finally {
@@ -2214,12 +2234,19 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  private setPageError(canvas: HTMLCanvasElement, failed: boolean): void {
+  private pageFailedText(pageNumber: number): string {
+    return this.localize('pdfViewerPageFailed', undefined, {
+      page: getNumberFormat(this.effectiveLocale).format(pageNumber),
+    });
+  }
+
+  private setPageError(canvas: HTMLCanvasElement, failed: boolean, pageNumber = 0): void {
     const fallback = canvas.parentElement?.querySelector<HTMLElement>('[part~="page-error"]');
     if (!fallback) return;
     fallback.setAttribute('part', failed ? 'page-error page-error-visible' : 'page-error');
     fallback.hidden = !failed;
-    fallback.textContent = failed ? this.localize('documentPreviewFailedToLoad') : '';
+    fallback.dataset['page'] = String(pageNumber);
+    fallback.textContent = failed ? this.pageFailedText(pageNumber) : '';
     if (failed) this.failedPageFallbacks.add(fallback);
     else this.failedPageFallbacks.delete(fallback);
   }

@@ -2,12 +2,12 @@
   "locale": "ms",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:9a239936a15681974a645ea303cca1f5da155be29094ad0d5cd76bfb89b33f8a"
+    "keyCount": 1717,
+    "sha256": "sha256:39e3360111446dc74257ff0c0dde9aab5cb7563981da96f952c7c3cf3502540f"
   },
   "translator": {
     "status": "complete-original",
@@ -105,6 +105,10 @@
     {
       "messagePath": "commitCardLabel",
       "rationale": "A standalone conventional software/domain label or cross-language cognate for this specific UI concept is commonly retained in this locale; it is a term, not untranslated English sentence copy."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

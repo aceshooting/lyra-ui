@@ -21,8 +21,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'objekts',
   jsonValue: 'vērtība',
   jsonCopyLabel: 'Kopēt {label}',
-  jsonExpandLabel: 'Izvērst {label}',
-  jsonCollapseLabel: 'Sakļaut {label}',
+  jsonToggleLabel: 'Pārslēgt {label}',
   jsonItemCount: {
     one: '{count} vienums',
     other: '{count} vienumi',

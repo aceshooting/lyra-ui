@@ -1036,7 +1036,7 @@ describe('row expand toggle accessible name', () => {
     const el = await expandableTable();
     const names = toggleNames(el);
     expect(names.length).to.equal(rows.length);
-    expect(names).to.deep.equal(rows.map(row => `Expand ${row.id}`));
+    expect(names).to.deep.equal(rows.map(row => `Toggle row ${row.id}`));
   });
 
   it('names each row its own way when rowExpandLabel is set', async () => {

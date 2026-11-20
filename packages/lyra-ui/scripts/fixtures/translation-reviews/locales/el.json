@@ -2,12 +2,12 @@
   "locale": "el",
   "direction": "ltr",
   "source": {
-    "keyCount": 1727,
-    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
+    "keyCount": 1717,
+    "sha256": "sha256:4e658e809e3a56b29ab881f99f55ff8e1fcd09919bdb1410277d889c55899002"
   },
   "catalog": {
-    "keyCount": 1727,
-    "sha256": "sha256:7fec368fc202f72e440952643e48792c67aeaeabfdbcf5c794b9709135451bc1"
+    "keyCount": 1717,
+    "sha256": "sha256:0593f6b2a14d8497a79b6eeb80c63b61ec071163b260a4df4df6c21f46a06d1a"
   },
   "translator": {
     "status": "complete-original",
@@ -81,6 +81,10 @@
     {
       "messagePath": "chartValuePercentageLabel",
       "rationale": "The chartValuePercentageLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "connectorManagerStatusChanged",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
     },
     {
       "messagePath": "contactViewerAddressFormat",

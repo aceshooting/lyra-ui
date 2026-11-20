@@ -191,8 +191,13 @@ panel space for a persistent sidebar/toolbar while the default backdrop still co
 viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
 `size="s"` for tighter header/body padding.
 
-The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
-panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
+The collapse-button `aria-label` is one constant name in both states, with `aria-expanded`
+carrying the state: `appRailItemToggle` (`'Toggle {label}'`) with the widget's `aria-label`,
+`label` or slotted label text, or `panelToggle` (`'Toggle panel'`) for an unlabeled widget. The
+fullscreen button is qualified the same way through `widgetExpandToFullscreenWithLabel` (`'Expand
+{label} to fullscreen'`) and `widgetExitFullscreenWithLabel` (`'Exit fullscreen: {label}'`),
+falling back to `widgetExpandToFullscreen`/`widgetExitFullscreen` without a label, so several
+widgets on one dashboard expose distinguishable controls.
 
 **Known gotchas:**
 
@@ -208,11 +213,6 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
   `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
-- prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
-  own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
-  registered against those keys specifically to target `lr-widget`'s collapse button should move
-  to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
-  itself is unaffected.
 
 **Additional API surface:**
 

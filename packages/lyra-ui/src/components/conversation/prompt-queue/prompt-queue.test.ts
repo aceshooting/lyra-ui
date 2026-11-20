@@ -2,6 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
+import { sinkTexts } from "../../../../test/announcements.js";
 import type { DocumentRef } from "../../../ai/types.js";
 import "../../lr-prompt-queue.js";
 import type {
@@ -143,6 +144,19 @@ it("renders queued attachment names and retains them in send-now detail", async 
   expect(
     detail.item.attachments?.map((attachment) => attachment.name)
   ).to.deep.equal(["annual-report.pdf", "notes.txt"]);
+});
+
+it("names each queued prompt's attachment list with that prompt's position", async () => {
+  const queued: PromptQueueItem[] = [
+    { id: "one", value: "First", attachments: [{ id: "a", name: "a.txt" }] },
+    { id: "two", value: "Second", attachments: [{ id: "b", name: "b.txt" }] },
+  ];
+  const el = (await fixture(html`
+    <lr-prompt-queue .items=${queued}></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="attachments"]')].map((list) => list.getAttribute("aria-label"))
+  ).to.deep.equal(["Attachments for prompt 1", "Attachments for prompt 2"]);
 });
 
 it("uses first-wins unique nonempty item ids before rendering and mutation", async () => {
@@ -895,6 +909,37 @@ for (const [action, row, expected] of [
     expect(focused?.getAttribute("data-action")).to.equal(expected);
   });
 }
+
+it("announces an applied move and removal, but not a host-rejected request or a host-driven change", async () => {
+  const queued: PromptQueueItem[] = [
+    { id: "one", value: "First" },
+    { id: "two", value: "Second" },
+    { id: "three", value: "Third" },
+  ];
+  const el = (await fixture(html`<lr-prompt-queue .items=${queued}></lr-prompt-queue>`)) as LyraPromptQueue;
+  const before = sinkTexts().length;
+  const spoken = (): string[] => sinkTexts().slice(before);
+  let accept = true;
+  el.addEventListener("lr-queue-change", (event) => {
+    if (accept) el.items = event.detail.items;
+  });
+  const action = (name: string, row: number): HTMLElement =>
+    el.shadowRoot!.querySelectorAll<HTMLElement>(`[data-action="${name}"]`)[row]!;
+  action("down", 0).click();
+  await el.updateComplete;
+  expect(spoken()).to.deep.equal(["Moved to position 2 of 3"]);
+  action("remove", 2).click();
+  await el.updateComplete;
+  expect(spoken()).to.deep.equal(["Moved to position 2 of 3", "Queued prompt removed. 2 remaining"]);
+  accept = false;
+  action("up", 1).click();
+  await el.updateComplete;
+  el.items = [...el.items, { id: "four", value: "Fourth" }];
+  await el.updateComplete;
+  el.items = [...el.items].reverse();
+  await el.updateComplete;
+  expect(spoken().length).to.equal(2);
+});
 
 it('sends the visible draft during deferred controlled writeback', async () => {
   const metadata = { thread: 'current' };

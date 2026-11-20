@@ -143,12 +143,15 @@ describe('code-block header labels, keyboard and direction', () => {
     it(`${name} names the frame, label and button and marks every chrome node`, async () => {
       const el = await mount('```ts\nconst a = 1;\n```\n\n    indented');
       const frames = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="code-block-frame"]')];
-      expect(frames.map((frame) => frame.getAttribute('aria-label'))).to.deep.equal(['ts code', 'Code']);
+      // Two blocks: each region and copy button carries its ordinal.
+      expect(frames.map((frame) => frame.getAttribute('aria-label'))).to.deep.equal(['ts code 1', 'Code 2']);
       const label = el.shadowRoot!.querySelector<HTMLElement>('[part="code-block-language"]')!;
       expect([label.getAttribute('data-language'), label.getAttribute('aria-hidden')]).to.deep.equal(['ts', 'true']);
       expect(frames[1]!.querySelectorAll('[part="code-block-language"]').length).to.equal(0);
       const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="code-block-copy"]')!;
-      expect([button.getAttribute('aria-label'), button.title]).to.deep.equal(['Copy code', 'Copy code']);
+      expect([button.getAttribute('aria-label'), button.title]).to.deep.equal(['Copy code 1', 'Copy code 1']);
+      expect([...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="code-block-copy"]')].map((copy) => copy.getAttribute('aria-label')))
+        .to.deep.equal(['Copy code 1', 'Copy code 2']);
       for (const node of [frames[0]!, frames[0]!.querySelector('[part="code-block-header"]')!, label, button]) {
         expect(node.hasAttribute('data-lr-code-chrome'), node.getAttribute('part') ?? '').to.equal(true);
       }

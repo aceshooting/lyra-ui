@@ -45,7 +45,9 @@ with a development warning while it is open, and `focusContent()` returns `false
   `[longitude, latitude]`. Compared by identity like the map's `anchorLngLat`, so assign a new array
   to move it. A missing or invalid coordinate hides the panel without closing it.
 - `closable: boolean = false` (attribute `closable`, reflected) — adds the localized close button
-  and nonmodal Escape ownership. `close()` works either way.
+  and nonmodal Escape ownership. `close()` works either way. The button is named `Close {label}`
+  (`mapCloseWithLabel`) with the anchor's name, so several open anchors stay distinguishable, and
+  plain `Close` without one.
 - `label?: string` (attribute `label`) — names the panel, which then becomes a `role="group"`. A host
   `aria-label` wins. Without a name the content owns its semantics; for dialog semantics, put
   `role="dialog"` and its labelling on your content root.

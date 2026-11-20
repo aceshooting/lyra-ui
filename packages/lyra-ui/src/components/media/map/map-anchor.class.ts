@@ -15,6 +15,7 @@ import { MAP_ANCHOR_SEAM, type MapAnchorChildOperation, type MapAnchorOwner } fr
 import { styles } from './map-anchor.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_mapCloseWithLabel } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -74,7 +75,8 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  *   to false. Not fired when the panel merely hides, or for removal or disconnect.
  * @csspart base - The positioned panel surface. A `z-index` set on it replaces automatic ordering.
  * @csspart body - The scrolling content wrapper.
- * @csspart close-button - The localized icon close button of a `closable` anchor.
+ * @csspart close-button - The localized icon close button of a `closable` anchor, named
+ *   `Close {label}` (`mapCloseWithLabel`) with the anchor's accessible name, else `Close`.
  * @csspart close-icon - The wrapper of the close glyph.
  * @cssstate placed - Matches while the panel is placed and shown.
  * @cssprop --lr-map-popup-close-button-active-bg - Pressed background of `close-button`; defaults to a press-mixed `--lr-color-brand-quiet`.
@@ -92,6 +94,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
+    mapCloseWithLabel: LYRA_DEFAULT_mapCloseWithLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -242,7 +245,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
     const name = this.getAttribute('aria-label') === '' ? undefined : resolveAccessibleName(this, this.label);
     return html`<div class="fence" aria-hidden="true"></div><div part="base" hidden role=${name ? 'group' : nothing}
       aria-label=${name || nothing}><div part="body"><slot @slotchange=${this.onContentChange}></slot></div>${this.closable
-        ? html`<button type="button" part="close-button" aria-label=${this.localize('close')} @click=${this.onCloseClick}
+        ? html`<button type="button" part="close-button" aria-label=${name ? this.localize('mapCloseWithLabel', undefined, { label: name }) : this.localize('close')} @click=${this.onCloseClick}
           ><span part="close-icon" aria-hidden="true"><slot name="close-icon">${closeIcon()}</slot></span></button>` : nothing}</div>`;
   }
 }

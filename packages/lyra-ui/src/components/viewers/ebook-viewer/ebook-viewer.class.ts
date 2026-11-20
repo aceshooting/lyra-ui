@@ -1051,8 +1051,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       const task = action === 'previous' ? rendition.prev() : rendition.next();
       void Promise.resolve(task).catch((error: unknown) => {
         this.reportRenditionFailure(error, rendition, generation, ownerView);
+      }).finally(() => {
+        // A navigation that settles without relocating (already at the edge) must not leave the
+        // flag armed for a later, unrelated relocation.
+        this.navigationPending = false;
       });
     } catch (error) {
+      this.navigationPending = false;
       this.reportRenditionFailure(error, rendition, generation, ownerView);
     }
   }

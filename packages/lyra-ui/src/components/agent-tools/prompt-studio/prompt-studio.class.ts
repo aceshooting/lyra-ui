@@ -639,23 +639,24 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
               >
                 ${chevronIcon()}
               </button>
-              ${this.renderRemoveMessage(message.id, displayIndex)}
+              ${this.renderRemoveMessage(message.id, displayIndex, messageCount)}
             </div>
           `
-        : this.renderRemoveMessage(message.id, displayIndex)}
+        : this.renderRemoveMessage(message.id, displayIndex, messageCount)}
     </li>`;
   };
 
-  private renderRemoveMessage(id: string, displayIndex: string): TemplateResult {
-    const numbered = this.localize('promptStudioRemoveMessageNumbered', undefined, { index: displayIndex });
-    const numberedName = this.strings.promptStudioRemoveMessageNumbered !== undefined && this.strings.promptStudioRemoveMessage === undefined;
+  /** Several messages each name their remove button with the message number; a single message
+   *  keeps the unnumbered name. */
+  private renderRemoveMessage(id: string, displayIndex: string, messageCount: number): TemplateResult {
     return html`<button
       part="remove-message"
       data-agent-action="neutral"
       type="button"
       ?disabled=${this.disabled}
-      aria-label=${numberedName ? numbered : this.localize('promptStudioRemoveMessage')}
-      aria-description=${numberedName ? nothing : numbered}
+      aria-label=${messageCount > 1
+        ? this.localize('promptStudioRemoveMessageNumbered', undefined, { index: displayIndex })
+        : this.localize('promptStudioRemoveMessage')}
       @click=${() => this.removeMessage(id)}
     >
       ×

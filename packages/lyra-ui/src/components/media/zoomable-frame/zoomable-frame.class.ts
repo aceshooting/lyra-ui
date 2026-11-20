@@ -3,6 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -645,7 +646,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   private onControlsKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (shouldIgnoreNavigationKey(event)) return;
     if (event.key === '+' || event.key === '=') {
       event.preventDefault();
       this.zoomIn();

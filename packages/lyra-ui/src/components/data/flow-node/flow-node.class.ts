@@ -25,6 +25,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { styles } from './flow-node.styles.js';
+import { bdi } from '../../../internal/bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowNodeProgressLabel, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration } from '../../../internal/default-strings/data.generated.js';
@@ -331,7 +332,7 @@ export class LyraFlowNode extends LyraElement {
             part="heading"
             role=${headingLevel ? 'heading' : nothing}
             aria-level=${headingLevel ?? nothing}
-          >${this.heading}</span>
+          >${bdi(this.heading)}</span>
         </div>
         ${this.status
           ? html`<div part="status" data-status=${this.status}>

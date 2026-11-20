@@ -31,6 +31,9 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus. An accepted Move up/down keeps focus on
 the moved row's action, or its nearest enabled action once that one is disabled at the queue's edge.
+Once the host applies a requested move or removal, the outcome is announced politely through the
+shared live region: the new position (`reorderItemMoved`) or the removal and remaining count
+(`promptQueueItemRemoved`). A host that rejects or reshapes the request is not announced.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
 (reflected) — renders each queued prompt as read-only text instead of an editor;
@@ -64,7 +67,8 @@ these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
 `actions`, `action`, `empty`, `input-limit`, `attachment-limit`, `pagination`, `page-status`,
-`page-button`. Initial input-limit notes are quiet; later changed omissions and user page changes
+`page-button`. Each `attachments` list is named `Attachments` for a single queued prompt and
+`Attachments for prompt {index}` (`promptQueueItemAttachments`) while several are queued. Initial input-limit notes are quiet; later changed omissions and user page changes
 are politely announced.
 
 **Slots:** none. **Optional peer deps:** none.

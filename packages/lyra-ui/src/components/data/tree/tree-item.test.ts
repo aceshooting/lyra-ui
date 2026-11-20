@@ -1431,3 +1431,10 @@ it('keeps the selected fill on a disabled selected row under the pointer', async
     await resetMouse();
   }
 });
+
+it('isolates the label so leading and trailing punctuation keep their sides under RTL', async () => {
+  const el = (await fixture(html`<lr-tree-item dir="rtl" label=".gitignore"></lr-tree-item>`)) as LyraTreeItem;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(getComputedStyle(label).unicodeBidi).to.equal('plaintext');
+  expect(label.textContent).to.equal('.gitignore');
+});

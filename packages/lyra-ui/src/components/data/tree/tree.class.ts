@@ -24,7 +24,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { TreePointerReorder } from './tree-pointer-reorder.js';
 import { styles } from './tree.styles.js';
 import { TreeDataExpansion } from './tree-data-expansion.js';
@@ -1908,7 +1908,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     // A control inside an item's label owns its own keys; the item host itself is the boundary.
     const itemTag = tag('tree-item');
     if (fromInteractiveDescendant(e, (target) => (target as Partial<Element>).localName === itemTag)) return;
-    if (e.altKey || e.isComposing || e.keyCode === 229) return;
+    if (e.altKey || isHandledOrComposingKey(e)) return;
     const visible = this.visibleNodeElements();
     if (visible.length === 0) return;
     // `nodeId` resolves in both child models -- see `focusNode()`.

@@ -1761,6 +1761,49 @@ events with the same name, and check nested event targets and existing canonical
 |---|---|---|
 | `<lr-token-input>` | `maxTokensVisible` | An omitted or non-finite limit now mounts a 200-token window; set max-tokens-visible="0" to keep mounting every token. |
 
+Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
+dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
+string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
+reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep
+working; other uses (a deep import, a namespace member) and removed localization keys are reported as
+`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
+
+| Kind | From | To | Handling |
+|---|---|---|---|
+| locale-key | `appRailCollapse` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `appRailExpand` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `appRailItemCollapse` | `appRailItemToggle` | Reported only. lr-app-rail-item names its disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `appRailItemExpand` | `appRailItemToggle` | Reported only. lr-app-rail-item names its disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `appRailUnpin` | `appRailPin` | Reported only. lr-app-rail names its pin button with one constant key while aria-pressed reports the state; a string override under the old key no longer applies. |
+| locale-key | `closeNavigation` | `toggleNavigation` | Reported only. lr-page and lr-app-rail name their navigation toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `collapseCode` | `codeBlockToggle` | Reported only. lr-code-block names its collapse toggle with the constant codeBlockToggle key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `collapseMessage` | `toggleMessage` | Reported only. lr-chat-message names its collapse button with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `commitCardHideFiles` | `commitCardChangedFiles` | Reported only. lr-commit-card names its file-list toggle with one constant count key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `commitCardShowFiles` | `commitCardChangedFiles` | Reported only. lr-commit-card names its file-list toggle with one constant count key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `dataGridCollapseRow` | `dataGridToggleRow` | Reported only. lr-table and lr-data-grid name their row disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `dataGridExpandRow` | `dataGridToggleRow` | Reported only. lr-table and lr-data-grid name their row disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `dockPanelCollapse` | `panelToggle` | Reported only. lr-dock-panel names its collapse toggle with one constant key (appRailItemToggle with a host label) while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `dockPanelExpand` | `panelToggle` | Reported only. lr-dock-panel names its collapse toggle with one constant key (appRailItemToggle with a host label) while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `emailViewerHideQuoted` | `emailViewerQuotedText` | Reported only. lr-email-viewer names its quoted-text toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `emailViewerShowQuoted` | `emailViewerQuotedText` | Reported only. lr-email-viewer names its quoted-text toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `expandCode` | `codeBlockToggle` | Reported only. lr-code-block names its collapse toggle with the constant codeBlockToggle key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `expandMessage` | `toggleMessage` | Reported only. lr-chat-message names its collapse button with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `jsonCollapseLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `jsonExpandLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `mapSceneHide` | `mapScene` | Reported only. lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `mapSceneShow` | `mapScene` | Reported only. lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `notebookViewerCollapseOutput` | `notebookViewerFullOutput` | Reported only. lr-notebook-viewer names its output toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `notebookViewerShowAllOutput` | `notebookViewerFullOutput` | Reported only. lr-notebook-viewer names its output toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `openNavigation` | `toggleNavigation` | Reported only. lr-page and lr-app-rail name their navigation toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `stackTraceHideFrames` | `stackTraceInternalFrames` | Reported only. lr-stack-trace names its internal-frame toggle with the constant stackTraceInternalFrames key; a string override under the old key no longer applies. |
+| locale-key | `stackTraceShowFrames` | `stackTraceInternalFrames` | Reported only. lr-stack-trace names its internal-frame toggle with the constant stackTraceInternalFrames key; a string override under the old key no longer applies. |
+| locale-key | `testResultsCollapseTest` | `testResultsToggleTest` | Reported only. lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `testResultsExpandTest` | `testResultsToggleTest` | Reported only. lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `widgetCollapse` | `panelToggle` | Reported only. lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `widgetExpand` | `panelToggle` | Reported only. lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `xmlViewerCollapseNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `xmlViewerExpandNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+
 ## Upstream compatibility spellings
 
 The deprecated upstream compatibility spellings have retired; see the v29 to v30 migration guide for their replacements and review requirements.

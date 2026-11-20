@@ -181,7 +181,7 @@ describe('<lr-funnel>', () => {
     expect(text(part(el, 'comparison-value'))).to.equal('Comparison: 100%');
   });
 
-  it('treats non-finite stage values as zero rather than producing NaN geometry', async () => {
+  it('treats non-finite stage values as no data rather than producing NaN geometry', async () => {
     const el = await fixture<LyraFunnel>(
       html`<lr-funnel
         .stages=${[
@@ -191,7 +191,7 @@ describe('<lr-funnel>', () => {
         ]}
       ></lr-funnel>`,
     );
-    expect(parts(el, 'stage-value').map(text)).to.deep.equal(['200', '0', '0']);
+    expect(parts(el, 'stage-value').map(text)).to.deep.equal(['200', 'No data', 'No data']);
     expect(parts(el, 'bar').map((bar) => bar.style.inlineSize)).to.deep.equal(['100%', '0%', '0%']);
   });
 
@@ -473,4 +473,10 @@ describe('.strings overrides (every localize() key)', () => {
     await el.updateComplete;
     expect(text(part(el, 'limit'))).to.match(/^ADMIT-MARKER \S+\/\S+$/);
   });
+});
+
+it('isolates caller stage labels under an RTL host', async () => {
+  const el = (await fixture(html`<lr-funnel dir="rtl" label="Funnel" .stages=${[{ label: '(draft)', value: 10 }]}></lr-funnel>`)) as LyraFunnel;
+  const node = el.shadowRoot!.querySelector('[part="stage-label"] > bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:(draft)');
 });

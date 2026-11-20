@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../internal/data-descriptors.js';
 import { formatBoundedRetrievalValue } from './retrieval-value-format.js';
+import { bdi } from '../../internal/bidi.js';
 
 const MAX_METADATA_ENTRIES = 32;
 const MAX_METADATA_SCAN = 128;
@@ -60,12 +61,12 @@ export function renderRetrievalMetadata(
     <dl part=${listPart}>
       ${entries.map(([key, value]) => html`
         <div part=${rowPart}>
-          <dt part=${termPart}>${key}</dt>
-          <dd part=${valuePart}>${formatBoundedRetrievalValue(value, {
+          <dt part=${termPart}>${bdi(key)}</dt>
+          <dd part=${valuePart}>${bdi(formatBoundedRetrievalValue(value, {
             locale,
             invalid,
             truncated,
-          })}</dd>
+          }))}</dd>
         </div>
       `)}
       ${wasTruncated

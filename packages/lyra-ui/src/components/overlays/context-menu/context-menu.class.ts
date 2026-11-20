@@ -1,5 +1,6 @@
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -416,7 +417,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
 
   private onRegionKeyDown = (event: KeyboardEvent): void => {
     this.gesture = undefined;
-    if (claimed.has(event) || event.defaultPrevented || event.isComposing) return;
+    if (claimed.has(event) || isHandledOrComposingKey(event)) return;
     if (this.inForeignOpenSurface(event)) return;
     if (!isContextMenuKey(event) || this.disabled) return;
     claimed.add(event);

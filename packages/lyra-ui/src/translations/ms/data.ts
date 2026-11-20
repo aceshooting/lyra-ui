@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   sequenceStripBucketSummary: '{items} item dalam {ranges} julat',
   noColumns: 'Tiada lajur dikonfigurasikan',
   dataGridColumnMenu: 'Pilihan untuk {label}',
-  dataGridCollapseRow: 'Runtuhkan {row}',
   dataGridPinStart: 'Sematkan {label} pada permulaan',
   dataGridPinEnd: 'Sematkan {label} pada penghujung',
   dataGridUnpin: 'Nyahsemat {label}',
@@ -31,6 +30,7 @@ const strings: LyraLocaleStrings = {
   tableLoading: 'Memuatkan baris',
   tableLoadingMore: 'Memuatkan lebih banyak baris',
   tableEditCell: 'Sunting {column}',
+  tableEditCellInRow: 'Sunting {column}, baris {row}',
   showAllColumns: 'Papar semua lajur',
   dataGridColumns: 'Lajur',
   showFewerColumns: 'Papar kurang lajur',
@@ -39,6 +39,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Bulan seterusnya',
   paginationPage: 'Halaman',
   paginationJumpToPage: 'Pergi ke halaman {page}',
+  paginationInvalidPage: 'Masukkan halaman dari 1 hingga {max}.',
+  paginationInvalidPageUnknownTotal: 'Masukkan nombor halaman bulat 1 atau lebih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Halaman {page}',
   trendOf: 'Trend {count} nilai, terakhir {value}',
@@ -216,7 +218,7 @@ const strings: LyraLocaleStrings = {
   dataGridRowLimit: {
     other: 'Hanya {count} baris pertama ditunjukkan.',
   },
-  dataGridExpandRow: 'Kembangkan {row}',
+  dataGridToggleRow: 'Togol baris {row}',
   dataGridFilterColumn: 'Tapis {column}',
   dataGridSelectPage: 'Pilih semua baris pada halaman ini',
   tableRowLimit: {

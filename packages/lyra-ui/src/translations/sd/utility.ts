@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'آبجيڪٽ',
   jsonValue: 'قدر',
   jsonCopyLabel: '{label} ڪاپي ڪريو',
-  jsonExpandLabel: '{label} وڌايو',
-  jsonCollapseLabel: '{label} سميٽيو',
+  jsonToggleLabel: '{label} ٽوگل ڪريو',
   jsonItemCount: {
     one: '{count} شيءِ',
     other: '{count} شيون',

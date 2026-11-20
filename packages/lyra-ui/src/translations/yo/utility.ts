@@ -19,8 +19,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'ohun',
   jsonValue: 'iye',
   jsonCopyLabel: 'Dàkọ {label}',
-  jsonExpandLabel: 'Fẹ {label} sí i',
-  jsonCollapseLabel: 'Kó {label} jọ',
+  jsonToggleLabel: 'Fi hàn/Fi {label} pamọ́',
   jsonItemCount: {
     other: 'Àwọn ohun {count}',
   },

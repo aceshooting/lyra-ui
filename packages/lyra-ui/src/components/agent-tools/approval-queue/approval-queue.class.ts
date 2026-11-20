@@ -92,6 +92,7 @@ export interface LyraApprovalQueueEventMap {
  * Equivalent JSON arguments keep an open draft and pending decision across new arrays, including
  * reordered object keys. A comparison exceeding 50,000 entries and containers or 256 nested levels
  * starts a fresh draft. A resolved decision is announced, and focus lost with it moves to the next pending row.
+ * Newly arriving pending requests (after the first render) announce the updated pending count politely.
  *
  * @customElement lr-approval-queue
  * @event lr-approval-open - A review was opened, with detail.invocationId.
@@ -234,7 +235,10 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('requests') && this.hasUpdated) this.prepareRequestsUpdate();
+    if (changed.has('requests') && this.hasUpdated) {
+      this.prepareRequestsUpdate();
+      this.queueArrivalAnnouncement(changed.get('requests') as readonly ToolApprovalRequest[] | undefined);
+    }
     if (!changed.has('requests') && !changed.has('selectedInvocationId')) return;
     const selectedInvocationId = this.selectedInvocationId;
     const selected = this.selectedRequest;
@@ -296,6 +300,18 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
       this.decidedInvocationIds.delete(id);
       if (status) this.settledAnnouncements.push(this.statusLabel(status));
     }
+  }
+
+  /** A host-driven arrival of new pending requests speaks the updated pending count once. */
+  private queueArrivalAnnouncement(previous: readonly ToolApprovalRequest[] | undefined): void {
+    const known = new Set(this.normalizedRequestsFor(previous ?? []).map((request) => request.id));
+    const arrived = this.normalizedRequests.some(
+      (request) => !known.has(request.id) && (request.status ?? 'pending') === 'pending',
+    );
+    if (!arrived) return;
+    this.settledAnnouncements.push(this.localize('approvalQueuePendingCount', undefined, {
+      count: this.formatLocaleNumber(this.pendingCount()),
+    }));
   }
 
   private pendingCount(): number {

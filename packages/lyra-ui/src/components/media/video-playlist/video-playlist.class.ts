@@ -10,7 +10,7 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
-import { resolveListMove } from '../../../internal/list-navigation.js';
+import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { NativeMediaPreferences } from '../../../internal/media-controller.js';
 import { finiteRange, nearestEnabledIndex } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -733,14 +733,14 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   private onItemKeyDown(event: KeyboardEvent): void {
     const button = event.currentTarget as HTMLButtonElement;
     const index = Number(button.dataset['index']);
-    if (!Number.isInteger(index) || button.disabled) return;
+    if (!Number.isInteger(index) || button.disabled || shouldIgnoreNavigationKey(event)) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.navigationIndex = index;
       this.goTo(index);
       return;
     }
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.shiftKey) return;
     const target = resolveListMove(event, {
       count: this.playlistVideos.length,
       current: index,

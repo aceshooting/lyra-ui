@@ -273,12 +273,17 @@ backtick spans, not fenced blocks; also isolated LTR), `link` (every rendered `<
 inline or block math span, carrying `data-display="inline"|"block"`), and, when
 `code-block-header` is enabled, `code-block-frame`, `code-block-header`, `code-block-language`,
 `code-block-copy`, `code-block-copy-success`, and `code-block-copy-error`. The language label uses
-CSS-generated content, so headers add no text to selection or text-quote anchoring. Each header
+CSS-generated content, so headers add no text to selection or text-quote anchoring. With more than
+one fenced block, each frame's group name and copy button carry the block's locale-formatted
+ordinal (`codeRegionIndexed` "Code {index}", `codeRegionWithLanguageIndexed` "{language} code
+{index}", `copyCodeIndexed` "Copy code {index}"); a single block keeps `codeRegion`,
+`codeRegionWithLanguage` and `copyCode`. Each header
 adds at most eight elements toward the normal 20,000-node traversal bound.
 The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
 Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
-`markdownTableRegion` (English: "Table"). The label follows locale and `.strings` changes without
+`markdownTableRegion` (English: "Table"), or by `markdownTableRegionIndexed` ("Table {index}")
+when the document holds several tables. The label follows locale and `.strings` changes without
 reparsing. Wrapped tables use word-safe wrapping and honor GFM physical alignment. Raw authored
 HTML and custom-renderer tables remain unchanged unless they emit exactly `part="table-wrapper"`
 and `role="group"`. Their intrinsic width may grow to fit the longest word; consumers can restore

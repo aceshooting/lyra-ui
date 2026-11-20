@@ -100,8 +100,9 @@ resize event name. Use `lr-resize-change` for persistence. Type imports move fro
 `collapsed`, after the toggle, typically one icon button per section (each with its own accessible
 name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
 toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
-icons). The toggle's accessible name is the action it performs (`dockPanelCollapse` while expanded,
-`dockPanelExpand` while collapsed) and `aria-expanded` reports the state. A slotted glyph keeps its orientation.
+icons). The toggle's accessible name is constant in both states and `aria-expanded` reports the state:
+`appRailItemToggle` (`Toggle {label}`) with the host's own accessible name, or `panelToggle`
+(`Toggle panel`) when the host has none. A slotted glyph keeps its orientation.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; rendered when resizing is enabled and the panel is expanded),

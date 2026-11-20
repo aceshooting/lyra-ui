@@ -20,7 +20,7 @@ import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationInvalidPage, LYRA_DEFAULT_paginationInvalidPageUnknownTotal, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -203,6 +203,8 @@ function paginationItems(
  * @csspart label - Upstream alias on the same compact wrapper as `page-field`.
  * @csspart page-input - The validated numeric page-jump input (`format="compact"`).
  * @csspart page-count - The total page count shown after the input (`format="compact"`).
+ * @csspart page-error - The visible correction message for an out-of-range or non-integer page-jump
+ *   draft; it describes the input, and committing that draft also announces it politely.
  * @csspart next-button - The next-page button.
  * @csspart next-icon - The next-page directional icon.
  * @csspart last-button - The last-page button, rendered with `with-edges`.
@@ -262,6 +264,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     paginationAppliedUnknownTotal: LYRA_DEFAULT_paginationAppliedUnknownTotal,
     paginationEmptySummary: LYRA_DEFAULT_paginationEmptySummary,
     paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
+    paginationInvalidPage: LYRA_DEFAULT_paginationInvalidPage,
+    paginationInvalidPageUnknownTotal: LYRA_DEFAULT_paginationInvalidPageUnknownTotal,
     paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     paginationLastPage: LYRA_DEFAULT_paginationLastPage,
@@ -357,6 +361,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   @state() private draftPage = '';
   @state() private invalidDraft = false;
+  /** The rejected draft whose correction message was last announced, so one commit speaks once. */
+  private announcedInvalidDraft: string | null = null;
   @state() private liveText = '';
   @query('[part="page-input"]') private pageInput?: HTMLInputElement;
   private readonly internals = attachInternalsSafely(this);
@@ -616,13 +622,25 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const input = event.currentTarget as HTMLInputElement;
     this.draftPage = input.value;
     this.invalidDraft = input.value !== '' && this.validRequestedPage(input.value) == null;
+    this.announcedInvalidDraft = null;
   };
+
+  private invalidPageText(): string {
+    return this.indeterminate
+      ? this.localize('paginationInvalidPageUnknownTotal')
+      : this.localize('paginationInvalidPage', undefined, { max: this.formatLocaleNumber(Math.max(1, this.calculatedTotalPages)) });
+  }
 
   private commitPage = (event: Event): void => {
     const input = event.currentTarget as HTMLInputElement;
     const page = this.validRequestedPage(input.value);
     if (page == null) {
       this.invalidDraft = true;
+      // Enter and the following native `change` both commit the same draft; speak it once.
+      if (this.announcedInvalidDraft !== input.value) {
+        this.announcedInvalidDraft = input.value;
+        this.sink.announcePolite(this.invalidPageText());
+      }
       return;
     }
     this.requestPage(page);
@@ -838,6 +856,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         required
         aria-label=${pageLabel}
         aria-invalid=${this.invalidDraft ? 'true' : 'false'}
+        aria-describedby=${this.invalidDraft ? 'page-error' : nothing}
         .value=${live(this.draftPage)}
         ?disabled=${this.controlsDisabled}
         @input=${this.onPageInput}
@@ -849,7 +868,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       ${this.indeterminate
         ? nothing
         : html`<span part="page-count" aria-hidden="true"> / ${this.formatLocaleNumber(this.calculatedTotalPages)}</span>`}
-    </span>`;
+    </span>${this.invalidDraft ? html`<span part="page-error" id="page-error">${this.invalidPageText()}</span>` : nothing}`;
   }
 
   constructor() {

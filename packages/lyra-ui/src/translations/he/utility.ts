@@ -21,8 +21,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'אובייקט',
   jsonValue: 'ערך',
   jsonCopyLabel: 'העתק את {label}',
-  jsonExpandLabel: 'הרחב את {label}',
-  jsonCollapseLabel: 'כווץ {label}',
+  jsonToggleLabel: 'החלף מצב של {label}',
   jsonItemCount: {
     one: '{count} פריט',
     two: '{count} פריטים',

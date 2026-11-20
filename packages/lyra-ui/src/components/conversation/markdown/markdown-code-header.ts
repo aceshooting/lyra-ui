@@ -15,6 +15,8 @@ interface HeaderOptions {
   getContentRoot(): ParentNode | null;
   getChangedRoots?(): readonly ParentNode[];
   localize(key: string, fallback?: string, values?: Record<string, string>): string;
+  /** Formats a 1-based block ordinal for the effective locale. */
+  formatIndex(index: number): string;
   buildHeader(frame: HTMLElement, language: string): HTMLButtonElement;
   emit: Parameters<typeof reportCopyOutcome>[0]['emit'];
 }
@@ -179,10 +181,17 @@ export class MarkdownCodeHeaderController implements ReactiveController {
       const frame = this.liveFrames.get(index);
       if (!record || !frame) continue;
       const { localize } = this.options;
-      const group = record.language ? localize('codeRegionWithLanguage', undefined, { language: record.language }) : localize('codeRegion');
+      // Several blocks each carry their ordinal so their regions and copy buttons stay distinct.
+      const ordinal = this.records.length > 1 ? this.options.formatIndex(index + 1) : undefined;
+      const group = ordinal === undefined
+        ? record.language ? localize('codeRegionWithLanguage', undefined, { language: record.language }) : localize('codeRegion')
+        : record.language
+          ? localize('codeRegionWithLanguageIndexed', undefined, { language: record.language, index: ordinal })
+          : localize('codeRegionIndexed', undefined, { index: ordinal });
       if (frame.getAttribute('aria-label') !== group) frame.setAttribute('aria-label', group);
       const status = this.feedback.get(index)?.status ?? 'rest';
-      const label = status === 'success' ? localize('copiedToClipboard') : status === 'error' ? localize('copyFailed') : localize('copyCode');
+      const label = status === 'success' ? localize('copiedToClipboard') : status === 'error' ? localize('copyFailed')
+        : ordinal === undefined ? localize('copyCode') : localize('copyCodeIndexed', undefined, { index: ordinal });
       for (const name of ['aria-label', 'title']) if (button.getAttribute(name) !== label) button.setAttribute(name, label);
       const part = status === 'success' ? 'code-block-copy code-block-copy-success'
         : status === 'error' ? 'code-block-copy code-block-copy-error' : 'code-block-copy';

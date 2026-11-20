@@ -20,8 +20,7 @@ const strings: LyraLocaleStrings = {
   jsonObject: 'αντικείμενο',
   jsonValue: 'τιμή',
   jsonCopyLabel: 'Αντιγραφή {label}',
-  jsonExpandLabel: 'Ανάπτυξη {label}',
-  jsonCollapseLabel: 'Σύμπτυξη {label}',
+  jsonToggleLabel: 'Εναλλαγή {label}',
   jsonItemCount: {
     one: '{count} στοιχείο',
     other: '{count} στοιχεία',

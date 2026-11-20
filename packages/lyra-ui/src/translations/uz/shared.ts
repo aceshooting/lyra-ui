@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'Rad etildi',
   statusIncomplete: 'Tugallanmagan',
   restore: 'Tiklash',
+  fileTypeAudio: 'Audio',
   navigation: 'Navigatsiya',
   attachmentUntitledFile: 'Nomsiz fayl',
   chartTrendIncreasing: 'oʻsuvchi',

@@ -1282,7 +1282,7 @@ describe("lr-email-viewer", () => {
       try {
         const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
         await untilRendered(el, '[part="quote-toggle"]');
-        expect(await el.search('Show quoted text')).to.equal(0);
+        expect(await el.search('Quoted text')).to.equal(0);
         expect(await el.search('Sounds good')).to.equal(1);
         const bodyText = el.shadowRoot!.querySelector('[part="body-text"]')!;
         const range = document.createRange();
@@ -1290,7 +1290,7 @@ describe("lr-email-viewer", () => {
         const anchor = (el as unknown as { computeSelectionAnchor(range: Range, text: string): { suffix?: string } | null })
           .computeSelectionAnchor(range, bodyText.textContent ?? '');
         expect(anchor).not.to.equal(null);
-        expect(anchor?.suffix ?? '').not.to.include('Show quoted text');
+        expect(anchor?.suffix ?? '').not.to.include('Quoted text');
       } finally {
         restore();
       }
@@ -1373,7 +1373,7 @@ describe("lr-email-viewer", () => {
       try {
         const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
         await untilRendered(el, '[part="quote-toggle"]');
-        expect(await el.search('Show quoted text')).to.equal(0);
+        expect(await el.search('Quoted text')).to.equal(0);
         expect(await el.search('Sounds good')).to.equal(1);
         const paragraph = el.shadowRoot!.querySelector('[part="body-html"] p')!;
         const range = document.createRange();
@@ -1381,7 +1381,7 @@ describe("lr-email-viewer", () => {
         const anchor = (el as unknown as { computeSelectionAnchor(range: Range, text: string): { suffix?: string } | null })
           .computeSelectionAnchor(range, paragraph.textContent ?? '');
         expect(anchor).not.to.equal(null);
-        expect(anchor?.suffix ?? '').not.to.include('Show quoted text');
+        expect(anchor?.suffix ?? '').not.to.include('Quoted text');
       } finally {
         restore();
       }
@@ -1491,7 +1491,7 @@ describe("lr-email-viewer", () => {
         ) as HTMLButtonElement;
         expect(quoted.hasAttribute("hidden")).to.be.false;
         expect(toggle.getAttribute("aria-expanded")).to.equal("true");
-        expect(toggle.textContent).to.equal("Hide quoted text");
+        expect(toggle.textContent).to.equal("Quoted text");
 
         toggle.click();
         await el.updateComplete;
@@ -1501,7 +1501,7 @@ describe("lr-email-viewer", () => {
         ) as HTMLButtonElement;
         expect(quoted.hasAttribute("hidden")).to.be.true;
         expect(toggle.getAttribute("aria-expanded")).to.equal("false");
-        expect(toggle.textContent).to.equal("Show quoted text");
+        expect(toggle.textContent).to.equal("Quoted text");
       } finally {
         restore();
       }
@@ -1654,7 +1654,7 @@ describe("lr-email-viewer", () => {
         expect(blocks()[0]!.hasAttribute("hidden"), "the clicked block expands")
           .to.be.false;
         expect(toggles()[0]!.getAttribute("aria-expanded")).to.equal("true");
-        expect(toggles()[0]!.textContent).to.equal("Hide quoted text");
+        expect(toggles()[0]!.textContent).to.equal("Quoted text");
         expect(
           blocks()[1]!.hasAttribute("hidden"),
           "the sibling block must stay folded"
@@ -1663,7 +1663,7 @@ describe("lr-email-viewer", () => {
           toggles()[1]!.getAttribute("aria-expanded"),
           "the sibling toggle must stay collapsed"
         ).to.equal("false");
-        expect(toggles()[1]!.textContent).to.equal("Show quoted text");
+        expect(toggles()[1]!.textContent).to.equal("Quoted text");
       } finally {
         restore();
       }
@@ -1748,13 +1748,13 @@ describe("lr-email-viewer", () => {
         await untilRendered(el, '[part="quote-toggle"]');
         expect(
           el.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent
-        ).to.equal("Show quoted text");
-        el.strings = { emailViewerShowQuoted: "Montrer le texte cité" };
+        ).to.equal("Quoted text");
+        el.strings = { emailViewerQuotedText: "Texte cité" };
         el.requestUpdate();
         await el.updateComplete;
         expect(
           el.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent
-        ).to.equal("Montrer le texte cité");
+        ).to.equal("Texte cité");
       } finally {
         restore();
       }
@@ -1778,7 +1778,7 @@ describe("lr-email-viewer", () => {
         el.shadowRoot!.querySelector('[data-quote-index="0"]')!.remove();
         toggle.click();
         expect(toggle.getAttribute("aria-expanded")).to.equal("false");
-        expect(toggle.textContent).to.equal("Show quoted text");
+        expect(toggle.textContent).to.equal("Quoted text");
       } finally {
         restore();
       }
@@ -2039,5 +2039,19 @@ it('floors the quote toggle and attachment rows at the icon-button hit area', as
     } finally {
       restore();
     }
+  }
+});
+
+it('isolates attachment names and lets plain-text bodies take their own direction under RTL', async () => {
+  const { el, restore } = await loaded(ATTACHMENT_EML);
+  try {
+    el.dir = 'rtl';
+    await el.updateComplete;
+    await untilRendered(el, '[part="attachment-name"]');
+    const name = el.shadowRoot!.querySelector('[part="attachment-name"] > bdi');
+    expect(name ? `${name.getAttribute('dir')}:${name.textContent}` : null).to.equal('auto:notes.txt');
+    expect(el.shadowRoot!.querySelector('[part="body-text"]')!.getAttribute('dir')).to.equal('auto');
+  } finally {
+    restore();
   }
 });

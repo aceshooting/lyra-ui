@@ -576,6 +576,8 @@ it("rejects out-of-range and fractional page jumps", async () => {
   ) as HTMLInputElement;
   let calls = 0;
   el.addEventListener("lr-page-change", () => calls++);
+  const before = sinkTexts().length;
+  const message = () => el.shadowRoot!.querySelector('[part="page-error"]');
 
   for (const value of ["0", "11", "2.5"]) {
     input.value = value;
@@ -583,8 +585,19 @@ it("rejects out-of-range and fractional page jumps", async () => {
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(input.getAttribute("aria-invalid")).to.equal("true");
+    expect(message()?.textContent).to.equal("Enter a page from 1 to 10.");
+    expect(input.getAttribute("aria-describedby")).to.equal(message()?.id);
   }
+  // Enter followed by the native change commits the same draft; it is spoken once per draft.
+  input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(sinkTexts().slice(before)).to.deep.equal(Array(3).fill("Enter a page from 1 to 10."));
 
+  input.value = "3";
+  input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(message() === null).to.equal(true);
+  expect(input.hasAttribute("aria-describedby")).to.equal(false);
   expect(calls).to.equal(0);
 });
 
@@ -1409,6 +1422,9 @@ describe("page-input invalid-state specificity (regression)", () => {
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(input.getAttribute("aria-invalid")).to.equal("true");
+    // Committing the invalid draft announces it, which can resolve style before the attribute
+    // flips; the border then eases (--lr-transition-fast) to the invalid colour instead of snapping.
+    await waitUntil(() => getComputedStyle(input).borderTopColor === "rgb(1, 2, 3)", "the scoped invalid border applies");
     expect(getComputedStyle(input).borderTopColor).to.equal("rgb(1, 2, 3)");
   });
 });

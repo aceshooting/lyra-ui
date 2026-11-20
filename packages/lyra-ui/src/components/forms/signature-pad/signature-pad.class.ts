@@ -2,6 +2,7 @@ import type { LyraLabelDisplay } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -562,7 +563,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (this.inactive || this.readonly || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (this.inactive || this.readonly || shouldIgnoreNavigationKey(event)) return;
     const step = event.shiftKey ? 0.1 : 0.01;
     const [x, y] = this.cursor;
     const moves: Record<string, [number, number] | undefined> = {

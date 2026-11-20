@@ -73,6 +73,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'رد شده',
   statusIncomplete: 'ناتمام',
   restore: 'بازیابی',
+  fileTypeAudio: 'صدا',
   navigation: 'راهبری',
   attachmentUntitledFile: 'پروندهٔ بدون عنوان',
   chartTrendIncreasing: 'روند افزایشی',

@@ -830,9 +830,10 @@ describe("data mode", () => {
         'button[part~="group-toggle"]'
       ),
     ];
+    // Named by the visible group label alone; aria-expanded carries the state.
     expect(
       toggles.map((toggle) => toggle.getAttribute("aria-label"))
-    ).to.deep.equal(["Collapse beta:1", "Collapse alpha:2"]);
+    ).to.deep.equal([null, null]);
     expect(
       toggles.map((toggle) =>
         toggle.querySelector('[part~="group-label"]')?.textContent?.trim()
@@ -879,7 +880,7 @@ describe("data mode", () => {
         ),
       ].find((button) => button.textContent?.includes("alpha"))!;
     expect(alphaToggle().getAttribute("aria-expanded")).to.equal("false");
-    expect(alphaToggle().getAttribute("aria-label")).to.equal("Expand alpha");
+    expect(alphaToggle().hasAttribute("aria-label")).to.equal(false);
     expect(alphaToggle().tabIndex).to.equal(0);
     expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal(["b1"]);
     const measuredItems = (list as unknown as { items: unknown[] }).items;
@@ -902,19 +903,11 @@ describe("data mode", () => {
     await el.updateComplete;
     await nextFrame();
     expect(alphaToggle().getAttribute("aria-expanded")).to.equal("true");
-    expect(alphaToggle().getAttribute("aria-label")).to.equal(
-      "Collapse alpha"
-    );
+    expect(alphaToggle().hasAttribute("aria-label")).to.equal(false);
     expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal([
       "a1",
       "b1",
     ]);
-
-    el.strings = { threadGroupCollapse: "Réduire {label}" };
-    await el.updateComplete;
-    expect(alphaToggle().getAttribute("aria-label")).to.equal(
-      "Réduire alpha"
-    );
 
     await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
     await expectLabelInName(el, reviewComponentLabels(

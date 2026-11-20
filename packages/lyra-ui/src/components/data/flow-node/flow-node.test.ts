@@ -905,3 +905,9 @@ describe('.strings overrides (every localize() key)', () => {
     expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal('PROGRESS-OF[Fetch]');
   });
 });
+
+it('isolates the caller heading under an RTL host', async () => {
+  const el = (await fixture(html`<lr-flow-node dir="rtl" heading=".gitignore"></lr-flow-node>`)) as LyraFlowNode;
+  const node = el.shadowRoot!.querySelector('[part="heading"] > bdi');
+  expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:.gitignore');
+});

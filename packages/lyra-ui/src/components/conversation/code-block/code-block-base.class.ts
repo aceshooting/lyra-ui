@@ -31,7 +31,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './code-block-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockActiveLine, LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockHighlightedLine, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeBlockToggle, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockActiveLine, LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockHighlightedLine, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeBlockToggle, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -66,13 +66,11 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     codeBlockToggle: LYRA_DEFAULT_codeBlockToggle,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
-    collapseCode: LYRA_DEFAULT_collapseCode,
     copied: LYRA_DEFAULT_copied,
     copiedToClipboard: LYRA_DEFAULT_copiedToClipboard,
     copy: LYRA_DEFAULT_copy,
     copyCode: LYRA_DEFAULT_copyCode,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -365,7 +363,6 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       hasHeaderActions: this.hasHeaderActions,
       collapsible: this.collapsible,
       collapsed: this.collapsed,
-      stableToggleName: this.strings.codeBlockToggle !== undefined,
       justCopied: this.justCopied,
       copyFailed: this.copyFailed,
       bodyId: this.bodyId,

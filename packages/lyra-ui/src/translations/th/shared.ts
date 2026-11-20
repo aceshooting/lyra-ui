@@ -71,6 +71,7 @@ const strings: LyraLocaleStrings = {
   statusDenied: 'ถูกปฏิเสธ',
   statusIncomplete: 'ไม่สมบูรณ์',
   restore: 'คืนค่า',
+  fileTypeAudio: 'เสียง',
   navigation: 'การนำทาง',
   attachmentUntitledFile: 'ไฟล์ไม่มีชื่อ',
   chartTrendIncreasing: 'เพิ่มขึ้น',
