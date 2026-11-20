@@ -198,6 +198,7 @@ export type LyraMessageKey =
   | 'scrollPrevious'
   | 'scrollNext'
   | 'showAllColumns'
+  | 'dataGridColumns'
   | 'showFewerColumns'
   | 'clear'
   | 'openCalendar'

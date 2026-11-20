@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Täiendavate ridade laadimine',
   tableEditCell: 'Muuda: {column}',
   showAllColumns: 'Näita kõiki veerge',
+  dataGridColumns: 'Veerud',
   showFewerColumns: 'Näita vähem veerge',
   resizeColumn: 'Muuda veeru {label} laiust',
   calendarPreviousMonth: 'Eelmine kuu',

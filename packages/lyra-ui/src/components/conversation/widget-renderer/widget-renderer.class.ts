@@ -321,9 +321,6 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         : undefined;
     const justify = justifyRaw ? JUSTIFY_VALUE[justifyRaw] : undefined;
     return {
-      display: 'flex',
-      'flex-direction': node.kind === 'builtin-row' ? 'row' : 'column',
-      'flex-wrap': node.kind === 'builtin-row' ? 'wrap' : 'nowrap',
       ...(gap ? { gap } : {}),
       ...(align ? { 'align-items': align } : {}),
       ...(justify ? { 'justify-content': justify } : {}),

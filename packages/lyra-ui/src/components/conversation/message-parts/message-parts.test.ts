@@ -542,9 +542,8 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
 
   const audio = el.shadowRoot!.querySelectorAll('audio[part="audio-control"]');
   expect(audio.length).to.equal(1);
-  const source = audio[0]!.querySelector("source")!;
-  expect(source.getAttribute("src")).to.equal("data:audio/wav;base64,UklGRg==");
-  expect(source.getAttribute("type")).to.equal("audio/wav");
+  expect(audio[0]!.getAttribute("src")).to.equal("data:audio/wav;base64,UklGRg==");
+  expect(audio[0]!.querySelector("source") === null).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[part="audio-transcript"]').length).to.equal(0);
 });
 
@@ -641,7 +640,7 @@ it("applies per-instance strings to retry controls", async () => {
     ></lr-message-parts>`
   )) as LyraMessageParts;
   const retry = el.shadowRoot!.querySelector("lr-button") as HTMLElement;
-  expect(retry.getAttribute("aria-label")).to.equal("Réessayer cette section");
+  expect(retry.getAttribute("aria-label")).to.equal("Réessayer cette section: Could not finish");
   expect(retry.textContent?.trim()).to.equal("Réessayer");
   const retried = oneEvent(el, "lr-part-retry");
   retry.click();
@@ -1642,4 +1641,33 @@ it('applies the shared button radius and external resume part to the operable co
   const control = resume.shadowRoot?.querySelector('button') ?? resume;
   const style = getComputedStyle(control);
   expect([style.borderTopLeftRadius, style.borderTopColor]).to.deep.equal(['13px', 'rgb(12, 34, 56)']);
+});
+
+it("names each part-level retry by its own failure text and keeps generic copy errors inside", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts
+      .parts=${[
+        { id: "e1", type: "error", message: "First failed", retryable: true },
+        { id: "e2", type: "error", message: "Second failed", retryable: true },
+        { id: "t", type: "text", text: "hello" },
+      ] as MessagePart[]}
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+  const labels = [...el.shadowRoot!.querySelectorAll('lr-button[part="retry"]')].map(b => b.getAttribute("aria-label"));
+  expect(labels).to.deep.equal(["Retry this part: First failed", "Retry this part: Second failed"]);
+  let escaped = 0;
+  el.addEventListener("lr-error", () => escaped++);
+  el.shadowRoot!.querySelector("lr-markdown")!.dispatchEvent(new CustomEvent("lr-error", { bubbles: true, composed: true, detail: null }));
+  expect(escaped).to.equal(0);
+});
+
+it("reloads the audio resource when the src of the same part id changes", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[{ id: "a", type: "audio", src: "data:audio/wav;base64,UklGRg==" }] as MessagePart[]}></lr-message-parts>`
+  )) as LyraMessageParts;
+  const audio = el.shadowRoot!.querySelector("audio")!;
+  el.parts = [{ id: "a", type: "audio", src: "data:audio/wav;base64,UklGRh==" }] as MessagePart[];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector("audio")!.getAttribute("src")).to.equal("data:audio/wav;base64,UklGRh==");
+  expect(el.shadowRoot!.querySelector("audio") === audio).to.equal(true);
 });

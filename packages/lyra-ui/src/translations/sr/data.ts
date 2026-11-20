@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Учитавање још редова',
   tableEditCell: 'Измени {column}',
   showAllColumns: 'Прикажи све колоне',
+  dataGridColumns: 'Колоне',
   showFewerColumns: 'Прикажи мање колона',
   resizeColumn: 'Промени ширину колоне {label}',
   calendarPreviousMonth: 'Претходни месец',

@@ -698,3 +698,14 @@ it('keeps the decorative separator with the preceding metric on a wrapped line',
   expect(getComputedStyle(second, '::before').content).to.equal('none');
   expect(getComputedStyle(second, '::after').content).to.equal('none');
 });
+
+it("rounds the focusable base, not the host, and keeps its footprint equal to the figures", async () => {
+  const el = (await fixture(
+    html`<lr-usage-badge tabindex="0" .tokensIn=${10} .tokensOut=${20}></lr-usage-badge>`
+  )) as LyraUsageBadge;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(getComputedStyle(base).borderTopLeftRadius).to.not.equal('0px');
+  const cs = getComputedStyle(base);
+  expect(parseFloat(cs.paddingInlineStart) + parseFloat(cs.marginInlineStart)).to.equal(0);
+  expect(Math.abs(el.getBoundingClientRect().width - base.getBoundingClientRect().width)).to.be.lessThan(0.5);
+});

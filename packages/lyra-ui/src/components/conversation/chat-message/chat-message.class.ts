@@ -477,10 +477,20 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     if (this.status !== 'failed') this.bubbleEl?.focus();
   };
 
+  private authorLabel(): string {
+    return this.localize(
+      this.messageRole === 'user'
+        ? 'promptStudioRoleUser'
+        : this.messageRole === 'system'
+          ? 'promptStudioRoleSystem'
+          : 'promptStudioRoleAssistant',
+    );
+  }
+
   private renderRetryButton(): TemplateResult {
     const action = this.localize('retry');
-    const title = normalizeLabel(this.messageId);
-    const label = title ? this.localize('conversationActionWithTitle', undefined, { action, title }) : nothing;
+    const title = this.authorLabel();
+    const label = this.localize('conversationActionWithTitle', undefined, { action, title });
     return html`<button part="retry-button" type="button" aria-label=${label} @click=${this.onRetryClick}>
       ${retryIcon()}<span>${action}</span>
     </button>`;
@@ -500,13 +510,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     // suppressed, so it alone covers that case here too.
     const actionsOutside = this.actionsPlacement === 'outside';
     const showFooter = Boolean(statusText) || Boolean(ts) || (!actionsOutside && this.hasActionsSlot);
-    const authorLabel = this.localize(
-      this.messageRole === 'user'
-        ? 'promptStudioRoleUser'
-        : this.messageRole === 'system'
-          ? 'promptStudioRoleSystem'
-          : 'promptStudioRoleAssistant',
-    );
+    const authorLabel = this.authorLabel();
     const hostLabel = this.getAttribute('aria-label');
     const articleLabel = hostLabel === '' ? '' : normalizeLabel(hostLabel) ?? authorLabel;
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}

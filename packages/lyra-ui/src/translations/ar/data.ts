@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'جارٍ تحميل مزيد من الصفوف',
   tableEditCell: 'تعديل {column}',
   showAllColumns: 'عرض كل الأعمدة',
+  dataGridColumns: 'الأعمدة',
   showFewerColumns: 'عرض أعمدة أقل',
   resizeColumn: 'تغيير حجم عمود {label}',
   calendarPreviousMonth: 'الشهر السابق',

@@ -244,6 +244,61 @@ describe('lr-env-list', () => {
     }
   });
 
+  it('lets the visible Copied text name the copy button while feedback shows, then restores the named label', async () => {
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } });
+    try {
+      const el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'v' }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      const button = () => el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      expect(button().getAttribute('aria-label')).to.equal('Copy API_KEY');
+      const listener = oneEvent(el, 'lr-copy');
+      button().click();
+      await listener;
+      await waitUntil(() => button().dataset['copyState'] === 'copied');
+      expect(button().hasAttribute('aria-label')).to.equal(false);
+      expect(button().textContent!.trim()).to.equal('Copied!');
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('lets only the latest copy report feedback and drops a copy whose entry was replaced', async () => {
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const resolvers: Array<() => void> = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => new Promise<void>((resolve) => { resolvers.push(resolve); }) },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'A', value: '1' }, { name: 'B', value: '2' }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      const texts: string[] = [];
+      el.addEventListener('lr-copy', (event) => texts.push((event as CustomEvent<{ text: string }>).detail.text));
+      const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="copy-button"]');
+      buttons[0]!.click();
+      buttons[1]!.click();
+      resolvers[0]!();
+      resolvers[1]!();
+      await waitUntil(() => texts.length > 0);
+      await el.updateComplete;
+      expect(texts).to.deep.equal(['2']);
+
+      buttons[0]!.click();
+      el.entries = [{ name: 'C', value: '3' }];
+      await el.updateComplete;
+      resolvers[2]!();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(texts).to.deep.equal(['2']);
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('localizes clipboard rejection and emits only typed failure outcomes', async () => {
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const error = new Error('platform secret must not be rendered');

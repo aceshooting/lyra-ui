@@ -1528,7 +1528,7 @@ also make the rendered controls inert.
 `--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-bg` (default
 `var(--lr-color-surface)`) and `--lr-pagination-control-border-color` (default
 `var(--lr-color-border)`) — the resting fill and border shared by the first/previous/next/last
-buttons, interactive ellipses, and numbered pages, which is what `appearance` re-points: `filled` → `var(--lr-color-surface-raised)` + `transparent`,
+buttons, interactive ellipses, numbered pages and the compact page-jump input, which is what `appearance` re-points: `filled` → `var(--lr-color-surface-raised)` + `transparent`,
 `filled-outlined` → `var(--lr-color-surface-raised)` + `var(--lr-color-border)`, `plain` →
 `transparent` + `transparent`, `accent` → `var(--lr-color-brand-quiet)` +
 `var(--lr-color-brand)`; set either property yourself to theme past the five presets —
@@ -1640,9 +1640,9 @@ pagination.hrefTemplate = (page) =>
   number; a gap that would hide exactly one page shows that page instead. A gap is a named jump control, not decorative text; repeated activation advances through
   a large skipped run. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
   however large you set them the list never renders more than 103 slots
-- `appearance` does not reach the compact page-jump input — `[part="page-input"]` always draws with
-  the shared surface and border tokens. Style `::part(page-input)` directly when a non-default
-  appearance needs it to match
+- The compact page-jump input follows `appearance` and `--lr-pagination-control-bg` /
+  `--lr-pagination-control-border-color` like the buttons; its hover, pressed and invalid states
+  keep their own tokens
 
 ---
 

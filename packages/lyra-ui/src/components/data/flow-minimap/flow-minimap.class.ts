@@ -685,7 +685,7 @@ export class LyraFlowMinimap extends LyraElement {
           ></rect>
           <rect
             part="viewport-hit-area"
-            role="group"
+            role="application"
             tabindex=${locked ? '-1' : '0'}
             aria-disabled=${locked ? 'true' : 'false'}
             aria-label=${this.localize('flowMinimapViewport')}

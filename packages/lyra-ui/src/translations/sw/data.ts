@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Inapakia safu mlalo zaidi',
   tableEditCell: 'Hariri {column}',
   showAllColumns: 'Onyesha safu wima zote',
+  dataGridColumns: 'Safu wima',
   showFewerColumns: 'Onyesha safu wima chache',
   resizeColumn: 'Badilisha ukubwa wa safu wima ya {label}',
   calendarPreviousMonth: 'Mwezi uliopita',

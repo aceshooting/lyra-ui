@@ -8,6 +8,17 @@ export const styles = css`
     display: contents;
   }
   [part='row'],
+  [part='col'],
+  [part='text'] {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+  [part='row'] {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  [part='row'],
   [part='col'] {
     min-inline-size: 0;
     max-inline-size: 100%;

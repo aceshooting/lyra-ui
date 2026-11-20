@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Ana loda ƙarin layuka',
   tableEditCell: 'Gyara {column}',
   showAllColumns: 'Nuna duk ginshiƙai',
+  dataGridColumns: 'Ginshiƙai',
   showFewerColumns: 'Nuna ginshiƙai kaɗan',
   resizeColumn: 'Canza girman ginshiƙin {label}',
   calendarPreviousMonth: 'Watan da ya gabata',

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'மேலும் வரிசைகள் ஏற்றப்படுகின்றன',
   tableEditCell: '{column}-ஐத் திருத்து',
   showAllColumns: 'அனைத்து நெடுவரிசைகளையும் காட்டு',
+  dataGridColumns: 'நெடுவரிசைகள்',
   showFewerColumns: 'குறைவான நெடுவரிசைகளைக் காட்டு',
   resizeColumn: '{label} நெடுவரிசையின் அளவை மாற்று',
   calendarPreviousMonth: 'முந்தைய மாதம்',

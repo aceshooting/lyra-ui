@@ -318,7 +318,7 @@ export const DATA_GRID_DRAG_TYPE = 'application/x-lyra-data-grid-column';
 /** Sentinel for `isRebind()` when a property has no stored snapshot to compare against. */
 export const REBIND_NO_SNAPSHOT = Symbol('no snapshot');
 
-export function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
+export function freezeSnapshot<Value>(values: Iterable<Value>): readonly Value[] {
   return Object.freeze([...values]);
 }
 
@@ -427,7 +427,7 @@ export function snapshotKeys(value: readonly DataGridKey[]): readonly DataGridKe
   } catch {
     // Preserve the admitted prefix when a host iterable throws.
   }
-  return frozenArray(output);
+  return freezeSnapshot(output);
 }
 
 export function keysEqual(left: DataGridKey, right: DataGridKey): boolean {

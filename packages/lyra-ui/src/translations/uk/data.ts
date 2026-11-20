@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Завантаження додаткових рядків',
   tableEditCell: 'Редагувати {column}',
   showAllColumns: 'Показати всі стовпці',
+  dataGridColumns: 'Стовпці',
   showFewerColumns: 'Показати менше стовпців',
   resizeColumn: 'Змінити ширину стовпця {label}',
   calendarPreviousMonth: 'Попередній місяць',

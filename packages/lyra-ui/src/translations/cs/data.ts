@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Načítají se další řádky',
   tableEditCell: 'Upravit {column}',
   showAllColumns: 'Zobrazit všechny sloupce',
+  dataGridColumns: 'Sloupce',
   showFewerColumns: 'Zobrazit méně sloupců',
   resizeColumn: 'Změnit šířku sloupce {label}',
   calendarPreviousMonth: 'Předchozí měsíc',

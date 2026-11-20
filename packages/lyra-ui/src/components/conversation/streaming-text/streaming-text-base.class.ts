@@ -294,6 +294,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
       @lr-highlight-activate=${this.stopOwnedEvent}
       @lr-text-select=${this.stopOwnedEvent}
       @lr-anchor-result=${this.stopOwnedEvent}
+      @lr-error=${this.stopOwnedEvent}
     ></${element}>`;
   }
 

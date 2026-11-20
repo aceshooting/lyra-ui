@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'နောက်ထပ် အတန်းများ တင်နေသည်',
   tableEditCell: '{column} ကို တည်းဖြတ်ရန်',
   showAllColumns: 'ကော်လံအားလုံး ပြရန်',
+  dataGridColumns: 'ကော်လံများ',
   showFewerColumns: 'ကော်လံနည်းနည်းသာ ပြရန်',
   resizeColumn: '{label} ကော်လံ အရွယ်အစားပြောင်းရန်',
   calendarPreviousMonth: 'ယခင်လ',

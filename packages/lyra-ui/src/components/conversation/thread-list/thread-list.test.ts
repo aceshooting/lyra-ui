@@ -5046,3 +5046,13 @@ it('resolves whitespace names on the role owner and preserves an explicitly empt
   await el.updateComplete;
   expect(owner()).to.equal('');
 });
+
+it("keeps conversation search text out of spell-check, autocorrect and autofill", async () => {
+  const el = (await fixture(html`<lr-thread-list searchable></lr-thread-list>`)) as LyraThreadList;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  expect(input.spellcheck).to.equal(false);
+  expect(input.getAttribute("autocapitalize")).to.equal("off");
+  expect(input.getAttribute("autocorrect")).to.equal("off");
+  expect(input.autocomplete).to.equal("off");
+});

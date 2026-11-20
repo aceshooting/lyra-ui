@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'अउरी पंक्ति लोड हो रहल बा',
   tableEditCell: '{column} बदलीं',
   showAllColumns: 'सब कॉलम देखाईं',
+  dataGridColumns: 'कॉलम',
   showFewerColumns: 'कम कॉलम देखाईं',
   resizeColumn: '{label} कॉलम के आकार बदलीं',
   calendarPreviousMonth: 'पिछला महीना',

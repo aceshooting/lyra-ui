@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'ተጨማሪ ረድፎችን በመጫን ላይ',
   tableEditCell: '{column}ን አርትዕ',
   showAllColumns: 'ሁሉንም አምዶች አሳይ',
+  dataGridColumns: 'አምዶች',
   showFewerColumns: 'ጥቂት አምዶችን አሳይ',
   resizeColumn: 'የ{label} አምድ መጠን ቀይር',
   calendarPreviousMonth: 'ቀዳሚ ወር',

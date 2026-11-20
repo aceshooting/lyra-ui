@@ -47,6 +47,10 @@ export const styles = css`
      unit rather than a plain dot next to unrelated-looking text. */
   :host([data-stalled]) [part='base'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
+    /* The padding and border are cancelled by an equal negative margin so the content never moves
+       when a stall begins; only the tint and outline appear around it. */
+    margin-block: calc(-1 * (var(--lr-space-xs) + var(--lr-border-width-thin)));
+    margin-inline: calc(-1 * (var(--lr-space-s) + var(--lr-border-width-thin)));
     background: var(--lr-stream-status-stalled-bg, var(--lr-color-warning-quiet));
     border: var(--lr-border-width-thin) solid
       var(--lr-stream-status-stalled-border-color, var(--lr-color-warning));

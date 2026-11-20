@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Ilayisha imigqa eyengeziwe',
   tableEditCell: 'Hlela u-{column}',
   showAllColumns: 'Bonisa wonke amakholomu',
+  dataGridColumns: 'Amakholomu',
   showFewerColumns: 'Bonisa amakholomu ambalwa',
   resizeColumn: 'Shintsha usayizi wekholomu ka-{label}',
   calendarPreviousMonth: 'Inyanga edlule',

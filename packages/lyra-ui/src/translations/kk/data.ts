@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Қосымша жолдар жүктелуде',
   tableEditCell: 'Өңдеу: {column}',
   showAllColumns: 'Барлық бағандарды көрсету',
+  dataGridColumns: 'Бағандар',
   showFewerColumns: 'Азырақ баған көрсету',
   resizeColumn: 'Баған өлшемін өзгерту: {label}',
   calendarPreviousMonth: 'Алдыңғы ай',

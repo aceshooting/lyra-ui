@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Naglo-load ng mas maraming row',
   tableEditCell: 'I-edit ang {column}',
   showAllColumns: 'Ipakita ang lahat ng column',
+  dataGridColumns: 'Mga column',
   showFewerColumns: 'Magpakita ng mas kaunting column',
   resizeColumn: 'Baguhin ang laki ng column na {label}',
   calendarPreviousMonth: 'Nakaraang buwan',

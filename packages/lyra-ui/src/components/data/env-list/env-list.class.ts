@@ -145,6 +145,12 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly copyFeedback = new KeyedCopyFeedback(this);
   private droppedReveals: string[] = [];
+  private copyGeneration = 0;
+
+  override disconnectedCallback(): void {
+    this.copyGeneration += 1;
+    super.disconnectedCallback();
+  }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
@@ -198,8 +204,14 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   private async copy(entry: EnvEntry): Promise<void> {
     const text = entry.value;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    const generation = ++this.copyGeneration;
     const outcome = await writeClipboardText(owner, text);
-    if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+    const current = (): boolean =>
+      this.isConnected &&
+      this.ownerDocument.defaultView === owner &&
+      generation === this.copyGeneration &&
+      this.entries.some((candidate) => candidate.name === entry.name && candidate.value === text);
+    if (!current()) return;
     this.copyFeedback.show(entry.name, outcome.ok);
     reportCopyOutcome(
       {
@@ -211,6 +223,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
         announce: (ok) => this.announcements.announcePolite(this.localize(ok ? 'copied' : 'copyFailed')),
       },
       outcome,
+      current,
     );
   }
 
@@ -273,7 +286,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                 ? html`<button
                     part="copy-button"
                     type="button"
-                    aria-label=${this.localize('envListCopy', undefined, { name: entry.name })}
+                    aria-label=${feedback ? nothing : this.localize('envListCopy', undefined, { name: entry.name })}
                     data-copy-state=${ifDefined(feedback ? (feedback.ok ? 'copied' : 'failed') : undefined)}
                     @click=${() => void this.copy(entry)}
                   >

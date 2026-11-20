@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Ielādē vairāk rindu',
   tableEditCell: 'Rediģēt {column}',
   showAllColumns: 'Rādīt visas kolonnas',
+  dataGridColumns: 'Kolonnas',
   showFewerColumns: 'Rādīt mazāk kolonnu',
   resizeColumn: 'Mainīt kolonnas {label} platumu',
   calendarPreviousMonth: 'Iepriekšējais mēnesis',

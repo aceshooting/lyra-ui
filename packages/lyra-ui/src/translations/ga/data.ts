@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Tuilleadh rónna á lódáil',
   tableEditCell: 'Cuir {column} in eagar',
   showAllColumns: 'Taispeáin gach colún',
+  dataGridColumns: 'Colúin',
   showFewerColumns: 'Taispeáin níos lú colún',
   resizeColumn: 'Athraigh méid an cholúin {label}',
   calendarPreviousMonth: 'An mhí roimhe seo',

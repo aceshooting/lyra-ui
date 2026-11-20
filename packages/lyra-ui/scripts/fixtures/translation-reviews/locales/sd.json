@@ -2,12 +2,12 @@
   "locale": "sd",
   "direction": "rtl",
   "source": {
-    "keyCount": 1726,
-    "sha256": "sha256:38356f7dc034f5675ce8f5d3f85144c87b0298997caf987ba8dadede683fc964"
+    "keyCount": 1727,
+    "sha256": "sha256:12022b65b83286e73c560e8e30c27a582bb85c347ceafebf61f5a2f0dc68e251"
   },
   "catalog": {
-    "keyCount": 1726,
-    "sha256": "sha256:3af56e41e53da7373ae2e15641c57067c4eafbe3fff1a2ad151ed55dd55de9e1"
+    "keyCount": 1727,
+    "sha256": "sha256:7c6e1bf500c88a784e1ecbcc765ae99e358746c9fbf686e54762e4d506d7e47f"
   },
   "translator": {
     "status": "complete-original",

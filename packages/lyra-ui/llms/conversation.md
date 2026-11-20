@@ -517,8 +517,8 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
-`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-error`, `lr-copy-error` — identical detail shapes to
-`<lr-markdown>`'s own.
+`lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
+`<lr-markdown>`'s own. The generic `lr-error` is not forwarded; use `lr-copy-error`.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 

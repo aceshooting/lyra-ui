@@ -1129,6 +1129,29 @@ describe("layout gap hooks", () => {
   });
 });
 
+describe("compact page input paint", () => {
+  it("follows the appearance variant and the control background and border hooks", async () => {
+    const wrapper = (await fixture(html`
+      <div>
+        <lr-pagination format="compact" appearance="plain" total="95" page-size="10"></lr-pagination>
+        <lr-pagination
+          format="compact"
+          total="95"
+          page-size="10"
+          style="--lr-pagination-control-bg: rgb(1, 2, 3); --lr-pagination-control-border-color: rgb(4, 5, 6)"
+        ></lr-pagination>
+      </div>
+    `)) as HTMLElement;
+    const [plain, themed] = [...wrapper.querySelectorAll("lr-pagination")] as LyraPagination[];
+    await Promise.all([plain.updateComplete, themed.updateComplete]);
+    const input = (el: LyraPagination) => getComputedStyle(el.shadowRoot!.querySelector('[part="page-input"]')!);
+    expect(input(plain).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+    expect(input(plain).borderTopColor).to.equal("rgba(0, 0, 0, 0)");
+    expect(input(themed).backgroundColor).to.equal("rgb(1, 2, 3)");
+    expect(input(themed).borderTopColor).to.equal("rgb(4, 5, 6)");
+  });
+});
+
 describe("state color hooks", () => {
   it("inherits resting and current-page color hooks from an ancestor", async () => {
     const wrapper = (await fixture(html`

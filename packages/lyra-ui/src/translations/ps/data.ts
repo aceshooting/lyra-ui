@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'نور کتارونه راوړل کېږي',
   tableEditCell: '{column} سمول',
   showAllColumns: 'ټول ستنونه ښکاره کول',
+  dataGridColumns: 'کالمونه',
   showFewerColumns: 'لږ ستنونه ښکاره کول',
   resizeColumn: 'د {label} ستن کچه بدلول',
   calendarPreviousMonth: 'تېره میاشت',

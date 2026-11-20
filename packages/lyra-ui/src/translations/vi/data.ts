@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Đang tải thêm hàng…',
   tableEditCell: 'Chỉnh sửa {column}',
   showAllColumns: 'Hiện tất cả cột',
+  dataGridColumns: 'Cột',
   showFewerColumns: 'Hiện ít cột hơn',
   resizeColumn: 'Đổi kích thước cột {label}',
   calendarPreviousMonth: 'Tháng trước',

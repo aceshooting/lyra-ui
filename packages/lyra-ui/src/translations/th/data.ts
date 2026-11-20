@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'กำลังโหลดแถวเพิ่มเติม…',
   tableEditCell: 'แก้ไข {column}',
   showAllColumns: 'แสดงคอลัมน์ทั้งหมด',
+  dataGridColumns: 'คอลัมน์',
   showFewerColumns: 'แสดงคอลัมน์น้อยลง',
   resizeColumn: 'ปรับขนาดคอลัมน์ {label}',
   calendarPreviousMonth: 'เดือนก่อนหน้า',

@@ -110,6 +110,20 @@ describe('lr-flow-canvas keyboard connect boundaries', () => {
     expect(connectTargets(el)).to.deep.equal([]);
   });
 
+  it('Space while choosing a connection target is consumed and commits like Enter', async () => {
+    const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas connectable style="width:600px;height:300px"
+      .nodes=${pair}></lr-flow-canvas>`);
+    const connects = countEvents(el, 'lr-connect');
+    const control = nodeControl(el, 'a');
+    key(control, 'c');
+    await el.updateComplete;
+    const space = key(control, ' ');
+    await el.updateComplete;
+    expect(space.defaultPrevented).to.equal(true);
+    expect(connects.count).to.equal(1);
+    expect(connectTargets(el)).to.deep.equal([]);
+  });
+
   it('Escape cancels a pending keyboard connect, and Escape with nothing selected changes nothing', async () => {
     const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas connectable style="width:600px;height:300px"
       .nodes=${pair}></lr-flow-canvas>`);

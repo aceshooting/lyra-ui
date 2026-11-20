@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'وڌيڪ قطارون لوڊ ٿي رهيون آهن',
   tableEditCell: '{column} ۾ ترميم ڪريو',
   showAllColumns: 'سڀ ڪالم ڏيکاريو',
+  dataGridColumns: 'ڪالمن',
   showFewerColumns: 'گهٽ ڪالم ڏيکاريو',
   resizeColumn: '{label} ڪالم جو ماپ بدلايو',
   calendarPreviousMonth: 'اڳوڻو مهينو',

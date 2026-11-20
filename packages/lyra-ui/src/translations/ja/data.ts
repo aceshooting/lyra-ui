@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: '追加の行を読み込み中',
   tableEditCell: '{column} を編集',
   showAllColumns: 'すべての列を表示',
+  dataGridColumns: '列',
   showFewerColumns: '列の表示を減らす',
   resizeColumn: '{label} 列の幅を変更',
   calendarPreviousMonth: '前の月',

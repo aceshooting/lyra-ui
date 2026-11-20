@@ -347,7 +347,7 @@ it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive 
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
-  expect(rect.getAttribute('role')).to.equal('group');
+  expect(rect.getAttribute('role')).to.equal('application');
   expect(rect.getAttribute('aria-label')).to.equal('Visible area');
   const instructions = minimap.shadowRoot!.querySelector('[part="instructions"]') as HTMLElement;
   expect(rect.getAttribute('aria-describedby')).to.equal(instructions.id);

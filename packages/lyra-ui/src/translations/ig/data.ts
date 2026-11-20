@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'A na-ebunye ahịrị ndị ọzọ',
   tableEditCell: 'Dezie kọlụm {column}',
   showAllColumns: 'Gosi kọlụm niile',
+  dataGridColumns: 'Ogidi',
   showFewerColumns: 'Gosi kọlụm ole na ole',
   resizeColumn: 'Gbanwee obosara kọlụm {label}',
   calendarPreviousMonth: 'Ọnwa gara aga',

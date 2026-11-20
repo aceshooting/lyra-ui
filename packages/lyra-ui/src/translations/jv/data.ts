@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Lagi ngemot baris liyane',
   tableEditCell: 'Sunting {column}',
   showAllColumns: 'Tampilake kabeh kolom',
+  dataGridColumns: 'Kolom',
   showFewerColumns: 'Tampilake kolom luwih sithik',
   resizeColumn: 'Owahi ukuran kolom {label}',
   calendarPreviousMonth: 'Sasi sadurunge',

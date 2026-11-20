@@ -990,8 +990,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private onKeyUp = (e: KeyboardEvent): void => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     if (this.holdGesture?.source !== 'keyboard' || this.holdGesture.key !== e.key) return;
+    // Some engines still synthesize the button's click on Space keyup after a cancelled keydown;
+    // that click belongs to the hold gesture being released, so cancel it and ignore any that
+    // arrives in the same task.
+    e.preventDefault();
+    this.suppressKeyboardClick = true;
+    setTimeout(() => { this.suppressKeyboardClick = false; }, 0);
     this.releaseHoldGesture();
   };
+  private suppressKeyboardClick = false;
   private onBlur = (): void => {
     this.releaseHoldGesture();
   };
@@ -999,7 +1006,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   // -- Toggle mode ----------------------------------------------------------
   private onClick = (event: MouseEvent): void => {
     if (this.disabled || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (this.mode === 'hold' && (event.detail !== 0 || this.holdGesture)) return;
+    if (this.mode === 'hold' && (event.detail !== 0 || this.holdGesture || this.suppressKeyboardClick)) return;
     if (this._state === 'recording') this.stop();
     else void this.start();
   };

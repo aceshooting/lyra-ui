@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Ko‘proq qatorlar yuklanmoqda',
   tableEditCell: '{column}ni tahrirlash',
   showAllColumns: 'Barcha ustunlarni koʻrsatish',
+  dataGridColumns: 'Ustunlar',
   showFewerColumns: 'Kamroq ustun koʻrsatish',
   resizeColumn: '{label} ustuni oʻlchamini oʻzgartirish',
   calendarPreviousMonth: 'Oldingi oy',

@@ -1516,6 +1516,37 @@ describe("hold mode", () => {
     }
   });
 
+  it("a Space keyup in hold mode cancels the default and ignores the synthesized click instead of starting a second take", async () => {
+    const { restore, resolve } = stubDeferredCapture();
+    try {
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+      const btn = trigger(el);
+      let starts = 0;
+      el.addEventListener("lr-record-start", () => starts++);
+      btn.dispatchEvent(
+        new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true })
+      );
+      await el.updateComplete;
+      expect(el.state).to.equal("requesting");
+
+      const keyup = new KeyboardEvent("keyup", { key: " ", bubbles: true, cancelable: true });
+      btn.dispatchEvent(keyup);
+      expect(keyup.defaultPrevented).to.equal(true);
+      // Engines that synthesize the click on Space keyup deliver it with detail 0 in the same task.
+      btn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
+
+      const cancelPromise = oneEvent(el, "lr-record-cancel");
+      resolve();
+      await cancelPromise;
+      expect(el.state).to.equal("idle");
+      expect(starts).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   it("stubDeferredCapture.restore() fully restores window.MediaRecorder, not just getUserMedia (regression)", () => {
     const originalMediaRecorder = window.MediaRecorder;
     const { restore } = stubDeferredCapture();

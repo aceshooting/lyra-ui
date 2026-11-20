@@ -2512,7 +2512,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         this.cancelKeyboardConnect();
         return;
       }
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         if (isRepeatedActivationKey(e)) return;
         this.commitKeyboardConnect();

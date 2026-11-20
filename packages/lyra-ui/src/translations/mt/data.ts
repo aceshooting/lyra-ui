@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Qed jitgħabbew aktar ringieli',
   tableEditCell: 'Editja {column}',
   showAllColumns: 'Uri l-kolonni kollha',
+  dataGridColumns: 'Kolonni',
   showFewerColumns: 'Uri inqas kolonni',
   resizeColumn: 'Ibdel id-daqs tal-kolonna {label}',
   calendarPreviousMonth: 'Ix-xahar ta’ qabel',

@@ -177,6 +177,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   scrollPrevious: 'Scroll backward',
   scrollNext: 'Scroll forward',
   showAllColumns: 'Show all columns',
+  dataGridColumns: 'Columns',
   showFewerColumns: 'Show fewer columns',
   clear: 'Clear',
   openCalendar: 'Open calendar',

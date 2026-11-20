@@ -795,6 +795,24 @@ it('wraps built-in text in a narrow nested row', async () => {
   expect(text.clientHeight).to.be.greaterThan(32);
 });
 
+it('lets consumer ::part rules override the layout of row, col and text nodes', async () => {
+  const sheet = document.createElement('style');
+  sheet.textContent = 'lr-widget-renderer.override::part(row){flex-wrap:nowrap}'
+    + 'lr-widget-renderer.override::part(text){display:grid}';
+  document.head.append(sheet);
+  try {
+    const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer class="override" .document=${documentFor({
+      type: 'row', props: { gap: 'm' }, children: [{ type: 'text', props: { value: 'x' } }] })}></lr-widget-renderer>`);
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
+    const text = el.shadowRoot!.querySelector<HTMLElement>('[part="text"]')!;
+    expect(getComputedStyle(row).flexWrap).to.equal('nowrap');
+    expect(getComputedStyle(row).columnGap).to.not.equal('normal');
+    expect(getComputedStyle(text).display).to.equal('grid');
+  } finally {
+    sheet.remove();
+  }
+});
+
 it('keeps unchanged field properties and listeners when a sibling binding changes', async () => {
   const registry = createWidgetTypeRegistry([['field', { tag: 'lr-input', props: { value: 'string' },
     interaction: 'control', bindings: { value: { event: 'lr-input' } } }]]);

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Įkeliama daugiau eilučių',
   tableEditCell: 'Redaguoti {column}',
   showAllColumns: 'Rodyti visus stulpelius',
+  dataGridColumns: 'Stulpeliai',
   showFewerColumns: 'Rodyti mažiau stulpelių',
   resizeColumn: 'Keisti stulpelio {label} dydį',
   calendarPreviousMonth: 'Ankstesnis mėnuo',

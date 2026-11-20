@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'További sorok betöltése',
   tableEditCell: 'Szerkesztés: {column}',
   showAllColumns: 'Összes oszlop megjelenítése',
+  dataGridColumns: 'Oszlopok',
   showFewerColumns: 'Kevesebb oszlop megjelenítése',
   resizeColumn: 'Oszlop átméretezése: {label}',
   calendarPreviousMonth: 'Előző hónap',

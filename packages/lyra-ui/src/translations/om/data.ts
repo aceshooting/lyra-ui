@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Tarreewwan dabalataa fe’amaa jiru',
   tableEditCell: '{column} gulaali',
   showAllColumns: 'Tarjaawwan hunda agarsiisi',
+  dataGridColumns: 'Kolomoota',
   showFewerColumns: 'Tarjaawwan muraasa agarsiisi',
   resizeColumn: 'Tarjaa {label} guddina jijjiiri',
   calendarPreviousMonth: 'Ji\'a darbe',

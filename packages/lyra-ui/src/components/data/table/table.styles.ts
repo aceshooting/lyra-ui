@@ -393,12 +393,17 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
     transition-property: background-color;
   }
+  /* Each cell-level fill is also written to --_lr-table-cell-bg, the property the opaque sticky
+     rule below reads first: a sticky cell paints its own 'background' from variables, so a bare
+     'background' here would lose to it and the pinned column would show no hover or press. */
   :where([part='cell'][data-editable]):hover {
     cursor: pointer;
-    background: var(--lr-color-brand-quiet);
+    --_lr-table-cell-bg: var(--lr-color-brand-quiet);
+    background: var(--_lr-table-cell-bg);
   }
   :where([part='cell'][data-editable]):active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    --_lr-table-cell-bg: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--_lr-table-cell-bg);
   }
   [part='cell'][data-editable]:focus-visible {
     ${focusRingInsetOffset}
@@ -510,11 +515,12 @@ export const styles = css`
     text-align: end;
   }
   [part='cell'][data-heat] {
-    background: color-mix(
+    --_lr-table-cell-bg: color-mix(
       in srgb,
       var(--lr-table-heat-tint-hi, var(--_lr-table-heat-tint-hi-default)) var(--lr-table-heat-t),
       var(--lr-table-heat-tint-lo, var(--_lr-table-heat-tint-lo-default))
     );
+    background: var(--_lr-table-cell-bg);
   }
   [part='expand-toggle-cell'] {
     padding: var(--lr-space-s);
@@ -585,9 +591,10 @@ export const styles = css`
   }
   /* Reads --_lr-table-row-bg, written by the [part='row'] stripe/selected/hover/active rules above,
      so a sticky body cell shows the same fill as the rest of its row instead of painting a flat
-     surface over the state. */
+     surface over the state; a cell-level hover, press or heat fill (--_lr-table-cell-bg) wins
+     over the row fill. */
   [part='cell'][data-sticky] {
-    background: var(--_lr-table-row-bg, var(--lr-table-surface, var(--lr-color-surface)));
+    background: var(--_lr-table-cell-bg, var(--_lr-table-row-bg, var(--lr-table-surface, var(--lr-color-surface))));
   }
   /* Reads --_lr-table-header-bg, written only by the sorted-header rule above -- a sticky AND
      sorted column's <th> carries both [data-sticky] and [aria-sort] at once, so without this split

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'טוען שורות נוספות',
   tableEditCell: 'ערוך את {column}',
   showAllColumns: 'הצג את כל העמודות',
+  dataGridColumns: 'עמודות',
   showFewerColumns: 'הצג פחות עמודות',
   resizeColumn: 'שנה את גודל העמודה {label}',
   calendarPreviousMonth: 'החודש הקודם',

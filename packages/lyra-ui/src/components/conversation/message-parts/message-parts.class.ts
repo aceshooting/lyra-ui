@@ -53,7 +53,7 @@ import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_messagePartsWindowNotice, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_messagePartsWindowNotice, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -312,6 +312,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    conversationActionWithTitle: LYRA_DEFAULT_conversationActionWithTitle,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
     loading: LYRA_DEFAULT_loading,
     messagePartError: LYRA_DEFAULT_messagePartError,
@@ -598,6 +599,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     this.suppressNextErrorAnnouncement = false;
   }
 
+  /** The generic null-detail `lr-error` of composed content is not this component's event; the typed
+   *  `lr-copy-error` passthrough already carries the failure. */
+  private stopGenericError(event: Event): void {
+    event.stopPropagation();
+  }
+
   private selectCitation(event: Event, part: CitationMessagePart): void {
     event.stopPropagation();
     this.emit('lr-citation-select', { citation: part.citation });
@@ -696,7 +703,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       .withoutImages=${this.withoutImages}
       .linkTarget=${this.linkTarget}
       .linkSchemes=${this.linkSchemes}
-      .maxHeight=${this.maxHeight}></lr-markdown>`;
+      .maxHeight=${this.maxHeight}
+      @lr-error=${this.stopGenericError}></lr-markdown>`;
   }
 
   private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {
@@ -785,14 +793,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
             .registry=${this.widgetRegistry} .bindingState=${this.widgetBindingState}></lr-widget-renderer>`;
         }
         if (!this.rendererReady('json-viewer')) return this.rendererFallback('json-viewer');
-        return html`<lr-json-viewer .data=${part.data}></lr-json-viewer>`;
+        return html`<lr-json-viewer .data=${part.data} @lr-error=${this.stopGenericError}></lr-json-viewer>`;
       }
       case 'audio': {
         const src = safeMediaSrc(part.src);
         return html`${src
-          ? html`<audio part="audio-control" controls>
-              <source src=${src} type=${part.mimeType || nothing} />
-            </audio>`
+          ? html`<audio part="audio-control" controls src=${src}></audio>`
           : nothing}
         ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
       }
@@ -803,7 +809,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
                 part="retry"
                 size="s"
                 variant="neutral"
-                aria-label=${this.localize('messagePartRetry')}
+                aria-label=${this.localize('conversationActionWithTitle', undefined, {
+                  action: this.localize('messagePartRetry'),
+                  title: normalizeLabel(part.message) ?? this.localize('messagePartError'),
+                })}
                 ?disabled=${this.disabled}
                 @click=${() => this.requestRetry(part)}
                 >${this.localize('retry')}</lr-button
@@ -833,10 +842,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   private renderInterruption(part: MessagePart): TemplateResult | typeof nothing {
     if (part.state !== 'interrupted') return nothing;
     let resume: TemplateResult | typeof nothing = nothing;
+    const reason = normalizeLabel(part.interruption?.reason);
     if (part.interruption?.resumable === true) {
       resume = this.rendererReady('button')
         ? html`<lr-button part="resume" exportparts="base:resume" size="s" variant="neutral" type="button"
-            wrap ?disabled=${this.disabled} @click=${() => this.requestResume(part)}>${this.localize('streamResume')}</lr-button>`
+            wrap aria-label=${reason
+              ? this.localize('conversationActionWithTitle', undefined, { action: this.localize('streamResume'), title: reason })
+              : nothing}
+            ?disabled=${this.disabled} @click=${() => this.requestResume(part)}>${this.localize('streamResume')}</lr-button>`
         : this.rendererFallback('button');
     }
     return html`<div part="interruption"><span>${this.localize('streamInterrupted')}</span>${part.interruption?.reason

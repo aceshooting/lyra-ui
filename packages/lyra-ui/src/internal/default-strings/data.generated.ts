@@ -13,6 +13,7 @@ export const LYRA_DEFAULT_contextMeterUsed: LyraMessage = '{used} used';
 export const LYRA_DEFAULT_contextMeterUsedOfTotal: LyraMessage = '{used} of {total} used';
 export const LYRA_DEFAULT_dataGridCollapseRow: LyraMessage = 'Collapse {row}';
 export const LYRA_DEFAULT_dataGridColumnMenu: LyraMessage = 'Options for {label}';
+export const LYRA_DEFAULT_dataGridColumns: LyraMessage = 'Columns';
 export const LYRA_DEFAULT_dataGridExpandRow: LyraMessage = 'Expand {row}';
 export const LYRA_DEFAULT_dataGridFilterColumn: LyraMessage = 'Filter {column}';
 export const LYRA_DEFAULT_dataGridPinEnd: LyraMessage = 'Pin {label} to end';

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: '正在加载更多行',
   tableEditCell: '编辑{column}',
   showAllColumns: '显示所有列',
+  dataGridColumns: '列',
   showFewerColumns: '减少显示的列',
   resizeColumn: '调整{label}列宽',
   calendarPreviousMonth: '上个月',

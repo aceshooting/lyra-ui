@@ -986,3 +986,15 @@ it('applies the shared button radius and external resume part to the operable co
   const style = getComputedStyle(control);
   expect([style.borderTopLeftRadius, style.borderTopColor]).to.deep.equal(['13px', 'rgb(12, 34, 56)']);
 });
+
+it('keeps the indicator in place when a stall begins', async () => {
+  const el = await renderFixture<LyraStreamStatus>(html`<lr-stream-status connection-state="streaming"></lr-stream-status>`);
+  await el.updateComplete;
+  const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="indicator"]')!;
+  const before = { host: el.getBoundingClientRect(), dot: dot.getBoundingClientRect() };
+  el.markStalled();
+  await el.updateComplete;
+  expect(el.hasAttribute('data-stalled')).to.equal(true);
+  const after = { host: el.getBoundingClientRect(), dot: dot.getBoundingClientRect() };
+  expect(Math.abs(after.dot.left - before.dot.left)).to.be.lessThan(1);
+});

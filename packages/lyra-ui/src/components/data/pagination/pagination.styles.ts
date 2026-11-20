@@ -315,12 +315,19 @@ export const styles = css`
       --lr-pagination-control-padding,
       var(--_lr-pagination-control-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid
+      var(
+        --lr-pagination-control-border-color,
+        var(--_lr-pagination-control-border-color-default)
+      );
     border-radius: var(
       --lr-pagination-control-radius,
       var(--_lr-pagination-control-radius)
     );
-    background: var(--lr-color-surface);
+    background: var(
+      --lr-pagination-control-bg,
+      var(--_lr-pagination-control-bg-default)
+    );
     color: var(--lr-pagination-control-color, var(--lr-color-text));
     font: inherit;
     text-align: center;

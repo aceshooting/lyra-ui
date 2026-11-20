@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'మరిన్ని వరుసలు లోడ్ అవుతున్నాయి',
   tableEditCell: '{column}ను సవరించండి',
   showAllColumns: 'అన్ని కాలమ్‌లను చూపించండి',
+  dataGridColumns: 'నిలువు వరుసలు',
   showFewerColumns: 'తక్కువ కాలమ్‌లను చూపించండి',
   resizeColumn: '{label} కాలమ్ పరిమాణాన్ని మార్చండి',
   calendarPreviousMonth: 'మునుపటి నెల',

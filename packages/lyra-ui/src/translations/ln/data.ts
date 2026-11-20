@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Milɔngɔ mosusu ezali kocharger',
   tableEditCell: 'Bongisa {column}',
   showAllColumns: 'Lakisa ba colonne nyonso',
+  dataGridColumns: 'Bakolone',
   showFewerColumns: 'Lakisa ba colonne moke',
   resizeColumn: 'Bongola bonene ya colonne {label}',
   calendarPreviousMonth: 'Sanza eleki',

@@ -1143,3 +1143,16 @@ it('keeps the declared default for a blank numeric attribute instead of coercing
   const props = el as unknown as Record<string, unknown>;
   expect(['tabSize'].map((key) => props[key])).to.deep.equal([4]);
 });
+
+it("keeps the composed markdown's generic lr-error inside while copy results still pass through", async () => {
+  const el = (await fixture(html`<lr-streaming-text content-mode="markdown" content="# hi"></lr-streaming-text>`)) as LyraStreamingText;
+  await el.updateComplete;
+  const md = el.shadowRoot!.querySelector("lr-markdown")!;
+  let errors = 0, copyErrors = 0;
+  el.addEventListener("lr-error", () => errors++);
+  el.addEventListener("lr-copy-error", () => copyErrors++);
+  md.dispatchEvent(new CustomEvent("lr-error", { bubbles: true, composed: true, detail: null }));
+  md.dispatchEvent(new CustomEvent("lr-copy-error", { bubbles: true, composed: true, detail: {} }));
+  expect(errors).to.equal(0);
+  expect(copyErrors).to.equal(1);
+});

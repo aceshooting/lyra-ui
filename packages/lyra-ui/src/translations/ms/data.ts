@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Memuatkan lebih banyak baris',
   tableEditCell: 'Sunting {column}',
   showAllColumns: 'Papar semua lajur',
+  dataGridColumns: 'Lajur',
   showFewerColumns: 'Papar kurang lajur',
   resizeColumn: 'Ubah saiz lajur {label}',
   calendarPreviousMonth: 'Bulan sebelumnya',

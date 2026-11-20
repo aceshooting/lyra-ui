@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'در حال بارگیری ردیف‌های بیشتر',
   tableEditCell: 'ویرایش {column}',
   showAllColumns: 'نمایش همهٔ ستون‌ها',
+  dataGridColumns: 'ستون‌ها',
   showFewerColumns: 'نمایش ستون‌های کمتر',
   resizeColumn: 'تغییر اندازهٔ ستون {label}',
   calendarPreviousMonth: 'ماه قبل',

@@ -677,6 +677,47 @@ it("gives a sticky cell in a hovered row the row's hover background instead of t
   }
 });
 
+it('paints the heat tint and the editable hover fill on a sticky cell like on a non-sticky one', async () => {
+  const mixed: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', sticky: 'end', heatValue: (r) => r.score, editTrigger: 'double-click', editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+    { key: 'plain', label: 'Plain', heatValue: (r) => r.score, editTrigger: 'double-click', editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = mixed;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelectorAll('[part="row"]')[1] as HTMLElement;
+  const sticky = row.querySelector('[part="cell"][data-sticky][data-heat]') as HTMLElement;
+  const plain = row.querySelector('[part="cell"][data-heat]:not([data-sticky])') as HTMLElement;
+  expect(getComputedStyle(sticky).backgroundColor).to.equal(getComputedStyle(plain).backgroundColor);
+  expect(getComputedStyle(sticky).backgroundColor).to.not.equal(getComputedStyle(row).backgroundColor);
+
+  // Heat-free editable columns: hover feedback on the pinned cell matches the unpinned one.
+  const editable: TableColumn<Row>[] = [
+    { key: 'score', label: 'Score', sticky: 'start', editTrigger: 'double-click', editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+    { key: 'plain', label: 'Plain', editTrigger: 'double-click', editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+  ];
+  el.columns = editable;
+  await el.updateComplete;
+  const cells = el.shadowRoot!.querySelectorAll('[part="row"]')[1].querySelectorAll<HTMLElement>('[part="cell"][data-editable]');
+  const [pinned, loose] = [cells[0], cells[1]];
+  const probe = document.createElement('div');
+  probe.style.background = 'var(--lr-color-brand-quiet)';
+  document.body.append(probe);
+  const expected = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  try {
+    await hoverUntilMatched(loose, 'the plain editable cell never took the pointer');
+    await waitUntil(() => getComputedStyle(loose).backgroundColor === expected, 'the plain editable cell never showed its hover fill');
+    await hoverUntilMatched(pinned, 'the sticky editable cell never took the pointer');
+    await waitUntil(() => getComputedStyle(pinned).backgroundColor === expected, 'the sticky editable cell never showed its own hover fill');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('honors an override of --lr-table-cell-padding-compact on group-cell/footer-cell independently of --lr-table-cell-padding, preserving the tighter block/inline shorthand by default (unset-regression)', async () => {
   const columnsWithFooter: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name, footer: () => 'Total' },

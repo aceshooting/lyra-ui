@@ -1680,6 +1680,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         <input
           part="search-input"
           type="search"
+          spellcheck="false"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          enterkeyhint="search"
           .value=${this.searchText}
           aria-label=${this.localize('searchThreads')}
           placeholder=${this.localize('searchThreads')}

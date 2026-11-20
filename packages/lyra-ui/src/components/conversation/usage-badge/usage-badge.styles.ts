@@ -7,7 +7,6 @@ export const styles = css`
     display: inline-flex;
     min-inline-size: 0;
     max-inline-size: 100%;
-    border-radius: var(--lr-radius);
   }
   [part='base']:where([tabindex]) {
     cursor: help;
@@ -25,6 +24,12 @@ export const styles = css`
     align-items: baseline;
     gap: var(--lr-space-xs);
     max-inline-size: 100%;
+    /* The hover tint and focus ring sit off the figures; the equal negative margin keeps the
+       badge's layout footprint unchanged. */
+    box-sizing: border-box;
+    padding-inline: var(--lr-space-2xs);
+    margin-inline: calc(-1 * var(--lr-space-2xs));
+    border-radius: var(--lr-radius);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
     font-variant-numeric: tabular-nums;

@@ -1973,16 +1973,16 @@ describe("--lr-chat-message-failed-color", () => {
   });
 });
 
-it('names the retry action for a specific message while preserving its visible label', async () => {
+it('names the retry action for the message author while preserving its visible label', async () => {
   const el = await fixture<LyraChatMessage>(html`
     <lr-chat-message status="failed" message-id="draft-7"></lr-chat-message>
   `);
   const retry = el.shadowRoot!.querySelector('[part="retry-button"]')!;
   expect(retry.textContent?.trim()).to.equal('Retry');
-  expect(retry.getAttribute('aria-label')).to.equal('Retry: draft-7');
+  expect(retry.getAttribute('aria-label')).to.equal('Retry: Assistant');
   el.messageId = '';
   await el.updateComplete;
-  expect(retry.hasAttribute('aria-label')).to.equal(false);
+  expect(retry.getAttribute('aria-label')).to.equal('Retry: Assistant');
 });
 
 it('applies the shared icon action border to its buttons', async () => {
@@ -2019,4 +2019,13 @@ it('preserves whole-word intrinsic width in a shrink-to-fit message', async () =
   const intrinsicWidth = probe.getBoundingClientRect().width;
   probe.style.whiteSpace = 'nowrap';
   expect(intrinsicWidth).to.be.at.least(probe.getBoundingClientRect().width - 1);
+});
+
+it("names the retry button by the author, never the opaque message id", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="assistant" status="failed" message-id="msg_8f3a91"></lr-chat-message>`
+  )) as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute("aria-label")!;
+  expect(label).to.not.contain("msg_8f3a91");
+  expect(label.startsWith("Retry")).to.equal(true);
 });

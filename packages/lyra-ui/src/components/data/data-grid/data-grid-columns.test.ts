@@ -306,6 +306,18 @@ it("filters from the column panel and reports the controlled filter state", asyn
   expect(element.shadowRoot!.querySelector('[part="no-results"]')).to.exist;
 });
 
+it("names the columns-menu trigger and dropdown 'Columns', not 'Show all columns', and honors a strings override", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="Names" with-columns-menu .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const menu = element.shadowRoot!.querySelector('[part="columns-menu"]') as HTMLElement;
+  expect(menu.getAttribute('aria-label')).to.equal('Columns');
+  expect(menu.querySelector('lr-button')!.textContent!.trim()).to.equal('Columns');
+  element.strings = { dataGridColumns: 'Visible fields' };
+  await element.updateComplete;
+  expect(menu.getAttribute('aria-label')).to.equal('Visible fields');
+});
+
 it("supports silent programmatic pin/visibility changes and user menu events", async () => {
   const element = await dataGrid(html`
     <lr-data-grid

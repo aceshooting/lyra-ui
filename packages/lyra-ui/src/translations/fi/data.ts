@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   tableLoadingMore: 'Ladataan lisää rivejä',
   tableEditCell: 'Muokkaa: {column}',
   showAllColumns: 'Näytä kaikki sarakkeet',
+  dataGridColumns: 'Sarakkeet',
   showFewerColumns: 'Näytä vähemmän sarakkeita',
   resizeColumn: 'Muuta sarakkeen kokoa: {label}',
   calendarPreviousMonth: 'Edellinen kuukausi',
