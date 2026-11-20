@@ -114,7 +114,7 @@ const MAX_SLICE_CONTROLS = 500;
  * @cssprop [--lr-rag-eval-dashboard-selected-border-color=var(--lr-color-brand)] - Border color
  *   shared by the controlled active slice and metric.
  * @cssprop [--lr-rag-eval-dashboard-item-hover-bg=var(--lr-color-surface-raised)] - Hover background of a `slice`, `metric` or `run` button.
- * @cssprop --lr-rag-eval-dashboard-item-active-bg - Pressed background of those buttons. Defaults to the hover background mixed by the press step.
+ * @cssprop [--lr-rag-eval-dashboard-item-active-bg=color-mix(in oklab, var(--lr-rag-eval-dashboard-item-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of those buttons. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 7.0.0
  */

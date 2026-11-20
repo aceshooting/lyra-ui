@@ -1182,7 +1182,7 @@ describe("compact page input paint", () => {
         ></lr-pagination>
       </div>
     `)) as HTMLElement;
-    const [plain, themed] = [...wrapper.querySelectorAll("lr-pagination")] as LyraPagination[];
+    const [plain, themed] = [...wrapper.querySelectorAll("lr-pagination")] as [LyraPagination, LyraPagination];
     await Promise.all([plain.updateComplete, themed.updateComplete]);
     const input = (el: LyraPagination) => getComputedStyle(el.shadowRoot!.querySelector('[part="page-input"]')!);
     expect(input(plain).backgroundColor).to.equal("rgba(0, 0, 0, 0)");

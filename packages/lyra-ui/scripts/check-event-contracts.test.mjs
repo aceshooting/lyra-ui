@@ -939,6 +939,29 @@ try {
   rmSync(copyReporterRoot, { recursive: true, force: true });
 }
 
+const typedEmitRoot = mkdtempSync(path.join(tmpdir(), 'lyra-typed-emit-callback-'));
+try {
+  mkdirSync(path.join(typedEmitRoot, 'src'), { recursive: true });
+  writeFileSync(path.join(typedEmitRoot, 'src/fixture.ts'), `
+    import { emitSelection as select } from './helper.js';
+    export class Fixture {
+      pick() { select((name, detail) => this.emit(name, detail), 1); }
+    }
+  `);
+  const observe = parameterType => {
+    writeFileSync(path.join(typedEmitRoot, 'src/helper.ts'),
+      `export function emitSelection(emit: (name: ${parameterType}, detail: never) => unknown, index: number) {}`);
+    const { components: [fixture] } = collectRepositoryEventContracts(typedEmitRoot, { modules: [{
+      path: 'src/fixture.ts', declarations: [{ name: 'Fixture', customElement: true, tagName: 'lr-fixture' }],
+    }] });
+    return [sorted(fixture.runtimeEventCancelability.keys()), fixture.unresolvedRuntimeEmitCalls];
+  };
+  assert.deepEqual(observe("'lr-point-select' | 'lr-category-select'"), [['lr-category-select', 'lr-point-select'], 0]);
+  assert.deepEqual(observe('string'), [[], 1]);
+} finally {
+  rmSync(typedEmitRoot, { recursive: true, force: true });
+}
+
 const referenceRoot = mkdtempSync(path.join(tmpdir(), 'lyra-event-map-reference-'));
 try {
   mkdirSync(path.join(referenceRoot, 'src'));

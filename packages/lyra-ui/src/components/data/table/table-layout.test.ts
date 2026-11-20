@@ -700,8 +700,8 @@ it('paints the heat tint and the editable hover fill on a sticky cell like on a 
   ];
   el.columns = editable;
   await el.updateComplete;
-  const cells = el.shadowRoot!.querySelectorAll('[part="row"]')[1].querySelectorAll<HTMLElement>('[part="cell"][data-editable]');
-  const [pinned, loose] = [cells[0], cells[1]];
+  const cells = el.shadowRoot!.querySelectorAll('[part="row"]')[1]!.querySelectorAll<HTMLElement>('[part="cell"][data-editable]');
+  const [pinned, loose] = [cells[0]!, cells[1]!];
   const probe = document.createElement('div');
   probe.style.background = 'var(--lr-color-brand-quiet)';
   document.body.append(probe);

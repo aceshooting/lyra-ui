@@ -363,7 +363,7 @@ describe('play / playing / reduced-motion arbitration', () => {
       button.click();
       await played;
       await el.updateComplete;
-      const pauseLabel = LYRA_DEFAULT_STRINGS.pauseWithContext.replace('{name}', 'Pixel');
+      const pauseLabel = (LYRA_DEFAULT_STRINGS.pauseWithContext as string).replace('{name}', 'Pixel');
       expect([el.play, el.playing, button.getAttribute('aria-label')]).to.deep.equal([true, true, pauseLabel]);
     } finally {
       stub.restore();

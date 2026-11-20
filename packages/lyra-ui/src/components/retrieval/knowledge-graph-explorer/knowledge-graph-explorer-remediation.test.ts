@@ -125,9 +125,9 @@ it('lets a host veto or accept the proposed hidden types before the legend commi
   const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer .nodeTypes=${[{id:'topic',label:'Topic'}]}></lr-knowledge-graph-explorer>`);
   const legend = el.shadowRoot!.querySelector('lr-graph-legend')!;
   const button = legend.shadowRoot!.querySelector('button')!;
-  const proposals: string[][] = [];
+  const proposals: (readonly string[])[] = [];
   el.addEventListener('lr-hidden-types-change-request', event => {
-    proposals.push((event as CustomEvent<{hiddenTypes:string[]}>).detail.hiddenTypes);
+    proposals.push((event as CustomEvent<{ readonly hiddenTypes: readonly string[] }>).detail.hiddenTypes);
     if (proposals.length === 1) event.preventDefault();
   });
   button.click();

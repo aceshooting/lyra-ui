@@ -139,7 +139,7 @@ export type LyraProvenancePanelDisclosureDetail =
  * @cssprop [--lr-provenance-panel-entity-justify=flex-start] - Main-axis packing of the entity-chip
  *   row. `center` centers every line, the wrapped final one included.
  * @cssprop [--lr-provenance-panel-header-hover-bg=var(--lr-color-brand-quiet)] - Hover background of each section `[part="header"]`.
- * @cssprop --lr-provenance-panel-header-active-bg - Pressed background of a section header. Defaults to the hover background mixed by the press step.
+ * @cssprop [--lr-provenance-panel-header-active-bg=color-mix(in oklab, var(--lr-provenance-panel-header-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of a section header. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

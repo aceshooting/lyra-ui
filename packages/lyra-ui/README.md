@@ -142,7 +142,7 @@ import "@aceshooting/lyra-ui/components/lr-option.js";
 - **Family entries** (`@aceshooting/lyra-ui/components/forms`, likewise `overlays`, `agent-tools`, `charts`,
   `conversation`, `data`, `layout`, `media`, `retrieval`, `utility`, `viewers`) register every tag in the family;
   they are side-effectful and cannot be tree-shaken, so prefer granular paths.
-- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 296 tags — every component **except** the 15 optional-peer
+- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 300 tags — every component **except** the 15 optional-peer
   tags (`<lr-chart>` and typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`, `<lr-graph>`,
   `<lr-knowledge-graph-explorer>`, `<lr-geojson-viewer>`), which need their own subpath import.
   `<lr-flag>` with `country`/`language` also needs `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once.

@@ -624,7 +624,7 @@ describe('document renderer contract', () => {
       },
     ];
     const anchor = { kind: 'fragment' as const, id: 'feature' };
-    const host = await fixture<HTMLElement>(html`<div>${'render' in loaded ? loaded.render({
+    const host = await fixture<HTMLElement>(html`<div>${'render' in loaded ? loaded.render!({
       name: 'zones.geojson',
       mimeType: 'application/geo+json',
       src: GEOJSON_URL,
@@ -2291,7 +2291,7 @@ it('registers a application/geo+json renderer whose matches() and render() behav
   const loaded = await load(def!);
   const host = (await fixture(
     html`<div>
-      ${'render' in loaded ? loaded.render({
+      ${'render' in loaded ? loaded.render!({
         name: 'Region.GEOJSON',
         mimeType: 'application/geo+json',
         src: 'https://example.test/f',

@@ -70,7 +70,7 @@
       "module": "src/ai/adapters/a2ui.ts",
       "exportName": "adaptA2UiSurface",
       "kind": "function",
-      "fingerprint": "b9120a246ddb1f55e09d",
+      "fingerprint": "be5aad3b69eee8e07e99",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -118,7 +118,7 @@
       "module": "src/ai/adapters/ai-sdk.ts",
       "exportName": "adaptAiSdkMessage",
       "kind": "function",
-      "fingerprint": "f4a4c85d3ea780705f42",
+      "fingerprint": "d28018827277c08fdff9",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -182,7 +182,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "AgentStreamState",
       "kind": "interface",
-      "fingerprint": "e0cb6af631820b50653e",
+      "fingerprint": "879b960e585975f6a67a",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -214,7 +214,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "createAgentStreamState",
       "kind": "function",
-      "fingerprint": "2907735f066213c70fc3",
+      "fingerprint": "478fd4a72d39d5528133",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -246,7 +246,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStream",
       "kind": "function",
-      "fingerprint": "ee4581bd347ef80f5454",
+      "fingerprint": "476e002404f400a84143",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -262,7 +262,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStreamEvents",
       "kind": "function",
-      "fingerprint": "014c144b52d48f057ee4",
+      "fingerprint": "a5b3cf432916d3be95a4",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -472,7 +472,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ChatMessage",
       "kind": "interface",
-      "fingerprint": "4692a19b51eeeaa67483",
+      "fingerprint": "18015e58fd6f5a8eb674",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -491,7 +491,7 @@
       "module": "src/ai/types.ts",
       "exportName": "Citation",
       "kind": "interface",
-      "fingerprint": "7fc8e79a04aa6867a067",
+      "fingerprint": "ba39d93253d2fb12d1f1",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -510,7 +510,7 @@
       "module": "src/ai/types.ts",
       "exportName": "CitationMessagePart",
       "kind": "interface",
-      "fingerprint": "fbe5e260b017add73563",
+      "fingerprint": "0c55c08721862b28bcb4",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -529,7 +529,7 @@
       "module": "src/ai/types.ts",
       "exportName": "CitationSelectEventDetail",
       "kind": "interface",
-      "fingerprint": "6243f5cb7be527264079",
+      "fingerprint": "b92f9c562d9c9719341a",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -700,7 +700,7 @@
       "module": "src/ai/types.ts",
       "exportName": "RetrievalChunk",
       "kind": "interface",
-      "fingerprint": "80d0c325b3d339097082",
+      "fingerprint": "b9a143ef38ec23042fac",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "dc29f45118bea7c84d85",
+      "fingerprint": "2aa46ba5c8cbeed10932",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "a88c0875e02ce8991313",
+      "fingerprint": "998b91413872eef60584",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "3452dd1775ee8cb9ab3d",
+      "fingerprint": "5815a3aa25714e00d570",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "d6f1fe3f151a9f579d56",
+      "fingerprint": "cce31162f5a26a2f31af",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1169,7 +1169,9 @@
         "src/all.ts",
         "src/components/agent-tools/agent-run/agent-run.class.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-agent-run.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -1292,6 +1294,8 @@
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-eval-run.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -1491,6 +1495,8 @@
         "src/all.ts",
         "src/components/agent-tools/context-inspector/context-inspector.class.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/components/lr-context-inspector.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -1507,7 +1513,7 @@
       "module": "src/components/agent-tools/context-inspector/context-inspector.class.ts",
       "exportName": "ContextInspectorSegment",
       "kind": "interface",
-      "fingerprint": "f9dbeb6558d9f5886a04",
+      "fingerprint": "68214cbaa6ad8be1ca64",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/context-inspector/context-inspector.class.ts",
@@ -1575,7 +1581,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalCitationSelectDetail",
       "kind": "interface",
-      "fingerprint": "b80b069f7e88765d64fd",
+      "fingerprint": "2286caa427d74f0b275a",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -1638,7 +1644,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalExampleResult",
       "kind": "interface",
-      "fingerprint": "0e5dca6f964a7e514c04",
+      "fingerprint": "400278af55c9682c6ae0",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -1935,6 +1941,10 @@
       "fingerprint": "e1cbc7acfa5a6d278dc9",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-agent-eval-dashboard.ts",
+        "src/components/lr-eval-result.ts",
+        "src/components/lr-subagent-panel.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -2228,6 +2238,8 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/thinking-panel/thinking-panel.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-message-parts.ts",
         "src/components/lr-thinking-panel.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2249,6 +2261,8 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-message-parts.ts",
         "src/components/lr-tool-call-block.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2270,6 +2284,8 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-call-block/tool-call-block.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-message-parts.ts",
         "src/components/lr-tool-call-block.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2312,6 +2328,7 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-param-form/tool-param-form.class.ts",
+        "src/components/lr-agent-question.ts",
         "src/components/lr-tool-param-form.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2529,6 +2546,7 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+        "src/components/lr-eval-run.ts",
         "src/components/lr-tool-timeline.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2550,6 +2568,9 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-agent-workspace.ts",
+        "src/components/lr-eval-run.ts",
         "src/components/lr-tool-timeline.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2575,6 +2596,7 @@
         "src/components/conversation/agent-workspace/agent-workspace.class.ts",
         "src/components/conversation/index.ts",
         "src/components/lr-agent-workspace.ts",
+        "src/components/lr-eval-run.ts",
         "src/components/lr-tool-timeline.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2596,6 +2618,7 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+        "src/components/lr-eval-run.ts",
         "src/components/lr-tool-timeline.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -2621,8 +2644,10 @@
         "src/components/agent-tools/trace-tree/span.ts",
         "src/components/agent-tools/trace-tree/trace-tree.class.ts",
         "src/components/lr-agent-trace.ts",
+        "src/components/lr-retrieval-trace.ts",
         "src/components/lr-span-waterfall.ts",
         "src/components/lr-trace-tree.ts",
+        "src/components/retrieval/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -3118,6 +3143,7 @@
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
         "src/components/charts/index.ts",
+        "src/components/lr-box-plot.ts",
         "src/components/lr-chart.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -3301,7 +3327,9 @@
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
         "src/components/charts/index.ts",
+        "src/components/lr-box-plot.ts",
         "src/components/lr-chart.ts",
+        "src/components/lr-lite-chart.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -3842,6 +3870,11 @@
       "fingerprint": "3e20a7fac24b73c416d8",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-code-block.ts",
+        "src/components/lr-markdown-core.ts",
+        "src/components/lr-markdown.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -4041,7 +4074,10 @@
       "fingerprint": "2c6bee8a56f8a2b27174",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
         "src/components/conversation/markdown/markdown-loader.ts",
+        "src/components/lr-markdown-core.ts",
+        "src/components/lr-markdown.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -4165,10 +4201,10 @@
       }
     },
     {
-      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "module": "src/internal/toolbar-actions.ts",
       "exportName": "isLyraToolbarActionProvider",
       "kind": "function",
-      "fingerprint": "528958d3913dc9f8e6da",
+      "fingerprint": "603cc698de22c4dd0a05",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4186,7 +4222,7 @@
       }
     },
     {
-      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "module": "src/internal/toolbar-actions.ts",
       "exportName": "LyraToolbarAction",
       "kind": "interface",
       "fingerprint": "a1d9d1cc0b12472e31f6",
@@ -4194,7 +4230,14 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/message-actions/toolbar-actions.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-branch-picker.ts",
+        "src/components/lr-copy-button.ts",
+        "src/components/lr-icon-button.ts",
         "src/components/lr-message-actions.ts",
+        "src/components/lr-message-feedback.ts",
+        "src/components/lr-toggle.ts",
+        "src/components/utility/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -4207,10 +4250,10 @@
       }
     },
     {
-      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "module": "src/internal/toolbar-actions.ts",
       "exportName": "LyraToolbarActionProvider",
       "kind": "interface",
-      "fingerprint": "424c72da1a4eb8addd64",
+      "fingerprint": "829d012dee1aea668a15",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4278,6 +4321,7 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/message-feedback/message-feedback.class.ts",
+        "src/components/lr-message-actions.ts",
         "src/components/lr-message-feedback.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -4300,6 +4344,8 @@
         "src/components/conversation/index.ts",
         "src/components/conversation/model-select/model-select.class.ts",
         "src/components/lr-model-select.ts",
+        "src/components/lr-model-settings-panel.ts",
+        "src/components/lr-prompt-input.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -4385,6 +4431,7 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/prompt-queue/prompt-queue.class.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/lr-prompt-queue.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -4425,7 +4472,7 @@
       "module": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
       "exportName": "SelectionActionDetail",
       "kind": "interface",
-      "fingerprint": "6e9221880c795a2c82e6",
+      "fingerprint": "8ab07254848b9d64a99b",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4558,6 +4605,7 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/transcript-feed/transcript-feed.class.ts",
+        "src/components/lr-realtime-session.ts",
         "src/components/lr-transcript-feed.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -4666,6 +4714,7 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/widget-renderer/registry.ts",
+        "src/components/lr-message-parts.ts",
         "src/components/lr-widget-renderer.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -4750,6 +4799,8 @@
         "src/all.ts",
         "src/components/conversation/index.ts",
         "src/components/conversation/widget-renderer/resolve.ts",
+        "src/components/layout/index.ts",
+        "src/components/lr-dashboard-grid.ts",
         "src/components/lr-widget-renderer.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -5704,6 +5755,7 @@
         "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
+        "src/components/lr-flow-node.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -6065,6 +6117,8 @@
       "fingerprint": "cff05ee3e69b937fe97d",
       "routes": [
         "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -6427,7 +6481,9 @@
         "src/all.ts",
         "src/components/data/index.ts",
         "src/components/data/stat/stat.class.ts",
+        "src/components/lr-entity-dossier.ts",
         "src/components/lr-stat.ts",
+        "src/components/retrieval/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -6532,6 +6588,7 @@
         "src/all.ts",
         "src/components/data/index.ts",
         "src/components/data/tree/tree.class.ts",
+        "src/components/lr-tree-item.ts",
         "src/components/lr-tree.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -6847,6 +6904,7 @@
         "src/all.ts",
         "src/components/forms/date-picker/date-picker.class.ts",
         "src/components/forms/index.ts",
+        "src/components/lr-date-input.ts",
         "src/components/lr-date-picker.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -6868,7 +6926,9 @@
         "src/all.ts",
         "src/components/forms/date-picker/date-picker.class.ts",
         "src/components/forms/index.ts",
+        "src/components/lr-date-input.ts",
         "src/components/lr-date-picker.ts",
+        "src/components/lr-filter-bar.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -8353,7 +8413,11 @@
         "src/all.ts",
         "src/components/layout/index.ts",
         "src/components/layout/menu/menu.class.ts",
+        "src/components/lr-context-menu.ts",
+        "src/components/lr-dropdown.ts",
         "src/components/lr-menu.ts",
+        "src/components/lr-menubar.ts",
+        "src/components/overlays/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -8876,7 +8940,9 @@
       "fingerprint": "54d6ab44c6168828247f",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-attachment-chip.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/media/attachment-chip/attachment-chip.class.ts",
         "src/components/media/index.ts",
         "src/lyra.ts",
@@ -8897,7 +8963,9 @@
       "fingerprint": "ed86e00893736bb7c29f",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-attachment-chip.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/media/attachment-chip/attachment-chip.class.ts",
         "src/components/media/index.ts",
         "src/lyra.ts",
@@ -8937,7 +9005,9 @@
       "fingerprint": "922bd51f7a662972a32e",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-attachment-trigger.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/media/attachment-trigger/attachment-trigger.class.ts",
         "src/components/media/index.ts",
         "src/lyra.ts",
@@ -8959,8 +9029,10 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-av-player.ts",
+        "src/components/lr-document-viewer.ts",
         "src/components/media/av-player/av-player.class.ts",
         "src/components/media/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -8980,8 +9052,10 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-av-player.ts",
+        "src/components/lr-document-viewer.ts",
         "src/components/media/av-player/av-player.class.ts",
         "src/components/media/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -9330,6 +9404,7 @@
       "fingerprint": "ece14b77504bbfb486dc",
       "routes": [
         "src/all.ts",
+        "src/components/lr-attachment-trigger.ts",
         "src/components/lr-file-input.ts",
         "src/components/media/file-input/file-input.class.ts",
         "src/components/media/index.ts",
@@ -9573,6 +9648,7 @@
       "fingerprint": "8f4707b1a1f7ce989fa8",
       "routes": [
         "src/all.ts",
+        "src/components/lr-map-anchor.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
@@ -10018,6 +10094,7 @@
       "fingerprint": "835d39510dac8920bc24",
       "routes": [
         "src/all.ts",
+        "src/components/lr-map-anchor.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
@@ -11149,6 +11226,9 @@
         "src/all.ts",
         "src/components/lr-chunk-inspector.ts",
         "src/components/lr-entity-dossier.ts",
+        "src/components/lr-memory-panel.ts",
+        "src/components/lr-provenance-panel.ts",
+        "src/components/lr-retrieval-trace.ts",
         "src/components/retrieval/chunk-inspector/chunk-inspector.class.ts",
         "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
         "src/components/retrieval/index.ts",
@@ -11213,6 +11293,8 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-community-card.ts",
+        "src/components/lr-entity-dossier.ts",
+        "src/components/lr-provenance-panel.ts",
         "src/components/retrieval/community-card/community-card.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -11257,6 +11339,10 @@
         "src/components/lr-community-card.ts",
         "src/components/lr-entity-card.ts",
         "src/components/lr-entity-dossier.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
+        "src/components/lr-neighbor-list.ts",
+        "src/components/lr-path-strip.ts",
+        "src/components/lr-provenance-panel.ts",
         "src/components/retrieval/community-card/community-card.class.ts",
         "src/components/retrieval/entity-card/entity-card.class.ts",
         "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
@@ -11546,6 +11632,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -11567,6 +11654,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -11588,6 +11676,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -11609,6 +11698,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-chunk-inspector.ts",
+        "src/components/lr-entity-dossier.ts",
         "src/components/lr-graph.ts",
         "src/components/lr-grounding-summary.ts",
         "src/components/lr-memory-panel.ts",
@@ -11877,6 +11967,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-entity-dossier.ts",
+        "src/components/lr-memory-panel.ts",
         "src/components/lr-provenance-panel.ts",
         "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
         "src/components/retrieval/index.ts",
@@ -11896,7 +11987,7 @@
       "module": "src/components/retrieval/rag-answer/rag-answer.class.ts",
       "exportName": "LyraRagCitationSelectDetail",
       "kind": "interface",
-      "fingerprint": "7146affdbb98e5adeae4",
+      "fingerprint": "252e4f5ffaac98ec01c6",
       "routes": [
         "src/all.ts",
         "src/components/lr-rag-answer.ts",
@@ -11959,7 +12050,7 @@
       "module": "src/components/retrieval/retrieval-compare/retrieval-compare.class.ts",
       "exportName": "RetrievalComparisonSet",
       "kind": "interface",
-      "fingerprint": "121ead1275e321ba2b92",
+      "fingerprint": "55de1f158a44b4c901cc",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-compare.ts",
@@ -11980,9 +12071,11 @@
       "module": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
       "exportName": "RetrievalResultsSelectDetail",
       "kind": "interface",
-      "fingerprint": "aa317494a6ce64d2c71f",
+      "fingerprint": "b8719faccfd1c1bf6894",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/components/lr-retrieval-results.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
@@ -12022,7 +12115,7 @@
       "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
       "exportName": "RetrievalStage",
       "kind": "interface",
-      "fingerprint": "3ce78758eefea943a51c",
+      "fingerprint": "1bdc33cfbb5b886a1a38",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-trace.ts",
@@ -12043,7 +12136,7 @@
       "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
       "exportName": "RetrievalStageEvidence",
       "kind": "interface",
-      "fingerprint": "759de54ffab072fe0f34",
+      "fingerprint": "b4aba93e71e7ad03c37d",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-trace.ts",
@@ -12088,6 +12181,7 @@
       "fingerprint": "1e0a4a314bd1f0b55c0f",
       "routes": [
         "src/all.ts",
+        "src/components/lr-rag-answer.ts",
         "src/components/lr-source-card.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/source-card/source-card.class.ts",
@@ -12264,7 +12358,9 @@
       "fingerprint": "d2f98e03e45a0df62839",
       "routes": [
         "src/all.ts",
+        "src/components/lr-export-button.ts",
         "src/components/utility/export-button/csv.ts",
+        "src/components/utility/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -12472,7 +12568,9 @@
       "fingerprint": "ef32097eb006b6bbb169",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-mention-popover.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/utility/index.ts",
         "src/components/utility/mention-popover/mention-popover.class.ts",
         "src/lyra.ts",
@@ -12567,66 +12665,6 @@
         "kind": "utility",
         "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
         "declaration": "clearIcalCache"
-      }
-    },
-    {
-      "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
-      "exportName": "IcalApi",
-      "kind": "interface",
-      "fingerprint": "723e95de72987233fc28",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-calendar-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
-        "declaration": "IcalApi"
-      }
-    },
-    {
-      "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
-      "exportName": "IcalComponentApi",
-      "kind": "interface",
-      "fingerprint": "0e379c15a6d92cefac42",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-calendar-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
-        "declaration": "IcalComponentApi"
-      }
-    },
-    {
-      "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
-      "exportName": "IcalEventApi",
-      "kind": "interface",
-      "fingerprint": "09be170a8f934728cd79",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-calendar-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
-        "declaration": "IcalEventApi"
       }
     },
     {
@@ -12849,7 +12887,7 @@
       "module": "src/components/viewers/document-compare/document-compare.class.ts",
       "exportName": "DocumentCompareVersion",
       "kind": "interface",
-      "fingerprint": "ba853f90191453b0d92d",
+      "fingerprint": "315d56792458aca37c39",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-compare.ts",
@@ -12873,7 +12911,20 @@
       "fingerprint": "f73c288e0a1195f62d8a",
       "routes": [
         "src/all.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/lr-calendar-viewer.ts",
+        "src/components/lr-contact-viewer.ts",
+        "src/components/lr-diff-view.ts",
         "src/components/lr-document-viewer.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/lr-geojson-viewer.ts",
+        "src/components/lr-html-viewer.ts",
+        "src/components/lr-image-viewer.ts",
+        "src/components/lr-include.ts",
+        "src/components/lr-pptx-viewer.ts",
+        "src/components/lr-xml-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/utility/index.ts",
         "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -12890,7 +12941,7 @@
       "module": "src/internal/document-anchors.ts",
       "exportName": "AnchorTargetCapabilities",
       "kind": "interface",
-      "fingerprint": "3141ec8d62f72a79ea0b",
+      "fingerprint": "c89827136efa1b176f8b",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -12915,8 +12966,17 @@
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/terminal/terminal.class.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/lr-diff-view.ts",
+        "src/components/lr-document-compare.ts",
+        "src/components/lr-document-preview.ts",
         "src/components/lr-document-viewer.ts",
+        "src/components/lr-highlight-layer.ts",
+        "src/components/lr-image-viewer.ts",
         "src/components/lr-terminal.ts",
+        "src/components/lr-xml-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/utility/index.ts",
         "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -12933,12 +12993,18 @@
       "module": "src/internal/document-anchors.ts",
       "exportName": "LyraHighlight",
       "kind": "interface",
-      "fingerprint": "1d83bbfffdd5311a9ba8",
+      "fingerprint": "41aeb8e578fbdbd984e0",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/terminal/terminal.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-code-block.ts",
+        "src/components/lr-document-compare.ts",
+        "src/components/lr-document-preview.ts",
         "src/components/lr-document-viewer.ts",
+        "src/components/lr-page-rail.ts",
         "src/components/lr-terminal.ts",
         "src/components/viewers/index.ts",
         "src/lyra.ts",
@@ -12956,12 +13022,19 @@
       "module": "src/internal/document-anchors.ts",
       "exportName": "TextSelectDetail",
       "kind": "interface",
-      "fingerprint": "9b6bb755d23773a2bd83",
+      "fingerprint": "32d6e18678cf10e629aa",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/terminal/terminal.class.ts",
+        "src/components/lr-calendar-viewer.ts",
+        "src/components/lr-contact-viewer.ts",
         "src/components/lr-document-viewer.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/lr-geojson-viewer.ts",
+        "src/components/lr-html-viewer.ts",
+        "src/components/lr-include.ts",
+        "src/components/lr-pptx-viewer.ts",
         "src/components/lr-terminal.ts",
         "src/components/viewers/index.ts",
         "src/lyra.ts",
@@ -12982,7 +13055,9 @@
       "fingerprint": "2a0d3105dacf2f2a20a1",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/index.ts",
         "src/components/lr-document-viewer.ts",
+        "src/components/lr-terminal.ts",
         "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -12999,7 +13074,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "adaptDocumentRenderer",
       "kind": "function",
-      "fingerprint": "de3f12d51e195a01043d",
+      "fingerprint": "9fdca6ce3a8cfa2f76b7",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13038,7 +13113,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "createDocumentRendererAdapter",
       "kind": "function",
-      "fingerprint": "8cdf729ef1d6d141f5b6",
+      "fingerprint": "ee354ec646bbbd800c99",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13059,7 +13134,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "createDocumentRendererRegistry",
       "kind": "function",
-      "fingerprint": "d3ef4965d4bd30bbe516",
+      "fingerprint": "9e2bc5163b7d44716428",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13080,7 +13155,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "DirectDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "acd041c999093c8e0101",
+      "fingerprint": "cdfba22ac68b0299b027",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13101,7 +13176,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "findDocumentRenderer",
       "kind": "function",
-      "fingerprint": "4948152d5d555938aecb",
+      "fingerprint": "f3bd7835347933268144",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13122,7 +13197,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "getDefaultDocumentRendererRegistry",
       "kind": "function",
-      "fingerprint": "2c60eae5f1147234c3d3",
+      "fingerprint": "e05b4f83ac519f2892a8",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13143,7 +13218,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LazyDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "ee3c036fada4cf13a8f3",
+      "fingerprint": "db7f74dd0bc83447f351",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13164,7 +13239,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "loadDocumentRenderer",
       "kind": "function",
-      "fingerprint": "30f07736e5a9792b0b96",
+      "fingerprint": "fcdf2995b1bf42ba13ea",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13185,7 +13260,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraAdaptedDocumentRenderer",
       "kind": "interface",
-      "fingerprint": "e557c3936724bd5a900d",
+      "fingerprint": "e92ef43eb311985afd8f",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13206,7 +13281,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraAdaptedDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "0047d9fd8ef4cbb81675",
+      "fingerprint": "2a9e3c828eebd1623650",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13227,7 +13302,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraAvDocumentRendererPayload",
       "kind": "interface",
-      "fingerprint": "de195800dfa4739de122",
+      "fingerprint": "b53da387a7484dc243e9",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13248,7 +13323,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraDocumentFile",
       "kind": "interface",
-      "fingerprint": "e1dbd4bea6df70b9d8e6",
+      "fingerprint": "ca64607e75fcbe7489f5",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13269,7 +13344,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraDocumentRendererAdapter",
       "kind": "interface",
-      "fingerprint": "b820a20cb6c55003c389",
+      "fingerprint": "3ebb4da27c4fb789e0fd",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13290,7 +13365,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraDocumentRendererAdapterDefinition",
       "kind": "interface",
-      "fingerprint": "dfa0a10c943f53df676f",
+      "fingerprint": "da95073e72dfecdf9c81",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13311,7 +13386,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraGenericDocumentRendererPayload",
       "kind": "interface",
-      "fingerprint": "b364953febfebab7958b",
+      "fingerprint": "b4a79ca0256babf15352",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13332,7 +13407,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "registerDocumentRenderer",
       "kind": "function",
-      "fingerprint": "9d15318e2932fe9f6172",
+      "fingerprint": "b44d2612116829fae94d",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13353,7 +13428,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "snapshotLyraDocumentRendererPayload",
       "kind": "function",
-      "fingerprint": "cceb5b48aa328bec91fd",
+      "fingerprint": "e0bc447202faa9357c41",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13779,7 +13854,7 @@
       "module": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
       "exportName": "HighlightLayerItem",
       "kind": "interface",
-      "fingerprint": "6afa99b89f973518201e",
+      "fingerprint": "8ab6ace73ee365659030",
       "routes": [
         "src/all.ts",
         "src/components/lr-highlight-layer.ts",
@@ -13825,6 +13900,8 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
+        "src/components/lr-pdf-viewer.ts",
+        "src/components/lr-pptx-viewer.ts",
         "src/components/viewers/index.ts",
         "src/components/viewers/page-rail/page-rail.class.ts",
         "src/lyra.ts",
@@ -13846,6 +13923,8 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
+        "src/components/lr-pdf-viewer.ts",
+        "src/components/lr-pptx-viewer.ts",
         "src/components/viewers/index.ts",
         "src/components/viewers/page-rail/page-rail.class.ts",
         "src/lyra.ts",
@@ -13867,6 +13946,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
+        "src/components/lr-pptx-viewer.ts",
         "src/components/viewers/index.ts",
         "src/components/viewers/page-rail/page-rail.class.ts",
         "src/lyra.ts",
@@ -14163,30 +14243,10 @@
       }
     },
     {
-      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
-      "exportName": "SheetJsWorkbook",
-      "kind": "interface",
-      "fingerprint": "2ae8a474fa477d8ffe75",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-spreadsheet-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts",
-        "declaration": "SheetJsWorkbook"
-      }
-    },
-    {
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnostic",
       "kind": "interface",
-      "fingerprint": "c7416d3c7d20f8070170",
+      "fingerprint": "774f9390c1cf8ef5c782",
       "routes": [
         "src/all.ts",
         "src/components/lr-csv-viewer.ts",
@@ -14213,12 +14273,14 @@
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnosticEventDetail",
       "kind": "interface",
-      "fingerprint": "f03d4a90e4cf311d1dc7",
+      "fingerprint": "dc01f666051c73baf1cb",
       "routes": [
         "src/all.ts",
         "src/components/lr-csv-viewer.ts",
         "src/components/lr-dataset-viewer.ts",
         "src/components/lr-docx-viewer.ts",
+        "src/components/lr-geojson-viewer.ts",
+        "src/components/lr-notebook-viewer.ts",
         "src/components/lr-pptx-viewer.ts",
         "src/components/viewers/csv-viewer/csv-viewer.class.ts",
         "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
@@ -14240,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "e605026a155bf90727a6",
+      "fingerprint": "61edf2572ea94dd07b05",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14273,7 +14335,7 @@
       "module": "src/internal/anchor-target-base.ts",
       "exportName": "LyraAnchorTarget",
       "kind": "interface",
-      "fingerprint": "4339d8396c96116f8012",
+      "fingerprint": "73c5a809331197cb1f8c",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14356,6 +14418,8 @@
       "fingerprint": "2e5e7f9c002904b05538",
       "routes": [
         "src/all.ts",
+        "src/components/lr-live-region.ts",
+        "src/components/utility/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts",
         "src/utilities/announcer.ts",
@@ -14470,6 +14534,7 @@
         "src/components/conversation/model-select/model-select.class.ts",
         "src/components/conversation/voice-picker/voice-picker.class.ts",
         "src/components/lr-model-select.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/lr-voice-picker.ts",
         "src/lyra.ts",
         "src/ssr/all.ts",
@@ -14491,9 +14556,29 @@
       "fingerprint": "e6c5e2e91d2823c3cfd8",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/conversation/index.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-artifact-panel.ts",
+        "src/components/lr-commit-card.ts",
         "src/components/lr-copy-button.ts",
+        "src/components/lr-data-grid.ts",
+        "src/components/lr-diff-view.ts",
+        "src/components/lr-document-compare.ts",
+        "src/components/lr-env-list.ts",
+        "src/components/lr-json-viewer.ts",
+        "src/components/lr-markdown-core.ts",
+        "src/components/lr-markdown.ts",
+        "src/components/lr-message-actions.ts",
+        "src/components/lr-selection-toolbar.ts",
+        "src/components/lr-stack-trace.ts",
+        "src/components/lr-streaming-text-core.ts",
+        "src/components/lr-streaming-text.ts",
+        "src/components/lr-terminal.ts",
+        "src/components/lr-xml-viewer.ts",
         "src/components/utility/copy-button/copy-button.class.ts",
         "src/components/utility/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -14512,9 +14597,29 @@
       "fingerprint": "dfcab286b7facf54c776",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/conversation/index.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-artifact-panel.ts",
+        "src/components/lr-commit-card.ts",
         "src/components/lr-copy-button.ts",
+        "src/components/lr-data-grid.ts",
+        "src/components/lr-diff-view.ts",
+        "src/components/lr-document-compare.ts",
+        "src/components/lr-env-list.ts",
+        "src/components/lr-json-viewer.ts",
+        "src/components/lr-markdown-core.ts",
+        "src/components/lr-markdown.ts",
+        "src/components/lr-message-actions.ts",
+        "src/components/lr-selection-toolbar.ts",
+        "src/components/lr-stack-trace.ts",
+        "src/components/lr-streaming-text-core.ts",
+        "src/components/lr-streaming-text.ts",
+        "src/components/lr-terminal.ts",
+        "src/components/lr-xml-viewer.ts",
         "src/components/utility/copy-button/copy-button.class.ts",
         "src/components/utility/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -15143,7 +15248,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "a0e8b653ff052e3a714f",
+      "fingerprint": "9e5ca3900d92fc978c69",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15277,7 +15382,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "155c3a8fcf1dfe1c6a48",
+      "fingerprint": "97b1d0530fc7831bfb0c",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15331,6 +15436,7 @@
         "src/components/lr-graph.ts",
         "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/lr-memory-panel.ts",
+        "src/components/lr-neighbor-list.ts",
         "src/components/lr-provenance-panel.ts",
         "src/components/retrieval/entity-card/entity-card.class.ts",
         "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
@@ -15629,6 +15735,33 @@
       "fingerprint": "481328c1ccade1786d9c",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/lr-calendar-viewer.ts",
+        "src/components/lr-contact-viewer.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-diff-view.ts",
+        "src/components/lr-document-compare.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/lr-docx-viewer.ts",
+        "src/components/lr-ebook-viewer.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/lr-geojson-viewer.ts",
+        "src/components/lr-html-viewer.ts",
+        "src/components/lr-include.ts",
+        "src/components/lr-json-viewer.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
+        "src/components/lr-notebook-viewer.ts",
+        "src/components/lr-pdf-viewer.ts",
+        "src/components/lr-pptx-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/lr-terminal.ts",
+        "src/components/lr-xml-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/utility/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -15644,7 +15777,7 @@
       "module": "src/internal/text-viewer-target.ts",
       "exportName": "LyraTextViewerTarget",
       "kind": "interface",
-      "fingerprint": "c1d44db843c86d143e98",
+      "fingerprint": "3335e0df00fd316bc812",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -15851,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "f7b5c3211d26a8517e9d",
+      "fingerprint": "e20590acb3b850c3c007",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15867,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "6edca6f8b2a33ecef335",
+      "fingerprint": "94bf3c6c7931f5fc8bd5",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15883,7 +16016,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "417fa8f2b50e5e9258ed",
+      "fingerprint": "86dc2378e3a09b35b9bd",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16410,7 +16543,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "23b0b211d7e976b81834",
+      "fingerprint": "a8227991fb201632fd8b",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16427,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "bf4de75daadf5e6e8796",
+      "fingerprint": "3caf5578f30d1544a6c8",
       "routes": [
         "src/vue.ts"
       ],
@@ -16462,7 +16595,7 @@
       "module": "src/components/agent-tools/background-runs/background-runs.class.ts",
       "exportName": "BackgroundRun",
       "kind": "interface",
-      "fingerprint": "1be184c7d0eba0e151c3",
+      "fingerprint": "48013cf179b53740ed63",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/background-runs/background-runs.class.ts",
@@ -16819,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "9a15dc4b16c1973ef554",
+      "fingerprint": "68e103df549f639a7953",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16844,7 +16977,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "e7968e2feee60b98b037",
+      "fingerprint": "a8bc68dbfd66f4a0894d",
       "routes": [
         "src/localization.ts"
       ],
@@ -17725,6 +17858,11 @@
       "fingerprint": "1a82076ff3ff741b0cac",
       "routes": [
         "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-country-picker.ts",
+        "src/components/lr-currency-picker.ts",
+        "src/components/lr-time-zone-picker.ts",
+        "src/components/lr-unit-picker.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -18208,6 +18346,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -18550,6 +18689,8 @@
       "fingerprint": "c32ce126ac6530d8c147",
       "routes": [
         "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -18777,6 +18918,8 @@
       "fingerprint": "c2e5c4fdd9d25247786a",
       "routes": [
         "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
         "src/components/media/map/map-loader.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
@@ -20633,6 +20776,17 @@
       "fingerprint": "6fb39672ba6ffac30a71",
       "routes": [
         "src/all.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/lr-graph.ts",
+        "src/components/lr-image-viewer.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
+        "src/components/lr-model-viewer.ts",
+        "src/components/lr-video.ts",
+        "src/components/media/index.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/viewers/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -20651,6 +20805,8 @@
       "fingerprint": "ecabf482873a39f68aa5",
       "routes": [
         "src/all.ts",
+        "src/components/lr-graph.ts",
+        "src/components/retrieval/index.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -20792,7 +20948,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LazyAdaptedDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "1722f7d71af98836c730",
+      "fingerprint": "3a1c275e3324be760e3b",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -20813,7 +20969,7 @@
       "module": "src/internal/document-renderer-registry.ts",
       "exportName": "LyraModelDocumentRendererPayload",
       "kind": "interface",
-      "fingerprint": "c638f83a967415c94cd5",
+      "fingerprint": "3d77beec91a66edba29d",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -20837,6 +20993,7 @@
       "fingerprint": "f001e1a3fcbdaecc41f9",
       "routes": [
         "src/all.ts",
+        "src/components/lr-document-viewer.ts",
         "src/components/lr-model-viewer.ts",
         "src/components/viewers/index.ts",
         "src/components/viewers/model-viewer/model-viewer.class.ts",
@@ -21060,7 +21217,7 @@
       "module": "src/ai/adapters/a2ui.ts",
       "exportName": "A2UiAdapterResult",
       "kind": "interface",
-      "fingerprint": "bce542e50f470dc53128",
+      "fingerprint": "68dde20e9c2e8c007d19",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -21359,6 +21516,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-knowledge-graph-explorer.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
@@ -22259,6 +22417,7 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-ingestion-queue.ts",
+        "src/components/lr-knowledge-base-admin.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
         "src/lyra.ts",
@@ -22413,6 +22572,8 @@
       "fingerprint": "120fc636d618c7cc75e2",
       "routes": [
         "src/all.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -22446,7 +22607,7 @@
       "module": "src/internal/file-intake.ts",
       "exportName": "FileIntakeDetail",
       "kind": "interface",
-      "fingerprint": "367f66c95181b3e7f59f",
+      "fingerprint": "69cdaa2eaea1af0019bd",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -22458,6 +22619,169 @@
         "kind": "component",
         "tag": "lr-file-input",
         "declaration": "FileIntakeDetail"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "clearToolRenderers",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/components/agent-tools/tool-result-view/registry.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-tool-result-view-registry-contracts",
+        "declaration": "clearToolRenderers"
+      }
+    },
+    {
+      "module": "src/components/conversation/thread-list/thread-list.class.ts",
+      "exportName": "ThreadListSourcePageChangeDetail",
+      "kind": "interface",
+      "fingerprint": "818154ed737a1fb8d6f7",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/thread-list/thread-list.class.ts",
+        "src/components/lr-thread-list.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-thread-list-thread-list-contracts",
+        "declaration": "ThreadListSourcePageChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/date-picker/date-picker.class.ts",
+      "exportName": "LyraDatePickerSelectRequestDetail",
+      "kind": "interface",
+      "fingerprint": "1a82076ff3ff741b0cac",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/date-picker/date-picker.class.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-date-picker.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-date-picker-date-picker-contracts",
+        "declaration": "LyraDatePickerSelectRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/radio/radio-group.class.ts",
+      "exportName": "LyraRadioGroupSelectRequestDetail",
+      "kind": "interface",
+      "fingerprint": "15735ca37f99edfbd6e2",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/radio/radio-group.class.ts",
+        "src/components/lr-radio-group.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-radio-radio-group-contracts",
+        "declaration": "LyraRadioGroupSelectRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/swatch-picker/swatch-picker.class.ts",
+      "exportName": "LyraSwatchPickerSelectRequestDetail",
+      "kind": "interface",
+      "fingerprint": "84ccae160d9f27c9c33e",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/swatch-picker/swatch-picker.class.ts",
+        "src/components/lr-swatch-picker.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-swatch-picker-swatch-picker-contracts",
+        "declaration": "LyraSwatchPickerSelectRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/segmented/segmented.class.ts",
+      "exportName": "LyraSegmentedSelectRequestDetail",
+      "kind": "interface",
+      "fingerprint": "1a82076ff3ff741b0cac",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/segmented/segmented.class.ts",
+        "src/components/lr-segmented.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-segmented-segmented-contracts",
+        "declaration": "LyraSegmentedSelectRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/tab-group/tab-group.class.ts",
+      "exportName": "LyraTabGroupSelectRequestDetail",
+      "kind": "interface",
+      "fingerprint": "1a82076ff3ff741b0cac",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/tab-group/tab-group.class.ts",
+        "src/components/lr-tab-group.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-tab-group-tab-group-contracts",
+        "declaration": "LyraTabGroupSelectRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/overlays/rating/rating.class.ts",
+      "exportName": "LyraRatingChangeRequestDetail",
+      "kind": "interface",
+      "fingerprint": "74b957b628d2c59b1de5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-rating.ts",
+        "src/components/overlays/index.ts",
+        "src/components/overlays/rating/rating.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-rating-rating-contracts",
+        "declaration": "LyraRatingChangeRequestDetail"
       }
     }
   ],

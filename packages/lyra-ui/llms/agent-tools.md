@@ -4910,6 +4910,8 @@ These named interfaces and helper signatures are available to typed integrations
   `ToolRenderContext {
     reportStatus: (status: ToolStatus) => void;
   }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `clearToolRenderers(): void`
 
 - **`components-agent-tools-tool-select-dialog-tool-select-dialog-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`.

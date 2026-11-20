@@ -247,8 +247,12 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
 
   private renderIsolatedValue(key: 'contactViewerTypedValue' | 'contactViewerOrganization', value: string,
     values: Record<string, string> = {}): TemplateResult {
-    const pieces = resolveLocalizedParts(this.localize(key), (marker) =>
-      this.localize(key, undefined, { ...values, value: marker }));
+    // Ternaries of literals keep the key set statically decidable for the English-default contract.
+    const organization = key === 'contactViewerOrganization';
+    const pieces = resolveLocalizedParts(
+      this.localize(organization ? 'contactViewerOrganization' : 'contactViewerTypedValue'),
+      (marker) => this.localize(organization ? 'contactViewerOrganization' : 'contactViewerTypedValue',
+        undefined, { ...values, value: marker }));
     return html`${pieces.map((piece, index) => index < pieces.length - 1 ? html`${piece}${bdi(value)}` : piece)}`;
   }
 

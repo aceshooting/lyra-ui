@@ -45,7 +45,7 @@ describe('lr-thread-list provider paging', () => {
     expect([el.sourcePage, pages.length]).to.deep.equal([1, 1]);
     next().click();
     expect([el.sourcePage, ...pages]).to.deep.equal([2, 2, 2]);
-    el.searchText = 'Thread';
+    (el as unknown as { searchText: string }).searchText = 'Thread';
     await waitUntil(() => pages.length === 3, 'the query reset is reported');
     expect([el.sourcePage, pages[2]]).to.deep.equal([0, 0]);
   });

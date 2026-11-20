@@ -1223,7 +1223,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel` (`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel` (`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. While it is hovered or pressed, `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`) and `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`) set its border and text; `--lr-chip-group-overflow-hover-bg` sets the hover background (default: its resting fill), and `--lr-chip-group-overflow-active-bg` the pressed background (default: the hover background mixed by the press step).
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -3368,6 +3368,13 @@ These named interfaces and helper signatures are available to typed integrations
   `parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[]`
   Import: `@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js`.
   `shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel`
+
+- **`components-overlays-rating-rating-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/rating/rating.class.js`.
+  `LyraRatingChangeRequestDetail {
+    readonly value: number;
+    readonly previousValue: number;
+  }`
 
 - **`components-overlays-toast-toast-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`.

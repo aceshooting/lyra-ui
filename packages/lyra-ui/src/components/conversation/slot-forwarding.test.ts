@@ -46,7 +46,7 @@ async function mountForwarded(c: ForwardingCase): Promise<{ wrapper: HTMLElement
 function partHidden(el: HTMLElement, part: string): boolean {
   const node = el.shadowRoot?.querySelector<HTMLElement>(`[part~="${part}"]`);
   if (!node) return true;
-  return node.hidden || node.closest('[hidden]') !== null;
+  return node.hidden !== false || node.closest('[hidden]') !== null;
 }
 
 describe('forwarded slots', () => {

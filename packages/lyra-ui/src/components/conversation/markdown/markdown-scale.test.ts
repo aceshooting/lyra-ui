@@ -264,7 +264,7 @@ it('creates a header on a newly committed foreign-document code frame', async ()
     root.append(frame); iframe.contentDocument!.body.append(root);
     controller = new MarkdownCodeHeaderController(host, { isEnabled: () => true, contentVersion: () => 1,
       getContentRoot: () => root, getChangedRoots: () => [frame], localize: key => key,
-      buildHeader: renderMarkdownCodeHeader, emit() {} });
+      formatIndex: index => String(index), buildHeader: renderMarkdownCodeHeader, emit() {} });
     frame.setAttribute('data-lr-code-frame', `${controller.nonce}:0`);
     controller.setBlocks([{ language: 'text', source: 'source', ordinal: 0 }]); controller.hostUpdated();
     expect(frame.querySelectorAll('button').length).equal(1);

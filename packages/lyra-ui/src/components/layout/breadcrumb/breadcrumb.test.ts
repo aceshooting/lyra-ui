@@ -108,7 +108,7 @@ it("treats an explicitly empty accessibleLabel/label property as a real override
   await el.updateComplete;
   expect(nav()).to.equal("");
 
-  el.accessibleLabel = undefined;
+  el.accessibleLabel = null;
   el.label = "";
   await el.updateComplete;
   expect(nav()).to.equal("Breadcrumb");

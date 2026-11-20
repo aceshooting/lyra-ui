@@ -183,6 +183,7 @@ export function catalogPickerStyles(
 
     [part='listbox'] {
       position: fixed;
+      /* @internalcssprop --lr-overlay-stack-index - Leased by the overlay stack manager. */
       z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
       box-sizing: border-box;
       max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));

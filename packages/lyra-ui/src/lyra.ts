@@ -299,6 +299,7 @@ export type {
   LyraDatePickerDisabledDates,
   LyraDatePickerFirstDayOfWeek,
   LyraDatePickerPageBy,
+  LyraDatePickerSelectRequestDetail,
   LyraDatePickerView,
 } from './components/forms/date-picker/date-picker.class.js';
 export type {
@@ -898,6 +899,7 @@ export type { ConfirmOptions } from './components/overlays/dialog/confirm.js';
 export type {
   LyraTabGroupPlacement,
   LyraTabGroupActivation,
+  LyraTabGroupSelectRequestDetail,
 } from './components/layout/tab-group/tab-group.class.js';
 export type { LyraTabEventMap } from './components/layout/tab-group/tab.class.js';
 export type { LyraLiveRegionMode } from './components/utility/live-region/live-region.class.js';
@@ -1325,9 +1327,13 @@ export type {
   LyraStepperOrientationChangeDetail,
   LyraStepState,
 } from './components/layout/stepper/stepper.class.js';
-export type { LyraSegmentedItem } from './components/layout/segmented/segmented.class.js';
+export type {
+  LyraSegmentedItem,
+  LyraSegmentedSelectRequestDetail,
+} from './components/layout/segmented/segmented.class.js';
 export type {
   LyraSwatchPickerMode,
+  LyraSwatchPickerSelectRequestDetail,
   SwatchPickerItem,
 } from './components/forms/swatch-picker/swatch-picker.class.js';
 export {
@@ -1370,7 +1376,10 @@ export type {
   OtpInputSelectionDirection,
 } from './components/forms/otp-input/otp-input.class.js';
 export type { LyraOtpInputEventMap } from './components/forms/otp-input/otp-input.class.js';
-export type { RadioGroupOrientation } from './components/forms/radio/radio-group.class.js';
+export type {
+  LyraRadioGroupSelectRequestDetail,
+  RadioGroupOrientation,
+} from './components/forms/radio/radio-group.class.js';
 export type { LyraSpinnerLabelPlacement } from './components/overlays/spinner/spinner.class.js';
 export type { LyraProgressVariant } from './components/overlays/progress/progress-bar.class.js';
 export type {
@@ -1421,6 +1430,7 @@ export type {
 } from './components/utility/format/format-bytes.class.js';
 export type { LyraRelativeTimeUnit } from './components/utility/format/relative-time.class.js';
 export type {
+  LyraRatingChangeRequestDetail,
   LyraRatingEventMap,
   LyraRatingHoverPhase,
   LyraRatingSize,

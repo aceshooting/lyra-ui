@@ -308,9 +308,9 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @cssprop [--lr-memory-panel-confidence-danger-color=var(--lr-color-danger)] - Text color for a
  * low-confidence item's confidence indicator.
  * @cssprop [--lr-memory-panel-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the add, remove and forget-all buttons.
- * @cssprop --lr-memory-panel-button-active-bg - Pressed background of those buttons. Defaults to the hover background mixed by the press step.
+ * @cssprop [--lr-memory-panel-button-active-bg=color-mix(in oklab, var(--lr-memory-panel-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of those buttons. Defaults to the hover background mixed by the press step.
  * @cssprop [--lr-memory-panel-expand-toggle-hover-bg=transparent] - Hover background of `[part="expand-toggle"]`, beside its underline.
- * @cssprop --lr-memory-panel-expand-toggle-active-bg - Pressed background of the expand toggle. Defaults to its hover background mixed by the press step.
+ * @cssprop [--lr-memory-panel-expand-toggle-active-bg=color-mix(in oklab, var(--lr-memory-panel-expand-toggle-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the expand toggle. Defaults to its hover background mixed by the press step.
  * @status stable
  * @since 4.1.0
  */

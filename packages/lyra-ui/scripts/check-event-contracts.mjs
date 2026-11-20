@@ -2227,6 +2227,58 @@ function contextualCopyReporterEvents(graph, module, declaration) {
   return callbacks;
 }
 
+/** String-literal members of a type annotation, or undefined when any member is not one. */
+function literalEventNameUnion(type) {
+  if (!type) return undefined;
+  const members = type.type === 'TSUnionType' ? type.types : [type];
+  const names = members.map((member) =>
+    member.type === 'TSLiteralType' && typeof member.literal?.value === 'string' && EVENT_NAME_RE.test(member.literal.value)
+      ? member.literal.value
+      : undefined);
+  return names.length && names.every(Boolean) ? names : undefined;
+}
+
+/**
+ * Seeds an emit callback handed to an imported helper whose matching parameter is typed as a
+ * function taking a closed string-literal union of event names: the type system already confines
+ * every name the helper can pass, so `(name, detail) => this.emit(name, detail)` stays decidable.
+ */
+function contextualTypedEmitCallbacks(graph, module, declaration) {
+  const callbacks = new Map();
+  const signatures = new Map();
+  const callbackNames = (localName) => {
+    const entry = module.imports.get(localName);
+    if (!entry?.file) return undefined;
+    const key = `${entry.file}#${entry.imported}`;
+    if (signatures.has(key)) return signatures.get(key);
+    let names;
+    const helper = graph.get(entry.file)?.program.body.find((statement) =>
+      statement.type === 'ExportNamedDeclaration' && statement.declaration?.type === 'FunctionDeclaration'
+      && statement.declaration.id?.name === entry.imported)?.declaration;
+    if (helper) {
+      names = helper.params.map((parameter) => {
+        const callback = parameter.typeAnnotation?.typeAnnotation;
+        return callback?.type === 'TSFunctionType' && !callback.typeParameters
+          ? literalEventNameUnion(callback.params[0]?.typeAnnotation?.typeAnnotation)
+          : undefined;
+      });
+      if (!names.some(Boolean)) names = undefined;
+    }
+    signatures.set(key, names);
+    return names;
+  };
+  walkAst(declaration.body, (node) => {
+    if (node.type !== 'CallExpression' || node.callee?.type !== 'Identifier') return;
+    const names = callbackNames(node.callee.name);
+    if (!names) return;
+    node.arguments.forEach((argument, index) => {
+      const callback = unwrapExpression(argument);
+      if (names[index] && isCallableNode(callback)) callbacks.set(callback, names[index]);
+    });
+  });
+  return callbacks;
+}
+
 function effectiveClassRuntimeEventAnalysis(
   graph,
   module,
@@ -2243,7 +2295,10 @@ function effectiveClassRuntimeEventAnalysis(
     classDeclaration.body,
     booleanMembers,
     contextualFormInvalidCallbackInits(graph, module, classDeclaration),
-    contextualCopyReporterEvents(graph, module, classDeclaration),
+    new Map([
+      ...contextualCopyReporterEvents(graph, module, classDeclaration),
+      ...contextualTypedEmitCallbacks(graph, module, classDeclaration),
+    ]),
   );
   const observations = new Map();
   mergeRuntimeCancelability(observations, own.events);

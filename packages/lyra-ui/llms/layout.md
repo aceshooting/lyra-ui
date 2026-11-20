@@ -4244,7 +4244,8 @@ own action buttons (see the gotchas below).
 
 **Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
 safe, or the activation button while `actionable` is set without a link. Passive cards remain
-inert.
+inert. `focus(options?)` moves focus to that same native owner (a passive card has no focus target),
+and `blur(): void` removes focus from it.
 
 Changing `href` or `actionable` while the whole-card owner has focus transfers focus across the
 link, activation button, and a programmatically focusable passive base. It never overrides a newer
@@ -4425,7 +4426,7 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
   while the palette is in a hidden or inert subtree. If several connected palettes use the same
   chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
-- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
   combobox also has its own name and announces its active listbox option.
@@ -4585,7 +4586,8 @@ the ladder doesn't cover is a two-line override rather than a fork.
   `collapseAll()` collapses every direct expanded item. Nested accordion items are never included.
 - Accordion item: `expand(): Promise<void>`, `collapse(): Promise<void>`, and
   `toggle(): Promise<void>` initiate the corresponding transition and settle after its rendered
-  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger.
+  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger, and
+  `blur(): void` removes focus from it.
 - Details: `show(): Promise<void>` expands and `hide(): Promise<void>` collapses. Each promise
   settles after its matching `lr-after-show` or `lr-after-hide`; a vetoed, disabled, or
   already-satisfied request resolves without changing state. Assigning `open` runs the same
@@ -4901,7 +4903,7 @@ sets `role="listitem"` on itself. A non-current item without `href` renders a na
 explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
-is a no-op for the current-page label.
+is a no-op for the current-page label. `blur(): void` removes focus from the internal link or button.
 
 Changing `href` or `current` while that native owner has focus transfers focus across the link,
 button, and programmatically focusable current-page label. External focus is preserved.
@@ -6373,6 +6375,11 @@ These named interfaces and helper signatures are available to typed integrations
     icon?: unknown;
     disabled?: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`.
+  `LyraSegmentedSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
+  }`
 
 - **`components-layout-split-panel-split-panel-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`.
@@ -6402,6 +6409,13 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
   `LyraStepperOrientationChangeDetail {
     orientation: LyraOrientation;
+  }`
+
+- **`components-layout-tab-group-tab-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`.
+  `LyraTabGroupSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
   }`
 
 - **`components-layout-virtual-list-virtual-list-contracts`** — Supporting data types and helpers for this component family.
@@ -6476,7 +6490,7 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — names the `nav` landmark by attribute
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the `nav` landmark by attribute
   presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
   `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
   example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
@@ -6618,7 +6632,7 @@ hover opening.
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — forwarded by presence to the link or button,
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded by presence to the link or button,
   including an explicitly empty value.
 - `href: string = ''` — link URL, sanitized; a safe value makes a link item.
 - `target: string = ''` — native link target. Any non-empty value forces `noopener noreferrer`.
@@ -6632,7 +6646,8 @@ hover opening.
   when the item cannot disclose: it is a link item, or its `panel` slot is empty once slot content can
   be inspected. Within one menu only one item is open at a time.
 
-**Methods:** `focus(options?)` and `click()` forward to the link or button.
+**Methods:** `focus(options?)` and `click()` forward to the link or button, and `blur(): void`
+removes focus from it.
 
 **Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, source }`,
 where `expanded` is the new state and `source` is `'user' | 'programmatic' | 'peer'`, the same

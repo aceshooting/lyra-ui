@@ -314,7 +314,11 @@ rendered as authored, not neutralized.
 on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
-take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
+take precedence when specified. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`)
+and `--lr-markdown-code-copy-color-active` (default `var(--lr-markdown-code-copy-color-hover)`) set
+the copy glyph color while hovered and pressed, and `--lr-markdown-code-copy-success-color` /
+`--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`)
+its color after a successful or failed copy. `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
 property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
@@ -2419,6 +2423,11 @@ controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-he
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
 `--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
+`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover`
+(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` (default
+`var(--lr-code-block-toggle-color-hover)`) set the disclosure glyph color at rest, hovered and
+pressed; `--lr-code-block-gutter-color-hover` (default `inherit`, so it keeps the line-number color)
+sets the hovered line button's text color.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
@@ -5677,6 +5686,12 @@ These named interfaces and helper signatures are available to typed integrations
     iconLibrary?: string;
     detail?: string;
     disabled?: boolean;
+  }`
+
+- **`components-conversation-thread-list-thread-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js`.
+  `ThreadListSourcePageChangeDetail {
+    page: number;
   }`
 
 - **`components-conversation-transcript-feed-transcript-feed-contracts`** — Supporting data types and helpers for this component family.

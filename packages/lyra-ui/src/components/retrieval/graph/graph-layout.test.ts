@@ -964,7 +964,7 @@ describe('focus and camera fit', () => {
       const changed = oneEvent(el, 'lr-viewport-change');
       await el.focusNode('a', { zoom: 2 });
       const detail = (await changed).detail as Record<string, number>;
-      expect(detail.zoom).to.be.closeTo(2, 0.01);
+      expect(detail['zoom']).to.be.closeTo(2, 0.01);
       expect(Object.keys(detail).sort()).to.deep.equal(['x', 'y', 'zoom']);
     } finally {
       window.matchMedia = originalMatchMedia;

@@ -20,7 +20,8 @@ const children = [
 test('message-parts preserves child tag declarations without emitting child registration imports', () => {
   const source = readFileSync(path.join(packageDir, 'src', entry), 'utf8');
   const declarations = parseSync(entry, source).program.body
-    .filter(node => node.type === 'ExportNamedDeclaration' && node.exportKind === 'type')
+    .filter(node => node.type === 'ExportNamedDeclaration' && node.exportKind === 'type'
+      && node.specifiers.length === 0)
     .map(node => source.slice(node.start, node.end)).join('\n');
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-type-registration-'));
   try {

@@ -2699,7 +2699,6 @@
       },
       "evidence": [
         "src/components/agent-tools/thinking-panel/thinking-panel.styles.ts",
-        "src/components/charts/chart/lite-chart.styles.ts",
         "src/components/conversation/checkpoint/checkpoint.styles.ts",
         "src/components/retrieval/ingestion-queue/ingestion-queue.styles.ts"
       ]
@@ -3043,7 +3042,7 @@
         "aliasOf": "--lr-lite-chart-legend-font-size"
       },
       "evidence": [
-        "src/components/charts/chart/lite-chart.styles.ts"
+        "src/components/forms/date-picker/date-picker.styles.ts"
       ]
     },
     "--lr-size-0-9375rem": {
@@ -3180,9 +3179,7 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/conversation/branch-picker/branch-picker.styles.ts",
         "src/components/conversation/conversation-item/conversation-item.styles.ts",
-        "src/components/conversation/thread-list/thread-list.styles.ts",
         "src/components/data/calendar/calendar.styles.ts",
         "src/components/data/sequence-strip/sequence-strip.class.ts",
         "src/components/data/sequence-strip/sequence-strip.styles.ts",
@@ -3220,7 +3217,6 @@
       },
       "evidence": [
         "src/components/agent-tools/span-waterfall/span-waterfall.styles.ts",
-        "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/model-select/model-select.class.ts",
         "src/components/data/tree/tree-item.styles.ts",
         "src/components/forms/combobox/combobox.styles.ts",
@@ -3546,7 +3542,6 @@
         "src/components/layout/app-rail/app-rail-item.styles.ts",
         "src/components/media/image-comparer/image-comparer.class.ts",
         "src/components/media/image-comparer/image-comparer.styles.ts",
-        "src/components/overlays/spinner/spinner.styles.ts",
         "src/components/utility/export-button/export-button.styles.ts",
         "src/internal/a11y.ts"
       ]
@@ -3684,9 +3679,7 @@
         "src/components/overlays/overlay/popover.class.ts",
         "src/components/overlays/overlay/tooltip.class.ts",
         "src/components/utility/export-button/export-button.styles.ts",
-        "src/components/viewers/csv-viewer/csv-viewer.styles.ts",
-        "src/components/viewers/dataset-viewer/dataset-viewer.styles.ts",
-        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.styles.ts"
+        "src/components/viewers/dataset-viewer/dataset-viewer.styles.ts"
       ]
     },
     "--lr-size-22rem": {
@@ -3855,7 +3848,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/charts/chart/lite-chart.styles.ts",
         "src/components/conversation/conversation-item/conversation-item.class.ts",
         "src/components/conversation/conversation-item/conversation-item.styles.ts",
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
@@ -3906,7 +3898,6 @@
         "src/components/overlays/chip/chip.styles.ts",
         "src/components/viewers/document-preview/document-preview.styles.ts",
         "src/components/viewers/document-viewer/document-viewer.styles.ts",
-        "src/components/viewers/pptx-viewer/pptx-viewer.styles.ts",
         "src/internal/size-tiers.styles.ts"
       ]
     },
@@ -4241,8 +4232,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/forms/combobox/combobox.class.ts",
-        "src/components/forms/combobox/combobox.styles.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.styles.ts",
         "src/components/media/video/video.styles.ts"
       ]
@@ -4468,8 +4457,7 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/forms/date-picker/date-picker.styles.ts",
-        "src/components/layout/tab-group/tab-group.styles.ts"
+        "src/components/forms/date-picker/date-picker.styles.ts"
       ]
     },
     "--lr-size-neg-4px": {

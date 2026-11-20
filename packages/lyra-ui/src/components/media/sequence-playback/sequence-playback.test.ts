@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { probeTimers } from '../../../../test/timer-probe.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
@@ -130,6 +130,7 @@ it('holds its frame while the document is hidden and resumes when it is visible 
     const steps: number[] = [];
     el.addEventListener('lr-sequence-step', () => steps.push(el.currentIndex));
     el.play();
+    // wait-reason: asserting no step fires across several 20 ms intervals while hidden
     await aTimeout(120);
     expect(steps, 'no step while hidden').to.deep.equal([]);
     expect(el.currentIndex).to.equal(0);
