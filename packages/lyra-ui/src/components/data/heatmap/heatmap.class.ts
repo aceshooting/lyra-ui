@@ -2077,9 +2077,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!this.initialLimitUpdate && notice && notice !== this.lastLimitNotice) this.announcements.announcePolite(notice);
     this.initialLimitUpdate = false;
     this.lastLimitNotice = notice;
-    // Both halves matter: the unfrozen default has nothing that can clip the tooltip, so it never
-    // pays for the measurement (or its forced layout) at all. See measureTooltip().
-    if (this.hoverCell && this.effectiveStickyLabels !== 'none')
+    // Measured in both renders: the scrollport clips a frozen grid's tooltip, and an ancestor's
+    // overflow or the page edge clips the unfrozen one. See measureTooltip().
+    if (this.hoverCell)
       this.scheduleAfterUpdate(
         () => this.measureTooltip(),
         'heatmap-tooltip-metrics'
@@ -4288,14 +4288,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /** The tooltip's own rendered box in CSS px, recorded by `measureTooltip()`: `inline` is its
-   *  border box, `block` that box plus the token-sized gap it keeps from the cell. Only read while
-   *  a scrollport can clip it; zero until the first measurement, which degrades to the unclamped
-   *  placement rather than to a wrong one. */
+   *  border box, `block` that box plus the token-sized gap it keeps from the cell. Zero until the
+   *  first measurement, which degrades to the unclamped placement rather than to a wrong one. */
   private tooltipSize = { inline: 0, block: 0 };
 
   /**
    * Records the tooltip's rendered size, so the next paint can keep it inside the `stickyLabels`
-   * scrollport. Measured rather than derived: the box is sized by caller text, and the gap it
+   * scrollport or, unfrozen, inside `[part="base"]`. Measured rather than derived: the box is sized by caller text, and the gap it
    * keeps from the cell is a design token whose value belongs in the stylesheet.
    *
    * Repositioning can never resize it (`white-space: nowrap`, no inline-size constraint), so the
@@ -4305,7 +4304,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * position is the first one the user ever sees.
    */
   private measureTooltip(): void {
-    if (!this.gridScrollport) return;
     const tooltip =
       this.shadowRoot?.querySelector<HTMLElement>('[part="tooltip"]');
     if (!tooltip || tooltip.hidden) return;
@@ -4333,9 +4331,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Inline `style` for `[part="tooltip"]` — centered on the given cell — plus whether it had to be
    * flipped below that cell.
    *
-   * With no `stickyLabels` scrollport this is the original unconditional "centered above the cell"
-   * placement, in the canvas-local coordinates `cellRect()` returns. With one, the tooltip renders
-   * *inside* that scrollport, which is what keeps it pinned to the cell it describes through a
+   * Coordinates are the canvas-local ones `cellRect()` returns. With no `stickyLabels` scrollport
+   * the tooltip is a `[part="base"]` child sharing the canvas origin, and is kept inside the base's
+   * box the same way as below, so an ancestor's `overflow: hidden` or the page edge never cuts off
+   * an edge cell's tooltip. With a scrollport, the tooltip renders *inside* it, which is what keeps it pinned to the cell it describes through a
    * scroll — and there `overflow: auto` clips whatever leaves the scrollport, while an opaque
    * frozen band hides whatever is drawn under it. So the placement is additionally kept inside the
    * band-free part of the visible window: still centered on the cell but clamped to that window,
@@ -4350,18 +4349,21 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const rect = this.cellRect(pos);
     const center = rect.x + rect.w / 2;
     const port = this.gridScrollport;
-    if (!port)
+    const frame = port ?? this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+    if (!frame)
       return {
         style: { left: `${center}px`, top: `${rect.y}px` },
         below: false,
       };
     const { inline, block } = this.tooltipSize;
+    const scrollLeft = port?.scrollLeft ?? 0;
+    const scrollTop = port?.scrollTop ?? 0;
     const windowStart =
-      port.scrollLeft + (this.freezesRowLabels ? this.matrixPadLeft : 0);
-    const windowEnd = port.scrollLeft + port.clientWidth;
+      scrollLeft + (port && this.freezesRowLabels ? this.matrixPadLeft : 0);
+    const windowEnd = scrollLeft + frame.clientWidth;
     const windowTop =
-      port.scrollTop + (this.freezesColLabels ? this.matrixPadTop : 0);
-    const windowBottom = port.scrollTop + port.clientHeight;
+      scrollTop + (port && this.freezesColLabels ? this.matrixPadTop : 0);
+    const windowBottom = scrollTop + frame.clientHeight;
     const below =
       rect.y - block < windowTop && rect.y + rect.h + block <= windowBottom;
     // Math.max last, so a tooltip wider than the band-free window keeps its start edge visible

@@ -187,8 +187,8 @@ import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-item-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
-already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
-`prefers-reduced-motion: reduce`. `index` is clamped to the effective source's `0…count-1` range.
+already fully visible); `options.behavior` (default `'smooth'`) is forced to `'instant'` under
+`prefers-reduced-motion: reduce`, so a consumer `scroll-behavior: smooth` cannot animate it. `index` is clamped to the effective source's `0…count-1` range.
 In auto-height mode, estimate-based jumps are corrected as row and group-marker measurements arrive.
 Measurements and scroll-anchor corrections apply together on the next frame.
 That correction is bound to the source, key function, and target identity and is canceled on a new

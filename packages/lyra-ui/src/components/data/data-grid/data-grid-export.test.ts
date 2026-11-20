@@ -568,6 +568,8 @@ it("copies and raises a context menu from the grid keyboard contract", async () 
   const element = await dataGrid(html`
     <lr-data-grid
       label="People"
+      selectable="multiple"
+      row-key="id"
       .columns=${columns}
       .data=${rows}
     ></lr-data-grid>
@@ -588,19 +590,45 @@ it("copies and raises a context menu from the grid keyboard contract", async () 
   });
   try {
     const cell = dataCells(element)[0]!;
-    const copy = new KeyboardEvent("keydown", {
-      key: "c",
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    });
-    cell.dispatchEvent(copy);
-    expect(copy.defaultPrevented).to.equal(true);
+    const pressCopy = (): boolean => {
+      const copy = new KeyboardEvent("keydown", {
+        key: "c",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      cell.dispatchEvent(copy);
+      return copy.defaultPrevented;
+    };
+    // No row selection: the browser's own copy runs and nothing is written.
+    expect(pressCopy(), "unselected grid keeps native copy").to.equal(false);
+    expect(written).to.equal("");
+
+    element.selectedRowKeys = [rows[0]!.id];
+    await element.updateComplete;
+    // A live text selection keeps native copy even with a selected row.
+    const note = document.createElement("p");
+    note.textContent = "Selected note";
+    element.after(note);
+    const selection = document.getSelection()!;
+    selection.selectAllChildren(note);
+    expect(pressCopy(), "text selection keeps native copy").to.equal(false);
+    expect(written).to.equal("");
+    selection.removeAllRanges();
+    note.remove();
+    // So does a text selection made inside a cell of the grid's own shadow tree.
+    const cellText = [...cell.querySelectorAll("*"), cell]
+      .flatMap((node) => [...node.childNodes])
+      .find((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").includes("Ada"))!;
+    selection.setBaseAndExtent(cellText, 0, cellText, 3);
+    expect(pressCopy(), "cell text selection keeps native copy").to.equal(false);
+    expect(written).to.equal("");
+    selection.removeAllRanges();
+
+    expect(pressCopy(), "row selection owns the shortcut").to.equal(true);
     expect(written.split("\r\n")).to.deep.equal([
       "Name\tTeam\tScore",
       "Ada\tCompiler\t7",
-      "Lin\tRuntime\t10",
-      "Grace\tCompiler\t9",
     ]);
   } finally {
     if (clipboardDescriptor)
@@ -618,7 +646,7 @@ it("copies and raises a context menu from the grid keyboard contract", async () 
     })
   );
   const { detail } = await menu;
-  expect(detail.rowKey).to.equal('row-occurrence-1');
+  expect(detail.rowKey).to.equal(1);
   expect(detail.columnId).to.equal('name');
   expect(detail.index).to.equal(0);
   expect(detail.value).to.equal("Ada");

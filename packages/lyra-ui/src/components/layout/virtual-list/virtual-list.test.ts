@@ -1256,7 +1256,7 @@ it("scrollToIndex is a no-op against an empty items array", async () => {
   expect(() => el.scrollToIndex(0)).to.not.throw();
 });
 
-it('forces behavior "auto" under prefers-reduced-motion even when "smooth" is requested', async () => {
+it('forces an instant scroll under prefers-reduced-motion even when "smooth" is requested', async () => {
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = ((query: string) => ({
     matches: query === "(prefers-reduced-motion: reduce)",
@@ -1281,8 +1281,9 @@ it('forces behavior "auto" under prefers-reduced-motion even when "smooth" is re
     await nextFrame();
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
+    // A consumer stylesheet asking for smooth scrolling must not bring the animation back.
+    base.style.scrollBehavior = "smooth";
     el.scrollToIndex(20, { align: "start", behavior: "smooth" });
-    await nextFrame();
     // Reduced motion forces an immediate jump -- scrollTop already landed
     // synchronously rather than animating over several frames.
     expect(base.scrollTop).to.equal(800);

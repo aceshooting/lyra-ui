@@ -22,8 +22,6 @@ export const styles = css`
   })}
   :where([part='previous-button'], [part='next-button']) {
     --_lr-icon-button-radius-default: var(--lr-radius-xs);
-    inline-size: var(--lr-size-1-5rem);
-    block-size: var(--lr-size-1-5rem);
   }
   [part='previous-glyph'],
   [part='next-glyph'] {

@@ -159,6 +159,19 @@ export const WindowedRendering: Story = {
   render: () => html`<lr-message-parts label="Supporting evidence" .parts=${citationDenseParts} max-rendered-parts="12"></lr-message-parts>`,
 };
 
+export const UntrustedModelOutput: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Model-authored Markdown with images rendered as alt text and links narrowed to https.',
+      },
+    },
+  },
+  render: () => html`<lr-message-parts without-images link-schemes="https" .parts=${[
+    { id: 'untrusted', type: 'text', text: 'See ![chart](https://example.com/chart.png), [the report](https://example.com/report) or [email us](mailto:team@example.com).' },
+  ] satisfies MessagePart[]}></lr-message-parts>`,
+};
+
 export const Narrow: Story = {
   render: () => html`
     <div style="max-width: 320px;">

@@ -32,7 +32,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
-import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { DEFAULT_SCORE_THRESHOLDS, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -173,10 +173,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
    *  Malformed type rows are ignored so later valid matching records remain available. */
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Score boundaries forwarded to the composed chunk inspector. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.75,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_SCORE_THRESHOLDS;
   /** Fallback name for the provenance group, used when omitted; falls back to the localized
    *  `provenancePanelLabel`. A non-empty host `aria-label` makes the host the sole overall owner;
    *  an explicitly empty host label stays empty on the group, and so does an explicitly empty

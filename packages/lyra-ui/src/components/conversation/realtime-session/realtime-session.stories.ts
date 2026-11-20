@@ -80,6 +80,7 @@ export const RetainedCaptions: Story = {
 };
 
 export const SessionOptions: Story = {
-  render: () => html`<lr-realtime-session state="connected" .captureOptions=${{mode: 'toggle', maxDurationMs: 30000}}
+  parameters: { docs: { description: { story: 'Stream-only capture emits 250 ms chunks for a transport without retaining the take.' } } },
+  render: () => html`<lr-realtime-session state="connected" .captureOptions=${{mode: 'toggle', maxDurationMs: 30000, timesliceMs: 250, streamOnly: true}}
     .transcriptOptions=${{withTimestamps: true, maxRenderedEntries: 50}}></lr-realtime-session>`,
 };

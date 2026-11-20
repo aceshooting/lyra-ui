@@ -113,7 +113,9 @@ still current. ID lookup uses `findIndex` then verifies the returned `getItem` I
 change `selectedIndex` or emit activation. Disabled exact items remain inspectable and resolve
 `true`; absent, invalid, unavailable or revoked targets resolve `false`. The `source-exact` native
 button supports RTL-aware Left/Right and Home/End over the complete original index range, including
-missing/disabled positions; it does not scan for enabled items. Enter/Space or click activates only
+missing/disabled positions; it does not scan for enabled items. Its localized key help
+(`sequenceStripSourceKeyboardHelp`) is its accessible description, a pointer `title`, and shown below
+the button while it has keyboard focus. Enter/Space or click activates only
 the current admitted enabled exact item. Pending/unavailable detail keeps a focusable localized
 inspector fallback. Controlled `selectedIndex` changes resolve exact detail silently. Source-only
 parts are `source-status`, `source-retry` and `source-exact`; `base`, `cell`, `marker`, `tooltip`,

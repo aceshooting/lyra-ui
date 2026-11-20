@@ -238,7 +238,7 @@ export const styles = css`
   /* no-pressed-state: the panel is a container for slotted content, not a target -- :active also
      matches the ancestors of whatever was pressed, so clicking any control inside would flash this
      outline around the whole panel. */
-  [part="panel"]:hover {
+  [part="panel"]:hover:not(:focus-visible) {
     outline-width: var(
       --lr-tab-group-panel-hover-outline-width,
       var(--lr-border-width-thin)

@@ -195,7 +195,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
- * @cssprop [--lr-markdown-content-min-size=var(--lr-icon-button-size)] - Minimum content size on both axes.
+ * @cssprop [--lr-markdown-content-min-size=0] - Minimum content size on both axes. Unset, short content keeps its own line box.
  * @cssprop [--lr-markdown-code-copy-bg=transparent] - Fenced copy control background at rest.
  * @cssprop [--lr-markdown-code-copy-bg-hover=var(--lr-color-brand-quiet)] - Fenced copy control hover background.
  * @cssprop --lr-markdown-code-copy-bg-active - Fenced copy control pressed background.

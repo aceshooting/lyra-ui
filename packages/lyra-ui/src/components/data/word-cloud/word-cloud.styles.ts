@@ -22,13 +22,20 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     block-size: 100%;
-    /* A host narrower than the legible floor scrolls rather than shrinking the words further. */
+    /* A host narrower than the legible floor scrolls rather than shrinking the words further.
+       overflow-y is pinned: one non-visible axis would otherwise compute the other to auto and
+       make the base a block-axis scroller. */
     overflow-x: auto;
+    overflow-y: hidden;
   }
   svg {
     display: block;
+    /* The drawing takes the block space the summary, legend and limit rows leave, shrinking in a
+       definite-height host (down to the hit-target floor below) instead of pushing them past
+       the base. */
+    flex: 1 1 auto;
     inline-size: 100%;
-    block-size: 100%;
+    block-size: auto;
     ${iconHitTarget}
     /* Never narrower than the width at which the smallest word still renders at the legible floor
        (or its own size when that is smaller), and never wider than the natural layout. */

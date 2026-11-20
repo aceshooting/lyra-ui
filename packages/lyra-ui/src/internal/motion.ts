@@ -9,3 +9,13 @@ export function prefersReducedMotion(target?: Element | Window | null): boolean 
   return inheritedPreference(element, 'data-lr-motion', 'reduce') === 'reduce' ||
     preferenceMediaMatches(view ?? (element ? null : typeof window === 'undefined' ? null : window), '(prefers-reduced-motion: reduce)');
 }
+
+/** The scroll behavior for a programmatic scroll: `requested` normally, and `'instant'` when motion
+ * is reduced. Never `'auto'` there, which defers to the scroller's computed `scroll-behavior` and so
+ * still animates under a stylesheet that sets `scroll-behavior: smooth`. */
+export function motionScrollBehavior(
+  target: Element | Window | null | undefined,
+  requested: ScrollBehavior = 'smooth',
+): ScrollBehavior {
+  return prefersReducedMotion(target) ? 'instant' : requested;
+}

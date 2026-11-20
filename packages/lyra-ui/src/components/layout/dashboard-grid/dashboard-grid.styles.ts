@@ -1,5 +1,6 @@
-import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
@@ -124,13 +125,20 @@ export const styles = css`
       var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow-m));
   }
 
+  /* The corner grip lies over the slotted widget's own trailing corner, so it keeps to the WCAG
+     2.5.8 minimum by default (rethemeable through --lr-dashboard-grid-resize-handle-hit-area)
+     rather than the larger icon-button size: a widget's scrollbar end or corner button next to it
+     stays reachable. Coarse or hover-less pointers are floored at --lr-icon-button-size below. */
   [part="resize-handle"] {
+    --_lr-dashboard-grid-resize-hit-area: var(
+      --lr-dashboard-grid-resize-handle-hit-area,
+      ${minimumPointerTarget}
+    );
     position: absolute;
     inset-block-end: 0;
     inset-inline-end: 0;
-    inline-size: var(--lr-space-l);
-    block-size: var(--lr-space-l);
-    ${iconHitTarget}
+    inline-size: var(--_lr-dashboard-grid-resize-hit-area);
+    block-size: var(--_lr-dashboard-grid-resize-hit-area);
     padding: 0;
     border: none;
     background: transparent;
@@ -162,6 +170,14 @@ export const styles = css`
 
   :host(:dir(rtl)) [part="resize-handle"] {
     cursor: nesw-resize;
+  }
+  @media (hover: none), (pointer: coarse) {
+    [part="resize-handle"] {
+      --_lr-dashboard-grid-resize-hit-area: max(
+        var(--lr-icon-button-size),
+        var(--lr-dashboard-grid-resize-handle-hit-area, ${minimumPointerTarget})
+      );
+    }
   }
 
   /* Below the breakpoint the two-dimensional grid becomes a single stacked column: authored

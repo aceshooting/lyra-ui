@@ -252,6 +252,9 @@ export interface LyraDashboardGridEventMap {
  *   cell for the duration of its pointer drag or resize interaction.
  * @cssprop [--lr-dashboard-grid-resize-handle-hover-bg=var(--lr-color-brand-quiet)] - Background
  *   of `resize-handle` on hover; also feeds its pressed background via `color-mix()`.
+ * @cssprop [--lr-dashboard-grid-resize-handle-hit-area=24px] - Size of the square
+ *   `resize-handle` pointer target in a cell's trailing/bottom corner. Coarse or hover-less pointers
+ *   use at least `--lr-icon-button-size`.
  * @cssprop [--lr-dashboard-grid-resize-handle-color=var(--lr-color-border-strong)] - Colour of the
  *   corner grip that keeps `resize-handle` visible at rest.
  * @status stable
@@ -1353,7 +1356,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     >
       <slot name=${`cell-${cell.cellId}`}></slot>
       ${resizableHere
-        ? html`<button
+        ? // hit-area-exempt: an aria-hidden, untabbable drag grip whose keyboard equivalent is
+          // Ctrl/Cmd+Shift+Arrow; it keeps to the WCAG 2.5.8 minimum over the widget's corner
+          // and is floored at the icon-button size for coarse pointers (see the styles).
+          html`<button
             part="resize-handle"
             type="button"
             tabindex="-1"

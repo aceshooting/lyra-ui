@@ -79,6 +79,10 @@ export interface LyraConversationItemEventMap {
  * semantics is also the more accurate
  * description of what's on screen.
  *
+ * Without an authored host `aria-label`, the selectable region is named from its visible content in
+ * reading order -- start, title, excerpt, meta and timestamp -- so a screen-reader or speech user
+ * gets the same row summary a sighted user reads. A host `aria-label` replaces that name.
+ *
  * Inline rename is a dedicated pencil/edit icon button (not a double-click
  * on the label) -- double-click has no keyboard/screen-reader equivalent
  * and would silently swallow the row's own single-click `lr-select`,
@@ -498,9 +502,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     const displayLabel = normalizeLabel(this.label) ?? this.localize('untitledConversation');
     const showRenameButton = !this.withoutRename && !this.renaming;
     const hostLabel = this.getAttribute('aria-label');
-    const selectionLabel = hostLabel === ''
-      ? ''
-      : normalizeLabel(hostLabel) ?? (this.hasContentSlot ? nothing : displayLabel);
+    // Without an authored host name the row is named from its visible content -- title, excerpt,
+    // meta and timestamp in reading order -- so none of that text is silent to assistive tech.
+    const selectionLabel = hostLabel === '' ? '' : normalizeLabel(hostLabel) ?? nothing;
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific
     // accessible name (not a generic one) to disambiguate which row a

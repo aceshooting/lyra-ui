@@ -111,8 +111,8 @@ export const styles = css`
   [part='clear-button'] {
     --_lr-icon-button-radius-default: var(--lr-radius-xs);
     flex: 0 0 auto;
-    inline-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
-    block-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
+    inline-size: var(--lr-thread-list-search-clear-size, var(--lr-icon-button-size));
+    block-size: var(--lr-thread-list-search-clear-size, var(--lr-icon-button-size));
   }
   [part='list'] {
     flex: 1 1 auto;
@@ -231,8 +231,6 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     /* Compact glyph in an interactive box at the shared minimum target size. */
-    inline-size: var(--lr-size-1-5rem);
-    block-size: var(--lr-size-1-5rem);
     ${iconHitTarget}
     padding: 0;
     border: 0;

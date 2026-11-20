@@ -187,6 +187,16 @@ describe('lr-thread-list search sizing', () => {
     ).to.equal(floor['inline-size']);
   });
 
+  it('defaults the clear button box to the shared icon-button size', async () => {
+    const el = await searchableFixture();
+    el.style.setProperty('--lr-icon-button-size', '20px');
+    searchInput(el).value = 'quarter';
+    searchInput(el).dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const box = getComputedStyle(clearButton(el)!);
+    expect([box.inlineSize, box.blockSize]).to.deep.equal(['20px', '20px']);
+  });
+
   it('keeps the tier applied across a disconnect and reconnect', async () => {
     const el = await searchableFixture();
     el.size = 'l';

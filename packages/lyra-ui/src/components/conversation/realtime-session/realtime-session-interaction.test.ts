@@ -28,17 +28,18 @@ it('configures recording and transcript controls and restores their defaults', a
   const el = await fixture<HTMLElementTagNameMap['lr-realtime-session']>(html`<lr-realtime-session></lr-realtime-session>`);
   const capture = el.shadowRoot!.querySelector('lr-push-to-talk')!;
   const feed = el.shadowRoot!.querySelector('lr-transcript-feed')!;
-  const values = () => [capture.mode, capture.deviceId, capture.mimeType, capture.timesliceMs, capture.maxDurationMs,
-    capture.withoutTimer, capture.audioConstraints, feed.follow, feed.withTimestamps, feed.formatTimestamp, feed.maxRenderedEntries];
-  const defaults = ['hold', '', '', 0, 0, false, undefined, true, false, undefined, 500];
+  const values = () => [capture.mode, capture.deviceId, capture.mimeType, capture.timesliceMs, capture.streamOnly,
+    capture.levelEvents, capture.maxDurationMs, capture.withoutTimer, capture.audioConstraints, feed.follow,
+    feed.withTimestamps, feed.formatTimestamp, feed.maxRenderedEntries];
+  const defaults = ['hold', '', '', 0, false, true, 0, false, undefined, true, false, undefined, 500];
   expect(values()).to.deep.equal(defaults);
   const formatTimestamp = () => 'Now';
   const audioConstraints = { echoCancellation: true };
-  el.captureOptions = { mode: 'toggle', deviceId: 'chosen', mimeType: 'audio/webm', timesliceMs: 500, maxDurationMs: 10000,
-    withoutTimer: true, audioConstraints };
+  el.captureOptions = { mode: 'toggle', deviceId: 'chosen', mimeType: 'audio/webm', timesliceMs: 500, streamOnly: true,
+    levelEvents: false, maxDurationMs: 10000, withoutTimer: true, audioConstraints };
   el.transcriptOptions = { follow: false, withTimestamps: true, formatTimestamp, maxRenderedEntries: 20 };
   await el.updateComplete;
-  expect(values()).to.deep.equal(['toggle','chosen','audio/webm',500,10000,true,audioConstraints,false,true,formatTimestamp,20]);
+  expect(values()).to.deep.equal(['toggle','chosen','audio/webm',500,true,false,10000,true,audioConstraints,false,true,formatTimestamp,20]);
   el.captureOptions = undefined;
   el.transcriptOptions = undefined;
   await el.updateComplete;

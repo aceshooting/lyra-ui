@@ -911,10 +911,10 @@ brand/active-mix rendering when unset. The scroll-snap viewport's mouse-hover pr
 four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-width` (default `var(--lr-border-width-thin)`),
 `--lr-carousel-scroll-container-hover-outline-style` (default `solid`),
-`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
+`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
-(default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint. The `scroll-container` part also honors the opt-in theme-level
+(default `var(--lr-focus-ring-offset)`). Unset, they paint the same preview as `lr-scroller`'s
+viewport and `lr-tab-group`'s panel, and a keyboard focus ring replaces it. The `scroll-container` part also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
 its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library. Chromium and Safari ignore
@@ -1930,7 +1930,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
   the (possibly overflowing) track, without changing the selection. Scrolls only the track, never
   the page or another scroll ancestor. Honors `prefers-reduced-motion` (falls back to
-  `behavior: 'auto'`). This runs automatically when `value`
+  `behavior: 'instant'`, which a consumer `scroll-behavior: smooth` cannot animate). This runs automatically when `value`
   is changed programmatically (keyboard navigation already reveals the focused segment on its own),
   so you only need to call it for the "reveal without selecting" case.
 
@@ -2226,8 +2226,8 @@ import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-item-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
-already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
-`prefers-reduced-motion: reduce`. `index` is clamped to the effective source's `0…count-1` range.
+already fully visible); `options.behavior` (default `'smooth'`) is forced to `'instant'` under
+`prefers-reduced-motion: reduce`, so a consumer `scroll-behavior: smooth` cannot animate it. `index` is clamped to the effective source's `0…count-1` range.
 In auto-height mode, estimate-based jumps are corrected as row and group-marker measurements arrive.
 Measurements and scroll-anchor corrections apply together on the next frame.
 That correction is bound to the source, key function, and target identity and is canceled on a new
@@ -2779,8 +2779,11 @@ never destroyed/recreated, so a reference captured before opening remains valid 
 it renders as its own reserved row ahead of the `header` slot rather than an absolute overlay on
 top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
-`resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
-(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover),
+`resizable` and `mode` is `'full'`; its hit target lies wholly outside the rail's inline-end edge,
+so it never covers the rail's scrollbar or its items, and is `--lr-app-rail-resizer-hit-area` wide,
+default 24px, at least `--lr-icon-button-size` for coarse or hover-less pointers), `resizer-track`
+(the slim 3px visible drag line flush with the rail edge inside that hit target, tinted
+`--lr-color-brand` on hover),
 `collapse-toggle` (the opt-in desktop collapse control, rendered inside `[part="header"]` only while
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
@@ -2870,7 +2873,8 @@ interaction hooks are `--lr-app-rail-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
 `var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
 `--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
-`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
+`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`; `--lr-app-rail-resizer-hit-area`
+(default `24px`) sizes its pointer band. Each hook is an inline
 fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
 **Optional peer deps:** none.
@@ -4398,9 +4402,11 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
   resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
   the legacy platform string and reduced user-agent string rather than trusting
-  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
-  several connected palettes use the same chord, the last connected palette owns it;
-  activation is idempotently open rather than a toggle.
+  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. A
+  chord without a Ctrl, Cmd, Alt or `mod` modifier (`/`, `shift+?`) is ignored while focus is in a
+  text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
+  while the palette is in a hidden or inert subtree. If several connected palettes use the same
+  chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
 - `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
@@ -5012,6 +5018,7 @@ attribute restores 12 columns.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
 - `--lr-dashboard-grid-resize-handle-hover-bg` — Background of `resize-handle` on hover, also mixed deeper for its pressed state. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-dashboard-grid-resize-handle-hit-area` — Size of the square `resize-handle` pointer target over a cell's trailing/bottom corner. Default: `24px` (the WCAG 2.5.8 minimum, so a widget's own corner controls stay reachable); coarse or hover-less pointers use at least `--lr-icon-button-size`.
 
 ## `lr-drilldown-panel`
 

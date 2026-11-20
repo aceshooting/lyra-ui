@@ -677,6 +677,54 @@ it("clears the drag ghost when a header drag ends without a drop", async () => {
   expect((element.shadowRoot!.querySelector('[part="drag-ghost"]')) == null).to.be.true;
 });
 
+it("keeps the drag preview at the pointer and inside the grid box while a column is dragged", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable style="inline-size: 320px" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const box = element.shadowRoot!.querySelector<HTMLElement>('[part="data-grid"]')!;
+  const nameHeader = header(element, "name");
+  const start = nameHeader.getBoundingClientRect();
+  nameHeader.dispatchEvent(
+    new DragEvent("dragstart", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: start.left + 8,
+      clientY: start.top + 4,
+      dataTransfer: new DataTransfer(),
+    })
+  );
+  await element.updateComplete;
+  await element.updateComplete;
+  const ghost = element.shadowRoot!.querySelector<HTMLElement>('[part="drag-ghost"]')!;
+  const inside = (): boolean => {
+    const outer = box.getBoundingClientRect();
+    const rect = ghost.getBoundingClientRect();
+    return rect.left >= outer.left - 1 && rect.right <= outer.right + 1 &&
+      rect.top >= outer.top - 1 && rect.bottom <= outer.bottom + 1;
+  };
+  const near = Math.abs(ghost.getBoundingClientRect().left - (start.left + 8)) < 4;
+  expect({ inside: inside(), near }).to.deep.equal({ inside: true, near: true });
+
+  // Dragging past the far corner clamps the preview to the grid box instead of overflowing it.
+  const outer = box.getBoundingClientRect();
+  header(element, "team").dispatchEvent(
+    new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: outer.right + 200,
+      clientY: outer.bottom + 200,
+      dataTransfer: new DataTransfer(),
+    })
+  );
+  const moved = ghost.getBoundingClientRect();
+  expect({
+    inside: inside(),
+    atEnd: Math.abs(moved.right - (outer.right - box.clientLeft)) < 2,
+  }).to.deep.equal({ inside: true, atEnd: true });
+});
+
 it("renders a footer row from string and function column footers", async () => {
   const footerColumns: DataGridColumn<Person>[] = [
     { field: "name", label: "Name", footer: "Total" },
@@ -1373,6 +1421,30 @@ it("uses a 0px grid-template minimum for an unsized column that only declares a 
     element.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!.style
       .getPropertyValue("--data-grid-columns")
   ).to.contain("minmax(0px, 100px)");
+});
+
+it("fits a column to its content with Enter on the resize separator, like double-click", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const handle = header(element, "name").querySelector<HTMLElement>('[part="resize-handle"]')!;
+  const sortEvents: unknown[] = [];
+  element.addEventListener("lr-sort-request", (event) => sortEvents.push(event));
+  element.setState({ widths: { name: 20 } });
+  await element.updateComplete;
+  const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, composed: true, cancelable: true });
+  handle.dispatchEvent(enter);
+  await element.updateComplete;
+  const keyboardWidth = element.getState().widths?.["name"];
+  expect(enter.defaultPrevented).to.equal(true);
+  expect(sortEvents.length).to.equal(0);
+  expect(keyboardWidth).to.be.greaterThan(20);
+
+  element.setState({ widths: { name: 20 } });
+  await element.updateComplete;
+  handle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, composed: true }));
+  await element.updateComplete;
+  expect(element.getState().widths?.["name"]).to.equal(keyboardWidth);
 });
 
 it("cancels an active resize on the very next pointermove once its column can no longer resize, without waiting for pointerup", async () => {

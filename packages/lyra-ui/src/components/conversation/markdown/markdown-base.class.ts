@@ -788,14 +788,25 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
         isCurrent
       );
       if (!isCurrent() || html === undefined) return;
-      if (html !== null) { setCachedHighlight(completed, pending.key, html); this.setCachedHighlight(pending.key, html); }
-      // An evicted result stays plain for this configuration instead of cycling through
-      // tokenization again when a document's highlighted output exceeds the cache budget.
-      addFailedHighlightKey(this.failedHighlightKeys, pending.key);
+      // Only a real failure, or a result too large to retain at all, is recorded as failed. A
+      // success that the shared cache later evicts is tokenized again on a later render.
+      if (html === null || !setCachedHighlight(completed, pending.key, html)) {
+        addFailedHighlightKey(this.failedHighlightKeys, pending.key);
+        return;
+      }
+      this.setCachedHighlight(pending.key, html);
     };
 
     try {
       await processPendingHighlights(work, tokenizeOne);
+      // A result this batch itself pushed out of `completed` (the document's highlighted output
+      // exceeds the cache budget) stays plain for this configuration instead of cycling through
+      // tokenization again on the render below.
+      for (const { key } of work) {
+        if (isCurrent() && !completed.has(key) && this.getCachedHighlight(key) === undefined) {
+          addFailedHighlightKey(this.failedHighlightKeys, key);
+        }
+      }
     } catch {
       // tokenizePendingHighlight()'s own layers (loadShikiHighlighter()/loadShikiHighlighterCore()'s
       // load-time capability validation, shikiHasLoadedLanguage()'s tolerant check,

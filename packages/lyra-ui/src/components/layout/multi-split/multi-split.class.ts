@@ -644,8 +644,22 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  one panel always stays open: a set naming every panel leaves the last one open. Assigning this
    *  property is silent, like assigning `sizes`; `collapsePanel()`/`expandPanel()`/`togglePanel()`
    *  apply a change immediately, persist it under `storageKey`, and announce it. A valid stored
-   *  layout restores the collapsed set unless this property already names panels. */
-  @property({ attribute: false }) collapsedPanels: readonly string[] = [];
+   *  layout restores the collapsed set only while this property was never assigned: any binding,
+   *  including an explicit empty array, stays authoritative over the stored set. */
+  @property({ attribute: false })
+  get collapsedPanels(): readonly string[] {
+    return this.collapsedPanelsValue;
+  }
+  set collapsedPanels(value: readonly string[]) {
+    const previous = this.collapsedPanelsValue;
+    this.collapsedPanelsAssigned = true;
+    this.collapsedPanelsValue = value;
+    this.requestUpdate('collapsedPanels', previous);
+  }
+  private collapsedPanelsValue: readonly string[] = [];
+  /** Whether anything ever assigned `collapsedPanels`. Its declared default is not an assignment,
+   *  so a controlled empty binding is told apart from the untouched default. */
+  private collapsedPanelsAssigned = false;
 
   /** Disables pointer and keyboard resizing of all dividers. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -1844,8 +1858,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       const expandedSize = persistedCollapsed.get(panelId);
       if (expandedSize !== undefined) this.expandedSizes.set(panelId, expandedSize);
     }
-    // An authored set wins over the stored one; `syncCollapsedLayout()` then refolds toward it.
-    if (restoredCollapsed.length > 0 && this.collapsedPanels.length === 0) {
+    // Any assigned set (an explicit empty one included) wins over the stored one;
+    // `syncCollapsedLayout()` then refolds toward it.
+    if (restoredCollapsed.length > 0 && !this.collapsedPanelsAssigned) {
       this.collapsedPanels = restoredCollapsed;
     }
     return true;
@@ -2341,14 +2356,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  existing `lr-resize` notification remains the non-cancelable post-commit
    *  signal, so property-driven layouts stay silent while hosts can veto an
    *  interaction before it changes their persistence-facing state. */
-  private requestResize(next: number[], commit: boolean, index: number, keyEvent?: KeyboardEvent): boolean {
+  private requestResize(next: number[], commit: boolean, index: number): boolean {
     if (
       next.length === this.sizes.length &&
       next.every((size, index) => Math.abs(size - this.sizes[index]!) <= 1e-9)
     ) {
       return false;
     }
-    keyEvent?.preventDefault();
     const before = this.sizes;
     const constraints = this.panelConstraints;
     const minimum = this.min;
@@ -2384,7 +2398,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.emit('lr-resize-change', { sizes: [...this.sizes] });
   }
 
-  private applyDelta(index: number, delta: number, keyEvent: KeyboardEvent): void {
+  private applyDelta(index: number, delta: number): void {
     const pair = this.dividerPair(index)!;
     const next = this.clampPair(
       this.sizes,
@@ -2393,7 +2407,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       delta,
       this.getContainerSize()
     );
-    this.requestResize(next, true, index, keyEvent);
+    this.requestResize(next, true, index);
   }
 
   /** The collapsing pane's light-DOM element itself — the `'floating'`
@@ -2602,15 +2616,19 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
       this.effectiveOrientation === 'horizontal' && isRtl(this),
     );
+    // A handled separator key is owned even when the divider is already at a
+    // limit: the clamped no-op must not let the browser scroll the page.
     if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
       const { min, max } = this.dividerValueRange(index);
       const current = this.sizes[this.dividerPair(index)?.[0] ?? index];
       if (current !== undefined) {
         const target = e.key === 'Home' ? min : max;
-        this.applyDelta(index, target - current, e);
+        this.applyDelta(index, target - current);
       }
     } else if (direction === 1 || direction === -1) {
-      this.applyDelta(index, direction * KEYBOARD_STEP, e);
+      e.preventDefault();
+      this.applyDelta(index, direction * KEYBOARD_STEP);
     }
   };
 

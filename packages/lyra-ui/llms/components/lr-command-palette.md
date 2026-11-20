@@ -64,9 +64,11 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
   resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
   the legacy platform string and reduced user-agent string rather than trusting
-  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
-  several connected palettes use the same chord, the last connected palette owns it;
-  activation is idempotently open rather than a toggle.
+  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. A
+  chord without a Ctrl, Cmd, Alt or `mod` modifier (`/`, `shift+?`) is ignored while focus is in a
+  text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
+  while the palette is in a hidden or inert subtree. If several connected palettes use the same
+  chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
 - `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search

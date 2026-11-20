@@ -9905,7 +9905,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 971,
+              "line": 978,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14929,6 +14929,18 @@
             },
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
+              "test": "falls back to \"Untitled conversation\" when label is empty",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
+              "test": "forwards a host aria-label onto the inner role=\"button\" element instead of the derived label",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
               "test": "is accessible in a populated dense state",
               "target": "el",
               "state": "populated"
@@ -14948,6 +14960,18 @@
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
               "test": "is accessible with the active-state props themed",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
+              "test": "localizes the untitled-conversation fallback via this.localize() when .strings overrides untitledConversation",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
+              "test": "names the row from its title, excerpt, meta and timestamp when no host name is authored",
               "target": "el",
               "state": "populated"
             }
@@ -15046,7 +15070,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 441,
+              "line": 445,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16211,8 +16235,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/data-grid/data-grid-remediation.test.ts",
-              "test": "reserves visible effective fixed widths with flex=${flex} and selection=${selection}",
+              "file": "src/components/data/data-grid/data-grid-columns.test.ts",
+              "test": "keeps the drag preview at the pointer and inside the grid box while a column is dragged",
               "kind": "320px allocation test signal"
             }
           ]
@@ -47718,7 +47742,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 703,
+              "line": 700,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56532,6 +56556,12 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
+              "test": "names a data row from its title, excerpt, meta and pinned status",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/thread-list/thread-list.test.ts",
               "test": "passes axe with a promoted row menu open",
               "target": "el",
               "state": "populated"
@@ -56665,7 +56695,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 830,
+              "line": 832,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63092,7 +63122,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 602,
+              "line": 579,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

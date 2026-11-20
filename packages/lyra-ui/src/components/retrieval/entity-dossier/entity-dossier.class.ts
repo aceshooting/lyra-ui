@@ -35,7 +35,7 @@ import '../../data/stat/stat.class.js';
 import '../../layout/tab-group/tab-group.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
-import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { DEFAULT_SCORE_THRESHOLDS, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_provenancePanelLabel } from '../../../internal/default-strings/retrieval.generated.js';
@@ -199,10 +199,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   @property({ attribute: false }) chunks: readonly LyraChunk[] = [];
   /** Forwarded to both `lr-chunk-inspector`'s and `lr-provenance-panel`'s own `thresholds`, so
    *  the score tiers agree everywhere a score renders in this dossier. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.75,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_SCORE_THRESHOLDS;
   /** Forwarded to `lr-provenance-panel`'s own `provenance`. */
   @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
   /** Accessible name for the overall dossier, separate from accessibleLabel's tab-strip name.

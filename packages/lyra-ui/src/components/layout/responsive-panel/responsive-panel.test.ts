@@ -355,12 +355,17 @@ it("emits lr-mode-change with the new effective mode when the breakpoint is cros
   )) as LyraResponsivePanel;
   await el.updateComplete;
   let fired = false;
-  el.addEventListener("lr-mode-change", () => (fired = true));
+  let updatePendingAtEvent: boolean | undefined;
+  el.addEventListener("lr-mode-change", () => {
+    fired = true;
+    updatePendingAtEvent = el.isUpdatePending;
+  });
 
   const listener = oneEvent(el, "lr-mode-change");
   applyAllocation(el, 320);
   const event = await listener;
   expect(fired).to.be.true;
+  expect(updatePendingAtEvent).to.equal(false);
   expect((event.detail as LyraResponsivePanelModeChangeDetail).mode).to.equal(
     "overlay"
   );

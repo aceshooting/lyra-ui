@@ -36,6 +36,18 @@ async function settle(item: LyraNavigationMenuItem): Promise<void> {
   await item.updateComplete;
 }
 
+describe('<lr-navigation-menu-item> host blur()', () => {
+  it('removes focus from the internal link', async () => {
+    const el = await fixture<LyraNavigationMenuItem>(
+      html`<lr-navigation-menu-item href="/blog">Blog</lr-navigation-menu-item>`,
+    );
+    el.focus();
+    expect(el.shadowRoot!.activeElement === null).to.equal(false);
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  });
+});
+
 describe('<lr-navigation-menu-item>', () => {
   it('renders a link item as a native anchor with aria-current page or false', async () => {
     const current = await fixture<LyraNavigationMenuItem>(

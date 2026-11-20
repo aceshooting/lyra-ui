@@ -111,7 +111,7 @@ describe('app rail sidebar frame', () => {
   for (const direction of ['ltr', 'rtl']) it(`aligns the resizer with the card edge in ${direction}`, async () => {
     const el = await fixture<LyraAppRail>(html`<lr-app-rail frame="card" resizable dir=${direction} style="block-size:300px"></lr-app-rail>`);
     const edge = base(el).getBoundingClientRect(); const resizer = el.shadowRoot!.querySelector('[part="resizer"]')!.getBoundingClientRect();
-    expect(Math.abs((resizer.left + resizer.right) / 2 - (direction === 'ltr' ? edge.right : edge.left))).to.be.lessThan(1.1);
+    expect(Math.abs(direction === 'ltr' ? resizer.left - edge.right : resizer.right - edge.left)).to.be.lessThan(1.1);
     el.forceMode = 'icon-only'; await el.updateComplete;
     await waitUntil(() => base(el).getBoundingClientRect().width === 64, 'icon-only rail width did not settle');
     expect(base(el).getBoundingClientRect().width).to.equal(64);

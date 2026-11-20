@@ -42,11 +42,13 @@ export const styles = css`
   [part='day'][data-selected='true'] {
     background: var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet));
   }
+  /* An unselected day hovers with a neutral step off the surface, never the selected fill, so the
+     day under the pointer cannot pass for the selection. */
   [part='day']:hover {
-    background: var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet));
+    background: var(--lr-calendar-day-hover-bg, ${hoverFill('var(--lr-color-surface)')});
   }
   [part='day']:active {
-    background: var(--lr-calendar-day-active-bg, ${activeFill('var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet))')});
+    background: var(--lr-calendar-day-active-bg, ${activeFill(`var(--lr-calendar-day-hover-bg, ${hoverFill('var(--lr-color-surface)').cssText})`)});
   }
   [part='day'][data-selected='true']:hover {
     background: var(--lr-calendar-day-hover-bg, ${hoverFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});

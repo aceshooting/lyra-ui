@@ -4,7 +4,7 @@ import { createInputMemo } from '../../../internal/input-memo.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { isolateText } from '../../../internal/bidi.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
+import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -243,6 +243,10 @@ export interface LyraMessagePartsEventMap
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * Built-in text and reasoning Markdown parts receive `html-mode`, `without-images`, `link-target`,
+ * `link-schemes` and `max-height` with `<lr-markdown>`'s own defaults. For model-authored content,
+ * set `without-images` (and narrow `link-schemes`) rather than replacing parts with `renderPart`.
+ *
  * Direction: built-in text and reasoning parts inherit `<lr-markdown>`'s code direction, so code
  * reads left-to-right inside a right-to-left document. This element forwards no Markdown part,
  * so that nested code direction cannot be overridden with `::part()` from outside.
@@ -402,6 +406,20 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
   /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
   @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
+  /** Raw-HTML handling forwarded to built-in text and reasoning Markdown parts (`sanitize`, the
+   *  default, `escape` or `trusted`), matching `<lr-markdown>`'s own `htmlMode`. */
+  @property({ attribute: 'html-mode' }) htmlMode: MarkdownHtmlMode = 'sanitize';
+  /** Renders every image in built-in text and reasoning Markdown parts as its alt text, so model
+   *  output never makes the page load an image. Set it for untrusted message content. */
+  @property({ type: Boolean, attribute: 'without-images' }) withoutImages = false;
+  /** `target` forwarded to every link in built-in Markdown parts; `'_blank'` (the default) matches
+   *  `<lr-markdown>`. `null` or the empty string opens links in the same tab. */
+  @property({ attribute: 'link-target' }) linkTarget: string | null = '_blank';
+  /** Narrows which link destinations in built-in Markdown parts become anchors (for example
+   *  `link-schemes="https"`); a refused link renders as plain text. Unset keeps the standard allowlist. */
+  @property({ attribute: 'link-schemes' }) linkSchemes?: string;
+  /** CSS length past which each built-in Markdown part scrolls internally. Empty (the default) never caps. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** `0` (the default) renders every part -- unbounded, matching every prior release. A positive
    *  value windows rendering to the newest N parts (host `parts` data is untouched); citation
@@ -673,7 +691,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   private renderPartMarkdown(part: Extract<MessagePart, { type: 'text' | 'reasoning' }>): TemplateResult {
     return html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}
       .streamingRender=${this.streamingRender}
-      .codeBlockHeader=${this.codeBlockHeader}></lr-markdown>`;
+      .codeBlockHeader=${this.codeBlockHeader}
+      .htmlMode=${this.htmlMode}
+      .withoutImages=${this.withoutImages}
+      .linkTarget=${this.linkTarget}
+      .linkSchemes=${this.linkSchemes}
+      .maxHeight=${this.maxHeight}></lr-markdown>`;
   }
 
   private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {

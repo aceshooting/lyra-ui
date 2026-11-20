@@ -1415,6 +1415,26 @@ describe("lr-message-parts rendered whitespace, code direction and code headers"
   });
 });
 
+it('forwards the untrusted-content Markdown switches to built-in text and reasoning parts', async () => {
+  const text = '![pixel](https://example.com/p.png) [site](https://example.com) [mail](mailto:a@example.com)';
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts without-images link-schemes="https"
+    link-target="" max-height="10rem" html-mode="escape" .parts=${[
+      { id: 'r', type: 'reasoning', collapsed: false, text },
+      { id: 'a', type: 'text', text },
+    ]}></lr-message-parts>`);
+  const docs = () => [...el.shadowRoot!.querySelectorAll('lr-markdown')].map((node) => node.shadowRoot);
+  await waitUntil(() => docs().length === 2 && docs().every((root) => Boolean(root?.querySelector('a'))),
+    'markdown never rendered');
+  const summary = docs().map((root) => [
+    root!.querySelectorAll('img').length,
+    [...root!.querySelectorAll('a')].map((a) => `${a.getAttribute('href')}|${a.getAttribute('target')}`).join(),
+    root!.textContent!.includes('mail'),
+  ]);
+  expect(summary).to.deep.equal([[0, 'https://example.com|null', true], [0, 'https://example.com|null', true]]);
+  const inner = [...el.shadowRoot!.querySelectorAll('lr-markdown')] as (HTMLElement & { htmlMode: string; maxHeight: string })[];
+  expect(inner.map((node) => `${node.htmlMode}|${node.maxHeight}`)).to.deep.equal(['escape|10rem', 'escape|10rem']);
+});
+
 describe('lr-message-parts canonical code-block-header spelling', () => {
   type Parts = LyraMessageParts & { shadowRoot: ShadowRoot };
   type InnerMarkdown = HTMLElement & { codeBlockHeader: boolean };

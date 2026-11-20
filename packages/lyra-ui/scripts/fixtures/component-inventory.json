@@ -2173,6 +2173,15 @@
         ],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
@@ -2238,6 +2247,7 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
+            "blur",
             "click",
             "focus"
           ]
@@ -7341,6 +7351,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-app-rail-resizer-hit-area",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "24px"
+          },
+          {
             "name": "--lr-app-rail-resizer-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -8206,10 +8222,35 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -8228,7 +8269,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -15199,10 +15242,35 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -15219,7 +15287,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -18684,13 +18754,13 @@
             "name": "--lr-calendar-day-active-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+            "default": "color-mix(in oklab, var(--lr-calendar-day-hover-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-calendar-day-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
             "name": "--lr-calendar-day-min-block-size",
@@ -20018,10 +20088,35 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
                 "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "void"
               }
             ]
@@ -20040,7 +20135,9 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
-            "click"
+            "blur",
+            "click",
+            "focus"
           ]
         }
       }
@@ -20532,7 +20629,7 @@
             "name": "--lr-carousel-scroll-container-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border-strong)"
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-carousel-scroll-container-hover-outline-offset",
@@ -27692,7 +27789,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.75, medium: 0.5, }"
+            "default": "DEFAULT_SCORE_THRESHOLDS"
           },
           {
             "name": "virtualizeAt",
@@ -41755,6 +41852,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border-strong)"
+          },
+          {
+            "name": "--lr-dashboard-grid-resize-handle-hit-area",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "24px"
           },
           {
             "name": "--lr-dashboard-grid-resize-handle-hover-bg",
@@ -59191,7 +59294,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.75, medium: 0.5, }"
+            "default": "DEFAULT_SCORE_THRESHOLDS"
           },
           {
             "name": "types",
@@ -70310,7 +70413,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.8, medium: 0.5, }"
+            "default": "{ high: 0.8, medium: 0.5 }"
           },
           {
             "name": "withoutClaims",
@@ -88836,7 +88939,7 @@
             "name": "--lr-markdown-content-min-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-size)"
+            "default": 0
           },
           {
             "name": "--lr-markdown-font-mono",
@@ -89707,7 +89810,7 @@
             "name": "--lr-markdown-content-min-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-size)"
+            "default": 0
           },
           {
             "name": "--lr-markdown-font-mono",
@@ -90799,7 +90902,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.75, medium: 0.5, }"
+            "default": "DEFAULT_SCORE_THRESHOLDS"
           },
           {
             "name": "types",
@@ -93573,6 +93676,16 @@
             "default": false
           },
           {
+            "name": "html-mode",
+            "property": "htmlMode",
+            "type": "MarkdownHtmlMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "sanitize"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -93582,10 +93695,39 @@
             "hasDefault": false
           },
           {
+            "name": "link-schemes",
+            "property": "linkSchemes",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "link-target",
+            "property": "linkTarget",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "_blank"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
             "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max-height",
+            "property": "maxHeight",
+            "type": "string",
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -93619,6 +93761,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "without-reasoning",
@@ -93662,6 +93814,16 @@
             "default": false
           },
           {
+            "name": "htmlMode",
+            "attribute": "html-mode",
+            "type": "MarkdownHtmlMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "sanitize"
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | undefined",
@@ -93671,11 +93833,40 @@
             "hasDefault": false
           },
           {
+            "name": "linkSchemes",
+            "attribute": "link-schemes",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "linkTarget",
+            "attribute": "link-target",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "_blank"
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
             "readonly": false,
             "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "maxHeight",
+            "attribute": "max-height",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": ""
@@ -93746,6 +93937,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "DEFAULT_WIDGET_TYPE_REGISTRY"
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "withoutReasoning",
@@ -95231,121 +95432,6 @@
             "default": "var(--lr-color-surface-container-high)"
           },
           {
-            "name": "--lr-picker-expand-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-gap",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-max-inline-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-open-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-active-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-disabled-opacity",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-font-weight",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-border-style",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-font-style",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-radius",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-active-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-fill",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-height",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-hover-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-hover-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-min-height",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-padding",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-positioner-available-block-size",
             "deprecated": null,
             "hasDefault": false
@@ -96614,8 +96700,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "collapseState",
@@ -99716,6 +99801,15 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "click",
             "overloads": [
               {
@@ -99752,6 +99846,7 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": [
+            "blur",
             "click",
             "focus"
           ]
@@ -116607,7 +116702,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.75, medium: 0.5, }"
+            "default": "DEFAULT_SCORE_THRESHOLDS"
           },
           {
             "name": "types",
@@ -123234,7 +123329,7 @@
           {
             "name": "captureOptions",
             "attribute": null,
-            "type": "Readonly<Partial<Pick<LyraPushToTalk, 'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'maxDurationMs' | 'withoutTimer' | 'audioConstraints'>>> | undefined",
+            "type": "Readonly<Partial<Pick<LyraPushToTalk, 'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'streamOnly' | 'levelEvents' | 'maxDurationMs' | 'withoutTimer' | 'audioConstraints'>>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -126023,7 +126118,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "{ high: 0.75, medium: 0.5, }"
+            "default": "DEFAULT_SCORE_THRESHOLDS"
           },
           {
             "name": "virtualizeAt",
@@ -149508,7 +149603,7 @@
             "name": "--lr-thread-list-search-clear-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-size-1-5rem)"
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-thread-list-search-font-size",
@@ -166777,121 +166872,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-container-high)"
-          },
-          {
-            "name": "--lr-picker-expand-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-font-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-gap",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-max-inline-size",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-open-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-active-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-disabled-opacity",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-selected-font-weight",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-border-style",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-option-synthetic-font-style",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-radius",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-active-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-fill",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-height",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-hover-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-hover-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-min-height",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-picker-trigger-padding",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-positioner-available-block-size",

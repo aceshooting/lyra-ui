@@ -893,6 +893,7 @@ export interface LyraComponentTypeMap {
       | '--lr-app-rail-pin-pressed-bg'
       | '--lr-app-rail-pin-pressed-color'
       | '--lr-app-rail-resizer-active-bg'
+      | '--lr-app-rail-resizer-hit-area'
       | '--lr-app-rail-resizer-hover-bg'
       | '--lr-app-rail-toggle-active-bg'
       | '--lr-app-rail-toggle-active-color'
@@ -3983,6 +3984,7 @@ export interface LyraComponentTypeMap {
       | '--lr-dashboard-grid-gap'
       | '--lr-dashboard-grid-interaction-shadow'
       | '--lr-dashboard-grid-resize-handle-color'
+      | '--lr-dashboard-grid-resize-handle-hit-area'
       | '--lr-dashboard-grid-resize-handle-hover-bg'
       | '--lr-dashboard-grid-row-height';
     attributeAliases: {
@@ -8656,8 +8658,12 @@ export interface LyraComponentTypeMap {
       | 'codeBlockHeader'
       | 'contentMode'
       | 'disabled'
+      | 'htmlMode'
       | 'label'
+      | 'linkSchemes'
+      | 'linkTarget'
       | 'locale'
+      | 'maxHeight'
       | 'maxRenderedParts'
       | 'parts'
       | 'renderPart'
@@ -8666,6 +8672,7 @@ export interface LyraComponentTypeMap {
       | 'toolDisplay'
       | 'widgetBindingState'
       | 'widgetRegistry'
+      | 'withoutImages'
       | 'withoutReasoning',
       {}
     >;
@@ -8698,9 +8705,14 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraAttributeValue<string | null>;
       'code-block-header'?: LyraMessageParts['codeBlockHeader'];
       'content-mode'?: LyraMessageParts['contentMode'];
+      'html-mode'?: LyraMessageParts['htmlMode'];
+      'link-schemes'?: LyraMessageParts['linkSchemes'];
+      'link-target'?: LyraMessageParts['linkTarget'];
+      'max-height'?: LyraMessageParts['maxHeight'];
       'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
       'streaming-render'?: LyraMessageParts['streamingRender'];
       'tool-display'?: LyraMessageParts['toolDisplay'];
+      'without-images'?: LyraMessageParts['withoutImages'];
       'without-reasoning'?: LyraMessageParts['withoutReasoning'];
     };
   };
@@ -8817,29 +8829,6 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
-      | '--lr-picker-expand-size'
-      | '--lr-picker-font-size'
-      | '--lr-picker-gap'
-      | '--lr-picker-max-inline-size'
-      | '--lr-picker-open-border-color'
-      | '--lr-picker-option-active-bg'
-      | '--lr-picker-option-disabled-opacity'
-      | '--lr-picker-option-selected-bg'
-      | '--lr-picker-option-selected-border'
-      | '--lr-picker-option-selected-color'
-      | '--lr-picker-option-selected-font-weight'
-      | '--lr-picker-option-synthetic-border-color'
-      | '--lr-picker-option-synthetic-border-style'
-      | '--lr-picker-option-synthetic-font-style'
-      | '--lr-picker-radius'
-      | '--lr-picker-trigger-active-bg'
-      | '--lr-picker-trigger-border-color'
-      | '--lr-picker-trigger-fill'
-      | '--lr-picker-trigger-height'
-      | '--lr-picker-trigger-hover-bg'
-      | '--lr-picker-trigger-hover-border-color'
-      | '--lr-picker-trigger-min-height'
-      | '--lr-picker-trigger-padding'
       | '--lr-positioner-available-block-size'
       | '--lr-positioner-available-inline-size'
       | '--lr-positioning-strategy';
@@ -15028,29 +15017,6 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
-      | '--lr-picker-expand-size'
-      | '--lr-picker-font-size'
-      | '--lr-picker-gap'
-      | '--lr-picker-max-inline-size'
-      | '--lr-picker-open-border-color'
-      | '--lr-picker-option-active-bg'
-      | '--lr-picker-option-disabled-opacity'
-      | '--lr-picker-option-selected-bg'
-      | '--lr-picker-option-selected-border'
-      | '--lr-picker-option-selected-color'
-      | '--lr-picker-option-selected-font-weight'
-      | '--lr-picker-option-synthetic-border-color'
-      | '--lr-picker-option-synthetic-border-style'
-      | '--lr-picker-option-synthetic-font-style'
-      | '--lr-picker-radius'
-      | '--lr-picker-trigger-active-bg'
-      | '--lr-picker-trigger-border-color'
-      | '--lr-picker-trigger-fill'
-      | '--lr-picker-trigger-height'
-      | '--lr-picker-trigger-hover-bg'
-      | '--lr-picker-trigger-hover-border-color'
-      | '--lr-picker-trigger-min-height'
-      | '--lr-picker-trigger-padding'
       | '--lr-positioner-available-block-size'
       | '--lr-positioner-available-inline-size'
       | '--lr-positioning-strategy'

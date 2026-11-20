@@ -9,9 +9,9 @@ import { collectionSupport, publicCollectionTruncation } from '../../../internal
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { parseHotkey, matchesHotkey, isIgnorableKeyEvent, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
+import { parseHotkey, matchesHotkey, hasNonShiftModifier, isEditableKeyEventTarget, isIgnorableKeyEvent, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
 import { detectPlatform } from '../../../internal/platform.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, isAccessibilityVisible } from '../../../internal/a11y.js';
 import {
   activateOverlay,
   type OverlayHandle,
@@ -319,7 +319,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
    *  duplicates from untyped boundaries are omitted deterministically. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) commands: readonly LyraCommand[] = [];
   /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere,
-   * using Client Hints with legacy platform and reduced user-agent fallbacks. */
+   * using Client Hints with legacy platform and reduced user-agent fallbacks. A chord with no
+   * Control, Command, Alt or `mod` modifier (`/`, `shift+?`) is ignored while focus is in a text
+   * field, so it stays typeable; any chord is ignored while the palette sits in a hidden or inert
+   * subtree. */
   @property() hotkey = 'mod+k';
   /** Accessible name for the dialog. Omitted falls back to the localized `commandPaletteLabel`
    *  default. An explicitly empty `aria-label` is used as-is. */
@@ -716,7 +719,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private shortcutMemo?: { source: string; parsed: ReturnType<typeof parseHotkey> };
   private matchesShortcut(event: KeyboardEvent): boolean {
     if (!this.shortcutMemo || this.shortcutMemo.source !== this.hotkey) this.shortcutMemo = { source: this.hotkey, parsed: parseHotkey(this.hotkey) };
-    return matchesHotkey(this.shortcutMemo.parsed, event, this.shortcutIsMac);
+    const parsed = this.shortcutMemo.parsed;
+    // A bare or Shift-only chord (`/`, `k`, `shift+?`) is also a typed character: it never fires
+    // while the user is typing into a text field. A palette in a hidden or inert subtree never
+    // claims the chord either.
+    return parsed !== null && matchesHotkey(parsed, event, this.shortcutIsMac) &&
+      (hasNonShiftModifier(parsed) || !isEditableKeyEventTarget(event)) &&
+      isAccessibilityVisible(this);
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
     if (isIgnorableKeyEvent(event)) return;

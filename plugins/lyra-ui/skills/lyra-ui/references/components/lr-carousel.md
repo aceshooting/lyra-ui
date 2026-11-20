@@ -166,10 +166,10 @@ brand/active-mix rendering when unset. The scroll-snap viewport's mouse-hover pr
 four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-width` (default `var(--lr-border-width-thin)`),
 `--lr-carousel-scroll-container-hover-outline-style` (default `solid`),
-`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
+`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
-(default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint. The `scroll-container` part also honors the opt-in theme-level
+(default `var(--lr-focus-ring-offset)`). Unset, they paint the same preview as `lr-scroller`'s
+viewport and `lr-tab-group`'s panel, and a keyboard focus ring replaces it. The `scroll-container` part also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
 its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library. Chromium and Safari ignore

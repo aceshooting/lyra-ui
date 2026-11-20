@@ -148,7 +148,9 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  * common row composition, `renderStart`, `renderExcerpt`, `renderMeta`, and `renderRowContent`
  * provide focused virtualized render hooks -- `renderExcerpt` renders into the row item's own
  * `excerpt` slot (winning over the plain-string `excerpt` property) for rich per-row content such
- * as a highlighted search snippet. A host needing a fully custom
+ * as a highlighted search snippet. Excerpt, meta and row-content output joins the row's
+ * content-derived accessible name, as does a pinned row's localized "Pinned" status; `renderStart`
+ * output stays out of it. A host needing a fully custom
  * `actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a
  * `<lr-dropdown>` + `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
  * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
@@ -293,9 +295,9 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   field. A `size` tier replaces the default with that tier's shared form-control block gutter.
  * @cssprop [--lr-thread-list-search-radius=var(--lr-radius)] - Corner radius of the search field. A
  *   `size` tier replaces the default with that tier's shared form-control radius.
- * @cssprop [--lr-thread-list-search-clear-size=var(--lr-size-1-5rem)] - Box size of the search
- *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at the
- *   shared minimum target size, not a text box.
+ * @cssprop [--lr-thread-list-search-clear-size=var(--lr-icon-button-size)] - Box size of the search
+ *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at
+ *   `--lr-icon-button-size`, not a text box, so only a larger value changes it.
  * @cssprop [--lr-thread-list-group-header-bg=var(--lr-color-surface)] - Group header background; sticky headers stay opaque so scrolled rows never show through.
  * @cssprop [--lr-thread-list-group-toggle-hover-bg=var(--lr-color-surface-raised)] - Group-toggle hover background.
  * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
@@ -1537,22 +1539,22 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
             >`
           : nothing}
         ${this.renderExcerpt
-          ? html`<span slot="excerpt" part="row-excerpt" data-lr-virtual-list-mark inert
+          ? html`<span slot="excerpt" part="row-excerpt" data-lr-virtual-list-mark
               >${this.renderExcerpt(source)}</span
             >`
           : nothing}
         ${this.renderRowContent
-          ? html`<span slot="content" part="row-content" inert
+          ? html`<span slot="content" part="row-content"
               >${this.renderRowContent(source)}</span
             >`
           : nothing}
         ${thread.pinned
-          ? html`<span slot="meta" part="row-meta pin-glyph" aria-hidden="true"
-              >${pinIcon()}</span
+          ? html`<span slot="meta" part="row-meta pin-glyph"
+              ><span role="img" aria-label=${this.localize('threadGroupPinned')}>${pinIcon()}</span> </span
             >`
           : nothing}
         ${this.renderMeta
-          ? html`<span slot="meta" part="row-meta" inert
+          ? html`<span slot="meta" part="row-meta"
               >${this.renderMeta(source)}</span
             >`
           : nothing}

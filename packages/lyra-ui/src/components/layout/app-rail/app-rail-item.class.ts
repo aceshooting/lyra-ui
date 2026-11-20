@@ -586,6 +586,16 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
 
+  /** Moves focus to the internal link or button. */
+  override focus(options?: FocusOptions): void {
+    this.renderRoot?.querySelector<HTMLElement>('a[part~="base"], button[part~="base"]')?.focus(options);
+  }
+
+  /** Removes focus from the internal link or button. */
+  override blur(): void {
+    this.renderRoot?.querySelector<HTMLElement>('[part~="base"]')?.blur();
+  }
+
   /** Activates the internal link or button. Disabled items remain inert. */
   override click(): void {
     if (this.disabled) return;

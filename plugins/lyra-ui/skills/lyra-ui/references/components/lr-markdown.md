@@ -306,7 +306,7 @@ preview uses code direction. Bidi formatting characters inside code (for example
 rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
-on both logical axes (default `var(--lr-icon-button-size)`). `--lr-markdown-code-copy-bg`,
+on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
 take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on

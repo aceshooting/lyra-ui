@@ -1475,6 +1475,7 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
   // and the binding would render: a blank first line, an indented first line and a blank last
   // line. The fallback must show exactly `content`. The template carries no whitespace outside
   // the tags either, so a host that inherits a preserving white-space value renders none of it.
+  // hit-area-exempt: a document-sized reading and scroll region, not an icon-sized control.
   // prettier-ignore
   return html`<div
         part="content"

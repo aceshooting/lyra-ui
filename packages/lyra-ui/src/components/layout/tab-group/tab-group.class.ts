@@ -16,7 +16,7 @@ import { composedAccessibilityText, labelReferenceRecordsMatter } from '../../..
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
@@ -1292,9 +1292,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const physical = this.effectiveDirection === 'rtl' ? -towardEnd : towardEnd;
     tablist.scrollBy({
       left: step * physical,
-      behavior: prefersReducedMotion(this)
-        ? 'instant'
-        : 'smooth',
+      behavior: motionScrollBehavior(this),
     });
   }
 

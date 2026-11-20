@@ -49,6 +49,8 @@ export function catalogPickerStyles(
   triggerLayout: CSSResult,
   localStyles: CSSResult,
 ): CSSResult {
+  // Public hooks are written with the picker's own `--lr-<component>-` prefix directly.
+  const hook = unsafeCSS(`--lr-${component}-`);
   const styles = css`
     [part='limit'] {
       margin: 0;
@@ -63,7 +65,7 @@ export function catalogPickerStyles(
       display: inline-block;
       inline-size: 100%;
       min-inline-size: 0;
-      max-inline-size: var(--lr-picker-max-inline-size, var(--lr-size-24rem));
+      max-inline-size: var(${hook}max-inline-size, var(--lr-size-24rem));
       --_lr-picker-trigger-padding: var(--lr-form-control-padding-block)
         var(--lr-form-control-padding-inline);
       --_lr-picker-trigger-min-height: var(--lr-form-control-height);
@@ -93,20 +95,20 @@ export function catalogPickerStyles(
     [part='combobox'] {
       display: flex;
       align-items: center;
-      gap: var(--lr-picker-gap, var(--_lr-picker-gap-default));
+      gap: var(${hook}gap, var(--_lr-picker-gap-default));
       ${triggerLayout}
       min-inline-size: 0;
-      min-block-size: var(--lr-picker-trigger-height, var(--lr-picker-trigger-min-height, var(--_lr-picker-trigger-min-height)));
-      block-size: var(--lr-picker-trigger-height, auto);
+      min-block-size: var(${hook}trigger-height, var(${hook}trigger-min-height, var(--_lr-picker-trigger-min-height)));
+      block-size: var(${hook}trigger-height, auto);
       box-sizing: border-box;
-      padding: var(--lr-picker-trigger-padding, var(--_lr-picker-trigger-padding));
+      padding: var(${hook}trigger-padding, var(--_lr-picker-trigger-padding));
       border: var(--lr-border-width-thin) solid
-        var(--lr-picker-trigger-border-color, var(--lr-color-border));
-      border-radius: var(--lr-picker-radius, var(--_lr-picker-radius-default));
-      background: var(--lr-picker-trigger-fill, var(--lr-color-surface));
+        var(${hook}trigger-border-color, var(--lr-color-border));
+      border-radius: var(${hook}radius, var(--_lr-picker-radius-default));
+      background: var(${hook}trigger-fill, var(--lr-color-surface));
       color: inherit;
       font: inherit;
-      font-size: var(--lr-picker-font-size, var(--_lr-picker-font-size));
+      font-size: var(${hook}font-size, var(--_lr-picker-font-size));
     }
     [part='trigger'] {
       cursor: pointer;
@@ -124,15 +126,15 @@ export function catalogPickerStyles(
       ${formControlFocusHalo}
     }
     :where([part='trigger']):hover:where(:not(:disabled)) {
-      background: var(--lr-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
-      border-color: var(--lr-picker-trigger-hover-border-color, var(--lr-picker-trigger-border-color, var(--lr-color-border)));
+      background: var(${hook}trigger-hover-bg, var(--lr-color-brand-quiet));
+      border-color: var(${hook}trigger-hover-border-color, var(${hook}trigger-border-color, var(--lr-color-border)));
     }
     :where([part='trigger']):active:where(:not(:disabled)) {
-      background: var(--lr-picker-trigger-active-bg,
-        ${activeFill('var(--lr-picker-trigger-hover-bg, var(--lr-color-brand-quiet))')});
+      background: var(${hook}trigger-active-bg,
+        ${activeFill('var(${hook}trigger-hover-bg, var(--lr-color-brand-quiet))')});
     }
     :host([open]) [part='trigger'] {
-      border-color: var(--lr-picker-open-border-color, var(--lr-color-brand));
+      border-color: var(${hook}open-border-color, var(--lr-color-brand));
     }
     :host(:disabled) [part='trigger'],
     :host(:disabled) [part='combobox'] {
@@ -163,11 +165,11 @@ export function catalogPickerStyles(
       color: var(--lr-color-text-quiet);
       min-inline-size: min(
         var(--lr-icon-button-size),
-        var(--lr-picker-expand-size, var(--_lr-picker-expand-size))
+        var(${hook}expand-size, var(--_lr-picker-expand-size))
       );
       min-block-size: min(
         var(--lr-icon-button-size),
-        var(--lr-picker-expand-size, var(--_lr-picker-expand-size))
+        var(${hook}expand-size, var(--_lr-picker-expand-size))
       );
       line-height: var(--lr-line-height-none);
     }
@@ -192,7 +194,7 @@ export function catalogPickerStyles(
       padding: var(--lr-space-xs);
       ${overlaySurfaceFill}
       ${overlaySurfaceControlEdge}
-      border-radius: var(--lr-picker-radius, var(--lr-overlay-radius, var(--_lr-picker-radius-default)));
+      border-radius: var(${hook}radius, var(--lr-overlay-radius, var(--_lr-picker-radius-default)));
       box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
       ${anchoredPopupReveal}
     }
@@ -208,12 +210,12 @@ export function catalogPickerStyles(
     [part='option'] {
       display: flex;
       align-items: center;
-      gap: var(--lr-picker-gap, var(--_lr-picker-gap-default));
+      gap: var(${hook}gap, var(--_lr-picker-gap-default));
       inline-size: 100%;
       box-sizing: border-box;
       padding: var(--lr-space-xs) var(--lr-space-s);
       border: var(--lr-border-width-thin) solid transparent;
-      border-radius: var(--lr-picker-radius, var(--_lr-picker-radius-default));
+      border-radius: var(${hook}radius, var(--_lr-picker-radius-default));
       background: none;
       color: inherit;
       font: inherit;
@@ -221,29 +223,29 @@ export function catalogPickerStyles(
       cursor: pointer;
     }
     [part='option'][aria-selected="true"] {
-      background: var(--lr-picker-option-selected-bg, transparent);
-      border-color: var(--lr-picker-option-selected-border, var(--lr-color-brand));
-      color: var(--lr-picker-option-selected-color, var(--lr-color-brand));
-      font-weight: var(--lr-picker-option-selected-font-weight, var(--lr-font-weight-semibold));
+      background: var(${hook}option-selected-bg, transparent);
+      border-color: var(${hook}option-selected-border, var(--lr-color-brand));
+      color: var(${hook}option-selected-color, var(--lr-color-brand));
+      font-weight: var(${hook}option-selected-font-weight, var(--lr-font-weight-semibold));
     }
     /* The selected option also needs the hover and keyboard-active background. */
     [part='option']:where(:not([aria-disabled='true'])):hover,
     [part='option'][data-active] {
-      background: var(--lr-picker-option-active-bg, var(--lr-color-brand-quiet));
+      background: var(${hook}option-active-bg, var(--lr-color-brand-quiet));
     }
     [part='option']:where(:not([aria-disabled='true'])):active {
-      background: ${activeFill('var(--lr-picker-option-active-bg, var(--lr-color-brand-quiet))')};
+      background: ${activeFill('var(${hook}option-active-bg, var(--lr-color-brand-quiet))')};
     }
     [part='option'][aria-disabled='true'] {
       cursor: default;
-      opacity: var(--lr-picker-option-disabled-opacity, var(--lr-opacity-disabled));
+      opacity: var(${hook}option-disabled-opacity, var(--lr-opacity-disabled));
     }
     [part='option'][data-synthetic] {
-      border-style: var(--lr-picker-option-synthetic-border-style, dashed);
-      border-color: var(--lr-picker-option-synthetic-border-color, var(--lr-color-border));
+      border-style: var(${hook}option-synthetic-border-style, dashed);
+      border-color: var(${hook}option-synthetic-border-color, var(--lr-color-border));
     }
     [part='option'][data-synthetic] [part='option-label'] {
-      font-style: var(--lr-picker-option-synthetic-font-style, italic);
+      font-style: var(${hook}option-synthetic-font-style, italic);
     }
     [part='option-badge'] {
       flex: 0 0 auto;
@@ -267,8 +269,8 @@ export function catalogPickerStyles(
     ${glassSurface("[part='listbox']", css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
   `;
   const minimumHeight = component === 'voice-picker' ? 'trigger-min-height-default' : 'trigger-min-height';
-  // Replace only the shared template's placeholder namespace, leaving local hooks intact.
+  // Replace only the shared template's private placeholder namespace, leaving local hooks intact.
   return unsafeCSS(styles.cssText
     .replaceAll('--_lr-picker-trigger-min-height', `--_lr-${component}-${minimumHeight}`)
-    .replaceAll(/(--_?lr)-picker-/g, `$1-${component}-`));
+    .replaceAll('--_lr-picker-', `--_lr-${component}-`));
 }

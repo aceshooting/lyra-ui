@@ -229,6 +229,9 @@ hook receive the default, component-themeable highlight treatment documented bel
 metadata in the row's meta region.
 `renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
+Excerpt, meta and row-content output is part of the row's accessible name, so keep it short,
+non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-glyph` part is a
+named image) to that name. `renderStart` output stays out of the name.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
 returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
@@ -366,8 +369,8 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-size-1-5rem)`) is the clear button's box; it never follows `size`, because that button is
-a tap target floored at `--lr-icon-button-size` rather than a text box. Every one of these wins over
+`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_

@@ -339,6 +339,11 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     else super.focus(options);
   }
 
+  /** Removes focus from the link or button. */
+  override blur(): void {
+    this.baseElement?.blur();
+  }
+
   /** Activates the link or button, exactly like a user click. */
   override click(): void {
     this.baseElement?.click();

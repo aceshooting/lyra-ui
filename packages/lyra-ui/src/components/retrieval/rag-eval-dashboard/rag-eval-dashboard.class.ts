@@ -511,7 +511,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                 part="run"
                 type="button"
                 tabindex=${run.id === rovingRunId ? '0' : '-1'}
-                @focus=${() => { this.rovingRunId = run.id; this.requestUpdate(); }}
+                @focus=${() => { if (this.rovingRunId === run.id) return; this.rovingRunId = run.id; this.requestUpdate(); }}
                 @keydown=${(event: KeyboardEvent) => this.onRunKeyDown(event, index, renderedRuns.length)}
                 @click=${() => this.activateRun(run)}
               >

@@ -342,6 +342,21 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.contentTextObserver.adopted();
   }
 
+  /** Moves focus to the native whole-card owner (the linked anchor or the activation button).
+   *  A passive card has no focus target. */
+  override focus(options?: FocusOptions): void {
+    this.renderRoot
+      ?.querySelector<HTMLElement>('a[part~="base"], button[part~="activation-button"]')
+      ?.focus(options);
+  }
+
+  /** Removes focus from the native whole-card owner. */
+  override blur(): void {
+    this.renderRoot
+      ?.querySelector<HTMLElement>('a[part~="base"], button[part~="activation-button"]')
+      ?.blur();
+  }
+
   /** Activates the native whole-card owner: the linked anchor when `href` is safe, or the
    *  activation button while `actionable` is set without a link. Passive and `disabled` cards
    *  remain inert. */

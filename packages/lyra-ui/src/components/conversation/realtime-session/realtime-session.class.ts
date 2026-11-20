@@ -147,9 +147,12 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Disables the built-in session actions and microphone capture. */
   @property({ type: Boolean, reflect: true }) disabled = false;
-  /** Options for the built-in recorder. Assign a new object to change recording configuration. */
+  /** Options for the built-in recorder. Assign a new object to change recording configuration.
+   *  `streamOnly` emits chunks without retaining the take (the stop event carries an empty Blob);
+   *  `levelEvents` defaults to `true` here so the session indicator can follow the input level. */
   @property({ attribute: false }) captureOptions?: Readonly<Partial<Pick<LyraPushToTalk,
-    'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'maxDurationMs' | 'withoutTimer' | 'audioConstraints'>>>;
+    'mode' | 'deviceId' | 'mimeType' | 'timesliceMs' | 'streamOnly' | 'levelEvents' | 'maxDurationMs' |
+    'withoutTimer' | 'audioConstraints'>>>;
   /** Options for transcript following, timestamps and the number of mounted entries. */
   @property({ attribute: false }) transcriptOptions?: Readonly<Partial<Pick<LyraTranscriptFeed,
     'follow' | 'withTimestamps' | 'formatTimestamp' | 'maxRenderedEntries'>>>;
@@ -351,10 +354,11 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           .deviceId=${this.captureOptions?.deviceId ?? ''}
           .mimeType=${this.captureOptions?.mimeType ?? ''}
           .timesliceMs=${this.captureOptions?.timesliceMs ?? 0}
+          .streamOnly=${this.captureOptions?.streamOnly ?? false}
+          .levelEvents=${this.captureOptions?.levelEvents ?? true}
           .maxDurationMs=${this.captureOptions?.maxDurationMs ?? 0}
           .withoutTimer=${this.captureOptions?.withoutTimer ?? false}
           .audioConstraints=${this.captureOptions?.audioConstraints}
-          level-events
         ></lr-push-to-talk>
         ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
         <lr-transcript-feed

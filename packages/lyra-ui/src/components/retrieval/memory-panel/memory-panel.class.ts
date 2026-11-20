@@ -34,8 +34,8 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
-import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
-import { labelWithVisibleText } from '../../../internal/accessible-name.js';
+import { DEFAULT_SCORE_THRESHOLDS, resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { boundedAccessibleContext, labelWithVisibleText } from '../../../internal/accessible-name.js';
 import { collapseWhitespaceAndSoftHyphen } from '../../../internal/text-selection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -192,8 +192,6 @@ export type LyraMemoryPanelDisclosureDetail = Readonly<{ memoryId: string; scope
   (Readonly<{ kind: 'memory'; expanded: boolean }> | LyraProvenancePanelDisclosureDetail);
 
 type Tier = 'high' | 'medium' | 'low';
-
-const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
 
 const CONFIRM_HEADING_KEY: Record<'add' | 'remove' | 'forget-all', string> = {
   add: 'memoryPanelConfirmAddHeading',
@@ -373,6 +371,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private rememberRovingAction(scope: MemoryScope, itemKey: string, remove: boolean): void {
+    const changed =
+      this.rovingActionByScope.get(scope) !== itemKey || this.rovingRemoveByScope.has(scope) !== remove;
+    if (!changed) return;
     this.rovingActionByScope.set(scope, itemKey);
     if (remove) this.rovingRemoveByScope.add(scope);
     else this.rovingRemoveByScope.delete(scope);
@@ -411,10 +412,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
 
   /** Confidence-tier and (forwarded) provenance relevance-tier boundaries. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.75,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_SCORE_THRESHOLDS;
 
   /** Semantic level of the section headings; `none` keeps the visible text without heading semantics. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
@@ -601,7 +599,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private tier(score: number): Tier {
-    const { high, medium } = resolveScoreTiers(DEFAULT_TIERS, this.thresholds);
+    const { high, medium } = resolveScoreTiers(DEFAULT_SCORE_THRESHOLDS, this.thresholds);
     if (score >= high) return 'high';
     if (score >= medium) return 'medium';
     return 'low';
@@ -615,8 +613,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (promotionTextCounts.size === 0) return undefined;
     const label = collapseWhitespaceAndSoftHyphen(text).trim();
     const context = label && promotionTextCounts.get(label) === 1
-      ? label
-      : labelWithVisibleText(label, this.localize('memoryPanelAddPosition', undefined, {
+      ? boundedAccessibleContext(label)
+      : labelWithVisibleText(boundedAccessibleContext(label), this.localize('memoryPanelAddPosition', undefined, {
           index: this.formatLocaleNumber(index + 1),
         }));
     return labelWithVisibleText(this.localize('memoryPanelAdd'), context);
@@ -808,7 +806,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-controls=${bodyId}
-                aria-label=${this.localize(expanded ? 'retrievalShowLessWithContext' : 'retrievalShowMoreWithContext', undefined, { label: item.text })}
+                aria-label=${this.localize(expanded ? 'retrievalShowLessWithContext' : 'retrievalShowMoreWithContext', undefined, { label: boundedAccessibleContext(item.text) })}
                 @click=${() => this.toggleExpand(item, scope)}
               >
                 ${this.localize(expanded ? 'showLess' : 'showMore')}
@@ -830,7 +828,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                         @focus=${() => this.rememberRovingAction(scope, itemKey, false)}
                         @keydown=${this.onPrimaryKeyDown}
                         aria-label=${this.addActionLabel(item.text, index, promotionTextCounts) ?? nothing}
-                        aria-description=${this.localize('memoryPanelAddWithContext', undefined, { label: item.text })}
+                        aria-description=${this.localize('memoryPanelAddWithContext', undefined, { label: boundedAccessibleContext(item.text) })}
                         @click=${() =>
                           this.startItemPending('add', item, scope)}
                       >
@@ -847,7 +845,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                   @focus=${() => this.rememberRovingAction(scope, itemKey, scope === 'short-term')}
                   @keydown=${this.onPrimaryKeyDown}
                   aria-label=${this.localize('removeWithContext', undefined, {
-                    label: item.text,
+                    label: boundedAccessibleContext(item.text),
                   })}
                   @click=${() => this.startItemPending('remove', item, scope)}
                 >

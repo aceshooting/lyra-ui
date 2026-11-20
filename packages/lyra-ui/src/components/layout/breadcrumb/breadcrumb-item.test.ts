@@ -128,6 +128,23 @@ describe('owner names and direct a11y coverage', () => {
   });
 });
 
+describe('host focus() and blur()', () => {
+  for (const [name, markup] of [
+    ['button', html`<lr-breadcrumb-item>Open menu</lr-breadcrumb-item>`],
+    ['link', html`<lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>`],
+    ['current label', html`<lr-breadcrumb-item current>Here</lr-breadcrumb-item>`],
+  ] as const) {
+    it(`forwards to the internal ${name}`, async () => {
+      const el = (await fixture(markup)) as LyraBreadcrumbItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      el.focus();
+      expect(el.shadowRoot!.activeElement === base).to.equal(true);
+      el.blur();
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    });
+  }
+});
+
 describe('host click()', () => {
   for (const [name, markup] of [
     ['button', html`<lr-breadcrumb-item>Open menu</lr-breadcrumb-item>`],

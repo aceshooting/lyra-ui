@@ -6,6 +6,9 @@ export interface LyraScoreThresholds {
   readonly medium: number;
 }
 
+/** Default relevance boundaries shared by the retrieval components. */
+export const DEFAULT_SCORE_THRESHOLDS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
+
 /** Merges a partial threshold input over the defaults; non-finite values fall back and an inverted pair is reordered. */
 export function resolveScoreTiers(
   defaults: LyraScoreThresholds,

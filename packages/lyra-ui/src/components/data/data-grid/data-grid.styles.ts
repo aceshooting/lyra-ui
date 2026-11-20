@@ -722,9 +722,16 @@ export const styles = css`
     transform: rotate(90deg);
   }
 
+  /* Pointer coordinates are physical, so the preview is anchored to the physical top-left corner
+     and moved with a translate computed from them, under either direction. */
   [part="drag-ghost"] {
-    position: fixed;
+    position: absolute;
+    inset: 0 auto auto 0;
     z-index: var(--lr-layer-toast);
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     pointer-events: none;
     padding: var(--lr-space-s);
     border: var(--border-width, var(--_lr-data-grid-border-width)) solid

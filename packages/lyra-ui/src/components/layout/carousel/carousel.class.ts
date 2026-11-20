@@ -158,7 +158,7 @@ export interface LyraCarouselEventMap {
  *   Outline width of the mouse-hover preview on `[part="scroll-container"]`.
  * @cssprop [--lr-carousel-scroll-container-hover-outline-style=solid] - Outline style of the
  *   mouse-hover preview on `[part="scroll-container"]`.
- * @cssprop [--lr-carousel-scroll-container-hover-outline-color=var(--lr-color-border-strong)] -
+ * @cssprop [--lr-carousel-scroll-container-hover-outline-color=var(--lr-color-border)] -
  *   Outline color of the mouse-hover preview on `[part="scroll-container"]`. Set to `transparent`
  *   to opt out of the hover treatment entirely.
  * @cssprop [--lr-carousel-scroll-container-hover-outline-offset=var(--lr-focus-ring-offset)] -
@@ -462,12 +462,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         // this component's existing contract). A `slidesPerPage` change that pushes the active
         // slide out of range is a sibling-property correction, not a direct set, so it emits --
         // mirroring changeTo()'s and the scroll-settle handler's own emit-after-write pattern.
+        // The event waits for the render, so a listener reads the corrected DOM and may assign
+        // properties without re-entering this update.
         const forcedBySibling =
           changed.has('slidesPerPage') && !changed.has('currentSlide');
         this.currentSlide = normalized;
         if (forcedBySibling) {
-          const slide = this.slideElements()[normalized];
-          if (slide) this.emit('lr-slide-change', { index: normalized, slide });
+          this.scheduleAfterUpdate(() => {
+            if (this.currentSlide !== normalized) return;
+            const slide = this.slideElements()[normalized];
+            if (slide) this.emit('lr-slide-change', { index: normalized, slide });
+          }, 'slide-sibling-correction');
         }
       }
     }

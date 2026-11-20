@@ -182,6 +182,19 @@ describe('dashboard-grid keyboard', () => {
 });
 
 describe('dashboard-grid resize handle theming', () => {
+  it('keeps the corner grip to the 24px minimum target and lets the hit area be retuned', async () => {
+    const el = await fixture<LyraDashboardGrid>(html`<lr-dashboard-grid cells-resizable style="inline-size: 400px"
+      .layout=${[{ cellId: 'a', x: 0, y: 0, w: 2, h: 2, widget: { type: 'text', props: { text: 'A' } } }]}></lr-dashboard-grid>`);
+    const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="resize-handle"]')!;
+    const size = (): number[] => {
+      const rect = handle.getBoundingClientRect();
+      return [Math.round(rect.width), Math.round(rect.height)];
+    };
+    expect(size()).to.deep.equal([24, 24]);
+    el.style.setProperty('--lr-dashboard-grid-resize-handle-hit-area', '30px');
+    expect(size()).to.deep.equal([30, 30]);
+  });
+
   it('paints the hovered resize handle from --lr-dashboard-grid-resize-handle-hover-bg', async () => {
     const el = await fixture<LyraDashboardGrid>(html`<lr-dashboard-grid cells-resizable
       style="inline-size: 400px; --lr-dashboard-grid-resize-handle-hover-bg: rgb(1, 2, 3)"

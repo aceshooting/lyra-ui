@@ -1660,7 +1660,8 @@ describe("lr-segmented auto-reveal", () => {
     expect(calls.map((call) => call?.behavior)).to.deep.equal(["smooth"]);
     el.setAttribute("data-lr-motion", "reduce");
     el.scrollToValue("v28");
-    expect(calls.map((call) => call?.behavior)).to.deep.equal(["smooth", "auto"]);
+    // `instant`, not `auto`: `auto` defers to a consumer `scroll-behavior: smooth`.
+    expect(calls.map((call) => call?.behavior)).to.deep.equal(["smooth", "instant"]);
   });
 });
 

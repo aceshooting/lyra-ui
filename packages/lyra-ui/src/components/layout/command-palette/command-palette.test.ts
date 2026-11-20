@@ -888,6 +888,37 @@ it("supports an explicit ctrl hotkey without requiring the platform mod key", as
   expect(el.open).to.be.true;
 });
 
+it("lets a bare-key hotkey type into text fields and ignores it in a hidden subtree", async () => {
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div><input aria-label="Search" /><lr-command-palette hotkey="/"></lr-command-palette></div>`
+  );
+  const el = wrapper.querySelector("lr-command-palette") as LyraCommandPalette;
+  const input = wrapper.querySelector("input")!;
+  const press = (target: EventTarget): KeyboardEvent => {
+    const event = new KeyboardEvent("keydown", { key: "/", bubbles: true, composed: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  };
+  const typed = press(input);
+  await el.updateComplete;
+  expect(typed.defaultPrevented).to.equal(false);
+  expect(el.open).to.equal(false);
+
+  wrapper.hidden = true;
+  const hiddenPress = press(document.body);
+  await el.updateComplete;
+  expect(hiddenPress.defaultPrevented).to.equal(false);
+  expect(el.open).to.equal(false);
+
+  wrapper.hidden = false;
+  const page = press(document.body);
+  await el.updateComplete;
+  expect(page.defaultPrevented).to.equal(true);
+  expect(el.open).to.equal(true);
+  el.open = false;
+  await el.updateComplete;
+});
+
 it("binds its global shortcut to the adopted owner window", async () => {
   const frame = document.createElement("iframe");
   document.body.append(frame);

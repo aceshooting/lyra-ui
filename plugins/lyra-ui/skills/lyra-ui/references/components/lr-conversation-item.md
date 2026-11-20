@@ -204,6 +204,9 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 - Rename is triggered only by the dedicated pencil-icon button, never a double-click on the label —
   double-click has no keyboard/screen-reader equivalent and would also swallow the row's own
   single-click `lr-select`.
+- Without a host `aria-label`, `[part="select-button"]` is named from its visible content in reading
+  order — `start`, title, excerpt, `meta` and timestamp — so an unread badge or the time is read with
+  the title. A host `aria-label` replaces that name; keep it in sync with the visible title.
 - While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
 - Setting `withoutRename = true` mid-rename silently discards the in-progress draft (no `lr-rename`

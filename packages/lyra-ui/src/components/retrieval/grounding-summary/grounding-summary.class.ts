@@ -379,10 +379,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** Tone thresholds applied to both `coverage` and `confidence` (both 0-1 fractions): at or above
    *  `high` renders `success`, at or above `medium` renders `warning`, below `medium` renders
    *  `danger`. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.8,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_TIERS;
 
   /** Accessible name used by the stable group when the host has no `aria-label`; falls back to the
    *  localized `groundingSummaryLabel` default. An explicitly empty host label stays empty, and so
@@ -535,7 +532,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           source-id=${citation.sourceId ?? ''}
           .label=${citation.label ?? ''}
           .rovingTabIndex=${citation.id === rovingEvidenceId ? 0 : -1}
-          @focusin=${() => { this.rovingEvidenceId = citation.id; this.requestUpdate(); }}
+          @focusin=${() => { if (this.rovingEvidenceId === citation.id) return; this.rovingEvidenceId = citation.id; this.requestUpdate(); }}
           @keydown=${(event: KeyboardEvent) => this.onEvidenceKeyDown(event, index, count)}
           @lr-citation-activate=${(event: Event) =>
             this.onCitation('lr-citation-select', citation, event)}

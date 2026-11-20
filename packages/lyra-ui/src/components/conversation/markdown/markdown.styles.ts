@@ -15,7 +15,9 @@ export const styles = css`
     --_lr-markdown-max-height: none;
   }
   [part='content'] {
-    --_lr-markdown-content-min-size: var(--lr-markdown-content-min-size, var(--lr-icon-button-size));
+    /* A document-sized reading region, not an icon-sized target: no floor unless a consumer sets one,
+       so a one-line reply keeps its own line box. */
+    --_lr-markdown-content-min-size: var(--lr-markdown-content-min-size, 0);
     min-block-size: var(--_lr-markdown-content-min-size);
     box-sizing: border-box;
     min-inline-size: var(--_lr-markdown-content-min-size);

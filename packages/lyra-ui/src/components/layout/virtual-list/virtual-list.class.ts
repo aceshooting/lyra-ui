@@ -23,7 +23,7 @@ import { VIRTUAL_LIST_ROW_ATTRIBUTE } from './virtual-list-attributes.js';
 export { VIRTUAL_LIST_ROW_ATTRIBUTE, VIRTUAL_LIST_STICKY_ATTRIBUTE } from './virtual-list-attributes.js';
 import { MAX_OVERSCAN_ROWS } from './virtual-list-limits.js';
 export { MAX_OVERSCAN_ROWS } from './virtual-list-limits.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { nativePopoverSupported } from '../../../internal/native-popover.js';
 import {
   finiteAdd,
@@ -933,7 +933,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** Moves whichever element is scrolling so this list's own offset space lands at `top`. Omit
    *  `behavior` for the direct `scrollTop` write the measurement-anchoring paths need. */
-  private applyScrollPosition(top: number, behavior?: 'auto' | 'smooth'): void {
+  private applyScrollPosition(top: number, behavior?: ScrollBehavior): void {
     const external = this.externalScroller;
     if (!external) {
       const base = this.scrollContainer;
@@ -2334,7 +2334,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private scrollActiveIntoView(): void {
     const index = this.activeIndex;
     if (index < 0) return;
-    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
+    const behavior = motionScrollBehavior(this);
     if (!this.performScrollTo(index, 'auto', behavior)) return;
     this.beginPendingScrollCorrection(index, 'auto', this.activeItemId);
   }
@@ -2344,8 +2344,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * flush with the viewport top), `'end'` (row's bottom edge flush with the viewport bottom), or
    * `'auto'` (the same minimal-distance scroll `scrollActiveIntoView()` already uses for
    * `active-item-id` -- no scroll at all when the row is already fully visible). `behavior` (default
-   * `'smooth'`) is forced to `'auto'` under `prefers-reduced-motion: reduce` regardless of what's
-   * passed. `index` is clamped to `0…count-1`; a call against an empty source is a no-op.
+   * `'smooth'`) is forced to `'instant'` under `prefers-reduced-motion: reduce` regardless of what's
+   * passed, so a consumer `scroll-behavior: smooth` cannot animate it either. `index` is clamped to `0…count-1`; a call against an empty source is a no-op.
    *
    * Estimate-based geometry is corrected as measurements arrive, including changes to rows before
    * the target and to real group markers. The transaction is bound to the target identity, source,
@@ -2365,9 +2365,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const clamped = finiteInteger(index, 0, 0, n - 1);
     this.setCompositionScrollTarget(clamped);
     const align = options?.align ?? 'auto';
-    const behavior: 'auto' | 'smooth' = prefersReducedMotion(this)
-      ? 'auto'
-      : options?.behavior ?? 'smooth';
+    const behavior = motionScrollBehavior(this, options?.behavior ?? 'smooth');
     if (this.performScrollTo(clamped, align, behavior))
       this.beginPendingScrollCorrection(clamped, align);
     else this.pendingScrollCorrection = undefined;
@@ -2405,7 +2403,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private performScrollTo(
     index: number,
     align: 'start' | 'end' | 'auto',
-    behavior: 'auto' | 'smooth'
+    behavior: ScrollBehavior
   ): boolean {
     // Expressed against whichever element is scrolling, in this list's own offset space either
     // way -- so an external `scrollElement` needs no separate alignment arithmetic here.

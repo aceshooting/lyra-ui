@@ -351,9 +351,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       syncAriaDescribedByElements(this, owner, overlayOpen ? this.hostDescribedBy : null);
     }
     if (!this.isFirstUpdate && changed.has('resolvedMode')) {
-      this.emit('lr-mode-change', {
-        mode: this.resolvedMode,
-      });
+      // After the update completes, so a listener that assigns a property schedules a fresh
+      // update instead of one inside this cycle.
+      const mode = this.resolvedMode;
+      this.scheduleAfterUpdate(() => {
+        if (this.resolvedMode === mode) this.emit('lr-mode-change', { mode });
+      }, 'responsive-mode-change');
     }
     if (this.focusOverlayAfterUpdate) {
       this.focusOverlayAfterUpdate = false;

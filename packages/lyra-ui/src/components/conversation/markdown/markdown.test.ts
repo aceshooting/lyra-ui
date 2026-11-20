@@ -184,7 +184,8 @@ it("uses logical size containment and an internal overflow surface at a narrow a
 
   expect(getComputedStyle(el).minInlineSize).to.equal("0px");
   expect(getComputedStyle(el).maxInlineSize).to.equal("100%");
-  expect(getComputedStyle(content).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(content).minInlineSize).to.equal("0px");
+  expect(getComputedStyle(content).minBlockSize).to.equal("0px");
   expect(getComputedStyle(content).maxInlineSize).to.equal("100%");
   expect(getComputedStyle(content).overflowInline).to.equal("auto");
   // Paired-axis overflow: leaving the block axis unset would force it to the browser's own
@@ -2082,6 +2083,23 @@ describe("shiki highlighting (real peer)", () => {
       "existing",
       "language-ts",
     ]);
+  });
+
+  it("re-highlights a successfully highlighted block after the shared cache evicts it", async function () {
+    this.timeout(60_000);
+    const code = "const evictedHighlightProbe = 1;\n";
+    const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+    el.content = "```ts\n" + code + "```";
+    const highlighted = () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null;
+    await waitUntil(highlighted, "never highlighted", { timeout: 45_000 });
+    type Internals = { failedHighlightKeys: Set<string>; highlightCache: Map<string, string> };
+    const internals = el as unknown as Internals;
+    const key = markdownHighlightKey("ts", code);
+    expect(internals.failedHighlightKeys.has(key)).to.equal(false);
+    for (const entry of [...internals.highlightCache.keys()]) if (entry.includes(key)) internals.highlightCache.delete(entry);
+    el.content = "Intro\n\n```ts\n" + code + "```";
+    await el.updateComplete;
+    await waitUntil(highlighted, "an evicted success stayed plain", { timeout: 10_000 });
   });
 
   it("marks a fenced block as permanently failed (no cache entry, plain fallback) when codeToHtml throws mid-tokenization", async () => {

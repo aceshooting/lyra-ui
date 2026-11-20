@@ -178,7 +178,7 @@ export const styles = css`
   /* no-pressed-state: the viewport is a scroll port, not a target -- pressing it activates
      nothing, and :active matches the ancestors of whatever was pressed, so clicking any slotted
      item would flash this outline around the whole strip. */
-  [part="viewport"]:hover {
+  [part="viewport"]:hover:not(:focus-visible) {
     outline-width: var(
       --lr-scroller-hover-outline-width,
       var(--lr-border-width-thin)

@@ -37,6 +37,43 @@ describe('lr-multi-split persisted layout edges', () => {
     });
   }
 
+  it('keeps an explicitly bound empty collapsedPanels over a stored collapsed set', async () => {
+    const storageKey = `persisted-edge-controlled-${Math.random()}`;
+    localStorage.setItem(
+      fullKey(storageKey),
+      JSON.stringify({
+        version: 2,
+        panels: [
+          { panelId: 'a', size: 40 },
+          { panelId: 'b', size: 0, collapsed: true, expandedSize: 20 },
+          { panelId: 'c', size: 30 },
+          { panelId: 'd', size: 30 },
+        ],
+      })
+    );
+    let events = 0;
+    const onEvent = (): void => {
+      events += 1;
+    };
+    document.addEventListener('lr-multi-split-panel-collapse-change', onEvent);
+    try {
+      const split = await fixture<LyraMultiSplit>(html`<lr-multi-split storage-key=${storageKey} .collapsedPanels=${[]} style=${SPLIT_STYLE}>
+        <div panel-id="a">A</div>
+        <div panel-id="b">B</div>
+        <div panel-id="c">C</div>
+        <div panel-id="d">D</div>
+      </lr-multi-split>`);
+      await split.updateComplete;
+      expect([...split.collapsedPanels]).to.eql([]);
+      expect(split.sizes[1]).to.be.greaterThan(0);
+      expect(split.querySelector('[panel-id="b"]')!.hasAttribute('data-panel-collapsed')).to.equal(false);
+      expect(events).to.equal(0);
+    } finally {
+      document.removeEventListener('lr-multi-split-panel-collapse-change', onEvent);
+      localStorage.removeItem(fullKey(storageKey));
+    }
+  });
+
   it('round-trips a restored collapsed panel that has no recorded expanded size', async () => {
     const storageKey = `persisted-edge-no-expanded-${Math.random()}`;
     localStorage.setItem(

@@ -16276,8 +16276,10 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
   `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`). An unlinked
-  value with exact text is a tab stop and exposes that text as its accessible description.
-  `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  value with exact text is a tab stop and exposes that text as its accessible description; while it
+  has keyboard focus (`:focus-visible`) the exact text is also shown on its own line below the
+  value, since browsers show no `title` tooltip on keyboard focus. Rows and a linked stat's card
+  link reveal theirs the same way. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -16370,7 +16372,8 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 **Known gotchas:**
 
 - When `href` makes the whole stat a link, exact-value spans keep their hover tooltips and share
-  the card's tab stop. The link exposes the headline exact value as its accessible description.
+  the card's tab stop. The link exposes the headline exact value as its accessible description
+  and reveals it below the value while keyboard-focused.
   Each breakdown value exposes its own exact text when supplied.
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
@@ -16594,9 +16597,10 @@ cell toggles selection, and on group rows only in `multiple` mode. Header select
 column-menu, and resize controls remain Tab stops. Selection controls are named by localized
 "Select" plus the first visible cell; selection sets `aria-multiselectable`. Alt+Arrow/Cmd+Arrow
 stay browser history. Separator ArrowLeft/ArrowRight resizes 10px (Shift: 50px); Home/End set min/
-authored max. Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
+authored max; Enter fits the column to its content (as double-click does). Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
 sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the current page;
-Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
+Ctrl+C copies the selected rows (with no row selected, or with a live text selection, the native copy
+runs); Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
 descendants keep their own keys.
 
 **Events:** `lr-request` followed by `request` for a server-data request (each carries sort,
@@ -16867,8 +16871,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   timestamp behind a relative one;
   `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
-  under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
-  `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
+  under RTL), Shift+Arrow for 50px steps, Home for the minimum, End for an explicit pixel
+  `maxWidth`, and Enter (or double-click) to fit the column to its content; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
   _commit_ is vetoable — see `lr-column-resize-request` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
@@ -19122,7 +19126,9 @@ still current. ID lookup uses `findIndex` then verifies the returned `getItem` I
 change `selectedIndex` or emit activation. Disabled exact items remain inspectable and resolve
 `true`; absent, invalid, unavailable or revoked targets resolve `false`. The `source-exact` native
 button supports RTL-aware Left/Right and Home/End over the complete original index range, including
-missing/disabled positions; it does not scan for enabled items. Enter/Space or click activates only
+missing/disabled positions; it does not scan for enabled items. Its localized key help
+(`sequenceStripSourceKeyboardHelp`) is its accessible description, a pointer `title`, and shown below
+the button while it has keyboard focus. Enter/Space or click activates only
 the current admitted enabled exact item. Pending/unavailable detail keeps a focusable localized
 inspector fallback. Controlled `selectedIndex` changes resolve exact detail silently. Source-only
 parts are `source-status`, `source-retry` and `source-exact`; `base`, `cell`, `marker`, `tooltip`,
@@ -20049,7 +20055,7 @@ sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
-(`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
+(`detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-`readonly` canvas only), `lr-viewport-change` (`detail: { x, y, zoom }`),
 `lr-layout-change` (`detail: { positions, truncated }`, fired after an auto-layout pass places
 previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 
@@ -23162,10 +23168,10 @@ brand/active-mix rendering when unset. The scroll-snap viewport's mouse-hover pr
 four-longhand outline shape, matching `lr-scroller`'s viewport:
 `--lr-carousel-scroll-container-hover-outline-width` (default `var(--lr-border-width-thin)`),
 `--lr-carousel-scroll-container-hover-outline-style` (default `solid`),
-`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border-strong)`, set
+`--lr-carousel-scroll-container-hover-outline-color` (default `var(--lr-color-border)`, set
 to `transparent` to opt out entirely), and `--lr-carousel-scroll-container-hover-outline-offset`
-(default `var(--lr-focus-ring-offset)`). Unset, all four resolve to the rule's previous literal
-paint. The `scroll-container` part also honors the opt-in theme-level
+(default `var(--lr-focus-ring-offset)`). Unset, they paint the same preview as `lr-scroller`'s
+viewport and `lr-tab-group`'s panel, and a keyboard focus ring replaces it. The `scroll-container` part also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `none`/`auto`, matching
 its previous unconditional `scrollbar-width: none`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library. Chromium and Safari ignore
@@ -24181,7 +24187,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
   the (possibly overflowing) track, without changing the selection. Scrolls only the track, never
   the page or another scroll ancestor. Honors `prefers-reduced-motion` (falls back to
-  `behavior: 'auto'`). This runs automatically when `value`
+  `behavior: 'instant'`, which a consumer `scroll-behavior: smooth` cannot animate). This runs automatically when `value`
   is changed programmatically (keyboard navigation already reveals the focused segment on its own),
   so you only need to call it for the "reveal without selecting" case.
 
@@ -24476,8 +24482,8 @@ import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-item-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
-already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
-`prefers-reduced-motion: reduce`. `index` is clamped to the effective source's `0…count-1` range.
+already fully visible); `options.behavior` (default `'smooth'`) is forced to `'instant'` under
+`prefers-reduced-motion: reduce`, so a consumer `scroll-behavior: smooth` cannot animate it. `index` is clamped to the effective source's `0…count-1` range.
 In auto-height mode, estimate-based jumps are corrected as row and group-marker measurements arrive.
 Measurements and scroll-anchor corrections apply together on the next frame.
 That correction is bound to the source, key function, and target identity and is canceled on a new
@@ -25029,8 +25035,11 @@ never destroyed/recreated, so a reference captured before opening remains valid 
 it renders as its own reserved row ahead of the `header` slot rather than an absolute overlay on
 top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
-`resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
-(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover),
+`resizable` and `mode` is `'full'`; its hit target lies wholly outside the rail's inline-end edge,
+so it never covers the rail's scrollbar or its items, and is `--lr-app-rail-resizer-hit-area` wide,
+default 24px, at least `--lr-icon-button-size` for coarse or hover-less pointers), `resizer-track`
+(the slim 3px visible drag line flush with the rail edge inside that hit target, tinted
+`--lr-color-brand` on hover),
 `collapse-toggle` (the opt-in desktop collapse control, rendered inside `[part="header"]` only while
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
@@ -25120,7 +25129,8 @@ interaction hooks are `--lr-app-rail-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
 `var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
 `--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
-`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
+`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`; `--lr-app-rail-resizer-hit-area`
+(default `24px`) sizes its pointer band. Each hook is an inline
 fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
 **Optional peer deps:** none.
@@ -26648,9 +26658,11 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
   resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
   the legacy platform string and reduced user-agent string rather than trusting
-  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
-  several connected palettes use the same chord, the last connected palette owns it;
-  activation is idempotently open rather than a toggle.
+  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. A
+  chord without a Ctrl, Cmd, Alt or `mod` modifier (`/`, `shift+?`) is ignored while focus is in a
+  text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
+  while the palette is in a hidden or inert subtree. If several connected palettes use the same
+  chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
 - `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
@@ -27262,6 +27274,7 @@ attribute restores 12 columns.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
 - `--lr-dashboard-grid-resize-handle-hover-bg` — Background of `resize-handle` on hover, also mixed deeper for its pressed state. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-dashboard-grid-resize-handle-hit-area` — Size of the square `resize-handle` pointer target over a cell's trailing/bottom corner. Default: `24px` (the WCAG 2.5.8 minimum, so a widget's own corner controls stay reachable); coarse or hover-less pointers use at least `--lr-icon-button-size`.
 
 ## `lr-drilldown-panel`
 
@@ -48094,7 +48107,7 @@ preview uses code direction. Bidi formatting characters inside code (for example
 rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
-on both logical axes (default `var(--lr-icon-button-size)`). `--lr-markdown-code-copy-bg`,
+on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
 take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
@@ -49282,6 +49295,9 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 - Rename is triggered only by the dedicated pencil-icon button, never a double-click on the label —
   double-click has no keyboard/screen-reader equivalent and would also swallow the row's own
   single-click `lr-select`.
+- Without a host `aria-label`, `[part="select-button"]` is named from its visible content in reading
+  order — `start`, title, excerpt, `meta` and timestamp — so an unread badge or the time is read with
+  the title. A host `aria-label` replaces that name; keep it in sync with the visible title.
 - While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
 - Setting `withoutRename = true` mid-rename silently discards the in-progress draft (no `lr-rename`
@@ -49296,13 +49312,6 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 ---
 
 ## `lr-model-select`
-
-The picker shares these styling controls with other catalog pickers.
-
-- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
-- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
-- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
-- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
 
 Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
@@ -51020,7 +51029,8 @@ announcement history and treats the new session's current entries as a silent ba
 the localized default; attribute-reflects from a host-level `aria-label`.
 
 **Methods:** `scrollToBottom()` re-engages `follow` and instantly scrolls to the current latest
-entry. The built-in jump action delegates to this method.
+entry. The built-in jump action delegates to this method. Setting `follow` from `false` to `true`
+directly scrolls to the latest entry the same way, without waiting for a new entry.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
@@ -51128,9 +51138,11 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events.** `lr-follow-change` carries `detail: { following }` whenever `follow` flips: scrolling
-releases or resumes follow, the user activates the jump button, `scrollToBottom()` re-engages it, or
-`follow` is assigned directly. It never fires for the initial mount state.
+**Events.** `lr-follow-change` carries `detail: { following }` when the reader changes follow:
+scrolling releases or resumes it, or the user activates the jump button. Direct `follow` assignments
+and `scrollToBottom()` are controlled input and do not echo an event, the same contract as
+`lr-transcript-feed`, `lr-terminal`, `lr-activity-feed` and `lr-thinking-panel`. It never fires for
+the initial mount state.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
@@ -51153,9 +51165,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
-**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports every follow-state change
-after mount, whether from scrolling, the jump-to-latest button, `scrollToBottom()` or a direct
-`follow` write.
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a reader's follow-state
+change after mount, from scrolling or the jump-to-latest button; `scrollToBottom()` and a direct
+`follow` write stay silent.
 
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
@@ -51516,6 +51528,9 @@ hook receive the default, component-themeable highlight treatment documented bel
 metadata in the row's meta region.
 `renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
+Excerpt, meta and row-content output is part of the row's accessible name, so keep it short,
+non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-glyph` part is a
+named image) to that name. `renderStart` output stays out of the name.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
 returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
@@ -51653,8 +51668,8 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-size-1-5rem)`) is the clear button's box; it never follows `size`, because that button is
-a tap target floored at `--lr-icon-button-size` rather than a text box. Every one of these wins over
+`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
@@ -52028,13 +52043,6 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
-
-The picker shares these styling controls with other catalog pickers.
-
-- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
-- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
-- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
-- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
 
 Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
@@ -52520,6 +52528,13 @@ and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode re
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
 These settings do not replace the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
+The untrusted-content switches reach the same built-in Markdown parts, with `<lr-markdown>`'s own
+defaults: `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`),
+`withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'`
+(attribute `link-target`), `linkSchemes?: string` (attribute `link-schemes`) and `maxHeight: string = ''`
+(attribute `max-height`). For model-authored messages set `without-images` (and narrow
+`link-schemes`) here instead of re-implementing text parts through `renderPart`:
+`<lr-message-parts without-images link-schemes="https"></lr-message-parts>`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -52953,8 +52968,9 @@ import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 Whitespace-only name overrides use the same fallback as an omitted name.
 
 Set `disabled` to disable the built-in session actions and capture. The `lr-mute-change` event requests a new mute state. Assign `muted` to apply it.
-Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
-Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults.
+Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `streamOnly`, `levelEvents`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
+Set `streamOnly: true` with a positive `timesliceMs` when chunks go to a transport during a long take: the recorder then keeps no copy, and `lr-record-stop` carries an empty Blob.
+Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults, except `levelEvents`, which defaults to `true` so `lr-level` keeps reaching the session; set it to `false` to stop level sampling.
 
 Host `aria-labelledby` and `aria-describedby` name and describe the session region. The built-in capture control supports click-only start and stop in hold mode.
 

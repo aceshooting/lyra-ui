@@ -2,7 +2,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { toRgba } from '../../../../test/color-contrast.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
-import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import "../../lr-app-rail.js";
 import {
   computeAppRailMode,
@@ -1728,6 +1728,21 @@ describe("preferredMode", () => {
     expect(el.mode).to.equal("icon-only");
   });
 
+  it("announces a live preferredMode change only after the render that applies it", async () => {
+    const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    let seen: { pending: boolean; attribute: string | null } | undefined;
+    el.addEventListener(
+      "lr-mode-change",
+      () => (seen = { pending: el.isUpdatePending, attribute: el.getAttribute("mode") }),
+      { once: true }
+    );
+    const changed = oneEvent(el, "lr-mode-change");
+    el.preferredMode = "icon-only";
+    await changed;
+    expect(seen).to.deep.equal({ pending: false, attribute: "icon-only" });
+  });
+
   it("does not override an explicitly forced mode", async () => {
     const el = (await fixture(
       html`<lr-app-rail preferred-mode="icon-only"></lr-app-rail>`
@@ -1787,21 +1802,29 @@ describe("resizable", () => {
     );
   });
 
-  it("gives the resizer hit target the shared minimum tappable size without inflating the visible drag line", async () => {
+  it("keeps the resizer hit target outside the rail so its scrollbar and items stay reachable", async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable></lr-app-rail>`
+      html`<lr-app-rail resizable style="block-size: 120px"
+        >${Array.from({ length: 20 }, (_, i) => html`<a href="#${i}">Item ${i}</a>`)}</lr-app-rail
+      >`
     )) as LyraAppRail;
     await el.updateComplete;
-    const resizer = el.shadowRoot!.querySelector(
-      '[part="resizer"]'
-    ) as HTMLElement;
-    const track = resizer.querySelector(
-      '[part="resizer-track"]'
-    ) as HTMLElement;
-    expect(getComputedStyle(resizer).minInlineSize).to.equal("36px");
-    expect(getComputedStyle(resizer).minBlockSize).to.equal("36px");
-    // The visible drag line itself stays a slim 3px bar, not blown up to 40px -- the handle's own
-    // box grows around it via flex centering instead.
+    await nextFrame();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const track = resizer.querySelector('[part="resizer-track"]') as HTMLElement;
+    const rail = base.getBoundingClientRect();
+    const grip = resizer.getBoundingClientRect();
+    // The WCAG 2.5.8 minimum for a fine pointer, wholly outside the rail edge.
+    expect(Math.round(grip.width)).to.equal(24);
+    expect(grip.left).to.be.closeTo(rail.right, 1);
+    // A point just inside the rail's inline-end edge (its scrollbar) is not the resizer.
+    const inside = el.shadowRoot!.elementFromPoint(rail.right - 4, rail.top + rail.height / 2);
+    expect(inside === resizer || inside === track).to.equal(false);
+    el.style.setProperty("--lr-app-rail-resizer-hit-area", "30px");
+    await nextFrame();
+    expect(Math.round(resizer.getBoundingClientRect().width)).to.equal(30);
+    // The visible drag line itself stays a slim 3px bar.
     expect(getComputedStyle(track).inlineSize).to.equal("3px");
   });
 

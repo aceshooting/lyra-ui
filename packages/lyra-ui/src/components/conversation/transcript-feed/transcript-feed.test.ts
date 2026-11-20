@@ -430,6 +430,24 @@ describe('follow / stick-to-bottom contract', () => {
     expect(followChanges).to.equal(0);
   });
 
+  it('scrolls to the latest entry when follow is set back to true, with no new entry and no echo', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed follow="false" style="block-size: 80px"></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    el.entries = Array.from({ length: 20 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.scrollTop = 0;
+    let followChanges = 0;
+    el.addEventListener('lr-follow-change', () => { followChanges += 1; });
+
+    el.follow = true;
+    await el.updateComplete;
+
+    expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
+    expect(followChanges).to.equal(0);
+  });
+
   it('never emits lr-follow-change for a direct programmatic follow assignment, in either direction', async () => {
     const el = document.createElement('lr-transcript-feed') as LyraTranscriptFeed;
     let fired = false;

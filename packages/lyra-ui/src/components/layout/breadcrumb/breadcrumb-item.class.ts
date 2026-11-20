@@ -118,6 +118,17 @@ export class LyraBreadcrumbItem extends LyraElement {
     super.disconnectedCallback();
   }
 
+  /** Moves focus to the internal link or button, or to the programmatically focusable
+   *  current-page label. */
+  override focus(options?: FocusOptions): void {
+    this.renderRoot?.querySelector<HTMLElement>('[part~="base"]')?.focus(options);
+  }
+
+  /** Removes focus from the internal link or button. */
+  override blur(): void {
+    this.renderRoot?.querySelector<HTMLElement>('[part~="base"]')?.blur();
+  }
+
   /** Activates the internal link or button. Current-page labels remain inert. */
   override click(): void {
     if (this.current) return;

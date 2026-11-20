@@ -26,8 +26,6 @@ export const styles = css`
     --_lr-icon-button-border-default: var(--lr-border-width-thin) solid transparent;
     --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
     --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
-    inline-size: var(--lr-size-1-75rem);
-    block-size: var(--lr-size-1-75rem);
   }
   [part='up-button']:where([aria-pressed='true']) {
     --_lr-thumb-selected-bg: var(--lr-message-feedback-up-active-bg, var(--lr-color-success-quiet));

@@ -116,6 +116,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   static override styles = [LyraElement.styles, srOnly, styles];
 
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
+  /** Stick-to-bottom state. Setting it from `false` to `true` scrolls to the latest entry at once,
+   *  like `scrollToBottom()`; a user scroll away from the tail releases it. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Shows each entry's timestamp. */
   @property({ type: Boolean, attribute: 'with-timestamps' }) withTimestamps = false;
@@ -204,10 +206,11 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     const inputNotice = this.inputLimitMessage();
     if (!this._isFirstUpdate && inputNotice && inputNotice !== this.lastInputNotice) this.announcements.announcePolite(inputNotice);
     this.lastInputNotice = inputNotice;
-    if (changed.has('entries')) {
+    const reengaged = changed.has('follow') && this.follow && changed.get('follow') === false;
+    if (changed.has('entries') || reengaged) {
       if (this.follow) this.scrollToBottom();
-      this.announceFinalizedEntries();
     }
+    if (changed.has('entries')) this.announceFinalizedEntries();
   }
 
   /** Speaks every entry that has become final since the previous update. The very first update

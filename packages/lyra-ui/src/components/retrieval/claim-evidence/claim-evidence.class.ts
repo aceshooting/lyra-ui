@@ -368,7 +368,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           part="claim-trigger"
           type="button"
           tabindex=${claim.id === rovingClaimId ? '0' : '-1'}
-          @focus=${() => { this.rovingClaimId = claim.id; this.requestUpdate(); }}
+          @focus=${() => { if (this.rovingClaimId === claim.id) return; this.rovingClaimId = claim.id; this.requestUpdate(); }}
           @keydown=${(event: KeyboardEvent) => this.onClaimKeyDown(event, index, count)}
           aria-pressed=${selected ? 'true' : 'false'}
           @click=${() => this.emit('lr-claim-select', { claim: claim.source })}

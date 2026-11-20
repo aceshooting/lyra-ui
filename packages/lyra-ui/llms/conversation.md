@@ -310,7 +310,7 @@ preview uses code direction. Bidi formatting characters inside code (for example
 rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
-on both logical axes (default `var(--lr-icon-button-size)`). `--lr-markdown-code-copy-bg`,
+on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
 take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
@@ -1498,6 +1498,9 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 - Rename is triggered only by the dedicated pencil-icon button, never a double-click on the label —
   double-click has no keyboard/screen-reader equivalent and would also swallow the row's own
   single-click `lr-select`.
+- Without a host `aria-label`, `[part="select-button"]` is named from its visible content in reading
+  order — `start`, title, excerpt, `meta` and timestamp — so an unread badge or the time is read with
+  the title. A host `aria-label` replaces that name; keep it in sync with the visible title.
 - While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
 - Setting `withoutRename = true` mid-rename silently discards the in-progress draft (no `lr-rename`
@@ -1512,13 +1515,6 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 ---
 
 ## `lr-model-select`
-
-The picker shares these styling controls with other catalog pickers.
-
-- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
-- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
-- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
-- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
 
 Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
@@ -3236,7 +3232,8 @@ announcement history and treats the new session's current entries as a silent ba
 the localized default; attribute-reflects from a host-level `aria-label`.
 
 **Methods:** `scrollToBottom()` re-engages `follow` and instantly scrolls to the current latest
-entry. The built-in jump action delegates to this method.
+entry. The built-in jump action delegates to this method. Setting `follow` from `false` to `true`
+directly scrolls to the latest entry the same way, without waiting for a new entry.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
@@ -3344,9 +3341,11 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events.** `lr-follow-change` carries `detail: { following }` whenever `follow` flips: scrolling
-releases or resumes follow, the user activates the jump button, `scrollToBottom()` re-engages it, or
-`follow` is assigned directly. It never fires for the initial mount state.
+**Events.** `lr-follow-change` carries `detail: { following }` when the reader changes follow:
+scrolling releases or resumes it, or the user activates the jump button. Direct `follow` assignments
+and `scrollToBottom()` are controlled input and do not echo an event, the same contract as
+`lr-transcript-feed`, `lr-terminal`, `lr-activity-feed` and `lr-thinking-panel`. It never fires for
+the initial mount state.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
@@ -3369,9 +3368,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
-**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports every follow-state change
-after mount, whether from scrolling, the jump-to-latest button, `scrollToBottom()` or a direct
-`follow` write.
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a reader's follow-state
+change after mount, from scrolling or the jump-to-latest button; `scrollToBottom()` and a direct
+`follow` write stay silent.
 
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
@@ -3732,6 +3731,9 @@ hook receive the default, component-themeable highlight treatment documented bel
 metadata in the row's meta region.
 `renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
+Excerpt, meta and row-content output is part of the row's accessible name, so keep it short,
+non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-glyph` part is a
+named image) to that name. `renderStart` output stays out of the name.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
 returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
@@ -3869,8 +3871,8 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-size-1-5rem)`) is the clear button's box; it never follows `size`, because that button is
-a tap target floored at `--lr-icon-button-size` rather than a text box. Every one of these wins over
+`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
@@ -4244,13 +4246,6 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
-
-The picker shares these styling controls with other catalog pickers.
-
-- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
-- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
-- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
-- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
 
 Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
@@ -4736,6 +4731,13 @@ and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode re
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
 These settings do not replace the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
+The untrusted-content switches reach the same built-in Markdown parts, with `<lr-markdown>`'s own
+defaults: `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`),
+`withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'`
+(attribute `link-target`), `linkSchemes?: string` (attribute `link-schemes`) and `maxHeight: string = ''`
+(attribute `max-height`). For model-authored messages set `without-images` (and narrow
+`link-schemes`) here instead of re-implementing text parts through `renderPart`:
+`<lr-message-parts without-images link-schemes="https"></lr-message-parts>`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -5170,8 +5172,9 @@ import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 Whitespace-only name overrides use the same fallback as an omitted name.
 
 Set `disabled` to disable the built-in session actions and capture. The `lr-mute-change` event requests a new mute state. Assign `muted` to apply it.
-Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
-Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults.
+Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `streamOnly`, `levelEvents`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
+Set `streamOnly: true` with a positive `timesliceMs` when chunks go to a transport during a long take: the recorder then keeps no copy, and `lr-record-stop` carries an empty Blob.
+Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults, except `levelEvents`, which defaults to `true` so `lr-level` keeps reaching the session; set it to `false` to stop level sampling.
 
 Host `aria-labelledby` and `aria-describedby` name and describe the session region. The built-in capture control supports click-only start and stop in hold mode.
 

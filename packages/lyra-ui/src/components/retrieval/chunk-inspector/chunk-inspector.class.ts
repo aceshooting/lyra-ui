@@ -28,7 +28,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { DEFAULT_SCORE_THRESHOLDS, resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -86,8 +86,6 @@ export interface LyraChunkInspectorEventMap {
 
 type Tier = 'high' | 'medium' | 'low';
 type ChunkAction = 'open-button' | 'toggle';
-
-const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
 
 /** How `<lr-chunk-inspector>` orders the chunks it was given. */
 export type ChunkInspectorSort = 'score' | 'none';
@@ -192,10 +190,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   /** Retrieved chunks to inspect. The input order is preserved when `sort="none"`. */
   @property({ attribute: false }) chunks: readonly LyraChunk[] = [];
   /** Score boundaries used to classify each chunk as high, medium, or low relevance. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.75,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_SCORE_THRESHOLDS;
   /** Ordering applied before rendering the supplied chunks. */
   @property() sort: ChunkInspectorSort = 'score';
   /** Marks the chunk currently open in the viewer. */
@@ -286,7 +281,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   private tier(score: number): Tier {
     const safeScore = this.safeScore(score);
-    const { high, medium } = resolveScoreTiers(DEFAULT_TIERS, this.thresholds);
+    const { high, medium } = resolveScoreTiers(DEFAULT_SCORE_THRESHOLDS, this.thresholds);
     if (safeScore >= high) return 'high';
     if (safeScore >= medium) return 'medium';
     return 'low';

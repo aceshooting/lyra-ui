@@ -354,6 +354,7 @@ export const ThemedInteractionStates: Story = {
           --lr-app-rail-width: var(--lr-size-18rem);
           --lr-app-rail-resizer-hover-bg: ${storyColor("success")};
           --lr-app-rail-resizer-active-bg: ${storyColor("warning")};
+          --lr-app-rail-resizer-hit-area: var(--lr-size-2rem);
         "
       >
         <lr-app-rail

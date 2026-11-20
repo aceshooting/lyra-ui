@@ -1096,6 +1096,16 @@ it('recognizes foreign-realm accordion items in focus and keyboard event paths',
   }
 });
 
+describe('<lr-accordion-item> host blur()', () => {
+  it('removes focus from the internal trigger', async () => {
+    const item = (await fixture(html`<lr-accordion-item label="Item">Body</lr-accordion-item>`)) as LyraAccordionItem;
+    item.focus();
+    expect(item.shadowRoot!.activeElement === null).to.equal(false);
+    item.blur();
+    expect(item.shadowRoot!.activeElement === null).to.equal(true);
+  });
+});
+
 describe('<lr-accordion-item>', () => {
   it('exposes the complete canonical item surface without the Details vocabulary', async () => {
     const item = (await fixture(html`<lr-accordion-item

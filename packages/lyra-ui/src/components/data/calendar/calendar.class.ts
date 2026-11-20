@@ -203,8 +203,8 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @csspart empty - The agenda view's localized "no events" message.
  * @cssprop [--lr-calendar-nav-hover-bg=var(--lr-color-brand-quiet)] - Month-navigation hover background.
  * @cssprop [--lr-calendar-nav-active-bg=color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Month-navigation pressed background.
- * @cssprop [--lr-calendar-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
- * @cssprop [--lr-calendar-day-active-bg=color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
+ * @cssprop [--lr-calendar-day-hover-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Day hover background; the default is a neutral step distinct from the selected fill.
+ * @cssprop [--lr-calendar-day-active-bg=color-mix(in oklab, var(--lr-calendar-day-hover-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
  * @cssprop --lr-calendar-event-hover-tint - Tint over a month-view event while hovered.
  * @cssprop [--lr-calendar-agenda-event-hover-bg=var(--lr-color-brand-quiet)] - Agenda-event hover background override; without one, colored events retain their event fill.
  * @cssprop [--lr-calendar-agenda-event-active-bg=color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Agenda-event pressed background override; without one, colored events retain their event fill.

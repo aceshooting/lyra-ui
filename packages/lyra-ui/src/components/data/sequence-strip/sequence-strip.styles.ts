@@ -27,6 +27,16 @@ export const styles = css`
     background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='source-retry']:focus-visible, [part='source-exact']:focus-visible { ${focusRing} }
+  /* Browsers show no title tooltip on keyboard focus, so the exact-item keys are spelled out
+     below the button while it has keyboard focus; the text is its description either way. */
+  .source-help { display: none; }
+  [part='source-exact']:focus-visible + .source-help {
+    display: block;
+    margin-block-start: var(--lr-space-2xs);
+    overflow-wrap: anywhere;
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
+  }
   :host {
     display: block;
   }

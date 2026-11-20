@@ -263,7 +263,7 @@ sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
-(`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
+(`detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-`readonly` canvas only), `lr-viewport-change` (`detail: { x, y, zoom }`),
 `lr-layout-change` (`detail: { positions, truncated }`, fired after an auto-layout pass places
 previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 

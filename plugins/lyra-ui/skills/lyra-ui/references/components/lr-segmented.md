@@ -82,7 +82,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
   the (possibly overflowing) track, without changing the selection. Scrolls only the track, never
   the page or another scroll ancestor. Honors `prefers-reduced-motion` (falls back to
-  `behavior: 'auto'`). This runs automatically when `value`
+  `behavior: 'instant'`, which a consumer `scroll-behavior: smooth` cannot animate). This runs automatically when `value`
   is changed programmatically (keyboard navigation already reveals the focused segment on its own),
   so you only need to call it for the "reveal without selecting" case.
 

@@ -245,7 +245,7 @@ interface OwnedAnimationFrame {
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
  * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
  * @event lr-node-add - `detail: { type, position }`.
- * @event lr-selection-delete - `detail: { nodeIds, edgeIds }`.
+ * @event lr-selection-delete - `detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-readonly canvas only.
  * @event lr-viewport-change - `detail: { x, y, zoom }`.
  * @event lr-layout-change - `detail: { positions, truncated }`.
  * @csspart base - The root wrapper.
@@ -2431,7 +2431,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private deleteSelection(): void {
-    if (this.sourceMode) return;
+    if (this.sourceMode || this.readonly) return;
     if (!this.nodesDraggable && !this.connectable && !this.droppable) return;
     if (this.selectedNodeIds.length === 0 && this.selectedEdgeIds.length === 0) return;
     this.emit(

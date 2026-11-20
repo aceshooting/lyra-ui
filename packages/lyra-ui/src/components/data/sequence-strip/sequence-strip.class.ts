@@ -981,8 +981,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
       ${snapshot && !controller.length ? html`<span part="empty">${this.localize('sequenceStripEmpty')}</span>` : nothing}
       ${overview ? html`<div part="bucket-summary" aria-hidden="true">${overview}</div>` : nothing}
       ${snapshot && controller.length ? html`<button part="source-exact" type="button" aria-disabled=${!exact || exact.item.disabled ? 'true' : 'false'}
-        title=${this.localize('sequenceStripSourceKeyboardHelp')} aria-busy=${controller.exactPending ? 'true' : 'false'} @keydown=${(event: KeyboardEvent) => { if (current() && controller.exact === exact) this.sourceExactKey(event); }}
-        @click=${() => { if (current() && exact && controller.exact === exact && !exact.item.disabled) this.emit('lr-item-activate', { index: exact.index, id: exact.item.id, item: exact.item }); }}>${exactLabel}</button>` : nothing}
+        title=${this.localize('sequenceStripSourceKeyboardHelp')} aria-describedby="sequence-strip-source-help" aria-busy=${controller.exactPending ? 'true' : 'false'} @keydown=${(event: KeyboardEvent) => { if (current() && controller.exact === exact) this.sourceExactKey(event); }}
+        @click=${() => { if (current() && exact && controller.exact === exact && !exact.item.disabled) this.emit('lr-item-activate', { index: exact.index, id: exact.item.id, item: exact.item }); }}>${exactLabel}</button>
+        <span id="sequence-strip-source-help" class="source-help" aria-hidden="true">${this.localize('sequenceStripSourceKeyboardHelp')}</span>` : nothing}
       ${this.withLegend ? this.renderLegend() : nothing}
     `;
   }

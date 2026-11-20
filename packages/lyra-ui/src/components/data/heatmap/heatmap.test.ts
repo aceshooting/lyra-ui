@@ -8605,6 +8605,36 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     expect(tip.right, 'and anything past its inline end').to.be.at.most(port.right + 0.5);
   });
 
+  it('keeps an unfrozen edge cell tooltip inside the host instead of hanging past it', async () => {
+    const el = (await fixture(html`<lr-heatmap
+      cell-size="40"
+      style="inline-size: 320px"
+    ></lr-heatmap>`)) as LyraHeatmap;
+    const labels = Array.from({ length: 6 }, (_value, index) => `n${index}`);
+    setMatrixData(el, {
+      rowLabels: labels,
+      colLabels: labels,
+      values: labels.map((_row, r) => labels.map((_col, c) => r + c)),
+    });
+    el.cellText = (_pos, value) => `Long caption for cell value ${value}`;
+    await el.updateComplete;
+    await aTimeout(0);
+    const base = part(el, 'base')!.getBoundingClientRect();
+    const boxes: Record<string, boolean> = {};
+    for (const col of [0, 5]) {
+      await hoverCell(el, 0, col);
+      await aTimeout(0);
+      await el.updateComplete;
+      const tip = part(el, 'tooltip')!.getBoundingClientRect();
+      boxes[`col${col}`] =
+        tip.width < base.width &&
+        tip.left >= base.left - 0.5 &&
+        tip.right <= base.right + 0.5 &&
+        tip.top >= base.top - 0.5;
+    }
+    expect(boxes).to.deep.equal({ col0: true, col5: true });
+  });
+
   it('scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there', async () => {
     const el = await scrollingMatrix();
     const grid = part(el, 'grid')!;

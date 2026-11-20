@@ -895,6 +895,14 @@ export class GraphSpatialController {
     }
   };
   private readonly pointerCancel = (event: PointerEvent): void => { this.cancelHover(); if (event.pointerId === this.gesture?.id) this.cancelGesture(); };
+  // The wheel listener must be non-passive to cancel page scroll, so it exists only while the
+  // surface has focus; an unfocused canvas never blocks compositor scrolling.
+  private readonly armWheel = (event: FocusEvent): void => {
+    (event.currentTarget as HTMLElement).addEventListener('wheel', this.wheel, { passive: false });
+  };
+  private readonly disarmWheel = (event: FocusEvent): void => {
+    (event.currentTarget as HTMLElement).removeEventListener('wheel', this.wheel);
+  };
   private readonly wheel = (event: WheelEvent): void => {
     const focused = activeElementIn(this.host.shadowRoot);
     if (this.selection.renderer === 'webgl' ? focused !== this.engineSurface : focused !== this.canvas && !this.gesture) return;
@@ -982,7 +990,7 @@ export class GraphSpatialController {
       ${this.fallback ? html`<p part="engine-notice">${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).reason)} ${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).showing)}</p>` : nothing}
       ${this.enginePending ? html`<p part="loading">${this.options.engineMessage?.('engine3dLoading')}</p>` : nothing}
       ${this.host.view === '3d' && this.preference === 'webgl' ? html`<div data-webgl-host part="spatial-canvas" class="webgl-surface" ?hidden=${this.selection.renderer !== 'webgl'} tabindex="0" role="application" aria-roledescription=${messages['view3d']}
-        aria-label=${canvasName} aria-describedby=${this.instructionsId} @keydown=${this.keyDown} @wheel=${this.wheel} @pointermove=${this.enginePointerMove}
+        aria-label=${canvasName} aria-describedby=${this.instructionsId} @keydown=${this.keyDown} @focusin=${this.armWheel} @focusout=${this.disarmWheel} @pointermove=${this.enginePointerMove}
         @pointerdown=${this.enginePointerDown}><canvas data-graph-labels aria-hidden="true"></canvas></div>` : nothing}
       ${list ? html`<div part="spatial-list" tabindex="-1" @keydown=${(event: KeyboardEvent) => { if (event.key === 'Escape') this.options.clearSelection(); }}>
         <ul aria-label=${messages['dataList']}>
@@ -1007,7 +1015,7 @@ export class GraphSpatialController {
         ${this.selection.renderer !== 'webgl' ? html`<canvas part="spatial-canvas" tabindex="0" role="application" aria-roledescription=${messages['view3d']} aria-label=${canvasName}
           aria-describedby=${this.instructionsId} @pointerdown=${this.pointerDown} @pointermove=${this.pointerMove} @pointerup=${this.pointerUp}
           @pointercancel=${this.pointerCancel} @lostpointercapture=${this.pointerCancel} @pointerleave=${() => { if (!this.gesture) { this.cancelHover(); this.setHover(undefined); } }}
-          @wheel=${this.wheel} @keydown=${this.keyDown} @dblclick=${(event: MouseEvent) => { const hit = this.hit(event.clientX, event.clientY); if (hit?.kind === 'node') this.options.expand(hit.id); }}
+          @focusin=${this.armWheel} @focusout=${this.disarmWheel} @keydown=${this.keyDown} @dblclick=${(event: MouseEvent) => { const hit = this.hit(event.clientX, event.clientY); if (hit?.kind === 'node') this.options.expand(hit.id); }}
         ></canvas>` : nothing}
         ${!(this.columnScene?.data.nodeCount ?? this.world.length) ? html`<p part="empty">${messages['noData']}</p>` : nothing}`}
       ${limitNotices}

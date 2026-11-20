@@ -207,7 +207,7 @@ const DATA_GRID_CHILDREN = {
  *   against that former structure (`::part(columns-menu) > button`, a descendant
  *   `input[type=checkbox]`) no longer matches.
  * @csspart data-grid - The outer data-grid container.
- * @csspart drag-ghost - Preview shown while a column is dragged.
+ * @csspart drag-ghost - Preview that follows the pointer while a column is dragged, kept inside the grid box.
  * @csspart ellipsis - Omitted-page indicator in the pager.
  * @csspart empty - Empty-data state.
  * @csspart error-row - The single full-width row that replaces the body content while `error` is
@@ -4265,6 +4265,22 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     event.dataTransfer.setData('text/plain', id);
     event.dataTransfer.effectAllowed = 'move';
     this.dragGhost = this.columnLabel(entry.column, id);
+    const { clientX, clientY } = event;
+    void this.updateComplete.then(() => this.positionDragGhost(clientX, clientY));
+  }
+
+  /** Places the drag preview at the pointer, clamped inside the grid box so the grid's own
+   *  clipping and any clipping ancestor never cut it off. */
+  private positionDragGhost(clientX: number, clientY: number): void {
+    const ghost = this.renderRoot.querySelector<HTMLElement>('[part="drag-ghost"]');
+    const box = ghost?.parentElement;
+    if (!ghost || !box) return;
+    const bounds = box.getBoundingClientRect();
+    const maxX = Math.max(0, box.clientWidth - ghost.offsetWidth);
+    const maxY = Math.max(0, box.clientHeight - ghost.offsetHeight);
+    const x = finiteRange(clientX - bounds.left - box.clientLeft, 0, 0, maxX);
+    const y = finiteRange(clientY - bounds.top - box.clientTop, 0, 0, maxY);
+    ghost.style.translate = `${x}px ${y}px`;
   }
 
   private onDrop(event: DragEvent, targetId: string): void {
@@ -4398,7 +4414,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   /**
    * Keyboard resize, with `<lr-table>`'s step model: Left/Right ±10px (±50px with Shift; swapped
-   * under RTL), and on the focused separator itself Home/End jump to the column's minimum/maximum.
+   * under RTL), and on the focused separator itself Home/End jump to the column's minimum/maximum
+   * and Enter fits the column to its content, the keyboard form of double-click.
    * Each step is proposed through the cancelable `lr-column-resize-request` before it commits.
    */
   private onResizeKey(event: KeyboardEvent, id: string, fromHandle = false): void {
@@ -4410,6 +4427,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const jump =
       fromHandle &&
       (event.key === 'Home' || (event.key === 'End' && entry.column.maxWidth !== undefined));
+    if (fromHandle && event.key === 'Enter') {
+      event.preventDefault();
+      if (!isRepeatedActivationKey(event)) this.autoSizeColumn(id);
+      return;
+    }
     if (!arrow && !jump) return;
     event.preventDefault();
     const { minimum, maximum } = this.columnBounds(entry.column);
@@ -4538,6 +4560,24 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return true;
   }
 
+  /** Whether a non-collapsed text selection is live anywhere the native copy would take it from:
+   *  composed ranges into this shadow tree, the shadow root's own selection where an engine exposes
+   *  one, or the document selection. */
+  private hasTextSelection(): boolean {
+    const root = this.shadowRoot as (ShadowRoot & { getSelection?: () => Selection | null }) | null;
+    const selection = this.ownerDocument.getSelection() as
+      | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
+      | null;
+    try {
+      if (root && selection?.getComposedRanges?.({ shadowRoots: [root] }).some((range) => !range.collapsed)) return true;
+    } catch {
+      // An engine with the older positional signature falls through to the checks below.
+    }
+    return [root?.getSelection?.(), selection].some(
+      (candidate) => candidate != null && candidate.rangeCount > 0 && !candidate.isCollapsed
+    );
+  }
+
   private onGridKeyDown(
     event: KeyboardEvent,
     rowPosition: number,
@@ -4568,7 +4608,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       event.preventDefault();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+    // Ctrl/Cmd+C owns the copy only for an explicit row selection; a text selection (or no row
+    // selection at all) keeps the native copy.
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.key.toLowerCase() === 'c' &&
+      this.selectedRows.length > 0 &&
+      !this.hasTextSelection()
+    ) {
       this.copySelectedRows();
       event.preventDefault();
       return;
@@ -5520,7 +5567,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         : 'grid';
     const treeProjection = this.sourceProjection();
     return html`
-      <div part="data-grid">
+      <div
+        part="data-grid"
+        @dragover=${(event: DragEvent) => {
+          if (this.columnDragSession) this.positionDragGhost(event.clientX, event.clientY);
+        }}
+      >
         ${this.renderToolbar()}
         <div
           part="table"

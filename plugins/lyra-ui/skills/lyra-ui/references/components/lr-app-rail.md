@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -299,8 +299,11 @@ never destroyed/recreated, so a reference captured before opening remains valid 
 it renders as its own reserved row ahead of the `header` slot rather than an absolute overlay on
 top of it, so a wide/slotted header is never obscured), `backdrop`, `panel` (`base`/`panel` are mutually exclusive on the same
 underlying element — see above), `resizer` (the `resizable` opt-in's drag handle, only rendered while
-`resizable` and `mode` is `'full'`; its hit target is `--lr-icon-button-size`-wide), `resizer-track`
-(the slim 3px visible drag line centered inside that hit target, tinted `--lr-color-brand` on hover),
+`resizable` and `mode` is `'full'`; its hit target lies wholly outside the rail's inline-end edge,
+so it never covers the rail's scrollbar or its items, and is `--lr-app-rail-resizer-hit-area` wide,
+default 24px, at least `--lr-icon-button-size` for coarse or hover-less pointers), `resizer-track`
+(the slim 3px visible drag line flush with the rail edge inside that hit target, tinted
+`--lr-color-brand` on hover),
 `collapse-toggle` (the opt-in desktop collapse control, rendered inside `[part="header"]` only while
 `collapsible` is set and `mode` is not `'mobile'`; it renders `aria-expanded` in both states, points
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
@@ -390,7 +393,8 @@ interaction hooks are `--lr-app-rail-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-app-rail-collapse-toggle-hover-color` (default
 `var(--lr-color-brand)`), `--lr-app-rail-collapse-toggle-active-bg` (no default) and
 `--lr-app-rail-collapse-toggle-active-color` (default `var(--lr-color-brand)`). The resizer track uses
-`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`. Each hook is an inline
+`--lr-app-rail-resizer-hover-bg` and `--lr-app-rail-resizer-active-bg`; `--lr-app-rail-resizer-hit-area`
+(default `24px`) sizes its pointer band. Each hook is an inline
 fallback at its exact state rule and preserves the previous brand or active-mix value when unset.
 
 **Optional peer deps:** none.

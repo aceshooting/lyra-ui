@@ -179,8 +179,10 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
 - `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
   `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`). An unlinked
-  value with exact text is a tab stop and exposes that text as its accessible description.
-  `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  value with exact text is a tab stop and exposes that text as its accessible description; while it
+  has keyboard focus (`:focus-visible`) the exact text is also shown on its own line below the
+  value, since browsers show no `title` tooltip on keyboard focus. Rows and a linked stat's card
+  link reveal theirs the same way. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
@@ -273,7 +275,8 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 **Known gotchas:**
 
 - When `href` makes the whole stat a link, exact-value spans keep their hover tooltips and share
-  the card's tab stop. The link exposes the headline exact value as its accessible description.
+  the card's tab stop. The link exposes the headline exact value as its accessible description
+  and reveals it below the value while keyboard-focused.
   Each breakdown value exposes its own exact text when supplied.
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
@@ -497,9 +500,10 @@ cell toggles selection, and on group rows only in `multiple` mode. Header select
 column-menu, and resize controls remain Tab stops. Selection controls are named by localized
 "Select" plus the first visible cell; selection sets `aria-multiselectable`. Alt+Arrow/Cmd+Arrow
 stay browser history. Separator ArrowLeft/ArrowRight resizes 10px (Shift: 50px); Home/End set min/
-authored max. Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
+authored max; Enter fits the column to its content (as double-click does). Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
 sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the current page;
-Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
+Ctrl+C copies the selected rows (with no row selected, or with a live text selection, the native copy
+runs); Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
 descendants keep their own keys.
 
 **Events:** `lr-request` followed by `request` for a server-data request (each carries sort,
@@ -770,8 +774,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   timestamp behind a relative one;
   `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
-  under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
-  `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
+  under RTL), Shift+Arrow for 50px steps, Home for the minimum, End for an explicit pixel
+  `maxWidth`, and Enter (or double-click) to fit the column to its content; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
   _commit_ is vetoable — see `lr-column-resize-request` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
@@ -3025,7 +3029,9 @@ still current. ID lookup uses `findIndex` then verifies the returned `getItem` I
 change `selectedIndex` or emit activation. Disabled exact items remain inspectable and resolve
 `true`; absent, invalid, unavailable or revoked targets resolve `false`. The `source-exact` native
 button supports RTL-aware Left/Right and Home/End over the complete original index range, including
-missing/disabled positions; it does not scan for enabled items. Enter/Space or click activates only
+missing/disabled positions; it does not scan for enabled items. Its localized key help
+(`sequenceStripSourceKeyboardHelp`) is its accessible description, a pointer `title`, and shown below
+the button while it has keyboard focus. Enter/Space or click activates only
 the current admitted enabled exact item. Pending/unavailable detail keeps a focusable localized
 inspector fallback. Controlled `selectedIndex` changes resolve exact detail silently. Source-only
 parts are `source-status`, `source-retry` and `source-exact`; `base`, `cell`, `marker`, `tooltip`,
@@ -3952,7 +3958,7 @@ sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
-(`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
+(`detail: { nodeIds, edgeIds }`; Delete/Backspace on an editable, non-`readonly` canvas only), `lr-viewport-change` (`detail: { x, y, zoom }`),
 `lr-layout-change` (`detail: { positions, truncated }`, fired after an auto-layout pass places
 previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 

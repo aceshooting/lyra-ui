@@ -68,7 +68,8 @@ export interface StatRow {
  * @csspart row - A single breakdown row (one per `rows` entry).
  * @csspart row-label - The label text of a breakdown row, exposed as a term when present.
  * @csspart row-value - The value text of a breakdown row, exposed as a definition when labelled.
- *   Shows the row's `exactValue` (if any) as a hover/focus tooltip, same as the headline `value`,
+ *   Shows the row's `exactValue` (if any) as a hover tooltip and, while keyboard-focused, on its
+ *   own line, same as the headline `value`,
  *   and is accessibly labelled by its `row-label` (via `aria-labelledby`) the same way the
  *   headline `value` is.
  * @cssprop [--lr-stat-bg=var(--lr-color-surface)] - Resting background of the card. The pressed
@@ -201,7 +202,8 @@ export class LyraStat extends LyraElement {
    *  the two combine. */
   @property({ type: Boolean, reflect: true }) emphasis = false;
   /** Exact value shown as a tooltip on the headline `value` (e.g. `value="$1.2K"
-   * exact-value="$1,204.37"`). The keyboard-focusable value or card link exposes it as a description. */
+   * exact-value="$1,204.37"`). The keyboard-focusable value or card link exposes it as a description
+   * and, while keyboard-focused, shows it on its own line below the value. */
   @property({ attribute: 'exact-value' }) exactValue = '';
   /** A secondary line distinct from `caption` (e.g. a comparison-period label), rendered between the
    *  trend pill and the caption. */
@@ -424,7 +426,7 @@ export class LyraStat extends LyraElement {
           >${this.value}</span
         >
         <span part="unit" id=${this.unitId}>${this.unit}</span>
-        ${exactId ? html`<span id=${exactId} hidden>${this.exactValue}</span>` : nothing}
+        ${exactId ? html`<span id=${exactId} class="exact-reveal" aria-hidden="true">${this.exactValue}</span>` : nothing}
       </div>
       ${hasTrend
         ? html`<span
@@ -464,7 +466,7 @@ export class LyraStat extends LyraElement {
                 aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
                 >${row.value}</span
               >
-              ${rowExactId ? html`<span id=${rowExactId} hidden>${row.exactValue}</span>` : nothing}
+              ${rowExactId ? html`<span id=${rowExactId} class="exact-reveal" aria-hidden="true">${row.exactValue}</span>` : nothing}
             </div>
           `;
         })}

@@ -61,7 +61,8 @@ announcement history and treats the new session's current entries as a silent ba
 the localized default; attribute-reflects from a host-level `aria-label`.
 
 **Methods:** `scrollToBottom()` re-engages `follow` and instantly scrolls to the current latest
-entry. The built-in jump action delegates to this method.
+entry. The built-in jump action delegates to this method. Setting `follow` from `false` to `true`
+directly scrolls to the latest entry the same way, without waiting for a new entry.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 

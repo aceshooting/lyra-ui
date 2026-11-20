@@ -147,6 +147,18 @@ expectLocaleFallback('ar-u-nu-arab', [
   'approve',
 ]);
 describe('lr-memory-panel', () => {
+  it('bounds the memory text quoted in per-row action names', async () => {
+    const text = `Long memory ${'word '.repeat(200)}`;
+    const el = await fixture<LyraMemoryPanel>(
+      html`<lr-memory-panel .shortTerm=${[{ id: 'l1', text }]} .longTerm=${[{ id: 'l2', text }]}></lr-memory-panel>`
+    );
+    const names = [...el.shadowRoot!.querySelectorAll('[part~="remove-button"], [part~="add-button"]')].map(
+      (button) => button.getAttribute('aria-label') ?? ''
+    );
+    expect(names.length).to.be.greaterThan(1);
+    for (const name of names) expect(name.length, name.slice(0, 20)).to.be.lessThan(200);
+  });
+
   it('renders lr-empty and no sections when both shortTerm and longTerm are empty', async () => {
     const el = (await fixture(
       html`<lr-memory-panel></lr-memory-panel>`

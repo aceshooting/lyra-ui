@@ -82,7 +82,7 @@ export const styles = css`
     );
     outline-color: var(
       --lr-carousel-scroll-container-hover-outline-color,
-      var(--lr-color-border-strong)
+      var(--lr-color-border)
     );
     ${focusRingOffsetFrom('--lr-carousel-scroll-container-hover-outline-offset')}
   }

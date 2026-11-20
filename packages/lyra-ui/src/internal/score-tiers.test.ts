@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { resolveScoreTiers } from './score-tiers.js';
+import { DEFAULT_SCORE_THRESHOLDS, resolveScoreTiers } from './score-tiers.js';
 
 describe('resolveScoreTiers', () => {
   const defaults = { high: 0.75, medium: 0.5 };
@@ -15,5 +15,11 @@ describe('resolveScoreTiers', () => {
 
   it('reorders an inverted pair so the high tier stays the larger bound', () => {
     expect(resolveScoreTiers(defaults, { high: 0.5, medium: 0.8 })).to.deep.equal({ high: 0.8, medium: 0.5 });
+  });
+});
+
+describe('DEFAULT_SCORE_THRESHOLDS', () => {
+  it('is the shared 0.75 / 0.5 boundary pair', () => {
+    expect(DEFAULT_SCORE_THRESHOLDS).to.deep.equal({ high: 0.75, medium: 0.5 });
   });
 });

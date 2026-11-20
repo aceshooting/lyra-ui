@@ -174,19 +174,21 @@ export const styles = css`
     );
   }
 
-  /* The hit target takes the shared --lr-icon-button-size floor (as lr-code-block's/
-     lr-json-viewer's [part='toggle'] and lr-swatch-picker's [part='swatch'] do), centered on the
-     inset-inline-end edge the old 3px box held; the visible drag line stays a 3px bar on the
-     separate [part='resizer-track'] child, flex-centered rather than resized. */
+  /* The hit target lies wholly OUTSIDE the rail's inline-end edge, so it never covers the rail's
+     own scrollbar or the trailing edge of its items. Its width is the WCAG 2.5.8 minimum by
+     default (rethemeable through --lr-app-rail-resizer-hit-area) and is floored at the shared
+     --lr-icon-button-size only for coarse or hover-less pointers, below; the visible drag line
+     stays a 3px bar on the separate [part='resizer-track'] child, flush with the rail edge.
+     syncResizerPosition() pins the live inset to the measured edge. */
   [part="resizer"] {
+    --_lr-app-rail-resizer-hit-area: var(--lr-app-rail-resizer-hit-area, ${minimumPointerTarget});
     position: absolute;
     inset-block: 0;
-    inset-inline-end: calc(var(--lr-icon-button-size) * -0.5);
-    inline-size: var(--lr-icon-button-size);
-    ${iconHitTarget}
+    inset-inline-end: calc(-1 * var(--_lr-app-rail-resizer-hit-area));
+    inline-size: var(--_lr-app-rail-resizer-hit-area);
     display: flex;
     align-items: stretch;
-    justify-content: center;
+    justify-content: flex-start;
     background: transparent;
     cursor: col-resize;
     touch-action: none;
@@ -209,6 +211,14 @@ export const styles = css`
   }
   [part="resizer"]:focus-visible {
     ${focusRing}
+  }
+  @media (hover: none), (pointer: coarse) {
+    [part="resizer"] {
+      --_lr-app-rail-resizer-hit-area: max(
+        var(--lr-icon-button-size),
+        var(--lr-app-rail-resizer-hit-area, ${minimumPointerTarget})
+      );
+    }
   }
 
   [part="panel"] {
@@ -487,7 +497,7 @@ export const styles = css`
   }
   :host([frame="card"]) [part="resizer"] {
     inset-block: var(--_lr-app-rail-frame-gap);
-    inset-inline-end: calc(var(--_lr-app-rail-frame-gap) - var(--lr-icon-button-size) * 0.5);
+    inset-inline-end: calc(var(--_lr-app-rail-frame-gap) - var(--_lr-app-rail-resizer-hit-area));
   }
   :host([frame="plain"]) [part="base"] {
     border-inline-end: var(--lr-app-rail-edge-border, none);

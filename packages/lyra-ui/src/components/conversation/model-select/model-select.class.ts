@@ -212,29 +212,6 @@ export interface LyraModelSelectEventMap {
  * @cssprop --lr-form-control-padding-block - Default block padding of the trigger.
  * @cssprop --lr-form-control-padding-inline - Default inline padding of the trigger.
  * @cssprop --lr-form-control-radius - Default corner radius of the trigger and option rows.
- * @cssprop --lr-picker-expand-size - Size of the trigger chevron.
- * @cssprop --lr-picker-font-size - Text size of the trigger.
- * @cssprop --lr-picker-gap - Gap between contents of the trigger and of each option row.
- * @cssprop --lr-picker-max-inline-size - Maximum inline size of the picker host.
- * @cssprop --lr-picker-open-border-color - Trigger border color while the popup is open.
- * @cssprop --lr-picker-option-active-bg - Background of the highlighted option.
- * @cssprop --lr-picker-option-disabled-opacity - Opacity of disabled options.
- * @cssprop --lr-picker-option-selected-bg - Background of the selected option.
- * @cssprop --lr-picker-option-selected-border - Border color of the selected option.
- * @cssprop --lr-picker-option-selected-color - Foreground color of the selected option.
- * @cssprop --lr-picker-option-selected-font-weight - Font weight of the selected option.
- * @cssprop --lr-picker-option-synthetic-border-color - Border color of an option for a custom value.
- * @cssprop --lr-picker-option-synthetic-border-style - Border style of an option for a custom value.
- * @cssprop --lr-picker-option-synthetic-font-style - Font style of an option for a custom value.
- * @cssprop --lr-picker-radius - Corner radius of the trigger, popup, and option rows.
- * @cssprop --lr-picker-trigger-active-bg - Background of the pressed trigger.
- * @cssprop --lr-picker-trigger-border-color - Resting border color of the trigger.
- * @cssprop --lr-picker-trigger-fill - Resting background of the trigger.
- * @cssprop --lr-picker-trigger-height - Explicit block size of the trigger.
- * @cssprop --lr-picker-trigger-hover-bg - Background of the hovered trigger.
- * @cssprop --lr-picker-trigger-hover-border-color - Border color of the hovered trigger.
- * @cssprop --lr-picker-trigger-min-height - Minimum block size of the trigger when no explicit height is set.
- * @cssprop --lr-picker-trigger-padding - Padding of the trigger.
  * @cssprop --lr-positioner-available-block-size - Available block size published by the positioner to cap the popup height.
  * @cssprop --lr-positioner-available-inline-size - Available inline size published by the positioner to constrain the popup width.
  * @status stable

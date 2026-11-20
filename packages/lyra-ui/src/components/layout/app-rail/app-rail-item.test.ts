@@ -269,6 +269,28 @@ it('renders a stable initial tooltip label when MutationObserver is unavailable'
   }
 });
 
+describe("host focus() and blur()", () => {
+  for (const [name, markup] of [
+    ["button", html`<lr-app-rail-item>Settings</lr-app-rail-item>`],
+    ["link", html`<lr-app-rail-item href="/settings">Settings</lr-app-rail-item>`],
+  ] as const) {
+    it(`forwards to the internal ${name}`, async () => {
+      const el = (await fixture(markup)) as LyraAppRailItem;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      el.focus();
+      expect(el.shadowRoot!.activeElement === base).to.equal(true);
+      el.blur();
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    });
+  }
+
+  it("honors autofocus on the host", async () => {
+    const el = (await fixture(html`<lr-app-rail-item autofocus>Settings</lr-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await waitUntil(() => el.shadowRoot!.activeElement === base);
+  });
+});
+
 describe("host click()", () => {
   for (const [name, markup] of [
     ["button", html`<lr-app-rail-item>Settings</lr-app-rail-item>`],

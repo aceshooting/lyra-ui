@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -107,3 +107,4 @@ attribute restores 12 columns.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
 - `--lr-dashboard-grid-resize-handle-hover-bg` — Background of `resize-handle` on hover, also mixed deeper for its pressed state. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-dashboard-grid-resize-handle-hit-area` — Size of the square `resize-handle` pointer target over a cell's trailing/bottom corner. Default: `24px` (the WCAG 2.5.8 minimum, so a widget's own corner controls stay reachable); coarse or hover-less pointers use at least `--lr-icon-button-size`.

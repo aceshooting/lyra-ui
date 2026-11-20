@@ -243,13 +243,18 @@ it('renders hover and keyboard focus-visible treatment on nav, day, and agenda-e
   for (const target of targets) {
     target.scrollIntoView({ block: 'center' });
     const rect = target.getBoundingClientRect();
+    const rest = getComputedStyle(target).backgroundColor;
+    // An unselected day hovers with a neutral step, never the brand-quiet selected fill.
+    const hovered = target.getAttribute('part') === 'day'
+      ? (color: string) => color !== rest && color !== 'rgb(1, 2, 3)'
+      : (color: string) => color === 'rgb(1, 2, 3)';
     try {
       await sendMouse({
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
       await waitUntil(
-        () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+        () => hovered(getComputedStyle(target).backgroundColor),
         `${target.getAttribute('part')} never painted its hover feedback`,
       );
     } finally {

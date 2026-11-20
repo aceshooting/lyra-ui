@@ -252,13 +252,15 @@ export interface LyraAppRailEventMap {
  *   Retune that elevation through `--lr-app-rail-panel-shadow`. A `::part(panel)` `box-shadow`
  *   override must be scoped to the open state, `lr-app-rail[mode="mobile"][open]::part(panel)`: an
  *   unqualified one also applies while closed and paints that edge band again.
- * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target, sized to
- *   the shared minimum tappable size (`--lr-icon-button-size`), independent of the slimmer
+ * @csspart resizer - The `resizable` opt-in's drag handle -- its interactive hit target. It lies
+ *   wholly outside the rail's inline-end edge, so it never covers the rail's scrollbar or the
+ *   trailing edge of its items, and is `--lr-app-rail-resizer-hit-area` wide (24px; floored at
+ *   `--lr-icon-button-size` for coarse or hover-less pointers), independent of the slimmer
  *   visible line rendered by its `resizer-track` child. Its numeric ARIA range remains in CSS
  *   pixels while `aria-valuetext` reports the current width through the effective locale. Only
  *   rendered while `resizable` and `mode` is `'full'`.
- * @csspart resizer-track - The resizer's slim visible drag line, centered inside `[part="resizer"]`'s
- *   larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
+ * @csspart resizer-track - The resizer's slim visible drag line, flush with the rail edge at the
+ *   inline start of `[part="resizer"]`'s larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split). Colors on hover/focus the same way the whole handle previously did.
  * @cssprop [--lr-app-rail-width=var(--lr-size-15rem)] - The inline rail's width in `'full'` mode.
  *   Overridden by an inline width while a `resizable` rail has an explicit `railWidth`.
@@ -354,6 +356,8 @@ export interface LyraAppRailEventMap {
  *   brand-quiet active mix.
  * @cssprop [--lr-app-rail-toggle-active-color=var(--lr-color-brand)] - Toggle pressed foreground.
  * @cssprop [--lr-app-rail-resizer-hover-bg=var(--lr-color-brand)] - Resizer-track hover background.
+ * @cssprop [--lr-app-rail-resizer-hit-area=24px] - Width of the resizer's pointer band outside the
+ *   rail edge. Coarse or hover-less pointers use at least `--lr-icon-button-size`.
  * @cssprop --lr-app-rail-resizer-active-bg - Resizer-track pressed background; defaults to the
  *   former brand active mix.
  *
@@ -964,6 +968,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // ordinary mount where the settled mode never left the constructor default, and once the queued
   // event has been emitted.
   private pendingInitialModeAnnouncement?: LyraAppRailMode;
+  // Set while willUpdate() runs: a mode change it applies (an `auto-hide` or `preferredMode`
+  // write, a breakpoint attribute change) announces itself only after the render, so a listener
+  // reads the settled `[mode]`/`[open]` DOM and may assign properties without re-entering it.
+  private deferRailEvents = false;
+  private deferredRailEvents: Array<() => void> = [];
   // Whether matchMedia changes are currently ignored because a consumer
   // pinned a specific mode via `forceMode` -- see the `mode` getter doc.
   private forced = false;
@@ -1200,6 +1209,29 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    this.deferRailEvents = true;
+    try {
+      this.reconcileBeforeRender(changed);
+    } finally {
+      this.deferRailEvents = false;
+    }
+  }
+
+  /** Emits now, or queues the event until after the render when willUpdate() is running. */
+  private emitRailEvent(emit: () => void): void {
+    if (!this.deferRailEvents) {
+      emit();
+      return;
+    }
+    this.deferredRailEvents.push(emit);
+    this.scheduleAfterUpdate(() => {
+      const due = this.deferredRailEvents;
+      this.deferredRailEvents = [];
+      for (const run of due) run();
+    }, 'rail-deferred-events');
+  }
+
+  private reconcileBeforeRender(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       (changed.has('resizable') || changed.has('mode')) &&
@@ -1733,7 +1765,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (options?.silent) {
       this.pendingInitialModeAnnouncement = next;
     } else {
-      this.emit('lr-mode-change', { mode: next });
+      this.emitRailEvent(() => this.emit('lr-mode-change', { mode: next }));
     }
     // 'open' is only meaningful in 'mobile' mode -- leaving it while open
     // closes the overlay as a side effect (through setOpen, so it still
@@ -1761,7 +1793,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // `mode` is no longer `'mobile'` (where `open` is documented as meaningless).
     if (options?.force) {
       this.open = next;
-      this.emit('lr-toggle', { expanded: next });
+      this.emitRailEvent(() => this.emit('lr-toggle', { expanded: next }));
       return;
     }
     const mode = this._mode;
@@ -2078,10 +2110,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!resizer || !this.baseEl || this._mode !== 'full' || !this.resizable) return;
     const hostRect = this.getBoundingClientRect();
     const baseRect = this.baseEl.getBoundingClientRect();
-    const half = resizer.offsetWidth / 2;
     const rtl = this.effectiveDirection === 'rtl';
     const offset = rtl ? hostRect.right - baseRect.left : baseRect.right - hostRect.left;
-    resizer.style.setProperty('inset-inline-start', `${offset / layoutScale(this).x - half}px`);
+    // The hit target starts at the rail edge and extends outward (see the styles).
+    resizer.style.setProperty('inset-inline-start', `${offset / layoutScale(this).x}px`);
     resizer.style.setProperty('inset-inline-end', 'auto');
     const width = this.effectiveRailWidthPx;
     resizer.setAttribute('aria-valuenow', String(Math.round(width)));
@@ -2090,6 +2122,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private renderResizer(): TemplateResult {
     const railWidthPx = this.effectiveRailWidthPx;
+    // hit-area-exempt: a drag separator, not a tap-to-activate icon button. Its pointer band is
+    // the WCAG 2.5.8 minimum outside the rail edge, floored at the icon-button size for coarse
+    // pointers (see app-rail.styles.ts), so it never covers the rail's scrollbar or items.
     return html`<div
       part="resizer"
       role="separator"

@@ -1,4 +1,5 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
+import { accessibleName } from '../../../../test/accessible-name.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -147,6 +148,17 @@ it("defaults to slotted mode and emits only a host-owned lr-query-change for sea
   expect((await queryPromise).detail).to.deep.equal({ text: "Manual" });
   expect(filterEvents).to.have.length(0);
   expect(nativeInputs).to.have.length(0);
+});
+
+it('names a data row from its title, excerpt, meta and pinned status', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list
+    .threads=${[{ id: 'a', title: 'Launch notes', excerpt: 'Ship it', pinned: true }]}
+    .renderMeta=${() => html`3 unread`}></lr-thread-list>`);
+  await waitUntil(() => dataRows(el).length === 1 && Boolean(dataRows(el)[0]!.shadowRoot?.querySelector('[part="select-button"]')));
+  await expect(el).to.be.accessible();
+  const button = dataRows(el)[0]!.shadowRoot!.querySelector('[part="select-button"]')!;
+  expect(button.hasAttribute('aria-label')).to.equal(false);
+  expect(accessibleName(button).replace(/\s+/g, ' ').trim()).to.equal('Launch notes Ship it Pinned 3 unread');
 });
 
 it("ignores invalid-only thread records when choosing slotted mode", async () => {
@@ -4913,7 +4925,7 @@ it('skips a slotted conversation row inside a hidden wrapper during arrow naviga
   const first = rows[0]!.shadowRoot!.querySelector<HTMLElement>('[part="select-button"]')!;
   await focusByKeyboard(first);
   first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
-  expect(rows[2]!.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('Last');
+  expect(rows[2]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('select-button');
 });
 
 it('applies the shared icon action border to its buttons', async () => {

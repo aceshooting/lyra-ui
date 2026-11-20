@@ -253,6 +253,11 @@ export class LyraAccordionItem extends LyraElement {
     this.button?.focus(options);
   }
 
+  /** Remove focus from the internal trigger. */
+  override blur(): void {
+    this.button?.blur();
+  }
+
   /** Activate the internal trigger. */
   override click(): void {
     const trigger = this.button;

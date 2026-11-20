@@ -12,7 +12,7 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -323,7 +323,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     const start = track.left + base.clientLeft * scale;
     const end = start + base.clientWidth * scale;
     const left = rect.left < start ? rect.left - start : Math.max(0, rect.right - end);
-    if (left) base.scrollBy({ left: left / scale, behavior: prefersReducedMotion(this) ? 'auto' : 'smooth' });
+    if (left) base.scrollBy({ left: left / scale, behavior: motionScrollBehavior(this) });
   }
 
   protected override updated(changed: PropertyValues): void {

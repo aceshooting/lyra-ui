@@ -69,3 +69,21 @@ it('keeps data paint visible in forced colors', async () => {
     await setForcedColors('none');
   }
 });
+
+it('shrinks the drawing in a definite-height host instead of scrolling the base block-wise', async () => {
+  const grouped = [
+    { text: 'alpha', weight: 3, group: 'Group A' },
+    { text: 'beta', weight: 2, group: 'Group B' },
+    { text: 'gamma', weight: 1, group: 'Group C' },
+  ];
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend style="display:block; block-size: 160px; inline-size: 320px" .words=${grouped}></lr-word-cloud>`);
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const svg = svgOf(el).getBoundingClientRect();
+  const outer = base.getBoundingClientRect();
+  expect({
+    overflowY: getComputedStyle(base).overflowY,
+    blockScrolls: base.scrollHeight > base.clientHeight + 1,
+    svgInside: svg.bottom <= outer.bottom + 1,
+  }).to.deep.equal({ overflowY: 'hidden', blockScrolls: false, svgInside: true });
+});

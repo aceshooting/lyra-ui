@@ -468,11 +468,15 @@ describe("Web Awesome carousel surface", () => {
     await el.updateComplete;
     expect(el.currentSlide).to.equal(3);
 
+    let updatePendingAtEvent: boolean | undefined;
+    el.addEventListener("lr-slide-change", () => (updatePendingAtEvent = el.isUpdatePending), { once: true });
     const changed = oneEvent(el, "lr-slide-change");
     el.slidesPerPage = 2;
     const event = await changed;
     expect(el.currentSlide).to.equal(2);
     expect(event.detail.index).to.equal(2);
+    // Emitted after the render, never from inside the in-flight update.
+    expect(updatePendingAtEvent).to.equal(false);
   });
 
   it("emits lr-slide-change when removing the active slide forces a clamp", async () => {
@@ -888,7 +892,7 @@ it('lets each scroll-container hover-outline longhand be retinted independently 
   }
 });
 
-it('keeps the pre-hook scroll-container hover outline when each scoped property is unset', async () => {
+it('paints the shared container hover outline when each scoped property is unset', async () => {
   const el = (await fixture(
     html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`,
   )) as LyraCarousel;
@@ -904,7 +908,8 @@ it('keeps the pre-hook scroll-container hover outline when each scoped property 
   );
   const expectedColor = resolvedInShadow(
     el,
-    'outline-color: var(--lr-color-border-strong)',
+    // The same default the tab-group panel and scroller viewport previews use.
+    'outline-color: var(--lr-color-border)',
     'outline-color',
   );
   const expectedOffset = resolvedInShadow(

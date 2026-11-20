@@ -151,14 +151,31 @@ export const styles = css`
      nothing to reveal stays inert, like its lack of a focus ring. :where() zeroes the [tabindex]
      contribution, leaving :hover at (0,1,0) -- below the :host([variant='...']) [part='value']
      colour rules at (0,2,0), so a coloured stat keeps its variant colour hovered. */
-  /* no-pressed-state: the [tabindex] only lets a keyboard user reach the native title tooltip a
-     mouse user hovers for -- no click handler, nothing to activate, which is what cursor: help
+  /* no-pressed-state: the [tabindex] only lets a keyboard user reach the exact value a mouse
+     user hovers the title tooltip for -- no click handler, nothing to activate, which is what cursor: help
      says. A value part inside a linked stat never takes the tabindex; the anchor owns the
      interaction and its pressed state above covers it. */
   :where([part='value'][tabindex]):hover,
   :where([part='row-value'][tabindex]):hover {
     color: var(--lr-stat-value-hover-color, var(--lr-color-brand));
     cursor: help;
+  }
+  /* Browsers show no title tooltip on keyboard focus, so a keyboard-focused exact-value stop (or
+     a linked stat's card link) reveals its exact value in place on its own line; pointer users
+     keep the title tooltip. The span is the value's accessible description either way. */
+  .exact-reveal {
+    display: none;
+  }
+  [part='value']:focus-visible ~ .exact-reveal,
+  [part='row-value']:focus-visible ~ .exact-reveal,
+  .linked-shell > [part='base']:focus-visible + .linked-content [part='value-row'] > .exact-reveal {
+    display: block;
+    flex-basis: 100%;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--lr-font-mono);
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text-quiet);
   }
   [part='unit'] {
     min-inline-size: 0;

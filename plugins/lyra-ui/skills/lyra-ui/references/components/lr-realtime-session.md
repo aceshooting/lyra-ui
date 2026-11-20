@@ -19,8 +19,9 @@
 Whitespace-only name overrides use the same fallback as an omitted name.
 
 Set `disabled` to disable the built-in session actions and capture. The `lr-mute-change` event requests a new mute state. Assign `muted` to apply it.
-Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
-Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults.
+Supply `.captureOptions` with `mode`, `deviceId`, `mimeType`, `timesliceMs`, `streamOnly`, `levelEvents`, `maxDurationMs`, `withoutTimer` or `audioConstraints`.
+Set `streamOnly: true` with a positive `timesliceMs` when chunks go to a transport during a long take: the recorder then keeps no copy, and `lr-record-stop` carries an empty Blob.
+Supply `.transcriptOptions` with `follow`, `withTimestamps`, `formatTimestamp` or `maxRenderedEntries`. Replace either object to update its options. Omitted members use the child control’s defaults, except `levelEvents`, which defaults to `true` so `lr-level` keeps reaching the session; set it to `false` to stop level sampling.
 
 Host `aria-labelledby` and `aria-describedby` name and describe the session region. The built-in capture control supports click-only start and stop in hold mode.
 

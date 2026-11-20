@@ -1984,6 +1984,23 @@ describe('selection & roving focus', () => {
     expect(fired).to.be.false;
   });
 
+  it('does not emit lr-selection-delete while readonly, even with editor flags set', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable connectable readonly></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    let fired = 0;
+    el.addEventListener('lr-selection-delete', () => (fired += 1));
+    for (const key of ['Delete', 'Backspace']) {
+      nodeControl(el, 'a').dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    }
+    expect(fired).to.equal(0);
+    el.readonly = false;
+    await el.updateComplete;
+    nodeControl(el, 'a').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    expect(fired).to.equal(1);
+  });
+
   it('omits rendered edges from the fallback list and lists only dangling edges', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

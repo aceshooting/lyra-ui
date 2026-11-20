@@ -46,6 +46,13 @@ and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode re
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
 These settings do not replace the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
+The untrusted-content switches reach the same built-in Markdown parts, with `<lr-markdown>`'s own
+defaults: `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`),
+`withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'`
+(attribute `link-target`), `linkSchemes?: string` (attribute `link-schemes`) and `maxHeight: string = ''`
+(attribute `max-height`). For model-authored messages set `without-images` (and narrow
+`link-schemes`) here instead of re-implementing text parts through `renderPart`:
+`<lr-message-parts without-images link-schemes="https"></lr-message-parts>`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they

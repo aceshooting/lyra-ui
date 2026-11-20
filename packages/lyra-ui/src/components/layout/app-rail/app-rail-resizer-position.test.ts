@@ -9,7 +9,8 @@ const handle = (el: LyraAppRail) => el.shadowRoot!.querySelector<HTMLElement>('[
 const edgeError = (el: LyraAppRail, direction: 'ltr' | 'rtl') => {
   const rail = base(el).getBoundingClientRect();
   const grip = handle(el).getBoundingClientRect();
-  return Math.abs(grip.left + grip.width / 2 - (direction === 'rtl' ? rail.left : rail.right));
+  // The hit target starts at the rail edge and extends outward.
+  return Math.abs(direction === 'rtl' ? grip.right - rail.left : grip.left - rail.right);
 };
 
 for (const direction of ['ltr', 'rtl'] as const) {

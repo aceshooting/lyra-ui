@@ -2,6 +2,7 @@ import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html } from '@open-wc/testing';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-stat.js';
 import type { LyraStat } from '../../lr-stat.js';
 
@@ -39,4 +40,35 @@ it('shows and clears the number of admitted breakdown rows', async () => {
   el.rows = rows.slice(0, 1);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});
+
+it('reveals the exact value visibly while the value or a linked card has keyboard focus', async () => {
+  const el = await fixture<LyraStat>(html`<lr-stat label="Revenue" value="1.2M" exact-value="1,234,567.89"></lr-stat>`);
+  el.rows = [{ label: 'Tokens', value: '1.2K', exactValue: '1,204' }];
+  await el.updateComplete;
+  const root = el.shadowRoot!;
+  const shown = (selector: string): boolean => {
+    const node = root.querySelector<HTMLElement>(selector)!;
+    return getComputedStyle(node).display !== 'none' && node.getBoundingClientRect().height > 0;
+  };
+  const value = root.querySelector<HTMLElement>('[part="value"]')!;
+  const rowValue = root.querySelector<HTMLElement>('[part="row-value"]')!;
+  const states: Record<string, boolean> = { rest: shown('[part="value-row"] > .exact-reveal') };
+  await focusAfterPointer(value);
+  states['pointerFocus'] = shown('[part="value-row"] > .exact-reveal');
+  await focusByKeyboard(value);
+  states['keyboard'] = shown('[part="value-row"] > .exact-reveal');
+  states['keyboardText'] = root.querySelector('[part="value-row"] > .exact-reveal')!.textContent === '1,234,567.89';
+  await focusByKeyboard(rowValue);
+  states['row'] = shown('[part="row"] > .exact-reveal');
+  states['headlineAfterRow'] = shown('[part="value-row"] > .exact-reveal');
+
+  const linked = await fixture<LyraStat>(html`<lr-stat href="#stat" label="Revenue" value="1.2M" exact-value="1,234,567.89"></lr-stat>`);
+  const anchor = linked.shadowRoot!.querySelector<HTMLElement>('a[part="base"]')!;
+  await focusByKeyboard(anchor);
+  const linkedReveal = linked.shadowRoot!.querySelector<HTMLElement>('.exact-reveal')!;
+  states['linked'] = getComputedStyle(linkedReveal).display !== 'none';
+  expect(states).to.deep.equal({
+    rest: false, pointerFocus: false, keyboard: true, keyboardText: true, row: true, headlineAfterRow: false, linked: true,
+  });
 });

@@ -29,3 +29,15 @@ export function labelWithVisibleText(visible: string, context?: string): string 
   const extra = normalizeLabel(context) ?? '';
   return text && extra ? `${text} ${extra}` : text || extra;
 }
+
+/** Default ceiling, in characters, for caller data quoted inside an accessible name. */
+export const MAX_ACCESSIBLE_CONTEXT_LENGTH = 80;
+
+/** Caller text as bounded accessible-name context: whitespace collapsed and, past `max`
+ *  characters, cut on a code-point boundary with an ellipsis, so a long item never makes each
+ *  of its buttons announce the whole text. */
+export function boundedAccessibleContext(value: unknown, max: number = MAX_ACCESSIBLE_CONTEXT_LENGTH): string {
+  const text = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  const points = Array.from(text);
+  return points.length > max ? `${points.slice(0, max).join('').trimEnd()}…` : text;
+}

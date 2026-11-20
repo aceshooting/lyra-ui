@@ -483,3 +483,26 @@ describe('sequence source exact-control keyboard', () => {
     });
   }
 });
+
+it('shows the exact-item key help below the source button only while it has keyboard focus', async () => {
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${smallSource()}></lr-sequence-strip>`);
+  await ready(el);
+  await el.revealSourceItem(0);
+  const exact = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="source-exact"]')!;
+  const help = el.shadowRoot!.querySelector<HTMLElement>('#sequence-strip-source-help')!;
+  const visible = (): boolean => getComputedStyle(help).display !== 'none' && help.getBoundingClientRect().height > 0;
+  exact.blur();
+  const rest = visible();
+  await focusByKeyboard(exact);
+  expect({
+    rest,
+    keyboard: visible(),
+    describedBy: exact.getAttribute('aria-describedby'),
+    text: help.textContent,
+  }).to.deep.equal({
+    rest: false,
+    keyboard: true,
+    describedBy: 'sequence-strip-source-help',
+    text: 'Use Left and Right Arrow to inspect adjacent items, Home and End for the first and last item, and Enter to activate the inspected item.',
+  });
+});

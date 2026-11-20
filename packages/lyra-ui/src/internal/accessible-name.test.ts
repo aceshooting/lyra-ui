@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { labelWithVisibleText, normalizeLabel, resolveAccessibleName } from './accessible-name.js';
+import { boundedAccessibleContext, labelWithVisibleText, normalizeLabel, resolveAccessibleName } from './accessible-name.js';
 
 describe('accessible name helpers', () => {
   it('treats blank, whitespace and non-string values as absent', () => {
@@ -24,5 +24,15 @@ describe('accessible name helpers', () => {
     expect(labelWithVisibleText('  Add  ')).to.equal('Add');
     expect(labelWithVisibleText('', 'Context')).to.equal('Context');
     expect(labelWithVisibleText('', '')).to.equal('');
+  });
+});
+
+describe('boundedAccessibleContext', () => {
+  it('collapses whitespace and cuts long text on a code-point boundary', () => {
+    expect(boundedAccessibleContext('  a \n b ')).to.equal('a b');
+    expect(boundedAccessibleContext(5)).to.equal('');
+    const long = boundedAccessibleContext('\u{1F600}'.repeat(100), 10);
+    expect(Array.from(long)).to.have.length(11);
+    expect(long.endsWith('\u2026')).to.equal(true);
   });
 });

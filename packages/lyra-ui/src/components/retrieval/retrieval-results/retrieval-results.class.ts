@@ -33,7 +33,7 @@ import {
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { DEFAULT_SCORE_THRESHOLDS, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_retrievalResultsSelectionLimit, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
@@ -591,10 +591,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   @property() presentation: RetrievalResultsPresentation = 'expanded';
 
   /** Forwarded verbatim to every per-row `<lr-chunk-inspector>`'s own `thresholds`. */
-  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
-    high: 0.75,
-    medium: 0.5,
-  };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = DEFAULT_SCORE_THRESHOLDS;
 
   /** Above this many rows (after identity canonicalization, before grouping), rendering switches
    *  from a plain list to the internal `<lr-virtual-list>`. Grouped mode always virtualizes

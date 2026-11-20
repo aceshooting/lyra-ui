@@ -130,8 +130,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   timestamp behind a relative one;
   `resizable` adds a focusable separator `[part='resize-handle']` and emits `lr-column-resize` with
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
-  under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
-  `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
+  under RTL), Shift+Arrow for 50px steps, Home for the minimum, End for an explicit pixel
+  `maxWidth`, and Enter (or double-click) to fit the column to its content; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
   _commit_ is vetoable — see `lr-column-resize-request` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an

@@ -1,4 +1,5 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
+import { accessibleName } from '../../../../test/accessible-name.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -69,9 +70,8 @@ it('falls back to "Untitled conversation" when label is empty', async () => {
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal(
     "Untitled conversation"
   );
-  expect(selectButtonEl(el).getAttribute("aria-label")).to.equal(
-    "Untitled conversation"
-  );
+  await expect(el).to.be.accessible();
+  expect(accessibleName(selectButtonEl(el))).to.equal("Untitled conversation");
 });
 
 it("localizes the untitled-conversation fallback via this.localize() when .strings overrides untitledConversation", async () => {
@@ -83,9 +83,8 @@ it("localizes the untitled-conversation fallback via this.localize() when .strin
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal(
     "Conversation sans titre"
   );
-  expect(selectButtonEl(el).getAttribute("aria-label")).to.equal(
-    "Conversation sans titre"
-  );
+  await expect(el).to.be.accessible();
+  expect(accessibleName(selectButtonEl(el))).to.equal("Conversation sans titre");
 });
 
 it("renders label as visible content while preserving native host title semantics", async () => {
@@ -101,6 +100,15 @@ it("renders label as visible content while preserving native host title semantic
   expect(labelPart.textContent).to.equal("Migrating the table component");
   expect(labelPart.hasAttribute("title")).to.be.false;
   expect(el.title).to.equal("Open the conversation menu for more actions");
+});
+
+it('names the row from its title, excerpt, meta and timestamp when no host name is authored', async () => {
+  const el = await fixture<LyraConversationItem>(html`<lr-conversation-item label="Quarterly plan"
+    excerpt="Draft the summary" .timestamp=${new Date(2001, 0, 2)} .formatTimestamp=${() => 'Jan 2'}
+    ><span slot="meta">3 unread</span></lr-conversation-item>`);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="meta"]:not([hidden])') !== null);
+  await expect(el).to.be.accessible();
+  expect(accessibleName(selectButtonEl(el)).replace(/\s+/g, ' ').trim()).to.equal('Quarterly plan Draft the summary 3 unread Jan 2');
 });
 
 it('forwards a host aria-label onto the inner role="button" element instead of the derived label', async () => {
@@ -120,9 +128,9 @@ it('forwards a host aria-label onto the inner role="button" element instead of t
 
   el.removeAttribute("aria-label");
   await el.updateComplete;
-  expect(selectButtonEl(el).getAttribute("aria-label")).to.equal(
-    "Internal name"
-  );
+  expect(selectButtonEl(el).hasAttribute("aria-label")).to.equal(false);
+  await expect(el).to.be.accessible();
+  expect(accessibleName(selectButtonEl(el))).to.equal("Internal name");
 });
 
 describe("excerpt", () => {

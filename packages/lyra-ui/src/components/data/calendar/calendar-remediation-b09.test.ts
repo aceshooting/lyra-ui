@@ -13,6 +13,23 @@ describe('calendar remediation', () => {
     await resetMouse();
   });
 
+  it('paints a hovered unselected day differently from the selected day', async () => {
+    const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-03-01" value="2026-03-10"></lr-calendar>`);
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][data-date="2026-03-10"]')!;
+    const other = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][data-date="2026-03-12"]')!;
+    const rest = getComputedStyle(other).backgroundColor;
+    const selectedFill = getComputedStyle(selected).backgroundColor;
+    try {
+      await hoverUntilMatched(other, 'unselected day did not receive hover');
+      await waitUntil(() => getComputedStyle(other).backgroundColor !== rest, 'hover did not repaint the day');
+      // Compare the settled hover fill, not a frame of the fill transition.
+      await Promise.all(other.getAnimations().map((animation) => animation.finished));
+      expect(getComputedStyle(other).backgroundColor).to.not.equal(selectedFill);
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('announces the new month after navigation', async () => {
     const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-03-01"></lr-calendar>`);
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"], button[part~="nav"]:last-of-type')!.click();

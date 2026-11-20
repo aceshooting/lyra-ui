@@ -125,9 +125,10 @@ const MAX_BUSY_SETTLE_SAMPLES = 60;
  *
  * @customElement lr-chat-viewport
  * @slot - The transcript: ordinary element children, or exactly one `<lr-virtual-list>`.
- * @event lr-follow-change - `detail: { following }` — fired whenever `follow` flips: a user
- *   scroll-up release, reaching the bottom again, a jump-button click, `scrollToBottom()` or a
- *   direct `follow` assignment. Never fired for the initial mount state.
+ * @event lr-follow-change - `detail: { following }` — a reader changed stick-to-bottom: a user
+ *   scroll-up release, scrolling back to the bottom, or a jump-button click. Direct `follow`
+ *   assignments and calling `scrollToBottom()` are controlled input and do not echo an event,
+ *   matching `lr-transcript-feed` and `lr-terminal`. Never fired for the initial mount state.
  * @csspart base - The positioning root.
  * @csspart scroll - The scroll container (`role="log"` and, in slotted mode, `tabindex="0"`). In
  *   virtual mode it stops scrolling itself and drops its tab stop because the slotted list owns
@@ -238,6 +239,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private scrollbarDragRelease?: () => void;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
+  /** Set when a reader's scroll or jump-pill click flips `follow`; only such flips emit. */
+  private userFollowChange = false;
   private readonly contentResizeObserver = new OwnedResizeObserver(this, () => {
     if (this.contentSizeMeasured) this.scheduleGrowthTick();
     this.contentSizeMeasured = true;
@@ -399,9 +402,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
-      if (!wasMounting && changed.get('follow') !== this.follow) {
+      if (!wasMounting && this.userFollowChange && changed.get('follow') !== this.follow) {
         this.emit('lr-follow-change', { following: this.follow });
       }
+      this.userFollowChange = false;
     }
     // No unread-divider measurement here: it happens in willUpdate(), ahead of render -- see the
     // comment there for why a post-commit measurement was wrong.
@@ -727,6 +731,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (atBottom) {
       this.clearUserIntent();
       if (!this.follow) {
+        this.userFollowChange = true;
         this.follow = true;
       }
       return;
@@ -734,11 +739,13 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const userCaused = this.consumeUserIntent() || keyboardCaused || this.scrollbarDragActive;
     if (userCaused && this.follow) {
       this.clearKeyboardScrollIntent();
+      this.userFollowChange = true;
       this.follow = false;
     }
   };
 
   private onJumpClick = (): void => {
+    if (!this.follow) this.userFollowChange = true;
     this.scrollToBottom();
   };
 

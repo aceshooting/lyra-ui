@@ -220,9 +220,10 @@ cell toggles selection, and on group rows only in `multiple` mode. Header select
 column-menu, and resize controls remain Tab stops. Selection controls are named by localized
 "Select" plus the first visible cell; selection sets `aria-multiselectable`. Alt+Arrow/Cmd+Arrow
 stay browser history. Separator ArrowLeft/ArrowRight resizes 10px (Shift: 50px); Home/End set min/
-authored max. Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
+authored max; Enter fits the column to its content (as double-click does). Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
 sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the current page;
-Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
+Ctrl+C copies the selected rows (with no row selected, or with a live text selection, the native copy
+runs); Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
 descendants keep their own keys.
 
 **Events:** `lr-request` followed by `request` for a server-data request (each carries sort,

@@ -4,6 +4,22 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-card.js';
 import type { LyraCard } from '../../lr-card.js';
 
+describe('lr-card host focus() and blur()', () => {
+  for (const [name, markup, part] of [
+    ['link', html`<lr-card href="/a">Linked</lr-card>`, 'a[part~="base"]'],
+    ['activation button', html`<lr-card actionable>Action</lr-card>`, '[part="activation-button"]'],
+  ] as const) {
+    it(`forwards to the ${name}`, async () => {
+      const el = await fixture<LyraCard>(markup);
+      const owner = el.shadowRoot!.querySelector<HTMLElement>(part)!;
+      el.focus();
+      expect(el.shadowRoot!.activeElement === owner).to.equal(true);
+      el.blur();
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    });
+  }
+});
+
 describe('lr-card interactions', () => {
   afterEach(async () => {
     await resetMouse();
