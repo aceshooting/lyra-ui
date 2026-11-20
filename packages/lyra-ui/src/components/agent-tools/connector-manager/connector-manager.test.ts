@@ -23,6 +23,21 @@ const connectors: AgentConnector[] = [
 ];
 
 describe('lr-connector-manager', () => {
+  it('keeps a row with a foreign status or kind visible as a neutral unknown row with no action', async () => {
+    const foreign = [
+      { id: 'next', name: 'Next server', kind: 'mcp', status: 'reconnecting' },
+      { id: 'odd', name: 'Odd kind', kind: 'plugin', status: 'connected' },
+    ] as unknown as AgentConnector[];
+    const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${foreign}></lr-connector-manager>`);
+    expect(el.shadowRoot!.querySelector('[part="empty"]') === null).to.equal(true);
+    expect(rowPart(el, 'next', 'status')!.textContent).to.equal('Unknown');
+    expect(rowPart(el, 'next', 'status')!.dataset['status']).to.equal('unknown');
+    expect(rowPart(el, 'next', 'action') === null).to.equal(true);
+    expect(rowPart(el, 'odd', 'kind') === null).to.equal(true);
+    expect(rowPart(el, 'odd', 'name')!.textContent).to.equal('Odd kind');
+    expect(rowPart(el, 'odd', 'action') !== null).to.equal(true);
+  });
+
   it('keeps each action bound to its own connector when the host re-sorts rows', async () => {
     const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager style="--lr-button-radius: 7px" .connectors=${connectors}></lr-connector-manager>`);
     const filesAction = rowPart(el, 'files', 'action')!;

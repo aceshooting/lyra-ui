@@ -9,16 +9,25 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-background-runs`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
-running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
+`collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
+buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
@@ -27,8 +36,10 @@ Tab enters the current row's actions. Up, Down, Home and End move between rows a
 same action when available. A narrow layout stacks status and actions below the run label.
 A polite announcement accompanies the first transition past the 100-row display limit.
 
-**Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
-`completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
+**Statuses and events:** the shared active `AgentStatusKind` states `collecting`, `waiting-input`
+and `waiting-approval` render with the agent-run labels and, like `queued` and `running`, offer
+Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
+`failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
 opening a run.
@@ -47,12 +58,12 @@ opening a run.
 | `status` | Localized controlled status. |
 | `actions` | Open and optional cancel controls. |
 | `open` | Native open button. |
-| `cancel` | Cancel button, present only for queued or running runs. |
+| `cancel` | Cancel button, present only for active (queued, running, collecting or waiting) runs. |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for active runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';

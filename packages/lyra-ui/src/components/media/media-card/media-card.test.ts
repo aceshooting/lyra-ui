@@ -1441,3 +1441,14 @@ describe('lr-media-card parity pass: resting background token, disabled, pressed
     await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
   });
 });
+
+it('falls back past a whitespace-only alt and filename to the localized image name', async () => {
+  const el = (await fixture(
+    html`<lr-media-card kind="image" src="https://example.com/a.png" alt="   " filename="  "></lr-media-card>`,
+  )) as LyraMediaCard;
+  const img = el.shadowRoot!.querySelector('img[part="media"]')!;
+  expect(img.getAttribute('alt')).to.equal('Image attachment');
+  el.alt = '';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('img[part="media"]')!.getAttribute('alt')).to.equal('');
+});

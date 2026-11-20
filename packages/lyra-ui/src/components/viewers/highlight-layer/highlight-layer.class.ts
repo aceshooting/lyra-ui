@@ -9,8 +9,8 @@ import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
-import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { shouldIgnoreActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -363,10 +363,12 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   override render(): TemplateResult | typeof nothing {
-    if (this.items.length === 0) return nothing;
     const rectsByItem = this.items.map((item) => item.rects);
     const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
-    if (renderedIndexes.length === 0) return nothing;
+    if (renderedIndexes.length === 0) {
+      viewerSemanticRole(this, null);
+      return nothing;
+    }
     const tabStop = this.tabStopIndex(rectsByItem);
     const activeIndex = this.activeHighlightId
       ? this.items.findIndex(
@@ -376,15 +378,15 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
     const interactive = !this.withoutInteraction;
     const useActionList = interactive && this.actionList;
+    // A non-empty host label makes the host the named group (one owner, never a copy).
+    const role = viewerSemanticRole(this, interactive ? 'group' : null);
     const ariaLabel = interactive
-      ? hostAriaLabel(this) === ''
-        ? ''
-        : resolveAccessibleName(this, this.localize('highlightLayerLabel'))
-      : undefined;
+      ? viewerSemanticLabel(this, this.localize('highlightLayerLabel'))
+      : null;
     return html`
       <div
         part="base"
-        role=${interactive ? 'group' : nothing}
+        role=${role ?? nothing}
         aria-label=${ariaLabel ?? nothing}
         aria-hidden=${!interactive ? 'true' : nothing}
       >

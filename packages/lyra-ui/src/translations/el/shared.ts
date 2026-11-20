@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Δεν ήταν δυνατή η φόρτωση αυτού του στοιχείου.',
   noData: 'Δεν υπάρχουν δεδομένα',
   legendTypeShown: 'Εμφανίζεται το {label}',
   legendTypeHidden: 'Το {label} είναι κρυφό',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Δεν ήταν δυνατή η φόρτωση των δεδομένων',
   zoomOut: 'Σμίκρυνση',
   zoomIn: 'Μεγέθυνση',
+  scrollerLabel: 'Περιεχόμενο με δυνατότητα κύλισης',
   clear: 'Εκκαθάριση',
   open: 'Άνοιγμα',
   close: 'Κλείσιμο',

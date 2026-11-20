@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'No s’ha pogut carregar aquest component.',
   noData: 'No hi ha dades',
   legendTypeShown: '{label} visible',
   legendTypeHidden: '{label} amagat',
@@ -21,6 +22,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'No s’han pogut carregar les dades',
   zoomOut: 'Redueix',
   zoomIn: 'Amplia',
+  scrollerLabel: 'Contingut desplaçable',
   clear: 'Esborra',
   open: 'Obre',
   close: 'Tanca',

@@ -11,7 +11,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getDisplayNames, getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveLocalizedSlots } from '../../../internal/localization-runtime.js';
 import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.js';
 import { formatProgressPercent } from '../../../internal/progress-value.js';
@@ -34,6 +34,7 @@ import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ThumbnailCue } from './video-thumbnails.js';
 import { styles } from './video.styles.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
@@ -930,6 +931,16 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.captionListeners = [];
   }
 
+  private captionLanguageName(language: string): string | undefined {
+    const code = normalizeLabel(language);
+    if (code === undefined) return undefined;
+    try {
+      return normalizeLabel(getDisplayNames(this.effectiveLocale, { type: 'language' }).of(code)) ?? code;
+    } catch {
+      return code;
+    }
+  }
+
   private bindCaptionTracks(): void {
     this.unbindCaptionTracks();
     const selectable = Array.from(this.videoEl?.textTracks ?? []).filter(
@@ -940,7 +951,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     }
     this.captionTracks = selectable.map((track) => ({
       track,
-      label: track.label || track.language || this.localize('videoCaptions'),
+      label: normalizeLabel(track.label) ?? this.captionLanguageName(track.language) ?? this.localize('videoCaptions'),
       language: track.language,
     }));
     for (const track of selectable) {
@@ -1234,6 +1245,12 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         </div>
       </div>
     `;
+  }
+
+  constructor() {
+    super();
+    // A panorama page button disables itself on the first or last page; focus moves to the other, then the current hotspot.
+    repairControlFocusOnUpdate(this, () => [this.renderRoot.querySelector<HTMLElement>('[part="panorama-hotspot"][tabindex="0"]')]);
   }
 
   override render(): TemplateResult {

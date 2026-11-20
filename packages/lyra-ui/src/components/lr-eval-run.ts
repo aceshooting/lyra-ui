@@ -5,6 +5,8 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { AgentStatusPresentation } from './agent-tools/agent-status-presentation.js';
+export type { ToolTimelineActivateDetail, ToolTimelineApprovalDetail, ToolTimelineEntry, ToolTimelineRenderErrorDetail } from './agent-tools/tool-timeline/tool-timeline.class.js';
 export * from './agent-tools/evaluation-run/evaluation-run.class.js';
 import './lr-live-region.js';
 import './lr-progress-bar.js';

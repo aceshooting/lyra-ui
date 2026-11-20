@@ -1250,7 +1250,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       .checked=${selected.has(document.id)}
       .disabled=${this.sourceSelectionBlocked}
       aria-label=${this.localize('documentLibrarySelectDocument', undefined, {
-        name: document.name,
+        name: normalizeLabel(document.name) ?? document.id,
       })}
       @lr-checkbox-toggle-request=${this.stopOwnedEvent}
       @input=${this.stopOwnedEvent}
@@ -1270,7 +1270,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       @click=${() => this.openDocument(document)}
       ?disabled=${this.sourceBlocked}
     >
-      ${document.name}
+      ${normalizeLabel(document.name) ?? document.id}
     </button>`;
   }
 

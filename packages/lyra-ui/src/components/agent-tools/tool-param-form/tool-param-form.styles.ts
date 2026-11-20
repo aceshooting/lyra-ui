@@ -91,6 +91,11 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }
+  /* no-hover-state: a missing-property error takes focus only by script, when a submit attempt
+     reveals it; it is read-only text, not a pointer target. */
+  [part='error']:focus-visible {
+    ${focusRing}
+  }
   .unsupported {
     margin: 0;
     font-size: var(--lr-font-size-sm);

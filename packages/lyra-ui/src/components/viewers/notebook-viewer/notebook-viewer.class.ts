@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
@@ -22,6 +23,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
@@ -706,7 +708,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   @state() private searchMatches: number[] = [];
   private searchMatchCountExact = true;
   @state() private activeSearchIndex = -1;
-  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
+  @query(tag('virtual-list')) private virtualListEl?: LyraVirtualList;
   private readonly cellKey = (item: unknown, index: number): string | number => (item as NotebookCell).id ?? index;
   /** Cell index -> the highest-priority `highlights` entry resolved against it, recomputed by
    *  `repaintHighlights()` (called from `willUpdate()`, ahead of the render pass that same property
@@ -1293,7 +1295,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    const label = viewerSemanticLabel(this, this.name || this.localize('notebookViewerLabel'));
+    const label = viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('notebookViewerLabel'));
     return html`<div
       part="base"
       style=${maxHeight

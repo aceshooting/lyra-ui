@@ -32,6 +32,8 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
 
+The default entry registers the transcript's `lr-virtual-list` the first time the player has cues.
+
 Removing `mime-type` consumes the absent hint safely and restores automatic video fallback unless
 `kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
 empty hint remains empty, and a later audio MIME value restores audio detection.

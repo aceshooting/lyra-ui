@@ -1,7 +1,7 @@
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { blockHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
-import { panelFrame } from '../../../internal/panel-frame.styles.js';
+import { panelFrame, panelFramePlain } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -95,4 +95,5 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  ${panelFramePlain}
 `;

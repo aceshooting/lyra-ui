@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -129,7 +130,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
    *  construction, so `changed.has('paused')` is true on the very first `updated()` call too). */
   private isMounting = true;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   override connectedCallback(): void {
     super.connectedCallback();

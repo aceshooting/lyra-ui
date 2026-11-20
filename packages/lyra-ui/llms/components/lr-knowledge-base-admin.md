@@ -24,6 +24,8 @@ admission truncates the source or ingestion array, an `input-limit` note for the
 the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
 are quiet, and later changed omissions are politely announced.
 
+The default entry registers `lr-ingestion-queue` the first time its tab opens.
+
 **Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined` and
 `ingestionSource: IngestionQueueSource | undefined` are property-only inputs
 (attribute: false). `dataSource` supplies the Sources tab's `lr-knowledge-base.dataSource`;

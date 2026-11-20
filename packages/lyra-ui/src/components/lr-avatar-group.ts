@@ -1,3 +1,4 @@
+export type { LyraAvatarShape } from './media/avatar/avatar.class.js';
 export * from './media/avatar-group/avatar-group.class.js';
 import { LyraAvatarGroup } from './media/avatar-group/avatar-group.class.js';
 import { defineElement } from '../internal/prefix.js';

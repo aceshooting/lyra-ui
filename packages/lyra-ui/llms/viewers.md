@@ -514,7 +514,8 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner. With an
+`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an
 explicitly empty host label, the shadow document keeps `role="document"` and an empty accessible
 name; when the attribute is absent, `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
@@ -642,7 +643,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
-host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
+host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
+through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
 localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
@@ -851,8 +853,8 @@ platform accessors, including across document realms. Arbitrary peer-owned acces
 uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A non-empty host `aria-label` names the
-host, and the inner reading region then drops its own `role="region"` and name (the shared viewer
-rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
+host, which takes the `region` role through `ElementInternals`, and the inner reading region then
+drops its own `role="region"` and name (the shared viewer rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
 no matching JS property: the `accessibleLabel`
 property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
 attribute.) `maxHeight: string = ''`
@@ -1176,13 +1178,15 @@ preview.
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A nonempty host `aria-label`
-makes the host the sole named semantic owner; an explicitly empty host label keeps the shadow
+makes the host the sole named semantic owner (the host takes the `document` role through
+`ElementInternals`); an explicitly empty host label keeps the shadow
 `document` role with an empty name, and an absent host label falls back to `name` or the localized
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
@@ -1229,7 +1233,8 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 `.tsv`, `.psv`, and `.dat` filenames.
 
 With the default `scroll-mode="self"`, the capped `body` becomes a named keyboard scroll region
-(named by `name`, else the localized "Dataset") while its rows exceed the cap, and adds no tab stop
+(named by the localized `datasetViewerLabel`, "Dataset", so it never repeats the region's `name`)
+while its rows exceed the cap, and adds no tab stop
 otherwise.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
@@ -1417,8 +1422,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -2629,7 +2635,8 @@ Comparison surface for two document versions, using `lr-diff-view` for textual d
 `lr-document-preview` the first time `view="side-by-side"` renders it;
 `updateComplete` waits for that registration and the child's first render.
 
-A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
+A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an explicitly empty
 host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
 is absent, it uses the localized comparison label. Dynamic host-label changes update that ownership.
 
@@ -2757,7 +2764,10 @@ unbroken values from widening a 320px allocation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`.
+`geojsonViewLabel` when unset; a whitespace-only `name` counts as unset). A nonempty host
+`aria-label` takes precedence over `name`: it names the map, and while the map does not own the
+landmark the host itself takes the `region` role through `ElementInternals` instead of a second
+named shadow region.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps `[part="base"]` —
 covering the loaded map, the serialized metadata, and the missing-peer fallback alike — by writing
 `--lr-geojson-viewer-max-height` inline on it; invalid CSS `max-height` values, declaration breaks,
@@ -2866,8 +2876,9 @@ state (a built-in sentence is used when empty); `target: string = '_blank'` and 
 
 Writing `src`, `name`, `mimeType` or `format` invalidates the current load synchronously: the
 in-flight request is aborted and the engine is disposed before Lit updates, so a stale response can
-never publish. A host `aria-label` (by presence, an explicitly empty one included) names the region
-and the camera surface; otherwise `name`, then the localized `3D model` label, does.
+never publish. A nonempty host `aria-label` makes the host the named `region` (through `ElementInternals`) and
+the shadow region drops its role and name; an explicitly empty host label keeps the shadow region
+with an empty name; otherwise `name`, then the localized `3D model` label, names the shadow region.
 
 `LyraModelCamera` is `{ yaw, pitch, distance, target: { x, y, z } }`, the orbit camera the engine and
 `lr-graph` share. Assignment copies own data fields only (accessors never run), requires finite

@@ -175,6 +175,8 @@ export function findBareGlobalIsNaNCalls(source, file = '<source>') {
 }
 
 const SELECTOR_METHODS = new Set(['closest', 'matches', 'querySelector', 'querySelectorAll']);
+/** Lit's selector decorators, called by bare name: `@query('lr-x')`, `@queryAll('lr-x')`. */
+const SELECTOR_DECORATORS = new Set(['query', 'queryAll']);
 const LITERAL_TAG = /(?:^|[\s>+~,(])lr-[a-z]/u;
 
 /** Static text of a string or template literal; each `${}` hole reads as a space. */
@@ -185,14 +187,18 @@ function staticLiteralText(node) {
   return syntaxStaticString(expression) ?? '';
 }
 
-/** Lines that spell an `lr-` tag in a `closest`/`matches`/`querySelector(All)` selector or compare
- * `localName` to one, instead of building it with `tag()`. */
+/** Lines that spell an `lr-` tag in a `closest`/`matches`/`querySelector(All)` selector or an
+ * `@query`/`@queryAll` decorator selector, compare `localName` to one, or assign one to a `*Tag`
+ * property (`ownerTag: 'lr-x'`), instead of building it with `tag()`. */
 export function findLiteralTagNames(source, file = '<source>') {
   const lines = new Set();
   visitSyntaxNodes(parseSyntaxProgram(source, file), (node) => {
     let hit = false;
     if (node.type === 'CallExpression') {
-      hit = SELECTOR_METHODS.has(syntaxMemberName(node.callee)) && LITERAL_TAG.test(staticLiteralText(node.arguments[0]));
+      hit = (SELECTOR_METHODS.has(syntaxMemberName(node.callee)) || SELECTOR_DECORATORS.has(syntaxIdentifierName(node.callee))) &&
+        LITERAL_TAG.test(staticLiteralText(node.arguments[0]));
+    } else if (node.type === 'Property' && !node.computed && /tag$/iu.test(node.key?.name ?? syntaxStaticString(node.key) ?? '')) {
+      hit = staticLiteralText(node.value).startsWith('lr-');
     } else if (node.type === 'BinaryExpression' && /^[!=]==?$/u.test(node.operator)) {
       const [name, other] = syntaxMemberName(node.left) === 'localName' ? [node.left, node.right] : [node.right, node.left];
       hit = syntaxMemberName(name) === 'localName' && staticLiteralText(other).startsWith('lr-');

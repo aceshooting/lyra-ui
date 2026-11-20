@@ -5,6 +5,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { HostChildrenObserver } from '../../../internal/owned-observer.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
@@ -255,8 +257,13 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     super.disconnectedCallback();
   }
 
+  private readonly semanticInternals = attachInternalsSafely(this);
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    // A host aria-label names the whole playlist (stage plus list), so the host owns a real role;
+    // an author `role` attribute still overrides ElementInternals semantics.
+    this.semanticInternals.role = normalizeLabel(hostAriaLabel(this)) === undefined ? null : 'region';
     if (changed.has('controls')) this.controls = safeControls(this.controls);
     if (changed.has('repeat')) this.repeat = safeRepeat(this.repeat);
     if (changed.has('controls') || changed.has('iconLibrary')) {
@@ -812,12 +819,9 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   }
 
   override render(): TemplateResult {
-    const explicitHostLabel = hostAriaLabel(this);
-    const label = explicitHostLabel === null
-      ? this.localize('videoPlaylistLabel')
-      : explicitHostLabel === ''
-        ? ''
-        : this.localize('videoPlaylistLabel');
+    // The list keeps its own name inside a host-named region; an explicitly empty host label
+    // clears it.
+    const label = hostAriaLabel(this) === '' ? '' : this.localize('videoPlaylistLabel');
     const seededItems = !this.liveChildrenReady && Array.isArray(this.items)
       ? this.items.filter((item): item is LyraVideoPlaylistItem =>
           item !== null && typeof item === 'object')

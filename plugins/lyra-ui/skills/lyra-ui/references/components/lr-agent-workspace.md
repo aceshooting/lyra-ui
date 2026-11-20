@@ -33,7 +33,7 @@ assign new data to the properties as the host receives updates.
 `components/conversation/agent-workspace/agent-workspace-register.js` registers the conversation
 shell and its ordinary message/composer children. Import the run, timeline, retrieval-results,
 grounding-summary and context-inspector entries too when those panels can receive data. The default
-entry registers them all.
+entry registers each panel the first time the workspace has data for it.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
 `@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,

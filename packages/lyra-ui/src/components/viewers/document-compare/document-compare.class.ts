@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -29,6 +30,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion } from '../../../internal/default-strings/viewers.generated.js';
@@ -354,11 +356,11 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
    *  to jump to the same anchor again. */
   @property({ attribute: false }) anchor: LyraAnchor | string | null = null;
 
-  @query('lr-diff-view') private diffEl?: LyraDiffView;
+  @query(tag('diff-view')) private diffEl?: LyraDiffView;
   @query('[part="pane-old"]') private paneOldEl?: HTMLElement;
   @query('[part="pane-new"]') private paneNewEl?: HTMLElement;
-  @query('[part="pane-old"] lr-document-preview') private previewOldEl?: LyraDocumentPreview;
-  @query('[part="pane-new"] lr-document-preview') private previewNewEl?: LyraDocumentPreview;
+  @query(`[part="pane-old"] ${tag('document-preview')}`) private previewOldEl?: LyraDocumentPreview;
+  @query(`[part="pane-new"] ${tag('document-preview')}`) private previewNewEl?: LyraDocumentPreview;
 
   private suppressSync = false;
   private syncReleaseFrame?: number;
@@ -560,16 +562,22 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     const newName = distinct ? newLabel : this.localize('documentCompareNewVersion');
     return html`
       <div part="panes">
-        <div part="pane-old" role="region" aria-label=${oldName} tabindex="0" @scroll=${this.onPaneScroll('old')}>
+        <div part="pane-old" role="region" aria-label=${oldName} @scroll=${this.onPaneScroll('old')}>
           <div part="pane-header">${oldLabel}</div>
           ${this.renderVersionPane(this.oldVersion, 'old')}
         </div>
-        <div part="pane-new" role="region" aria-label=${newName} tabindex="0" @scroll=${this.onPaneScroll('new')}>
+        <div part="pane-new" role="region" aria-label=${newName} @scroll=${this.onPaneScroll('new')}>
           <div part="pane-header">${newLabel}</div>
           ${this.renderVersionPane(this.newVersion, 'new')}
         </div>
       </div>
     `;
+  }
+
+  constructor() {
+    super();
+    // Each pane is a named region; it takes a tab stop only while its version overflows.
+    trackScrollRegions(this, () => [...this.renderRoot.querySelectorAll<HTMLElement>('[part="pane-old"], [part="pane-new"]')].map((el) => ({ el })));
   }
 
   override render(): TemplateResult {

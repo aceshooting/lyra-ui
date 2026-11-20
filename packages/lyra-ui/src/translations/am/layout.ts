@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'ማዞርን ባለበት አቁም',
   carouselResumeRotation: 'ማዞርን ቀጥል',
   carouselViewport: 'ስላይዶች',
-  scrollerLabel: 'ሊሸበለል የሚችል ይዘት',
   scrollPrevious: 'ወደ ኋላ ሸብልል',
   scrollNext: 'ወደ ፊት ሸብልል',
   closeNavigation: 'ዳሰሳን ዝጋ',

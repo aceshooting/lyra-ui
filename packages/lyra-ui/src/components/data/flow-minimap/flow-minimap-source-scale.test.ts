@@ -90,7 +90,7 @@ describe('flow minimap bounded source overview', () => {
     expect(calls[0]!.y).to.be.closeTo(1100, pixel);
     hit(minimap).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(calls[1]).to.deep.equal({ x: -32, y: 0, zoom: 1 });
-    map(minimap).dispatchEvent(new WheelEvent('wheel', { deltaY: -1, cancelable: true }));
+    map(minimap).dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
     expect(zooms()).to.equal(1);
   });
 

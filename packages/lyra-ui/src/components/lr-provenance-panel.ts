@@ -1,3 +1,8 @@
+export type { LyraChunk, LyraChunkInspectorEventMap } from './retrieval/chunk-inspector/chunk-inspector.class.js';
+export type { LyraCommunity, LyraCommunityCardEventMap } from './retrieval/community-card/community-card.class.js';
+export type { LyraEntity } from './retrieval/entity-card/entity-card.class.js';
+export type { LyraEntityChipEventMap } from './retrieval/entity-chip/entity-chip.class.js';
+export type { LyraPathElement, LyraPathStripEventMap } from './retrieval/path-strip/path-strip.class.js';
 export * from './retrieval/provenance-panel/provenance-panel.class.js';
 import { LyraProvenancePanel } from './retrieval/provenance-panel/provenance-panel.class.js';
 import { defineElement } from '../internal/prefix.js';

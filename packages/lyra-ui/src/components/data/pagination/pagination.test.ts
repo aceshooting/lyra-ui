@@ -752,7 +752,7 @@ it("distinguishes omitted pagination labels from explicit English and empty over
       .strings=${strings}
     ></lr-pagination>
   `);
-  expect(labels(empty)).to.deep.equal(["", "", "", "", ""]);
+  expect(labels(empty)).to.deep.equal(labels(omitted));
 });
 
 it("localizes the empty summary as one interpolated message", async () => {

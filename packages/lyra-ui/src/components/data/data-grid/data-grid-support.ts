@@ -308,10 +308,6 @@ export interface ColumnDragSession {
   readonly token: string;
 }
 
-/** Interactive cell content that owns its own clicks and keys -- the same vocabulary as
- *  `<lr-table>`'s guard. */
-export const INTERACTIVE_SELECTOR =
-  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
 export const VIRTUALIZATION_THRESHOLD = 80;
 export const VIRTUAL_OVERSCAN = 5;
 export const DATA_GRID_TREE_NODE_LIMIT = 10_000;

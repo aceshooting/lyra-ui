@@ -19,6 +19,9 @@
 Controlled list of documents moving through an ingestion pipeline: stage badge, progress, chunk/
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
 
+The default entry registers the internal `lr-virtual-list` and the source pager the first time the
+queue virtualizes or pages a `dataSource`.
+
 Nonstring failure details use the localized failed-stage label for row text and fresh failure
 announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
 failures remain silent on mount.

@@ -5,6 +5,15 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { DialogCloseReason } from './overlays/dialog/dialog.class.js';
+export type { LyraEbookViewerEventMap } from './viewers/ebook-viewer/ebook-viewer.class.js';
+export type { LyraNotebookViewerEventMap } from './viewers/notebook-viewer/notebook-viewer.class.js';
+export type { LyraPdfViewerEventMap } from './viewers/pdf-viewer/pdf-viewer.class.js';
+export type { LyraPptxViewerEventMap } from './viewers/pptx-viewer/pptx-viewer.class.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraAvCue, LyraAvTrack } from '../internal/av-metadata.js';
+export type { LyraModelCamera, LyraModelFormat } from '../internal/model-viewer-contract.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/document-viewer/document-viewer.class.js';
 export * from './viewers/document-viewer/registry.js';
 export * from './viewers/document-viewer/anchors.js';

@@ -93,9 +93,12 @@ test('tag-name policy rejects literal lr- tags in selector calls and localName c
     "this.querySelector('[data-lr-look], .lr-visually-hidden, [part=\"lr-x\"], --lr-token');",
     "const named = el.localName === tag('checkbox') || el.localName.includes('-');",
     "this.emit('lr-change');",
+    "class A { @query('lr-pan-zoom') frame; @query(tag('pan-zoom')) other; }",
+    "const options = { ownerTag: 'lr-pan-zoom', label: 'lr-not-a-tag-key' };",
+    "const ok = { ownerTag: tag('pan-zoom') };",
   ].join('\n');
 
-  assert.deepEqual(findLiteralTagNames(source), [1, 2, 3, 4, 5]);
+  assert.deepEqual(findLiteralTagNames(source), [1, 2, 3, 4, 5, 11, 12]);
 });
 
 test('Announcer timer policy requires an owner-window binding', () => {

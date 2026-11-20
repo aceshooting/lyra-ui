@@ -1,3 +1,8 @@
+export type { LyraAnchor } from './viewers/document-viewer/anchors.js';
+export type { LyraPageViewerStateChangeDetail } from './viewers/page-rail/page-rail.class.js';
+export type { LyraPageViewerSnapshot } from './viewers/page-rail/page-viewer-snapshot.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/pdf-viewer/pdf-viewer.class.js';
 import { html } from 'lit';
 import { LyraPdfViewer } from './viewers/pdf-viewer/pdf-viewer.class.js';

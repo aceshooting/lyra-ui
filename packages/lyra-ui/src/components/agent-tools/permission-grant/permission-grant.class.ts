@@ -2,10 +2,12 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import '../../forms/button/button.class.js';
 import { styles } from './permission-grant.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_deny, LYRA_DEFAULT_permissionGrantAllowOnce, LYRA_DEFAULT_permissionGrantAllowSession, LYRA_DEFAULT_permissionGrantLabel, LYRA_DEFAULT_permissionGrantScopeLabel } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -41,6 +43,11 @@ const DECISION_LABEL_KEY: Record<PermissionGrantDecision, string> = {
  * @event lr-permission-decision - A permission decision was requested. `detail: { requestId,
  *   decision }`. The host owns authorization and the controlled `status` value.
  * @csspart base - The fieldset and overall request group.
+ * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every
+ *   fieldset panel of this family, so one declaration retunes them together.
+ * @cssprop [--lr-panel-frame-border-color=var(--lr-color-border)] - Border colour of `[part='base']`.
+ * @cssprop [--lr-panel-frame-radius=var(--lr-radius-xs)] - Corner radius of `[part='base']`.
+ * @cssprop [--lr-panel-frame-padding=var(--lr-space-s)] - Padding of `[part='base']`.
  * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
  * @cssprop --lr-decision-positive-color - Text color of a positive status.
  * @cssprop --lr-decision-negative-color - Text color of a negative status.
@@ -98,6 +105,12 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
   /** Disables every available decision action. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded panel; `'plain'` removes the border, fill, padding and
+   *  corner radius, so a panel nested in a container that already draws a border (a transcript
+   *  bubble, a card) does not double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
+
   private dispatchingDecision = false;
   private settledWithFocus = false;
 
@@ -141,6 +154,8 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
   override render(): TemplateResult {
     const visibleLabel = this.label == null ? this.localize('permissionGrantLabel') : this.label;
     const hostLabel = hostAriaLabel(this);
+    // The legend names the fieldset; a blank legend with no host name falls back to the localized default.
+    const groupName = normalizeLabel(hostLabel) ?? (normalizeLabel(visibleLabel) === undefined ? this.localize('permissionGrantLabel') : undefined);
     const scope = this.scope;
     const status = this.status;
     const statusLabel = status === 'approved' || status === 'granted'
@@ -152,7 +167,7 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
     const requestId = this.identifiedRequestId;
     const identified = requestId !== null;
     return html`
-      <fieldset part="base" aria-label=${hostLabel === null ? nothing : hostLabel} ?disabled=${this.disabled}>
+      <fieldset part="base" aria-label=${groupName ?? nothing} ?disabled=${this.disabled}>
         <legend part="legend">${visibleLabel}</legend>
         ${this.description ? html`<p part="description">${this.description}</p>` : nothing}
         <div part="scope-row">

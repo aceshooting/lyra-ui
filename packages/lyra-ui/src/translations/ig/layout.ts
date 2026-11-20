@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Kwụsịtụ mgbanwe',
   carouselResumeRotation: 'Gaa n’ihu na mgbanwe',
   carouselViewport: 'Onyonyo dị iche iche',
-  scrollerLabel: 'Ọdịnaya a pụrụ ịpịgharị',
   scrollPrevious: 'Pịgharịa azụ',
   scrollNext: 'Pịgharịa n’ihu',
   closeNavigation: 'Mechie nnyagharị',

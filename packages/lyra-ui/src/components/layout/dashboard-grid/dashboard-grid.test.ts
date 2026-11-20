@@ -2692,10 +2692,12 @@ describe("narrow allocation", () => {
 
 describe("accessibility", () => {
   it("is accessible with populated, draggable, and resizable cells", async () => {
+    // Rows tall enough for a rendered stat: an overflowing widget body is a scroll region of its own.
     const el = (await fixture(
       html`<lr-dashboard-grid
         cells-draggable
         cells-resizable
+        row-height="160"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
@@ -2704,7 +2706,7 @@ describe("accessibility", () => {
         x: 0,
         y: 0,
         w: 2,
-        h: 1,
+        h: 2,
         label: "Users",
         widget: { type: "stat", props: { label: "Users", value: "12" } },
       },
@@ -2713,12 +2715,27 @@ describe("accessibility", () => {
         x: 2,
         y: 0,
         w: 2,
-        h: 1,
+        h: 2,
         label: "Errors",
         widget: { type: "stat", props: { label: "Errors", value: "0" } },
       },
     ];
     await el.updateComplete;
+    const renderers = Array.from(el.querySelectorAll("lr-widget-renderer"));
+    expect(renderers.map((renderer) => (renderer as unknown as { hasUpdated: boolean }).hasUpdated), "updateComplete covers the widget bodies")
+      .to.deep.equal([true, true]);
+    // The default cells render their stat after the grid's own update; a one-row cell clips it, so
+    // each body must have become a named keyboard scroll stop before axe runs.
+    const bodies = () =>
+      [...el.querySelectorAll<HTMLElement>("[data-dashboard-grid-default-cell]")].map(
+        (cell) => cell.shadowRoot?.querySelector<HTMLElement>('[part="body"]') ?? null
+      );
+    await waitUntil(
+      () => bodies().length === 2 && bodies().every((body) => body?.getAttribute("tabindex") === "0"),
+      "each clipped stat body takes a tab stop"
+    );
+    expect(bodies().map((body) => body!.scrollHeight > body!.clientHeight)).to.deep.equal([true, true]);
+    expect(bodies().map((body) => body!.getAttribute("aria-label"))).to.deep.equal(["Users", "Errors"]);
     await expect(el).to.be.accessible();
   });
 

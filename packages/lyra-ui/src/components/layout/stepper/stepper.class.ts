@@ -8,6 +8,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   OrientationBreakpointController,
   type BreakpointBasis,
@@ -710,7 +712,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.label ?? nothing}
+        aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label) ?? nothing}
         @keydown=${this.onKeyDown}
       >
         ${repeat(

@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Nincs megjeleníthető generált nézet.',
   genViewInvalid: 'Ez a generált nézet nem jeleníthető meg.',
   genViewLoading: 'Komponens betöltése…',
-  genViewLoadFailed: 'Ezt a komponenst nem sikerült betölteni.',
   genViewInvalidState: 'Ennek a mezőnek az értéke nem használható.',
   genViewActionDenied: 'Ez a művelet nem érhető el.',
   genViewConfirmationRequired: 'Ez a művelet az alkalmazás megerősítését igényli.',

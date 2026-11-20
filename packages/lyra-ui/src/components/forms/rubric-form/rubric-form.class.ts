@@ -41,11 +41,20 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_rubricKeysLimit, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// Category criteria register their controls the first time a criterion of that kind renders.
+const RUBRIC_CHILDREN = {
+  select: () => import('../../lr-select.js'),
+  option: () => import('../../lr-option.js'),
+  checkbox: () => import('../../lr-checkbox.js'),
+  'checkbox-group': () => import('../../lr-checkbox-group.js'),
+};
 
 installFormControlLabelSupport();
 
@@ -1035,29 +1044,17 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     this.description.adopted();
   }
 
-  private singleCategoryControls?: Promise<unknown>;
-  private multipleCategoryControls?: Promise<unknown>;
+  private childRegistration?: Promise<unknown>;
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    await Promise.all([this.singleCategoryControls, this.multipleCategoryControls]);
+    await this.childRegistration;
     return complete;
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    for (const key of this._keys) {
-      if (key.type !== 'category') continue;
-      if (key.multiple) {
-        this.multipleCategoryControls ??= Promise.all([import('../../lr-checkbox.js'), import('../../lr-checkbox-group.js')]);
-      } else {
-        this.singleCategoryControls ??= Promise.all([import('../../lr-select.js'), import('../../lr-option.js')]);
-      }
-    }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren(RUBRIC_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.structuredValidity.publish();
       if (this.pendingFocusFirst) {
       this.pendingFocusFirst = false;

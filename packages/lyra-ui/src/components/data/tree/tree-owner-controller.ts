@@ -1,3 +1,4 @@
+import { nestedInteractiveTarget } from '../../../internal/nested-interactive.js';
 import { tag } from '../../../internal/prefix.js';
 import type { TreeDataExpansion } from './tree-data-expansion.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -160,26 +161,13 @@ export function setTreeItemSelection(
   else if (contextChanged) owner.requestUpdate();
 }
 
-/** Interactive content an item label may carry (a "Rename" button, a link, a nested control). Its
- *  own keys and clicks stay its own instead of becoming row selection or tree navigation. Mirrors
- *  `<lr-table>`'s interactive-descendant vocabulary. @internal */
-const INTERACTIVE_DESCENDANT_SELECTOR =
-  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
-
 /** Whether `event` came from an interactive element nested inside `boundary` (exclusive), walking
  *  the composed path so controls inside open shadow roots count too. @internal */
 export function fromInteractiveDescendant(
   event: Event,
   isBoundary: (target: EventTarget) => boolean,
 ): boolean {
-  for (const target of event.composedPath()) {
-    if (isBoundary(target)) return false;
-    const element = target as Partial<Element>;
-    if (element.nodeType === 1 && typeof element.matches === 'function' && element.matches(INTERACTIVE_DESCENDANT_SELECTOR)) {
-      return true;
-    }
-  }
-  return false;
+  return nestedInteractiveTarget(event, isBoundary) !== null;
 }
 
 const bulkMotionPreferences = new WeakMap<HTMLElement, boolean>();

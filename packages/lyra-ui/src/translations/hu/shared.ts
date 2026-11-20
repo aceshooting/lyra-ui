@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Ezt a komponenst nem sikerült betölteni.',
   noData: 'Nincs adat',
   legendTypeShown: 'Megjelenítve: {label}',
   legendTypeHidden: 'Elrejtve: {label}',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Nem sikerült betölteni az adatokat',
   zoomOut: 'Kicsinyítés',
   zoomIn: 'Nagyítás',
+  scrollerLabel: 'Görgethető tartalom',
   clear: 'Törlés',
   open: 'Megnyitás',
   close: 'Bezárás',

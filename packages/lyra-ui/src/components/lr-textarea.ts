@@ -1,3 +1,4 @@
+export type { LyraTextResize } from '../internal/safe-css.js';
 export * from './forms/textarea/textarea.class.js';
 import { LyraTextarea } from './forms/textarea/textarea.class.js';
 import { defineElement } from '../internal/prefix.js';

@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Această componentă nu a putut fi încărcată.',
   noData: 'Fără date',
   legendTypeShown: '{label} afișat',
   legendTypeHidden: '{label} ascuns',
@@ -21,6 +22,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Datele nu au putut fi încărcate',
   zoomOut: 'Micșorează',
   zoomIn: 'Mărește',
+  scrollerLabel: 'Conținut derulabil',
   clear: 'Șterge',
   open: 'Deschide',
   close: 'Închide',

@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Tokoki te kocharger composant oyo.',
   noData: 'Data ezali te',
   legendTypeShown: '{label} emonisami',
   legendTypeHidden: '{label} ebombami',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Tokoki te kolakisa makambo',
   zoomOut: 'Kitisá monene ya elilingi',
   zoomIn: 'Bakisá monene ya elilingi',
+  scrollerLabel: 'Makambo oyo ekoki kotambwisama',
   clear: 'Longola',
   open: 'Fungola',
   close: 'Kanga',

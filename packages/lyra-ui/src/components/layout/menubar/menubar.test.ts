@@ -75,7 +75,10 @@ describe('lr-menubar', () => {
     bar.label = 'App'; await bar.updateComplete;
     expect(base.getAttribute('aria-label')).to.equal('App');
     bar.label = ''; await bar.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Menu');
+    bar.accessibleLabel = ''; await bar.updateComplete;
     expect(base.getAttribute('aria-label')).to.equal('');
+    bar.accessibleLabel = null;
     bar.label = 'App'; bar.setAttribute('aria-label', 'Host'); await bar.updateComplete;
     expect(base.getAttribute('aria-label')).to.equal('Host');
     bar.setAttribute('aria-label', ''); await bar.updateComplete;
@@ -491,7 +494,7 @@ describe('lr-menubar name, type-ahead and top-layer', () => {
       fixture<LyraMenubar>(html`<lr-menubar .strings=${{ menuLabel: 'Barre' }}><lr-menubar-item>File</lr-menubar-item></lr-menubar>`),
     ]);
     const name = (bar: LyraMenubar): string | null => bar.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
-    expect([name(unnamed), name(empty), name(host), name(strings)]).to.deep.equal(['Menu', '', 'Primary', 'Barre']);
+    expect([name(unnamed), name(empty), name(host), name(strings)]).to.deep.equal(['Menu', 'Menu', 'Primary', 'Barre']);
   });
 
   it('matches type-ahead against cached titles without reading styles', async () => {

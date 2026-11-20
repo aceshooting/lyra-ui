@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Pausa rotationen',
   carouselResumeRotation: 'Återuppta rotationen',
   carouselViewport: 'Bilder',
-  scrollerLabel: 'Rullningsbart innehåll',
   scrollPrevious: 'Rulla bakåt',
   scrollNext: 'Rulla framåt',
   closeNavigation: 'Stäng navigering',

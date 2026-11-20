@@ -1,3 +1,5 @@
+import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import type { LyraPageSource, LyraSourceRecord } from '../../../data-sources.js';
 import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController } from '../../../internal/source-page-controller.js';
 
@@ -72,8 +74,10 @@ const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
 const MAX_RENDERED_TESTS = 1_000;
 
 /** Provider payloads can bypass the compile-time union. `error`, `timedOut` and `broken` count as
- * `failed`; other unknown states use the neutral, non-success `skipped` fallback, so every accepted
- * row retains a visible localized status and participates in exactly one summary count. */
+ * `failed`; other unknown states (including the `pending`/`incomplete`/`cancelled` states of the
+ * task and agent-run vocabularies, deliberately outside a test runner's four outcomes) use the
+ * neutral, non-success `skipped` fallback, so every accepted row retains a visible localized status
+ * and participates in exactly one summary count. */
 function normalizeTestStatus(value: unknown): TestStatus {
   switch (value) {
     case 'passed':
@@ -387,7 +391,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  `without-auto-expand-failures`. */
   @state() private manualExpanded = new Map<string, boolean>();
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   private legacyGeneration = 0;
   private legacyNeedsNormalization = false;
@@ -562,8 +566,11 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       await done;
       result = await super.getUpdateComplete();
     }
+    await this.childRegistration;
     return result;
   }
+
+  private childRegistration?: Promise<unknown>;
 
   override disconnectedCallback(): void {
     this.cancelLegacy(); this.pendingCompletionRun = undefined;
@@ -596,6 +603,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('test-results', this.renderRoot) ?? this.childRegistration;
     const status = this.sourceMode
       ? this.sourcePages.state.pending ? this.localize('loading') : !this.sourcePages.state.result ? this.localize('tableLoadFailed') : ''
       : this.legacyError ? this.localize('testResultsInputTooLarge') : this.legacyPending ? this.localize('loading') : '';
@@ -753,7 +761,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const statusId = `${this.idPrefix}-${domKey}-status`;
     const testName = normalizeLabel(test.name) ?? this.localize('testResultsUnnamedTest');
     const toggleName = this.localize(expanded ? 'testResultsCollapseTest' : 'testResultsExpandTest', undefined, {
-      name: [suiteName, testName].join(this.localize('accessibleLabelSeparator')),
+      name: [normalizeLabel(suiteName), testName].filter(Boolean).join(this.localize('accessibleLabelSeparator')),
     });
     return html`
       <div part="test" role="listitem" data-status=${test.status}>
@@ -805,7 +813,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return html`
       <div part="suite">
         <div part="suite-header">${suite.name}</div>
-        <div role="list" aria-label=${suite.name || nothing}
+        <div role="list" aria-label=${normalizeLabel(suite.name) ?? nothing}
           >${repeat(visibleTests, ({ test }) => test.id, ({ test, testIndex }) =>
             this.renderTest(suite.id, suite.name, test, suiteIndex, testIndex))}</div
         >
@@ -826,7 +834,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         if (this.isConnected && this.dataSource === source && this.sourcePages.state === state) { this.sourceInputs = undefined; this.syncSource(); this.sourceVersion++; }
       }}>${this.localize('retry')}</button>` : nothing}
       ${sourceSuiteRuns(rows).map((run) => html`<div part="suite-header">${run.suiteName}</div>
-        <div role="list" aria-label=${run.suiteName || nothing}
+        <div role="list" aria-label=${normalizeLabel(run.suiteName) ?? nothing}
           >${run.rows.map(({ value, index }) => this.renderTest(value.suiteId, value.suiteName, value.test, index, 0))}</div
         >`)}
       ${result && !rows.length ? html`<lr-empty part="empty" heading=${this.localize(result.summary!.total ? 'noMatches' : 'noData')}></lr-empty>` : nothing}

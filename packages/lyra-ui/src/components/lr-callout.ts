@@ -1,3 +1,4 @@
+export type { SemanticVariant } from '../internal/semantic-variant.js';
 export * from './overlays/callout/callout.class.js';
 // The lean icon-button entry: the close control slots this component's own "×" glyph, so it must
 // not drag lr-icon (and its unreachable sanitizer chunk) into a consumer's graph.

@@ -110,7 +110,7 @@ validity fails.
   left empty, set `aria-label` on the host so the control still has an accessible name. Flattened
   forwarding-slot assignment and later mutations
   keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
-  it. A host `aria-label` wins by presence, including an explicitly empty value.
+  it. A host `aria-label` wins by presence, including an explicitly empty value; whitespace-only is ignored.
 - `hint` — custom hint content.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.

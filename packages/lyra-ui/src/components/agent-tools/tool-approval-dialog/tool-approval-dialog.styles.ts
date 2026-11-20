@@ -79,9 +79,11 @@ export const styles = css`
     min-block-size: var(--lr-size-10rem);
     box-sizing: border-box;
     resize: vertical;
-    padding: var(--lr-space-s) var(--lr-space-m);
+    /* Inline geometry and corner follow the shared form-control chain, like lr-tool-param-form's
+       fields, so a theme or size tier that retunes the form controls reaches this editor too. */
+    padding: var(--lr-space-s) var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-form-control-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font-family: var(

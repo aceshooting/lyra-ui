@@ -1,3 +1,4 @@
+export type { LyraAccordionAppearance, LyraAccordionHeadingLevel, LyraAccordionIconPlacement } from './layout/details/accordion-types.js';
 export * from './layout/details/accordion.class.js';
 import { LyraAccordion } from './layout/details/accordion.class.js';
 import { defineElement } from '../internal/prefix.js';

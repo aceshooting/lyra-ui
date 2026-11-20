@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Bu komponentni yuklab bo‘lmadi.',
   noData: 'Maʼlumot yoʻq',
   legendTypeShown: '{label} koʻrsatildi',
   legendTypeHidden: '{label} yashirildi',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Maʼlumotni yuklab boʻlmadi',
   zoomOut: 'Kichraytirish',
   zoomIn: 'Kattalashtirish',
+  scrollerLabel: 'Aylantiriladigan kontent',
   clear: 'Tozalash',
   open: 'Ochish',
   close: 'Yopish',

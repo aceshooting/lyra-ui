@@ -9,12 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-permission-grant`
+
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
 
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 

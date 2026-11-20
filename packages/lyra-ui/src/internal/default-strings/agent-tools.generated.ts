@@ -158,6 +158,7 @@ export const LYRA_DEFAULT_fieldMustBeNumber: LyraMessage = 'Must be a finite num
 export const LYRA_DEFAULT_fieldMustBeOneOf: LyraMessage = 'Must be one of: {values}.';
 export const LYRA_DEFAULT_fieldMustBeString: LyraMessage = 'Must be a string.';
 export const LYRA_DEFAULT_fieldMustEqual: LyraMessage = 'Must equal {value}.';
+export const LYRA_DEFAULT_genViewLoadFailed: LyraMessage = 'This component could not be loaded.';
 export const LYRA_DEFAULT_invalidJson: LyraMessage = 'Invalid JSON.';
 export const LYRA_DEFAULT_maximize: LyraMessage = 'Maximize';
 export const LYRA_DEFAULT_mcpAppLabel: LyraMessage = 'Interactive app';

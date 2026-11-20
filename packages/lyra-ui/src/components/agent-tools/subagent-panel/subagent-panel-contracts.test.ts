@@ -129,3 +129,12 @@ it('leaves navigation keys on a nested run action to the button', async () => {
   expect(event.defaultPrevented).to.equal(false);
   expect(el.shadowRoot!.activeElement === button).to.equal(true);
 });
+
+it('keeps the selected run visible and tokenized under frame="plain"', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel frame="plain" selected-run-id="a"
+    style="--lr-subagent-panel-selected-border: rgb(1, 2, 3)" .runs=${RUNS}></lr-subagent-panel>`);
+  const run = (id: string) => getComputedStyle(el.shadowRoot!.querySelector(`[data-run-id="${id}"]`)!);
+  expect(parseFloat(run('a').borderInlineStartWidth)).to.be.greaterThan(0);
+  expect(run('a').borderInlineStartColor).to.equal('rgb(1, 2, 3)');
+  expect(run('b').borderInlineStartWidth).to.equal('0px');
+});

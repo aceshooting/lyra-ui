@@ -9,6 +9,7 @@ import { live } from 'lit/directives/live.js';
 import { ref } from 'lit/directives/ref.js';
 import { setSourcePageScope } from '../../../internal/source-page-scope.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeBaseSource, KnowledgeSource, LyraKnowledgeBase } from '../knowledge-base/knowledge-base.class.js';
@@ -245,8 +246,17 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     }) : '';
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('knowledge-base-admin', this.renderRoot) ?? this.childRegistration;
     const notice = this.inputLimitMessage();
     if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.inputAnnouncements.announcePolite(notice);
     this.lastInputNotice = notice;

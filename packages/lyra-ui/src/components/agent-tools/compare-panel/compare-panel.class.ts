@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -102,7 +103,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   @query('[part="pane-a"]') private paneAEl?: HTMLElement;
   @query('[part="pane-b"]') private paneBEl?: HTMLElement;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   private _labelA = '';
   private _labelB = '';

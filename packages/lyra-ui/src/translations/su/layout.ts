@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Eureun muter samentara',
   carouselResumeRotation: 'Neruskeun muter',
   carouselViewport: 'Runtuyan slide',
-  scrollerLabel: 'Eusi nu bisa digulung',
   scrollPrevious: 'Gulung ka tukang',
   scrollNext: 'Gulung ka hareup',
   closeNavigation: 'Tutup napigasi',

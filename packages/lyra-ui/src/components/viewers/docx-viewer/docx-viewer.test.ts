@@ -1199,7 +1199,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
-  it('uses a cross-inline quote as an unlabeled action name and scrolls its element ancestor', async () => {
+  it('names an unlabeled cross-inline quote action by position and scrolls its element ancestor', async () => {
     const { el, restore } = await loadWithMarkup('<p>Ada <strong>wrote</strong> the first program.</p>');
     try {
       const paragraph = el.shadowRoot!.querySelector('[part="content"] p') as HTMLElement;
@@ -1211,7 +1211,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       }];
       await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
       const action = el.shadowRoot!.querySelector('[part="highlight-action"]') as HTMLButtonElement;
-      expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada wrote');
+      expect(action.getAttribute('aria-label')).to.equal('Highlight 1 of 1');
 
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       action.click();

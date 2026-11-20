@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -319,7 +320,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     );
   }
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   /** `true` until the first completed update -- gates the status-change announcements below so a
    *  freshly-mounted run never announces whatever statuses its very first `examples` happens to

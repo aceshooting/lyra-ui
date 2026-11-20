@@ -119,7 +119,7 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
   when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
   `paginationLabel` message, while an explicit empty string renders no visible/accessible label
-- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
+- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input; an empty or whitespace-only value is treated as unset (localized default), as for the four buttons below
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
 - `firstLabel?: string` (attribute `first-label`), `lastLabel?: string`
@@ -128,8 +128,9 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   `with-edges`
 
 Omitting any of those five control-label properties resolves the matching locale message. Any
-supplied string is an explicit per-instance override and renders verbatim, including the built-in
-English wording under a non-English `.strings` catalog and an empty string.
+non-blank supplied string is an explicit per-instance override and renders verbatim, including the
+built-in English wording under a non-English `.strings` catalog. An empty or whitespace-only string
+is treated as unset: these controls have no visible text, so they always keep an accessible name.
 
 **Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses

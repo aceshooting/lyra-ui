@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Көрсетілетін жасалған көрініс жоқ.',
   genViewInvalid: 'Бұл жасалған көріністі көрсету мүмкін емес.',
   genViewLoading: 'Құрамдас жүктелуде…',
-  genViewLoadFailed: 'Бұл құрамдасты жүктеу мүмкін болмады.',
   genViewInvalidState: 'Бұл өрістің мәнін пайдалану мүмкін емес.',
   genViewActionDenied: 'Бұл әрекет қолжетімді емес.',
   genViewConfirmationRequired: 'Бұл әрекет қолданбаның растауын қажет етеді.',

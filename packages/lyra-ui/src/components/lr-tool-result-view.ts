@@ -5,6 +5,8 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { ToolRendererRegistry } from './agent-tools/tool-result-view/registry.js';
+export type { ToolStatus } from './agent-tools/tool-status.js';
 export * from './agent-tools/tool-result-view/tool-result-view.class.js';
 import { LyraToolResultView } from './agent-tools/tool-result-view/tool-result-view.class.js';
 import { defineElement } from '../internal/prefix.js';

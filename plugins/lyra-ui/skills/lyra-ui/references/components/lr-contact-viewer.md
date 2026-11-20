@@ -37,8 +37,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.

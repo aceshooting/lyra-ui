@@ -50,7 +50,8 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner. With an
+`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an
 explicitly empty host label, the shadow document keeps `role="document"` and an empty accessible
 name; when the attribute is absent, `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are

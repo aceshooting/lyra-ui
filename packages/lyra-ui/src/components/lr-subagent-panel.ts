@@ -1,3 +1,4 @@
+export type { AgentRunActivateDetail } from './agent-tools/run-events.js';
 export * from './agent-tools/subagent-panel/subagent-panel.class.js';
 import { LyraSubagentPanel } from './agent-tools/subagent-panel/subagent-panel.class.js';
 import { defineElement } from '../internal/prefix.js';

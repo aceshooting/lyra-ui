@@ -92,8 +92,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
   `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
-  Every supplied string, including an empty one, is honored literally; only absence uses the
-  localized navigation fallback. A host-level `aria-label` attribute (including an explicit empty
+  A blank or whitespace-only string is treated as unset and uses the localized navigation
+  fallback. A host-level `aria-label` attribute (including an explicit empty
   value) takes precedence.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the host `aria-label` as a
   property; overrides `label` and the localized default on the landmark and the mobile dialog.

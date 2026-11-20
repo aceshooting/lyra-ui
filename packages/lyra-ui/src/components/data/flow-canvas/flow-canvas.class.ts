@@ -55,13 +55,14 @@ import {
 } from './flow-types.js';
 import { styles } from './flow-canvas.styles.js';
 import { FlowViewportIndex, type FlowViewportBounds } from './flow-viewport-index.js';
-import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';export * from './flow-types.js';
+import { wheelZoomDelta, wheelZoomFactor } from '../../../internal/wheel-zoom.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowCanvasInputLimit, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasLayoutLimit, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_flowSourceRecordMatches, LYRA_DEFAULT_flowSourceRevealSourceNode, LYRA_DEFAULT_flowSourceRevealTargetNode, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-export * from './flow-types.js';
+
 export type FlowCanvasSource = LyraGraphSource<FlowNode, FlowEdge>;
 const EMPTY_FLOW_QUERY: LyraGraphSourceQuery = Object.freeze({ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: Object.freeze([]) });
 const EMPTY_FLOW_NODES: readonly FlowNode[] = Object.freeze([]);
@@ -2066,6 +2067,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onWheel = (e: WheelEvent): void => {
     if (this.readonly || !this.viewportEl) return;
     if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
+    // A horizontal swipe carries no zoom and stays with the page.
+    const delta = wheelZoomDelta(e, this.viewportEl.clientHeight);
+    if (delta === 0) return;
     e.preventDefault();
     // Wheel events arrive in dense bursts; neither the viewport's rect nor the resolved text
     // direction can change within a single frame, so both are measured at most once per frame
@@ -2080,8 +2084,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const { rect, rtl } = this.wheelMeasure;
     const localX = this.localWorldX(e.clientX, rect, rtl);
     const localY = e.clientY - rect.top;
-    const factor = e.deltaY < 0 ? ZOOM_MULTIPLIER : 1 / ZOOM_MULTIPLIER;
-    this.zoomAtPoint(localX, localY, this.zoomLevel * factor);
+    this.zoomAtPoint(localX, localY, this.zoomLevel * wheelZoomFactor(delta));
   };
 
   private onBackgroundPointerDown = (e: PointerEvent): void => {

@@ -237,7 +237,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 467,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -446,7 +446,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 467,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -673,7 +673,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 488,
+              "line": 489,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -1050,6 +1050,7 @@
         "tests": [
           "src/components/agent-tools/agent-question/agent-question-contracts.test.ts",
           "src/components/agent-tools/agent-question/agent-question-lazy.test.ts",
+          "src/components/agent-tools/agent-question/agent-question-load-failure.test.ts",
           "src/components/agent-tools/agent-question/agent-question.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -1607,6 +1608,7 @@
           "src/components/conversation/agent-workspace/agent-workspace-class-import.test.ts",
           "src/components/conversation/agent-workspace/agent-workspace-interaction.test.ts",
           "src/components/conversation/agent-workspace/agent-workspace-register.test.ts",
+          "src/components/conversation/agent-workspace/agent-workspace-registration.test.ts",
           "src/components/conversation/agent-workspace/agent-workspace-scale.test.ts",
           "src/components/conversation/agent-workspace/agent-workspace.test.ts"
         ],
@@ -3353,6 +3355,12 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
+              "test": "gives a capped body of slotted prose a named tab stop only while it overflows",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
               "test": "is accessible with versions, streaming, and both slots populated",
               "target": "el",
               "state": "populated"
@@ -3830,7 +3838,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 441,
+              "line": 442,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4229,7 +4237,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 548,
+              "line": 549,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9897,7 +9905,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 970,
+              "line": 971,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11162,6 +11170,7 @@
         "tests": [
           "src/components/retrieval/chunk-inspector/chunk-inspector-keyed-rows.test.ts",
           "src/components/retrieval/chunk-inspector/chunk-inspector-membership-cost.test.ts",
+          "src/components/retrieval/chunk-inspector/chunk-inspector-registration.test.ts",
           "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16045,6 +16054,7 @@
           "src/components/layout/dashboard-grid/dashboard-grid-input-edges.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-interaction.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-register.test.ts",
+          "src/components/layout/dashboard-grid/dashboard-grid-registration.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
           "src/components/layout/dashboard-grid/layout.test.ts"
@@ -16265,7 +16275,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2433,
+              "line": 2440,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16324,6 +16334,7 @@
           "src/components/data/data-grid/data-grid-processing.test.ts",
           "src/components/data/data-grid/data-grid-public-filter-state.test.ts",
           "src/components/data/data-grid/data-grid-query-assignment-order.test.ts",
+          "src/components/data/data-grid/data-grid-registration.test.ts",
           "src/components/data/data-grid/data-grid-remediation-b08b.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-render-refresh.test.ts",
@@ -17004,6 +17015,12 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.test.ts",
+              "test": "gives prose in a size-limited open details a named tab stop only while it overflows",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/details/details.test.ts",
               "test": "is accessible with custom icons, a sibling header action, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
@@ -17137,7 +17154,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 467,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18028,6 +18045,12 @@
               "test": "is accessible in populated side-by-side view, including region highlights",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/viewers/document-compare/document-compare.test.ts",
+              "test": "makes the version panes tab stops only while their content overflows",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -18124,7 +18147,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 494,
+              "line": 496,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18530,7 +18553,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.class.ts",
-              "line": 8,
+              "line": 9,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18703,7 +18726,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 412,
+              "line": 415,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19993,7 +20016,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1078,
+              "line": 1079,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20029,6 +20052,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/blank-label-names.test.ts",
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
@@ -20727,7 +20751,7 @@
             },
             {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer.test.ts",
-              "test": "prioritizes the plot label over the compatibility alias and preserves explicit empty names",
+              "test": "prioritizes the plot label over the compatibility alias and never exposes an empty name",
               "target": "el",
               "state": "populated"
             }
@@ -23633,7 +23657,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.class.ts",
-              "line": 275,
+              "line": 276,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24228,7 +24252,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-minimap/flow-minimap.class.ts",
-              "line": 309,
+              "line": 310,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27225,7 +27249,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap-source-view.ts",
-              "line": 135,
+              "line": 136,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29077,7 +29101,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
-              "line": 788,
+              "line": 798,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30458,6 +30482,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/knowledge-base-admin/knowledge-base-admin-registration.test.ts",
           "src/components/retrieval/knowledge-base-admin/knowledge-base-admin-scale.test.ts",
           "src/components/retrieval/knowledge-base-admin/knowledge-base-admin-source-scale.test.ts",
           "src/components/retrieval/knowledge-base-admin/knowledge-base-admin-source.test.ts",
@@ -31011,7 +31036,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 477,
+              "line": 480,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36510,7 +36535,8 @@
           "src/components/conversation/model-select/model-select-scale.test.ts",
           "src/components/conversation/model-select/model-select-width-and-height-hooks.test.ts",
           "src/components/conversation/model-select/model-select.test.ts",
-          "src/components/conversation/model-select/positioning-strategy.test.ts"
+          "src/components/conversation/model-select/positioning-strategy.test.ts",
+          "src/components/conversation/model-select/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -36746,12 +36772,6 @@
             },
             {
               "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
-              "test": "honors host aria-label by presence, instructions and strings overrides without shadow live regions",
-              "target": "viewer",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
               "test": "keeps a lost context accessible with the alternative and shows the software-rendering notice",
               "target": "viewer",
               "state": "populated"
@@ -36759,6 +36779,12 @@
             {
               "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
               "test": "loads bounded bytes into the structural model engine and exposes localized progress",
+              "target": "viewer",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
+              "test": "makes a host named by aria-label the region, honors instructions and strings overrides without shadow live regions",
               "target": "viewer",
               "state": "populated"
             },
@@ -38514,7 +38540,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.class.ts",
-              "line": 457,
+              "line": 459,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39172,7 +39198,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 356,
+              "line": 363,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39828,6 +39854,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/pagination/pagination-blank-labels.test.ts",
           "src/components/data/pagination/pagination-page-jump.test.ts",
           "src/components/data/pagination/pagination-remediation-b08.test.ts",
           "src/components/data/pagination/pagination-window-boundaries.test.ts",
@@ -39892,7 +39919,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
-              "line": 50,
+              "line": 51,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42123,7 +42150,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1078,
+              "line": 1079,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42159,6 +42186,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/blank-label-names.test.ts",
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
@@ -42523,7 +42551,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
-              "line": 201,
+              "line": 202,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43048,7 +43076,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 604,
+              "line": 605,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43777,7 +43805,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.class.ts",
-              "line": 399,
+              "line": 400,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43974,7 +44002,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 427,
+              "line": 428,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44518,6 +44546,7 @@
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
+          "src/components/forms/radio/radio-select-request.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -44712,6 +44741,7 @@
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
+          "src/components/forms/radio/radio-select-request.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -44906,6 +44936,7 @@
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
+          "src/components/forms/radio/radio-select-request.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45048,7 +45079,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/rag-answer/rag-answer.class.ts",
-              "line": 178,
+              "line": 179,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46171,7 +46202,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 348,
+              "line": 349,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46369,7 +46400,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 348,
+              "line": 349,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46775,6 +46806,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/layout/responsive-panel/responsive-panel.test.ts",
+              "test": "gives a docked body of long text a named tab stop only while it overflows",
+              "target": "el",
+              "state": "open"
+            },
             {
               "file": "src/components/layout/responsive-panel/responsive-panel.test.ts",
               "test": "is accessible while open in the bottom-sheet overlay shape",
@@ -47681,7 +47718,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 701,
+              "line": 703,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49517,7 +49554,7 @@
             },
             {
               "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
-              "test": "keeps host naming on the host while every nested playback control owns its purpose name",
+              "test": "makes a named host the playback group while every nested playback control owns its purpose name",
               "target": "el",
               "state": "populated"
             }
@@ -49621,7 +49658,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 214,
+              "line": 217,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50431,7 +50468,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 809,
+              "line": 818,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50987,7 +51024,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 559,
+              "line": 560,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52059,6 +52096,12 @@
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
               "test": "is accessible with a parsed, internal-collapsed trace",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
+              "test": "makes a capped raw trace with no copy button keyboard-scrollable only while it overflows",
               "target": "el",
               "state": "populated"
             },
@@ -54350,7 +54393,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 500,
+              "line": 504,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54609,7 +54652,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 500,
+              "line": 504,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54863,7 +54906,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 500,
+              "line": 504,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55215,6 +55258,7 @@
           "src/components/data/table/table-ownership.test.ts",
           "src/components/data/table/table-performance-regressions.test.ts",
           "src/components/data/table/table-processing.test.ts",
+          "src/components/data/table/table-registration.test.ts",
           "src/components/data/table/table-remediation-b08b.test.ts",
           "src/components/data/table/table-remediation.test.ts",
           "src/components/data/table/table-request.test.ts",
@@ -55781,7 +55825,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 917,
+              "line": 918,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55971,7 +56015,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 475,
+              "line": 479,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56621,7 +56665,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 825,
+              "line": 830,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58418,7 +58462,7 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle-group/toggle-group.class.ts",
-              "line": 610,
+              "line": 611,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -60338,7 +60382,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1078,
+              "line": 1079,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -60374,6 +60418,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/blank-label-names.test.ts",
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
@@ -62429,7 +62474,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 409,
+              "line": 416,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63125,6 +63170,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/layout/widget/widget.test.ts",
+              "test": "is a named keyboard stop only while slotted content overflows the capped body",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/layout/widget/widget.test.ts",
               "test": "is accessible in both default and fullscreen-expandable states",
@@ -64089,7 +64140,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 432,
+              "line": 433,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

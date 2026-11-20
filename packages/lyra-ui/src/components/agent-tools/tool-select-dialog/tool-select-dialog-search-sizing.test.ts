@@ -29,37 +29,23 @@ async function openDialog(): Promise<LyraToolSelectDialog> {
 }
 
 describe('lr-tool-select-dialog search-field sizing', () => {
-  it('renders the search field on exactly its pre-hook geometry when no hook is set', async () => {
+  it('falls back to the shared form-control chain when no hook is set', async () => {
     const el = await openDialog();
     const expected = resolveInShadow(el, [
-      ['padding-inline-start', 'var(--lr-space-m)'],
+      ['min-block-size', 'var(--lr-form-control-height)'],
+      ['padding-inline-start', 'var(--lr-form-control-padding-inline)'],
       ['padding-inline-end', 'var(--lr-icon-button-size)'],
-      ['padding-block-start', 'var(--lr-space-s)'],
-      ['border-start-start-radius', 'var(--lr-radius)'],
+      ['padding-block-start', 'var(--lr-space-xs)'],
+      ['border-start-start-radius', 'var(--lr-form-control-radius)'],
+      ['font-size', 'var(--lr-form-control-font-size)'],
     ]);
     const geometry = fieldGeometry(el);
-
-    // A field that declares no minimum of its own resolves as `auto` where it is a flex item and
-    // as `0px` elsewhere; both mean the same thing, and both are what this field computed before
-    // the hook existed.
-    const unsetMinimum = geometry['min-block-size']!;
-    expect(
-      unsetMinimum === 'auto' || parseFloat(unsetMinimum) === 0,
-      'an unset height hook must impose no minimum of its own'
-    ).to.equal(true);
-    expect(geometry['font-size']).to.equal(getComputedStyle(el).fontSize);
-    expect(geometry['padding-inline-start']).to.equal(
-      expected['padding-inline-start']
-    );
-    expect(geometry['padding-inline-end']).to.equal(
-      expected['padding-inline-end']
-    );
-    expect(geometry['padding-block-start']).to.equal(
-      expected['padding-block-start']
-    );
-    expect(geometry['border-start-start-radius']).to.equal(
-      expected['border-start-start-radius']
-    );
+    for (const key of ['min-block-size', 'padding-inline-start', 'padding-inline-end', 'border-start-start-radius', 'font-size']) {
+      expect(geometry[key], key).to.equal(expected[key]);
+      expect(parseFloat(geometry[key]!), `${key} resolves to a real length`).to.be.greaterThan(0);
+    }
+    // The shared block padding is capped by the control's own line box, never above --lr-space-xs.
+    expect(parseFloat(geometry['padding-block-start']!)).to.be.at.most(parseFloat(expected['padding-block-start']!));
   });
 
   it('sizes the search field through --lr-tool-select-dialog-search-*', async () => {

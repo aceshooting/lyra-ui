@@ -6,6 +6,7 @@ import type { LyraPreparedSeriesData } from '../../../utilities/data-preparation
 export type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chartValueFractionDigits, formatChartValue } from '../../../internal/chart-number-format.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -349,10 +350,8 @@ export class LyraSparkline extends LyraElement {
     // label then outranks the property-only compatibility alias, followed by the generated summary.
     const hostLabel = this.getAttribute('aria-label');
     if (hostLabel !== null) return hostLabel;
-    if (this.label) return this.label;
-    if (typeof this.accessibleLabel === 'string' && this.accessibleLabel.length > 0) {
-      return this.accessibleLabel;
-    }
+    const label = normalizeLabel(this.label) ?? normalizeLabel(this.accessibleLabel);
+    if (label !== undefined) return label;
 
     if (this.preparedSeries) {
       const series = this.preparedSeries;

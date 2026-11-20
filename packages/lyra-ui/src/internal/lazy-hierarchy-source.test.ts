@@ -72,7 +72,15 @@ describe('HierarchySourceRuntimeGate', () => {
     const host = gateHost();
     let attempts = 0;
     const gate = new HierarchySourceRuntimeGate(host, () => ++attempts === 1 ? Promise.reject(new Error('offline')) : Promise.resolve());
-    expect(await gate.ensure(() => true) === undefined).to.equal(true);
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (message: unknown) => { warnings.push(String(message)); };
+    try {
+      expect(await gate.ensure(() => true) === undefined).to.equal(true);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.length, 'a failed load leaves a development diagnostic').to.equal(1);
     expect(gate.runtime === undefined).to.equal(true);
     expect((await gate.ensure(() => true))?.summary === summary).to.equal(true);
     expect(attempts).to.equal(2);

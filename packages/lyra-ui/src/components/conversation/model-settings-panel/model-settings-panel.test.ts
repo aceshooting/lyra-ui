@@ -873,3 +873,9 @@ it('contains the model selector typed live input', async () => {
   }));
   expect(inputs).to.equal(0);
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-model-settings-panel temperature="" temperature-min="" temperature-max="" temperature-step=""></lr-model-settings-panel>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['temperature', 'temperatureMin', 'temperatureMax', 'temperatureStep'].map((key) => props[key])).to.deep.equal([1, 0, 2, 0.1]);
+});

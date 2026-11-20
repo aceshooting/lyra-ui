@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Dan il-komponent ma setax jitgħabba.',
   noData: 'M’hemmx data',
   legendTypeShown: '{label} muri',
   legendTypeHidden: '{label} moħbi',
@@ -23,6 +24,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Ma setgħetx tiġi mgħobbija d-data',
   zoomOut: 'Iżżumja ’l barra',
   zoomIn: 'Iżżumja ’l ġewwa',
+  scrollerLabel: 'Kontenut li jiskrollja',
   clear: 'Ħassar',
   open: 'Iftaħ',
   close: 'Agħlaq',

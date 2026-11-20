@@ -75,7 +75,7 @@ respectively; either spelling can be used, and both spellings share one wrapper 
 The leading, label, and trailing wrappers are hidden independently while empty, so missing regions
 do not contribute dead flex gaps.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
-`aria-label=""`; it is not replaced by the visible default-slot text.
+`aria-label=""`; it is not replaced by the visible default-slot text. Whitespace-only is ignored.
 
 **CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
 `label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`

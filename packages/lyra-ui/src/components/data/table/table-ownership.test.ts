@@ -112,6 +112,21 @@ it('lets an opaque custom control opt out of delegated row activation explicitly
   expect(activated).to.equal(0);
 });
 
+it('leaves row activation to a nested role="link" or label in a cell', async () => {
+  const linkColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (row) => html`<div role="link">${row.name}</div><label>Tag</label>` },
+  ];
+  const el = await fixture<LyraTable<Row>>(html`<lr-table .columns=${linkColumns} .rows=${rows}
+    .rowKey=${(row: Row) => row.id}></lr-table>`);
+  let activated = 0;
+  el.addEventListener('lr-row-activate', () => activated++);
+  (el.shadowRoot!.querySelector('[role="link"]') as HTMLElement).click();
+  el.shadowRoot!.querySelector('label')!.click();
+  expect(activated).to.equal(0);
+  (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
+  expect(activated).to.equal(1);
+});
+
 describe('matching-entries memoization', () => {
   it('does not re-run row filtering for an unrelated reactive update (roving focus move)', async () => {
     const manyRows: Row[] = [

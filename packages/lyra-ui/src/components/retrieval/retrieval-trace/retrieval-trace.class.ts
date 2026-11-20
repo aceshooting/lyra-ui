@@ -8,6 +8,7 @@ import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk, LyraChunkInspectorEventMap } from '../chunk-inspector/chunk-inspector.class.js';
@@ -109,7 +110,7 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     text: chunk.text,
     score: chunk.score,
     sourceId: chunk.source.id,
-    title: chunk.source.name,
+    title: normalizeLabel(chunk.source.name),
     ...(chunk.locator ? { anchor: chunk.locator } : {}),
     ...(chunk.locator?.kind === 'page' ? { page: chunk.locator.page } : {}),
   };

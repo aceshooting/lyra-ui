@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'ફેરવવાનું થોભાવો',
   carouselResumeRotation: 'ફેરવવાનું ફરી શરૂ કરો',
   carouselViewport: 'સ્લાઇડ્સ',
-  scrollerLabel: 'સ્ક્રોલ કરી શકાય તેવી સામગ્રી',
   scrollPrevious: 'પાછળ સ્ક્રોલ કરો',
   scrollNext: 'આગળ સ્ક્રોલ કરો',
   closeNavigation: 'નેવિગેશન બંધ કરો',

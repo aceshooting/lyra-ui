@@ -311,7 +311,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   /** Override for the empty-name fallback shown (and used as the `title` tooltip) when neither
    *  `file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,
-   *  reproducing today's exact hardcoded text byte-for-byte. */
+   *  reproducing today's exact hardcoded text byte-for-byte. A blank or whitespace-only value falls
+   *  back to the default. */
   @property({ attribute: 'untitled-label' }) untitledLabel?: string;
 
   // The object URL created for `file`'s image thumbnail, plus the exact
@@ -457,7 +458,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** The localized upload-failure message. Same override-wins-verbatim rule as `untitledLabel`;
    *  read both by `render()` and by the failure announcement in `willUpdate()`. */
   private get localizedUploadFailedLabel(): string {
-    return this.uploadFailedLabel ?? this.localize('attachmentUploadFailed');
+    return normalizeLabel(this.uploadFailedLabel) ?? this.localize('attachmentUploadFailed');
   }
 
   private onRemoveClick = (): void => {
@@ -506,9 +507,9 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   override render(): TemplateResult {
-    const name = this.effectiveName;
+    const name = normalizeLabel(this.effectiveName) ?? '';
     const untitledLabel =
-      this.untitledLabel ?? this.localize('attachmentUntitledFile');
+      normalizeLabel(this.untitledLabel) ?? this.localize('attachmentUntitledFile');
     const displayName = name || untitledLabel;
     const sizeText =
       this.effectiveSize !== undefined

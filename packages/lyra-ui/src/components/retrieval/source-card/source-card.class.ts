@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { styles } from './source-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -228,7 +229,7 @@ export class LyraSourceCard extends LyraSourceCardBase {
   };
 
   private get titleText(): string {
-    const base = this.heading || this.localize('untitledSource');
+    const base = normalizeLabel(this.heading) ?? this.localize('untitledSource');
     return this.page == null || this.page === ''
       ? base
       : this.localize('sourcePageSuffix', undefined, { base, page: this.page });

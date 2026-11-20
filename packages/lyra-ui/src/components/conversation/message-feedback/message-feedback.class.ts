@@ -37,10 +37,14 @@ import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackCommentTooLong, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSingleReasonDescription, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings/conversation.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// Feedback reason choices register their chips the first time they render.
+const MESSAGE_FEEDBACK_CHILDREN = { chip: () => import('../../lr-chip.js') };
 
 export interface MessageFeedbackReason {
   readonly id: string;
@@ -518,17 +522,17 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     }
   }
 
-  private chipRegistration?: Promise<unknown>;
+  private childRegistration?: Promise<unknown>;
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    await this.chipRegistration;
+    await this.childRegistration;
     return complete;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (this.detailReasons.length) this.chipRegistration ??= import('../../lr-chip.js');
+    this.childRegistration = loadLazyChildren(MESSAGE_FEEDBACK_CHILDREN, this.renderRoot) ?? this.childRegistration;
     if (changed.has('disabled') || changed.has('pending')) {
       this.emit('lr-toolbar-actions-change');
     }

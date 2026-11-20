@@ -52,3 +52,9 @@ export const ControlledDecision: Story = {
   render: () => html`<lr-permission-rules .rules=${rules}
     @lr-permission-rule-change-request=${(event: Event) => event.preventDefault()}></lr-permission-rules>`,
 };
+
+export const PlainFrame: Story = {
+  render: () => html`<div style="max-inline-size: 42rem; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); padding: var(--lr-space-m)">
+    <lr-permission-rules frame="plain" .rules=${rules}></lr-permission-rules>
+  </div>`,
+};

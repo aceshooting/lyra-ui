@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: '没有可显示的已生成视图。',
   genViewInvalid: '无法显示此生成的视图。',
   genViewLoading: '正在加载组件…',
-  genViewLoadFailed: '无法加载此组件。',
   genViewInvalidState: '无法使用此字段的值。',
   genViewActionDenied: '此操作不可用。',
   genViewConfirmationRequired: '此操作需要应用程序确认。',

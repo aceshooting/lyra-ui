@@ -9,6 +9,7 @@ import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
 import { DEFAULT_MODEL_CAMERA } from './model-viewer-source.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { twoFrames } from '../../../../test/frames.js';
+import { viewerHostRole } from '../viewer-semantic-owner.js';
 
 const camera = () => ({ yaw: 0, pitch: 0, distance: 10, target: { x: 0, y: 0, z: 0 } });
 const source = 'data:text/plain,v%200%200%200%0Av%201%200%200%0Av%200%201%200%0Af%201%202%203';
@@ -45,9 +46,12 @@ it('loads bounded bytes into the structural model engine and exposes localized p
   expect(viewer.shadowRoot!.querySelector('[part="alternative"]')?.textContent).to.contain('A flat triangular face');
   expect(viewer.shadowRoot!.querySelector('[part="status"]')?.textContent).to.contain('ready'); await expect(viewer).to.be.accessible();
 });
-it('honors host aria-label by presence, instructions and strings overrides without shadow live regions', async () => {
+it('makes a host named by aria-label the region, honors instructions and strings overrides without shadow live regions', async () => {
   const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer aria-label="Custom model" src=${source} format="obj" .strings=${{ modelViewerFit: 'Frame object', modelViewerReady: 'Object loaded' }}></lr-model-viewer>`);
-  await ready(viewer); expect(viewer.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Custom model');
+  await ready(viewer);
+  const base = viewer.shadowRoot!.querySelector('[part="base"]')!;
+  expect([base.getAttribute('role'), base.getAttribute('aria-label')]).to.deep.equal([null, null]);
+  expect(viewerHostRole(viewer)).to.equal('region');
   expect(viewer.shadowRoot!.textContent).to.contain('Frame object'); expect(viewer.shadowRoot!.textContent).to.contain('Object loaded');
   expect(viewer.shadowRoot!.querySelector('[aria-live], [role="alert"], [role="status"]') === null).to.equal(true);
   await expect(viewer).to.be.accessible();

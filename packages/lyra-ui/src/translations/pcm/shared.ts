@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'E no fit load dis component.',
   noData: 'No data dey',
   legendTypeShown: 'Dem show {label}',
   legendTypeHidden: 'Dem hide {label}',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'E no fit load di data',
   zoomOut: 'Zoom am out',
   zoomIn: 'Zoom am in',
+  scrollerLabel: 'Content wey you fit scroll',
   clear: 'Clear am',
   open: 'Open am',
   close: 'Close am',

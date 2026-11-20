@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Tạm dừng xoay vòng',
   carouselResumeRotation: 'Tiếp tục xoay vòng',
   carouselViewport: 'Trang chiếu',
-  scrollerLabel: 'Nội dung có thể cuộn',
   scrollPrevious: 'Cuộn về trước',
   scrollNext: 'Cuộn về sau',
   closeNavigation: 'Đóng điều hướng',

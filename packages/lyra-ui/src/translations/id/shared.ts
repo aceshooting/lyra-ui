@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Komponen ini tidak dapat dimuat.',
   noData: 'Tidak ada data',
   legendTypeShown: '{label} ditampilkan',
   legendTypeHidden: '{label} disembunyikan',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Data tidak dapat dimuat',
   zoomOut: 'Perkecil',
   zoomIn: 'Perbesar',
+  scrollerLabel: 'Konten yang dapat digulir',
   clear: 'Hapus',
   open: 'Buka',
   close: 'Tutup',

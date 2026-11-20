@@ -380,3 +380,15 @@ for (const refresh of ['rebind', 'keyless'] as const) {
     expect(source.cells.length).equal(0);
   });
 }
+
+it('names the source canvas from the summary for a blank host label and drops stale generated host semantics', async () => {
+  const src = provider(2, 2);
+  const el = await fixture<SourceHost>(html`<lr-heatmap style="width:320px" aria-label="  "
+    .data=${[[1, 2], [3, 4]]}></lr-heatmap>`);
+  await el.updateComplete;
+  el.matrixSource = src;
+  await waitUntil(() => el.shadowRoot!.querySelector('canvas[aria-label]') !== null);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')!.trim()).to.not.equal('');
+  expect(el.getAttribute('aria-label')).to.not.match(/^Heatmap of 2/);
+});

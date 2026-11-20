@@ -21,6 +21,9 @@ states. Sort requests are cancelable; accepted client requests update `sortKey`/
 rows, while server mode leaves that state controlled. `columns[].heatValue` opts into a shared heat
 scale; `rowTotal`/`grandTotal` position caller-computed totals in a trailing column.
 
+The default entry registers `lr-pagination` and `lr-skeleton` the first time the table pages or
+renders skeleton loading rows.
+
 Effective locale changes recollate and filter the current view while keeping activation and edit
 lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
 programmatic locale changes do not emit a row action.

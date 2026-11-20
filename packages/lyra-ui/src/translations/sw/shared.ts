@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Kijenzi hiki hakikuweza kupakiwa.',
   noData: 'Hakuna data',
   legendTypeShown: '{label} inaonyeshwa',
   legendTypeHidden: '{label} imefichwa',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Imeshindwa kupakia data',
   zoomOut: 'Punguza ukuzaji',
   zoomIn: 'Ongeza ukuzaji',
+  scrollerLabel: 'Maudhui yanayoweza kusogezwa',
   clear: 'Futa',
   open: 'Fungua',
   close: 'Funga',

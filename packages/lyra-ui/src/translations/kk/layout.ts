@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Айналдыруды кідірту',
   carouselResumeRotation: 'Айналдыруды жалғастыру',
   carouselViewport: 'Слайдтар',
-  scrollerLabel: 'Айналдырылатын мазмұн',
   scrollPrevious: 'Артқа айналдыру',
   scrollNext: 'Алға айналдыру',
   closeNavigation: 'Навигацияны жабу',

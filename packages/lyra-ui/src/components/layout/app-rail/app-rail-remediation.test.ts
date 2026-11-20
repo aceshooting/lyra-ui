@@ -184,9 +184,9 @@ describe('rail overlay clicks, resizer keys and label', () => {
     expect(el.railWidth).to.equal(400);
   });
 
-  it('takes an empty label literally and exposes accessibleLabel for the host aria-label', async () => {
+  it('treats an empty label as unset and exposes accessibleLabel for the host aria-label', async () => {
     const el = await fixture<LyraAppRail>(html`<lr-app-rail label=""></lr-app-rail>`);
-    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Navigation');
     expect(el.accessibleLabel).to.equal(null);
     el.setAttribute('aria-label', 'Main');
     await el.updateComplete;

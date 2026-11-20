@@ -9,6 +9,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './permission-rules.styles.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_deny, LYRA_DEFAULT_permissionRulesAllow, LYRA_DEFAULT_permissionRulesAsk, LYRA_DEFAULT_permissionRulesDecisionFor, LYRA_DEFAULT_permissionRulesEmpty, LYRA_DEFAULT_permissionRulesLabel, LYRA_DEFAULT_permissionRulesLimit, LYRA_DEFAULT_permissionRulesScope } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -57,6 +58,11 @@ const DECISION_LABEL_KEY: Record<PermissionRuleDecision, string> = {
  * @event lr-permission-rule-change - A decision change was requested. `detail: { ruleId, decision }`.
  *   The collection remains controlled by the host; programmatic assignment is silent.
  * @csspart base - The fieldset and overall group.
+ * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every
+ *   fieldset panel of this family, so one declaration retunes them together.
+ * @cssprop [--lr-panel-frame-border-color=var(--lr-color-border)] - Border colour of `[part='base']`.
+ * @cssprop [--lr-panel-frame-radius=var(--lr-radius-xs)] - Corner radius of `[part='base']`.
+ * @cssprop [--lr-panel-frame-padding=var(--lr-space-s)] - Padding of `[part='base']`.
  * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
  * @csspart legend - The visible group label.
  * @csspart list - The rendered rule rows.
@@ -100,6 +106,12 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Presents decisions without allowing edits. */
   @property({ type: Boolean, reflect: true }) readonly = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded panel; `'plain'` removes the border, fill, padding and
+   *  corner radius, so a panel nested in a container that already draws a border (a transcript
+   *  bubble, a card) does not double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private get normalizedRules(): PermissionRule[] {
     return firstByIdentityMemo(this.rules, admittedId);
@@ -154,9 +166,11 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
     const rules = this.normalizedRules;
     const visibleLabel = this.label ?? this.localize('permissionRulesLabel');
     const hostLabel = hostAriaLabel(this);
+    // The legend names the fieldset; a blank legend with no host name falls back to the localized default.
+    const groupName = normalizeLabel(hostLabel) ?? (normalizeLabel(visibleLabel) === undefined ? this.localize('permissionRulesLabel') : undefined);
     const visibleRules = rules.slice(0, MAX_RENDERED_RULES);
     return html`
-      <fieldset part="base" aria-label=${hostLabel === null ? nothing : hostLabel} ?disabled=${this.disabled}>
+      <fieldset part="base" aria-label=${groupName ?? nothing} ?disabled=${this.disabled}>
         <legend part="legend">${visibleLabel}</legend>
         ${rules.length === 0
           ? html`<p part="empty">${this.localize('permissionRulesEmpty')}</p>`

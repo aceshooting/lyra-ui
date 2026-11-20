@@ -64,3 +64,16 @@ export const Disabled: Story = {
     ></lr-permission-grant>
   `,
 };
+
+export const PlainFrame: Story = {
+  render: () => html`<div style="max-inline-size: 36rem; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); padding: var(--lr-space-m)">
+    <lr-permission-grant
+      frame="plain"
+      .requestId=${request.requestId}
+      .label=${request.label}
+      .description=${request.description}
+      .scope=${request.scope}
+      status="pending"
+    ></lr-permission-grant>
+  </div>`,
+};

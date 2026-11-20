@@ -1,3 +1,5 @@
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/docx-viewer/docx-loader.js';
 export * from './viewers/docx-viewer/docx-viewer.class.js';
 

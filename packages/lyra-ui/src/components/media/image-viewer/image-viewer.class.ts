@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
@@ -35,10 +36,11 @@ import { sanitizePercentRect, type SafePercentRect } from '../../../internal/saf
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerHighlightsLimited, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';
@@ -287,6 +289,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     model: LYRA_DEFAULT_model,
+    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
@@ -294,6 +297,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     panoramaInstructions: LYRA_DEFAULT_panoramaInstructions,
     previous: LYRA_DEFAULT_previous,
     resetZoom: LYRA_DEFAULT_resetZoom,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
@@ -419,8 +424,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private observedWrapper?: HTMLElement;
   private readonly geometryFrame = new OwnedFrame(this);
 
-  @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('pan-zoom')) private frameEl?: LyraPanZoom;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   @query('[part="image-wrapper"]') private wrapperEl?: HTMLElement;
 
   private get hasOperableContent(): boolean {
@@ -973,6 +978,12 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
         </div>
       </div>
     </lr-pan-zoom>`;
+  }
+
+  constructor() {
+    super();
+    // A panorama page button disables itself on the first or last page; focus moves to the other, then the current hotspot.
+    repairControlFocusOnUpdate(this, () => [this.renderRoot.querySelector<HTMLElement>('[part="panorama-hotspot"][tabindex="0"]')]);
   }
 
   override render(): TemplateResult {

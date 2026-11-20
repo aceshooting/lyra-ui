@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Misa ukujikeleza okwesikhashana',
   carouselResumeRotation: 'Qhubeka nokujikeleza',
   carouselViewport: 'Amaslayidi',
-  scrollerLabel: 'Okuqukethwe okushelelekayo',
   scrollPrevious: 'Skrolela emuva',
   scrollNext: 'Skrolela phambili',
   closeNavigation: 'Vala ukuzulazula',

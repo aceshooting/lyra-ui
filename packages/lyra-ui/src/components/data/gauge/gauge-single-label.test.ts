@@ -14,3 +14,14 @@ it('preserves the complete tooltip when only the value or label is present', asy
     expect(element.shadowRoot!.querySelector('svg title')?.textContent).to.equal(full);
   }
 });
+
+it('uses the localized default name for a whitespace-only label', async () => {
+  const names: string[] = [];
+  for (const shape of ['radial', 'linear'] as const) {
+    const element = await fixture<LyraGauge>(html`<lr-gauge shape=${shape} value="40" label="   "></lr-gauge>`);
+    names.push(element.getAttribute('aria-label') ?? '');
+  }
+  expect(names.filter((name) => name.trim() === '')).to.deep.equal([]);
+  const reference = await fixture<LyraGauge>(html`<lr-gauge value="40"></lr-gauge>`);
+  expect(names[0]).to.equal(reference.getAttribute('aria-label'));
+});

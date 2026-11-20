@@ -20,7 +20,8 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
-import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { viewerHostOwnsName, viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -488,9 +489,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   override render(): TemplateResult {
     // `name` names the shadow listing region. A non-empty host label owns the overall semantics
-    // itself; with neither source there is nothing meaningful to announce, so no region is added.
-    const label = viewerSemanticLabel(this, this.name || null);
-    const role = label === null ? null : viewerSemanticRole(this, 'region');
+    // itself, so the host takes the region role; with neither source there is nothing meaningful to
+    // announce, so no region is added.
+    const label = viewerSemanticLabel(this, normalizeLabel(this.name) ?? null);
+    const role = viewerSemanticRole(this, label !== null || viewerHostOwnsName(this) ? 'region' : null);
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-archive-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }

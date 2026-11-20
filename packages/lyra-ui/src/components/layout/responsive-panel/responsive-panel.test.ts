@@ -1460,3 +1460,19 @@ describe('overlay focus return to a host-hidden opener', () => {
     }
   });
 });
+
+describe("scrollable body", () => {
+  it("gives a docked body of long text a named tab stop only while it overflows", async () => {
+    const el = (await fixture(html`
+      <lr-responsive-panel mode="inline" open label="Filters" style="display:flex; flex-direction:column; block-size:10rem">
+        <p style="margin:0; block-size:1rem">short</p>
+      </lr-responsive-panel>
+    `)) as LyraResponsivePanel;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    expect(body.hasAttribute("tabindex")).to.equal(false);
+    el.querySelector("p")!.style.blockSize = "40rem";
+    await waitUntil(() => body.getAttribute("tabindex") === "0", "overflowing body takes a tab stop");
+    expect([body.getAttribute("role"), body.getAttribute("aria-label")]).to.deep.equal(["region", "Filters"]);
+    await expect(el).to.be.accessible();
+  });
+});

@@ -6,6 +6,7 @@ import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { loadIcal } from './calendar-loader.js';
+import { viewerHostRole } from '../viewer-semantic-owner.js';
 
 const SAMPLE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', 'BEGIN:VEVENT', 'UID:event-1@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260714T140000Z', 'DTEND:20260714T150000Z', 'SUMMARY:Quarterly planning', 'LOCATION:Room 204', 'DESCRIPTION:Review roadmap and budget.', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 const TWO_EVENTS = SAMPLE_ICS.replace('END:VCALENDAR', ['BEGIN:VEVENT', 'UID:event-2@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260715T100000Z', 'DTEND:20260715T110000Z', 'SUMMARY:Design review', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
@@ -16,7 +17,7 @@ function response(body: string, ok = true): Response { return { ok, status: ok ?
 function stubFetch(body: string, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(body, ok))) as typeof window.fetch; return () => { window.fetch = original; }; }
 async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: () => void }> { const restore = stubFetch(body); const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`); await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); return { el, restore }; }
 
-expectLocaleFallback('ja', ['calendarViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeCalendar', 'loadingDocument']);
+expectLocaleFallback('ja', ['calendarViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeCalendar', 'loadingDocument', 'scrollerLabel']);
 
 describe('lr-calendar-viewer', () => {
   it('does not search its own empty-state text', async () => {
@@ -359,7 +360,23 @@ describe('lr-calendar-viewer', () => {
   it('is accessible', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); await expect(el).to.be.accessible(); });
   it('is accessible with events listed', async () => { const { el, restore } = await loaded(TWO_EVENTS); try { expect(el.shadowRoot!.querySelectorAll('[part="event"]')).to.have.lengthOf(2); await expect(el).to.be.accessible(); } finally { restore(); } });
   it('uses the name property as the accessible name of the base region', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics"></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Team offsite.ics'); });
-  it('leaves a non-empty accessible name on the host instead of copying it to the shadow region', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer aria-label="Holiday schedule"></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.getAttribute('aria-label')).to.be.null; expect(base.getAttribute('role')).to.be.null; expect(el.getAttribute('aria-label')).to.equal('Holiday schedule'); });
+  it('makes a host named by aria-label the region instead of copying the name to the shadow region', async () => {
+    const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer aria-label="Holiday schedule"></lr-calendar-viewer>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-label')).to.be.null;
+    expect(base.getAttribute('role')).to.be.null;
+    expect(el.getAttribute('aria-label')).to.equal('Holiday schedule');
+    expect(viewerHostRole(el)).to.equal('region');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(viewerHostRole(el)).to.equal(null);
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Calendar viewer');
+  });
+  it('treats a whitespace-only name as absent and uses the localized default', async () => {
+    const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="   "></lr-calendar-viewer>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calendar viewer');
+  });
   it('lets a host aria-label override the name property without creating a second owner', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label="Host label"></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.getAttribute('aria-label')).to.be.null; expect(base.getAttribute('role')).to.be.null; });
   it('preserves an explicitly empty host aria-label ahead of name', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label=""></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.hasAttribute('aria-label')).to.be.true; expect(base.getAttribute('aria-label')).to.equal(''); });
   it('falls back to the localized calendarViewerLabel default when neither name nor a host aria-label is set', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calendar viewer'); });

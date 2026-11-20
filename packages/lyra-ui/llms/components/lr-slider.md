@@ -19,6 +19,8 @@
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
@@ -96,7 +98,7 @@ single numeric string entry.
 - `label: string = ''`, `hint: string = ''`, and `errorText: string = ''` (attribute `error-text`) —
   visible form context around the track, with matching rich `label`/`hint`/`error` slots. A host
   `aria-label` wins for the interactive accessible name by attribute presence, including an
-  explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
+  explicitly empty value (whitespace-only is ignored); range mode then suppresses `aria-labelledby` on its group owner as well.
   When error and hint content are both present, every handle's `aria-describedby` references the
   error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
   Every handle exposes `aria-invalid="true"` while error content is visible, and otherwise only after

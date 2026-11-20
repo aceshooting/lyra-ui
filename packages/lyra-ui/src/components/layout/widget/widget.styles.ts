@@ -248,6 +248,9 @@ export const styles = css`
   [part="body"][hidden] {
     display: none;
   }
+  [part="body"]:focus-visible {
+    ${focusRingInset}
+  }
   [part="backdrop"] {
     position: fixed;
     inset: var(--lr-widget-backdrop-inset, var(--_lr-widget-backdrop-inset, 0));

@@ -1954,3 +1954,9 @@ describe('unsized host in a stretched grid row', () => {
     );
   });
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-code-editor tab-size=""></lr-code-editor>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['tabSize'].map((key) => props[key])).to.deep.equal([2]);
+});

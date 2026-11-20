@@ -192,3 +192,20 @@ for (const token of ['invalid-length', 'initial'] as const) it(`bounds source-ta
   expect(getComputedStyle(list.shadowRoot!.querySelector('[part="data-row"]')!).height).to.equal('32px');
   expect(errors.length).to.equal(0);
 });
+
+it('renders the active source workbook sheet inside the panel its selected tab controls', async () => {
+  const viewer = await fixture<import('../lr-spreadsheet-viewer.js').LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer
+    .dataSource=${{ revision: 1, sheets: [{ key: 'a', name: 'First', data: sizedSource(3, 2) }, { key: 'b', name: 'Second', data: sizedSource(3, 2) }] }}></lr-spreadsheet-viewer>`);
+  await waitUntil(() => viewer.shadowRoot!.querySelector('[role="table"]') !== null, 'first sheet rendered');
+  const group = viewer.shadowRoot!.querySelector('lr-tab-group')!;
+  const holdsTable = () => [...group.querySelectorAll('lr-tab-panel')].map((panel) => panel.querySelector('[role="table"]') !== null);
+  expect(holdsTable()).to.deep.equal([true, false]);
+  group.show('source-1');
+  await waitUntil(() => holdsTable()[1] === true, 'second sheet renders in its own panel');
+  expect(holdsTable()).to.deep.equal([false, true]);
+  const shown = group.shadowRoot!.querySelector<HTMLElement>('[part="panel"]:not([hidden])')!;
+  const selected = group.shadowRoot!.querySelector<HTMLElement>('[part="tab"][aria-selected="true"]')!;
+  expect(selected.getAttribute('aria-controls')).to.equal(shown.id);
+  const assigned = shown.querySelector('slot')!.assignedElements();
+  expect(assigned.map((panel) => panel.querySelector('[role="table"]') !== null)).to.deep.equal([true]);
+});

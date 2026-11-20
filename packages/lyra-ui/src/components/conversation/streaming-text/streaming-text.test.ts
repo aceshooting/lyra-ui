@@ -1137,3 +1137,9 @@ it('forwards the composed Markdown render failure once with its original detail'
   expect(received.length).to.equal(1);
   expect(received[0] === detail).to.equal(true);
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-streaming-text tab-size=""></lr-streaming-text>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['tabSize'].map((key) => props[key])).to.deep.equal([4]);
+});

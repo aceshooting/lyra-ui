@@ -10,6 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { captureComposedFocusRepair, applyComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { projectIngestionPresentation, ingestionActionKey, type IngestionPresentationProjection,
   type IngestionQueueAction, type IngestionQueueStagePresentation, type IngestionItemActionEventDetail } from './ingestion-queue-presentation.js';
@@ -513,8 +514,17 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   private sourceStatusInitialized = false;
   private previousSourceStatus = '';
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('ingestion-queue', this.renderRoot) ?? this.childRegistration;
     this.restoreActionFocus();
     if (this.sourceMode) {
       const status = this.sourceFailed ? this.localize('tableLoadFailed')

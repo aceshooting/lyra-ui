@@ -1,3 +1,4 @@
+export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export * from './agent-tools/artifact-panel/artifact-panel.class.js';
 import './lr-live-region.js';
 import { LyraArtifactPanel } from './agent-tools/artifact-panel/artifact-panel.class.js';

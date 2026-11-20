@@ -21,7 +21,7 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_htmlViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -91,6 +91,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
     htmlViewerLabel: LYRA_DEFAULT_htmlViewerLabel,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -127,7 +128,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('htmlViewerLabel'))
+      ? makeScrollRegionFocusable(body, this.localize('scrollerLabel'))
       : undefined;
   }
 
@@ -193,8 +194,10 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   }
 
   private renderBody(): TemplateResult {
+    // Resolved in every state so a host-owned document role never outlives the loaded content.
+    const role = viewerSemanticRole(this, this.fetchState.kind === 'loaded' ? 'document' : null);
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role=${viewerSemanticRole(this, 'document') ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('htmlViewerLabel')) ?? nothing}>${this.fetchState.markup}</div>`;
+      case 'loaded': return html`<div part="html" role=${role ?? nothing} aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('htmlViewerLabel')) ?? nothing}>${this.fetchState.markup}</div>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;
       case 'idle':

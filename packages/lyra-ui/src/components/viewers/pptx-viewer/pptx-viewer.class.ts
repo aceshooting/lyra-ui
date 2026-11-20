@@ -46,7 +46,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-sear
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerMissingLibrary, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -150,6 +150,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     pptxViewerPreviousSlide: LYRA_DEFAULT_pptxViewerPreviousSlide,
     pptxViewerRenderError: LYRA_DEFAULT_pptxViewerRenderError,
     pptxViewerSlideOf: LYRA_DEFAULT_pptxViewerSlideOf,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -452,7 +453,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private syncScrollRegion(): void {
     const el = this.containerEl;
     if (!el) return;
-    const name = this.regionName() || this.localize('pptxViewerLabel');
+    // The outer region carries the viewer name; the scroll body gets its own name.
+    const name = this.localize('scrollerLabel');
     const current = this.scrollRegion;
     if (current?.el === el && current.name === name) return;
     current?.dispose();

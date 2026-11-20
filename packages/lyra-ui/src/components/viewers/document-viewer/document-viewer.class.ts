@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -39,7 +40,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_download } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_download, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -144,6 +145,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     documentViewerLabel: LYRA_DEFAULT_documentViewerLabel,
     download: LYRA_DEFAULT_download,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -263,7 +265,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     def: LyraDocumentRendererDefinition;
     resolved: LyraResolvedDocumentRendererDefinition;
   };
-  @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
+  @query(tag('document-preview')) private fallbackPreviewEl?: LyraDocumentPreview;
   private readonly announcements = new ViewerAnnouncementController(this);
 
   private readonly detached = new DeferredTeardown(() => this.releaseDetached());
@@ -302,7 +304,8 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private syncScrollRegion(): void {
     const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     if (!el || !this.isConnected) return;
-    const name = this.currentFile().name || this.localize('documentViewerLabel');
+    // The outer owner carries the viewer name; the scroll body gets its own name.
+    const name = this.localize('scrollerLabel');
     const child = el.firstElementChild;
     const current = this.scrollRegion;
     if (current?.el === el && current.child === child && current.name === name) return;

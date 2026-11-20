@@ -5,6 +5,7 @@ import type { LyraZoomableFrame } from '../../lr-zoomable-frame.js';
 import * as classModule from './zoomable-frame.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
 
@@ -542,11 +543,11 @@ describe('zoom controls and interaction', () => {
     expect(el.shadowRoot!.querySelector('[part="zoom-out-button"]')!.getAttribute('aria-label')).to.equal('Réduire');
   });
 
-  it('preserves an explicit empty host name without restoring a fallback iframe title', async () => {
+  it('falls back to the localized iframe title for an explicit empty host name', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame aria-label="" .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
     `);
-    expect(frameOf(el).title).to.equal('');
+    expect(frameOf(el).title).to.equal('Zoomable content');
   });
 });
 
@@ -1162,5 +1163,22 @@ it('copies inherited theme properties without scanning standard CSS declarations
     expect(standardReads).to.be.lessThan(10);
   } finally {
     window.getComputedStyle = getStyle;
+  }
+});
+
+it('moves focus to the other zoom button when the focused one disables itself at its limit', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom="0.5" zoom-levels="50% 100%"></lr-zoomable-frame>`);
+  const zoomIn = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in-button"]')!;
+  await focusByKeyboard(zoomIn);
+  await sendKeys({ press: 'Enter' });
+  await waitUntil(() => zoomIn.disabled, 'zoom-in reaches its limit');
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('zoom-out-button');
+});
+
+it('keeps the iframe title named when the host aria-label is empty or blank', async () => {
+  for (const value of ['', '   ']) {
+    const el = (await fixture(html`<lr-zoomable-frame aria-label=${value}></lr-zoomable-frame>`)) as LyraZoomableFrame;
+    expect(el.shadowRoot!.querySelector('iframe')!.getAttribute('title')).to.equal('Zoomable content');
   }
 });

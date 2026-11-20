@@ -21,6 +21,9 @@ deep-link event that lands a chunk in `lr-document-viewer`. Never fetches or ran
 documents itself. Blank chunk ids and later duplicates are omitted first-wins before sorting,
 rendering, state, or events.
 
+The default entry registers the internal `lr-virtual-list` the first time the chunk count passes
+`virtualizeAt`.
+
 **Properties:**
 
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:

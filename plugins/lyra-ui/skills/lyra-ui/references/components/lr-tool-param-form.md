@@ -89,7 +89,9 @@ value-serialization failure.
 - `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false) — a
   detached, deeply frozen assignment snapshot, capped at 100 fields and required keys and 500 enum
   choices per field. Exceeding a cap keeps the bounded prefix but fails validation closed. Create
-  and reassign a new schema after changes; mutating the caller's prior object has no effect.
+  and reassign a new schema after changes; mutating the caller's prior object has no effect. A
+  structurally different schema starts a fresh form (visited fields and revealed errors clear, so a
+  same-named field stays quiet until touched); an identical rebuilt object keeps them.
 - `value: ToolParamFormValue = {}` (attribute: false) — a detached, deeply frozen assignment
   snapshot, capped at 10,000 entries per array/plain record, 50,000 total nodes, and 16 nested
   levels. Unsafe or oversized assignments fail serialization closed. Create and reassign a new

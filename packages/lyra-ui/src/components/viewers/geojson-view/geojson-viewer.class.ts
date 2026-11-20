@@ -20,6 +20,8 @@ import {
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
@@ -39,7 +41,7 @@ import type {
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -575,6 +577,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
     geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -661,21 +664,25 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     }
   }
 
-  private readonly scrollRegions = new Map<Element, () => void>();
+  private readonly scrollRegions = new Map<Element, { name: string; dispose: () => void }>();
 
   private syncScrollRegions(): void {
     const live = new Set<Element>(this.renderRoot.querySelectorAll('[part="base"], [part="metadata"]'));
+    // The viewer (or map) owner carries the viewer name; a scroll body gets its own, kept current.
+    const name = this.localize('scrollerLabel');
     for (const el of live) {
-      const name = el.getAttribute('part') === 'metadata' ? undefined : this.effectiveLabel;
-      if (!this.scrollRegions.has(el)) this.scrollRegions.set(el, makeScrollRegionFocusable(el as HTMLElement, name));
+      const existing = this.scrollRegions.get(el);
+      if (existing?.name === name) continue;
+      existing?.dispose();
+      this.scrollRegions.set(el, { name, dispose: makeScrollRegionFocusable(el as HTMLElement, name) });
     }
-    for (const [el, dispose] of this.scrollRegions) {
-      if (!live.has(el)) { dispose(); this.scrollRegions.delete(el); }
+    for (const [el, region] of this.scrollRegions) {
+      if (!live.has(el)) { region.dispose(); this.scrollRegions.delete(el); }
     }
   }
 
   private disposeScrollRegions(): void {
-    for (const dispose of this.scrollRegions.values()) dispose();
+    for (const region of this.scrollRegions.values()) region.dispose();
     this.scrollRegions.clear();
   }
 
@@ -802,11 +809,11 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     }
   }
 
+  /** The resolved viewer name for the map landmark, which owns the semantics once it is ready. An
+   *  explicitly empty host label stays empty, like the shared viewer rule. */
   private get effectiveLabel(): string {
-    return (
-      hostAriaLabel(this) ??
-      (this.name?.trim() ? this.name : this.localize('geojsonViewLabel'))
-    );
+    if (hostAriaLabel(this) === '') return '';
+    return resolveAccessibleName(this, this.name) ?? this.localize('geojsonViewLabel');
   }
 
   private featureCountStatus(featureCount: number): string {
@@ -877,13 +884,17 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       this.loadState.peerAvailable &&
       this.mapReady;
     const maxHeight = sanitizeCssLength(this.maxHeight);
+    const role = viewerSemanticRole(this, mapOwnsLandmark ? null : 'region');
+    const label = mapOwnsLandmark
+      ? null
+      : viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('geojsonViewLabel'));
     return html`<div
       part="base"
-      role=${mapOwnsLandmark ? nothing : 'region'}
+      role=${role ?? nothing}
       style=${maxHeight
         ? styleMap({ '--lr-geojson-viewer-max-height': maxHeight })
         : nothing}
-      aria-label=${mapOwnsLandmark ? nothing : this.effectiveLabel}
+      aria-label=${label ?? nothing}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >
       ${this.renderBody()}${this.renderAnchorLiveRegion()}

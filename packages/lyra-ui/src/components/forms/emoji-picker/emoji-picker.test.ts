@@ -945,16 +945,13 @@ describe('keyboard navigation', () => {
     expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
 
     await focusByKeyboard(input);
-    for (const key of ['Home', 'End', ' ']) {
+    // The caret keys stay with the text field.
+    for (const key of ['Home', 'End', ' ', 'ArrowLeft', 'ArrowRight']) {
       const keydown = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
       input.dispatchEvent(keydown);
       expect(keydown.defaultPrevented, key).to.equal(false);
       expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
     }
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-1$/);
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-0$/);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(input.getAttribute('aria-activedescendant')).to.match(/-item-2$/);
     expect(el.shadowRoot!.activeElement === input).to.equal(true);

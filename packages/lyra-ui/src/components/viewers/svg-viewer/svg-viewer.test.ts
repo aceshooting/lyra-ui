@@ -1083,7 +1083,7 @@ it('exposes a keyboard stop while the drawing overflows its capped body', async 
     await waitUntil(() => !!el.shadowRoot!.querySelector('[part="svg"]'));
     const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     await waitUntil(() => body.tabIndex === 0);
-    expect(body.getAttribute('aria-label')).to.equal('Drawing');
+    expect(body.getAttribute('aria-label')).to.equal('Scrollable content');
     el.maxHeight = '';
     await el.updateComplete;
     await waitUntil(() => !body.hasAttribute('tabindex'));

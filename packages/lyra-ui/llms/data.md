@@ -305,6 +305,8 @@ record is retained. Interactive descendants (including open-shadow native contro
 import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 ```
 
+The default entry registers the `lr-pagination` pager the first time `paginate` renders it.
+
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
 Collection inputs are clone-owned readonly snapshots: reassign `data`, `columns`, `groupBy`, and controlled
 arrays after changes. Same-array rebinding/in-place mutation is ignored; call `requestUpdate()` after
@@ -658,6 +660,9 @@ Sort/select-aware table with a bounded 100-row default page, filtering, paginati
 states. Sort requests are cancelable; accepted client requests update `sortKey`/`sortDir` and order
 rows, while server mode leaves that state controlled. `columns[].heatValue` opts into a shared heat
 scale; `rowTotal`/`grandTotal` position caller-computed totals in a trailing column.
+
+The default entry registers `lr-pagination` and `lr-skeleton` the first time the table pages or
+renders skeleton loading rows.
 
 Effective locale changes recollate and filter the current view while keeping activation and edit
 lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
@@ -1443,7 +1448,7 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
   when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
   `paginationLabel` message, while an explicit empty string renders no visible/accessible label
-- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
+- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input; an empty or whitespace-only value is treated as unset (localized default), as for the four buttons below
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
 - `firstLabel?: string` (attribute `first-label`), `lastLabel?: string`
@@ -1452,8 +1457,9 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   `with-edges`
 
 Omitting any of those five control-label properties resolves the matching locale message. Any
-supplied string is an explicit per-instance override and renders verbatim, including the built-in
-English wording under a non-English `.strings` catalog and an empty string.
+non-blank supplied string is an explicit per-instance override and renders verbatim, including the
+built-in English wording under a non-English `.strings` catalog. An empty or whitespace-only string
+is treated as unset: these controls have no visible text, so they always keep an accessible name.
 
 **Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses

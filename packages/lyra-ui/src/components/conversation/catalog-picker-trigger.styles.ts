@@ -181,7 +181,7 @@ export function catalogPickerStyles(
 
     [part='listbox'] {
       position: fixed;
-      z-index: var(--lr-layer-dropdown);
+      z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
       box-sizing: border-box;
       max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
       overflow-y: auto;

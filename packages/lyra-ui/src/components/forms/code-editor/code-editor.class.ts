@@ -23,10 +23,11 @@ import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
 import { sanitizeCssResize, type LyraTextResize } from '../../../internal/safe-css.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import {
@@ -169,13 +170,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at assignment time instead, so
    *  both the `repeat()` call and the emitted tab-width style always see a safe value.
    * @default 2 */
-  @property({ type: Number, attribute: 'tab-size' })
+  @property({ attribute: 'tab-size', converter: blankNumberConverter(null) })
   get tabSize(): number {
     return this._tabSize;
   }
   set tabSize(value: number) {
     const old = this._tabSize;
-    // Removing the `tab-size` attribute hands Lit's Number converter a `null`: treat that as "back
+    // Removing (or blanking) the `tab-size` attribute hands the setter a `null`: treat that as "back
     // to unset" so the token regains control rather than staying pinned to the sanitized fallback.
     this.tabSizeAssigned = (value as number | null) != null;
     this._tabSize = finiteInteger(value, 2, 1, 16);
@@ -194,6 +195,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
 
   /** Visible label for the editor. */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   /** Supporting instructions shown below the editor. */
   @property() hint = '';
   /** Error shown below the editor and associated with its text field. */

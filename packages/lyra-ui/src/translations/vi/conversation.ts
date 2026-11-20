@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Không có chế độ xem được tạo để hiển thị.',
   genViewInvalid: 'Không thể hiển thị chế độ xem được tạo này.',
   genViewLoading: 'Đang tải thành phần…',
-  genViewLoadFailed: 'Không thể tải thành phần này.',
   genViewInvalidState: 'Không thể sử dụng giá trị của trường này.',
   genViewActionDenied: 'Thao tác này không khả dụng.',
   genViewConfirmationRequired: 'Thao tác này cần xác nhận từ ứng dụng.',

@@ -15,7 +15,7 @@ import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { submitFormImplicitly, submitOnEnter } from '../../../internal/submit-on-enter.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './otp-input.styles.js';
 import {
@@ -228,6 +228,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
   /** Visible label text, rendered before any `label`-slot content. */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   /** Supporting text, rendered before any `hint`-slot content. */
   @property() hint = '';
   /** Validation text, rendered before any `error`-slot content; marks the input invalid. */

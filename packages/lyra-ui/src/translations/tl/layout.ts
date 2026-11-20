@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'I-pause ang pag-ikot',
   carouselResumeRotation: 'Ituloy ang pag-ikot',
   carouselViewport: 'Mga slide',
-  scrollerLabel: 'Nai-scroll na nilalaman',
   scrollPrevious: 'Mag-scroll paatras',
   scrollNext: 'Mag-scroll pasulong',
   closeNavigation: 'Isara ang navigation',

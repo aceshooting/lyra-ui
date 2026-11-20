@@ -16,9 +16,11 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { CheckedFormAssociated, isLiveDisabled } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
-import { hasRealContent } from '../../../internal/a11y.js';
+import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings/forms.generated.js';
@@ -30,6 +32,7 @@ export interface LyraRadioEventMap {
   'lr-invalid': CustomEvent<null>;
   input: Event;
   change: Event;
+  'lr-radio-select-request': CustomEvent<{ checked: boolean; value: string }>;
   'lr-input': CustomEvent<{ checked: boolean; value: string }>;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
@@ -70,7 +73,7 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * shared across all its `<input type="radio">` children rather than one per option.
  * Flattened forwarding-slot changes keep the visual label wrapper synchronized; element-only and
  * decorative `aria-hidden` visuals still count as visual content. A host `aria-label` retains
- * accessible-name precedence by presence, including an explicitly empty value.
+ * accessible-name precedence by presence, including an explicitly empty value; whitespace-only is ignored.
  * A standalone radio is bounded by its allocation: an unbroken default label wraps within the
  * available inline size in both LTR and RTL while the circular indicator remains fixed.
  * In `appearance="button"`, the same `start`/`prefix` and `end`/`suffix` adornment aliases as
@@ -87,6 +90,12 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * @slot prefix - Shoelace-compatible alias for `start` in `appearance="button"`.
  * @slot end - Trailing content in `appearance="button"`.
  * @slot suffix - Shoelace-compatible alias for `end` in `appearance="button"`.
+ * @event lr-radio-select-request - A user activation (click or Space) is about to check an unchecked
+ *   standalone radio; `detail: { checked: true, value }`, while `checked` still holds `false`.
+ *   Cancelable: calling `preventDefault()` leaves the radio unchecked, and none of
+ *   `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
+ *   writing `checked` itself, which also suppresses the built-in commit. `lr-activate` still
+ *   follows. An owning radio group emits `lr-radio-group-select-request` instead.
  * @event input - A standalone radio was selected; native-style and composed.
  * @event lr-input - Standalone prefixed compatibility alias for `input`.
  *   `detail: { checked, value }`.
@@ -297,8 +306,14 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     this.setCustomValidity(next ?? '');
   }
 
+  // A listener that answers `lr-radio-select-request` by writing `checked` finishes before the
+  // built-in commit runs; the guard records that it wrote at all.
+  private readonly selectGuard = new VetoWriteGuard();
+
   /** A write that changes nothing is not a state change (and never notifies the group). */
   protected override acceptsCheckedWrite(previous: boolean, next: boolean): boolean {
+    // Unconditional, including the value already held: the guard records that a write happened.
+    markVetoGuardWrite(this.selectGuard);
     return previous !== next;
   }
 
@@ -606,16 +621,27 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   private select(): void {
     const group = this.group();
     if (this.effectiveDisabled) return;
-    if (!this.checked) this.setInteracted(true);
     if (group) {
+      const wasChecked = this.checked;
       group.selectRadio?.(this);
+      if (!wasChecked && this.checked) this.setInteracted(true);
       return;
     }
     if (!this.checked) {
-      this.checked = true;
-      const detail = { checked: true, value: this.value };
-      emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
-      emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
+      requestThenCommit({
+        requestDetail: { checked: true, value: this.value },
+        emitRequest: (detail, init: { cancelable: true }) =>
+          this.emit('lr-radio-select-request', detail, init),
+        guard: this.selectGuard,
+        commit: () => {
+          if (this.effectiveDisabled || this.checked) return;
+          this.setInteracted(true);
+          this.checked = true;
+          const detail = { checked: true, value: this.value };
+          emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
+          emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
+        },
+      });
     }
     this.emit('lr-activate', { value: this.value });
   }
@@ -764,7 +790,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
         aria-invalid=${this.invalid ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') ?? nothing}
+        aria-label=${hostAriaLabel(this) ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         ${this.renderButtonContent()}
       </span>
@@ -789,7 +815,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
         aria-invalid=${this.invalid ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') ?? nothing}
+        aria-label=${hostAriaLabel(this) ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>
         <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.labelController.onSlotChange}></slot></span>

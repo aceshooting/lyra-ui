@@ -206,6 +206,9 @@ export const styles = css`
     text-align: center;
     overflow-wrap: anywhere;
   }
+  [part="caption"]:focus-visible {
+    ${focusRingShorthand}
+  }
   @container ${compactContainerQuery} {
     [part="counter"] {
       max-inline-size: 45%;

@@ -1,3 +1,4 @@
+export type { FormOwnerValue } from '../internal/direct-form-associated.js';
 export * from './forms/rubric-form/rubric-form.class.js';
 import { LyraRubricForm } from './forms/rubric-form/rubric-form.class.js';
 import { defineElement } from '../internal/prefix.js';

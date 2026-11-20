@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Ba a iya loda wannan sashi ba.',
   noData: 'Babu bayanai',
   legendTypeShown: 'An nuna {label}',
   legendTypeHidden: 'An ɓoye {label}',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'An kasa loda bayanai',
   zoomOut: 'Rage girman kallo',
   zoomIn: 'Ƙara girman kallo',
+  scrollerLabel: 'Abun ciki da ake iya gungurawa',
   clear: 'Goge',
   open: 'Buɗe',
   close: 'Rufe',

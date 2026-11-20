@@ -43,6 +43,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
+  /* no-hover-state: a read-only count that only takes focus by script, once no pending row is left. */
+  [part='count']:focus-visible {
+    ${focusRing}
+  }
 
   [part='list'] {
     display: flex;

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Naannoo dhaabi',
   carouselResumeRotation: 'Naannoo itti fufi',
   carouselViewport: 'Isliidiiwwan',
-  scrollerLabel: 'Qabiyyee garagalchuu danda\'amu',
   scrollPrevious: 'Gara duubaatti garagalchi',
   scrollNext: 'Gara fuulduraatti garagalchi',
   closeNavigation: 'Sochii cufi',

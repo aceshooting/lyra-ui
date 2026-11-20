@@ -1,4 +1,5 @@
 import { guard } from 'lit/directives/guard.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -490,7 +491,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
    * unset, so the plot falls back to `auto` rather than collapsing.
    */
   @property() height = '360px';
-  /** Accessible plot name. A host aria-label takes precedence, including an empty string. */
+  /** Accessible plot name. A non-blank host aria-label takes precedence; a blank value falls back to the localized default. */
   @property() label: string | null = null;
   /** Compatibility plot name used when label is absent. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -767,9 +768,16 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     ></lr-graph-legend>`;
   }
 
+  /** The plot's accessible name: host attribute, then `label`, then `accessibleLabel`, then the
+   *  localized default. Blank values never win, so the listbox/region is always named. */
+  private plotName(): string {
+    return normalizeLabel(this.getAttribute('aria-label')) ?? normalizeLabel(this.label)
+      ?? normalizeLabel(this.accessibleLabel) ?? this.localize('embeddingExplorerLabel');
+  }
+
   private renderSpatial(): TemplateResult {
     const model = this.spatial, binding = model.binding, view = model.view;
-    const label = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
+    const label = this.plotName();
     const number = getNumberFormat(this.effectiveLocale);
     const formatBounds = (bounds: LyraSpatialBounds | null | undefined): string => bounds ?
       this.localize('embeddingExplorerSpatialBounds', undefined, { minX: number.format(bounds.minX), maxX: number.format(bounds.maxX), minY: number.format(bounds.minY), maxY: number.format(bounds.maxY) }) : this.localize('embeddingExplorerEmpty');
@@ -843,7 +851,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
   private renderEnhanced(): TemplateResult {
     const rows = this.rows;
-    const label = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
+    const label = this.plotName();
     const page = largeDataPage(rows?.count ?? 0, Math.floor(this.activeIndex / LARGE_DATA_PAGE_SIZE));
     const number = getNumberFormat(this.effectiveLocale);
     const clusterIndices = this.projectedClusters;
@@ -890,9 +898,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     if (this.source) return this.renderSpatial();
     if (this.enhanced) return this.renderEnhanced();
     const points = this.validPoints;
-    const label = this.hasAttribute('aria-label')
-      ? this.getAttribute('aria-label')!
-      : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
+    const label = this.plotName();
     if (points.length === 0)
       return html`<div part="base" role="region" aria-label=${label} aria-busy=${this.pointScan ? 'true' : 'false'}>
         ${this.pointScan ? nothing : html`<p part="empty">${this.localize('embeddingExplorerEmpty')}</p>`}

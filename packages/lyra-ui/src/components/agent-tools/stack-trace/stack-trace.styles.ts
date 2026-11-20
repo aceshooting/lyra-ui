@@ -1,4 +1,4 @@
-import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -26,6 +26,10 @@ export const styles = css`
     background: var(--lr-stack-trace-bg, var(--lr-color-surface));
     padding: var(--lr-space-s);
   }
+  [part="base"]:focus-visible {
+    ${focusRingInset}
+  }
+
   /* Density escape, same convention as lr-agent-run's and lr-thinking-panel's dense size tier. Inline
      var() fallbacks, not a :host declaration, which every instance would re-declare and so shadow
      an ancestor value. Purely density: border, radius and background stay; frame="plain" below

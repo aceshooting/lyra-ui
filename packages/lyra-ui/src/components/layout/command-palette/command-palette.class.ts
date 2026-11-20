@@ -790,9 +790,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || event.shiftKey || shouldIgnoreNavigationKey(event)) return;
+    // Only the search combobox (and the dialog surface itself) drive the listbox; a key on another
+    // focused control, such as the clear button, keeps its native meaning.
+    const input = this.renderRoot.querySelector<HTMLInputElement>('[part="input"]');
+    if (event.target !== input && event.target !== event.currentTarget) return;
     const rows = this.filtered;
     if (event.key === 'Home' || event.key === 'End') {
-      const input = this.renderRoot.querySelector<HTMLInputElement>('[part="input"]');
       if (input && event.target === input) {
         const boundary = event.key === 'Home' ? 0 : input.value.length;
         if (input.selectionStart !== boundary || input.selectionEnd !== boundary) return;

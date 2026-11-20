@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import {
@@ -242,7 +243,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     const showGlyph = !showImage && this.hasIconSlot;
     const showInitials = !showGlyph && !showImage;
     const explicitHostLabel = hostAriaLabel(this);
-    const label = this.label ?? '';
+    const label = normalizeLabel(this.label) ?? '';
     const accessibleName = explicitHostLabel ?? label;
     const suppressFallbackSemantics =
       explicitHostLabel !== null || label.length > 0;

@@ -68,25 +68,25 @@ export const styles = css`
     appearance: textfield;
     inline-size: 100%;
     box-sizing: border-box;
-    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset dialog
-       renders exactly as before. The inline-end gutter is reserved for the overlaid clear button
-       and is therefore not a knob. */
-    min-block-size: var(--lr-tool-select-dialog-search-min-height, auto);
+    /* Geometry knobs, each falling back to the shared form-control chain (as lr-tool-param-form's
+       fields do), so a theme or size tier that retunes the form controls reaches this field too.
+       The inline-end gutter is reserved for the overlaid clear button and is therefore not a knob. */
+    min-block-size: var(--lr-tool-select-dialog-search-min-height, var(--lr-form-control-height));
     padding-block: var(
       --lr-tool-select-dialog-search-padding-block,
-      var(--lr-space-s)
+      var(--lr-form-control-padding-block)
     );
     padding-inline-start: var(
       --lr-tool-select-dialog-search-padding-inline,
-      var(--lr-space-m)
+      var(--lr-form-control-padding-inline)
     );
     padding-inline-end: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-tool-select-dialog-search-radius, var(--lr-radius));
+    border-radius: var(--lr-tool-select-dialog-search-radius, var(--lr-form-control-radius));
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
-    font-size: var(--lr-tool-select-dialog-search-font-size, inherit);
+    font-size: var(--lr-tool-select-dialog-search-font-size, var(--lr-form-control-font-size));
     ${interactiveTransition}
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome

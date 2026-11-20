@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'ڏيکارڻ لاءِ ڪو ٺاهيل ڏيک موجود ناهي.',
   genViewInvalid: 'هي ٺاهيل ڏيک ڏيکاري نٿو سگهجي.',
   genViewLoading: 'جزو لوڊ ٿي رهيو آهي…',
-  genViewLoadFailed: 'هي جزو لوڊ نه ٿي سگهيو.',
   genViewInvalidState: 'هن فيلڊ جي قدر استعمال نٿي ڪري سگهجي.',
   genViewActionDenied: 'هي عمل موجود ناهي.',
   genViewConfirmationRequired: 'هن عمل لاءِ ايپ کان تصديق گهربل آهي.',

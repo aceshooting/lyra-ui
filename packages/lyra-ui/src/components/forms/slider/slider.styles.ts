@@ -1,6 +1,6 @@
 import { disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlLabelDisplay } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -549,4 +549,5 @@ export const styles = css`
       transition: none;
     }
   }
+  ${formControlLabelDisplay}
 `;

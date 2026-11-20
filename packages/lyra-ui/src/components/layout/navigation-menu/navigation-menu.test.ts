@@ -1942,11 +1942,11 @@ describe('<lr-navigation-menu> top-layer escape', () => {
 });
 
 describe('navigation menu label and glass foregrounds', () => {
-  it('names the nav from label, with the host aria-label winning and an empty label literal', async () => {
+  it('names the nav from label, with the host aria-label winning and an empty label unset', async () => {
     const labelled = await menuFixture(html`<lr-navigation-menu label="Main">${items('l-')}</lr-navigation-menu>`);
     expect(part(labelled, 'base')!.getAttribute('aria-label')).to.equal('Main');
     const empty = await menuFixture(html`<lr-navigation-menu label="">${items('m-')}</lr-navigation-menu>`);
-    expect(part(empty, 'base')!.getAttribute('aria-label')).to.equal('');
+    expect(part(empty, 'base')!.getAttribute('aria-label')).to.equal('Navigation');
     const both = await menuFixture(html`<lr-navigation-menu label="Main" aria-label="Primary">${items('b-')}</lr-navigation-menu>`);
     expect(part(both, 'base')!.getAttribute('aria-label')).to.equal('Primary');
   });
@@ -2046,3 +2046,9 @@ for (const ignored of [{ button: 1, isPrimary: true }, { button: 0, isPrimary: f
     pointer(document.body, 'pointerup', ignored);
   });
 }
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-navigation-menu show-delay="" hide-delay="" skip-delay="" distance=""></lr-navigation-menu>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['showDelay', 'hideDelay', 'skipDelay', 'distance'].map((key) => props[key])).to.deep.equal([200, 150, 300, 6]);
+});

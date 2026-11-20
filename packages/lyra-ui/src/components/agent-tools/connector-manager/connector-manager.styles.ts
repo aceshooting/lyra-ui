@@ -1,6 +1,6 @@
 import { blockHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
-import { panelFrame } from '../../../internal/panel-frame.styles.js';
+import { panelFrame, panelFramePlain } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -93,4 +93,6 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
+
+  ${panelFramePlain}
 `;

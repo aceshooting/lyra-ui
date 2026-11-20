@@ -851,9 +851,9 @@ describe('lr-document-compare', () => {
     }
 
     it('keeps each keyboard-focusable pane on the control border, not the subtle tier', async () => {
-      // The pane is a tabindex="0" scroll region with no fill of its own, so its border is the only
-      // resting boundary of a focusable widget (WCAG 2.2 SC 1.4.11) and must not read the
-      // decorative --lr-color-border-subtle tier a theme may lighten.
+      // The pane is a scroll region (a tab stop while it overflows) with no fill of its own, so its
+      // border is the only resting boundary of a focusable widget (WCAG 2.2 SC 1.4.11) and must not
+      // read the decorative --lr-color-border-subtle tier a theme may lighten.
       const el = (await fixture(html`
         <lr-document-compare data-lr-theme-scope
           view="side-by-side"
@@ -864,7 +864,7 @@ describe('lr-document-compare', () => {
       `)) as LyraDocumentCompare;
       for (const part of ['pane-old', 'pane-new']) {
         const pane = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-        expect(pane.tabIndex, part).to.equal(0);
+        expect(pane.hasAttribute('tabindex'), `${part} fits, so it adds no tab stop`).to.equal(false);
         expect(getComputedStyle(pane).borderTopColor, part).to.equal('rgb(4, 5, 6)');
       }
     });
@@ -1004,4 +1004,18 @@ describe('lr-document-compare', () => {
       expect(withProperty === tokenOnly).to.be.false;
     });
   });
+});
+
+it('makes the version panes tab stops only while their content overflows', async () => {
+  const el = (await fixture(html`
+    <lr-document-compare view="side-by-side" style="--lr-document-compare-pane-max-height: 4rem"
+      .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
+      .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
+    ></lr-document-compare>
+  `)) as LyraDocumentCompare;
+  const stops = () => ['pane-old', 'pane-new'].map((part) => el.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute('tabindex'));
+  await waitUntil(() => stops().every((stop) => stop === '0'), 'capped panes take a tab stop');
+  await expect(el).to.be.accessible();
+  el.style.setProperty('--lr-document-compare-pane-max-height', '80rem');
+  await waitUntil(() => stops().every((stop) => stop === null), 'panes that fit drop the stop');
 });

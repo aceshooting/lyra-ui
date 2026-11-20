@@ -716,7 +716,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  platform caused (see `resolveActiveFromDom()`) actually happened *here*. */
   private lastFocusedNodeId: string | null = null;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   private pendingReorder?: PendingTreeReorder;
   private pendingPointerReorder?: {
     readonly detail: LyraTreePointerReorderDetail;

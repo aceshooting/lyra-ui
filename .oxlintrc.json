@@ -24,22 +24,16 @@
     "**/*.generated.ts",
     "**/src/translations/**",
     "**/fixtures/**",
-    "**/visual-baselines/**",
-
-    // Covered separately: these component directories are being reworked and their findings are
-    // fixed with that work. Remove these entries once they are clean.
-    "packages/lyra-ui/src/components/media/map/**",
-    "packages/lyra-ui/src/components/media/image-viewer/**",
-    "packages/lyra-ui/src/components/media/video/**",
-    "packages/lyra-ui/src/components/retrieval/graph/**",
-    "packages/lyra-ui/src/components/retrieval/knowledge-graph-explorer/**",
-    "packages/lyra-ui/src/components/retrieval/embedding-explorer/**"
+    "**/visual-baselines/**"
   ],
   "rules": {
     // Not in `correctness`, but the code base already writes `void promise` for every deliberate
     // fire-and-forget call; these enforce that convention.
     "typescript/no-misused-promises": "error",
     "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+    // A template literal interpolates only strings, numbers and booleans; anything else (a
+    // CSSResult, an object, a nullable value) would print its default string conversion.
+    "typescript/restrict-template-expressions": ["error", { "allowNumber": true, "allowBoolean": true }],
     "eslint/no-unused-expressions": ["error", { "allowTernary": true, "allowShortCircuit": true }],
 
     // `correctness` rules that fire on intentional idioms here:

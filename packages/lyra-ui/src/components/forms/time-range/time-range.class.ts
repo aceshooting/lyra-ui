@@ -1,4 +1,5 @@
 import { isElementNode } from '../../../internal/dom-guards.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
@@ -33,6 +34,7 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart } from '../../../internal/default-strings/forms.generated.js';
@@ -241,11 +243,11 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
 
-  @property({ type: Number }) min = 0;
-  @property({ type: Number }) max = 100;
-  @property({ type: Number }) start = 0;
-  @property({ type: Number }) end = 100;
-  @property({ type: Number }) step = 1;
+  @property({ converter: blankNumberConverter(0) }) min = 0;
+  @property({ converter: blankNumberConverter(100) }) max = 100;
+  @property({ converter: blankNumberConverter(0) }) start = 0;
+  @property({ converter: blankNumberConverter(100) }) end = 100;
+  @property({ converter: blankNumberConverter(1) }) step = 1;
   /** Visual size — proportionally scales the handle, track, and preset buttons via a single
    *  multiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to
    *  `lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder. The Web Awesome / Shoelace spellings
@@ -994,7 +996,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
       <div
         part="base"
         role="group"
-        aria-label=${this.getAttribute('aria-label') ?? nothing}
+        aria-label=${hostAriaLabel(this) ?? nothing}
         @pointerdown=${this.onBasePointerDown}
       >
         <div part="track"></div>

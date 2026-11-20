@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'ایہہ کمپوننٹ لوڈ نئیں ہو سکیا۔',
   noData: 'کوئی ڈیٹا نئیں',
   legendTypeShown: '{label} وکھایا گیا',
   legendTypeHidden: '{label} لُکایا گیا',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'ڈیٹا لوڈ نئیں ہو سکیا',
   zoomOut: 'زوم گھٹاؤ',
   zoomIn: 'زوم ودھاؤ',
+  scrollerLabel: 'سکرول ہو سکّن والا مواد',
   clear: 'صاف کرو',
   open: 'کھولو',
   close: 'بند کرو',

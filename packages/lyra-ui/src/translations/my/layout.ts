@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'လည်ပတ်မှုကို ခေတ္တရပ်ပါ',
   carouselResumeRotation: 'လည်ပတ်မှုကို ဆက်လုပ်ပါ',
   carouselViewport: 'ဆလိုက်များ',
-  scrollerLabel: 'ရွှေ့ကြည့်နိုင်သော အကြောင်းအရာ',
   scrollPrevious: 'နောက်ပြန်ရွှေ့ရန်',
   scrollNext: 'ရှေ့သို့ရွှေ့ရန်',
   closeNavigation: 'လမ်းညွှန်မှု ပိတ်ရန်',

@@ -9548,3 +9548,12 @@ it('ignores a legend click if capture replaces its category before activation', 
   expect(requested).to.deep.equal(['replacement']);
   expect([...el.hiddenCategories]).to.deep.equal(['replacement']);
 });
+
+it('resolves a whitespace-only label to the localized map name but keeps an explicit empty label', async () => {
+  const el = document.createElement('lr-map') as HTMLElement & { label?: string };
+  const read = () => (el as unknown as { effectiveMapLabel: string }).effectiveMapLabel;
+  el.label = '   ';
+  expect(read().trim()).to.not.equal('');
+  el.label = '';
+  expect(read()).to.equal('');
+});

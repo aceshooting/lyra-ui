@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'ဤအစိတ်အပိုင်းကို မတင်နိုင်ခဲ့ပါ။',
   noData: 'ဒေတာမရှိပါ',
   legendTypeShown: '{label} ကို ပြထားသည်',
   legendTypeHidden: '{label} ကို ဖျောက်ထားသည်',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'ဒေတာကို မတင်နိုင်ပါ',
   zoomOut: 'ချုံ့ရန်',
   zoomIn: 'ချဲ့ရန်',
+  scrollerLabel: 'ရွှေ့ကြည့်နိုင်သော အကြောင်းအရာ',
   clear: 'ရှင်းလင်းရန်',
   open: 'ဖွင့်ရန်',
   close: 'ပိတ်ရန်',

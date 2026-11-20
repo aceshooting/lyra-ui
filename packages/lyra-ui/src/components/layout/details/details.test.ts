@@ -2084,3 +2084,21 @@ it('rounds all summary corners in both disclosure states and supports an indepen
   el.style.setProperty('--lr-details-summary-radius', '16px');
   expect(getComputedStyle(summary).borderRadius).to.equal('16px');
 });
+
+describe("scrollable content", () => {
+  it("gives prose in a size-limited open details a named tab stop only while it overflows", async () => {
+    const wrap = await fixture<HTMLElement>(html`
+      <div style="display:flex; flex-direction:column; block-size:8rem">
+        <lr-details open summary="Notes"><p style="margin:0; block-size:1rem">short</p></lr-details>
+      </div>
+    `);
+    const el = wrap.querySelector("lr-details") as LyraDetails;
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    expect(content.hasAttribute("tabindex")).to.equal(false);
+    el.querySelector("p")!.style.blockSize = "30rem";
+    await waitUntil(() => content.getAttribute("tabindex") === "0", "overflowing content takes a tab stop");
+    expect([content.getAttribute("role"), content.getAttribute("aria-label")]).to.deep.equal(["region", "Notes"]);
+    await expect(el).to.be.accessible();
+  });
+});

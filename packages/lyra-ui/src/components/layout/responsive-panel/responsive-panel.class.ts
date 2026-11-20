@@ -10,8 +10,11 @@ import { property, state } from 'lit/decorators.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { cancelDeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import {
   activateOverlay,
   deepActiveElement,
@@ -104,7 +107,7 @@ export interface LyraResponsivePanelEventMap {
  * has an `aria-label` attribute set, its value wins outright, overriding
  * every source below -- the standard ARIA convention for a consumer that
  * wants full control over the announced name, matching lr-dialog's
- * `accessibleLabel` pattern. Otherwise `label`, when set, is used verbatim.
+ * `accessibleLabel` pattern. Otherwise a non-blank `label` is used.
  * When both are empty, this falls back to the `header` slot's content -- a
  * heading element (`h1`–`h6` or `[role="heading"]`) among the slotted header
  * content wins if present, otherwise the header slot's full text content is
@@ -576,10 +579,21 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.overlayHandle?.dismissBackdrop();
   };
 
+  constructor() {
+    super();
+    // The body is the scrollport between header and footer; text content has no tab stop of its own.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+      return [el && { el, name: this.accessibleLabel ?? (this.label || this.headingText || this.localize('responsivePanel')) }];
+    });
+  }
+
   override render(): TemplateResult {
     const overlay = this.effectiveMode === 'overlay';
     const accessibleName =
-      this.accessibleLabel ?? (this.label || this.headingText || this.localize('responsivePanel'));
+      this.accessibleLabel === '' || hostAriaLabel(this) === ''
+        ? ''
+        : resolveAccessibleName(this, this.label, this.headingText, this.localize('responsivePanel'));
     return this.nativeModal.render(html`
       <div part="base" class=${overlay ? 'overlay' : 'inline'}>
         ${overlay

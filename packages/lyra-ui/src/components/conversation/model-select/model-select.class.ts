@@ -452,7 +452,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     super.updated(changed);
     this.syncCatalogDescription(this.controlId);
     const reposition =
-      changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
+      changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom') || changed.has('topLayer')));
     this.catalogPicker.updated(reposition);
     if (
       changed.has('required') ||

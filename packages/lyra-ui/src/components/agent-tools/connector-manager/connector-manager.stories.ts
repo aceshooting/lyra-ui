@@ -55,3 +55,9 @@ export const Disabled: Story = {
 export const Empty: Story = {
   render: () => html`<lr-connector-manager label="Workspace integrations"></lr-connector-manager>`,
 };
+
+export const PlainFrame: Story = {
+  render: () => html`<div style="max-inline-size: 42rem; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); padding: var(--lr-space-m)">
+    <lr-connector-manager frame="plain" .connectors=${connectors}></lr-connector-manager>
+  </div>`,
+};

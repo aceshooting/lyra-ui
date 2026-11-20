@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'ঘূর্ণন বিরতি দিন',
   carouselResumeRotation: 'ঘূর্ণন আবার শুরু করুন',
   carouselViewport: 'স্লাইডগুলো',
-  scrollerLabel: 'স্ক্রলযোগ্য বিষয়বস্তু',
   scrollPrevious: 'পেছনে স্ক্রল করুন',
   scrollNext: 'সামনে স্ক্রল করুন',
   closeNavigation: 'নেভিগেশন বন্ধ করুন',

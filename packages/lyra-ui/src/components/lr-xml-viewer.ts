@@ -1,3 +1,7 @@
+export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { LyraViewerSource } from './viewers/viewer-source.js';
+export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/xml-viewer/xml-viewer.class.js';
 import './lr-virtual-list.js';
 import { html } from 'lit';

@@ -22,6 +22,7 @@ import {
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './tool-param-form.styles.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { EMPTY_SCHEMA, MAX_ENUM_OPTIONS, MAX_SCHEMA_FIELDS, snapshotFormValue, snapshotSchema, type SchemaSnapshot } from './tool-param-snapshot.js';
 import { toolParamChoices, toolParamConstraintFailure, validToolParamConstraints } from './tool-param-constraints.js';
 import type { FlatToolParamSchema, ToolParamFormProperty, ToolParamFormValue } from './tool-param-types.js';
@@ -233,7 +234,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
   protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
@@ -477,7 +478,9 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
 
   /** Detached, deeply frozen schema snapshot. At most 100 fields, 100 required keys, and 500 enum
    * choices per field are retained. Oversized assignments remain invalid until replaced; reassign
-   * the schema after changing it; re-assigning the same object is not a change. */
+   * the schema after changing it; re-assigning the same object is not a change. A structurally
+   * different schema starts a fresh form: visited fields and revealed errors are cleared, so a
+   * same-named field of the new schema stays quiet until the user touches it. */
   get schema(): FlatToolParamSchema {
     return this._schema;
   }
@@ -489,6 +492,11 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     this._schema = snapshot.schema;
     this.schemaInputShapeError = snapshot.shapeError;
     this.schemaInputExceededLimits = snapshot.exceededLimits;
+    // A different schema is a different form: what the user visited on the old one says nothing
+    // about a same-named field of the new one, so its errors stay hidden until touched again. A
+    // structurally identical re-assignment (a template literal rebuilt every host render) keeps
+    // the interaction state. Cleared before syncFormState() so user-invalid drops with it.
+    if (JSON.stringify(snapshot.schema) !== JSON.stringify(old)) this.clearInteraction();
     this.syncFormState();
     this.requestUpdate('schema', old);
   }
@@ -732,6 +740,14 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     this.syncValidityCustomStates();
     this.structuredValidity.publish();
     this.requestUpdate();
+  }
+
+  private clearInteraction(): void {
+    this.hasInteracted = false;
+    this.touchedFields = new Set();
+    this.showFormError = false;
+    this.visibleErrorSnapshot = new Map();
+    this.suppressNextErrorAnnouncement = true;
   }
 
   formResetCallback(): void {

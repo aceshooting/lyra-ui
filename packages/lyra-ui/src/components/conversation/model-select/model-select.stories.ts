@@ -382,3 +382,13 @@ export const ConfirmBeforeSwitching: Story = {
     ></lr-model-select>
   `,
 };
+
+/** Inside a sticky, `z-index`ed toolbar, `top-layer` keeps the open listbox above a sibling stacked higher. */
+export const TopLayerInStickyToolbar: Story = {
+  render: () => html`
+    <div style="position: sticky; top: 0; z-index: 2; padding: 0.5rem; background: var(--lr-color-surface);">
+      <lr-model-select top-layer label="Model" .catalog=${OLLAMA_CATALOG}></lr-model-select>
+    </div>
+    <div style="position: relative; z-index: 3; block-size: 8rem; background: var(--lr-color-surface-raised, var(--lr-color-surface));"></div>
+  `,
+};

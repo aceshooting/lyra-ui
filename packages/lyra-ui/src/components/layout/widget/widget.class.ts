@@ -38,6 +38,7 @@ import {
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../../internal/icons.js';
 import { styles } from './widget.styles.js';
@@ -802,6 +803,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private onBackdropClick = (): void => {
     this.overlayHandle?.dismissBackdrop();
   };
+
+  constructor() {
+    super();
+    // A body taller than its box (a short dashboard row, a capped host) scrolls; with only text or
+    // a stat inside it has nothing tabbable, so it takes its own tab stop while it overflows.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+      return [el && { el, name: normalizeLabel(this.accessibleLabel) ?? normalizeLabel(this.label || this.labelSlotText) }];
+    });
+  }
 
   override render(): TemplateResult {
     const hasLabel = (this.label ?? '').length > 0;

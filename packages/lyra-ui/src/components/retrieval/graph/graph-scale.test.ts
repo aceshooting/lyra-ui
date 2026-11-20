@@ -141,7 +141,7 @@ it('retains context-free color resolutions across width changes', async () => {
   await waitUntil(() => graph.getAttribute('aria-busy') === 'false', 'graph ready', { timeout: 10000 });
   const work = graph as unknown as GraphWork & { resolvedCssColorCache: Map<string, string> };
   work.drawCanvas();
-  const entries = [...work.resolvedCssColorCache].filter(([value]) => /^rgb/.test(value));
+  const entries = [...work.resolvedCssColorCache].filter(([value]) => value.startsWith('rgb'));
   expect(entries.length).to.be.greaterThan(0);
   work.resolvedCssColorCache.set('var(--responsive-color)', 'rgb(4, 5, 6)');
   graph.width = Number(graph.width) + 10;

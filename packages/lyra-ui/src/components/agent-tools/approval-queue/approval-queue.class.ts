@@ -1,8 +1,9 @@
+import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 import { ltrIsolate } from '../../../internal/bidi.js';
-import { labelWithVisibleText } from '../../../internal/accessible-name.js';
+import { labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -170,7 +171,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   // that turn; a later independent invalidation remains observable.
   private nestedCloseInvocationId: string | null = null;
 
-  @query('lr-tool-approval-dialog') private dialogEl?: LyraToolApprovalDialog;
+  @query(tag('tool-approval-dialog')) private dialogEl?: LyraToolApprovalDialog;
   @query('[part="count"]') private countEl?: HTMLElement;
 
   private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
@@ -395,7 +396,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     const requests = this.normalizedRequests;
     const pendingCount = this.pendingCount();
     const truncated = requests.length > MAX_RENDERED_REQUESTS;
-    return html`<section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
+    return html`<section part="base" aria-label=${overallSemanticLabel(this, normalizeLabel(label) ?? this.localize('approvalQueueLabel')) ?? nothing}>
       <div part="heading-row">
         <div role=${level && label.trim() ? 'heading' : nothing} aria-level=${label.trim() ? level ?? nothing : nothing} part="heading">${label}</div>
         <span part="count" tabindex="-1">${this.localize('approvalQueuePendingCount', undefined, { count: this.formatLocaleNumber(pendingCount) })}</span>

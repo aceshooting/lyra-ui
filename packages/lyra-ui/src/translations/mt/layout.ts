@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Waqqaf ir-rotazzjoni',
   carouselResumeRotation: 'Kompli r-rotazzjoni',
   carouselViewport: 'Slajds',
-  scrollerLabel: 'Kontenut li jiskrollja',
   scrollPrevious: 'Skrollja lura',
   scrollNext: 'Skrollja ’l quddiem',
   closeNavigation: 'Agħlaq in-navigazzjoni',

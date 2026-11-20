@@ -3,6 +3,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { styles } from './control-group.styles.js';
 
 /**
@@ -64,7 +65,10 @@ export class LyraControlGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const accessibleLabel = hostAriaLabel(this) ?? (this.accessibleLabel === '' ? '' : this.label || nothing);
+    const accessibleLabel =
+      hostAriaLabel(this) === '' || this.accessibleLabel === ''
+        ? ''
+        : resolveAccessibleName(this, this.label) ?? nothing;
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }
 }

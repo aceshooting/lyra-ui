@@ -268,6 +268,10 @@ When fewer than two items are available, the disabled play button retains its re
 background under hover and press. Enabled playback controls retain their token-driven pointer
 feedback.
 
+A nonblank host `aria-label` names the playback controls as one group: the host takes the `group`
+role through `ElementInternals` (an author `role` attribute still wins), and each nested control
+keeps its own purpose name. A whitespace-only or empty host label leaves the host generic.
+
 **Properties:**
 
 - `itemCount: number = 0` (attribute `item-count`)
@@ -1628,7 +1632,8 @@ payload beside the map.
 
 - `label?: string` — accessible name for MapLibre's actual focusable canvas. A host `aria-label`
   (an empty one included) wins and names the canvas. Omitting `label` localizes the default `map`
-  message; an explicit empty string suppresses that default and renders an empty canvas name. The
+  message, as does a whitespace-only value; an explicit empty string suppresses that default and
+  renders an empty canvas name. The
   non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
@@ -3555,7 +3560,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
 - `accessibleLabel: string | null` (attribute `aria-label`) — titles the iframe; a host
-  `aria-label` attribute does the same, and an empty attribute stays an empty title. Without
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without
   either (or with an empty property) the iframe gets its localized purpose title.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
@@ -3649,7 +3654,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   preserves the historical natural-size layout; the other modes resolve against the viewport and
   update with its allocation, including when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
-  `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
@@ -3768,10 +3773,10 @@ coalesce into one update.
   visible status, and the progress bar keeps its localized name
 - `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
   `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
-  localized default (`'Upload failed'` in English)
+  localized default (`'Upload failed'` in English); a blank or whitespace-only value does the same
 - `untitledLabel?: string` (attribute `untitled-label`) — fallback filename and tooltip when
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
-  localized default (`'Untitled file'` in English)
+  localized default (`'Untitled file'` in English); a blank or whitespace-only value does the same
 
 Attachment actions carry a stable id for the lifetime of each chip, including separate chips for
 the same file. Set `attachment-id` to preserve an application id across component replacement.
@@ -5055,6 +5060,8 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
 
+The default entry registers the transcript's `lr-virtual-list` the first time the player has cues.
+
 Removing `mime-type` consumes the absent hint safely and restores automatic video fallback unless
 `kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
 empty hint remains empty, and a later audio MIME value restores audio detection.
@@ -5554,6 +5561,10 @@ Experimental direct-child `<lr-video>` playlist with a visible current-video sta
 keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
 prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/lr-video-playlist.js'`.
+
+A nonblank host `aria-label` names the whole playlist: the host takes the `region` role through
+`ElementInternals` (an author `role` attribute still wins), while the inner list keeps its localized
+`videoPlaylistLabel` name. An explicitly empty host label also clears the list name.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and

@@ -1,4 +1,4 @@
-import { activeFill, focusRingInsetOffset, focusRingOffsetInset, focusRingOutline } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, focusRingInsetOffset, focusRingOffsetInset, focusRingOutline } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
@@ -76,6 +76,22 @@ export const styles = css`
   :host([frame="plain"]) [part~='run'] {
     border: 0;
     border-radius: 0;
+  }
+  /* With the frame gone the border-colour cue for the selected run would vanish with it, so the
+     selected row keeps an inline-start rule in the same token. Logical, so it mirrors under RTL.
+     MUST stay after the plain rule above: both are equal-specificity. */
+  :host([frame="plain"]) [part~='run-selected'] {
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-subagent-panel-selected-border, var(--lr-color-brand));
+  }
+  /* no-hover-state: the run row is a roving-focus treeitem that only takes focus from the keyboard
+     or by script; its pointer target is [part='run-trigger'], which carries the hover. Inset so the
+     row's own overflow clip and the list gap never cut the ring. */
+  [part~='run']:focus-visible {
+    ${focusRingInset}
+  }
+  /* no-hover-state: the empty state takes focus only by script when the last run goes away. */
+  [part='empty']:focus-visible {
+    ${focusRing}
   }
   /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
      lr-terminal's dense size tier. Values sit behind inline var() fallbacks, not :host declarations that

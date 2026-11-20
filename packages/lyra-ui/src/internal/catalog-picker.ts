@@ -2,7 +2,7 @@ import { setNativeRangeText } from './native-text-control.js';
 import { getOwnDataDescriptor, readOwnDataValue } from './data-descriptors.js';
 import { CATALOG_ROW_LIMIT } from './selection-catalog.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
-import { deferredPlace } from './anchored-overlay-runtime.js';
+import { deferredPlace, syncTopLayerRelease, topLayerPlacement } from './anchored-overlay-runtime.js';
 import { foldSearchText, prepareNeedle } from './search-haystack.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
@@ -149,6 +149,8 @@ interface CatalogPickerHost extends HTMLElement {
   readonly effectiveDisabled: boolean;
   readonly updateComplete: Promise<boolean>;
   readonly hasUpdated?: boolean;
+  /** Opts the open listbox into the browser top layer. */
+  readonly topLayer?: boolean;
 }
 
 interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
@@ -189,6 +191,8 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
  */
 export class CatalogPickerController<T extends LyraCatalogEntry> {
   private readonly popupPosition: AnchoredPopoverController;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   private overlay?: OverlayHandle;
   private readonly popupController: PopupController;
   private _activeIndex = -1;
@@ -232,9 +236,10 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       },
     });
     this.popupPosition = new AnchoredPopoverController((anchor, popup) =>
-      deferredPlace(anchor, popup, {
-        strategy: resolveEffectivePositioningStrategy(this.host, undefined, 'fixed'),
-      }),
+      deferredPlace(anchor, popup, topLayerPlacement(
+        this.host.topLayer === true,
+        resolveEffectivePositioningStrategy(this.host, undefined, 'fixed'),
+      )),
     );
   }
 
@@ -951,6 +956,8 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
     );
     const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
-    if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
+    if (!anchor || !listbox) return;
+    this.placedTopLayer = syncTopLayerRelease(listbox, this.placedTopLayer, this.host.topLayer === true);
+    this.popupPosition.reposition(anchor, listbox);
   }
 }

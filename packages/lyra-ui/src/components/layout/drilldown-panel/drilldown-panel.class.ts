@@ -5,6 +5,8 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
@@ -23,6 +25,7 @@ import '../tab-group/tab.class.js';
 import '../tab-group/tab-panel.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_drilldownUntitledNode } from '../../../internal/default-strings/layout.generated.js';
@@ -173,12 +176,11 @@ const MAX_URL_LENGTH = 8_192;
 const ACTIVE_PAGE_SIZE = 8;
 
 /** Each data-gated child registers the first time its category renders. */
-const CHILD_REGISTRATIONS = {
-  evidence: () => import('../../lr-source-card.js'),
-  documents: () => import('../../lr-document-preview.js'),
-  entities: () => import('../../lr-entity-card.js'),
-} as const;
-const registeredChildren = new Set<string>();
+const DRILLDOWN_CHILDREN = {
+  'source-card': () => import('../../lr-source-card.js'),
+  'document-preview': () => import('../../lr-document-preview.js'),
+  'entity-card': () => import('../../lr-entity-card.js'),
+};
 
 const EMPTY_PATH: readonly LyraDrilldownNode[] = Object.freeze([]);
 const EMPTY_TYPES: readonly LyraNodeTypeStyle[] = Object.freeze([]);
@@ -679,10 +681,6 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     const node = this.currentNode;
     const categories = node ? this.categoriesFor(node) : [];
     const active = this.resolvedCategory(categories) ?? '';
-    if (active in CHILD_REGISTRATIONS && !registeredChildren.has(active)) {
-      registeredChildren.add(active);
-      CHILD_REGISTRATIONS[active as keyof typeof CHILD_REGISTRATIONS]().catch(() => registeredChildren.delete(active));
-    }
     const context = `${this.pathRevision}:${node?.nodeId ?? ''}:${active}`;
     if (context !== this.pageContext) {
       this.pageContext = context;
@@ -690,8 +688,17 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     }
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren(DRILLDOWN_CHILDREN, this.renderRoot) ?? this.childRegistration;
     const nextLimits = new Map(this.currentLimitAnnouncements());
     if (this.announcementsArmed) {
       for (const [key, text] of nextLimits) {
@@ -1143,13 +1150,15 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
         heading=${this.localize('noData')}
       ></lr-empty>`;
     }
-    const accessibleLabel = this.accessibleLabel;
+    // An explicitly empty host `aria-label` opts out; blank or whitespace values never name it.
+    const optedOut = (hostAriaLabel(this) === '' || this.accessibleLabel === '');
+    const accessibleLabel = resolveAccessibleName(this);
     if (categories.length === 1) {
       const only = categories[0]!;
       return html`<div
         part="category"
         role="region"
-        aria-label=${accessibleLabel ?? only.label}
+        aria-label=${optedOut ? '' : resolveAccessibleName(this, only.label) ?? nothing}
       >
         ${this.renderCategory(node, only)}
       </div>`;
@@ -1158,7 +1167,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       <lr-tab-group
         part="tabs"
         activation="manual"
-        aria-label=${accessibleLabel ?? nothing}
+        aria-label=${optedOut ? '' : accessibleLabel ?? nothing}
         .active=${active}
         @lr-activate=${this.stopOwnedEvent}
         @lr-tab-hide=${this.stopOwnedEvent}

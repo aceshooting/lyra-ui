@@ -15,6 +15,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
 import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-controller.js';
 import { styles } from './flow-minimap.styles.js';
+import { WHEEL_NOTCH_PX, wheelZoomDelta } from '../../../internal/wheel-zoom.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapSourceUnavailable, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged } from '../../../internal/default-strings/data.generated.js';
@@ -461,11 +462,22 @@ export class LyraFlowMinimap extends LyraElement {
     this.invokeCanvas(action, 'setViewport', [{ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom }]);
   };
 
+  /** Wheel motion not yet worth a whole zoom step; trackpad deltas accumulate into notches. */
+  private wheelRemainder = 0;
+
   private onMapWheel = (e: WheelEvent): void => {
     const action = this.captureInteraction(e);
     if (!action) return;
+    const delta = wheelZoomDelta(e, (e.currentTarget as Element | null)?.clientHeight ?? 0);
+    // A horizontal swipe carries no zoom and stays with the page.
+    if (delta === 0) return;
     e.preventDefault();
-    this.invokeCanvas(action, e.deltaY < 0 ? 'zoomIn' : 'zoomOut');
+    if (Math.sign(delta) !== Math.sign(this.wheelRemainder)) this.wheelRemainder = 0;
+    this.wheelRemainder += delta;
+    if (Math.abs(this.wheelRemainder) < WHEEL_NOTCH_PX) return;
+    const zoomIn = this.wheelRemainder < 0;
+    this.wheelRemainder = 0;
+    this.invokeCanvas(action, zoomIn ? 'zoomIn' : 'zoomOut');
   };
 
   private onViewportPointerDown = (e: PointerEvent): void => {

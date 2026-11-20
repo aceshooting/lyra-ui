@@ -9,12 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-permission-rules`
+
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
 
 `lr-permission-rule-change-request` carries `{ ruleId, decision }`. Cancel it to suppress the subsequent `lr-permission-rule-change` notification.
 

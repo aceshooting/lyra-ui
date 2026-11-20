@@ -1,3 +1,11 @@
+export type { StatRow } from './data/stat/stat.class.js';
+export type { LyraTabGroupEventMap } from './layout/tab-group/tab-group.class.js';
+export type { LyraChunkInspectorEventMap } from './retrieval/chunk-inspector/chunk-inspector.class.js';
+export type { LyraCommunity } from './retrieval/community-card/community-card.class.js';
+export type { LyraNeighborListEventMap } from './retrieval/neighbor-list/neighbor-list.class.js';
+export type { LyraPathElement } from './retrieval/path-strip/path-strip.class.js';
+export type { LyraProvenancePanelDisclosureDetail, LyraProvenancePanelEventMap } from './retrieval/provenance-panel/provenance-panel.class.js';
+export type { LyraScoreThresholds } from '../internal/score-tiers.js';
 export * from './retrieval/entity-dossier/entity-dossier.class.js';
 import { LyraEntityDossier } from './retrieval/entity-dossier/entity-dossier.class.js';
 import { defineElement } from '../internal/prefix.js';

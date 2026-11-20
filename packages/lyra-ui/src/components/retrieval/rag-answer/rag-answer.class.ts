@@ -1,4 +1,5 @@
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -317,7 +318,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       frame="plain"
       size="s"
       .sourceId=${source.id}
-      .heading=${source.name}
+      .heading=${normalizeLabel(source.name) ?? ''}
       .href=${source.uri ?? ''}
     >
       ${source.mimeType

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Dakatar da juyawa',
   carouselResumeRotation: 'Ci gaba da juyawa',
   carouselViewport: 'Hotuna',
-  scrollerLabel: 'Abun ciki da ake iya gungurawa',
   scrollPrevious: 'Gungura baya',
   scrollNext: 'Gungura gaba',
   closeNavigation: 'Rufe kewayawa',

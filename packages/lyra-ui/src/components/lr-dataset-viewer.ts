@@ -1,3 +1,7 @@
+export type { LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { TableViewerScrollMode } from './viewers/table-viewer-shared.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/dataset-viewer/dataset-viewer.class.js';
 import { LyraDatasetViewer } from './viewers/dataset-viewer/dataset-viewer.class.js';
 import { defineElement } from '../internal/prefix.js';

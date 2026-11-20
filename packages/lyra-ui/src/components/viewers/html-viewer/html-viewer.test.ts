@@ -25,7 +25,8 @@ describe('lr-html-viewer', () => {
       await waitUntil(() => body.getAttribute('tabindex') === '0');
       expect(body.scrollHeight).to.be.greaterThan(body.clientHeight);
       expect(body.getAttribute('role')).to.equal('region');
-      expect(body.getAttribute('aria-label')).to.equal('Report');
+      // The scroll body is named for its purpose; the viewer owner keeps the viewer name.
+      expect(body.getAttribute('aria-label')).to.equal('Scrollable content');
       await focusByKeyboard(body);
       expect(el.shadowRoot!.activeElement === body).to.equal(true);
       await sendKeys({ press: 'ArrowDown' });
@@ -34,7 +35,7 @@ describe('lr-html-viewer', () => {
       const parent = el.parentElement!;
       el.remove();
       el.name = '  ';
-      el.strings = { htmlViewerLabel: 'Document body' };
+      el.strings = { scrollerLabel: 'Document body' };
       await el.updateComplete;
       expect(body.hasAttribute('tabindex')).to.equal(false);
       parent.append(el);

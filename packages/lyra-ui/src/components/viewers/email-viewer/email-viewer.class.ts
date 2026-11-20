@@ -37,7 +37,7 @@ import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -421,6 +421,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
     emailViewerUnnamedAttachment: LYRA_DEFAULT_emailViewerUnnamedAttachment,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -518,7 +519,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('emailViewerLabel'))
+      ? makeScrollRegionFocusable(body, this.localize('scrollerLabel'))
       : undefined;
   }
 
@@ -775,7 +776,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('emailViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('emailViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

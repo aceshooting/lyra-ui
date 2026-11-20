@@ -7,6 +7,8 @@ import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opene
 import type { LyraLightbox, LyraLightboxImage } from '../../lr-lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusAfterPointer } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -1526,3 +1528,15 @@ for (const phase of ['lr-show', 'lr-hide'] as const) {
     if (el.open) await el.close();
   });
 }
+
+it('keeps focus inside the modal when Next disables itself on the last image', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`)) as LyraLightbox;
+  await el.updateComplete;
+  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!;
+  await focusAfterPointer(next, el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(next.disabled).to.equal(true);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('previous-button');
+  el.open = false;
+});

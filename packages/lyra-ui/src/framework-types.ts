@@ -1351,6 +1351,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraBackgroundRuns,
       | 'disabled'
+      | 'frame'
       | 'label'
       | 'locale'
       | 'runs'
@@ -1360,7 +1361,10 @@ export interface LyraComponentTypeMap {
     events: LyraBackgroundRunsEventMap;
     eventNames:       | 'lr-run-activate'
       | 'lr-run-cancel';
-    cssNames: never;
+    cssNames:       | '--lr-panel-frame-bg'
+      | '--lr-panel-frame-border-color'
+      | '--lr-panel-frame-padding'
+      | '--lr-panel-frame-radius';
     attributeAliases: {};
   };
   'lr-badge': {
@@ -3010,6 +3014,7 @@ export interface LyraComponentTypeMap {
       | 'inputmode'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'language'
       | 'locale'
       | 'maxlength'
@@ -3072,6 +3077,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraCodeEditor['enterKeyHint'];
       'error-text'?: LyraCodeEditor['errorText'];
       'inputmode'?: LyraCodeEditor['inputMode'];
+      'label-display'?: LyraCodeEditor['labelDisplay'];
       'tab-size'?: LyraCodeEditor['tabSize'];
       'value'?: LyraCodeEditor['defaultValue'];
       'without-line-numbers'?: LyraCodeEditor['withoutLineNumbers'];
@@ -3522,6 +3528,7 @@ export interface LyraComponentTypeMap {
       LyraConnectorManager,
       | 'connectors'
       | 'disabled'
+      | 'frame'
       | 'label'
       | 'locale'
       | 'strings',
@@ -3531,7 +3538,11 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-connector-action';
     cssNames:       | '--lr-decision-legend-font-size'
       | '--lr-decision-negative-color'
-      | '--lr-decision-positive-color';
+      | '--lr-decision-positive-color'
+      | '--lr-panel-frame-bg'
+      | '--lr-panel-frame-border-color'
+      | '--lr-panel-frame-padding'
+      | '--lr-panel-frame-radius';
     attributeAliases: {};
   };
   'lr-contact-viewer': {
@@ -8748,6 +8759,7 @@ export interface LyraComponentTypeMap {
       | 'size'
       | 'spellcheck'
       | 'strings'
+      | 'topLayer'
       | 'value',
       {
         form: HTMLFormElement | string | null;
@@ -8838,6 +8850,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraModelSelect['errorText'];
       'inputmode'?: LyraModelSelect['inputMode'];
       'label-display'?: LyraModelSelect['labelDisplay'];
+      'top-layer'?: LyraModelSelect['topLayer'];
       'value'?: LyraModelSelect['defaultValue'];
     };
   };
@@ -9481,6 +9494,7 @@ export interface LyraComponentTypeMap {
       | 'format'
       | 'hint'
       | 'label'
+      | 'labelDisplay'
       | 'length'
       | 'locale'
       | 'mask'
@@ -9535,6 +9549,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'custom-error'?: LyraOtpInput['customError'];
       'error-text'?: LyraOtpInput['errorText'];
+      'label-display'?: LyraOtpInput['labelDisplay'];
       'value'?: LyraOtpInput['defaultValue'];
       'with-hint'?: LyraOtpInput['withHint'];
       'with-label'?: LyraOtpInput['withLabel'];
@@ -9812,6 +9827,7 @@ export interface LyraComponentTypeMap {
       LyraPermissionGrant,
       | 'description'
       | 'disabled'
+      | 'frame'
       | 'label'
       | 'locale'
       | 'requestId'
@@ -9824,7 +9840,11 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-permission-decision';
     cssNames:       | '--lr-decision-legend-font-size'
       | '--lr-decision-negative-color'
-      | '--lr-decision-positive-color';
+      | '--lr-decision-positive-color'
+      | '--lr-panel-frame-bg'
+      | '--lr-panel-frame-border-color'
+      | '--lr-panel-frame-padding'
+      | '--lr-panel-frame-radius';
     attributeAliases: {
       'request-id'?: LyraPermissionGrant['requestId'];
     };
@@ -9834,6 +9854,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraPermissionRules,
       | 'disabled'
+      | 'frame'
       | 'label'
       | 'locale'
       | 'readonly'
@@ -9844,7 +9865,11 @@ export interface LyraComponentTypeMap {
     events: LyraPermissionRulesEventMap;
     eventNames:       | 'lr-permission-rule-change'
       | 'lr-permission-rule-change-request';
-    cssNames:       | '--lr-decision-legend-font-size';
+    cssNames:       | '--lr-decision-legend-font-size'
+      | '--lr-panel-frame-bg'
+      | '--lr-panel-frame-border-color'
+      | '--lr-panel-frame-padding'
+      | '--lr-panel-frame-radius';
     attributeAliases: {};
   };
   'lr-phone-input': {
@@ -10891,7 +10916,8 @@ export interface LyraComponentTypeMap {
       | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
-      | 'lr-invalid';
+      | 'lr-invalid'
+      | 'lr-radio-select-request';
     cssNames:       | '--checked-icon-color'
       | '--checked-icon-scale'
       | '--lr-radio-active-border-color'
@@ -10940,7 +10966,8 @@ export interface LyraComponentTypeMap {
       | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
-      | 'lr-invalid';
+      | 'lr-invalid'
+      | 'lr-radio-select-request';
     cssNames:       | '--checked-icon-color'
       | '--checked-icon-scale'
       | '--lr-radio-active-border-color'
@@ -11003,7 +11030,8 @@ export interface LyraComponentTypeMap {
       | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
-      | 'lr-invalid';
+      | 'lr-invalid'
+      | 'lr-radio-group-select-request';
     cssNames:       | '--lr-form-control-font-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
@@ -12009,6 +12037,7 @@ export interface LyraComponentTypeMap {
       | 'errorText'
       | 'hint'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'readonly'
@@ -12042,6 +12071,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'error-text'?: LyraSignaturePad['errorText'];
       'form'?: LyraSignaturePad['form'];
+      'label-display'?: LyraSignaturePad['labelDisplay'];
     };
   };
   'lr-skeleton': {
@@ -12085,6 +12115,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'indicatorOffset'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'max'
       | 'maxValue'
@@ -12157,6 +12188,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraSlider['errorText'];
       'help-text'?: LyraSlider['helpText'];
       'indicator-offset'?: LyraSlider['indicatorOffset'];
+      'label-display'?: LyraSlider['labelDisplay'];
       'max-value'?: LyraSlider['maxValue'];
       'min-value'?: LyraSlider['minValue'];
       'tooltip-distance'?: LyraSlider['tooltipDistance'];
@@ -14958,6 +14990,7 @@ export interface LyraComponentTypeMap {
       | 'size'
       | 'spellcheck'
       | 'strings'
+      | 'topLayer'
       | 'value'
       | 'withoutPreview',
       {
@@ -15055,6 +15088,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraVoicePicker['errorText'];
       'inputmode'?: LyraVoicePicker['inputMode'];
       'label-display'?: LyraVoicePicker['labelDisplay'];
+      'top-layer'?: LyraVoicePicker['topLayer'];
       'value'?: LyraVoicePicker['defaultValue'];
       'without-preview'?: LyraVoicePicker['withoutPreview'];
     };

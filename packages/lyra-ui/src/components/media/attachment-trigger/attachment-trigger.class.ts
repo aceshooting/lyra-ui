@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -356,7 +357,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property({ reflect: true }) size: LyraSize = 'm';
 
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
-  @query('lr-dropdown') private dropdownEl?: LyraDropdown;
+  @query(tag('dropdown')) private dropdownEl?: LyraDropdown;
   @query('[part="trigger"], [part="menu-trigger"]')
   private composedTriggerEl?: LyraIconButton;
 

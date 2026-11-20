@@ -7,6 +7,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -443,12 +444,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   override render(): TemplateResult {
     const hostLabel = hostAriaLabel(this);
     const hasLabelSlot = this.hasNativeLabelAssignment || this.slotPresence.has('label');
-    const hasLabel = hasLabelSlot || (this.label ?? '').length > 0;
+    const hasLabel = hasLabelSlot || normalizeLabel(this.label) !== undefined;
     const { hasHint, hintId, describedBy } = formControlSupportingState({
       idPrefix: 'segmented', hint: this.hint, withHint: this.hasNativeHintAssignment,
       presence: { has: name => name === 'hint' && this.slotPresence.has(name) },
     });
-    const ariaLabel = hostLabel ?? (hasLabelSlot ? nothing : this.label || nothing);
+    const ariaLabel = hostLabel ?? (hasLabelSlot ? nothing : normalizeLabel(this.label) ?? nothing);
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
     // checked item at all -- falling back to `item.value === this.value` alone

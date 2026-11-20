@@ -2,6 +2,9 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { finiteCount, finiteDuration, isSliderKey } from '../../../internal/numbers.js';
@@ -241,8 +244,13 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     super.disconnectedCallback();
   }
 
+  private readonly semanticInternals = attachInternalsSafely(this);
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A host aria-label names the playback controls as one group; an author `role` attribute still
+    // overrides ElementInternals semantics.
+    this.semanticInternals.role = normalizeLabel(hostAriaLabel(this)) === undefined ? null : 'group';
     if (this.boundCommands && changed.has('hidden') && this.hidden) this.releaseBinding?.();
     if (this.boundCommands && this.boundProjection) {
       this.itemCount = this.boundProjection.count; this.currentIndex = this.boundProjection.index;

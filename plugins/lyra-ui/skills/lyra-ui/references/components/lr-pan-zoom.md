@@ -39,7 +39,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   preserves the historical natural-size layout; the other modes resolve against the viewport and
   update with its allocation, including when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
-  `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders

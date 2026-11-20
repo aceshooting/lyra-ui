@@ -84,7 +84,9 @@ batch flush supersedes that older batch.
 **Keyboard:** ArrowUp/ArrowDown move between enabled options and stop at the ends. Home/End move
 the search caret to the start/end of the query. When the caret is already at that boundary, the
 key jumps to the first/last enabled option. PageUp/PageDown move by one visible page and scroll
-the active option into view. Enter selects the keyboard-active command once per press.
+the active option into view. Enter selects the keyboard-active command once per press. These keys
+act only while the search field (or the dialog surface) has focus: Enter or Space on the focused
+clear button clears the query instead of running a command.
 Shift, Alt, Ctrl, and Meta chords, IME composition, and previously handled keys pass through.
 Pointer hover highlights a row visually. Click selects the hovered row. A non-empty query announces its localized result
 count through the shared polite announcement sink; a query matching nothing announces

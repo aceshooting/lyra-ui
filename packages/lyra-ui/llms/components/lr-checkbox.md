@@ -109,7 +109,7 @@ glyph itself.
 The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
 visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
 independently of whether that node contributes to the accessible name. A host `aria-label` wins by
-presence and is forwarded verbatim, including `aria-label=""`.
+presence and is forwarded, including `aria-label=""`; a whitespace-only one is ignored.
 
 The internal `role="checkbox"` exposes explicit stateful `aria-invalid`. Visible property/slotted
 error chrome makes it `"true"` immediately; otherwise it becomes true only after interaction while

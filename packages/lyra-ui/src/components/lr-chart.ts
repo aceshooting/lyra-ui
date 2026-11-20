@@ -1,3 +1,4 @@
+export type { RuntimeChart } from './charts/chart/chart-types.js';
 export * from './charts/chart/chart.class.js';
 import { LyraChart } from './charts/chart/chart.class.js';
 import { defineElement } from '../internal/prefix.js';

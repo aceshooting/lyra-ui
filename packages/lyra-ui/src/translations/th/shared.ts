@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'ไม่สามารถโหลดคอมโพเนนต์นี้ได้',
   noData: 'ไม่มีข้อมูล',
   legendTypeShown: 'แสดง {label} แล้ว',
   legendTypeHidden: 'ซ่อน {label} แล้ว',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'โหลดข้อมูลไม่ได้',
   zoomOut: 'ย่อ',
   zoomIn: 'ขยาย',
+  scrollerLabel: 'เนื้อหาที่เลื่อนได้',
   clear: 'ล้าง',
   open: 'เปิด',
   close: 'ปิด',

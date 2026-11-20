@@ -118,6 +118,7 @@ export const LYRA_DEFAULT_resetZoom: LyraMessage = 'Reset zoom';
 export const LYRA_DEFAULT_resizeValuePixels: LyraMessage = '{value} pixels';
 export const LYRA_DEFAULT_restore: LyraMessage = 'Restore';
 export const LYRA_DEFAULT_retry: LyraMessage = 'Retry';
+export const LYRA_DEFAULT_scrollerLabel: LyraMessage = 'Scrollable content';
 export const LYRA_DEFAULT_search: LyraMessage = 'Search';
 export const LYRA_DEFAULT_select: LyraMessage = 'Select';
 export const LYRA_DEFAULT_showLess: LyraMessage = 'Show less';

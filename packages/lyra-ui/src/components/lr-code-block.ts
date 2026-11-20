@@ -1,3 +1,7 @@
+export type { LyraCodeBlockBaseEventMap } from './conversation/code-block/code-block-base.class.js';
+export type { LyraCodeBlockCopyAppearance } from './conversation/code-block/code-block-shared.js';
+export type { LyraAnchor, LyraHighlight } from './viewers/document-viewer/anchors.js';
+export type { ShikiLanguageRegistration } from '../internal/shiki/core.js';
 export * from './conversation/code-block/code-block.class.js';
 export type { ShikiLanguageInput, ShikiLanguageSource, ShikiLanguageLoader } from './conversation/code-block/shiki-types.js';
 import { LyraCodeBlock } from './conversation/code-block/code-block.class.js';

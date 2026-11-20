@@ -1389,6 +1389,14 @@ describe('lr-video-playlist public contract', () => {
     const thumbnail = el.shadowRoot!.querySelector('[part="playlist-thumbnail"]') as HTMLElement;
     expect(el.getAttribute('aria-label')).to.equal('Host playlist label');
     expect(el.shadowRoot!.querySelector('[part="playlist"]')!.getAttribute('aria-label')).to.equal('Video playlist');
+    // The host name reaches a real role owner instead of a generic host.
+    const internals = (el as unknown as { semanticInternals: ElementInternals }).semanticInternals;
+    expect(internals.role).to.equal('region');
+    el.setAttribute('aria-label', '   ');
+    await el.updateComplete;
+    expect(internals.role).to.equal(null);
+    el.setAttribute('aria-label', 'Host playlist label');
+    await el.updateComplete;
     expect(getComputedStyle(root).gridTemplateColumns.split(' ').length).to.equal(1);
     expect(getComputedStyle(title).overflow).to.equal('hidden');
     expect(getComputedStyle(title).textOverflow).to.equal('ellipsis');

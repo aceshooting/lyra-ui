@@ -6,9 +6,10 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { resolveListMove, isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { asciiWhitespaceTokens } from '../../../internal/ascii-whitespace.js';
 import { subscribeInheritedAttributes, type InheritedAttributeRelease } from '../../../internal/inherited-attribute-hub.js';
 import { composedAccessibilityText, labelReferenceRecordsMatter } from '../../../internal/accessibility-visibility.js';
@@ -21,6 +22,7 @@ import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './tab-group.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 import type { LyraTab } from './tab.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -395,6 +397,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private readonly labelTargets = new Set<Element>();
   private stopLabelObservation?: InheritedAttributeRelease;
   private rehomeTabFocus = false;
+  /** Focus held inside the shown panel when a selection change is about to hide it. */
+  private panelFocusRepair: ComposedFocusRepairSnapshot | null = null;
   @state() private scrollStartAvailable = false;
   @state() private scrollEndAvailable = false;
   /** Shares its single `ResizeObserver` instance with the tab-scroll-edge bookkeeping below via
@@ -920,6 +924,12 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // Assignment must settle before the initial active value or source SSR hints are repaired.
     if (this.projectionPending) return;
     if (!changed.has('tabs') && !changed.has('active')) return;
+    // A programmatic selection (a "Next" button inside the panel calling `show()`) hides the panel
+    // that holds focus; capture it so `updated()` can hand focus to the newly selected tab.
+    if (this.hasUpdated) {
+      const shown = this.renderRoot.querySelector<HTMLElement>('[part="panel"]:not([hidden])');
+      this.panelFocusRepair = shown ? captureComposedFocusRepair(shown, shown) : null;
+    }
     // Manual activation can focus an unselected occurrence: its removal needs focus repair even
     // while the selected tab remains valid. Inspect the old button before keyed rendering removes it.
     const focused = shadowFocusTarget(this);
@@ -972,6 +982,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       this.renderRoot.querySelectorAll('[part="tab"]')
     );
     this.measureTabScrollEdges();
+    const panelFocus = this.panelFocusRepair;
+    this.panelFocusRepair = null;
+    if (panelFocus?.owner.hasAttribute('hidden')) {
+      applyComposedFocusRepair(panelFocus, () => [
+        this.renderRoot.querySelector<HTMLElement>('[part="tab"][tabindex="0"]'),
+        this.renderRoot.querySelector<HTMLElement>('[part="panel"]:not([hidden])'),
+      ]);
+    }
     if (!this.rehomeTabFocus) return;
     this.rehomeTabFocus = false;
     this.renderRoot
@@ -1408,7 +1426,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           <div
             part="tablist tabs"
             role="tablist"
-            aria-label=${this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.label ?? nothing}
+            aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label) ?? nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
             @keydown=${this.onTabListKeyDown}
             @scroll=${this.onTabListScroll}

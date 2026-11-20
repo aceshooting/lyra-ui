@@ -569,7 +569,11 @@ function nonNegativeFinite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-function labelText(value: unknown, depth = 0): string {
+function labelText(value: unknown): string {
+  return normalizeLabel(rawLabelText(value, 0)) ?? '';
+}
+
+function rawLabelText(value: unknown, depth: number): string {
   if (value == null) return '';
   if (
     typeof value === 'string' ||
@@ -582,7 +586,7 @@ function labelText(value: unknown, depth = 0): string {
   if (depth < MAX_CHART_CONFIGURATION_DEPTH && admission) {
     const values: string[] = [];
     for (let index = 0; index < admission.length; index += 1) {
-      values.push(labelText(readOwnDataValue(admission.source, String(index)), depth + 1));
+      values.push(rawLabelText(readOwnDataValue(admission.source, String(index)), depth + 1));
     }
     return values.join(' ');
   }
@@ -1072,9 +1076,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private spatialPointText(point: LyraSpatialChartPoint): string {
     const series = this.spatial.binding!.chart!.series;
     const datasetIndex = series.findIndex(series => series.id === point.seriesId);
+    const seriesLabel = normalizeLabel(series[datasetIndex]!.label) ?? this.localize('chartSeriesLabel');
     const coordinates = this.datumDisplayValue({ x: point.x, y: point.y, ...(point.radius === undefined ? {} : { r: point.radius }) },
-      { surface: 'table', datasetIndex, index: point.sourceIndex, label: point.label, seriesLabel: series[datasetIndex]!.label });
-    return this.localize('chartSpatialPoint', undefined, { series: series[datasetIndex]!.label, id: point.id,
+      { surface: 'table', datasetIndex, index: point.sourceIndex, label: normalizeLabel(point.label), seriesLabel });
+    return this.localize('chartSpatialPoint', undefined, { series: seriesLabel, id: point.id,
       sourceIndex: this.formatSummaryValue(point.sourceIndex), coordinates,
       hidden: this.canonicalHiddenDatasets()?.includes(datasetIndex) ? this.localize('chartSpatialHidden') : '' });
   }
@@ -1162,7 +1167,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return html`<table class=${this.dataTableVisible ? nothing : 'sr-only'}><caption>${this.accessibleName(this.localize('chartData'))}</caption>
       <thead><tr><th scope="col">${this.localize('chartCategory')}</th><th scope="col">${this.localize('chartData')}</th></tr></thead><tbody>
       ${this.spatialPoints().map(point => { const current = this.spatialGuard(() => this.spatialPoints().includes(point));
-        return html`<tr><th scope="row">${point.label ?? point.id}</th><td><button part="data-table-button" type="button" tabindex=${this.dataTableVisible ? '0' : '-1'} data-spatial-id=${point.id}
+        return html`<tr><th scope="row">${isolateHtml(normalizeLabel(point.label) ?? point.id, this.effectiveDirection)}</th><td><button part="data-table-button" type="button" tabindex=${this.dataTableVisible ? '0' : '-1'} data-spatial-id=${point.id}
           @click=${(event: Event) => { if (current(event)) this.activateSpatialPoint(point); }}>${this.spatialPointText(point)}</button></td></tr>`; })}
       ${(this.spatial.result?.bins ?? []).map((bin, index) => { const current = this.spatialGuard(() => this.spatial.result?.bins.includes(bin) === true);
         return html`<tr><th scope="row">${this.spatialBinText(bin)}</th><td><button part="data-table-button" type="button" tabindex=${this.dataTableVisible ? '0' : '-1'} aria-label=${this.spatialBinText(bin)} data-spatial-bin=${index}
@@ -3646,7 +3651,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return this.localize('liteChartMarkSummary', undefined, {
       series,
       label:
-        datum.label ??
+        normalizeLabel(datum.label) ??
         this.localize('chartPointLabel', undefined, {
           n: getNumberFormat(this.effectiveLocale).format(datum.index + 1),
         }),

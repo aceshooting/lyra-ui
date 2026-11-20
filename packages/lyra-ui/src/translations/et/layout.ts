@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Peata pööramine',
   carouselResumeRotation: 'Jätka pööramist',
   carouselViewport: 'Slaidid',
-  scrollerLabel: 'Keritav sisu',
   scrollPrevious: 'Keri tagasi',
   scrollNext: 'Keri edasi',
   closeNavigation: 'Sule navigeerimine',

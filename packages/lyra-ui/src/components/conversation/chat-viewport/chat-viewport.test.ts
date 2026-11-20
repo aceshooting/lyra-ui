@@ -2112,3 +2112,8 @@ it('leaves a late virtual spacer unobserved after switching to ordinary messages
     MutationObserver.prototype.observe = original;
   }
 });
+
+it('names the log with the localized default for a whitespace-only label', async () => {
+  const el = (await fixture(html`<lr-chat-viewport label="   "></lr-chat-viewport>`)) as LyraChatViewport;
+  expect(el.shadowRoot!.querySelector('[role="log"]')!.getAttribute('aria-label')).to.equal('Conversation');
+});

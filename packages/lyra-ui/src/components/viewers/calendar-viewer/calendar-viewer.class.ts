@@ -27,7 +27,7 @@ import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/an
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_calendarViewerEmpty, LYRA_DEFAULT_calendarViewerLabel, LYRA_DEFAULT_calendarViewerMissingParser, LYRA_DEFAULT_calendarViewerNoSummary, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeCalendar, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -170,6 +170,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     documentPreviewTypeCalendar: LYRA_DEFAULT_documentPreviewTypeCalendar,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -209,7 +210,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('calendarViewerLabel'))
+      ? makeScrollRegionFocusable(body, this.localize('scrollerLabel'))
       : undefined;
   }
 
@@ -332,7 +333,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('calendarViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('calendarViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

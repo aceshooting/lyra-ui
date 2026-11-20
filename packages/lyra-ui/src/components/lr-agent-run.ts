@@ -1,3 +1,4 @@
+export type { BadgeVariant } from './overlays/badge/badge.class.js';
 export * from './agent-tools/agent-run/agent-run.class.js';
 import './lr-generation-metrics.js';
 import './lr-usage-badge.js';

@@ -55,7 +55,7 @@ The chip's decorative `details` subtree is hidden from assistive technology.
 **Properties:**
 
 - `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
-  an explicit `label=""` stays empty. When both are absent, the localized `menuLabel` ("Menu") names it.
+  a blank or whitespace-only `label` is treated as unset. When both are absent, the localized `menuLabel` ("Menu") names it.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every menu the bar opens,
   nested submenus included, in the browser top layer wherever the Popover API exists, so it paints
   above a sibling surface stacked higher than a `z-index`ed fixed or sticky header it sits in. Placed

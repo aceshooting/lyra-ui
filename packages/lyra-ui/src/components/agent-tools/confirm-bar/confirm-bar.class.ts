@@ -1,4 +1,6 @@
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { statusErrorIcon, statusSuccessIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -25,10 +27,17 @@ import {
   type ApprovalDecision,
 } from '../approval-state.js';
 import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// Supplied arguments register their disclosure and JSON view the first time they render.
+const CONFIRM_BAR_CHILDREN = {
+  details: () => import('../../lr-details.js'),
+  'json-viewer': () => import('../../lr-json-viewer.js'),
+};
 
 export type ConfirmBarDecision = ApprovalDecision | null;
 
@@ -354,7 +363,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   @property({ attribute: false }) returnFocusTo: ConfirmBarReturnFocusTarget = null;
 
   @query('[part="status"]') private statusEl?: HTMLElement;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   // `[part='body']:empty` never matches because the part always contains a literal `<slot>`
   // child (CSS `:empty` only ignores text/comment nodes) -- same fix `lr-details`/`lr-empty`/
@@ -367,7 +376,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated && this.args !== undefined && !this.argsRegistration) this.requestUpdate();
+    if (this.hasUpdated) this.loadChildren();
   }
 
   protected override async getUpdateComplete(): Promise<boolean> {
@@ -378,11 +387,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (this.args !== undefined && this.isConnected) {
-      this.argsRegistration ??= Promise.all([
-        import('../../lr-details.js'), import('../../lr-json-viewer.js'),
-      ]).catch(() => { this.argsRegistration = undefined; });
-    }
     if (!this.hasUpdated) {
       const defaultSlotNodes = Array.from(this.childNodes).filter(
         (node) => node.nodeType !== Node.ELEMENT_NODE || !(node as Element).getAttribute('slot'),
@@ -501,8 +505,13 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     }
   }
 
+  private loadChildren(): void {
+    if (this.isConnected) this.argsRegistration = loadLazyChildren(CONFIRM_BAR_CHILDREN, this.renderRoot) ?? this.argsRegistration;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.loadChildren();
     const decision = this.decision;
     if (changed.has('decision') && changed.get('decision') !== undefined && decision != null) {
       const key = decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
@@ -513,8 +522,9 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   }
 
   private renderHeading(): TemplateResult {
-    if (this.heading) return html`${this.heading}`;
-    const toolName = this.toolName || this.localize('toolApprovalGenericTool');
+    const heading = normalizeLabel(this.heading);
+    if (heading) return html`${heading}`;
+    const toolName = normalizeLabel(this.toolName) ?? this.localize('toolApprovalGenericTool');
     const template = this.localize('toolApprovalHeading');
     const pieces = resolveLocalizedParts(template, (marker) =>
       this.localize('toolApprovalHeading', undefined, { tool: marker }),

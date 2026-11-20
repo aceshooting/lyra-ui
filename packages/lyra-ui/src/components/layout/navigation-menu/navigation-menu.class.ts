@@ -8,7 +8,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
@@ -16,6 +16,7 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -173,8 +174,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
    * landmark is named from `label`, then the localized "Navigation". */
   @property({ attribute: 'aria-label' }) accessibleLabel?: string;
 
-  /** Accessible name of the `nav` landmark when no host `aria-label` is set. A supplied string,
-   * including an empty one, is literal; only absence uses the localized "Navigation". */
+  /** Accessible name of the `nav` landmark when no host `aria-label` is set. A blank or
+   * whitespace-only string is treated as unset and uses the localized "Navigation". */
   @property() label?: string;
 
   /** Allocation breakpoint: the menu collapses while its content-box inline size is at or below
@@ -225,17 +226,17 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
 
   /** Delay (ms) before a hovered trigger opens its panel. Non-finite values use the default;
    * negative values behave like `0`, which opens in the same turn. */
-  @property({ type: Number, attribute: 'show-delay' }) showDelay = DEFAULT_SHOW_DELAY;
+  @property({ attribute: 'show-delay', converter: blankNumberConverter(DEFAULT_SHOW_DELAY) }) showDelay = DEFAULT_SHOW_DELAY;
 
   /** Delay (ms) before a hover-opened panel closes once the pointer leaves the item. */
-  @property({ type: Number, attribute: 'hide-delay' }) hideDelay = DEFAULT_HIDE_DELAY;
+  @property({ attribute: 'hide-delay', converter: blankNumberConverter(DEFAULT_HIDE_DELAY) }) hideDelay = DEFAULT_HIDE_DELAY;
 
   /** Hover grace window (ms): a hover that arrives this soon after a panel closed opens
    * immediately. `0` disables it. */
-  @property({ type: Number, attribute: 'skip-delay' }) skipDelay = DEFAULT_SKIP_DELAY;
+  @property({ attribute: 'skip-delay', converter: blankNumberConverter(DEFAULT_SKIP_DELAY) }) skipDelay = DEFAULT_SKIP_DELAY;
 
   /** Gap (px) between the anchor and a floating panel. Negative values clamp to `0`. */
-  @property({ type: Number }) distance = DEFAULT_DISTANCE;
+  @property({ converter: blankNumberConverter(DEFAULT_DISTANCE) }) distance = DEFAULT_DISTANCE;
 
   /**
    * Shows the open floating panel in the browser top layer wherever the native Popover API exists,
@@ -1101,7 +1102,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
 
   override render(): TemplateResult {
     const hostLabel = hostAriaLabel(this);
-    const label = hostLabel ?? this.label ?? this.localize('navigation');
+    const label =
+      (hostLabel === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label, this.localize('navigation'));
     const collapsed = this.collapsedLayout;
     const box = this.indicatorBox;
     return html`<nav part="base" aria-label=${label}>

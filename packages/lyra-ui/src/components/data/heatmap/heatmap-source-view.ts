@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type ReactiveControllerHost, type TemplateResult } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { csvRow } from '../../../internal/csv.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -400,12 +401,12 @@ export function renderSource(h: HeatmapSourceHost): TemplateResult {
     ${controller.error ? html`<p part="source-error">${h.localize('heatmapSourceError')}</p>` : nothing}
     ${viewport ? html`<div class="source-axes" aria-hidden="true"><span>${number(viewport.columnStart + 1)}</span><span>${number(viewport.columnStart + Math.floor((viewport.columnEnd - viewport.columnStart - 1) / 2) + 1)}</span><span>${number(viewport.columnEnd)}</span></div>` : nothing}
     <canvas part="canvas" data-source-entry tabindex=${h.accessibleCells ? '-1' : '0'} role=${h.accessibleCells ? nothing : 'application'}
-      aria-hidden=${h.accessibleCells ? 'true' : nothing} aria-label=${h.accessibleCells ? nothing : h.getAttribute('aria-label') || summary} aria-describedby="source-help"
+      aria-hidden=${h.accessibleCells ? 'true' : nothing} aria-label=${h.accessibleCells ? nothing : normalizeLabel(h.getAttribute('aria-label')) ?? summary} aria-describedby="source-help"
       @click=${(e: MouseEvent) => sourceClick(h, e)} @mousemove=${(e: MouseEvent) => sourceHover(h, e)} @mouseleave=${() => { h.sourceTooltip = null; }} @keydown=${(e: KeyboardEvent) => sourceKeydown(h, e)}></canvas>
     ${h.sourceTooltip ? html`<p part="tooltip" style=${styleMap({
       left: `${h.sourceTooltip.x}px`, top: `${h.sourceTooltip.y}px`,
     })}>${sourceRangeLabel(h, h.sourceTooltip.tile)}</p>` : nothing}
-    ${h.accessibleCells ? html`<p>${windowLabel}</p><div part="source-exact-window" role="grid" aria-label=${h.getAttribute('aria-label') || windowLabel}
+    ${h.accessibleCells ? html`<p>${windowLabel}</p><div part="source-exact-window" role="grid" aria-label=${normalizeLabel(h.getAttribute('aria-label')) ?? windowLabel}
       aria-rowcount=${controller.rows} aria-colcount=${controller.cols} tabindex=${entry ? '-1' : '0'} data-source-entry @keydown=${(e: KeyboardEvent) => sourceKeydown(h, e)}>
       ${rows.map(row => html`<div role="row" aria-rowindex=${row + 1}>${cells.filter(cell => cell.row === row).map(cell => html`<div role="gridcell" aria-colindex=${cell.col + 1} aria-selected=${String(h.multiple ? h.sourceSelectedKeys.has(`${cell.row}:${cell.col}`) : h.selectedCell?.row === cell.row && h.selectedCell.col === cell.col)}><button part="cell" data-source-row=${cell.row} data-source-col=${cell.col}
         ?disabled=${!presentation.get(cell)?.interactive} style=${styleMap({ backgroundColor: presentation.get(cell)?.color })}

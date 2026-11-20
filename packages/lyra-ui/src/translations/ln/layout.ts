@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Tia kobalusa na kimya',
   carouselResumeRotation: 'Kobaluka lisusu',
   carouselViewport: 'Bililingi',
-  scrollerLabel: 'Makambo oyo ekoki kotambwisama',
   scrollPrevious: 'Kende na nsima',
   scrollNext: 'Kende liboso',
   closeNavigation: 'Kanga nzela ya kotambola',

@@ -5,6 +5,8 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { ApprovalAction } from './agent-tools/approval-state.js';
+export type { ApprovalWaitUntil } from '../internal/approval-wait-until.js';
 export * from './agent-tools/tool-timeline/tool-timeline.class.js';
 import './lr-tool-call-chip.js';
 import './lr-details.js';

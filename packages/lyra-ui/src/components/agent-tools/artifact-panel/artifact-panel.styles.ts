@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -145,6 +145,9 @@ export const styles = css`
     flex: 1 1 auto;
     padding: var(--lr-space-m);
     overflow: auto;
+  }
+  [part='body']:focus-visible {
+    ${focusRingInset}
   }
   [part='body'][aria-busy='true'] {
     position: relative;

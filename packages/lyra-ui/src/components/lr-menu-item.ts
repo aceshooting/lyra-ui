@@ -1,3 +1,4 @@
+export type { MenuFocusTarget } from './layout/menu/menu-shared.js';
 export * from './layout/menu/menu-item.class.js';
 import { LyraMenuItem } from './layout/menu/menu-item.class.js';
 import { defineElement } from '../internal/prefix.js';

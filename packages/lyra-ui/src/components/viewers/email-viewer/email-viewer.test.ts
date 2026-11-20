@@ -39,6 +39,7 @@ expectLocaleFallback('ar', [
   'emailViewerSubject',
   'emailViewerTo',
   'loadingDocument',
+  'scrollerLabel',
 ]);
 
 const SAMPLE_EML = [
@@ -1990,7 +1991,7 @@ it('keeps wide preformatted content horizontally scrollable', async () => {
   } finally { restore(); }
 });
 
-it('makes an overflowing message body keyboard scrollable with its current name', async () => {
+it('makes an overflowing message body keyboard scrollable without repeating the viewer name', async () => {
   const { el, restore } = await loaded(TEXT_EML.replace('See you at noon.', Array.from({ length: 50 }, () => 'Message text').join('\r\n')));
   try {
     el.maxHeight = '64px';
@@ -1998,10 +1999,11 @@ it('makes an overflowing message body keyboard scrollable with its current name'
     await el.updateComplete;
     const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     await waitUntil(() => body.tabIndex === 0);
-    expect(body.getAttribute('aria-label')).to.equal('Correspondence');
+    expect(body.getAttribute('aria-label')).to.equal('Scrollable content');
     el.name = 'Archive';
     await el.updateComplete;
-    expect(body.getAttribute('aria-label')).to.equal('Archive');
+    expect(body.getAttribute('aria-label')).to.equal('Scrollable content');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Archive');
   } finally { restore(); }
 });
 

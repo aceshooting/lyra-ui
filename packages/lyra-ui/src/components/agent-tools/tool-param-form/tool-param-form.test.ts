@@ -456,6 +456,22 @@ it('emits a cancelable lr-invalid alias and forwards its veto to the native inva
   expect(native.defaultPrevented).to.equal(true);
 });
 
+it('clears visited fields and revealed errors when a different schema is assigned', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  el.reportValidity();
+  await el.updateComplete;
+  expect(field(el, 'city').querySelector('[part="error"]') !== null).to.equal(true);
+  el.schema = { type: 'object', properties: { city: { type: 'string', title: 'Town' } }, required: ['city'] };
+  await el.updateComplete;
+  expect(field(el, 'city').querySelector('[part="error"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+  el.reportValidity();
+  await el.updateComplete;
+  el.schema = { type: 'object', properties: { city: { type: 'string', title: 'Town' } }, required: ['city'] };
+  await el.updateComplete;
+  expect(field(el, 'city').querySelector('[part="error"]') !== null, 'an identical rebuilt schema keeps the revealed error').to.equal(true);
+});
+
 it('does not render an inline error until the field has been visited (focusout)', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect((field(el, 'city').querySelector('[part="error"]')) === null).to.be.true;

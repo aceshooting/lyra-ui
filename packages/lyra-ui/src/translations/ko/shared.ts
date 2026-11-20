@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: '이 컴포넌트를 로드하지 못했습니다.',
   noData: '데이터가 없습니다.',
   legendTypeShown: '{label} 표시됨',
   legendTypeHidden: '{label} 숨김',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: '데이터를 불러올 수 없습니다.',
   zoomOut: '축소',
   zoomIn: '확대',
+  scrollerLabel: '스크롤 가능한 콘텐츠',
   clear: '지우기',
   open: '열기',
   close: '닫기',

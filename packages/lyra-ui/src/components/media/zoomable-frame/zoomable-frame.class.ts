@@ -1,8 +1,8 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -10,6 +10,7 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
@@ -294,7 +295,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * same-origin iframe document. Turning it off restores only the iframe state this component
    * changed; cross-origin access remains untouched. */
   @property({ type: Boolean, attribute: 'with-theme-sync', reflect: true }) withThemeSync = false;
-  /** Titles the iframe, like a host `aria-label` (an empty attribute stays empty); defaults to a
+  /** Titles the iframe, like a host `aria-label` (an empty or blank value uses the default); defaults to a
    * localized purpose title. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
@@ -851,13 +852,19 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     </div>`;
   }
 
+  constructor() {
+    super();
+    // A zoom button disables itself at its limit; focus moves to the other one.
+    repairControlFocusOnUpdate(this);
+  }
+
   override render(): TemplateResult {
     const generation = this.navigationGeneration;
     const navigationSignature = this.navigationSignature();
     const inline = this.hasInlineDocument;
     const src = inline ? null : safeZoomableFrameSrc(this.src);
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
-    const label = hostAriaLabel(this) ?? this.localize('zoomableFrameLabel');
+    const label = resolveAccessibleName(this, this.localize('zoomableFrameLabel'))!;
     const zoom = this.safeZoom;
     const frame = html`<iframe
       part="iframe"

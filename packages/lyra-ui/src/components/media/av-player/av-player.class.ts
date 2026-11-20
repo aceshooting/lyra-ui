@@ -9,6 +9,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTargetBase as DocumentAnchorTarget } from '../../../internal/anchor-target-base.js';
 import type {
@@ -34,7 +35,7 @@ import { formatMediaTime, withCurrentRate } from '../../../internal/media-time.j
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { createHaystackMemo, foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
-import { labelWithVisibleText } from '../../../internal/accessible-name.js';
+import { labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { styles } from './av-player.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
@@ -830,8 +831,17 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (refreshTranscript) this.refreshTranscriptRenderItem();
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('av-player', this.renderRoot) ?? this.childRegistration;
     if (changed.has('playbackRate')) {
       this.mediaController.playbackRate = this.playbackRate;
       if (changed.get('playbackRate') !== undefined) this.emit('lr-rate-change', { rate: this.playbackRate });
@@ -1478,7 +1488,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         data-tone=${h.tone ?? 'accent'}
         ?data-active=${this.activeHighlightId === h.id}
         style="--_lr-av-player-marker-start:${start}%;--_lr-av-player-marker-width:${end - start}%"
-        aria-label=${labelWithVisibleText(h.label || this.localize('viewerHighlightLabel'), this.markerRangeText(startSeconds, endSeconds))}
+        aria-label=${labelWithVisibleText(normalizeLabel(h.label) ?? this.localize('viewerHighlightLabel'), this.markerRangeText(startSeconds, endSeconds))}
         @click=${(event: MouseEvent) => {
           event.stopPropagation();
           this.onHighlightActivate(h.id, h.anchor.start);
@@ -1619,11 +1629,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   override render(): TemplateResult {
     const explicitHostLabel = hostAriaLabel(this);
-    const aggregateLabel = explicitHostLabel ?? (this.name || this.localize('avPlayerLabel'));
+    const aggregateLabel = explicitHostLabel ?? (normalizeLabel(this.name) ?? this.localize('avPlayerLabel'));
     const safeSrc = this.src ? safeMediaSrc(this.src) : null;
     const safePoster = this.poster ? safeMediaSrc(this.poster) : null;
     const kind = this.detectedKind();
-    const baseOwnsAggregate = explicitHostLabel === null && Boolean(this.name || (!safeSrc && this.src));
+    const baseOwnsAggregate = explicitHostLabel === null && Boolean(normalizeLabel(this.name) || (!safeSrc && this.src));
     const rateFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
     if (!safeSrc && this.src) {
       return html`<div

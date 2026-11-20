@@ -55,3 +55,19 @@ describe('scroll region', () => {
     expect(true).to.equal(true);
   });
 });
+
+describe('scroll region slotted content', () => {
+  it('re-measures when an element assigned to a child slot grows and can keep the own role', async () => {
+    const host = await fixture<HTMLElement>(html`<div><p style="margin:0;block-size:10px">a</p></div>`);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<aside style="display:block;block-size:40px;overflow:auto"><slot></slot></aside>';
+    const aside = root.querySelector('aside')!;
+    const dispose = makeScrollRegionFocusable(aside, 'Pane', { role: false });
+    expect(aside.hasAttribute('tabindex')).to.equal(false);
+    host.querySelector('p')!.style.blockSize = '200px';
+    await waitUntil(() => aside.getAttribute('tabindex') === '0', 'slotted growth is observed');
+    expect([aside.hasAttribute('role'), aside.getAttribute('aria-label')]).to.deep.equal([false, 'Pane']);
+    dispose();
+    expect(aside.hasAttribute('tabindex')).to.equal(false);
+  });
+});

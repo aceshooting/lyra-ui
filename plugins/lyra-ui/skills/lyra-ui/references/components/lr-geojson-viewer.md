@@ -62,7 +62,10 @@ unbroken values from widening a 320px allocation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`.
+`geojsonViewLabel` when unset; a whitespace-only `name` counts as unset). A nonempty host
+`aria-label` takes precedence over `name`: it names the map, and while the map does not own the
+landmark the host itself takes the `region` role through `ElementInternals` instead of a second
+named shadow region.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps `[part="base"]` —
 covering the loaded map, the serialized metadata, and the missing-peer fallback alike — by writing
 `--lr-geojson-viewer-max-height` inline on it; invalid CSS `max-height` values, declaration breaks,

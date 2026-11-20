@@ -1,4 +1,4 @@
-import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { resolveAccessibleName, normalizeLabel } from '../../../internal/accessible-name.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
@@ -443,7 +443,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
       >
         <div part="header">
           <div part="title">
-            <span part="tool-name" id=${this.titleId}>${this.toolName || this.localize('toolCall')}</span>
+            <span part="tool-name" id=${this.titleId}>${normalizeLabel(this.toolName) ?? this.localize('toolCall')}</span>
             <span part="status"
               >${toolStatusIcon(this.status)}<span
                 >${this.localize(TOOL_STATUS_LABEL_KEY[this.status])}</span

@@ -15,6 +15,7 @@ import { property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
@@ -282,17 +283,19 @@ interface ToolProjection {
  *   component resets. Only rendered while the field has text.
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-tool-select-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
- * @cssprop [--lr-tool-select-dialog-search-min-height=auto] - Minimum row height of the search
- *   field, for matching it to a themed search field of a chosen density tier. Point it at
- *   `--lr-form-control-height-s` (or any tier of that ladder) to line this field up with the rest
- *   of an application's controls.
- * @cssprop [--lr-tool-select-dialog-search-font-size=inherit] - Text size of the search field.
- * @cssprop [--lr-tool-select-dialog-search-padding-inline=var(--lr-space-m)] - Leading gutter of
- *   the search field. The trailing gutter is reserved for the overlaid clear button.
- * @cssprop [--lr-tool-select-dialog-search-padding-block=var(--lr-space-s)] - Block gutter of the
- *   search field.
- * @cssprop [--lr-tool-select-dialog-search-radius=var(--lr-radius)] - Corner radius of the search
- *   field.
+ * @cssprop [--lr-tool-select-dialog-search-min-height=var(--lr-form-control-height)] - Minimum
+ *   row height of the search field. Defaults to the shared form-control height, so it lines up with
+ *   the application's other controls; point it at another `--lr-form-control-height-*` tier to
+ *   pick a different density.
+ * @cssprop [--lr-tool-select-dialog-search-font-size=var(--lr-form-control-font-size)] - Text size
+ *   of the search field.
+ * @cssprop [--lr-tool-select-dialog-search-padding-inline=var(--lr-form-control-padding-inline)] -
+ *   Leading gutter of the search field. The trailing gutter is reserved for the overlaid clear
+ *   button.
+ * @cssprop [--lr-tool-select-dialog-search-padding-block=var(--lr-form-control-padding-block)] -
+ *   Block gutter of the search field.
+ * @cssprop [--lr-tool-select-dialog-search-radius=var(--lr-form-control-radius)] - Corner radius
+ *   of the search field.
  * @cssprop [--lr-tool-select-dialog-body-hover-outline-width=var(--lr-border-width-thin)] -
  *   Outline width of the mouse-hover preview on `[part="body"]`.
  * @cssprop [--lr-tool-select-dialog-body-hover-outline-style=solid] - Outline style of the
@@ -344,7 +347,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selectedToolIds']);
 
-  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles, srOnly];
+  static override styles = [LyraElement.styles, sizes, nativeModalCarrierStyles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-change-request',
     'lr-change',

@@ -14,13 +14,18 @@ import { styles } from './background-runs.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_backgroundRunsCancelFor, LYRA_DEFAULT_backgroundRunsEmpty, LYRA_DEFAULT_backgroundRunsLabel, LYRA_DEFAULT_backgroundRunsLimit, LYRA_DEFAULT_backgroundRunsOpenFor, LYRA_DEFAULT_backgroundRunsStatusCompleted, LYRA_DEFAULT_backgroundRunsStatusFailed } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_backgroundRunsCancelFor, LYRA_DEFAULT_backgroundRunsEmpty, LYRA_DEFAULT_backgroundRunsLabel, LYRA_DEFAULT_backgroundRunsLimit, LYRA_DEFAULT_backgroundRunsOpenFor, LYRA_DEFAULT_backgroundRunsStatusCompleted, LYRA_DEFAULT_backgroundRunsStatusFailed } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_open, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type BackgroundRunStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+/** `queued`, `running`, `collecting` and the two `waiting-*` states are active (cancellable);
+ *  `completed`, `failed` and `cancelled` are terminal. The active set matches `AgentStatusKind`. */
+export type BackgroundRunStatus =
+  | 'queued' | 'running' | 'collecting' | 'waiting-input' | 'waiting-approval'
+  | 'completed' | 'failed' | 'cancelled';
 
 /** Host-owned state for one background run. Status is display-only and never inferred or mutated. */
 export interface BackgroundRun {
@@ -39,16 +44,19 @@ export interface LyraBackgroundRunsEventMap {
 }
 
 const MAX_RENDERED_RUNS = 100;
-const STATUSES: readonly BackgroundRunStatus[] = ['queued', 'running', 'completed', 'failed', 'cancelled'];
+const STATUSES: readonly BackgroundRunStatus[] = ['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval', 'completed', 'failed', 'cancelled'];
 const STATUS_LABEL_KEY: Record<NormalizedRun['status'], string> = {
   queued: 'agentRunStatusQueued',
   running: 'statusRunning',
+  collecting: 'agentRunStatusCollecting',
+  'waiting-input': 'agentRunStatusWaitingInput',
+  'waiting-approval': 'agentRunStatusWaitingApproval',
   completed: 'backgroundRunsStatusCompleted',
   failed: 'backgroundRunsStatusFailed',
   cancelled: 'agentRunStatusCancelled',
   unknown: 'statusUnknown',
 };
-const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['queued', 'running']);
+const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval']);
 
 /**
  * `<lr-background-runs>` — a bounded, controlled list of background run states. Open and eligible
@@ -59,9 +67,14 @@ const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['que
  *
  * @customElement lr-background-runs
  * @event lr-run-activate - A run was requested for opening. `detail: { runId }`.
- * @event lr-run-cancel - A queued or running run was requested for cancellation. `detail: { runId }`.
+ * @event lr-run-cancel - An active (queued, running, collecting or waiting) run was requested for cancellation. `detail: { runId }`.
  *   Terminal or missing runs cannot emit this event.
  * @csspart base - The fieldset and group.
+ * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every
+ *   fieldset panel of this family, so one declaration retunes them together.
+ * @cssprop [--lr-panel-frame-border-color=var(--lr-color-border)] - Border colour of `[part='base']`.
+ * @cssprop [--lr-panel-frame-radius=var(--lr-radius-xs)] - Corner radius of `[part='base']`.
+ * @cssprop [--lr-panel-frame-padding=var(--lr-space-s)] - Padding of `[part='base']`.
  * @csspart legend - The visible component label.
  * @csspart list - The run rows.
  * @csspart run - One run row, keyed by `data-run-id`.
@@ -71,7 +84,7 @@ const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['que
  * @csspart status - The localized controlled status.
  * @csspart actions - The open and optional cancel buttons.
  * @csspart open - The native open button.
- * @csspart cancel - The native cancel button, present only for queued/running runs.
+ * @csspart cancel - The native cancel button, present only for active runs.
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid runs are supplied.
  * @status experimental
@@ -83,7 +96,10 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     agentRunStatusCancelled: LYRA_DEFAULT_agentRunStatusCancelled,
+    agentRunStatusCollecting: LYRA_DEFAULT_agentRunStatusCollecting,
     agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
+    agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
+    agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
     backgroundRunsCancelFor: LYRA_DEFAULT_backgroundRunsCancelFor,
     backgroundRunsEmpty: LYRA_DEFAULT_backgroundRunsEmpty,
     backgroundRunsLabel: LYRA_DEFAULT_backgroundRunsLabel,
@@ -108,6 +124,12 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
   @property() label?: string;
   /** Disables all run actions. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded panel; `'plain'` removes the border, fill, padding and
+   *  corner radius, so a panel nested in a container that already draws a border (a transcript
+   *  bubble, a card) does not double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private dispatchingRequest = false;
   private focusedRow?: Element | null;
@@ -243,8 +265,10 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
     const rendered = runs.slice(0, MAX_RENDERED_RUNS);
     const visibleLabel = this.label == null ? this.localize('backgroundRunsLabel') : this.label;
     const hostLabel = hostAriaLabel(this);
+    // The legend names the fieldset; a blank legend with no host name falls back to the localized default.
+    const groupName = normalizeLabel(hostLabel) ?? (normalizeLabel(visibleLabel) === undefined ? this.localize('backgroundRunsLabel') : undefined);
     return html`
-      <fieldset part="base" aria-label=${hostLabel === null ? nothing : hostLabel} ?disabled=${this.disabled}>
+      <fieldset part="base" aria-label=${groupName ?? nothing} ?disabled=${this.disabled}>
         <legend part="legend">${visibleLabel}</legend>
         ${runs.length === 0
           ? html`<p part="empty" tabindex="-1">${this.localize('backgroundRunsEmpty')}</p>`

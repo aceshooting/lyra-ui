@@ -92,6 +92,8 @@ still be appended. Closed listboxes contain no option rows after their exit tran
 labels and free-text behavior remain available.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
+`topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open listbox in the
+browser top layer, with the same contract as `<lr-model-select>`'s `top-layer`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
 affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,

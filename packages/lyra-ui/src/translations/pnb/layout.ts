@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'گھماؤ روکو',
   carouselResumeRotation: 'گھماؤ دوبارہ شروع کرو',
   carouselViewport: 'سلائیڈاں',
-  scrollerLabel: 'سکرول ہو سکّن والا مواد',
   scrollPrevious: 'پچھے سکرول کرو',
   scrollNext: 'اگے سکرول کرو',
   closeNavigation: 'راہنمائی بند کرو',

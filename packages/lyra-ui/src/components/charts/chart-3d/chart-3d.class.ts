@@ -38,10 +38,11 @@ import {
 } from './chart-3d-data.js';
 import { Chart3dEngineController } from './chart-3d-engine.js';
 import { styles } from './chart-3d.styles.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart3dCategory, LYRA_DEFAULT_chart3dEmpty, LYRA_DEFAULT_chart3dFit, LYRA_DEFAULT_chart3dInstructions, LYRA_DEFAULT_chart3dLabel, LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chart3dRow, LYRA_DEFAULT_chart3dSize, LYRA_DEFAULT_chart3dXAxis, LYRA_DEFAULT_chart3dYAxis, LYRA_DEFAULT_chart3dZAxis } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -172,11 +173,14 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     model: LYRA_DEFAULT_model,
+    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -625,6 +629,12 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
       <span>${this.localize('paginationApplied', undefined, { page: this.format(page.page + 1), totalPages: this.format(page.pageCount) })}</span>
       <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${() => this.moveCursor((page.page + 1) * LARGE_DATA_PAGE_SIZE, rows)}>${this.localize('next')}</button>
     </div>`;
+  }
+
+  constructor() {
+    super();
+    // A page button that reaches the first or last page disables itself; focus moves to the other.
+    repairControlFocusOnUpdate(this);
   }
 
   protected override render(): TemplateResult {

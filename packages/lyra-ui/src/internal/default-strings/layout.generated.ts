@@ -50,7 +50,6 @@ export const LYRA_DEFAULT_resizeValuePercent: LyraMessage = '{value} percent';
 export const LYRA_DEFAULT_responsivePanel: LyraMessage = 'Panel';
 export const LYRA_DEFAULT_scrollNext: LyraMessage = 'Scroll forward';
 export const LYRA_DEFAULT_scrollPrevious: LyraMessage = 'Scroll backward';
-export const LYRA_DEFAULT_scrollerLabel: LyraMessage = 'Scrollable content';
 export const LYRA_DEFAULT_skipToContent: LyraMessage = 'Skip to content';
 export const LYRA_DEFAULT_stepperStateCompleted: LyraMessage = 'Completed';
 export const LYRA_DEFAULT_stepperStateError: LyraMessage = 'Error';

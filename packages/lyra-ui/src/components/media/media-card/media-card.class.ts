@@ -291,14 +291,16 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   private get imgAlt(): string {
     // `??`, not `||`: `alt=""` is the HTML idiom for a decorative image, and collapsing it into
     // the unset case made that impossible to express -- every image got a generated description.
-    return this.alt ?? (this.filename || this.localize('mediaCardImageAttachment'));
+    return this.alt === ''
+      ? ''
+      : normalizeLabel(this.alt) ?? normalizeLabel(this.filename) ?? this.localize('mediaCardImageAttachment');
   }
 
   private get videoLabel(): string {
     // Deliberately `||` where `imgAlt` uses `??`. This is the `<video>`'s aria-label, and an
     // empty accessible name does not mark a player decorative -- it leaves an interactive control
     // unnamed, the same failure the class doc rules out for an explicitly empty host name.
-    return this.alt || this.filename || this.localize('mediaCardVideoAttachment');
+    return normalizeLabel(this.alt) ?? normalizeLabel(this.filename) ?? this.localize('mediaCardVideoAttachment');
   }
 
   /** Per-instance override for `--lr-media-card-max-height`, applied

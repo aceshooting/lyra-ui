@@ -120,7 +120,10 @@ unset or non-finite values restore 500. `activeSpanId: string | null = null`
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
-reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
+reaching `Intl.NumberFormat`. Counts of 100,000 or more render in locale compact notation
+(`1.2M`); the duration, token and cost columns are fixed tracks shared by every row, so a longer
+value (a long `costText`) is ellipsized with its full text on `title`. The row's accessible name
+always carries the exact figures. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
 identity, then at most `maxNodes` mount. The controlled `activeSpanId` and its nearest resolvable

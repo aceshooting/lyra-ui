@@ -12077,6 +12077,16 @@
             "default": false
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -12106,6 +12116,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -12206,7 +12226,32 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-panel-frame-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-panel-frame-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-panel-frame-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-panel-frame-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -29669,6 +29714,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "language",
             "property": "language",
             "type": "string",
@@ -30016,6 +30071,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -36239,6 +36304,16 @@
             "default": false
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -36278,6 +36353,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -36389,6 +36474,30 @@
             "name": "--lr-decision-positive-color",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-panel-frame-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-panel-frame-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-panel-frame-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-panel-frame-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
           }
         ],
         "cssStates": [],
@@ -94431,6 +94540,16 @@
             "default": true
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -94681,6 +94800,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",
@@ -103159,6 +103288,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "length",
             "property": "length",
             "type": "number",
@@ -103427,6 +103566,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -107289,6 +107438,16 @@
             "default": false
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -107357,6 +107516,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -107477,6 +107646,30 @@
             "name": "--lr-decision-positive-color",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-panel-frame-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-panel-frame-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-panel-frame-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-panel-frame-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
           }
         ],
         "cssStates": [],
@@ -107542,6 +107735,16 @@
             "default": false
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -107581,6 +107784,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -107688,6 +107901,30 @@
             "name": "--lr-decision-legend-font-size",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-panel-frame-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-panel-frame-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-panel-frame-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-panel-frame-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
           }
         ],
         "cssStates": [],
@@ -118940,6 +119177,12 @@
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-radio-select-request",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -119726,6 +119969,12 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-radio-select-request",
+            "type": "CustomEvent<{ checked: boolean; value: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -120718,6 +120967,12 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-radio-group-select-request",
+            "type": "CustomEvent<LyraRadioGroupSelectRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -132109,6 +132364,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -132196,6 +132461,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "locale",
@@ -133044,6 +133319,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -133392,6 +133677,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -158681,31 +158976,31 @@
             "name": "--lr-tool-select-dialog-search-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "inherit"
+            "default": "var(--lr-form-control-font-size)"
           },
           {
             "name": "--lr-tool-select-dialog-search-min-height",
             "deprecated": null,
             "hasDefault": true,
-            "default": "auto"
+            "default": "var(--lr-form-control-height)"
           },
           {
             "name": "--lr-tool-select-dialog-search-padding-block",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-s)"
+            "default": "var(--lr-form-control-padding-block)"
           },
           {
             "name": "--lr-tool-select-dialog-search-padding-inline",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "default": "var(--lr-form-control-padding-inline)"
           },
           {
             "name": "--lr-tool-select-dialog-search-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-form-control-radius)"
           }
         ],
         "cssStates": [],
@@ -165885,6 +166180,16 @@
             "default": true
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -166145,6 +166450,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",

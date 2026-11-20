@@ -61,8 +61,9 @@ state (a built-in sentence is used when empty); `target: string = '_blank'` and 
 
 Writing `src`, `name`, `mimeType` or `format` invalidates the current load synchronously: the
 in-flight request is aborted and the engine is disposed before Lit updates, so a stale response can
-never publish. A host `aria-label` (by presence, an explicitly empty one included) names the region
-and the camera surface; otherwise `name`, then the localized `3D model` label, does.
+never publish. A nonempty host `aria-label` makes the host the named `region` (through `ElementInternals`) and
+the shadow region drops its role and name; an explicitly empty host label keeps the shadow region
+with an empty name; otherwise `name`, then the localized `3D model` label, names the shadow region.
 
 `LyraModelCamera` is `{ yaw, pitch, distance, target: { x, y, z } }`, the orbit camera the engine and
 `lr-graph` share. Assignment copies own data fields only (accessors never run), requires finite

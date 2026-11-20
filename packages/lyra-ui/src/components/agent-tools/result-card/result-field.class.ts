@@ -1,4 +1,5 @@
 import type { PropertyValues } from 'lit';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -65,11 +66,12 @@ export class LyraResultField extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const hasLabel = (this.label ?? '').length > 0;
+    const label = normalizeLabel(this.label);
+    const hasLabel = label !== undefined;
     return html`
       <div part="base">
         ${hasLabel
-          ? html`<span part="label">${this.localize('resultFieldLabel', undefined, { label: this.label })}</span>`
+          ? html`<span part="label">${this.localize('resultFieldLabel', undefined, { label })}</span>`
           : nothing}
         <span part="value"><slot ?hidden=${!this.hasValueSlot} @slotchange=${this.onSlotChange}></slot>${this
           .hasValueSlot ? nothing : this.value}</span>

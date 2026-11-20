@@ -425,7 +425,7 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('keeps host naming on the host while every nested playback control owns its purpose name', async () => {
+it('makes a named host the playback group while every nested playback control owns its purpose name', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="3" aria-label="Timeline playback"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
@@ -434,6 +434,9 @@ it('keeps host naming on the host while every nested playback control owns its p
   const position = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
 
   expect(el.getAttribute('aria-label')).to.equal('Timeline playback');
+  // The host name reaches a real role owner: the host is the group, the shadow base stays bare.
+  const internals = (el as unknown as { semanticInternals: ElementInternals }).semanticInternals;
+  expect(internals.role).to.equal('group');
   expect(base.hasAttribute('role')).to.equal(false);
   expect(base.hasAttribute('aria-label')).to.equal(false);
   expect(button.getAttribute('aria-label')).to.equal('Play');
@@ -442,6 +445,7 @@ it('keeps host naming on the host while every nested playback control owns its p
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
+  expect(internals.role).to.equal(null);
   expect(el.hasAttribute('aria-label')).to.equal(true);
   expect(el.getAttribute('aria-label')).to.equal('');
   expect(base.hasAttribute('role')).to.equal(false);

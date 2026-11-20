@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Kò sí ìwò tí a dá sílẹ̀ láti fi hàn.',
   genViewInvalid: 'A kò lè fi ìwò tí a dá sílẹ̀ yìí hàn.',
   genViewLoading: 'Ó ń gbé ẹ̀yà wọlé…',
-  genViewLoadFailed: 'A kò lè gbé ẹ̀yà yìí wọlé.',
   genViewInvalidState: 'A kò lè lo iye pápá yìí.',
   genViewActionDenied: 'Ìṣe yìí kò sí lárọ̀ọ́wọ́tó.',
   genViewConfirmationRequired: 'Ìṣe yìí nílò ìmúdájú láti inú ohun èlò náà.',

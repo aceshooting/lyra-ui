@@ -1,4 +1,5 @@
 import { literalSetConverter } from '../../../internal/converters.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -40,7 +41,7 @@ export class LyraDivider extends LyraElement {
       part="base"
       role="separator"
       aria-orientation=${orientation}
-      aria-label=${this.getAttribute('aria-label') || nothing}
+      aria-label=${normalizeLabel(this.getAttribute('aria-label')) ?? nothing}
     >`;
   }
 }

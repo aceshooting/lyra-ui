@@ -38,11 +38,17 @@ it('replaces a failed lazy citation registration with a localized, settled fallb
     await el.updateComplete;
     expect(attempts).to.equal(1);
     expect(errors.length).to.equal(1);
+    const parent = el.parentNode!;
+    const retried = oneEvent(el, 'lr-render-error');
+    el.remove();
+    parent.append(el);
+    await retried;
+    expect(errors.length, 'a reconnect retries the failed registration').to.equal(2);
     el.renderPart = part => part.type === 'citation' ? html`<a href="#source">Source details</a>` : undefined;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('a')?.textContent).to.equal('Source details');
     expect(el.shadowRoot!.querySelectorAll('[aria-busy]').length).to.equal(0);
-    expect(errors.length).to.equal(1);
+    expect(errors.length).to.equal(2);
   } finally {
     customElements.define = original;
   }

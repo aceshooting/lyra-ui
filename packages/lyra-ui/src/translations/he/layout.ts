@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'השהה את הסיבוב',
   carouselResumeRotation: 'המשך את הסיבוב',
   carouselViewport: 'שקופיות',
-  scrollerLabel: 'תוכן שניתן לגלול',
   scrollPrevious: 'גלול אחורה',
   scrollNext: 'גלול קדימה',
   closeNavigation: 'סגור ניווט',

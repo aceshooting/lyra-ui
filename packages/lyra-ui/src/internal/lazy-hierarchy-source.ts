@@ -1,6 +1,7 @@
 import type * as HierarchySourceControllerModule from './hierarchy-source-controller.js';
 import type * as HierarchySourceViewModule from './hierarchy-source-view.js';
 import type * as HierarchySummarySourceModule from './hierarchy-summary-source.js';
+import { DEV_DIAGNOSTICS, devWarn } from './dev-warning.js';
 
 /** The provider controller, virtualized view and summary adapter a source-mode host renders with. */
 export interface HierarchySourceRuntime {
@@ -91,7 +92,8 @@ export class HierarchySourceRuntimeGate {
     let runtime: HierarchySourceRuntime;
     try {
       runtime = await loadHierarchySourceRuntime(this.registerElements);
-    } catch {
+    } catch (error) {
+      if (DEV_DIAGNOSTICS) devWarn(`Lyra: the source runtime for <${(host as Partial<Element>).localName ?? 'host'}> could not be loaded; the next request retries it. ${String(error)}`);
       return undefined;
     }
     this.loaded = runtime;

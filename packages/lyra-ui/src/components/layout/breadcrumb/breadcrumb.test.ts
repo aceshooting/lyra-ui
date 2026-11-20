@@ -111,7 +111,7 @@ it("treats an explicitly empty accessibleLabel/label property as a real override
   el.accessibleLabel = undefined;
   el.label = "";
   await el.updateComplete;
-  expect(nav()).to.equal("");
+  expect(nav()).to.equal("Breadcrumb");
 });
 
 it("distributes the breadcrumb-level separator slot to every item", async () => {

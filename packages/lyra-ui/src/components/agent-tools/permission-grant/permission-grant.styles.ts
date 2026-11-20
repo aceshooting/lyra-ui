@@ -1,5 +1,5 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
-import { panelFrame } from '../../../internal/panel-frame.styles.js';
+import { panelFrame, panelFramePlain } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -10,8 +10,6 @@ export const styles = css`
 
   [part='base'] {
     ${panelFrame}
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
   }
 
   [part='legend'] {
@@ -75,4 +73,6 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
   }
+
+  ${panelFramePlain}
 `;

@@ -14,6 +14,7 @@ import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { viewerHostRole } from '../viewer-semantic-owner.js';
 const GEOJSON_URL = 'https://example.test/zones.geojson';
 
 const FEATURE_COLLECTION = {
@@ -765,13 +766,13 @@ describe('child map camera', () => {
 });
 
 describe('aria-label forwarding', () => {
-  it('forwards a host aria-label to [part="base"], winning over the localized default', async () => {
+  it('makes a host named by aria-label the region instead of copying the name to [part="base"]', async () => {
     const el = (await fixture(
       html`<lr-geojson-viewer aria-label="Zones"></lr-geojson-viewer>`
     )) as LyraGeoJsonViewer;
-    expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
-    ).to.equal('Zones');
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect([base.getAttribute('role'), base.getAttribute('aria-label')]).to.deep.equal([null, null]);
+    expect(viewerHostRole(el)).to.equal('region');
   });
 
   it('names the region with the localized default when name is whitespace only', async () => {
@@ -790,8 +791,9 @@ describe('aria-label forwarding', () => {
       ></lr-geojson-viewer>`
     )) as LyraGeoJsonViewer;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('aria-label')).to.equal('Zones');
-    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(base.getAttribute('role')).to.equal(null);
+    expect(viewerHostRole(el)).to.equal('region');
   });
 
   it('forwards the host aria-label to the nested map role owner', async () => {
@@ -861,8 +863,9 @@ describe('aria-label forwarding', () => {
       map?: { getCanvas(): HTMLCanvasElement };
     };
     expect(map.map === undefined).to.equal(true);
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Host zones');
+    // Until the map owns the landmark, the named host is the region; the base never copies its name.
+    expect(base.getAttribute('aria-label')).to.not.equal('Host zones');
+    expect(viewerHostRole(el)).to.equal('region');
 
     const mapLoad = oneEvent(map, 'lr-map-load');
     await useDeterministicMapStyle(el);
@@ -871,6 +874,7 @@ describe('aria-label forwarding', () => {
 
     expect(base.getAttribute('role')).to.equal(null);
     expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(viewerHostRole(el)).to.equal(null);
     expect(map.map!.getCanvas().getAttribute('role')).to.equal('region');
     expect(map.map!.getCanvas().getAttribute('aria-label')).to.equal(
       'Host zones'

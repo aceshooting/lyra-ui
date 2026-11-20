@@ -1,10 +1,11 @@
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { normalizeImageZoom } from '../../../internal/image-zoom.js';
@@ -14,6 +15,7 @@ import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fi
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './pan-zoom.styles.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
@@ -141,7 +143,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
   @property() src = '';
   @property() alt = '';
-  /** Names the focusable viewport, like a host `aria-label`; defaults to a localized purpose name. */
+  /** Names the focusable viewport, like a host `aria-label` (an empty or blank value uses the default); defaults to a localized purpose name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private get safeMinZoom(): number {
@@ -234,11 +236,17 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     }
   };
 
+  constructor() {
+    super();
+    // A zoom button disables itself at its limit; focus moves to the remaining controls.
+    repairControlFocusOnUpdate(this, () => [this.renderRoot.querySelector<HTMLElement>('[part="viewport"]')]);
+  }
+
   override render(): TemplateResult {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
-    const viewportLabel = hostAriaLabel(this) ?? this.localize('zoomableFrameLabel');
+    const viewportLabel = resolveAccessibleName(this, this.localize('zoomableFrameLabel'))!;
     const safeSrc = safeMediaSrc(this.src);
     return html`<div part="base">
       <div

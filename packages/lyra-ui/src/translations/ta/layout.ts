@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'சுழற்சியை இடைநிறுத்து',
   carouselResumeRotation: 'சுழற்சியைத் தொடர்',
   carouselViewport: 'ஸ்லைடுகள்',
-  scrollerLabel: 'உருட்டக்கூடிய உள்ளடக்கம்',
   scrollPrevious: 'பின்னோக்கி உருட்டு',
   scrollNext: 'முன்னோக்கி உருட்டு',
   closeNavigation: 'வழிசெலுத்தலை மூடு',

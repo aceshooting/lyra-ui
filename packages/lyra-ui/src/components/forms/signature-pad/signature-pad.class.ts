@@ -1,3 +1,4 @@
+import type { LyraLabelDisplay } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
@@ -167,6 +168,13 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
 
   /** Visible label, before the `label` slot. */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   /** Hint text, before the `hint` slot. */
   @property() hint = '';
   /** Error text, before the `error` slot. */

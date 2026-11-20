@@ -1,3 +1,4 @@
+export type { TimeHourFormat } from './forms/input/time-input-shared.js';
 export * from './forms/input/time-input.class.js';
 import { LyraTimeInput } from './forms/input/time-input.class.js';
 import { defineElement } from '../internal/prefix.js';

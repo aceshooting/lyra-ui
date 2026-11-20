@@ -1,4 +1,5 @@
 import { emitValueEvents } from '../../../internal/value-events.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -73,7 +74,7 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  * @slot - Label text, rendered next to the track. Clicking it toggles the
  * switch, the same as clicking a checkbox's associated `<label>`. If left
  * empty, set `aria-label` on the host so the control still has an accessible name. Host
- * `aria-label` is forwarded by presence, including an explicitly empty value.
+ * `aria-label` is forwarded by presence, including an explicitly empty value; a whitespace-only one is ignored.
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
@@ -356,6 +357,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
       errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
     });
     const describedBy = supporting.describedBy;
+    const hostName = hostAriaLabel(this);
     const invalid = supporting.hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
@@ -369,8 +371,8 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-            aria-label=${this.getAttribute('aria-label') ?? nothing}
-            aria-labelledby=${this.hasAttribute('aria-label') ? nothing : 'switch-label'}
+            aria-label=${hostName ?? nothing}
+            aria-labelledby=${hostName !== null ? nothing : 'switch-label'}
             aria-describedby=${describedBy || nothing}
             @keydown=${this.onKeyDown}
             @focus=${this.onFocus}

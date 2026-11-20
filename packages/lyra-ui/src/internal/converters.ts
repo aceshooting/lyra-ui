@@ -158,6 +158,20 @@ export function declaredDefaultConverter<T extends string | number>(
 }
 
 /**
+ * Number attribute whose blank value (absent, empty or whitespace-only) yields `fallback` -- the
+ * declared default, or `null` for "unset" -- instead of the `0` that `Number('')` produces, so a
+ * framework binding that serializes an unset value as `""` keeps the default.
+ */
+export function blankNumberConverter<T extends number | null>(
+  fallback: T
+): ComplexAttributeConverter<number | T> {
+  return Object.freeze({
+    fromAttribute: (value: string | null): number | T => (value?.trim() ? Number(value) : fallback),
+    toAttribute: (value: number | T): number | T => value,
+  });
+}
+
+/**
  * Converter for a reflected boolean whose default is `true`.
  *
  * The non-default `false` value is serialized explicitly so declarative markup can distinguish it

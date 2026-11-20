@@ -20,6 +20,7 @@ import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type 
 import { fittedGraphCamera, graphCurvePoint, normalizeGraphCurvature, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, spatialNodePosition,
   type SpatialHit, type SpatialViewport, type SpatialWorldNode } from './graph-spatial.js';
 import { GraphBuiltin3dEngine, type GraphBuiltin3dFrame, type GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
+import { wheelZoomDelta, wheelZoomFactor } from '../../../internal/wheel-zoom.js';
 
 /** The scheduler's pending promise retains only cancellation authority, never a graph scene. */
 function yieldGraphNodeRendererTask(view: Window | null, signal: AbortSignal): Promise<void> {
@@ -897,8 +898,11 @@ export class GraphSpatialController {
   private readonly wheel = (event: WheelEvent): void => {
     const focused = activeElementIn(this.host.shadowRoot);
     if (this.selection.renderer === 'webgl' ? focused !== this.engineSurface : focused !== this.canvas && !this.gesture) return;
+    const delta = wheelZoomDelta(event, (event.currentTarget as Element | null)?.clientHeight ?? 0);
+    // A horizontal swipe carries no zoom and stays with the page.
+    if (delta === 0) return;
     event.preventDefault();
-    this.zoom(Math.exp(-finiteRange(event.deltaY, 0, -300, 300) * 0.002));
+    this.zoom(wheelZoomFactor(delta));
   };
   private readonly keyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
@@ -961,6 +965,11 @@ export class GraphSpatialController {
     const number = getNumberFormat(this.options.locale());
     const selectedNodes = selectedIds(this.host.selectedNodeIds), selectedEdges = selectedIds(this.host.selectedEdgeIds);
     const button = (action: string, label: string, callback: () => void) => html`<button type="button" part="spatial-control" data-spatial-action=${action} @click=${callback}>${label}</button>`;
+    // Same precedence as the 2D view (label first). A host aria-label already names the graph
+    // host, so the 3D surface then takes only its purpose name instead of a copy.
+    const canvasName = this.host.hasAttribute('aria-label')
+      ? messages['view3d']
+      : this.host.label ?? this.host.accessibleLabel ?? messages['view3d'];
     return html`<div part="base" class="spatial-base">
       <div part="spatial-toolbar" role="group" aria-label=${messages['controls']}>
         <button type="button" part="spatial-control" data-spatial-action="3d" aria-pressed=${String(!list)} @click=${() => this.changeView('3d')}>${messages['view3d']}</button>
@@ -973,7 +982,7 @@ export class GraphSpatialController {
       ${this.fallback ? html`<p part="engine-notice">${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).reason)} ${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).showing)}</p>` : nothing}
       ${this.enginePending ? html`<p part="loading">${this.options.engineMessage?.('engine3dLoading')}</p>` : nothing}
       ${this.host.view === '3d' && this.preference === 'webgl' ? html`<div data-webgl-host part="spatial-canvas" class="webgl-surface" ?hidden=${this.selection.renderer !== 'webgl'} tabindex="0" role="application" aria-roledescription=${messages['view3d']}
-        aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']} aria-describedby=${this.instructionsId} @keydown=${this.keyDown} @wheel=${this.wheel} @pointermove=${this.enginePointerMove}
+        aria-label=${canvasName} aria-describedby=${this.instructionsId} @keydown=${this.keyDown} @wheel=${this.wheel} @pointermove=${this.enginePointerMove}
         @pointerdown=${this.enginePointerDown}><canvas data-graph-labels aria-hidden="true"></canvas></div>` : nothing}
       ${list ? html`<div part="spatial-list" tabindex="-1" @keydown=${(event: KeyboardEvent) => { if (event.key === 'Escape') this.options.clearSelection(); }}>
         <ul aria-label=${messages['dataList']}>
@@ -995,7 +1004,7 @@ export class GraphSpatialController {
           <button type="button" part="spatial-control" data-spatial-action="next" ?disabled=${(this.page + 1) * PAGE_SIZE >= this.itemCount} @click=${() => this.changePage(1)}>${messages['next']}</button>
         </div>
       </div>` : html`<p part="spatial-instructions" id=${this.instructionsId}>${messages['instructions']}</p>
-        ${this.selection.renderer !== 'webgl' ? html`<canvas part="spatial-canvas" tabindex="0" role="application" aria-roledescription=${messages['view3d']} aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']}
+        ${this.selection.renderer !== 'webgl' ? html`<canvas part="spatial-canvas" tabindex="0" role="application" aria-roledescription=${messages['view3d']} aria-label=${canvasName}
           aria-describedby=${this.instructionsId} @pointerdown=${this.pointerDown} @pointermove=${this.pointerMove} @pointerup=${this.pointerUp}
           @pointercancel=${this.pointerCancel} @lostpointercapture=${this.pointerCancel} @pointerleave=${() => { if (!this.gesture) { this.cancelHover(); this.setHover(undefined); } }}
           @wheel=${this.wheel} @keydown=${this.keyDown} @dblclick=${(event: MouseEvent) => { const hit = this.hit(event.clientX, event.clientY); if (hit?.kind === 'node') this.options.expand(hit.id); }}

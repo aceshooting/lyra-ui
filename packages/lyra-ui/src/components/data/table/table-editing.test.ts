@@ -1262,3 +1262,19 @@ describe("editType: 'select'", () => {
     }
   });
 });
+
+it('names a persistent editor with the localized default when editLabel is blank or throws', async () => {
+  for (const editLabel of [() => '   ', () => { throw new Error('label'); }]) {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      { key: 'score', label: 'Score', editTrigger: 'always', editType: 'number', editValue: (r) => r.score, editLabel, cell: (r) => r.score },
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="cell-editor"]')].map((input) => input.getAttribute('aria-label') ?? '');
+    expect(labels.length).to.be.greaterThan(0);
+    expect(labels.filter((label) => label.trim() === '')).to.deep.equal([]);
+  }
+});

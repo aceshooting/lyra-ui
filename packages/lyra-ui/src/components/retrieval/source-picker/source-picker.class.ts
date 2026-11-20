@@ -1,4 +1,5 @@
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -692,14 +693,13 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     // A JS-only accessibleLabel names the inner picker while the host attribute names the host.
     const hostLabel = this.getAttribute('aria-label');
     const label =
-      hostLabel === null
-        ? this.accessibleLabel ??
-          (this.label == null
-            ? this.localize('sourceListDefaultLabel')
-            : this.label)
-        : this.label != null && this.label !== hostLabel
-        ? this.label
-        : this.localize('sourceListDefaultLabel');
+      normalizeLabel(
+        hostLabel === null
+          ? this.accessibleLabel ?? this.label
+          : this.label != null && this.label !== hostLabel
+          ? this.label
+          : null
+      ) ?? this.localize('sourceListDefaultLabel');
     const sourceModel = this.sourceModel;
     const selectedIds = this.normalizedSelectedSourceIds();
     const selectedIdSet = new Set(selectedIds);

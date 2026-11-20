@@ -455,7 +455,7 @@ it('forwards a JS-only accessibleLabel override onto the internal tree', async (
   ).to.not.equal('Grounding sources tree');
 });
 
-it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
+it('falls back to the localized tree name for an explicitly empty label', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
@@ -467,14 +467,14 @@ it('honors an explicitly empty label as genuinely empty, distinct from omitting 
 
   el.label = '';
   await el.updateComplete;
-  expect(tree().getAttribute('aria-label')).to.equal('');
+  expect(tree().getAttribute('aria-label')).to.equal('Sources');
 
   el.label = undefined;
   await el.updateComplete;
   expect(tree().getAttribute('aria-label')).to.equal('Sources');
 });
 
-it('honors an explicitly empty label as genuinely empty when the host already has an aria-label', async () => {
+it('falls back to the localized tree name for an empty label when the host already has an aria-label', async () => {
   const el = (await fixture(
     html`<lr-source-picker aria-label="Grounding sources"></lr-source-picker>`
   )) as LyraSourcePicker;
@@ -486,7 +486,7 @@ it('honors an explicitly empty label as genuinely empty when the host already ha
 
   el.label = '';
   await el.updateComplete;
-  expect(tree().getAttribute('aria-label')).to.equal('');
+  expect(tree().getAttribute('aria-label')).to.equal('Sources');
 
   el.label = undefined;
   await el.updateComplete;

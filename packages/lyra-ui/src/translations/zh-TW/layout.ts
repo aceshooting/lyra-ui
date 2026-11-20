@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: '暫停輪播',
   carouselResumeRotation: '繼續輪播',
   carouselViewport: '幻燈片',
-  scrollerLabel: '可滾動內容',
   scrollPrevious: '向前滾動',
   scrollNext: '向後滾動',
   closeNavigation: '關閉導航',

@@ -82,7 +82,19 @@ both prefixed aliases carry `{ value, option, radio }`. The committed `lr-change
 reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
-those events. Ownership is resolved synchronously, so immediate removal restores standalone
+those events. Before a user activation moves the selection, the group dispatches the cancelable
+`lr-radio-group-select-request` (`{ value, previousValue, option, radio }`, while `value` still
+holds the current selection), like the request events of `lr-checkbox-group` and
+`lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
+listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
+built-in commit. `lr-activate` still follows either way.
+
+```js
+group.addEventListener('lr-radio-group-select-request', (event) => {
+  if (event.detail.value === 'enterprise' && !confirm('Switch plan?')) event.preventDefault();
+});
+```
+ Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
 check fails; a consumer listening above the group does not receive a second prefixed alias from the

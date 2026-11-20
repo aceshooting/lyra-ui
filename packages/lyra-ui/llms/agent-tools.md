@@ -287,7 +287,8 @@ ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-v
 - `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
-- `clearToolRenderers(): void` — clears the default registry and its `load()` cache
+- `clearToolRenderers(): void` — clears the default registry and its `load()` cache; a reset for
+  test isolation or hot-module reload (mounted views keep their resolved renderer until they resolve again)
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:
@@ -631,11 +632,13 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
 `<lr-dialog>`/`<lr-tool-result-dialog>` read). `--lr-tool-select-dialog-search-min-height` (default
-`auto`), `--lr-tool-select-dialog-search-font-size` (default `inherit`),
-`--lr-tool-select-dialog-search-padding-inline` (default `var(--lr-space-m)`),
-`--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
-`--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
-the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+`var(--lr-form-control-height)`), `--lr-tool-select-dialog-search-font-size` (default
+`var(--lr-form-control-font-size)`), `--lr-tool-select-dialog-search-padding-inline` (default
+`var(--lr-form-control-padding-inline)`), `--lr-tool-select-dialog-search-padding-block` (default
+`var(--lr-form-control-padding-block)`) and `--lr-tool-select-dialog-search-radius` (default
+`var(--lr-form-control-radius)`) size the search field, so by default it follows the same
+form-control chain as `<lr-tool-param-form>`'s fields; point the height at another
+`--lr-form-control-height-*` tier to pick a different density. The trailing
 inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
 component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
 `--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
@@ -1277,7 +1280,9 @@ value-serialization failure.
 - `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false) — a
   detached, deeply frozen assignment snapshot, capped at 100 fields and required keys and 500 enum
   choices per field. Exceeding a cap keeps the bounded prefix but fails validation closed. Create
-  and reassign a new schema after changes; mutating the caller's prior object has no effect.
+  and reassign a new schema after changes; mutating the caller's prior object has no effect. A
+  structurally different schema starts a fresh form (visited fields and revealed errors clear, so a
+  same-named field stays quiet until touched); an identical rebuilt object keeps them.
 - `value: ToolParamFormValue = {}` (attribute: false) — a detached, deeply frozen assignment
   snapshot, capped at 10,000 entries per array/plain record, 50,000 total nodes, and 16 nested
   levels. Unsafe or oversized assignments fail serialization closed. Create and reassign a new
@@ -2252,7 +2257,10 @@ unset or non-finite values restore 500. `activeSpanId: string | null = null`
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
-reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
+reaching `Intl.NumberFormat`. Counts of 100,000 or more render in locale compact notation
+(`1.2M`); the duration, token and cost columns are fixed tracks shared by every row, so a longer
+value (a long `costText`) is ellipsized with its full text on `title`. The row's accessible name
+always carries the exact figures. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
 identity, then at most `maxNodes` mount. The controlled `activeSpanId` and its nearest resolvable
@@ -2511,6 +2519,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+The default entry registers the source pager the first time the results page a `dataSource`.
+
 Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
 between them. Detail toggles and other controls have their own Tab stops.
 
@@ -2593,9 +2603,11 @@ reflected) exposes its lifecycle. `withoutAutoExpandFailures: boolean = false`
 A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
 test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
-first-wins identity. Foreign runtime statuses normalize
-once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
-summary count and renders a label/glyph.
+first-wins identity. The vocabulary is deliberately a test runner's four outcomes: `error`,
+`timedOut` and `broken` count as `failed`, and every other runtime status — including the
+`pending`, `incomplete` and `cancelled` states of `lr-task-list`, `lr-research-progress` and the
+agent-run family — normalizes once to the localized neutral `skipped` state, so every accepted row
+contributes to one coherent summary count and renders a label/glyph.
 
 Legacy normalization retains the complete canonical input once with O(n) rows/indexes, yielding
 after at most 500 combined suite/test positions. It normalizes status once per corpus; filtering
@@ -4318,7 +4330,8 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+  selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `size` is
@@ -5184,6 +5197,14 @@ question.addEventListener('lr-question-response', event => {
 
 ## `lr-permission-rules`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 `lr-permission-rule-change-request` carries `{ ruleId, decision }`. Cancel it to suppress the subsequent `lr-permission-rule-change` notification.
 
 Set `--lr-decision-legend-font-size` to size the panel legend.
@@ -5240,6 +5261,14 @@ element.addEventListener('lr-permission-rule-change', (event) => {
 
 ## `lr-permission-grant`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
@@ -5282,12 +5311,22 @@ element.addEventListener('lr-permission-decision', (event) => {
 
 ## `lr-connector-manager`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-connector-manager` displays host-owned connector records and emits explicit requests through
 `lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A
 disconnected connector offers Connect, a connected connector offers Disconnect, an errored
-connector offers Retry, and a connecting connector has no available action. The component never
+connector offers Retry, and a connecting connector has no available action. A row whose `status`
+is outside that set (a newer server state) still renders, as a neutral localized "Unknown" status
+with no action, and a `kind` outside `'mcp' | 'connector'` simply omits the kind label. The component never
 reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
 that the host has already localized. Assign a new `.connectors` array after host updates; the
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
@@ -5297,7 +5336,7 @@ the next action appears.
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
-remains empty.
+remains empty visually, but the fieldset keeps the localized accessible name when the legend is blank.
 
 **CSS parts:**
 
@@ -5338,9 +5377,18 @@ element.addEventListener('lr-connector-action', (event) => {
 
 ## `lr-background-runs`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
-running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
+`collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
+buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
@@ -5349,8 +5397,10 @@ Tab enters the current row's actions. Up, Down, Home and End move between rows a
 same action when available. A narrow layout stacks status and actions below the run label.
 A polite announcement accompanies the first transition past the 100-row display limit.
 
-**Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
-`completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
+**Statuses and events:** the shared active `AgentStatusKind` states `collecting`, `waiting-input`
+and `waiting-approval` render with the agent-run labels and, like `queued` and `running`, offer
+Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
+`failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
 opening a run.
@@ -5369,12 +5419,12 @@ opening a run.
 | `status` | Localized controlled status. |
 | `actions` | Open and optional cancel controls. |
 | `open` | Native open button. |
-| `cancel` | Cancel button, present only for queued or running runs. |
+| `cancel` | Cancel button, present only for active (queued, running, collecting or waiting) runs. |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for active runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';

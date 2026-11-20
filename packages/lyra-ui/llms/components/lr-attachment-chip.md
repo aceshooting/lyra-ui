@@ -86,10 +86,10 @@ coalesce into one update.
   visible status, and the progress bar keeps its localized name
 - `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
   `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
-  localized default (`'Upload failed'` in English)
+  localized default (`'Upload failed'` in English); a blank or whitespace-only value does the same
 - `untitledLabel?: string` (attribute `untitled-label`) — fallback filename and tooltip when
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
-  localized default (`'Untitled file'` in English)
+  localized default (`'Untitled file'` in English); a blank or whitespace-only value does the same
 
 Attachment actions carry a stable id for the lifetime of each chip, including separate chips for
 the same file. Set `attachment-id` to preserve an application id across component replacement.

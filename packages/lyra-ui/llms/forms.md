@@ -102,7 +102,7 @@ unaffected, and an unset control renders exactly as before.
 
 It is one shared rule, so it is identical on `lr-checkbox-group`, `lr-radio-group`, `lr-select`, `lr-combobox`, `lr-input`,
 `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`,
-`lr-token-input`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
+`lr-token-input`, `lr-slider`, `lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
 `lr-time-zone-picker`, `lr-unit-picker`) and, in the conversation family, `lr-model-select` and
 `lr-voice-picker`. Prefer it to dropping `label`: a control with no label has no name. The attribute
 reflects, so `[label-display='hidden']` is also a styling hook.
@@ -1506,7 +1506,7 @@ purposes.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
-  override rather than restoring any fallback.
+  override rather than restoring any fallback; a whitespace-only value is ignored.
 - With `autoCommitSingleOption` set, a select with exactly one available option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the
@@ -2714,7 +2714,7 @@ until `<lr-icon>` is registered by something else.
   `href`
 
 The accessible name is the host `aria-label` (forwarded by presence, so an explicitly empty value
-stays empty), then `label`, then a name the slotted content already carries — visible text, an
+stays empty; whitespace-only is ignored), then `label`, then a name the slotted content already carries — visible text, an
 `aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
 Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
 rather than being empty — override it per instance with `.strings` or app-wide with
@@ -4804,7 +4804,7 @@ glyph itself.
 The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
 visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
 independently of whether that node contributes to the accessible name. A host `aria-label` wins by
-presence and is forwarded verbatim, including `aria-label=""`.
+presence and is forwarded, including `aria-label=""`; a whitespace-only one is ignored.
 
 The internal `role="checkbox"` exposes explicit stateful `aria-invalid`. Visible property/slotted
 error chrome makes it `"true"` immediately; otherwise it becomes true only after interaction while
@@ -5014,7 +5014,7 @@ validity fails.
   left empty, set `aria-label` on the host so the control still has an accessible name. Flattened
   forwarding-slot assignment and later mutations
   keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
-  it. A host `aria-label` wins by presence, including an explicitly empty value.
+  it. A host `aria-label` wins by presence, including an explicitly empty value; whitespace-only is ignored.
 - `hint` — custom hint content.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
@@ -5109,6 +5109,8 @@ checkbox and does not emit `lr-change`.
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
@@ -5186,7 +5188,7 @@ single numeric string entry.
 - `label: string = ''`, `hint: string = ''`, and `errorText: string = ''` (attribute `error-text`) —
   visible form context around the track, with matching rich `label`/`hint`/`error` slots. A host
   `aria-label` wins for the interactive accessible name by attribute presence, including an
-  explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
+  explicitly empty value (whitespace-only is ignored); range mode then suppresses `aria-labelledby` on its group owner as well.
   When error and hint content are both present, every handle's `aria-describedby` references the
   error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
   Every handle exposes `aria-invalid="true"` while error content is visible, and otherwise only after
@@ -5470,7 +5472,11 @@ native-style composed `change`, then `lr-change`; both aliases carry `{ checked,
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. A
 standalone radio also emits `lr-activate` (`{ value }`) on every activation, including a click on
-the radio that is already checked, after the value events when the selection moved. Standalone
+the radio that is already checked, after the value events when the selection moved. Before a
+standalone radio checks itself, it dispatches the cancelable `lr-radio-select-request`
+(`{ checked: true, value }`, while `checked` still reads `false`): `preventDefault()` leaves it
+unchecked with no value events, and a listener that writes `checked` itself suppresses the built-in
+commit; `lr-activate` still follows. Standalone
 radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
 others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
@@ -5483,7 +5489,7 @@ wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button
 from button appearance does not remove or rewrite the authored light-DOM content. Flattened
 forwarding-slot assignment and later mutations keep the visual label wrapper synchronized;
 element-only and visible `aria-hidden` decorations retain it. A host `aria-label` wins on the
-internal radio by presence, including `aria-label=""`.
+internal radio by presence, including `aria-label=""`; whitespace-only is ignored.
 
 A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
 LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.
@@ -5595,7 +5601,7 @@ respectively; either spelling can be used, and both spellings share one wrapper 
 The leading, label, and trailing wrappers are hidden independently while empty, so missing regions
 do not contribute dead flex gaps.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
-`aria-label=""`; it is not replaced by the visible default-slot text.
+`aria-label=""`; it is not replaced by the visible default-slot text. Whitespace-only is ignored.
 
 **CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
 `label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`
@@ -5649,6 +5655,8 @@ the only one of the set worth setting on this tag.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
@@ -5930,7 +5938,19 @@ both prefixed aliases carry `{ value, option, radio }`. The committed `lr-change
 reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
-those events. Ownership is resolved synchronously, so immediate removal restores standalone
+those events. Before a user activation moves the selection, the group dispatches the cancelable
+`lr-radio-group-select-request` (`{ value, previousValue, option, radio }`, while `value` still
+holds the current selection), like the request events of `lr-checkbox-group` and
+`lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
+listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
+built-in commit. `lr-activate` still follows either way.
+
+```js
+group.addEventListener('lr-radio-group-select-request', (event) => {
+  if (event.detail.value === 'enterprise' && !confirm('Switch plan?')) event.preventDefault();
+});
+```
+ Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
 check fails; a consumer listening above the group does not receive a second prefixed alias from the
@@ -6294,6 +6314,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
@@ -6872,7 +6894,8 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. ArrowUp/ArrowDown navigate results and Enter picks, while
+ArrowLeft/ArrowRight and Home/End keep moving the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
@@ -7855,7 +7878,7 @@ when `detail.value.length === 0`.
 - `appearance?: LyraToggleAppearance` (reflected, opt-in) — when set, overrides every owned toggle's
   appearance without rewriting it; unset leaves each toggle's own appearance in charge.
 - `label: string = ''` — accessible-name fallback when the host has no `aria-label` (the host
-  `aria-label` wins by presence, including an empty value).
+  `aria-label` wins by presence, including an empty value; a whitespace-only `label` is ignored).
 
 **Events:**
 
@@ -8396,6 +8419,8 @@ and skip invalid or duplicate rows. Pass the application's locale explicitly.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a

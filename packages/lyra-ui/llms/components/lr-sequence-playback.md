@@ -23,6 +23,10 @@ When fewer than two items are available, the disabled play button retains its re
 background under hover and press. Enabled playback controls retain their token-driven pointer
 feedback.
 
+A nonblank host `aria-label` names the playback controls as one group: the host takes the `group`
+role through `ElementInternals` (an author `role` attribute still wins), and each nested control
+keeps its own purpose name. A whitespace-only or empty host label leaves the host generic.
+
 **Properties:**
 
 - `itemCount: number = 0` (attribute `item-count`)

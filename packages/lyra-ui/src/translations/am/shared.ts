@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'ይህን ክፍል መጫን አልተቻለም።',
   noData: 'ምንም ውሂብ የለም',
   legendTypeShown: '{label} ታይቷል',
   legendTypeHidden: '{label} ተደብቋል',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'ውሂቡን መጫን አልተቻለም',
   zoomOut: 'አሳንስ',
   zoomIn: 'አሳድግ',
+  scrollerLabel: 'ሊሸበለል የሚችል ይዘት',
   clear: 'አጽዳ',
   open: 'ክፈት',
   close: 'ዝጋ',

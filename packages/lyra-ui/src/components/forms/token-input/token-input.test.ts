@@ -3336,3 +3336,9 @@ it('keeps the remove and edit focus rings inside the clipping token', async () =
     expectOutlineInsideClip(target, token);
   }
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-token-input max-tokens-visible=""></lr-token-input>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['maxTokensVisible'].map((key) => props[key])).to.deep.equal([200]);
+});

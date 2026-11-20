@@ -22,7 +22,7 @@ move, resize, collision, and layout-change requests; the host owns persistence a
 If every layout cell has authored `[cell-id]` content, use
 `components/layout/dashboard-grid/dashboard-grid-register.js`. It registers the grid and empty
 state; import `lr-widget.js` and `lr-widget-renderer.js` too when default cells can be created.
-The default entry registers that widget stack.
+The default entry registers that widget stack the first time the grid creates a default cell.
 
 Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
 movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and

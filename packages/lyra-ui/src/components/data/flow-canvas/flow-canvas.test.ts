@@ -1452,6 +1452,27 @@ describe('pan & zoom', () => {
     expect(changes).to.equal(1);
   });
 
+  it('wheel zoom follows the delta magnitude and leaves a horizontal swipe to the page', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.setViewport({ x: 0, y: 0, zoom: 1 });
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const rect = viewportEl.getBoundingClientRect();
+    const at = { clientX: rect.left + 100, clientY: rect.top + 100, bubbles: true, cancelable: true };
+
+    const swipe = new WheelEvent('wheel', { ...at, deltaX: 60, deltaY: 0 });
+    viewportEl.dispatchEvent(swipe);
+    expect(swipe.defaultPrevented).to.equal(false);
+    expect(el.viewport.zoom).to.equal(1);
+
+    viewportEl.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY: -2 }));
+    expect(el.viewport.zoom, 'a trackpad delta zooms a little').to.be.closeTo(Math.exp(2 * Math.log(1.2) / 100), 1e-9);
+    el.setViewport({ x: 0, y: 0, zoom: 1 });
+    viewportEl.dispatchEvent(new WheelEvent('wheel', { ...at, deltaY: -3, deltaMode: WheelEvent.DOM_DELTA_LINE }));
+    expect(el.viewport.zoom, 'line deltas are normalized to pixels').to.be.closeTo(Math.exp(48 * Math.log(1.2) / 100), 1e-9);
+  });
+
   it('background pointer-drag pans the viewport', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

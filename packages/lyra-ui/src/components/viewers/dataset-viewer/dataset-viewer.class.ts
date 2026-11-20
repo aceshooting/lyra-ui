@@ -42,6 +42,7 @@ export type {
 } from '../viewer-diagnostics.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import {
+  viewerHostOwnsName,
   viewerSemanticLabel,
   viewerSemanticRole,
 } from '../viewer-semantic-owner.js';
@@ -345,7 +346,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     },
     emitSearch: detail => this.emit('lr-search-change', detail),
     format: value => value == null ? '' : String(value),
-    label: (rows) => this.name ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: getNumberFormat(this.effectiveLocale).format(rows) }) : this.localize('datasetViewerCaption', undefined, { count: getNumberFormat(this.effectiveLocale).format(rows) }),
+    label: (rows) => {
+      const name = normalizeLabel(this.name);
+      const count = getNumberFormat(this.effectiveLocale).format(rows);
+      return name ? this.localize('datasetViewerCaptionNamed', undefined, { name, count }) : this.localize('datasetViewerCaption', undefined, { count });
+    },
     colorVar: '--_lr-dataset-viewer-highlight-color',
     headerPart: 'header-cell',
     activeHighlight: () => this.activeHighlightId,
@@ -361,7 +366,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected && this.scrollMode === 'self'
-      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('datasetViewerLabel'))
+      ? makeScrollRegionFocusable(body, this.localize('datasetViewerLabel'))
       : undefined;
   }
 
@@ -591,9 +596,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
         const localizedCount = getNumberFormat(this.effectiveLocale).format(
           rows.length
         );
-        const label = this.name
+        const name = normalizeLabel(this.name);
+        const label = name
           ? this.localize('datasetViewerCaptionNamed', undefined, {
-              name: this.name,
+              name,
               count: localizedCount,
             })
           : this.localize('datasetViewerCaption', undefined, {
@@ -655,10 +661,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     // once a table exists -- otherwise a landmark-navigating screen-reader user finds nothing at
     // all while the viewer is idle, loading, empty, or in error, which is every state except a
     // successful non-empty load. The richer row-count caption stays on the inner [part='table'].
-    // A non-empty host name owns the overall semantics and is never copied to either shadow owner;
+    // A non-empty host name owns the overall semantics (the host takes the region role) and is never
+    // copied to either shadow owner;
     // with neither name source there is no unnamed region (mirroring <lr-archive-viewer>).
-    const label = viewerSemanticLabel(this, this.name || null);
-    const role = label === null ? null : viewerSemanticRole(this, 'region');
+    const label = viewerSemanticLabel(this, normalizeLabel(this.name) ?? null);
+    const role = viewerSemanticRole(this, label !== null || viewerHostOwnsName(this) ? 'region' : null);
     const style = maxHeight
       ? styleMap({ '--lr-dataset-viewer-max-height': maxHeight })
       : nothing;

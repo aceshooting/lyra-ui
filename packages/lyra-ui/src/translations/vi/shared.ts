@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Không thể tải thành phần này.',
   noData: 'Chưa có dữ liệu',
   legendTypeShown: 'Đang hiển thị {label}',
   legendTypeHidden: 'Đã ẩn {label}',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Không thể tải dữ liệu',
   zoomOut: 'Thu nhỏ',
   zoomIn: 'Phóng to',
+  scrollerLabel: 'Nội dung có thể cuộn',
   clear: 'Xóa',
   open: 'Mở',
   close: 'Đóng',

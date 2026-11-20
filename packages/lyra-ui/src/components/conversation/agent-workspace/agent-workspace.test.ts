@@ -1311,3 +1311,24 @@ it('grows with slotted content inside an auto-height parent', async () => {
   expect(host.getBoundingClientRect().height).to.be.greaterThan(180);
   expect(bottom).to.be.at.most(shell.getBoundingClientRect().bottom + 1);
 });
+
+it("gives an overflowing text-only details pane a tab stop and keeps its landmark", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace style="inline-size:360px; block-size:640px" .messages=${messages}>
+      <div slot="details" style="block-size:2rem">Short details</div>
+    </lr-agent-workspace>
+  `);
+  const details = el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!;
+  await waitUntil(() => details.clientHeight > 0, "details pane laid out");
+  expect(details.hasAttribute("tabindex")).to.equal(false);
+  el.querySelector<HTMLElement>('[slot="details"]')!.style.blockSize = "1500px";
+  await waitUntil(() => details.getAttribute("tabindex") === "0", "overflowing pane takes a tab stop");
+  expect(details.hasAttribute("role")).to.equal(false);
+  expect(details.getAttribute("aria-label")).to.equal("Run details");
+});
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-agent-workspace unread-start-index=""></lr-agent-workspace>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['unreadStartIndex'].map((key) => props[key])).to.deep.equal([null]);
+});

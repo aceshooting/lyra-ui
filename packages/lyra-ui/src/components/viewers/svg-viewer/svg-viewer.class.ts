@@ -35,7 +35,7 @@ import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -163,6 +163,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     svgViewerLabel: LYRA_DEFAULT_svgViewerLabel,
@@ -212,7 +213,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     this.releaseScrollRegion?.();
     const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     this.releaseScrollRegion = body && this.isConnected
-      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('svgViewerLabel'))
+      ? makeScrollRegionFocusable(body, this.localize('scrollerLabel'))
       : undefined;
   }
 
@@ -392,7 +393,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       && regionHighlights.length === 0
       ? 'img'
       : 'region';
-    return html`<div part="base" role=${viewerSemanticRole(this, surfaceRole) ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('svgViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
+    return html`<div part="base" role=${viewerSemanticRole(this, surfaceRole) ?? nothing} aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('svgViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
       <div part="body">${this.renderBody(regionHighlights)}</div>
       ${this.renderAnchorLiveRegion()}
     </div>`;

@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { FollowTailController } from '../../../internal/follow-tail-controller.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
@@ -290,8 +291,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   /** Above this entry count, the body renders through an internal `<lr-virtual-list>`. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 199;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
-  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
+  @query(tag('virtual-list')) private virtualListEl?: LyraVirtualList;
 
   private readonly headerId = nextId('activity-feed-header');
   private readonly bodyId = nextId('activity-feed-body');

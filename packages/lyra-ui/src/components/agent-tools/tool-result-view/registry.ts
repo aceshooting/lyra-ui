@@ -191,7 +191,11 @@ export function loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToo
   return promise;
 }
 
-/** @internal Test-only utility for clearing the module-level default registry and load cache. */
+/**
+ * Empties the module-level default registry and forgets every cached `load()` result, so later
+ * lookups and loads start fresh. Meant for test isolation and hot-module reload; mounted views keep
+ * the renderer they already resolved until their next resolve.
+ */
 export function clearToolRenderers(): void {
   defaultRegistry.clear();
   loadCache = new WeakMap();

@@ -115,8 +115,7 @@ including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host 
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `label?: string` names the plot after an authored host `aria-label` and before the JS-only
 `accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
-attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
-explicitly empty value), so a competing internal generic label is not exposed. Non-finite
+attribute or `label`, `accessibleLabel` names the plot. A non-blank authored host `aria-label` governs the plot name too, so a competing internal generic label is not exposed; an empty or whitespace-only value falls through to the next name, ending at the localized default. Non-finite
 coordinates are omitted.
 `maxRenderedPoints: number = 1000` (attribute `max-rendered-points`) controls the evenly sampled
 point budget. Finite values clamp to 1–10,000; invalid values use 1,000. A selected point outside

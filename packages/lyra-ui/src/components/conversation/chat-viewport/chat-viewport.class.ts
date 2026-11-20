@@ -4,6 +4,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
@@ -1004,9 +1005,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   override render(): TemplateResult {
+    const fallback =
+      this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('chatViewportLabel');
     const label =
-      this.accessibleLabel ??
-      (this.label == null ? this.localize('chatViewportLabel') : this.label);
+      this.accessibleLabel === '' ? '' : normalizeLabel(this.accessibleLabel) ?? fallback;
     // Virtual mode's own layout rules key off this marker rather than `:host(:has(> lr-virtual-list))`:
     // `:has()` is not supported inside `:host()` (Chromium reports
     // `CSS.supports('selector(:host(:has(> em)))')` as false and drops the whole rule), so every

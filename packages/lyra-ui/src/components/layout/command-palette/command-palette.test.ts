@@ -254,6 +254,28 @@ it("renders a localized, keyboard-reachable clear button once the search field h
   expect(el.shadowRoot!.querySelector('[part="clear-button"]') === null).to.be.true;
 });
 
+it("Enter on the focused clear button clears the query instead of running the active command", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[{ commandId: "save", label: "Save" }]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  await waitUntil(() => el.shadowRoot!.activeElement === input, "the search field takes focus on open");
+  await sendKeys({ type: "save" });
+  await el.updateComplete;
+  let selected = 0;
+  el.addEventListener("lr-select", () => { selected += 1; });
+  await sendKeys({ press: "Tab" });
+  expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("clear-button");
+  await sendKeys({ press: "Enter" });
+  await el.updateComplete;
+  expect(selected).to.equal(0);
+  expect(el.open).to.be.true;
+  expect(input.value).to.equal("");
+  expect(el.shadowRoot!.activeElement === input).to.be.true;
+});
+
 it("anchors the clear-button glyph to the inherited font size instead of the UA button default", async () => {
   const el = (await fixture(html`<lr-command-palette
     .commands=${[{ commandId: "save", label: "Save" }]}

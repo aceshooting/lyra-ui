@@ -20,6 +20,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+The default entry registers the source pager the first time the results page a `dataSource`.
+
 Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
 between them. Detail toggles and other controls have their own Tab stops.
 
@@ -102,9 +104,11 @@ reflected) exposes its lifecycle. `withoutAutoExpandFailures: boolean = false`
 A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
 test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
-first-wins identity. Foreign runtime statuses normalize
-once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
-summary count and renders a label/glyph.
+first-wins identity. The vocabulary is deliberately a test runner's four outcomes: `error`,
+`timedOut` and `broken` count as `failed`, and every other runtime status — including the
+`pending`, `incomplete` and `cancelled` states of `lr-task-list`, `lr-research-progress` and the
+agent-run family — normalizes once to the localized neutral `skipped` state, so every accepted row
+contributes to one coherent summary count and renders a label/glyph.
 
 Legacy normalization retains the complete canonical input once with O(n) rows/indexes, yielding
 after at most 500 combined suite/test positions. It normalizes status once per corpus; filtering

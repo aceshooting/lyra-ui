@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Jeda putaran',
   carouselResumeRotation: 'Sambung semula putaran',
   carouselViewport: 'Slaid',
-  scrollerLabel: 'Kandungan boleh tatal',
   scrollPrevious: 'Tatal ke belakang',
   scrollNext: 'Tatal ke hadapan',
   closeNavigation: 'Tutup navigasi',

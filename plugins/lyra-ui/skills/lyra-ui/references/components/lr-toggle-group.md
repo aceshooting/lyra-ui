@@ -57,7 +57,7 @@ when `detail.value.length === 0`.
 - `appearance?: LyraToggleAppearance` (reflected, opt-in) — when set, overrides every owned toggle's
   appearance without rewriting it; unset leaves each toggle's own appearance in charge.
 - `label: string = ''` — accessible-name fallback when the host has no `aria-label` (the host
-  `aria-label` wins by presence, including an empty value).
+  `aria-label` wins by presence, including an empty value; a whitespace-only `label` is ignored).
 
 **Events:**
 

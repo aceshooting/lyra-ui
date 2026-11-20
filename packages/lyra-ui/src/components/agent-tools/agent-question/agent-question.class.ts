@@ -1,7 +1,7 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
@@ -13,12 +13,14 @@ import { containShadowChildEvent } from '../../../internal/child-event-containme
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormValue } from '../tool-param-form/tool-param-form.class.js';
 import { snapshotFormValue } from '../tool-param-form/tool-param-snapshot.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { AGENT_QUESTION_CHILDREN } from './agent-question-children.js';
 import { styles } from './agent-question.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentQuestionAccept, LYRA_DEFAULT_agentQuestionDecline, LYRA_DEFAULT_agentQuestionLabel, LYRA_DEFAULT_agentQuestionSubmitted, LYRA_DEFAULT_agentQuestionUnsupported } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentQuestionAccept, LYRA_DEFAULT_agentQuestionDecline, LYRA_DEFAULT_agentQuestionLabel, LYRA_DEFAULT_agentQuestionSubmitted, LYRA_DEFAULT_agentQuestionUnsupported, LYRA_DEFAULT_genViewLoadFailed } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_cancel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -67,7 +69,7 @@ const PROPERTY_KEYS = new Set(['type', 'enum', 'description', 'title', 'default'
  * @csspart action - A response button.
  * @csspart status - The submitted-state message. Receives focus if submission disables the focused
  *   response control and focus has not moved elsewhere.
- * @csspart error - Unsupported-schema explanation.
+ * @csspart error - Unsupported-schema explanation, or the notice that the response form could not load.
  * @status experimental
  * @since 22.0.0
  */
@@ -82,6 +84,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     agentQuestionSubmitted: LYRA_DEFAULT_agentQuestionSubmitted,
     agentQuestionUnsupported: LYRA_DEFAULT_agentQuestionUnsupported,
     cancel: LYRA_DEFAULT_cancel,
+    genViewLoadFailed: LYRA_DEFAULT_genViewLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -151,11 +154,14 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     this.requestUpdate('status', previous);
   }
 
-  protected override async scheduleUpdate(): Promise<void> {
-    if (this.schema !== EMPTY_SCHEMA && this.supportedSchema && !customElements.get(tag('tool-param-form'))) {
-      await import('../../lr-tool-param-form.js');
-    }
-    await super.scheduleUpdate();
+  private childRegistration?: Promise<unknown>;
+  /** The response form's registration failed; a later render retries it. */
+  @state() private formLoadFailed = false;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -192,6 +198,17 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const registration = loadLazyChildren(AGENT_QUESTION_CHILDREN, this.renderRoot);
+    if (registration) {
+      this.childRegistration = registration;
+      void registration.then((loaded) => {
+        if (loaded === !this.formLoadFailed) return;
+        this.formLoadFailed = !loaded;
+        if (!loaded) this.announcements.announceAssertive(this.localize('genViewLoadFailed'));
+      });
+    } else if (this.formLoadFailed && customElements.get(tag('tool-param-form'))) {
+      this.formLoadFailed = false;
+    }
     if (this.restoreActionFocus) {
       restoreComposedFocus(this, true, this.renderRoot.querySelector<HTMLButtonElement>('button[part="action"]:enabled'));
     }
@@ -240,7 +257,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
           content = {};
         } else {
           const form = this.renderRoot.querySelector<LyraToolParamForm>(tag('tool-param-form'));
-          if (!form) return;
+          if (!form?.matches(':defined')) return;
           // Synchronize synchronous host assignments before validation, even before Lit's next render.
           const schema = this.schema;
           const value = this.value;
@@ -275,8 +292,10 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       ${this.schema === EMPTY_SCHEMA ? nothing : this.supportedSchema ? html`<lr-tool-param-form .schema=${this.schema} .value=${this.value}
         .disabled=${this.inactive} @lr-input=${(event: CustomEvent<{ value: ToolParamFormValue }>) => this.input(event, requestId)}></lr-tool-param-form>`
         : html`<p part="error">${this.localize('agentQuestionUnsupported')}</p>`}
+      ${this.formLoadFailed && this.schema !== EMPTY_SCHEMA && this.supportedSchema
+        ? html`<p part="error">${this.localize('genViewLoadFailed')}</p>` : nothing}
       <div part="actions">${(['accept', 'decline', 'cancel'] as const).map((action) => html`<button
-        part="action" type="button" data-action=${action} data-agent-action=${action === 'accept' ? 'brand' : 'neutral'} ?disabled=${this.inactive || (action === 'accept' && !this.supportedSchema)}
+        part="action" type="button" data-action=${action} data-agent-action=${action === 'accept' ? 'brand' : 'neutral'} ?disabled=${this.inactive || (action === 'accept' && (!this.supportedSchema || this.formLoadFailed))}
         @click=${() => this.respond(action, requestId)}>${this.localize(action === 'accept' ? 'agentQuestionAccept' : action === 'decline' ? 'agentQuestionDecline' : 'cancel')}</button>`)}</div>
       ${this.status === 'submitted' ? html`<p part="status" tabindex="-1">${this.localize('agentQuestionSubmitted')}</p>` : nothing}
     </div>`;

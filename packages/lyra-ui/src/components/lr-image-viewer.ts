@@ -1,3 +1,5 @@
+export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchor, LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { Engine3dFallbackDetail, Engine3dPreference } from '../internal/engine-3d.js';
 export * from './media/image-viewer/image-viewer.class.js';
 import { html } from 'lit';
 import { LyraImageViewer } from './media/image-viewer/image-viewer.class.js';

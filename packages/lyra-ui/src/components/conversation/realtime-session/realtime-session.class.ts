@@ -7,7 +7,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
 import type { AudioVisualizerState } from '../audio-visualizer/audio-visualizer.class.js';
 import type { LyraPushToTalk, LyraPushToTalkEventMap } from '../push-to-talk/push-to-talk.class.js';
@@ -143,7 +143,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     this._voiceState = normalized;
     this.requestUpdate('voiceState', old);
   }
-  @property({ type: Number }) level: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) level: number | null = null;
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Disables the built-in session actions and microphone capture. */
   @property({ type: Boolean, reflect: true }) disabled = false;

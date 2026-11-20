@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: '無法載入此元件。',
   noData: '無資料',
   legendTypeShown: '{label}已顯示',
   legendTypeHidden: '{label}已隱藏',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: '無法載入資料',
   zoomOut: '縮小',
   zoomIn: '放大',
+  scrollerLabel: '可滾動內容',
   clear: '清除',
   open: '開啟',
   close: '關閉',

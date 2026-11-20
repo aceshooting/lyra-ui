@@ -1,3 +1,5 @@
+export type { LyraDateRangePreset } from './forms/date-picker/date-picker.class.js';
+export type { LyraInputType } from './forms/input/input-shared.js';
 export * from './layout/filter-bar/filter-bar.class.js';
 import { LyraFilterBar } from './layout/filter-bar/filter-bar.class.js';
 import { defineElement } from '../internal/prefix.js';

@@ -22,6 +22,9 @@ compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chu
 a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
 text verbatim. Large sets window through an internal `lr-virtual-list`.
 
+The default entry registers that `lr-virtual-list` and the source pager the first time the list
+virtualizes or pages a `dataSource`.
+
 With `dataSource` unset, assignment retains the first 10,000 chunks in a bounded readonly outer snapshot. Admitted record
 identities feed a descriptor-safe copy of the closed display schema, including source fields and
 score breakdowns; `metadata` remains opaque and a locator receives its own bounded snapshot. This

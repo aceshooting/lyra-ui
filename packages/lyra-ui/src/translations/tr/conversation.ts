@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Görüntülenecek oluşturulmuş görünüm yok.',
   genViewInvalid: 'Bu oluşturulmuş görünüm görüntülenemiyor.',
   genViewLoading: 'Bileşen yükleniyor…',
-  genViewLoadFailed: 'Bu bileşen yüklenemedi.',
   genViewInvalidState: 'Bu alanın değeri kullanılamaz.',
   genViewActionDenied: 'Bu işlem kullanılamıyor.',
   genViewConfirmationRequired: 'Bu işlem uygulamadan onay gerektiriyor.',

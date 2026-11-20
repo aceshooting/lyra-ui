@@ -2431,3 +2431,9 @@ it("relays host focus and blur once per entry and exit, not when focus moves bet
   handle("handle-start").blur();
   expect(seen.join(",")).to.equal("focus,blur");
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-time-range min="" max="" start="" end="" step=""></lr-time-range>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['min', 'max', 'start', 'end', 'step'].map((key) => props[key])).to.deep.equal([0, 100, 0, 100, 1]);
+});

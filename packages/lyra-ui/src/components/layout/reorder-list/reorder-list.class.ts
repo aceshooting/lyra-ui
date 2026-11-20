@@ -3,6 +3,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
@@ -154,7 +155,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  announcement -- the host already knows, since it made that edit itself. */
   @property({ type: Boolean, reflect: true }) controlled = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   /** Latest post-move focus target. A generation guard keeps a superseded async restore inert. */
   private pendingFocusTarget: ReorderFocusTarget | null = null;
@@ -607,7 +608,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
+        aria-label=${hostAriaLabel(this) === '' ? '' : resolveAccessibleName(this, this.label) ?? nothing}
         aria-busy=${this.pendingMove?.phase === 'held' || this.pendingReconciliation ? 'true' : 'false'}
         @lr-move-request=${this.onMoveRequest}
         @keydown=${this.onKeyDown}

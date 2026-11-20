@@ -27,8 +27,8 @@ platform accessors, including across document realms. Arbitrary peer-owned acces
 uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A non-empty host `aria-label` names the
-host, and the inner reading region then drops its own `role="region"` and name (the shared viewer
-rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
+host, which takes the `region` role through `ElementInternals`, and the inner reading region then
+drops its own `role="region"` and name (the shared viewer rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
 no matching JS property: the `accessibleLabel`
 property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
 attribute.) `maxHeight: string = ''`

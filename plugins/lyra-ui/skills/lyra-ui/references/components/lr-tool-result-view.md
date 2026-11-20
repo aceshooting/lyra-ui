@@ -169,7 +169,8 @@ ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-v
 - `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
-- `clearToolRenderers(): void` — clears the default registry and its `load()` cache
+- `clearToolRenderers(): void` — clears the default registry and its `load()` cache; a reset for
+  test isolation or hot-module reload (mounted views keep their resolved renderer until they resolve again)
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:

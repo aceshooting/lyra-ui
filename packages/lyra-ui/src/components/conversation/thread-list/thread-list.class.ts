@@ -52,11 +52,18 @@ import {
 } from '../../../internal/intl-cache.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraChatThread, ThreadBucketKey, ThreadListGrouping } from './thread-list-types.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// Provider mode registers the pager, and a failed load the error view, the first time each renders.
+const THREAD_LIST_CHILDREN = {
+  pagination: () => import('../../lr-pagination.js'),
+  empty: () => import('../../lr-empty.js'),
+};
 
 export type { LyraChatThread, ThreadBucketKey, ThreadListGrouping } from './thread-list-types.js';
 export type ThreadRowAction = 'pin' | 'archive' | 'delete';
@@ -707,8 +714,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @state() private hasEmptySlot = false;
   @state() private hasDefaultSlotContent = false;
 
-  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('virtual-list')) private virtualListEl?: LyraVirtualList;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   @query('[part="search-input"]') private searchInputEl?: HTMLInputElement;
   private focusTaskGeneration = 0;
   private stopPendingFocus?: () => void;
@@ -797,19 +804,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private sourceStatusInitialized = false;
   private previousSourceStatus = '';
-  private pagerRegistration?: Promise<unknown>;
-  private emptyRegistration?: Promise<unknown>;
+  private childRegistration?: Promise<unknown>;
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    await Promise.all([this.pagerRegistration, this.emptyRegistration]);
+    await this.childRegistration;
     return complete;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.sourceMode) this.pagerRegistration ??= import('../../lr-pagination.js');
-    if (this.error || this.sourceFailed) this.emptyRegistration ??= import('../../lr-empty.js');
+    this.childRegistration = loadLazyChildren(THREAD_LIST_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.syncInputLimitAnnouncement();
     const status = this.sourceMode && this.sourcePages.state.pending ? this.localize('loading')
       : this.sourceMode && this.sourceFailed ? this.localize('tableLoadFailed') : '';

@@ -1,3 +1,4 @@
+export type { LyraSpanKind, LyraSpanStatus } from './agent-tools/trace-tree/span-shared.js';
 export * from './agent-tools/agent-trace/agent-trace.class.js';
 import './lr-trace-tree.js';
 import './lr-graph-legend.js';

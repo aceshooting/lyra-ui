@@ -562,7 +562,7 @@ purposes.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
-  override rather than restoring any fallback.
+  override rather than restoring any fallback; a whitespace-only value is ignored.
 - With `autoCommitSingleOption` set, a select with exactly one available option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the

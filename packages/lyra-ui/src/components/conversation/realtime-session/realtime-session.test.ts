@@ -513,3 +513,9 @@ it('keeps the newest transcript entries past the collection limit', () => {
   el.entries = Array.from({ length: 10_005 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
   expect(el.entries.at(-1)?.id).to.equal('10004');
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-realtime-session level=""></lr-realtime-session>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['level'].map((key) => props[key])).to.deep.equal([null]);
+});

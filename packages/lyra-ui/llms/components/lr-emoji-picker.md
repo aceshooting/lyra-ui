@@ -103,7 +103,8 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. ArrowUp/ArrowDown navigate results and Enter picks, while
+ArrowLeft/ArrowRight and Home/End keep moving the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,

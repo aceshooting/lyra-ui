@@ -26,10 +26,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
-import {
-  autocorrectConverter,
-  spellcheckConverter,
-} from '../../../internal/converters.js';
+import { autocorrectConverter, spellcheckConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
   dispatchNativeEvent,
@@ -366,7 +363,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    * An omitted or non-finite limit uses the default window of 200.
    * @default 200
    */
-  @property({ type: Number, attribute: 'max-tokens-visible' })
+  @property({ attribute: 'max-tokens-visible', converter: blankNumberConverter(null) })
   get maxTokensVisible(): number { return this.authoredTokenLimit ?? IMPLICIT_TOKEN_LIMIT; }
   set maxTokensVisible(next: number | null) {
     const authored = Number.isFinite(next) ? next : null;

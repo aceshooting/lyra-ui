@@ -12,6 +12,7 @@ import type {
   RetrievalScoreBreakdown,
 } from '../../../ai/types.js';
 import { nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -358,7 +359,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
                     })}</span
                   >
                   <strong part="chunk-title" id="${id}-title"
-                    >${chunk.source.name || this.localize('untitledSource')}</strong
+                    >${normalizeLabel(chunk.source.name) ?? this.localize('untitledSource')}</strong
                   >
                   <span part="chunk-text" id="${id}-text">${chunk.text}</span>
                   <span part="scores" id="${id}-scores">

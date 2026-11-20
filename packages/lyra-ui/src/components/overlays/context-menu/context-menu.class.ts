@@ -3,7 +3,7 @@ import { eventCollectionSupport } from '../../../internal/collection-snapshot.js
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -291,7 +291,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   }
 
   private get resolvedLabel(): string {
-    return hostAriaLabel(this) || this.label || this.localize('menuLabel');
+    return resolveAccessibleName(this, this.label, this.localize('menuLabel')) as string;
   }
 
   override disconnectedCallback(): void {

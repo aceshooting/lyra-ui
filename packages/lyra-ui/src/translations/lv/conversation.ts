@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Nav ģenerēta skata, ko attēlot.',
   genViewInvalid: 'Šo ģenerēto skatu nevar attēlot.',
   genViewLoading: 'Ielādē komponentu…',
-  genViewLoadFailed: 'Neizdevās ielādēt šo komponentu.',
   genViewInvalidState: 'Šo lauka vērtību nevar izmantot.',
   genViewActionDenied: 'Šī darbība nav pieejama.',
   genViewConfirmationRequired: 'Šai darbībai nepieciešams lietojumprogrammas apstiprinājums.',

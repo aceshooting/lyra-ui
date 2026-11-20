@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Ora ana tampilan sing digawé kanggo ditampilaké.',
   genViewInvalid: 'Tampilan sing digawé iki ora bisa ditampilaké.',
   genViewLoading: 'Komponen lagi dimuat…',
-  genViewLoadFailed: 'Komponen iki ora bisa dimuat.',
   genViewInvalidState: 'Nilai kolom iki ora bisa digunakaké.',
   genViewActionDenied: 'Tumindak iki ora kasedhiya.',
   genViewConfirmationRequired: 'Tumindak iki mbutuhaké konfirmasi saka aplikasi.',

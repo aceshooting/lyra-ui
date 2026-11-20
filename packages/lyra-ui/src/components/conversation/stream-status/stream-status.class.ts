@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -9,11 +10,15 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled, LYRA_DEFAULT_streamStatusConnecting, LYRA_DEFAULT_streamStatusIdle, LYRA_DEFAULT_streamStatusStalled } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// An interrupted, resumable stream registers its resume button the first time it renders.
+const STREAM_STATUS_CHILDREN = { button: () => import('../../lr-button.js') };
 
 export type StreamConnectionState = Exclude<LyraStreamPhase, 'stalled'> | 'interrupted';
 
@@ -210,7 +215,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // can't be relied on for the default stalled-message text.
   @state() private hasMessageContent = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   private lastRenderedPhase?: StreamStatusPhase;
   private phaseAtDisconnect?: StreamStatusPhase;
@@ -232,11 +237,11 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     }
   }
 
-  private resumeRegistration?: Promise<unknown>;
+  private childRegistration?: Promise<unknown>;
 
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    await this.resumeRegistration;
+    await this.childRegistration;
     return complete;
   }
 
@@ -244,7 +249,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     super.updated(changed);
     const previous = this.lastRenderedPhase;
     const current = this.phase;
-    if (current === 'interrupted' && this.resumable) this.resumeRegistration ??= import('../../lr-button.js');
+    this.childRegistration = loadLazyChildren(STREAM_STATUS_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.lastRenderedPhase = current;
     this.toggleAttribute('data-stalled', current === 'stalled');
 

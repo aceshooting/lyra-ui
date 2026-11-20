@@ -3477,3 +3477,9 @@ for (const part of ['code-block', 'table-wrapper', 'code-block-copy']) {
     });
   }
 }
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-markdown tab-size=""></lr-markdown>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['tabSize'].map((key) => props[key])).to.deep.equal([4]);
+});

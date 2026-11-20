@@ -1355,6 +1355,28 @@ describe('lr-trace-tree remediation', () => {
     expect(getComputedStyle(placeholder).display).to.equal('none');
   });
 
+  it('keeps million-scale token counts and long cost text inside their own columns', async () => {
+    const spans: LyraSpan[] = [{
+      id: 'big', name: 'long-context call', kind: 'llm', startMs: 0, endMs: 3_600_500, status: 'success',
+      tokensIn: 1_048_576, tokensOut: 2_500_000, costText: '$12.3456 USD per long-context request',
+    }];
+    const host = await fixture<HTMLDivElement>(html`<div style="inline-size: 900px"><lr-trace-tree .spans=${spans} with-tokens with-cost></lr-trace-tree></div>`);
+    const row = host.querySelector('lr-trace-tree')!.shadowRoot!.querySelector('[data-id="big"]')!;
+    const cell = (part: string) => row.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    expect(cell('tokens-in').textContent).to.equal('1M');
+    expect(cell('tokens-in').title).to.equal('1M');
+    expect(row.getAttribute('aria-label')).to.contain('1,048,576');
+    for (const part of ['tokens-in', 'tokens-out']) {
+      expect(cell(part).scrollWidth, `${part} overflows its track`).to.be.at.most(cell(part).clientWidth);
+    }
+    for (const part of ['duration', 'cost']) {
+      expect(getComputedStyle(cell(part)).overflowX, `${part} paints past its track`).to.equal('hidden');
+      expect(getComputedStyle(cell(part)).textOverflow).to.equal('ellipsis');
+    }
+    expect(cell('cost').title).to.equal('$12.3456 USD per long-context request');
+    expect(cell('tokens-in').getBoundingClientRect().right).to.be.at.most(cell('tokens-out').getBoundingClientRect().left + 1);
+  });
+
   it('builds the hierarchy once per update and not at all per key press', async () => {
     const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${BRANCHES}></lr-trace-tree>`);
     const internals = el as unknown as { buildHierarchy: () => unknown };

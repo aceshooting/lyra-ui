@@ -1655,7 +1655,7 @@ If the import fails, leave the native disclosure visible and usable.
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
-  attribute wins by presence, including `aria-label=""`; only when it is absent does the property
+  attribute wins by presence, including `aria-label=""` (whitespace-only is ignored); otherwise the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none`
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves

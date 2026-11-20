@@ -39,9 +39,10 @@ both are also root scripts, and a finding fails `lint`:
   (each switched-off rule carries its reason in the file). A deliberately unawaited promise is
   `void p`; a callback slot that expects `void` gets `() => void p()`. Shipped component code fixes a
   finding; `// oxlint-disable-line <rule> -- <reason>` is for the tooling and for public type text that
-  generated docs quote verbatim (for example a documented return-kind union). The six component
-  directories under `ignorePatterns` ("covered separately") are excluded until their rework lands:
-  remove the entries then and fix what surfaces.
+  generated docs quote verbatim (for example a documented return-kind union). Every package source
+  directory is linted: `ignorePatterns` excludes only generated, vendored and fixture trees.
+  `restrict-template-expressions` (numbers and booleans allowed) keeps a non-string value, such as a
+  `CSSResult` or a nullable object, out of a plain template literal.
 - The same oxlint run lints Lit templates with `eslint-plugin-lit` and `eslint-plugin-wc` as oxlint
   JS plugins (alpha; pin exact versions). They run on oxlint's own parser, so they need neither
   TypeScript (which rules out `lit-analyzer`) nor ESLint (their `eslint` peer is optional in

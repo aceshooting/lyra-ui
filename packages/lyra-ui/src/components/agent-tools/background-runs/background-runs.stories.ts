@@ -22,6 +22,7 @@ type Story = StoryObj;
 const runs: BackgroundRun[] = [
   { id: 'index', label: 'Index the project', description: 'Prepare repository search data.', status: 'running' },
   { id: 'review', label: 'Review dependencies', description: 'Waiting for an available worker.', status: 'queued' },
+  { id: 'deploy', label: 'Deploy preview', description: 'Paused until a reviewer approves.', status: 'waiting-approval' },
   { id: 'format', label: 'Check formatting', status: 'completed' },
   { id: 'tests', label: 'Run browser tests', status: 'failed' },
 ];
@@ -36,4 +37,10 @@ export const Disabled: Story = {
 
 export const Empty: Story = {
   render: () => html`<lr-background-runs label="Work history"></lr-background-runs>`,
+};
+
+export const PlainFrame: Story = {
+  render: () => html`<div style="max-inline-size: 48rem; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); padding: var(--lr-space-m)">
+    <lr-background-runs frame="plain" .runs=${runs}></lr-background-runs>
+  </div>`,
 };

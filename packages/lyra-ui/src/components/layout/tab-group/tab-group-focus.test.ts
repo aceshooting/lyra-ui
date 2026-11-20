@@ -4,6 +4,7 @@ import '../../lr-tab.js';
 import '../../lr-tab-panel.js';
 import type { LyraTabGroup } from '../../lr-tab-group.js';
 import type { LyraTab } from '../../lr-tab.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const group = (activation: 'auto' | 'manual' = 'auto') => html`
   <lr-tab-group activation=${activation}>
@@ -103,5 +104,20 @@ describe('lr-tab-group programmatic tab focus', () => {
     expect(() => standalone.focus()).to.not.throw();
     expect(() => standalone.blur()).to.not.throw();
     expect(document.activeElement === standalone).to.equal(false);
+  });
+
+  it('hands focus to the newly selected tab when show() hides the panel that held it', async () => {
+    const el = await fixture<LyraTabGroup>(html`
+      <lr-tab-group>
+        <lr-tab panel="a">A</lr-tab>
+        <lr-tab panel="b">B</lr-tab>
+        <lr-tab-panel name="a"><button type="button">Next</button></lr-tab-panel>
+        <lr-tab-panel name="b">Two</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    await focusByKeyboard(el.querySelector('button')!);
+    el.show('b');
+    await el.updateComplete;
+    expect(focusedSlot(el)).to.equal('b');
   });
 });

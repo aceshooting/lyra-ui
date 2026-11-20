@@ -6,9 +6,11 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { trackScrollRegions, type ScrollRegionTarget } from '../../../internal/scroll-region.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { DisclosureMotionController } from './disclosure-motion.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { styles } from './details.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -233,6 +235,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   @state() private hasSummarySlot = false;
   @state() private hasHeaderActionsSlot = false;
 
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
@@ -398,7 +401,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   private applyOpenState(next: boolean): void {
     const old = this._open;
     const gate = this.contentGate;
-    if (!next) this.disclosureMotion.repairFocus(gate, this.summaryElement);
+    // A collapse hides the content; focus inside it moves to the summary.
+    if (!next && gate) repairComposedFocus(gate, this.summaryElement);
     this._open = next;
     this.contentGateGeneration += 1;
     this.setContentGateMode(next ? 'open' : 'until-found');
@@ -626,6 +630,19 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
       0;
   };
+
+  private contentScrollRegion(): ScrollRegionTarget | null {
+    const el = this.renderRoot.querySelector<HTMLElement>('[part="content"]');
+    const slotted = this.querySelector(':scope > [slot="summary"]')?.textContent;
+    return el && { el, name: hostAriaLabel(this) ?? (this.summary || slotted || this.localize('details')) };
+  }
+
+  constructor() {
+    super();
+    // Once a size-limited host makes the content scroll, prose inside has no tab stop of its own.
+    trackScrollRegions(this, () => [this.contentScrollRegion()]);
+  }
+
   override render(): TemplateResult {
     const gateHidden =
       this.contentGateMode === 'open'

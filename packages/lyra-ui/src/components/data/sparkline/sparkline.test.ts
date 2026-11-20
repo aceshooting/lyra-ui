@@ -571,3 +571,12 @@ it('keeps two significant digits for a final value below one in the generated na
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Trend of 2 values, last -0.57');
 });
+
+it('uses the generated name for a whitespace-only label or accessibleLabel', async () => {
+  const el = (await fixture(html`<lr-sparkline label="   " .values=${[1, 3, 2, 5]}></lr-sparkline>`)) as LyraSparkline;
+  el.accessibleLabel = '  ';
+  await el.updateComplete;
+  const name = el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label') ?? '';
+  expect(name.trim()).to.not.equal('');
+  expect(name).to.contain('4');
+});

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Sitisha mzunguko',
   carouselResumeRotation: 'Endeleza mzunguko',
   carouselViewport: 'Slaidi',
-  scrollerLabel: 'Maudhui yanayoweza kusogezwa',
   scrollPrevious: 'Sogeza nyuma',
   scrollNext: 'Sogeza mbele',
   closeNavigation: 'Funga urambazaji',

@@ -1949,3 +1949,18 @@ it('reuses amplitude storage across successive samples', async () => {
   expect(samples.currentAmplitudes(200) === first).to.equal(true);
   expect(first.every(value => value === 0.7)).to.equal(true);
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-audio-visualizer level="" bar-count="" gain=""></lr-audio-visualizer>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['level', 'barCount', 'gain'].map((key) => props[key])).to.deep.equal([null, 5, 1]);
+});
+
+it('drops the img role while the accessible name is empty and restores it when a name returns', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer label=""></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  expect(el.getAttribute('role')).to.equal('presentation');
+  el.label = 'Mic level';
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('aria-label')).to.equal('Mic level');
+});

@@ -49,6 +49,7 @@ import {
   viewerSemanticLabel,
   viewerSemanticRole,
 } from '../viewer-semantic-owner.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -326,7 +327,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     },
     emitSearch: detail => this.emit('lr-search-change', detail),
     format: value => value == null ? '' : String(value),
-    label: () => hostAriaLabel(this) ?? (this.name || this.localize('csvViewerLabel')),
+    label: () => hostAriaLabel(this) ?? normalizeLabel(this.name) ?? this.localize('csvViewerLabel'),
     colorVar: '--_lr-csv-viewer-highlight-color',
     headerPart: 'cell',
     activeHighlight: () => this.activeHighlightId,
@@ -585,7 +586,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   override render(): TemplateResult {
     const label = viewerSemanticLabel(
       this,
-      this.name || this.localize('csvViewerLabel')
+      normalizeLabel(this.name) ?? this.localize('csvViewerLabel')
     );
     let content: TemplateResult;
     if (this.dataSource !== undefined) content = this.provider.render();
@@ -602,7 +603,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         );
         const count = this.virtualListInputsCache!.count;
         const tableLabel = hostAriaLabel(this)
-          ?? (this.name || this.localize('csvViewerLabel'));
+          ?? normalizeLabel(this.name) ?? this.localize('csvViewerLabel');
         content = html`<div
           part="sheet"
           @scroll=${(event: Event) => this.table.scrollColumns(this.fetchState, event.currentTarget as HTMLElement)}

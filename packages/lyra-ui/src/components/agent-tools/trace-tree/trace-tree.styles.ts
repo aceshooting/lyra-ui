@@ -314,11 +314,17 @@ export const styles = css`
     to { background-position: var(--lr-size-24px) 0; }
   }
 
+  /* Every row is its own grid, so these tracks cannot size from content without breaking column
+     alignment across rows; an over-wide value is clipped with an ellipsis instead of painting into
+     the neighbouring column (the full text is on title and in the row's accessible name). */
   [part='duration'],
   [part='tokens-in'],
   [part='tokens-out'],
   [part='cost'] {
     min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-align: end;
     font-variant-numeric: tabular-nums;
     color: var(--lr-color-text-quiet);

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Cuir an rothlú ar sos',
   carouselResumeRotation: 'Lean ar aghaidh leis an rothlú',
   carouselViewport: 'Sleamhnáin',
-  scrollerLabel: 'Ábhar inscrollaithe',
   scrollPrevious: 'Scrollaigh siar',
   scrollNext: 'Scrollaigh ar aghaidh',
   closeNavigation: 'Dún an nascleanúint',

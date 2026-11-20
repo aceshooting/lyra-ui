@@ -158,3 +158,30 @@ export const WithToolbar: StoryObj = {
     </lr-radio-group>
   `,
 };
+
+export const ConfirmBeforeSwitching: StoryObj = {
+  name: 'Confirming a selection before it commits',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-radio-group-select-request` is cancelable and fires before the selection moves. Calling `preventDefault()` keeps the current plan, so no `input`/`change` events fire; here the Enterprise plan is held back until its checkbox is ticked.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; gap:1rem;">
+      <label><input id="radio-group-allow-enterprise" type="checkbox"> Allow Enterprise</label>
+      <lr-radio-group
+        label="Plan"
+        value="team"
+        @lr-radio-group-select-request=${(e: CustomEvent<{ value: string }>) => {
+          const allowed = (document.getElementById('radio-group-allow-enterprise') as HTMLInputElement | null)?.checked;
+          if (e.detail.value === 'enterprise' && !allowed) e.preventDefault();
+        }}
+      >
+        <lr-radio value="team">Team</lr-radio><lr-radio value="enterprise">Enterprise</lr-radio>
+      </lr-radio-group>
+    </div>
+  `,
+};

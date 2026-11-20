@@ -3421,3 +3421,9 @@ describe('lr-av-player remediation', () => {
     expect(row.querySelector('[part="cue-speaker"]')!.getAttribute('dir')).to.equal('auto');
   });
 });
+
+it('does not name the player region with a whitespace-only name', async () => {
+  const el = (await fixture(html`<lr-av-player name="   " src="https://example.com/a.mp3"></lr-av-player>`)) as LyraAvPlayer;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')?.trim() ?? 'none').to.not.equal('');
+});

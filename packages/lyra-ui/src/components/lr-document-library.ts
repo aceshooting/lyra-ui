@@ -1,3 +1,4 @@
+export type { TableSortDirection } from './data/table/table-support.js';
 export * from './data/document-library/document-library.class.js';
 import { LyraDocumentLibrary } from './data/document-library/document-library.class.js';
 import { defineElement } from '../internal/prefix.js';

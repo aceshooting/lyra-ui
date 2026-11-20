@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -148,6 +149,10 @@ export const styles = css`
     padding: var(--lr-responsive-panel-padding, var(--lr-space-l));
     overflow-wrap: anywhere;
     overflow: auto;
+  }
+  /* no-hover-state: a scroll region is not a pointer target; the ring marks keyboard focus only. */
+  [part='body']:focus-visible {
+    ${focusRingInset}
   }
 
   [part='footer'] {

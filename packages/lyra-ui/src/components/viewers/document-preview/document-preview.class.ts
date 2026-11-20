@@ -5,6 +5,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fileIcon, iconFrame } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { safeDownloadHref, safeFetchUrl, safeMediaSrc } from '../../../internal/safe-url.js';
 import {
   isResourceLimitError,
@@ -450,7 +451,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   private syncScrollRegions(): void {
     if (!this.isConnected) return;
     const live = new Set<Element>(this.renderRoot.querySelectorAll('[part="body"], pre.text'));
-    const name = this.filename || this.localize('documentPreviewGenericFile');
+    // The scroll bodies are the preview's only named owners, so they take the host name first.
+    const name = resolveAccessibleName(this, this.filename) ?? this.localize('documentPreviewGenericFile');
     for (const el of live) {
       const child = el.firstElementChild;
       const existing = this.scrollRegions.get(el);

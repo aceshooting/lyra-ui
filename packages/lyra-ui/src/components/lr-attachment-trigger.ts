@@ -1,3 +1,4 @@
+export type { LyraFileInputRejectedFile } from './media/file-input/file-input.class.js';
 export * from './media/attachment-trigger/attachment-trigger.class.js';
 import { LyraAttachmentTrigger } from './media/attachment-trigger/attachment-trigger.class.js';
 import { defineElement } from '../internal/prefix.js';

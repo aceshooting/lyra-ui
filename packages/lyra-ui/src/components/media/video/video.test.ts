@@ -2868,7 +2868,7 @@ describe('lr-video coverage gap-filling', () => {
     }
   });
 
-  it('falls back from label to language to a localized name for unlabeled caption tracks, and omits lang when unknown', async () => {
+  it('falls back from label to the language display name to a localized name for unlabeled caption tracks, and omits lang when unknown', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
     const media = nativeVideo(el);
     const languageOnly = new EventTarget() as EventTarget & {
@@ -2884,7 +2884,7 @@ describe('lr-video coverage gap-filling', () => {
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="captions"]')!;
-    expect(select.options[1]?.textContent).to.equal('fr');
+    expect(select.options[1]?.textContent).to.equal('French');
     expect(select.options[1]?.hasAttribute('lang')).to.be.true;
     expect(select.options[2]?.textContent).to.equal('Captions');
     expect(select.options[2]?.hasAttribute('lang')).to.be.false;
@@ -3088,4 +3088,11 @@ describe('lr-video remediation', () => {
     el.toggle();
     expect(stub.pauseCalls).to.equal(1);
   });
+});
+
+it('names an unlabeled caption track by its language instead of the raw code', async () => {
+  const el = (await fixture(html`<lr-video></lr-video>`)) as LyraVideo;
+  const name = (el as unknown as { captionLanguageName(l: string): string | undefined }).captionLanguageName('fr');
+  expect(name).to.equal('French');
+  expect((el as unknown as { captionLanguageName(l: string): string | undefined }).captionLanguageName('  ')).to.equal(undefined);
 });

@@ -22,6 +22,8 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { isStaticValidityCheckInProgress } from '../../../internal/invalid-event-alias.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -52,9 +54,22 @@ import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings/fo
 
 installFormControlLabelSupport();
 
+/** The selection a user activation proposes, while `value` still holds the current one. */
+export interface LyraRadioGroupSelectRequestDetail {
+  /** The value the group would take. */
+  readonly value: string;
+  /** The value the group holds while the request dispatches. */
+  readonly previousValue: string;
+  /** The radio the user activated, kept by identity. */
+  readonly option: LyraRadio;
+  /** Equal alias of `option`. */
+  readonly radio: LyraRadio;
+}
+
 export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
+  'lr-radio-group-select-request': CustomEvent<LyraRadioGroupSelectRequestDetail>;
   'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
@@ -101,6 +116,12 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @event {Event} change - Native event fired after `input` for the same group selection.
  * `option` identifies the acted-on radio; `radio` remains an equal compatibility alias.
  *
+ * @event lr-radio-group-select-request - A user activation (click, Space or an arrow/Home/End
+ * key) is about to select an unselected radio; `detail: { value, previousValue, option, radio }`
+ * carries the proposed value while `value` still holds the current one. Cancelable: calling
+ * `preventDefault()` keeps the current selection, and none of `input`/`lr-input`/`change`/`lr-change`
+ * fire. A listener may instead resolve the request by assigning `value` (or a radio's `checked`)
+ * itself, which also suppresses the built-in commit. `lr-activate` still follows.
  * @event lr-input - Prefixed alias for `input`; `detail: { value, option, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, previousValue, option, radio }`.
  * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
@@ -159,11 +180,13 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-radio-group-select-request',
     'lr-input',
     'lr-change',
     'lr-activate',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-radio-group-select-request': Object.freeze(['option', 'radio']),
     'lr-input': Object.freeze(['option', 'radio']),
     'lr-change': Object.freeze(['option', 'radio']),
     'lr-activate': Object.freeze(['option', 'radio']),
@@ -258,6 +281,8 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   get value(): string { return this._value ?? ''; }
   set value(next: string | null) {
+    // Unconditional, including the value already held: the guard records that a write happened.
+    markVetoGuardWrite(this.selectGuard);
     this._valueDirty = true;
     this.selectValue(next ?? '');
   }
@@ -617,30 +642,44 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   /** @internal Reconciles silent programmatic, reset, and restored checked-state changes. */
   radioCheckedChanged(radio: LyraRadio): void {
     if (this.syncingRadios || !this.ownsRadio(radio)) return;
+    markVetoGuardWrite(this.selectGuard);
     this._valueDirty = true;
     this.syncRadios(radio.checked ? radio : undefined);
   }
+  // A listener that answers `lr-radio-group-select-request` by writing `value` (or a radio's
+  // `checked`) finishes before the built-in commit runs; the guard records that it wrote at all.
+  private readonly selectGuard = new VetoWriteGuard();
+
   /** @internal */
   selectRadio(radio: LyraRadio): boolean {
     if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio)) return false;
     const detail = Object.freeze({ value: radio.value, option: radio, radio });
     if (!radio.checked) {
       const previousValue = this.value;
-      this._valueDirty = true;
-      this.hasInteracted = true;
-      this.syncingRadios = true;
-      try {
-        for (const candidate of this.radios()) {
-          if (candidate.checked !== (candidate === radio)) candidate.checked = candidate === radio;
-        }
-      } finally {
-        this.syncingRadios = false;
-      }
-      this.syncRadios();
-      dispatchNativeEvent(this, 'input');
-      this.emit('lr-input', detail);
-      dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { ...detail, previousValue });
+      requestThenCommit({
+        requestDetail: { value: radio.value, previousValue, option: radio, radio },
+        emitRequest: (request, init: { cancelable: true }) =>
+          this.emit('lr-radio-group-select-request', request, init),
+        guard: this.selectGuard,
+        commit: () => {
+          if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio) || radio.checked) return;
+          this._valueDirty = true;
+          this.hasInteracted = true;
+          this.syncingRadios = true;
+          try {
+            for (const candidate of this.radios()) {
+              if (candidate.checked !== (candidate === radio)) candidate.checked = candidate === radio;
+            }
+          } finally {
+            this.syncingRadios = false;
+          }
+          this.syncRadios();
+          dispatchNativeEvent(this, 'input');
+          this.emit('lr-input', detail);
+          dispatchNativeEvent(this, 'change');
+          this.emit('lr-change', { ...detail, previousValue });
+        },
+      });
     }
     this.emit('lr-activate', detail);
     return true;

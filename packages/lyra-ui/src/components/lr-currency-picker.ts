@@ -1,3 +1,4 @@
+export type { LyraCatalogPickerChangeDetail, LyraCatalogPickerEventMap } from './forms/catalog-picker-base.js';
 export * from './forms/currency-picker/currency-picker.class.js';
 import { LyraCurrencyPicker } from './forms/currency-picker/currency-picker.class.js';
 import { defineElement } from '../internal/prefix.js';

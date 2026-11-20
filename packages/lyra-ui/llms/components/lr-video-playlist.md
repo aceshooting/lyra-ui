@@ -21,6 +21,10 @@ keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist A
 prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/lr-video-playlist.js'`.
 
+A nonblank host `aria-label` names the whole playlist: the host takes the `region` role through
+`ElementInternals` (an author `role` attribute still wins), while the inner list keeps its localized
+`videoPlaylistLabel` name. An explicitly empty host label also clears the list name.
+
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and
 forwarded). Lyra additionally provides `withoutAutoAdvance: boolean = false` (attribute

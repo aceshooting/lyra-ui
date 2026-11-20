@@ -4,6 +4,7 @@ import {
   type TemplateResult,
   type PropertyValues,
 } from 'lit';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
@@ -363,7 +364,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   /** The visible tool name: the display label when set, else `name`, else the localized
    *  generic label. */
   private get shownName(): string {
-    return this.displayName || this.name || this.localize('toolCall');
+    return normalizeLabel(this.displayName) ?? normalizeLabel(this.name) ?? this.localize('toolCall');
   }
 
   private accessibleLabel(name: string, status: string, duration: string | null): string {

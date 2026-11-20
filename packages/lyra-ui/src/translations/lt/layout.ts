@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Pristabdyti sukimąsi',
   carouselResumeRotation: 'Tęsti sukimąsi',
   carouselViewport: 'Skaidrės',
-  scrollerLabel: 'Slenkamas turinys',
   scrollPrevious: 'Slinkti atgal',
   scrollNext: 'Slinkti pirmyn',
   closeNavigation: 'Uždaryti naršymą',

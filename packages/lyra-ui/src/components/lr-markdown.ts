@@ -1,3 +1,8 @@
+export type { MarkedExtension } from './conversation/markdown/markdown-loader.js';
+export type { MarkdownHtmlMode } from './conversation/markdown/markdown-shared.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
+export type { ShikiLanguageLoader, ShikiLanguageRegistration } from '../internal/shiki/core.js';
 export * from './conversation/markdown/markdown.class.js';
 export { loadMarkdownDeps as preloadMarkdown } from './conversation/markdown/markdown-loader.js';
 export type { LyraMarkedParser } from './conversation/markdown/markdown-loader.js';

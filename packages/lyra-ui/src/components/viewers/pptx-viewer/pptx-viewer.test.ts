@@ -2484,7 +2484,7 @@ describe('lr-pptx-viewer remediation', () => {
       filler.style.blockSize = '2000px';
       container.append(filler);
       await waitUntil(() => container.getAttribute('tabindex') === '0', 'overflowing container never became focusable');
-      expect(container.getAttribute('aria-label')).to.equal('Deck');
+      expect(container.getAttribute('aria-label')).to.equal('Scrollable content');
     } finally {
       restore();
     }

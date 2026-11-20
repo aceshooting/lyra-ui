@@ -3445,3 +3445,27 @@ it('keeps the focus rings of the first and last slotted actions inside the scrol
     expectOutlineInsideClip(base, actions);
   }
 });
+
+describe("scrollable body", () => {
+  it("is a named keyboard stop only while slotted content overflows the capped body", async () => {
+    const el = await fixture<LyraWidget>(html`
+      <lr-widget label="Revenue" style="display:block; block-size:8rem">
+        <p style="margin:0; block-size:1rem">short</p>
+      </lr-widget>
+    `);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const content = el.querySelector("p")!;
+    expect(body.hasAttribute("tabindex")).to.equal(false);
+    content.style.blockSize = "30rem";
+    await waitUntil(() => body.getAttribute("tabindex") === "0", "overflow adds the stop");
+    expect([body.getAttribute("role"), body.getAttribute("aria-label")]).to.deep.equal(["region", "Revenue"]);
+    await expect(el).to.be.accessible();
+    await focusByKeyboard(body);
+    content.style.blockSize = "1rem";
+    await waitUntil(() => body.getAttribute("tabindex") === "-1", "a focused body keeps focus once it fits");
+    expect(body.hasAttribute("role")).to.equal(false);
+    expect(el.shadowRoot!.activeElement === body).to.equal(true);
+    el.remove();
+    expect(body.hasAttribute("tabindex")).to.equal(false);
+  });
+});

@@ -71,7 +71,8 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+  selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `size` is

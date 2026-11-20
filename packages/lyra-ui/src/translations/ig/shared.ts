@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Enweghị ike ibunye akụkụ a.',
   noData: 'Enweghị data',
   legendTypeShown: 'Egosila {label}',
   legendTypeHidden: 'Ezola {label}',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Enweghị ike ibunye data',
   zoomOut: 'Belata nlele',
   zoomIn: 'Mee ka nlele buru ibu',
+  scrollerLabel: 'Ọdịnaya a pụrụ ịpịgharị',
   clear: 'Hichapụ',
   open: 'Mepee',
   close: 'Mechie',

@@ -533,7 +533,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncCatalogDescription(this.controlId);
-    const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
+    const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom') || changed.has('topLayer')));
     this.catalogPicker.updated(reposition);
     if (
       changed.has('required') ||

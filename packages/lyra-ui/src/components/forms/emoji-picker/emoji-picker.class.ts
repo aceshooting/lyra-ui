@@ -218,7 +218,8 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  * is tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap
  * under RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to
  * the first/last option, and Enter/Space picks. The search input doubles as a `role="combobox"`
- * over the same listbox: arrow keys navigate the options and Enter selects,
+ * over the same listbox: ArrowUp/ArrowDown navigate the options and Enter selects, while
+ * ArrowLeft/ArrowRight and Home/End keep moving the text caret,
  * with `aria-activedescendant` tracking the active option. Composing keyboard events remain with
  * text editing and do not navigate or pick an emoji. Large data sets automatically window
  * their visible rows so scrolling does not create one button per supplied emoji in the DOM.
@@ -988,8 +989,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let target: number;
-    if (event.key === forwardKey) target = this.activeIndex + 1;
-    else if (event.key === backwardKey) target = this.activeIndex - 1;
+    // In the input, ArrowLeft/ArrowRight keep their native caret meaning, like Home/End.
+    if (event.key === forwardKey && !inSearch) target = this.activeIndex + 1;
+    else if (event.key === backwardKey && !inSearch) target = this.activeIndex - 1;
     else if (event.key === 'ArrowDown') target = this.activeIndex + this.columnsPerRow();
     else if (event.key === 'ArrowUp') target = this.activeIndex - this.columnsPerRow();
     // In the input, Home/End keep their native caret meaning.

@@ -103,6 +103,17 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover. While set, the listbox is placed with the `fixed` strategy; no DOM node
+   * moves, so anchoring, RTL placement, focus and Escape are unchanged. Without native Popover API
+   * support the listbox keeps its ordinary `z-index` stacking. Same contract as `<lr-select>`'s
+   * `top-layer`. Changes apply live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
 
   protected abstract get catalogEditing(): CatalogPickerEditing;
   /** The localized `valueMissing` message. */

@@ -14,6 +14,7 @@ import {
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { literalSetConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import {
   isAccessibilitySubtreeExcluded,
   isAriaTrue,
@@ -759,8 +760,8 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   };
 
   override render(): TemplateResult {
-    const name = hostAriaLabel(this);
-    return html`<div part="base" role="group" aria-label=${name ?? (this.label || nothing)}>
+    const name = hostAriaLabel(this) ?? normalizeLabel(this.label);
+    return html`<div part="base" role="group" aria-label=${name ?? nothing}>
       <slot @slotchange=${this.onSlotChange}></slot>
     </div>`;
   }

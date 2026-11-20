@@ -15,7 +15,7 @@ interface LocaleSearchViewer extends HTMLElement {
   search(query: string): Promise<number>;
 }
 
-expectLocaleFallback('tr', ['documentPreviewEmpty', 'documentPreviewTypeDocument', 'docxViewerLabel', 'ebookViewerNextChapter', 'ebookViewerPreviousChapter', 'ebookViewerRegionLabel', 'loading', 'loadingDocument', 'notebookViewerLabel', 'pdfViewerLabel', 'pptxViewerFidelityNotice', 'pptxViewerLabel', 'viewerSearchNoMatches', 'xmlViewerLabel']);
+expectLocaleFallback('tr', ['documentPreviewEmpty', 'documentPreviewTypeDocument', 'docxViewerLabel', 'ebookViewerNextChapter', 'ebookViewerPreviousChapter', 'ebookViewerRegionLabel', 'loading', 'loadingDocument', 'notebookViewerLabel', 'pdfViewerLabel', 'pptxViewerFidelityNotice', 'pptxViewerLabel', 'scrollerLabel', 'viewerSearchNoMatches', 'xmlViewerLabel']);
 
 describe('viewer locale-sensitive search state', () => {
   const cases: Array<{

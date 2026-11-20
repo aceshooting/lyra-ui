@@ -5,6 +5,11 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { LyraViewerDiagnosticEventDetail } from './viewers/viewer-diagnostics.js';
+export type { LyraViewerSource } from './viewers/viewer-source.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/notebook-viewer/notebook-viewer.class.js';
 import { html } from 'lit';
 import { LyraNotebookViewer } from './viewers/notebook-viewer/notebook-viewer.class.js';

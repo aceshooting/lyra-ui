@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Призупинити зміну слайдів',
   carouselResumeRotation: 'Відновити зміну слайдів',
   carouselViewport: 'Слайди',
-  scrollerLabel: 'Вміст із прокручуванням',
   scrollPrevious: 'Прокрутити назад',
   scrollNext: 'Прокрутити вперед',
   closeNavigation: 'Закрити навігацію',

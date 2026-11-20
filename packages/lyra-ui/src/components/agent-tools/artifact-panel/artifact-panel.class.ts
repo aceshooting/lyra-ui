@@ -16,6 +16,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -291,6 +292,15 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     if (!safeSrc) return;
     this.emit('lr-download', { filename: this.downloadName, src: safeSrc });
   };
+
+  constructor() {
+    super();
+    // Slotted prose or an image taller than a capped panel has nothing tabbable to scroll by.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+      return [el && { el, name: this.accessibleLabel }];
+    });
+  }
 
   override render(): TemplateResult {
     const versions = this.normalizedVersions;

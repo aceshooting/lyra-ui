@@ -1,3 +1,6 @@
+export type { ApprovalAction, ApprovalDecision } from './agent-tools/approval-state.js';
+export type { ToolApprovalDialogCloseReason } from './agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
+export type { ApprovalWaitUntil } from '../internal/approval-wait-until.js';
 export * from './agent-tools/approval-queue/approval-queue.class.js';
 import './lr-badge.js';
 import { LyraApprovalQueue } from './agent-tools/approval-queue/approval-queue.class.js';

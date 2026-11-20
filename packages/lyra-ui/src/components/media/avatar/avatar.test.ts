@@ -783,3 +783,10 @@ it('accepts every shared size, variant and avatar-shape literal without normaliz
     expect(el.shape, `shape ${shape}`).to.equal(shape);
   }
 });
+
+it('treats a whitespace-only label as absent instead of naming the avatar with blanks', async () => {
+  const el = (await fixture(html`<lr-avatar label="   " initials="AB"></lr-avatar>`)) as LyraAvatar;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal(null);
+  expect(base.getAttribute('role')).to.equal(null);
+});

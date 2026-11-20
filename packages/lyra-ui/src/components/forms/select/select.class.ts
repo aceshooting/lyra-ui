@@ -1,4 +1,5 @@
 import { positionIndex } from '../../../internal/keyed-index.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { foldSearchText } from '../../../internal/search-haystack.js';
 import { capOptionRows } from '../../../internal/option-selection.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -31,7 +32,7 @@ import type {
   LyraPickerValue,
 } from '../../../internal/picker-value.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   activateNonmodalOverlay,
   type OverlayHandle,
@@ -545,7 +546,7 @@ export class LyraSelect<
    * @default '' */
   @property() placeholder = '';
   /** Visible label. A host `aria-label` wins on the internal trigger by attribute presence,
-   * including an explicitly empty value that suppresses this label's naming fallback. */
+   * including an explicitly empty value; a whitespace-only one is ignored. */
   @property() label = '';
   /**
    * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
@@ -2722,8 +2723,8 @@ export class LyraSelect<
               : 'false'}
             aria-controls=${isSingleOption ? nothing : this.listId}
             aria-activedescendant=${isSingleOption ? nothing : activeId || nothing}
-            aria-label=${this.getAttribute('aria-label') ??
-            (hasLabel ? nothing : this.placeholder || this.localize('select'))}
+            aria-label=${hostAriaLabel(this) ??
+            (hasLabel ? nothing : normalizeLabel(this.placeholder) ?? this.localize('select'))}
             aria-describedby=${describedBy || nothing}
             aria-required=${isSingleOption ? nothing : this.required ? 'true' : 'false'}
             aria-invalid=${supporting.hasError || (this.touched && !this.internals.validity.valid)

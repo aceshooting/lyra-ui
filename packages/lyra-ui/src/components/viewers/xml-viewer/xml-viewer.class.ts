@@ -41,6 +41,8 @@ import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { regionHighlightLabel } from '../region-highlight-layer.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import {
   writeClipboardText,
@@ -54,7 +56,7 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerLimit, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -414,6 +416,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
@@ -424,8 +428,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
+    search: LYRA_DEFAULT_search,
     sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     treeSourceError: LYRA_DEFAULT_treeSourceError,
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
@@ -589,7 +596,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             source === this.treeSource && epoch === this.hierarchy.epoch && projection === this.hierarchy.projection &&
             highlights === this.highlights && this.renderedHighlights.get(node.path)?.highlight === highlight.highlight)
             this.emit('lr-highlight-activate', { highlightId: highlight.highlight.id });
-        }}>${highlight.highlight.label || this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}</button>` : nothing}`;
+        }}>${normalizeLabel(highlight.highlight.label) ?? this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}</button>` : nothing}`;
   }
   private renderSource(): TemplateResult {
     const partial = !this.sourceSearch.exact && Boolean(this.searchQuery);
@@ -598,7 +605,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     return html`<div class="source-shell" style=${styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
       ${this.copyable && hasHierarchySourceCopy(() => this.treeSource) ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
       ${hierarchySourceView(this.hierarchy, {
-        label: hostAriaLabel(this) ?? (this.name || this.localize('xmlViewerLabel')), rtl: this.effectiveDirection === 'rtl', multiple: false,
+        label: hostAriaLabel(this) ?? normalizeLabel(this.name) ?? this.localize('xmlViewerLabel'), rtl: this.effectiveDirection === 'rtl', multiple: false,
         loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
         retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
         name: node => node.name, content: node => this.renderSourceNode(node), select: () => {},
@@ -1135,12 +1142,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** The localized accessible name of one highlight's action button -- its own `label` when the
    *  host supplied one, otherwise its position in the resolved set. Mirrors `<lr-svg-viewer>`. */
   private highlightActionLabel(highlight: LyraHighlight, index: number, total: number): string {
-    if (highlight.label) return this.localize('highlightWithLabel', undefined, { label: highlight.label });
-    const numberFormat = getNumberFormat(this.effectiveLocale);
-    return this.localize('highlightOfTotal', undefined, {
-      index: numberFormat.format(index + 1),
-      total: numberFormat.format(total),
-    });
+    return regionHighlightLabel(highlight, index, total, this.effectiveLocale,
+      (key, values) => this.localize(key, undefined, values));
   }
 
   private expandAncestors(path: readonly PathSegment[], includeSelf = false): void {
@@ -1445,8 +1448,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
                 this.emit('lr-highlight-activate', { highlightId: highlight.highlight.id });
               }}
             >
-              ${highlight.highlight.label
-                || this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}
+              ${normalizeLabel(highlight.highlight.label)
+                ?? this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}
             </button>`
           : nothing}
         ${this.renderCopyButton(() => el, toggleLabel, pathKey)}
@@ -1478,9 +1481,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   override render(): TemplateResult {
-    if (this.treeSource !== undefined) return this.renderSource();
+    // Source mode has no overall region: the tree is the named owner, so clear any host role.
+    if (this.treeSource !== undefined) {
+      viewerSemanticRole(this, null);
+      return this.renderSource();
+    }
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    const label = viewerSemanticLabel(this, this.name || this.localize('xmlViewerLabel'));
+    const label = viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('xmlViewerLabel'));
     const state = this.xmlState;
     const highlightDeps = [state, this.highlights, this.activeHighlightId, this.effectiveMaxNodes];
     if (!this.highlightDeps || highlightDeps.some((value, index) => value !== this.highlightDeps![index])) {

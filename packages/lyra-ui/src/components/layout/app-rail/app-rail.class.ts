@@ -17,8 +17,9 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lengthOrNumberConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { lengthOrNumberConverter, optionalLiteralSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
@@ -27,7 +28,7 @@ import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { parseHotkey, hasNonShiftModifier, matchesHotkey, hotkeyAriaKeyShortcuts, isIgnorableKeyEvent, isEditableKeyEventTarget, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
-import { nextId, isAccessibilityVisible } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, isAccessibilityVisible } from '../../../internal/a11y.js';
 import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
 import { chevronIcon, closeIcon, menuIcon, pinIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
@@ -489,9 +490,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    * inaccessible rails are ignored. The last eligible palette or rail owns a shared chord. */
   @property({ useDefault: true }) hotkey = '';
 
-  /** Optional accessible name for the rail's navigation landmark and mobile dialog. Every
-   *  supplied string is literal, including an empty one; only absence uses the localized
-   *  fallback. A host-level `aria-label` attribute takes precedence, including an explicit empty
+  /** Optional accessible name for the rail's navigation landmark and mobile dialog. A
+   *  blank or whitespace-only string is treated as unset and uses the localized fallback. A host-level `aria-label` attribute takes precedence, including an explicit empty
    *  value. */
   @property() label?: string;
 
@@ -573,12 +573,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  Keyboard focus opens it at once. A non-finite value uses the default and a negative one is
    *  clamped to `0`.
    *  @default 150 */
-  @property({ type: Number, attribute: 'peek-open-delay', useDefault: true }) peekOpenDelay = 150;
+  @property({ attribute: 'peek-open-delay', converter: blankNumberConverter(150), useDefault: true }) peekOpenDelay = 150;
 
   /** Milliseconds the `auto-hide` rail stays open after the pointer has left and keyboard focus is
    *  no longer inside it. A non-finite value uses the default and a negative one is clamped to `0`.
    *  @default 300 */
-  @property({ type: Number, attribute: 'peek-close-delay', useDefault: true }) peekCloseDelay = 300;
+  @property({ attribute: 'peek-close-delay', converter: blankNumberConverter(300), useDefault: true }) peekCloseDelay = 300;
 
   /** Opts in the desktop collapse control: a `[part="collapse-toggle"]` button rendered inside
    *  `[part="header"]` that flips the rail between its `'full'` and `'icon-only'` presentations,
@@ -2105,6 +2105,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     ><span part="resizer-track"></span></div>`;
   }
 
+  /** Landmark/dialog name: an explicitly empty host `aria-label` opts out; blank or whitespace
+   *  values never become the name. */
+  private navigationName(): string {
+    return (hostAriaLabel(this) === '' || this.accessibleLabel === '')
+      ? ''
+      : resolveAccessibleName(this, this.label, this.localize('navigation')) ?? '';
+  }
+
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
     // `auto-hide` replaces the collapse control with the pin control, which flips the same preference.
@@ -2129,7 +2137,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
         aria-label=${
-          this.nativeModal.requested ? nothing : this.accessibleLabel ?? this.label ?? this.localize('navigation')
+          this.nativeModal.requested ? nothing : this.navigationName()
         }
         role=${this.nativeModal.requested ? nothing : this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive && !this.nativeModal.requested ? 'true' : nothing}
@@ -2179,7 +2187,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         ${this.nativeModal.renderHelperSlot()}
       </div>
       ${this.resizable && this._mode === 'full' ? this.renderResizer() : nothing}
-    `, { label: this.accessibleLabel ?? this.label ?? this.localize('navigation') });
+    `, { label: this.navigationName() });
   }
 }
 

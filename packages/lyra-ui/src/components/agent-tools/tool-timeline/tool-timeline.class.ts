@@ -28,6 +28,7 @@ import {
   redactToolDetail,
   type RedactedToolDetail,
 } from '../tool-redaction.js';
+import { tag } from '../../../internal/prefix.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_deny, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit, LYRA_DEFAULT_toolTimelineLoadError } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -494,7 +495,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const state = this.loadingSurfaces.get(kind);
     if (state && !(retry && state === 'failed')) return;
     this.loadingSurfaces.set(kind, 'loading');
-    void this.loadSurface(kind).then(() => {
+    const load = this.loadSurface(kind).then(() => {
       this.loadingSurfaces.set(kind, 'ready');
       this.requestUpdate();
     }, () => {
@@ -502,6 +503,24 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       this.announcements.announceAssertive(this.localize('toolTimelineLoadError'));
       this.requestUpdate();
     });
+    this.surfaceLoads.add(load);
+    void load.finally(() => this.surfaceLoads.delete(load));
+  }
+
+  private readonly surfaceLoads = new Set<Promise<void>>();
+
+  /** Settles after any surface registration in flight and the first render of the surfaces it upgraded. */
+  protected override async getUpdateComplete(): Promise<boolean> {
+    let complete = await super.getUpdateComplete();
+    while (this.surfaceLoads.size > 0) {
+      await Promise.all(this.surfaceLoads);
+      complete = await super.getUpdateComplete();
+    }
+    await Promise.all(Array.from(
+      this.renderRoot.querySelectorAll(`${tag('tool-result-view')}, ${tag('tool-approval-dialog')}`),
+      (child) => Promise.resolve((child as Element & { updateComplete?: Promise<unknown> }).updateComplete),
+    ));
+    return complete;
   }
 
   protected override willUpdate(changed: PropertyValues): void {

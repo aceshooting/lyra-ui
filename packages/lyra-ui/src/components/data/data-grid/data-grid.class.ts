@@ -1,4 +1,6 @@
 import { copyOutcome, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { NESTED_INTERACTIVE_SELECTOR } from '../../../internal/nested-interactive.js';
 import { downloadBlob } from '../../../internal/csv.js';
 import { createInputMemo } from '../../../internal/input-memo.js';
 import { MeasuredOffsetIndex } from '../../../internal/measured-offset-index.js';
@@ -68,12 +70,19 @@ import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 export * from './data-grid-types.js';
-import { selectableConverter, displayItemKey, snapshotColumns, INTERACTIVE_SELECTOR, VIRTUALIZATION_THRESHOLD, VIRTUAL_OVERSCAN, DATA_GRID_TREE_NODE_LIMIT, DATA_GRID_TREE_DEPTH_LIMIT, DATA_GRID_DRAG_TYPE, REBIND_NO_SNAPSHOT, frozenArray, sameFilterState, sameSortState, serializableFilterValue, isKey, snapshotKeys, keysEqual, typedKey, sameKeySet, arrayHasKey, isElementValue, valueControl, checkableControl, humanizeIdentifier, safeText, normalizePinSide, normalizedGroupBy, type DataDisplayRow, type DataDisplayGroup, type DisplayItem, type DataGridViewportAnchor, type PendingVirtualScroll, type ResizeSession, type ColumnDragSession } from './data-grid-support.js';
+import { selectableConverter, displayItemKey, snapshotColumns, VIRTUALIZATION_THRESHOLD, VIRTUAL_OVERSCAN, DATA_GRID_TREE_NODE_LIMIT, DATA_GRID_TREE_DEPTH_LIMIT, DATA_GRID_DRAG_TYPE, REBIND_NO_SNAPSHOT, frozenArray, sameFilterState, sameSortState, serializableFilterValue, isKey, snapshotKeys, keysEqual, typedKey, sameKeySet, arrayHasKey, isElementValue, valueControl, checkableControl, humanizeIdentifier, safeText, normalizePinSide, normalizedGroupBy, type DataDisplayRow, type DataDisplayGroup, type DisplayItem, type DataGridViewportAnchor, type PendingVirtualScroll, type ResizeSession, type ColumnDragSession } from './data-grid-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_dataGridFilterColumn, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridSelectPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+// Only grids opting into the columns menu render, and so register, its dropdown, items and trigger.
+const DATA_GRID_CHILDREN = {
+  dropdown: () => import('../../lr-dropdown.js'),
+  'dropdown-item': () => import('../../lr-dropdown-item.js'),
+  button: () => import('../../lr-button.js'),
+};
 
 
 /**
@@ -1216,21 +1225,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private menuRegistration?: Promise<unknown>;
+  private childRegistration?: Promise<unknown>;
 
-  protected override getUpdateComplete(): Promise<boolean> {
-    const update = super.getUpdateComplete();
-    if (!this.withColumnsMenu) return update;
-    return update.then(async complete => {
-      await this.menuRegistration;
-      return complete;
-    });
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.menuRegistration;
+    await this.childRegistration;
+    return complete;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (this.withColumnsMenu) this.menuRegistration ??= Promise.all([
-      import('../../lr-dropdown.js'), import('../../lr-dropdown-item.js'), import('../../lr-button.js'),
-    ]);
+    this.menuRegistration = loadLazyChildren(DATA_GRID_CHILDREN, this.renderRoot) ?? this.menuRegistration;
+    this.childRegistration = loadLazyChildren('data-grid', this.renderRoot) ?? this.childRegistration;
     this.renderedDisplayItems = this.displayItems;
     this.renderedColumns = this.visibleColumns;
     if (this.restoreCellFocus) {
@@ -3823,7 +3830,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private onHeaderClick(event: MouseEvent, id: string): void {
     const target = event.target;
     const interactive = isElementValue(target)
-      ? target.closest(INTERACTIVE_SELECTOR)
+      ? target.closest(NESTED_INTERACTIVE_SELECTOR)
       : null;
     if (interactive && interactive !== event.currentTarget) return;
     this.activateSort(id, event.shiftKey);
@@ -3964,7 +3971,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   ): void {
     for (const target of event.composedPath()) {
       if (target === cell) break;
-      if (isElementValue(target) && target.matches(INTERACTIVE_SELECTOR)) return;
+      if (isElementValue(target) && target.matches(NESTED_INTERACTIVE_SELECTOR)) return;
     }
     this.emit(
       'lr-cell-click',
@@ -4544,7 +4551,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (
       isElementValue(target) &&
       target !== cell &&
-      target.closest(INTERACTIVE_SELECTOR)
+      target.closest(NESTED_INTERACTIVE_SELECTOR)
     ) {
       return;
     }

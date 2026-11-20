@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -195,5 +195,12 @@ export const styles = css`
     [part="current-step-icon"] svg {
       animation: none !important;
     }
+  }
+
+  /* no-hover-state: the read-only status readout and the empty state take focus only by script
+     (focus repair when the run's controls unmount), never from the pointer. */
+  [part='status']:focus-visible,
+  [part='empty']:focus-visible {
+    ${focusRing}
   }
 `;

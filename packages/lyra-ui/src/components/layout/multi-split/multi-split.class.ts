@@ -19,6 +19,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult, type PropertyDeclaration, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import {
   activateOverlay,
   composedContains,
@@ -707,11 +708,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private nativeModalLabel(): string | null {
+    const host = normalizeLabel(this.getAttribute('aria-label')) ?? null;
     const panel = this.floatingPanelEl;
-    if (!panel) return this.getAttribute('aria-label');
-    if (panel.hasAttribute('aria-label')) return panel.getAttribute('aria-label');
+    if (!panel) return host;
+    const own = normalizeLabel(panel.getAttribute('aria-label'));
+    if (own !== undefined) return own;
     const referenced = resolveIdReferencesIn(panel.getRootNode(), panel.getAttribute('aria-labelledby'));
-    return referenced.map(element => element.textContent?.trim()).filter(Boolean).join(' ') || this.getAttribute('aria-label');
+    return referenced.map(element => element.textContent?.trim()).filter(Boolean).join(' ') || host;
   }
 
   private readonly syncNativeModalGeometry = (): void => {

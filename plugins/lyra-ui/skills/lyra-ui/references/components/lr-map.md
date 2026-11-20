@@ -1207,7 +1207,8 @@ payload beside the map.
 
 - `label?: string` — accessible name for MapLibre's actual focusable canvas. A host `aria-label`
   (an empty one included) wins and names the canvas. Omitting `label` localizes the default `map`
-  message; an explicit empty string suppresses that default and renders an empty canvas name. The
+  message, as does a whitespace-only value; an explicit empty string suppresses that default and
+  renders an empty canvas name. The
   non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,

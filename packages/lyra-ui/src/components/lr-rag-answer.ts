@@ -1,3 +1,4 @@
+export type { SourceCardOpenDetail } from './retrieval/source-card/source-card.class.js';
 export * from './retrieval/rag-answer/rag-answer.class.js';
 import './lr-markdown.js';
 import './lr-citation-badge.js';

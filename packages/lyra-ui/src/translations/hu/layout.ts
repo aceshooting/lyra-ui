@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Forgatás szüneteltetése',
   carouselResumeRotation: 'Forgatás folytatása',
   carouselViewport: 'Diák',
-  scrollerLabel: 'Görgethető tartalom',
   scrollPrevious: 'Görgetés vissza',
   scrollNext: 'Görgetés előre',
   closeNavigation: 'Navigáció bezárása',

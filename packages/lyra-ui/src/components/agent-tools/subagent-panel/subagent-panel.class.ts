@@ -96,7 +96,8 @@ interface OrderedRuns {
  * @csspart retry - Retry action.
  * @csspart limit - Resource-ceiling status shown when additional runs are omitted.
  * @csspart empty - The empty state.
- * @cssprop [--lr-subagent-panel-selected-border=var(--lr-color-brand)] - Selected run border.
+ * @cssprop [--lr-subagent-panel-selected-border=var(--lr-color-brand)] - Selected run border; under
+ *   `frame="plain"` it paints the selected row's inline-start rule instead.
  * @cssprop [--lr-subagent-panel-progress-track=var(--lr-color-border)] - Progress track.
  * @cssprop [--lr-subagent-panel-progress-fill=var(--lr-color-brand)] - Progress fill.
  * @cssprop [--lr-subagent-panel-compact-trigger-padding=var(--lr-space-2xs) var(--lr-space-s)] -
@@ -175,7 +176,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   /** Visual chrome for each run row, in the library's shared container-frame vocabulary. `'card'`
    *  (the default) keeps each row's own border/radius; `'plain'` drops it, for a transcript or
    *  message-bubble context that already draws its own border around a nested
-   *  `<lr-subagent-panel>` and would otherwise double it. */
+   *  `<lr-subagent-panel>` and would otherwise double it. The selected run keeps an inline-start
+   *  rule in `--lr-subagent-panel-selected-border` so the selection stays visible. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
@@ -493,7 +495,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               ? html`<span
                   part="progress"
                   role="progressbar"
-                  aria-label=${run.label || this.localize('progress')}
+                  aria-label=${normalizeLabel(run.label) ?? this.localize('progress')}
                   aria-valuemin="0"
                   aria-valuemax="100"
                   aria-valuenow=${Math.round(progress * 100)}

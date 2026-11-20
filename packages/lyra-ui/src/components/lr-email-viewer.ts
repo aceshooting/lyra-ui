@@ -1,3 +1,5 @@
+export type { AnchorResultDetail, TextSelectDetail } from './viewers/document-viewer/anchors.js';
+export type { LyraSearchChangeDetail, LyraTextViewerTargetEventMap } from '../internal/text-viewer-target.js';
 export {
   clearEmailDepsCache, getEmailDepsIfLoaded, loadEmailAndSanitizer, loadEmailDeps,
   type EmailDeps, type PostalAddressApi, type PostalAttachmentApi, type PostalMessageApi, type PostalMimeApi,

@@ -34,6 +34,7 @@ import {
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
 import { styles } from './markdown.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
@@ -323,7 +324,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  Defaults to `4`; non-finite values fall back to that default and finite values are truncated
    *  and clamped to `[1, 32]` before use. This does not change tabs inside ordinary text or the
    *  separate `--lr-code-block-tab-size` used to display rendered code. */
-  @property({ type: Number, attribute: 'tab-size' }) override tabSize = 4;
+  @property({ attribute: 'tab-size', converter: blankNumberConverter(4) }) override tabSize = 4;
 
   /** How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible
    * text, or deliberately trusted. In escape mode, a consumer `renderer.text` or `renderer.html`

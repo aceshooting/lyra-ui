@@ -1035,7 +1035,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
           ?disabled=${this.effectiveDisabled}
           ?readonly=${this.readonly}
         />
-        <fieldset part="fieldset" aria-label=${this.accessibleLabel ?? nothing}>
+        <fieldset part="fieldset" aria-label=${this.accessibleLabel === '' ? '' : normalizeLabel(this.accessibleLabel) ?? nothing}>
           <legend part="legend" ?hidden=${!hasLabel}>
             <span part="form-control-label">
               <slot name="label"

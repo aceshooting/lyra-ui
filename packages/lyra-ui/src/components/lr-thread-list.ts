@@ -1,3 +1,4 @@
+export type { LyraTimestamp } from './conversation/timestamp.js';
 export * from './conversation/thread-list/thread-list.class.js';
 import './lr-conversation-item.js';
 import './lr-virtual-list.js';

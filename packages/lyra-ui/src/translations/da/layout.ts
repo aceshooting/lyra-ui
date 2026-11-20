@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Sæt rotation på pause',
   carouselResumeRotation: 'Genoptag rotation',
   carouselViewport: 'Dias',
-  scrollerLabel: 'Rulbart indhold',
   scrollPrevious: 'Rul tilbage',
   scrollNext: 'Rul frem',
   closeNavigation: 'Luk navigation',

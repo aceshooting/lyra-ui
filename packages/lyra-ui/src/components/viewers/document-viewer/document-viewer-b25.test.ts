@@ -48,6 +48,6 @@ describe('lr-document-viewer remediation', () => {
     const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     await waitUntil(() => body.getAttribute('tabindex') === '0', 'overflowing body never became focusable');
     expect(body.getAttribute('role')).to.equal('region');
-    expect(body.getAttribute('aria-label')).to.equal('Tall.doc');
+    expect(body.getAttribute('aria-label')).to.equal('Scrollable content');
   });
 });

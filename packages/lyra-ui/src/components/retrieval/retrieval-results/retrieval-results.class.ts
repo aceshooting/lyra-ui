@@ -1,4 +1,5 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { SourcePageController, resolveSourceSelection } from '../../../internal/source-page-controller.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
@@ -6,6 +7,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import { collectionSupport, publicCollectionTruncation, writeNormalizedOwnedCollection, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
 import { projectRetrievalChunk } from './retrieval-results-model.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -88,7 +90,7 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     text: chunk.text,
     score: chunk.score,
     sourceId: chunk.source.id,
-    title: chunk.source.name,
+    title: normalizeLabel(chunk.source.name),
     anchor: chunk.locator,
     page: chunk.locator?.kind === 'page' ? chunk.locator.page : undefined,
   };
@@ -841,8 +843,17 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private sourceStatusInitialized = false;
   private sourceStatus = '';
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('retrieval-results', this.renderRoot) ?? this.childRegistration;
     if (this.loadMoreHadFocus && changed.has('loading')) {
       this.loadMoreHadFocus = false;
       restoreComposedFocus(this, true);
@@ -1010,7 +1021,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         sorted,
         (chunk) => chunk.source.id,
         (_id, groupChunks) =>
-          groupChunks[0]!.source.name || this.localize('untitledSource')
+          normalizeLabel(groupChunks[0]!.source.name) ?? this.localize('untitledSource')
       );
     }
     // An unset groupBy degrades to the flat list rather than collapsing every row into one invented
@@ -1152,7 +1163,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private renderRow = (item: unknown, index: number, total: number): TemplateResult => {
     const chunk = item as RetrievalChunk;
     const selected = this.isChunkSelected(chunk.id);
-    const rowLabel = chunk.source.name || this.localize('untitledSource');
+    const rowLabel = normalizeLabel(chunk.source.name) ?? this.localize('untitledSource');
     return html`
       ${!this.withoutSelection
         ? html`<lr-checkbox

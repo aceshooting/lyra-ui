@@ -16,7 +16,7 @@ import { styles } from './radio-button.styles.js';
  * vertical layout, or wrapping starts a new fully rounded run; live layout and membership changes
  * are reconciled after layout in both directions.
  * A host `aria-label` is forwarded to the internal `role="radio"` by attribute presence, so an
- * explicitly empty value remains authoritative rather than restoring a label-text fallback.
+ * explicitly empty value remains authoritative; a whitespace-only one is ignored.
  * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long
  * start/prefix and end/suffix adornments truncate inside their capped portions instead of widening
  * the page. The leading, label, and trailing wrappers are hidden independently while empty, so a

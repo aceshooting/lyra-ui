@@ -10,7 +10,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { DEFAULT_CANVAS_COLOR, resolveCanvasColor } from '../../../internal/canvas-color.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './audio-visualizer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -107,7 +107,7 @@ export class LyraAudioVisualizer extends LyraElement {
   /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
    *  (e.g. `lr-push-to-talk`'s `lr-level`). `null` (the default) means "no external signal" --
    *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
-  @property({ converter: (value: string | null) => value?.trim() ? Number(value) : null }) level: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) level: number | null = null;
   private _state: AudioVisualizerState = 'idle';
   @property({ reflect: true, converter: AUDIO_VISUALIZER_STATE })
   get state(): AudioVisualizerState {
@@ -133,12 +133,12 @@ export class LyraAudioVisualizer extends LyraElement {
     this._mode = normalized;
     this.requestUpdate('mode', old);
   }
-  @property({ type: Number, attribute: 'bar-count' }) barCount = 5;
+  @property({ attribute: 'bar-count', converter: blankNumberConverter(5) }) barCount = 5;
   /** Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`. */
-  @property({ type: Number }) gain = 1;
+  @property({ converter: blankNumberConverter(1) }) gain = 1;
   /** Accessible-name override. Unset (the default) auto-generates "Voice activity: {state}"; an
    *  explicit empty string (`label=""` or `.label = ''`) suppresses that default and renders an
-   *  empty accessible name. */
+   *  empty accessible name, which makes the host `role="presentation"` instead of an unnamed image. */
   @property() label?: string;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
@@ -151,6 +151,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private nextTrackCheckMs = 0;
   private readonly amplitudes: number[] = [];
   private generatedAriaLabel?: string;
+  private generatedRole?: string;
   /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
   private hostSize?: { width: number; height: number };
   /** Token colors resolved once per theme change so `draw()` never calls `getComputedStyle` per frame. */
@@ -360,7 +361,6 @@ export class LyraAudioVisualizer extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('stream') || (changed.has('mode') && this.stream)) this.syncAnalyser();
-    this.syncDefaultRole();
     const currentAriaLabel = this.getAttribute('aria-label');
     const consumerSuppliedAriaLabel = currentAriaLabel !== this.generatedAriaLabel &&
       (currentAriaLabel === '' || normalizeLabel(currentAriaLabel) !== undefined);
@@ -372,6 +372,7 @@ export class LyraAudioVisualizer extends LyraElement {
       if (currentAriaLabel !== generated) this.setAttribute('aria-label', generated);
       this.generatedAriaLabel = generated;
     }
+    this.syncDefaultRole();
   }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
@@ -380,7 +381,12 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   private syncDefaultRole(): void {
-    if (!this.hasAttribute('role')) this.setAttribute('role', 'img');
+    const role = this.getAttribute('role');
+    if (role !== null && role !== this.generatedRole) return;
+    // An img role with no name is invalid, so an empty accessible name drops the role to presentation.
+    const wanted = normalizeLabel(this.getAttribute('aria-label')) === undefined ? 'presentation' : 'img';
+    this.generatedRole = wanted;
+    if (role !== wanted) this.setAttribute('role', wanted);
   }
 
   protected override updated(changed: PropertyValues): void {

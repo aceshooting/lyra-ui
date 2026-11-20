@@ -7663,7 +7663,7 @@ unaffected, and an unset control renders exactly as before.
 
 It is one shared rule, so it is identical on `lr-checkbox-group`, `lr-radio-group`, `lr-select`, `lr-combobox`, `lr-input`,
 `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`,
-`lr-token-input`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
+`lr-token-input`, `lr-slider`, `lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
 `lr-time-zone-picker`, `lr-unit-picker`) and, in the conversation family, `lr-model-select` and
 `lr-voice-picker`. Prefer it to dropping `label`: a control with no label has no name. The attribute
 reflects, so `[label-display='hidden']` is also a styling hook.
@@ -9067,7 +9067,7 @@ purposes.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
-  override rather than restoring any fallback.
+  override rather than restoring any fallback; a whitespace-only value is ignored.
 - With `autoCommitSingleOption` set, a select with exactly one available option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the
@@ -10275,7 +10275,7 @@ until `<lr-icon>` is registered by something else.
   `href`
 
 The accessible name is the host `aria-label` (forwarded by presence, so an explicitly empty value
-stays empty), then `label`, then a name the slotted content already carries — visible text, an
+stays empty; whitespace-only is ignored), then `label`, then a name the slotted content already carries — visible text, an
 `aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
 Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
 rather than being empty — override it per instance with `.strings` or app-wide with
@@ -12365,7 +12365,7 @@ glyph itself.
 The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
 visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
 independently of whether that node contributes to the accessible name. A host `aria-label` wins by
-presence and is forwarded verbatim, including `aria-label=""`.
+presence and is forwarded, including `aria-label=""`; a whitespace-only one is ignored.
 
 The internal `role="checkbox"` exposes explicit stateful `aria-invalid`. Visible property/slotted
 error chrome makes it `"true"` immediately; otherwise it becomes true only after interaction while
@@ -12575,7 +12575,7 @@ validity fails.
   left empty, set `aria-label` on the host so the control still has an accessible name. Flattened
   forwarding-slot assignment and later mutations
   keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
-  it. A host `aria-label` wins by presence, including an explicitly empty value.
+  it. A host `aria-label` wins by presence, including an explicitly empty value; whitespace-only is ignored.
 - `hint` — custom hint content.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
@@ -12670,6 +12670,8 @@ checkbox and does not emit `lr-change`.
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A numeric range control (e.g. an LLM "temperature" setting). **Form-associated** directly through
 `ElementInternals`, because its public `value` is a number rather than the string assumed by the
 shared form mixin. `value`, `defaultValue`, and `valueAsNumber` are numeric; `valueAsString` is the
@@ -12747,7 +12749,7 @@ single numeric string entry.
 - `label: string = ''`, `hint: string = ''`, and `errorText: string = ''` (attribute `error-text`) —
   visible form context around the track, with matching rich `label`/`hint`/`error` slots. A host
   `aria-label` wins for the interactive accessible name by attribute presence, including an
-  explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
+  explicitly empty value (whitespace-only is ignored); range mode then suppresses `aria-labelledby` on its group owner as well.
   When error and hint content are both present, every handle's `aria-describedby` references the
   error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
   Every handle exposes `aria-invalid="true"` while error content is visible, and otherwise only after
@@ -13031,7 +13033,11 @@ native-style composed `change`, then `lr-change`; both aliases carry `{ checked,
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. A
 standalone radio also emits `lr-activate` (`{ value }`) on every activation, including a click on
-the radio that is already checked, after the value events when the selection moved. Standalone
+the radio that is already checked, after the value events when the selection moved. Before a
+standalone radio checks itself, it dispatches the cancelable `lr-radio-select-request`
+(`{ checked: true, value }`, while `checked` still reads `false`): `preventDefault()` leaves it
+unchecked with no value events, and a listener that writes `checked` itself suppresses the built-in
+commit; `lr-activate` still follows. Standalone
 radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
 others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
@@ -13044,7 +13050,7 @@ wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button
 from button appearance does not remove or rewrite the authored light-DOM content. Flattened
 forwarding-slot assignment and later mutations keep the visual label wrapper synchronized;
 element-only and visible `aria-hidden` decorations retain it. A host `aria-label` wins on the
-internal radio by presence, including `aria-label=""`.
+internal radio by presence, including `aria-label=""`; whitespace-only is ignored.
 
 A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
 LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.
@@ -13156,7 +13162,7 @@ respectively; either spelling can be used, and both spellings share one wrapper 
 The leading, label, and trailing wrappers are hidden independently while empty, so missing regions
 do not contribute dead flex gaps.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
-`aria-label=""`; it is not replaced by the visible default-slot text.
+`aria-label=""`; it is not replaced by the visible default-slot text. Whitespace-only is ignored.
 
 **CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
 `label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`
@@ -13210,6 +13216,8 @@ the only one of the set worth setting on this tag.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
@@ -13491,7 +13499,19 @@ both prefixed aliases carry `{ value, option, radio }`. The committed `lr-change
 reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
-those events. Ownership is resolved synchronously, so immediate removal restores standalone
+those events. Before a user activation moves the selection, the group dispatches the cancelable
+`lr-radio-group-select-request` (`{ value, previousValue, option, radio }`, while `value` still
+holds the current selection), like the request events of `lr-checkbox-group` and
+`lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
+listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
+built-in commit. `lr-activate` still follows either way.
+
+```js
+group.addEventListener('lr-radio-group-select-request', (event) => {
+  if (event.detail.value === 'enterprise' && !confirm('Switch plan?')) event.preventDefault();
+});
+```
+ Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
 check fails; a consumer listening above the group does not receive a second prefixed alias from the
@@ -13855,6 +13875,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
@@ -14433,7 +14455,8 @@ changes are silent.
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
-`role="combobox"` over the same listbox. All four arrow keys navigate results and Enter picks. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`role="combobox"` over the same listbox. ArrowUp/ArrowDown navigate results and Enter picks, while
+ArrowLeft/ArrowRight and Home/End keep moving the text caret. Focus stays in the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
 `:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
 The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
@@ -15416,7 +15439,7 @@ when `detail.value.length === 0`.
 - `appearance?: LyraToggleAppearance` (reflected, opt-in) — when set, overrides every owned toggle's
   appearance without rewriting it; unset leaves each toggle's own appearance in charge.
 - `label: string = ''` — accessible-name fallback when the host has no `aria-label` (the host
-  `aria-label` wins by presence, including an empty value).
+  `aria-label` wins by presence, including an empty value; a whitespace-only `label` is ignored).
 
 **Events:**
 
@@ -15958,6 +15981,8 @@ and skip invalid or duplicate rows. Pass the application's locale explicitly.
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
 resize, zoom or theme change never redraws or distorts them; the surface fills its allocation's
@@ -16377,6 +16402,8 @@ record is retained. Interactive descendants (including open-shadow native contro
 import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 ```
 
+The default entry registers the `lr-pagination` pager the first time `paginate` renders it.
+
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
 Collection inputs are clone-owned readonly snapshots: reassign `data`, `columns`, `groupBy`, and controlled
 arrays after changes. Same-array rebinding/in-place mutation is ignored; call `requestUpdate()` after
@@ -16730,6 +16757,9 @@ Sort/select-aware table with a bounded 100-row default page, filtering, paginati
 states. Sort requests are cancelable; accepted client requests update `sortKey`/`sortDir` and order
 rows, while server mode leaves that state controlled. `columns[].heatValue` opts into a shared heat
 scale; `rowTotal`/`grandTotal` position caller-computed totals in a trailing column.
+
+The default entry registers `lr-pagination` and `lr-skeleton` the first time the table pages or
+renders skeleton loading rows.
 
 Effective locale changes recollate and filter the current view while keeping activation and edit
 lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
@@ -17515,7 +17545,7 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
   when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
   `paginationLabel` message, while an explicit empty string renders no visible/accessible label
-- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
+- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input; an empty or whitespace-only value is treated as unset (localized default), as for the four buttons below
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
 - `firstLabel?: string` (attribute `first-label`), `lastLabel?: string`
@@ -17524,8 +17554,9 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   `with-edges`
 
 Omitting any of those five control-label properties resolves the matching locale message. Any
-supplied string is an explicit per-instance override and renders verbatim, including the built-in
-English wording under a non-English `.strings` catalog and an empty string.
+non-blank supplied string is an explicit per-instance override and renders verbatim, including the
+built-in English wording under a non-English `.strings` catalog. An empty or whitespace-only string
+is treated as unset: these controls have no visible text, so they always keep an accessible name.
 
 **Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses
@@ -24791,8 +24822,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
   `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
-  Every supplied string, including an empty one, is honored literally; only absence uses the
-  localized navigation fallback. A host-level `aria-label` attribute (including an explicit empty
+  A blank or whitespace-only string is treated as unset and uses the localized navigation
+  fallback. A host-level `aria-label` attribute (including an explicit empty
   value) takes precedence.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the host `aria-label` as a
   property; overrides `label` and the localized default on the landmark and the mobile dialog.
@@ -26111,7 +26142,7 @@ The chip's decorative `details` subtree is hidden from assistive technology.
 **Properties:**
 
 - `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
-  an explicit `label=""` stays empty. When both are absent, the localized `menuLabel` ("Menu") names it.
+  a blank or whitespace-only `label` is treated as unset. When both are absent, the localized `menuLabel` ("Menu") names it.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every menu the bar opens,
   nested submenus included, in the browser top layer wherever the Popover API exists, so it paints
   above a sibling surface stacked higher than a `z-index`ed fixed or sticky header it sits in. Placed
@@ -26637,7 +26668,9 @@ batch flush supersedes that older batch.
 **Keyboard:** ArrowUp/ArrowDown move between enabled options and stop at the ends. Home/End move
 the search caret to the start/end of the query. When the caret is already at that boundary, the
 key jumps to the first/last enabled option. PageUp/PageDown move by one visible page and scroll
-the active option into view. Enter selects the keyboard-active command once per press.
+the active option into view. Enter selects the keyboard-active command once per press. These keys
+act only while the search field (or the dialog surface) has focus: Enter or Space on the focused
+clear button clears the query instead of running a command.
 Shift, Alt, Ctrl, and Meta chords, IME composition, and previously handled keys pass through.
 Pointer hover highlights a row visually. Click selects the hovered row. A non-empty query announces its localized result
 count through the shared polite announcement sink; a query matching nothing announces
@@ -27144,7 +27177,7 @@ move, resize, collision, and layout-change requests; the host owns persistence a
 If every layout cell has authored `[cell-id]` content, use
 `components/layout/dashboard-grid/dashboard-grid-register.js`. It registers the grid and empty
 state; import `lr-widget.js` and `lr-widget-renderer.js` too when default cells can be created.
-The default entry registers that widget stack.
+The default entry registers that widget stack the first time the grid creates a default cell.
 
 Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
 movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and
@@ -28668,8 +28701,8 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
   presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
   `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
   example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
-- `label?: string` — the landmark name when no host `aria-label` is set; any supplied string,
-  including an empty one, is literal.
+- `label?: string` — the landmark name when no host `aria-label` is set; a blank or
+  whitespace-only string is treated as unset and uses the localized default.
 - `mobileBreakpoint?: string` (attribute `mobile-breakpoint`) — a bare number or a `px`, `rem` or
   `em` length. The menu collapses while its own content-box inline size is at or below it (the same
   `<=` comparison and name as `lr-page`). Unlike `lr-page` and `lr-app-rail` there is no default:
@@ -30539,7 +30572,7 @@ If the import fails, leave the native disclosure visible and usable.
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
-  attribute wins by presence, including `aria-label=""`; only when it is absent does the property
+  attribute wins by presence, including `aria-label=""` (whitespace-only is ignored); otherwise the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none`
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
@@ -35011,6 +35044,10 @@ When fewer than two items are available, the disabled play button retains its re
 background under hover and press. Enabled playback controls retain their token-driven pointer
 feedback.
 
+A nonblank host `aria-label` names the playback controls as one group: the host takes the `group`
+role through `ElementInternals` (an author `role` attribute still wins), and each nested control
+keeps its own purpose name. A whitespace-only or empty host label leaves the host generic.
+
 **Properties:**
 
 - `itemCount: number = 0` (attribute `item-count`)
@@ -36370,7 +36407,8 @@ payload beside the map.
 
 - `label?: string` — accessible name for MapLibre's actual focusable canvas. A host `aria-label`
   (an empty one included) wins and names the canvas. Omitting `label` localizes the default `map`
-  message; an explicit empty string suppresses that default and renders an empty canvas name. The
+  message, as does a whitespace-only value; an explicit empty string suppresses that default and
+  renders an empty canvas name. The
   non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
@@ -38297,7 +38335,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
 - `accessibleLabel: string | null` (attribute `aria-label`) — titles the iframe; a host
-  `aria-label` attribute does the same, and an empty attribute stays an empty title. Without
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without
   either (or with an empty property) the iframe gets its localized purpose title.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
@@ -38391,7 +38429,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   preserves the historical natural-size layout; the other modes resolve against the viewport and
   update with its allocation, including when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
-  `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change` after the final scale renders
@@ -38510,10 +38548,10 @@ coalesce into one update.
   visible status, and the progress bar keeps its localized name
 - `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
   `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
-  localized default (`'Upload failed'` in English)
+  localized default (`'Upload failed'` in English); a blank or whitespace-only value does the same
 - `untitledLabel?: string` (attribute `untitled-label`) — fallback filename and tooltip when
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
-  localized default (`'Untitled file'` in English)
+  localized default (`'Untitled file'` in English); a blank or whitespace-only value does the same
 
 Attachment actions carry a stable id for the lifetime of each chip, including separate chips for
 the same file. Set `attachment-id` to preserve an application id across component replacement.
@@ -39797,6 +39835,8 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
 
+The default entry registers the transcript's `lr-virtual-list` the first time the player has cues.
+
 Removing `mime-type` consumes the absent hint safely and restores automatic video fallback unless
 `kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
 empty hint remains empty, and a later audio MIME value restores audio detection.
@@ -40296,6 +40336,10 @@ Experimental direct-child `<lr-video>` playlist with a visible current-video sta
 keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
 prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/lr-video-playlist.js'`.
+
+A nonblank host `aria-label` names the whole playlist: the host takes the `region` role through
+`ElementInternals` (an author `role` attribute still wins), while the inner list keeps its localized
+`videoPlaylistLabel` name. An explicitly empty host label also clears the list name.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and
@@ -44669,7 +44713,8 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner. With an
+`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an
 explicitly empty host label, the shadow document keeps `role="document"` and an empty accessible
 name; when the attribute is absent, `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
@@ -44797,7 +44842,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
-host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
+host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
+through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
 localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
@@ -45006,8 +45052,8 @@ platform accessors, including across document realms. Arbitrary peer-owned acces
 uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
 **Properties:** `src: string = ''` and `name: string = ''`. A non-empty host `aria-label` names the
-host, and the inner reading region then drops its own `role="region"` and name (the shared viewer
-rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
+host, which takes the `region` role through `ElementInternals`, and the inner reading region then
+drops its own `role="region"` and name (the shared viewer rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
 no matching JS property: the `accessibleLabel`
 property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
 attribute.) `maxHeight: string = ''`
@@ -45331,13 +45377,15 @@ preview.
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A nonempty host `aria-label`
-makes the host the sole named semantic owner; an explicitly empty host label keeps the shadow
+makes the host the sole named semantic owner (the host takes the `document` role through
+`ElementInternals`); an explicitly empty host label keeps the shadow
 `document` role with an empty name, and an absent host label falls back to `name` or the localized
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
@@ -45384,7 +45432,8 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 `.tsv`, `.psv`, and `.dat` filenames.
 
 With the default `scroll-mode="self"`, the capped `body` becomes a named keyboard scroll region
-(named by `name`, else the localized "Dataset") while its rows exceed the cap, and adds no tab stop
+(named by the localized `datasetViewerLabel`, "Dataset", so it never repeats the region's `name`)
+while its rows exceed the cap, and adds no tab stop
 otherwise.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
@@ -45572,8 +45621,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -46785,7 +46835,8 @@ Comparison surface for two document versions, using `lr-diff-view` for textual d
 `lr-document-preview` the first time `view="side-by-side"` renders it;
 `updateComplete` waits for that registration and the child's first render.
 
-A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
+A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an explicitly empty
 host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
 is absent, it uses the localized comparison label. Dynamic host-label changes update that ownership.
 
@@ -46913,7 +46964,10 @@ unbroken values from widening a 320px allocation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`.
+`geojsonViewLabel` when unset; a whitespace-only `name` counts as unset). A nonempty host
+`aria-label` takes precedence over `name`: it names the map, and while the map does not own the
+landmark the host itself takes the `region` role through `ElementInternals` instead of a second
+named shadow region.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps `[part="base"]` —
 covering the loaded map, the serialized metadata, and the missing-peer fallback alike — by writing
 `--lr-geojson-viewer-max-height` inline on it; invalid CSS `max-height` values, declaration breaks,
@@ -47022,8 +47076,9 @@ state (a built-in sentence is used when empty); `target: string = '_blank'` and 
 
 Writing `src`, `name`, `mimeType` or `format` invalidates the current load synchronously: the
 in-flight request is aborted and the engine is disposed before Lit updates, so a stale response can
-never publish. A host `aria-label` (by presence, an explicitly empty one included) names the region
-and the camera surface; otherwise `name`, then the localized `3D model` label, does.
+never publish. A nonempty host `aria-label` makes the host the named `region` (through `ElementInternals`) and
+the shadow region drops its role and name; an explicitly empty host label keeps the shadow region
+with an empty name; otherwise `name`, then the localized `3D model` label, names the shadow region.
 
 `LyraModelCamera` is `{ yaw, pitch, distance, target: { x, y, z } }`, the orbit camera the engine and
 `lr-graph` share. Assignment copies own data fields only (accessors never run), requires finite
@@ -49330,6 +49385,11 @@ focus move.
   option rows after their exit transition; trigger labels and free-text behavior remain available.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`'s
+  `top-layer`: shows the open listbox in the browser top layer, placed `fixed`, so it paints above a
+  sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail it sits
+  in. Without the native Popover API it keeps its ordinary `z-index` stacking. Changes apply live
+  while open.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
   slot in a `[part="form-control-label"]` `<label>` paired with the active control's id. A host
   `aria-label` remains the authoritative override by presence; otherwise either visible-label
@@ -50544,7 +50604,8 @@ animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' 
 reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
 `gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
 as `1`; `label?: string` — accessible-name override. Omitting it auto-generates "Voice activity:
-{state}"; an explicit empty string suppresses that default and renders an empty accessible name.
+{state}"; an explicit empty string suppresses that default and renders an empty accessible name, so the host
+becomes `role="presentation"` instead of an unnamed image.
 `level` is clamped to `[0, 1]`; after gain,
 waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
 `mode` attribute/property writes normalize to `idle` and `bars` respectively.
@@ -52044,6 +52105,8 @@ still be appended. Closed listboxes contain no option rows after their exit tran
 labels and free-text behavior remain available.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
+`topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open listbox in the
+browser top layer, with the same contract as `<lr-model-select>`'s `top-layer`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
 affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
@@ -52245,7 +52308,7 @@ assign new data to the properties as the host receives updates.
 `components/conversation/agent-workspace/agent-workspace-register.js` registers the conversation
 shell and its ordinary message/composer children. Import the run, timeline, retrieval-results,
 grounding-summary and context-inspector entries too when those panels can receive data. The default
-entry registers them all.
+entry registers each panel the first time the workspace has data for it.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
 `@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,
@@ -53702,7 +53765,8 @@ ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-v
 - `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
-- `clearToolRenderers(): void` — clears the default registry and its `load()` cache
+- `clearToolRenderers(): void` — clears the default registry and its `load()` cache; a reset for
+  test isolation or hot-module reload (mounted views keep their resolved renderer until they resolve again)
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:
@@ -54046,11 +54110,13 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
 `<lr-dialog>`/`<lr-tool-result-dialog>` read). `--lr-tool-select-dialog-search-min-height` (default
-`auto`), `--lr-tool-select-dialog-search-font-size` (default `inherit`),
-`--lr-tool-select-dialog-search-padding-inline` (default `var(--lr-space-m)`),
-`--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
-`--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
-the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+`var(--lr-form-control-height)`), `--lr-tool-select-dialog-search-font-size` (default
+`var(--lr-form-control-font-size)`), `--lr-tool-select-dialog-search-padding-inline` (default
+`var(--lr-form-control-padding-inline)`), `--lr-tool-select-dialog-search-padding-block` (default
+`var(--lr-form-control-padding-block)`) and `--lr-tool-select-dialog-search-radius` (default
+`var(--lr-form-control-radius)`) size the search field, so by default it follows the same
+form-control chain as `<lr-tool-param-form>`'s fields; point the height at another
+`--lr-form-control-height-*` tier to pick a different density. The trailing
 inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
 component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
 `--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
@@ -54691,7 +54757,9 @@ value-serialization failure.
 - `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false) — a
   detached, deeply frozen assignment snapshot, capped at 100 fields and required keys and 500 enum
   choices per field. Exceeding a cap keeps the bounded prefix but fails validation closed. Create
-  and reassign a new schema after changes; mutating the caller's prior object has no effect.
+  and reassign a new schema after changes; mutating the caller's prior object has no effect. A
+  structurally different schema starts a fresh form (visited fields and revealed errors clear, so a
+  same-named field stays quiet until touched); an identical rebuilt object keeps them.
 - `value: ToolParamFormValue = {}` (attribute: false) — a detached, deeply frozen assignment
   snapshot, capped at 10,000 entries per array/plain record, 50,000 total nodes, and 16 nested
   levels. Unsafe or oversized assignments fail serialization closed. Create and reassign a new
@@ -55665,7 +55733,10 @@ unset or non-finite values restore 500. `activeSpanId: string | null = null`
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
-reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
+reaching `Intl.NumberFormat`. Counts of 100,000 or more render in locale compact notation
+(`1.2M`); the duration, token and cost columns are fixed tracks shared by every row, so a longer
+value (a long `costText`) is ellipsized with its full text on `title`. The row's accessible name
+always carries the exact figures. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
 identity, then at most `maxNodes` mount. The controlled `activeSpanId` and its nearest resolvable
@@ -55924,6 +55995,8 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
+The default entry registers the source pager the first time the results page a `dataSource`.
+
 Visible test-name buttons share one Tab stop across suites. ArrowUp, ArrowDown, Home and End move
 between them. Detail toggles and other controls have their own Tab stops.
 
@@ -56006,9 +56079,11 @@ reflected) exposes its lifecycle. `withoutAutoExpandFailures: boolean = false`
 A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
 test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
-first-wins identity. Foreign runtime statuses normalize
-once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
-summary count and renders a label/glyph.
+first-wins identity. The vocabulary is deliberately a test runner's four outcomes: `error`,
+`timedOut` and `broken` count as `failed`, and every other runtime status — including the
+`pending`, `incomplete` and `cancelled` states of `lr-task-list`, `lr-research-progress` and the
+agent-run family — normalizes once to the localized neutral `skipped` state, so every accepted row
+contributes to one coherent summary count and renders a label/glyph.
 
 Legacy normalization retains the complete canonical input once with O(n) rows/indexes, yielding
 after at most 500 combined suite/test positions. It normalizes status once per corpus; filtering
@@ -57727,7 +57802,8 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+  selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `size` is
@@ -58591,6 +58667,14 @@ question.addEventListener('lr-question-response', event => {
 
 ## `lr-permission-rules`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 `lr-permission-rule-change-request` carries `{ ruleId, decision }`. Cancel it to suppress the subsequent `lr-permission-rule-change` notification.
 
 Set `--lr-decision-legend-font-size` to size the panel legend.
@@ -58646,6 +58730,14 @@ element.addEventListener('lr-permission-rule-change', (event) => {
 
 ## `lr-permission-grant`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
@@ -58687,12 +58779,22 @@ element.addEventListener('lr-permission-decision', (event) => {
 
 ## `lr-connector-manager`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-connector-manager` displays host-owned connector records and emits explicit requests through
 `lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A
 disconnected connector offers Connect, a connected connector offers Disconnect, an errored
-connector offers Retry, and a connecting connector has no available action. The component never
+connector offers Retry, and a connecting connector has no available action. A row whose `status`
+is outside that set (a newer server state) still renders, as a neutral localized "Unknown" status
+with no action, and a `kind` outside `'mcp' | 'connector'` simply omits the kind label. The component never
 reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
 that the host has already localized. Assign a new `.connectors` array after host updates; the
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
@@ -58702,7 +58804,7 @@ the next action appears.
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
-remains empty.
+remains empty visually, but the fieldset keeps the localized accessible name when the legend is blank.
 
 **CSS parts:**
 
@@ -58742,9 +58844,18 @@ element.addEventListener('lr-connector-action', (event) => {
 
 ## `lr-background-runs`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
-running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
+`collecting`, `waiting-input`, `waiting-approval`, `completed`, `failed`, and `cancelled`. Open
+buttons emit `lr-run-activate` (`{ runId }`); active (queued, running, collecting and waiting)
+records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
@@ -58753,8 +58864,10 @@ Tab enters the current row's actions. Up, Down, Home and End move between rows a
 same action when available. A narrow layout stacks status and actions below the run label.
 A polite announcement accompanies the first transition past the 100-row display limit.
 
-**Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
-`completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
+**Statuses and events:** the shared active `AgentStatusKind` states `collecting`, `waiting-input`
+and `waiting-approval` render with the agent-run labels and, like `queued` and `running`, offer
+Cancel. The shared agent spellings `done`/`success`/`complete` render as `completed` and `error` as
+`failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
 opening a run.
@@ -58773,11 +58886,11 @@ opening a run.
 | `status` | Localized controlled status. |
 | `actions` | Open and optional cancel controls. |
 | `open` | Native open button. |
-| `cancel` | Cancel button, present only for queued or running runs. |
+| `cancel` | Cancel button, present only for active (queued, running, collecting or waiting) runs. |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for active runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';
@@ -59209,8 +59322,9 @@ boolean; color?: string; dash?: number[]; curvature?: number }` (source/target a
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
-  inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
-  its localized node/edge-count fallback
+  inner renderer drops its parallel role/name, and the 3D surface keeps only its localized
+  `graphView3d` purpose name. Removing the attribute restores the inner owner and its localized
+  node/edge-count fallback. The 3D surface follows the same `label`-first precedence as the 2D view.
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
@@ -60088,6 +60202,9 @@ deep-link event that lands a chunk in `lr-document-viewer`. Never fetches or ran
 documents itself. Blank chunk ids and later duplicates are omitted first-wins before sorting,
 rendering, state, or events.
 
+The default entry registers the internal `lr-virtual-list` the first time the chunk count passes
+`virtualizeAt`.
+
 **Properties:**
 
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
@@ -60253,7 +60370,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   is active, leaving hidden selections untouched.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
-  while an explicit empty string stays empty
+  while an empty or whitespace-only string falls back to the localized name too
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
@@ -61054,6 +61171,9 @@ the 500-citation render ceiling), `claims` (the claim/evidence region), `empty`
 
 Controlled list of documents moving through an ingestion pipeline: stage badge, progress, chunk/
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
+
+The default entry registers the internal `lr-virtual-list` and the source pager the first time the
+queue virtualizes or pages a `dataSource`.
 
 Nonstring failure details use the localized failed-stage label for row text and fresh failure
 announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
@@ -61893,6 +62013,9 @@ compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chu
 a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
 text verbatim. Large sets window through an internal `lr-virtual-list`.
 
+The default entry registers that `lr-virtual-list` and the source pager the first time the list
+virtualizes or pages a `dataSource`.
+
 With `dataSource` unset, assignment retains the first 10,000 chunks in a bounded readonly outer snapshot. Admitted record
 identities feed a descriptor-safe copy of the closed display schema, including source fields and
 score breakdowns; `metadata` remains opaque and a locator receives its own bounded snapshot. This
@@ -62496,8 +62619,7 @@ including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host 
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `label?: string` names the plot after an authored host `aria-label` and before the JS-only
 `accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
-attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
-explicitly empty value), so a competing internal generic label is not exposed. Non-finite
+attribute or `label`, `accessibleLabel` names the plot. A non-blank authored host `aria-label` governs the plot name too, so a competing internal generic label is not exposed; an empty or whitespace-only value falls through to the next name, ending at the localized default. Non-finite
 coordinates are omitted.
 `maxRenderedPoints: number = 1000` (attribute `max-rendered-points`) controls the evenly sampled
 point budget. Finite values clamp to 1–10,000; invalid values use 1,000. A selected point outside
@@ -62554,6 +62676,8 @@ Only the active child view is mounted. With its corresponding provider unset, if
 admission truncates the source or ingestion array, an `input-limit` note for the active tab reports
 the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
 are quiet, and later changed omissions are politely announced.
+
+The default entry registers `lr-ingestion-queue` the first time its tab opens.
 
 **Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined` and
 `ingestionSource: IngestionQueueSource | undefined` are property-only inputs

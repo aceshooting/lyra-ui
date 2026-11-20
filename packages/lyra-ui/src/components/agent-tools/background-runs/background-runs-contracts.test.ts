@@ -120,3 +120,15 @@ it('announces a new limit in the document that adopted the runs', async () => {
   expect(sinkTexts('polite', owner)).to.deep.equal(['Showing the first 100 background runs.']);
   expect(sinkTexts()).to.deep.equal([]);
 });
+
+it('labels the shared active agent states and offers Cancel on each', async () => {
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${[
+    { id: 'c', label: 'Collect', status: 'collecting' },
+    { id: 'i', label: 'Input', status: 'waiting-input' },
+    { id: 'p', label: 'Approval', status: 'waiting-approval' },
+  ] satisfies BackgroundRun[]}></lr-background-runs>`);
+  const rows = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="run"]'));
+  expect(rows.map((row) => row.querySelector('[part="status"]')!.textContent)).to.deep.equal(
+    ['Collecting context', 'Waiting for input', 'Waiting for approval']);
+  expect(rows.map((row) => Boolean(row.querySelector('[part="cancel"]')))).to.deep.equal([true, true, true]);
+});

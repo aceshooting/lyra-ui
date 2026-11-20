@@ -39,6 +39,7 @@ import {
   viewerSemanticLabel,
   viewerSemanticRole,
 } from '../viewer-semantic-owner.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -333,10 +334,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     source: () => this.dataSource,
     cancelAnchor: () => this.cancelPendingAnchor(),
     workbook: true,
-    renderSheetTabs: (names, active, select) => html`<lr-tab-group part="tabs" .active=${`source-${active}`}
+    // The active sheet's table renders inside its own panel, as on the in-memory path, so the
+    // selected tab controls the panel that holds it.
+    renderSheetTabs: (names, active, select, content) => html`<lr-tab-group part="tabs" .active=${`source-${active}`}
+      @lr-activate=${this.stopInternalEvent} @lr-tab-hide=${this.stopInternalEvent}
       @lr-tab-show=${(event: CustomEvent<{ name: string }>) => {
         event.stopPropagation(); select(Number(event.detail.name.slice(7)));
-      }}>${names.map((name, index) => html`<lr-tab panel=${`source-${index}`}>${name}</lr-tab><lr-tab-panel name=${`source-${index}`}></lr-tab-panel>`)}</lr-tab-group>`,
+      }}>${names.map((name, index) => html`<lr-tab panel=${`source-${index}`}>${name}</lr-tab>`)}${names.map((_name, index) =>
+        html`<lr-tab-panel name=${`source-${index}`}>${index === active ? content : nothing}</lr-tab-panel>`)}</lr-tab-group>`,
     header: () => true,
     columnLimit: () => this.limits.columns,
     locale: () => this.effectiveLocale,
@@ -349,7 +354,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     },
     emitSearch: detail => this.emit('lr-search-change', detail),
     format: value => cell(value, this.effectiveLocale),
-    label: () => this.name || this.localize('spreadsheetViewerLabel'),
+    label: () => normalizeLabel(this.name) ?? this.localize('spreadsheetViewerLabel'),
     colorVar: '--_lr-spreadsheet-viewer-highlight-color',
     headerPart: 'cell',
     activeHighlight: () => this.activeHighlightId,
@@ -753,7 +758,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         : nothing}
       aria-label=${viewerSemanticLabel(
         this,
-        this.name || this.localize('spreadsheetViewerLabel')
+        normalizeLabel(this.name) ?? this.localize('spreadsheetViewerLabel')
       ) ?? nothing}
       aria-busy=${(this.dataSource !== undefined ? this.provider.busy : this.fetchState.kind === 'loading') ? 'true' : 'false'}
     >

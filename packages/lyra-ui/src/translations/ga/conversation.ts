@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Níl aon amharc ginte le taispeáint.',
   genViewInvalid: 'Ní féidir an t-amharc ginte seo a thaispeáint.',
   genViewLoading: 'An chomhpháirt á lódáil…',
-  genViewLoadFailed: 'Níorbh fhéidir an chomhpháirt seo a lódáil.',
   genViewInvalidState: 'Ní féidir luach an réimse seo a úsáid.',
   genViewActionDenied: 'Níl an gníomh seo ar fáil.',
   genViewConfirmationRequired: 'Teastaíonn deimhniú ón bhfeidhmchlár don ghníomh seo.',

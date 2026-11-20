@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -89,7 +90,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   @query('[part="previous-button"]') private previousButtonEl?: HTMLButtonElement;
   @query('[part="next-button"]') private nextButtonEl?: HTMLButtonElement;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   private readonly groupId = nextId('branch-picker');
   /** Gates the position announcement so a freshly-mounted picker never announces its own initial

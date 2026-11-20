@@ -1,3 +1,5 @@
+export type { LyraTableEventMap } from './data/table/table-support.js';
+export type { LyraExportFormatOption } from './utility/export-button/export-button.class.js';
 export * from './agent-tools/eval-dataset/eval-dataset.class.js';
 import './lr-table.js';
 import './lr-chip.js';

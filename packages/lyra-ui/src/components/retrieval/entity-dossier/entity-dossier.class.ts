@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -243,9 +244,12 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
 
   override render(): TemplateResult {
     const authored = this.getAttribute('aria-label');
-    const hostOwnsName = authored !== null && authored !== '';
+    const hostOwnsName = normalizeLabel(authored) !== undefined;
     const role = hostOwnsName ? nothing : 'group';
-    const label = hostOwnsName ? nothing : authored ?? this.label ?? this.localize('details');
+    // An explicitly empty host label or `label` stays an explicit opt-out; whitespace counts as absent.
+    const label = hostOwnsName
+      ? nothing
+      : authored === '' || this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('details');
     if (!this.entity) {
       return html`<div part="base" role=${role} aria-label=${label}>
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>

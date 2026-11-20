@@ -333,8 +333,9 @@ boolean; color?: string; dash?: number[]; curvature?: number }` (source/target a
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
-  inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
-  its localized node/edge-count fallback
+  inner renderer drops its parallel role/name, and the 3D surface keeps only its localized
+  `graphView3d` purpose name. Removing the attribute restores the inner owner and its localized
+  node/edge-count fallback. The 3D surface follows the same `label`-first precedence as the 2D view.
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
@@ -1212,6 +1213,9 @@ deep-link event that lands a chunk in `lr-document-viewer`. Never fetches or ran
 documents itself. Blank chunk ids and later duplicates are omitted first-wins before sorting,
 rendering, state, or events.
 
+The default entry registers the internal `lr-virtual-list` the first time the chunk count passes
+`virtualizeAt`.
+
 **Properties:**
 
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
@@ -1377,7 +1381,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   is active, leaving hidden selections untouched.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
-  while an explicit empty string stays empty
+  while an empty or whitespace-only string falls back to the localized name too
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
@@ -2178,6 +2182,9 @@ the 500-citation render ceiling), `claims` (the claim/evidence region), `empty`
 
 Controlled list of documents moving through an ingestion pipeline: stage badge, progress, chunk/
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
+
+The default entry registers the internal `lr-virtual-list` and the source pager the first time the
+queue virtualizes or pages a `dataSource`.
 
 Nonstring failure details use the localized failed-stage label for row text and fresh failure
 announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
@@ -3017,6 +3024,9 @@ compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chu
 a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
 text verbatim. Large sets window through an internal `lr-virtual-list`.
 
+The default entry registers that `lr-virtual-list` and the source pager the first time the list
+virtualizes or pages a `dataSource`.
+
 With `dataSource` unset, assignment retains the first 10,000 chunks in a bounded readonly outer snapshot. Admitted record
 identities feed a descriptor-safe copy of the closed display schema, including source fields and
 score breakdowns; `metadata` remains opaque and a locator receives its own bounded snapshot. This
@@ -3620,8 +3630,7 @@ including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host 
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `label?: string` names the plot after an authored host `aria-label` and before the JS-only
 `accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
-attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
-explicitly empty value), so a competing internal generic label is not exposed. Non-finite
+attribute or `label`, `accessibleLabel` names the plot. A non-blank authored host `aria-label` governs the plot name too, so a competing internal generic label is not exposed; an empty or whitespace-only value falls through to the next name, ending at the localized default. Non-finite
 coordinates are omitted.
 `maxRenderedPoints: number = 1000` (attribute `max-rendered-points`) controls the evenly sampled
 point budget. Finite values clamp to 1–10,000; invalid values use 1,000. A selected point outside
@@ -3678,6 +3687,8 @@ Only the active child view is mounted. With its corresponding provider unset, if
 admission truncates the source or ingestion array, an `input-limit` note for the active tab reports
 the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
 are quiet, and later changed omissions are politely announced.
+
+The default entry registers `lr-ingestion-queue` the first time its tab opens.
 
 **Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined` and
 `ingestionSource: IngestionQueueSource | undefined` are property-only inputs

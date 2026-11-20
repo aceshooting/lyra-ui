@@ -211,6 +211,9 @@ export const styles = css`
     box-sizing: border-box;
     overflow: auto;
   }
+  [part='content']:focus-visible {
+    ${focusRingInset}
+  }
   @media (prefers-reduced-motion: reduce) {
     .icon-fallback {
       transition: none;

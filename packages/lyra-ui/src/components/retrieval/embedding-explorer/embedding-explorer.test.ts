@@ -75,7 +75,7 @@ describe('lr-embedding-explorer', () => {
     expect(plot.getAttribute('aria-label')).to.equal('Vectors');
   });
 
-  it('lets the host aria-label govern the plot across explicit-empty and dynamic changes', async () => {
+  it('lets a non-blank host aria-label govern the plot and falls back when it is emptied', async () => {
     const el = (await fixture(html`
       <lr-embedding-explorer
         aria-label="Author vectors"
@@ -88,7 +88,7 @@ describe('lr-embedding-explorer', () => {
     el.setAttribute('aria-label', '');
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('');
-    expect(plot().getAttribute('aria-label')).to.equal('');
+    expect(plot().getAttribute('aria-label')).to.equal('Embedding explorer');
     el.setAttribute('aria-label', 'Revised vectors');
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('Revised vectors');
@@ -899,7 +899,7 @@ describe('lr-embedding-explorer point count past the render cap', () => {
   });
 });
 
-it('prioritizes the plot label over the compatibility alias and preserves explicit empty names', async () => {
+it('prioritizes the plot label over the compatibility alias and never exposes an empty name', async () => {
   const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`);
   const plot = () => el.shadowRoot!.querySelector('[part="plot"]')!;
   expect(plot().getAttribute('aria-label')).to.equal('Embedding explorer');
@@ -911,13 +911,13 @@ it('prioritizes the plot label over the compatibility alias and preserves explic
   expect(plot().getAttribute('aria-label')).to.equal('Vectors');
   el.label = '';
   await el.updateComplete;
-  expect(plot().getAttribute('aria-label')).to.equal('');
+  expect(plot().getAttribute('aria-label')).to.equal('Legacy vectors');
   el.setAttribute('aria-label', 'Host vectors');
   await el.updateComplete;
   expect(plot().getAttribute('aria-label')).to.equal('Host vectors');
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(plot().getAttribute('aria-label')).to.equal('');
+  expect(plot().getAttribute('aria-label')).to.equal('Embedding explorer');
   el.removeAttribute('aria-label');
   el.label = null;
   el.strings = { embeddingExplorerLabel: 'Vecteurs' };

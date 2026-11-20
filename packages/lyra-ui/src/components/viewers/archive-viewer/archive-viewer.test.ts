@@ -8,6 +8,7 @@ import '../../lr-archive-viewer.js';
 import type { LyraArchiveViewer } from '../../lr-archive-viewer.js';
 import type JSZipType from 'jszip';
 import { assembleZip, zipEntry } from './fixtures/zip-builder.js';
+import { viewerHostRole } from '../viewer-semantic-owner.js';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -667,6 +668,9 @@ describe('lr-archive-viewer', () => {
     expect(hostLabeledBase.getAttribute('role')).to.be.null;
     expect(hostLabeledBase.getAttribute('aria-label')).to.be.null;
     expect(hostLabeled.getAttribute('aria-label')).to.equal('Backup contents');
+    // The host name reaches a real role owner: the host itself becomes the region.
+    expect(viewerHostRole(hostLabeled)).to.equal('region');
+    expect(viewerHostRole(named)).to.equal(null);
 
     const emptyHostLabel = await fixture<LyraArchiveViewer>(
       html`<lr-archive-viewer name="backup.zip" aria-label=""></lr-archive-viewer>`,

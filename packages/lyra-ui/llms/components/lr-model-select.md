@@ -104,6 +104,11 @@ focus move.
   option rows after their exit transition; trigger labels and free-text behavior remain available.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`'s
+  `top-layer`: shows the open listbox in the browser top layer, placed `fixed`, so it paints above a
+  sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail it sits
+  in. Without the native Popover API it keeps its ordinary `z-index` stacking. Changes apply live
+  while open.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
   slot in a `[part="form-control-label"]` `<label>` paired with the active control's id. A host
   `aria-label` remains the authoritative override by presence; otherwise either visible-label

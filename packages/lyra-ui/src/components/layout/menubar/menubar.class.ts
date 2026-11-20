@@ -2,6 +2,8 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { TypeAheadBuffer, type TypeAheadMemo } from '../../../internal/type-ahead-buffer.js';
 import { isRovingTargetAvailable, isRepeatedActivationKey, shouldIgnoreNavigationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -62,7 +64,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   );
 
   /** Accessible name; a host aria-label takes precedence, including an explicit empty value. A
-   *  supplied string, including an empty one, is literal; only absence uses the localized "Menu". */
+   *  blank or whitespace-only string is treated as unset and uses the localized "Menu". */
   @property() label?: string;
 
   /** Accessible name taking precedence over the label fallback. */
@@ -325,7 +327,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.label ?? this.localize('menuLabel')}><slot @slotchange=${this.syncItems}></slot></div>`;
+    return html`<div part="base" role="menubar" aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label, this.localize('menuLabel'))}><slot @slotchange=${this.syncItems}></slot></div>`;
   }
 }
 

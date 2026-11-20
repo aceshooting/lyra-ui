@@ -1,4 +1,5 @@
 import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { compareNullable } from '../../../internal/sort-compare.js';
@@ -2194,8 +2195,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  when `hasSticky` is true (opt-in) and simply recomputes on every
    *  update; column widths are measured per update so the current layout
    *  reflects the rendered columns. */
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('table', this.renderRoot) ?? this.childRegistration;
     if (this.firstUpdateAnnouncementsReady && changed.has('filterText') && this.filterable) {
       this.announcements.announcePolite(this.localize('viewerSearchMatchCount', undefined, { count: this.matchingEntries().length }));
     }
@@ -2978,10 +2988,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return normalizeLabel(col.ariaLabel) ?? normalizeLabel(col.label) ?? col.key;
   }
 
+  /** A consumer label callback's result as usable text; a throw or a blank result is absent. */
+  private callbackLabel(read: () => unknown): string | undefined {
+    try {
+      return normalizeLabel(read());
+    } catch {
+      return undefined;
+    }
+  }
+
   private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
     const type = col.editType ?? 'text';
     const value = this.editorValue(row, col);
-    const label = col.editLabel?.(row) ?? this.localize('tableEditCell', undefined, { column: this.columnName(col) });
+    const label = this.callbackLabel(() => col.editLabel?.(row)) ?? this.localize('tableEditCell', undefined, { column: this.columnName(col) });
     const onChange = (event: Event): void => this.commitEdit(event, rowKey, col.key);
     const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     if (type === 'select') {
@@ -3340,7 +3359,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                                       type="button"
                                       part="row-expand-toggle"
                                       aria-expanded=${String(rowExpanded)}
-                                      aria-label=${this.rowExpandLabel?.(row, rowExpanded) ??
+                                      aria-label=${this.callbackLabel(() => this.rowExpandLabel?.(row, rowExpanded)) ??
                                       this.localize(rowExpanded ? 'dataGridCollapseRow' : 'dataGridExpandRow', undefined, { row: String(key) })}
                                       @click=${this.onExpandToggleClick}
                                     >

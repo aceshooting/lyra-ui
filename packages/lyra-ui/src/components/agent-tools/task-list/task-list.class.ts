@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTaskSourceSummary } from '../../../data-sources.js';
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
@@ -557,7 +558,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  border (an agent-run panel, a message bubble) doesn't double it. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   private readonly headerId = nextId('task-list-header');
   private readonly bodyId = nextId('task-list-body');

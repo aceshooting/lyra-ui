@@ -70,7 +70,11 @@ native-style composed `change`, then `lr-change`; both aliases carry `{ checked,
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. A
 standalone radio also emits `lr-activate` (`{ value }`) on every activation, including a click on
-the radio that is already checked, after the value events when the selection moved. Standalone
+the radio that is already checked, after the value events when the selection moved. Before a
+standalone radio checks itself, it dispatches the cancelable `lr-radio-select-request`
+(`{ checked: true, value }`, while `checked` still reads `false`): `preventDefault()` leaves it
+unchecked with no value events, and a listener that writes `checked` itself suppresses the built-in
+commit; `lr-activate` still follows. Standalone
 radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
 others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
@@ -83,7 +87,7 @@ wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button
 from button appearance does not remove or rewrite the authored light-DOM content. Flattened
 forwarding-slot assignment and later mutations keep the visual label wrapper synchronized;
 element-only and visible `aria-hidden` decorations retain it. A host `aria-label` wins on the
-internal radio by presence, including `aria-label=""`.
+internal radio by presence, including `aria-label=""`; whitespace-only is ignored.
 
 A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
 LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.

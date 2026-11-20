@@ -1,6 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -8,6 +8,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
@@ -527,6 +528,19 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   private readonly stopOwnedEvent = (event: Event): void => {
     event.stopPropagation();
   };
+
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.childRegistration = loadLazyChildren('chunk-inspector', this.renderRoot) ?? this.childRegistration;
+  }
 
   override render(): TemplateResult {
     const sorted = this.sortedChunks();

@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'אין תצוגה שנוצרה להצגה.',
   genViewInvalid: 'לא ניתן להציג את התצוגה שנוצרה.',
   genViewLoading: 'טוען רכיב…',
-  genViewLoadFailed: 'לא ניתן היה לטעון את הרכיב הזה.',
   genViewInvalidState: 'לא ניתן להשתמש בערך של השדה הזה.',
   genViewActionDenied: 'הפעולה הזו אינה זמינה.',
   genViewConfirmationRequired: 'הפעולה הזו דורשת אישור מהיישום.',

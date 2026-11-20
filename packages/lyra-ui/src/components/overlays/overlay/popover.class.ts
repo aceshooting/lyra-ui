@@ -11,6 +11,7 @@ import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import {
@@ -460,7 +461,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    */
   @property({ type: Boolean, attribute: 'hover-bridge', reflect: true }) hoverBridge = false;
   /** Accessible name for the semantic popup. An authored host `aria-label` wins by presence,
-   *  including an explicitly empty value, before this property or the localized role fallback. */
+   *  including an explicitly empty value, before this property or the localized role fallback;
+   *  whitespace-only is ignored. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private _popupRole: LyraPopupRole = 'dialog';
   /** Semantic role used by the popup. `dialog` (default) for a contextual surface, `menu` for an
@@ -633,11 +635,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   /** Resolved popup name, also available to a mapped subclass that delegates role ownership to a
-   * contained semantic component. Presence-based host naming preserves an authored empty label. */
+   * contained semantic component. An authored empty label is preserved; whitespace-only is ignored. */
   protected get effectivePopupLabel(): string {
-    return hostAriaLabel(this) ?? (
-      this.accessibleLabel || this.localize(this.triggerPopupRole === 'menu' ? 'menuLabel' : 'popover')
-    );
+    return hostAriaLabel(this) ?? normalizeLabel(this.accessibleLabel) ??
+      this.localize(this.triggerPopupRole === 'menu' ? 'menuLabel' : 'popover');
   }
 
   /** Subclasses can retain a different arrow default without forking rendering/positioning. */

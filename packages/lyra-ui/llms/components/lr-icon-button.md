@@ -66,7 +66,7 @@ until `<lr-icon>` is registered by something else.
   `href`
 
 The accessible name is the host `aria-label` (forwarded by presence, so an explicitly empty value
-stays empty), then `label`, then a name the slotted content already carries — visible text, an
+stays empty; whitespace-only is ignored), then `label`, then a name the slotted content already carries — visible text, an
 `aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
 Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
 rather than being empty — override it per instance with `.strings` or app-wide with

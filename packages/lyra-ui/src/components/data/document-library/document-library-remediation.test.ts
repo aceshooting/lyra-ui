@@ -104,3 +104,13 @@ it('reuses the selection set and tag list across renders until their inputs are 
   expect(Reflect.get(element, 'selectedIdSet') === selected).to.equal(false);
   expect(Reflect.get(element, 'allTags')).to.deep.equal(['y']);
 });
+
+it('names the open button and selection checkbox from the id when a document name is blank', async () => {
+  const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library
+    .documents=${[{ id: 'alpha', name: '   ' }, { id: 'beta', name: '' }]}></lr-document-library>`);
+  await waitUntil(() => nameButtons(element).length === 2);
+  expect(nameButtons(element).map((button) => button.textContent!.trim()).sort()).to.deep.equal(['alpha', 'beta']);
+  const boxes = [...element.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('lr-checkbox[aria-label]')];
+  const rowBoxes = boxes.map((box) => box.getAttribute('aria-label')!).filter((name) => /alpha|beta/.test(name));
+  expect(rowBoxes.length).to.equal(2);
+});

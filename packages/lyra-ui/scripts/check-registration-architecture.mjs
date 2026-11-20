@@ -866,7 +866,7 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   // Questions with a supplied, supported schema load the parameter form on demand.
-  'src/components/agent-tools/agent-question/agent-question.class.ts -> src/components/lr-tool-param-form.ts',
+  'src/components/agent-tools/agent-question/agent-question.class.ts -> src/components/agent-tools/agent-question/agent-question-children.ts -> src/components/lr-tool-param-form.ts',
   // A connected confirmation bar loads argument disclosure and JSON rendering when it receives args.
   'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-details.ts',
   'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-json-viewer.ts',

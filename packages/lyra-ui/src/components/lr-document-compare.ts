@@ -1,3 +1,9 @@
+export type { LyraDiffViewLayout } from './utility/diff-view/diff-view.class.js';
+export type { HighlightActivateDetail, LyraAnchor, LyraHighlight } from './viewers/document-viewer/anchors.js';
+export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
+export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
+export type { ShikiLanguageInput } from '../internal/shiki/core.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/document-compare/document-compare.class.js';
 import { LyraDocumentCompare } from './viewers/document-compare/document-compare.class.js';
 import { defineElement } from '../internal/prefix.js';

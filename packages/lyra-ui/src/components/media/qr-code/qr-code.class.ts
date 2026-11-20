@@ -5,6 +5,7 @@ import {
   resolveBoundedCanvasAllocation,
   type BoundedCanvasAllocation,
 } from '../../../internal/canvas.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
@@ -360,7 +361,7 @@ export class LyraQrCode extends LyraElement {
     if (!this.accessibilityInternals) return;
     this.accessibilityInternals.role = semantic ? 'img' : null;
     // This is a default ARIA value: an explicit host `aria-label` remains authoritative.
-    this.accessibilityInternals.ariaLabel = semantic ? this.label || this.value : null;
+    this.accessibilityInternals.ariaLabel = semantic ? normalizeLabel(this.label) ?? this.value : null;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -625,7 +626,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   private accessibleName(): string {
-    return this.getAttribute('aria-label') ?? (this.label || this.value);
+    return this.getAttribute('aria-label') ?? (normalizeLabel(this.label) ?? this.value);
   }
 
   private renderBody(): TemplateResult | typeof nothing {

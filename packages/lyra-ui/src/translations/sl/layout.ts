@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Ustavi vrtenje',
   carouselResumeRotation: 'Nadaljuj vrtenje',
   carouselViewport: 'Diapozitivi',
-  scrollerLabel: 'Drsna vsebina',
   scrollPrevious: 'Pomakni nazaj',
   scrollNext: 'Pomakni naprej',
   closeNavigation: 'Zapri navigacijo',

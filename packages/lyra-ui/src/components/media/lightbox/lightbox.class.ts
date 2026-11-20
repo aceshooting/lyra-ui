@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 export type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
@@ -23,6 +24,8 @@ import { LightboxSourceController } from './lightbox-source.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
@@ -395,7 +398,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private readonly slotPresence = new SlotPresenceController(this);
   @state() private liveText = '';
 
-  @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
+  @query(tag('pan-zoom')) private frameEl?: LyraPanZoom;
 
   private overlay?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -735,7 +738,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (
       keyEventOwnedByInnerControl(event, {
         container: this,
-        ownerTag: 'lr-pan-zoom',
+        ownerTag: tag('pan-zoom'),
       })
     ) return;
     const rtl = this.effectiveDirection === 'rtl';
@@ -755,6 +758,20 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       this.goTo(this.imageCount() - 1);
     }
   };
+
+  constructor() {
+    super();
+    // Next/previous disable at the ends without `loop`; focus stays inside the modal.
+    repairControlFocusOnUpdate(this, () => [
+      this.renderRoot.querySelector<HTMLElement>('[part="close-button"]'),
+      this.renderRoot.querySelector<HTMLElement>('[part="frame"]'),
+    ]);
+    // A capped caption takes a tab stop only while it has more text to scroll to.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="caption"]');
+      return [el && { el, role: false }];
+    });
+  }
 
   override render(): TemplateResult {
     const count = this.imageCount();
@@ -839,7 +856,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
               `
             : nothing}
         </div>
-        ${hasCaption ? html`<p part="caption" id=${this.captionId} tabindex="0">${image!.caption}</p>` : nothing}
+        ${hasCaption ? html`<p part="caption" id=${this.captionId}>${image!.caption}</p>` : nothing}
         <span part="live-region" class="sr-only" aria-hidden="true"
           >${this.liveText}</span
         >

@@ -1,6 +1,7 @@
 import { containerHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { panelFrame } from '../../../internal/panel-frame.styles.js';
+import { panelFrame, panelFramePlain } from '../../../internal/panel-frame.styles.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -77,10 +78,16 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
+  /* no-hover-state: the empty state takes focus only by script when the last run goes away. */
+  [part='empty']:focus-visible {
+    ${focusRing}
+  }
 
   @container ${compactContainerQuery} {
     [part='run'] {
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  ${panelFramePlain}
 `;

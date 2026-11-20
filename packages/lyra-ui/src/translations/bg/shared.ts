@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Този компонент не можа да бъде зареден.',
   noData: 'Няма данни',
   legendTypeShown: '{label} е показано',
   legendTypeHidden: '{label} е скрито',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Данните не можаха да се заредят',
   zoomOut: 'Намали',
   zoomIn: 'Увеличи',
+  scrollerLabel: 'Превъртаемо съдържание',
   clear: 'Изчисти',
   open: 'Отвори',
   close: 'Затвори',

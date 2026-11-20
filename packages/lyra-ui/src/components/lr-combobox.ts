@@ -1,3 +1,5 @@
+export type { FormOwnerValue } from '../internal/direct-form-associated.js';
+export type { PlaceStrategy, PlaceSync } from '../internal/positioner.js';
 export * from './forms/combobox/combobox.class.js';
 import { LyraCombobox } from './forms/combobox/combobox.class.js';
 import { defineElement } from '../internal/prefix.js';

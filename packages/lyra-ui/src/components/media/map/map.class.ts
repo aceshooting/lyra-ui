@@ -58,6 +58,7 @@ import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
@@ -213,6 +214,7 @@ import {
 export { buildGeoJsonPropertyDiff } from './map-geojson-diff.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapScene, LYRA_DEFAULT_mapSceneArc, LYRA_DEFAULT_mapSceneEmpty, LYRA_DEFAULT_mapSceneHide, LYRA_DEFAULT_mapSceneInvalid, LYRA_DEFAULT_mapSceneLimit, LYRA_DEFAULT_mapSceneMarker, LYRA_DEFAULT_mapSceneModel, LYRA_DEFAULT_mapSceneNext, LYRA_DEFAULT_mapScenePage, LYRA_DEFAULT_mapScenePartial, LYRA_DEFAULT_mapScenePath, LYRA_DEFAULT_mapScenePrevious, LYRA_DEFAULT_mapSceneShow, LYRA_DEFAULT_mapSceneUnavailable, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
@@ -2759,6 +2761,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!coordinated) this.drawingController?.repaint();
     });
     new GlassScrollLayer(this, '[part="legend"]');
+    // A scene page button disables itself on the first or last page; focus moves to the other.
+    repairControlFocusOnUpdate(this);
   }
 
   private readonly projectionGuard = new VetoWriteGuard();
@@ -8537,7 +8541,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private get effectiveMapLabel(): string {
-    return hostAriaLabel(this) ?? this.label ?? this.localize('map');
+    return hostAriaLabel(this) ?? normalizeLabel(this.label) ?? (this.label === '' ? '' : this.localize('map'));
   }
 
   private popupId(key: string): string {

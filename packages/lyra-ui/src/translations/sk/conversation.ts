@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Žiadne vygenerované zobrazenie na zobrazenie.',
   genViewInvalid: 'Toto vygenerované zobrazenie sa nedá zobraziť.',
   genViewLoading: 'Načítava sa komponent…',
-  genViewLoadFailed: 'Tento komponent sa nepodarilo načítať.',
   genViewInvalidState: 'Túto hodnotu poľa nemožno použiť.',
   genViewActionDenied: 'Táto akcia nie je k dispozícii.',
   genViewConfirmationRequired: 'Táto akcia vyžaduje potvrdenie od aplikácie.',

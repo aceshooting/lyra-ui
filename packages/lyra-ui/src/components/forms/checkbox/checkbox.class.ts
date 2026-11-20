@@ -1,4 +1,5 @@
 import { emitValueEvents } from '../../../internal/value-events.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -95,7 +96,7 @@ class LyraCheckboxBase extends LyraElement<LyraCheckboxEventMap> {}
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an accessible name. Host
- * `aria-label` is forwarded by presence, including an explicitly empty value. Interactive label
+ * `aria-label` is forwarded by presence, including an explicitly empty value; a whitespace-only one is ignored. Interactive label
  * content remains a separate focus stop outside the checkbox role; activating that content does
  * not also toggle the checkbox.
  * @slot hint - Web Awesome-compatible supporting text.
@@ -483,6 +484,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
       mixed ? 'indeterminate control--indeterminate' : '',
     ].filter(Boolean).join(' ');
     const describedBy = supporting.describedBy;
+    const hostName = hostAriaLabel(this);
     const invalid = supporting.hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
@@ -496,8 +498,8 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-            aria-label=${this.getAttribute('aria-label') ?? nothing}
-            aria-labelledby=${this.hasAttribute('aria-label') ? nothing : 'checkbox-label'}
+            aria-label=${hostName ?? nothing}
+            aria-labelledby=${hostName !== null ? nothing : 'checkbox-label'}
             aria-describedby=${describedBy || nothing}
             @keydown=${this.onKeyDown}
             @focus=${this.onFocus}

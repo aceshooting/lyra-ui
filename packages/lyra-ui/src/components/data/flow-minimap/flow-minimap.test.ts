@@ -310,6 +310,31 @@ it('wheeling over the map zooms in on scroll-down and out on scroll-up', async (
   expect(wrapper.viewport.zoom).to.be.lessThan(zoomAfterZoomIn);
 });
 
+it('wheeling over the map accumulates trackpad deltas into whole steps and leaves horizontal swipes to the page', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  const zoomBefore = wrapper.viewport.zoom;
+
+  const swipe = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: 80, deltaY: 0 });
+  map.dispatchEvent(swipe);
+  expect(swipe.defaultPrevented).to.equal(false);
+  expect(wrapper.viewport.zoom).to.equal(zoomBefore);
+
+  for (let i = 0; i < 9; i += 1) map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -10 }));
+  expect(wrapper.viewport.zoom, 'nine small deltas stay below one notch').to.equal(zoomBefore);
+  map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -10 }));
+  expect(wrapper.viewport.zoom).to.be.closeTo(zoomBefore * 1.2, 1e-9);
+});
+
 it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive the canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">

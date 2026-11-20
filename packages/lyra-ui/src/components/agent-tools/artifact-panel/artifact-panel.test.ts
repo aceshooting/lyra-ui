@@ -537,18 +537,20 @@ describe('lr-artifact-panel', () => {
   });
 
   describe('--lr-artifact-panel-view-active-bg / -color', () => {
-    const pressedFixture = async (): Promise<LyraArtifactPanel> => {
+    // The tints are set at mount: a later change would animate through the view button's own
+    // color transition, since the body's overflow measurement has already resolved its style.
+    const pressedFixture = async (tinted = false): Promise<LyraArtifactPanel> => {
       const el = (await fixture(html`
-        <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>
+        <lr-artifact-panel
+          style=${tinted ? '--lr-artifact-panel-view-active-bg: rgb(10, 20, 30); --lr-artifact-panel-view-active-color: rgb(40, 50, 60)' : ''}
+        ><pre slot="code">code</pre></lr-artifact-panel>
       `)) as LyraArtifactPanel;
       await el.updateComplete;
       return el;
     };
 
     it('retints the pressed view button background and color via the cssprops', async () => {
-      const el = await pressedFixture();
-      el.style.setProperty('--lr-artifact-panel-view-active-bg', 'rgb(10, 20, 30)');
-      el.style.setProperty('--lr-artifact-panel-view-active-color', 'rgb(40, 50, 60)');
+      const el = await pressedFixture(true);
       const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;
       expect(pressed.getAttribute('data-view')).to.equal('preview');
       expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
@@ -556,9 +558,7 @@ describe('lr-artifact-panel', () => {
     });
 
     it('steps the selected-view fill under hover and press while keeping its text color', async () => {
-      const el = await pressedFixture();
-      el.style.setProperty('--lr-artifact-panel-view-active-bg', 'rgb(10, 20, 30)');
-      el.style.setProperty('--lr-artifact-panel-view-active-color', 'rgb(40, 50, 60)');
+      const el = await pressedFixture(true);
       const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;
       const rect = pressed.getBoundingClientRect();
       try {
@@ -790,4 +790,18 @@ describe('lr-artifact-panel remediation (evals batch)', () => {
       else Reflect.deleteProperty(navigator, 'clipboard');
     }
   });
+});
+
+it('gives a capped body of slotted prose a named tab stop only while it overflows', async () => {
+  const el = await fixture<LyraArtifactPanel>(html`
+    <lr-artifact-panel label="Report" style="display:flex; flex-direction:column; block-size:10rem">
+      <p style="margin:0; block-size:1rem">short</p>
+    </lr-artifact-panel>
+  `);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(body.hasAttribute('tabindex')).to.equal(false);
+  el.querySelector('p')!.style.blockSize = '40rem';
+  await waitUntil(() => body.getAttribute('tabindex') === '0', 'overflowing body takes a tab stop');
+  expect([body.getAttribute('role'), body.getAttribute('aria-label')]).to.deep.equal(['region', 'Report']);
+  await expect(el).to.be.accessible();
 });

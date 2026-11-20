@@ -3,6 +3,7 @@ import '../../lr-approval-queue.js';
 import '../../lr-permission-rules.js';
 import '../../lr-permission-grant.js';
 import '../../lr-connector-manager.js';
+import '../../lr-background-runs.js';
 import '../../lr-confirm-bar.js';
 import '../../lr-tool-call-chip.js';
 import '../../lr-tool-select-dialog.js';
@@ -149,6 +150,39 @@ describe('tool approval interactions', () => {
     const host = await fixture<HTMLElement>(html`<lr-permission-rules style="--lr-form-control-radius:17px"
       .rules=${[{id:'r',label:'Read',scope:'files',decision:'ask'}]}></lr-permission-rules>`);
     expect(getComputedStyle(part(host, 'decision')).borderTopLeftRadius).to.equal('17px');
+  });
+
+  it('paints every fieldset panel from the shared panel hooks and drops the chrome under frame="plain"', async () => {
+    const theme = '--lr-panel-frame-bg: rgb(1, 2, 3); --lr-panel-frame-border-color: rgb(4, 5, 6)';
+    const panels = [
+      await fixture<HTMLElement>(html`<lr-permission-grant request-id="g" scope="s" style=${theme}></lr-permission-grant>`),
+      await fixture<HTMLElement>(html`<lr-permission-rules style=${theme} .rules=${[{id:'r',label:'Read',scope:'files',decision:'ask'}]}></lr-permission-rules>`),
+      await fixture<HTMLElement>(html`<lr-connector-manager style=${theme}></lr-connector-manager>`),
+      await fixture<HTMLElement>(html`<lr-background-runs style=${theme}></lr-background-runs>`),
+    ];
+    for (const panel of panels) {
+      const base = getComputedStyle(part(panel, 'base'));
+      expect([panel.localName, base.backgroundColor, base.borderTopColor]).to.deep.equal([panel.localName, 'rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+      panel.setAttribute('frame', 'plain');
+      await (panel as HTMLElement & {updateComplete: Promise<unknown>}).updateComplete;
+      const plain = getComputedStyle(part(panel, 'base'));
+      expect([panel.localName, plain.borderTopStyle, plain.paddingTop, plain.backgroundColor]).to.deep.equal([panel.localName, 'none', '0px', 'rgba(0, 0, 0, 0)']);
+    }
+  });
+
+  it('draws the dialog text fields from the shared form-control chain', async () => {
+    const theme = '--lr-theme-form-control-radius:17px; --lr-theme-form-control-height-m:61px; --lr-form-control-padding-inline:23px';
+    const approval = await fixture<HTMLElement>(html`<lr-tool-approval-dialog open tool-name="t" .args=${{q: 1}} style=${theme}></lr-tool-approval-dialog>`);
+    part(approval, 'edit-button').click();
+    await (approval as HTMLElement & {updateComplete: Promise<unknown>}).updateComplete;
+    const editor = getComputedStyle(part(approval, 'args-editor'));
+    expect([editor.borderTopLeftRadius, editor.paddingInlineStart]).to.deep.equal(['17px', '23px']);
+    const select = await fixture<HTMLElement>(html`<lr-tool-select-dialog open style=${theme}></lr-tool-select-dialog>`);
+    const search = getComputedStyle(part(select, 'search-input'));
+    expect([search.borderTopLeftRadius, search.paddingInlineStart, search.minBlockSize]).to.deep.equal(['17px', '23px', '61px']);
+    const form = await fixture<HTMLElement>(html`<lr-tool-param-form style=${theme} .schema=${{type:'object', properties:{q:{type:'string'}}}}></lr-tool-param-form>`);
+    const input = getComputedStyle(form.shadowRoot!.querySelector('input.control')!);
+    expect([input.borderTopLeftRadius, input.paddingInlineStart, input.minBlockSize]).to.deep.equal(['17px', '23px', '61px']);
   });
 
   it('keeps the defaults hint aligned when the switch track changes width', async () => {

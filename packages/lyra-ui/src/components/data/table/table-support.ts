@@ -1,3 +1,4 @@
+import { NESTED_INTERACTIVE_SELECTOR } from '../../../internal/nested-interactive.js';
 import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { sanitizeCssDeclarationValue } from '../../../internal/safe-css.js';
 // Type-only: registration (and the code) of the composed `<lr-empty>` comes from `lr-table.ts`.
@@ -394,13 +395,6 @@ export type TableColumn<T> =
       cell?: (row: T) => unknown;
     });
 
-/** Interactive elements a nested `cell()` template may render (e.g. an
- *  actions-column button). Clicks/keydowns landing on one of these — or
- *  bubbling up through one — must not be re-interpreted as row/column
- *  activation by the table's own delegated listeners. */
-const INTERACTIVE_SELECTOR =
-  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
-
 /** Normalizes a `cellPart(row)` result to space-separated, de-duplicated part names, dropping the
  *  always-present `cell-content` and any non-string result. */
 export function cellContentPartNames(value: unknown): string {
@@ -522,7 +516,7 @@ function asElement(value: EventTarget): Element | null {
  *
  * An editable body `<td>`'s own roving-focus stop is deliberately `tabindex="-1"` rather than a
  * toggling `"0"`/`"-1"` pair (see the render template) -- among other things, that keeps it out of
- * `INTERACTIVE_SELECTOR`'s `[tabindex]:not([tabindex="-1"])` clause for free, so it never needs an
+ * `NESTED_INTERACTIVE_SELECTOR`'s `[tabindex]:not([tabindex="-1"])` clause for free, so it never needs an
  * exclusion entry here the way `[data-row-key]`/`th[data-col-key]` do. */
 export function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | null {
   for (const value of event.composedPath()) {
@@ -530,7 +524,7 @@ export function eventInteractiveTarget(event: Event, boundary: HTMLElement): Ele
     const element = asElement(value);
     if (element === null) continue;
     if (element.matches('[data-table-interactive]')) return element;
-    if (element.matches(INTERACTIVE_SELECTOR) && !element.matches('[data-row-key], th[data-col-key]')) {
+    if (element.matches(NESTED_INTERACTIVE_SELECTOR) && !element.matches('[data-row-key], th[data-col-key]')) {
       return element;
     }
   }

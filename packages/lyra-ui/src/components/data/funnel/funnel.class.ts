@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chartValueFractionDigits, significantFractionDigits } from '../../../internal/chart-number-format.js';
@@ -247,7 +248,7 @@ export class LyraFunnel extends LyraElement {
     const { stage, value, share, change, comparisonShare } = resolved;
     const barColor = sanitizeCssColor(stage.color);
     const barPart = share !== null && share > 1 ? 'bar bar-overflow' : 'bar';
-    const comparisonName = this.comparisonLabel || this.localize('comparePanel');
+    const comparisonName = normalizeLabel(this.comparisonLabel) ?? this.localize('comparePanel');
     return html`<li part="stage">
       ${!this.withoutDropoff && change !== null
         ? html`<span part="dropoff">${this.changeText(change)}</span>`
@@ -295,7 +296,7 @@ export class LyraFunnel extends LyraElement {
     const renderedStages = resolved.slice(0, MAX_RENDERED_STAGES);
     const truncated = resolved.length > MAX_RENDERED_STAGES;
     const admission = publicCollectionTruncation(this, 'stages');
-    const name = hostAriaLabel(this) ?? (this.label || this.localize('chart'));
+    const name = hostAriaLabel(this) ?? (normalizeLabel(this.label) ?? this.localize('chart'));
     return html`<div part="base">
       <ol part="stages" aria-label=${name}>
         ${renderedStages.map((entry) => this.renderStage(entry))}

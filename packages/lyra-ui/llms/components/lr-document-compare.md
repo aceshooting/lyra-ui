@@ -21,7 +21,8 @@ Comparison surface for two document versions, using `lr-diff-view` for textual d
 `lr-document-preview` the first time `view="side-by-side"` renders it;
 `updateComplete` waits for that registration and the child's first render.
 
-A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
+A nonempty host `aria-label` makes the host the sole named semantic owner: the host takes the
+viewer's role through `ElementInternals` and the shadow owner drops its role and name. With an explicitly empty
 host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
 is absent, it uses the localized comparison label. Dynamic host-label changes update that ownership.
 

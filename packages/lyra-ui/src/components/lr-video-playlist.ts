@@ -1,3 +1,4 @@
+export type { LyraVideoControls } from './media/video/video.class.js';
 export * from './media/video-playlist/video-playlist.class.js';
 import './lr-video.js';
 import { defineElement } from '../internal/prefix.js';

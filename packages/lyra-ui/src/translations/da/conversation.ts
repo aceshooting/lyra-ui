@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Der er ingen genereret visning at vise.',
   genViewInvalid: 'Denne genererede visning kan ikke vises.',
   genViewLoading: 'Indlæser komponent…',
-  genViewLoadFailed: 'Denne komponent kunne ikke indlæses.',
   genViewInvalidState: 'Denne feltværdi kan ikke bruges.',
   genViewActionDenied: 'Denne handling er ikke tilgængelig.',
   genViewConfirmationRequired: 'Denne handling kræver bekræftelse fra applikationen.',

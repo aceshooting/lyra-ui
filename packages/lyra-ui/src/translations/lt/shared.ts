@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Nepavyko įkelti šio komponento.',
   noData: 'Duomenų nėra',
   legendTypeShown: '{label} rodoma',
   legendTypeHidden: '{label} paslėpta',
@@ -22,6 +23,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Nepavyko įkelti duomenų',
   zoomOut: 'Tolinti',
   zoomIn: 'Artinti',
+  scrollerLabel: 'Slenkamas turinys',
   clear: 'Išvalyti',
   open: 'Atidaryti',
   close: 'Uždaryti',

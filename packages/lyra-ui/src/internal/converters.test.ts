@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
   autocorrectConverter,
+  blankNumberConverter,
   declaredDefaultConverter,
   lengthOrNumberConverter,
   literalSetConverter,
@@ -142,5 +143,14 @@ describe('lengthOrNumberConverter', () => {
     expect(read('')).to.equal(null);
     expect(read('   ')).to.equal(null);
     expect(read(null)).to.equal(null);
+  });
+});
+
+describe('blankNumberConverter', () => {
+  it('maps an absent, empty or whitespace attribute to the fallback and parses the rest', () => {
+    const converter = blankNumberConverter(4);
+    const parse = converter.fromAttribute!;
+    expect([null, '', '  ', '2', ' 0 ', 'x'].map((value) => parse(value, Number))).to.deep.equal([4, 4, 4, 2, 0, NaN]);
+    expect(blankNumberConverter(null).fromAttribute!('', Number)).to.equal(null);
   });
 });

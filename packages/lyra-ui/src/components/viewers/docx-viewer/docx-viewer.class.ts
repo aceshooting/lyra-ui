@@ -43,6 +43,7 @@ import type {
 } from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { regionHighlightLabel } from '../region-highlight-layer.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
@@ -65,7 +66,7 @@ import { ViewerSearchState } from '../../../internal/viewer-search.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -222,6 +223,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    close: LYRA_DEFAULT_close,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
@@ -230,8 +236,16 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
     docxViewerLabel: LYRA_DEFAULT_docxViewerLabel,
     docxViewerMissingConverter: LYRA_DEFAULT_docxViewerMissingConverter,
+    download: LYRA_DEFAULT_download,
+    highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+    scrollerLabel: LYRA_DEFAULT_scrollerLabel,
+    select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -312,7 +326,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private syncScrollRegion(): void {
     const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
     if (!el || !this.isConnected) return;
-    const name = normalizeLabel(this.name) ?? this.localize('docxViewerLabel');
+    // The outer document owner carries the viewer name; the scroll body gets its own name.
+    const name = this.localize('scrollerLabel');
     const child = el.firstElementChild;
     const current = this.scrollRegion;
     if (current?.el === el && current.child === child && current.name === name) return;
@@ -601,14 +616,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.emit('lr-highlight-activate', { highlightId });
   }
 
-  private highlightActionLabel(highlight: LyraHighlight): string {
-    return this.localize('highlightWithLabel', undefined, {
-      label:
-        highlight.label ||
-        (highlight.anchor.kind === 'text-quote'
-          ? highlight.anchor.quote
-          : highlight.id),
-    });
+  private highlightActionLabel(highlight: LyraHighlight, index: number, total: number): string {
+    return regionHighlightLabel(highlight, index, total, this.effectiveLocale,
+      (key, values) => this.localize(key, undefined, values));
   }
 
   private activateHighlightAction(highlight: LyraHighlight): void {
@@ -631,15 +641,15 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     if (highlights.length === 0) return nothing;
     return html`
       <div part="highlight-actions">
-        ${highlights.map((highlight) => {
-          const label = this.highlightActionLabel(highlight);
+        ${highlights.map((highlight, index) => {
+          const label = this.highlightActionLabel(highlight, index, highlights.length);
           return html`
             <button
               part="highlight-action"
               type="button"
               aria-label=${label}
               @click=${() => this.activateHighlightAction(highlight)}
-            >${highlight.label || label}</button>
+            >${normalizeLabel(highlight.label) ?? label}</button>
           `;
         })}
       </div>
@@ -794,12 +804,14 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private renderBody(): TemplateResult {
+    // Resolved in every state so a host-owned document role never outlives the loaded content.
+    const role = viewerSemanticRole(this, this.fetchState.kind === 'loaded' ? 'document' : null);
     switch (this.fetchState.kind) {
       case 'loaded':
         return html`
           <div
             part="content"
-            role=${viewerSemanticRole(this, 'document') ?? nothing}
+            role=${role ?? nothing}
             aria-label=${viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('docxViewerLabel')) ?? nothing}
             @click=${this.onContentClick}
           >

@@ -1,4 +1,5 @@
 import type { PropertyValues } from 'lit';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -108,7 +109,8 @@ export class LyraResultCard extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const hasHeading = (this.heading ?? '').length > 0;
+    const heading = normalizeLabel(this.heading);
+    const hasHeading = heading !== undefined;
     const hasActions = this.withActions || this.hasActionsSlot;
     const hasHeader = hasHeading || hasActions;
     const headingLevel = resolveHeadingLevel(this.headingLevel ?? 'none');
@@ -118,10 +120,10 @@ export class LyraResultCard extends LyraElement {
           ${hasHeading
             ? html`<span
                 part="heading"
-                title=${this.heading}
+                title=${heading ?? nothing}
                 role=${headingLevel ? 'heading' : nothing}
                 aria-level=${headingLevel ?? nothing}
-              >${this.heading}</span>`
+              >${heading}</span>`
             : nothing}
           <div part="actions" ?hidden=${!hasActions}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>

@@ -5,6 +5,10 @@
 // here would put the icon implementation plus its unreachable sanitizer chunk back into every
 // consumer's graph, which is exactly what the lean entry exists to avoid -- see
 // icon-button-register.ts's own header comment for the full trade.
+export type { ContextMeterTone } from './data/context-meter/context-meter.class.js';
+export type { LyraCitationBadgeEventMap } from './retrieval/citation-badge/citation-badge.class.js';
+export type { LyraCopyButtonEventMap } from './utility/copy-button/copy-button.class.js';
+export type { LyraExportButtonEventMap, LyraExportFormatOption } from './utility/export-button/export-button.class.js';
 export * from './agent-tools/context-inspector/context-inspector.class.js';
 import { LyraContextInspector } from './agent-tools/context-inspector/context-inspector.class.js';
 import { defineElement } from '../internal/prefix.js';

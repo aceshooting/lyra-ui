@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -1099,7 +1100,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override render(): TemplateResult {
     const hasToolbar = !this.withoutCopyButton || this.downloadable;
-    const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
+    const ariaLabel = normalizeLabel(this.accessibleLabel) ?? this.localize('terminalLabel');
     // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
     // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
     const { perLine: highlightByLine, owners: highlightOwnerLines } = this.resolvedHighlightLines();

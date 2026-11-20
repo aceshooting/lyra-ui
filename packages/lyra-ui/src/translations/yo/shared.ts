@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'A kò lè gbé ẹ̀yà yìí wọlé.',
   noData: 'Kò sí dátà',
   legendTypeShown: 'A ti fi {label} hàn',
   legendTypeHidden: 'A ti fi {label} pamọ́',
@@ -19,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Kò ṣeé ṣe láti gbé dátà wọlé',
   zoomOut: 'Din ìfẹ̀ sílẹ̀',
   zoomIn: 'Mú ìfẹ̀ pọ̀ sí i',
+  scrollerLabel: 'Àkóónú tí a lè yí kiri',
   clear: 'Pa rẹ́',
   open: 'Ṣí',
   close: 'Pá',

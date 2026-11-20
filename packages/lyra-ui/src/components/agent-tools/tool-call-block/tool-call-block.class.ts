@@ -1,4 +1,4 @@
-import { resolveAccessibleName, labelWithVisibleText } from '../../../internal/accessible-name.js';
+import { resolveAccessibleName, labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -385,7 +385,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   override render(): TemplateResult {
     const status = this.status;
-    const name = this.displayName || this.name || this.localize('toolCall');
+    const name = normalizeLabel(this.displayName) ?? normalizeLabel(this.name) ?? this.localize('toolCall');
     const label = this.label ?? this.localize(HEADER_KEY[status], undefined, { name });
     const duration = this.durationText();
     const context = resolveAccessibleName(this);

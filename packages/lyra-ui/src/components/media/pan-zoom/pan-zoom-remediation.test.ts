@@ -21,9 +21,10 @@ it('names the viewport from the property or the host aria-label', async () => {
   el.setAttribute('aria-label', 'Host purpose');
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Host purpose');
+  // The viewport is a required focusable name owner, so an empty host label falls back.
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(viewport.getAttribute('aria-label')).to.equal('');
+  expect(viewport.getAttribute('aria-label')).to.equal('Viewport');
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Viewport');

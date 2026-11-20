@@ -1,3 +1,4 @@
+export type { LyraTableEventMap } from './data/table/table-support.js';
 export * from './retrieval/knowledge-base/knowledge-base.class.js';
 import { LyraKnowledgeBase } from './retrieval/knowledge-base/knowledge-base.class.js';
 import { defineElement } from '../internal/prefix.js';

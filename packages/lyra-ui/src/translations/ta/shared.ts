@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'இந்தக் கூறை ஏற்ற முடியவில்லை.',
   noData: 'தரவு இல்லை',
   legendTypeShown: '{label} காட்டப்பட்டது',
   legendTypeHidden: '{label} மறைக்கப்பட்டது',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'தரவை ஏற்ற முடியவில்லை',
   zoomOut: 'சிறிதாக்கு',
   zoomIn: 'பெரிதாக்கு',
+  scrollerLabel: 'உருட்டக்கூடிய உள்ளடக்கம்',
   clear: 'அழி',
   open: 'திற',
   close: 'மூடு',

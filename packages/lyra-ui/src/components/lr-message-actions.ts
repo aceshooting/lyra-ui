@@ -1,3 +1,5 @@
+export type { MessageFeedbackSubmitDetail, MessageFeedbackValue } from './conversation/message-feedback/message-feedback.class.js';
+export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export * from './conversation/message-actions/message-actions.class.js';
 export * from './conversation/message-actions/toolbar-actions.js';
 import { LyraMessageActions } from './conversation/message-actions/message-actions.class.js';

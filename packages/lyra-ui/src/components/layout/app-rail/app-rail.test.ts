@@ -3884,3 +3884,9 @@ it('preserves the plain frame edge default when the resizer is present', async (
   rail.style.setProperty('--lr-app-rail-edge-border', '2px solid red');
   expect(getComputedStyle(base).borderInlineEndWidth).to.equal('2px');
 });
+
+it('keeps the declared default for a blank numeric attribute instead of coercing it to 0', async () => {
+  const el = await fixture(html`<lr-app-rail peek-open-delay="" peek-close-delay=""></lr-app-rail>`);
+  const props = el as unknown as Record<string, unknown>;
+  expect(['peekOpenDelay', 'peekCloseDelay'].map((key) => props[key])).to.deep.equal([150, 300]);
+});

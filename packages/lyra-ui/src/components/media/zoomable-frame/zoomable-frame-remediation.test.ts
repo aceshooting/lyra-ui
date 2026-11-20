@@ -20,9 +20,10 @@ it('titles the iframe from the property or the host aria-label', async () => {
   el.setAttribute('aria-label', 'Host purpose');
   await el.updateComplete;
   expect(frame.title).to.equal('Host purpose');
+  // An iframe always needs a title, so an empty host label falls back.
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(frame.title).to.equal('');
+  expect(frame.title).to.equal('Frame');
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(frame.title).to.equal('Frame');

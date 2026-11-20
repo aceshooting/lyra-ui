@@ -17,6 +17,8 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { lengthOrNumberConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { NESTED_INTERACTIVE_SELECTOR } from '../../../internal/nested-interactive.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
@@ -66,9 +68,6 @@ interface DefaultCellEl extends HTMLElement {
 interface WidgetRendererEl extends HTMLElement {
   document: LyraWidgetDocument | null;
 }
-
-const INTERACTIVE_DESCENDANT_SELECTOR =
-  'button, a[href], area[href], input, select, textarea, summary, label, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], [role="spinbutton"], [role="textbox"], [role="combobox"], [role="option"], [role="menuitem"], [tabindex]:not([part="cell"])';
 
 const GEOMETRY_KEYS = ['cellId', 'x', 'y', 'w', 'h', 'minW', 'maxW', 'minH', 'maxH', 'locked'] as const;
 const sortedByLayout = new WeakMap<readonly LyraDashboardCell[], readonly LyraDashboardCell[]>();
@@ -626,6 +625,21 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     for (const stale of ownedById.values()) {
       for (const defaultCell of stale) defaultCell.remove();
     }
+    // Default cells live in light DOM, so their deferred registrations are found on the host.
+    this.childRegistration = loadLazyChildren('dashboard-grid', this) ?? this.childRegistration;
+  }
+
+  private childRegistration?: Promise<unknown>;
+
+  /** Settles after the default-cell widgets and renderers this grid created have rendered too. */
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    await Promise.all(Array.from(
+      this.querySelectorAll(`:scope > [data-dashboard-grid-default-cell], :scope > [data-dashboard-grid-default-cell] > ${tag('widget-renderer')}`),
+      (child) => Promise.resolve((child as Element & { updateComplete?: Promise<unknown> }).updateComplete),
+    ));
+    return complete;
   }
 
   private createDefaultCell(cell: LyraDashboardCell): Element {
@@ -1006,7 +1020,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       if (
         typeof element.matches === 'function' &&
         node !== wrapper &&
-        element.matches(INTERACTIVE_DESCENDANT_SELECTOR)
+        element.matches(NESTED_INTERACTIVE_SELECTOR)
       )
         return true;
     }

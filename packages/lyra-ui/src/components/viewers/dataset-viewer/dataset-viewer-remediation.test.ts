@@ -57,7 +57,8 @@ it('gives a capped, overflowing self-scrolling body a named tab stop only while 
   expect([body.getAttribute('role'), body.getAttribute('aria-label')]).to.deep.equal(['region', 'Dataset']);
   viewer.name = 'Sales';
   await viewer.updateComplete;
-  await waitUntil(() => body.getAttribute('aria-label') === 'Sales', 'region name did not follow the dataset name');
+  // The scroll body keeps its purpose name instead of repeating the dataset region's name.
+  expect(body.getAttribute('aria-label')).to.equal('Dataset');
   viewer.maxHeight = '400rem';
   await waitUntil(() => !body.hasAttribute('tabindex'), 'short body kept its tab stop');
   viewer.maxHeight = '120px';

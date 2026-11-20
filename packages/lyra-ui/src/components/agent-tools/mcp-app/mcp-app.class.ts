@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -631,7 +632,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     const propertyLabel = !this.hasAttribute('aria-label') && typeof this.accessibleLabel === 'string'
       ? this.accessibleLabel
       : '';
-    const fallbackLabel = propertyLabel || this.label || resource.resource.title || this.localize('mcpAppLabel');
+    const fallbackLabel = normalizeLabel(propertyLabel) ?? normalizeLabel(this.label) ?? normalizeLabel(resource.resource.title) ?? this.localize('mcpAppLabel');
     const label = purposeAccessibleLabel(this, fallbackLabel);
     const frameGeneration = this.frameGeneration;
     return html`<div part="base">

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { blockHost, inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
@@ -114,6 +115,10 @@ export const styles = css`
     padding: var(--lr-space-m);
     border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(--lr-color-surface-raised);
+  }
+  /* no-hover-state: a scroll region is not a pointer target; the ring marks keyboard focus only. */
+  [part='details']:focus-visible {
+    ${focusRingInset}
   }
   [part='details-content'] {
     display: flex;

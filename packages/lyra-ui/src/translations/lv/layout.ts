@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Pauzēt rotāciju',
   carouselResumeRotation: 'Atsākt rotāciju',
   carouselViewport: 'Slaidi',
-  scrollerLabel: 'Ritināms saturs',
   scrollPrevious: 'Ritināt atpakaļ',
   scrollNext: 'Ritināt uz priekšu',
   closeNavigation: 'Aizvērt navigāciju',

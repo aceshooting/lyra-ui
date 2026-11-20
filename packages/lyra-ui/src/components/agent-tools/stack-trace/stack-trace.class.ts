@@ -10,6 +10,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -325,6 +326,15 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     }
     flushRun();
     return html`<div part="group">${rendered}</div>`;
+  }
+
+  constructor() {
+    super();
+    // A capped raw trace (no copy button, no selectable frames) has nothing else to scroll it by.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      return [el && { el }];
+    });
   }
 
   override render(): TemplateResult {

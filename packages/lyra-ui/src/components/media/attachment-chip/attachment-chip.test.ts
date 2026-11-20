@@ -1551,3 +1551,11 @@ it('draws the resting chip edge in the subtle border tier while the progress tra
 });
 
 expectStaleAttribute('lr-attachment-chip', 'previewable');
+
+it('falls back to the localized untitled and failure text for blank overrides', async () => {
+  const el = (await fixture(
+    html`<lr-attachment-chip name="  " untitled-label="  " upload-failed-label=" " status="error"></lr-attachment-chip>`,
+  )) as LyraAttachmentChip;
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent!.trim()).to.equal('Untitled file');
+  expect(el.shadowRoot!.textContent).to.contain('Upload failed');
+});

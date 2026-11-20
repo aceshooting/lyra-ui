@@ -3,6 +3,8 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './breadcrumb.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -109,13 +111,13 @@ export class LyraBreadcrumb extends LyraElement {
    *  copied onto it. Both spellings work: an `aria-label` attribute on `<lr-breadcrumb>` (which the
    *  attribute mapping also surfaces here) and a plain property assignment
    *  (`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default
-   *  ("Breadcrumb"); an explicitly empty `aria-label` attribute or an explicitly empty
-   *  `accessibleLabel`/`label` property assignment stays empty rather than falling through. */
+   *  ("Breadcrumb"); an explicitly empty `aria-label` attribute or `accessibleLabel` assignment stays empty
+   *  rather than falling through, while a blank or whitespace-only `label` is treated as unset. */
   @property({ attribute: 'aria-label' }) accessibleLabel?: string;
 
   /** Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`
-   * remains the highest-priority override. An explicitly empty string stays empty rather than
-   * falling back to the localized default. */
+   * remains the highest-priority override. A blank or whitespace-only string is treated as
+   * unset and falls back to the localized default. */
   @property() label?: string;
 
   private generatedSeparators = new Map<Element, Array<{ source: Element; clone: Element }>>();
@@ -219,13 +221,10 @@ export class LyraBreadcrumb extends LyraElement {
     // attribute is absent the property is still consulted: a JS-only assignment never writes an
     // attribute back (this property does not reflect), so reading the attribute alone would make
     // `el.accessibleLabel = 'Docs trail'` silently inert.
-    const hostLabel = this.getAttribute('aria-label');
     const label =
-      hostLabel === null
-        ? this.accessibleLabel == null
-          ? (this.label == null ? this.localize('breadcrumb') : this.label)
-          : this.accessibleLabel
-        : hostLabel;
+      (hostAriaLabel(this) === '' || this.accessibleLabel === '')
+        ? ''
+        : resolveAccessibleName(this, this.label, this.localize('breadcrumb'));
     return html`<nav part="base breadcrumb" aria-label=${label}>
       <div part="list" role="list"><slot @slotchange=${this.syncSeparators}></slot></div>
       <slot class="separator-source" name="separator" @slotchange=${this.syncSeparators}></slot>

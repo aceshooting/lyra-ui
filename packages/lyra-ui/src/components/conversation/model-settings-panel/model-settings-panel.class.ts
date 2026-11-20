@@ -8,7 +8,7 @@ import { normalizeCatalog } from '../../../internal/catalog-picker.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './model-settings-panel.styles.js';
 import type { LyraCatalog, LyraModelCatalogEntry } from '../model-select/model-select.class.js';
 import '../model-select/model-select.class.js';
@@ -136,10 +136,10 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** Let the model control accept a value outside `catalog`; passed straight through. */
   @property({ type: Boolean, attribute: 'allow-custom' }) allowCustom = false;
   /** The current sampling temperature. */
-  @property({ type: Number, useDefault: true }) temperature = DEFAULT_TEMPERATURE;
-  @property({ type: Number, attribute: 'temperature-min', useDefault: true }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
-  @property({ converter: (value: string | null) => Number(value?.trim() || DEFAULT_TEMPERATURE_MAX), attribute: 'temperature-max', useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
-  @property({ type: Number, attribute: 'temperature-step', useDefault: true }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
+  @property({ converter: blankNumberConverter(DEFAULT_TEMPERATURE), useDefault: true }) temperature = DEFAULT_TEMPERATURE;
+  @property({ attribute: 'temperature-min', converter: blankNumberConverter(DEFAULT_TEMPERATURE_MIN), useDefault: true }) temperatureMin = DEFAULT_TEMPERATURE_MIN;
+  @property({ attribute: 'temperature-max', converter: blankNumberConverter(DEFAULT_TEMPERATURE_MAX), useDefault: true }) temperatureMax = DEFAULT_TEMPERATURE_MAX;
+  @property({ attribute: 'temperature-step', converter: blankNumberConverter(DEFAULT_TEMPERATURE_STEP), useDefault: true }) temperatureStep = DEFAULT_TEMPERATURE_STEP;
   /** `vertical` stacks full-width rows with visible labels; `compact` runs
    *  the same two rows side by side with a smaller temperature caption, for
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */

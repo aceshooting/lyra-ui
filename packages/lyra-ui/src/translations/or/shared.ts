@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'ଏହି ଘଟକକୁ ଲୋଡ୍ କରାଯାଇପାରିଲା ନାହିଁ।',
   noData: 'କୌଣସି ତଥ୍ୟ ନାହିଁ',
   legendTypeShown: '{label} ଦେଖାଯାଇଛି',
   legendTypeHidden: '{label} ଲୁଚାଯାଇଛି',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'ତଥ୍ୟ ଲୋଡ୍ ହୋଇପାରିଲା ନାହିଁ',
   zoomOut: 'ଛୋଟ କରନ୍ତୁ',
   zoomIn: 'ବଡ଼ କରନ୍ତୁ',
+  scrollerLabel: 'ସ୍କ୍ରୋଲ୍ ଯୋଗ୍ୟ ବିଷୟବସ୍ତୁ',
   clear: 'ସଫା କରନ୍ତୁ',
   open: 'ଖୋଲନ୍ତୁ',
   close: 'ବନ୍ଦ କରନ୍ତୁ',

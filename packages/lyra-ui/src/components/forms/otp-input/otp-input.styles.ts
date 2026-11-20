@@ -1,7 +1,7 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingText } from '../../../internal/form-control.styles.js';
+import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingText, formControlLabelDisplay } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   ${formControlAppearance}
@@ -146,4 +146,5 @@ export const styles = css`
       transition: none;
     }
   }
+  ${formControlLabelDisplay}
 `;

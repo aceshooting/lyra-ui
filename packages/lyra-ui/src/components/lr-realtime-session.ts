@@ -1,3 +1,6 @@
+export type { AudioVisualizerState } from './conversation/audio-visualizer/audio-visualizer.class.js';
+export type { LyraPushToTalkEventMap } from './conversation/push-to-talk/push-to-talk.class.js';
+export type { LyraTranscriptEntry } from './conversation/transcript-feed/transcript-feed.class.js';
 export * from './conversation/realtime-session/realtime-session.class.js';
 import { LyraRealtimeSession } from './conversation/realtime-session/realtime-session.class.js';
 import { defineElement } from '../internal/prefix.js';

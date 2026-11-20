@@ -1601,6 +1601,11 @@ focus move.
   option rows after their exit transition; trigger labels and free-text behavior remain available.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-select>`'s
+  `top-layer`: shows the open listbox in the browser top layer, placed `fixed`, so it paints above a
+  sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail it sits
+  in. Without the native Popover API it keeps its ordinary `z-index` stacking. Changes apply live
+  while open.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
   slot in a `[part="form-control-label"]` `<label>` paired with the active control's id. A host
   `aria-label` remains the authoritative override by presence; otherwise either visible-label
@@ -2815,7 +2820,8 @@ animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' 
 reflected); `barCount: number = 5` (attribute `bar-count`, normalized to an integer in `[1, 64]`);
 `gain: number = 1` — multiplier applied to the resolved amplitude, with a non-finite value treated
 as `1`; `label?: string` — accessible-name override. Omitting it auto-generates "Voice activity:
-{state}"; an explicit empty string suppresses that default and renders an empty accessible name.
+{state}"; an explicit empty string suppresses that default and renders an empty accessible name, so the host
+becomes `role="presentation"` instead of an unnamed image.
 `level` is clamped to `[0, 1]`; after gain,
 waveform and bar values are clamped to `[-1, 1]` and `[0, 1]` respectively. Invalid `state` or
 `mode` attribute/property writes normalize to `idle` and `bars` respectively.
@@ -4315,6 +4321,8 @@ still be appended. Closed listboxes contain no option rows after their exit tran
 labels and free-text behavior remain available.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
+`topLayer: boolean = false` (attribute `top-layer`, reflected) — shows the open listbox in the
+browser top layer, with the same contract as `<lr-model-select>`'s `top-layer`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
 affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
@@ -4516,7 +4524,7 @@ assign new data to the properties as the host receives updates.
 `components/conversation/agent-workspace/agent-workspace-register.js` registers the conversation
 shell and its ordinary message/composer children. Import the run, timeline, retrieval-results,
 grounding-summary and context-inspector entries too when those panels can receive data. The default
-entry registers them all.
+entry registers each panel the first time the workspace has data for it.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
 `@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Παύση περιστροφής',
   carouselResumeRotation: 'Συνέχιση περιστροφής',
   carouselViewport: 'Διαφάνειες',
-  scrollerLabel: 'Περιεχόμενο με δυνατότητα κύλισης',
   scrollPrevious: 'Κύλιση προς τα πίσω',
   scrollNext: 'Κύλιση προς τα εμπρός',
   closeNavigation: 'Κλείσιμο πλοήγησης',

@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'هیچ نمای ایجادشده‌ای برای نمایش وجود ندارد.',
   genViewInvalid: 'این نمای ایجادشده قابل نمایش نیست.',
   genViewLoading: 'در حال بارگذاری مؤلفه…',
-  genViewLoadFailed: 'بارگذاری این مؤلفه ممکن نشد.',
   genViewInvalidState: 'از مقدار این ساحه نمی‌توان استفاده کرد.',
   genViewActionDenied: 'این کار در دسترس نیست.',
   genViewConfirmationRequired: 'این کار به تأیید اپلیکیشن نیاز دارد.',

@@ -16,7 +16,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Pausar a rotação',
   carouselResumeRotation: 'Retomar a rotação',
   carouselViewport: 'Slides',
-  scrollerLabel: 'Conteúdo deslocável',
   scrollPrevious: 'Deslocar para trás',
   scrollNext: 'Deslocar para a frente',
   closeNavigation: 'Fechar a navegação',

@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Keskeytä kierto',
   carouselResumeRotation: 'Jatka kiertoa',
   carouselViewport: 'Diat',
-  scrollerLabel: 'Vieritettävä sisältö',
   scrollPrevious: 'Vieritä taaksepäin',
   scrollNext: 'Vieritä eteenpäin',
   closeNavigation: 'Sulje navigointi',

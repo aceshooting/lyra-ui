@@ -1,3 +1,4 @@
+export type { FlatToolParamSchema, ToolParamFormValue } from './agent-tools/tool-param-form/tool-param-types.js';
 export * from './agent-tools/agent-question/agent-question.class.js';
 import { LyraAgentQuestion } from './agent-tools/agent-question/agent-question.class.js';
 import { defineElement } from '../internal/prefix.js';

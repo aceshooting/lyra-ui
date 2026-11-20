@@ -36,6 +36,20 @@ function colorFootprint(canvas: HTMLCanvasElement, color: 'red' | 'blue'): Color
 }
 
 describe('3D graph canvas rendering', () => {
+  it('names the 3D surface with the 2D precedence and never copies a host aria-label onto it', async () => {
+    const el = await fixture<LyraGraph>(html`
+      <lr-graph view="3d" label="Org chart" .accessibleLabel=${'Compatibility name'} style="inline-size:320px;block-size:240px"
+        .nodes=${[{ id: 'a', position: { x: 0, y: 0, z: 0 } }]}></lr-graph>
+    `);
+    const surface = () => el.shadowRoot!.querySelector<HTMLElement>('[part="spatial-canvas"]');
+    await waitUntil(() => surface() !== null, 'the 3D surface renders');
+    expect(surface()!.getAttribute('aria-label')).to.equal('Org chart');
+    el.setAttribute('aria-label', 'Host graph');
+    await el.updateComplete;
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(surface()!.getAttribute('aria-label')).to.equal('3D view');
+  });
+
   it('renders square and diamond node types with their distinct public shapes', async () => {
     const el = await fixture<LyraGraph>(html`
       <lr-graph view="3d" style="inline-size:640px;block-size:480px"

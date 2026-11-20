@@ -3,6 +3,7 @@ import { combineShikiLanguageSources } from '../../../internal/shiki-language-so
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { html, noChange, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
@@ -86,7 +87,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   // numeric-guard-exempt: forwarded verbatim, never used for math here -- the composed Markdown
   // element clamps it at its point of use (`finiteInteger(this.tabSize, 4, 1, 32)` in
   // markdown-base.class.ts). A second guard here would duplicate that range and could diverge.
-  @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
+  @property({ attribute: 'tab-size', converter: blankNumberConverter(4) }) tabSize = 4;
 
   /** Forwarded verbatim to the composed Markdown element's own `htmlMode` -- how authored raw
    *  HTML is handled (`'sanitize'`, `'escape'`, or `'trusted'`). `'sanitize'` (the default)

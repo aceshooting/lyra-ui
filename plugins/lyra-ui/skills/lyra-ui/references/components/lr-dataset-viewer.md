@@ -24,7 +24,8 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 `.tsv`, `.psv`, and `.dat` filenames.
 
 With the default `scroll-mode="self"`, the capped `body` becomes a named keyboard scroll region
-(named by `name`, else the localized "Dataset") while its rows exceed the cap, and adds no tab stop
+(named by the localized `datasetViewerLabel`, "Dataset", so it never repeats the region's `name`)
+while its rows exceed the cap, and adds no tab stop
 otherwise.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the

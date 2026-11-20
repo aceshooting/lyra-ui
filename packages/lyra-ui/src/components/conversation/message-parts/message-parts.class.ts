@@ -431,10 +431,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     return false;
   }
 
+  /** Settles after every renderer registration in flight and the render it requested. */
   protected override async getUpdateComplete(): Promise<boolean> {
-    const complete = await super.getUpdateComplete();
-    await this.rendererLoads.get('button');
-    return complete;
+    let complete = await super.getUpdateComplete();
+    let settled = new Set<Promise<void>>();
+    for (;;) {
+      const pending = [...this.rendererLoads.values()].filter((load) => !settled.has(load));
+      if (pending.length === 0) return complete;
+      await Promise.all(pending);
+      settled = new Set([...settled, ...pending]);
+      complete = await super.getUpdateComplete();
+    }
   }
 
   private rendererFallback(name: PartRenderer): TemplateResult {
@@ -463,6 +470,9 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       // A reconnect snapshots the current parts as history. This covers a parts write queued while
       // detached and prevents DOM reparenting from turning old errors into fresh alerts.
       this.suppressNextErrorAnnouncement = true;
+      // A reconnected message retries any renderer whose registration failed.
+      for (const name of this.failedRendererLoads) this.rendererLoads.delete(name);
+      this.failedRendererLoads.clear();
       this.requestUpdate();
     }
   }

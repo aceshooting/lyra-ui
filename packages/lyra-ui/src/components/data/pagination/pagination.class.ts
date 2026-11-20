@@ -17,6 +17,7 @@ import { styles } from './pagination.styles.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
@@ -342,7 +343,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  an explicit empty string renders no visible/accessible label. */
   @property() label?: string;
   /** Optional control-label overrides. Omission localizes the matching message key; supplied
-   * strings, including the built-in English text or an empty string, render verbatim. */
+   * strings, including the built-in English text, render verbatim. An empty or whitespace-only
+   * value is treated as unset, because these controls have no visible text to name them. */
   @property({ attribute: 'page-label' }) pageLabel?: string;
   /** Accessible name for the previous-page control. */
   @property({ attribute: 'previous-label' }) previousLabel?: string;
@@ -645,8 +647,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isPrevious = direction === 'previous';
     const current = this.currentPage;
     const label = isPrevious
-      ? (this.previousLabel === '' ? '' : normalizeLabel(this.previousLabel) ?? this.localize('previous'))
-      : (this.nextLabel === '' ? '' : normalizeLabel(this.nextLabel) ?? this.localize('next'));
+      ? normalizeLabel(this.previousLabel) ?? this.localize('previous')
+      : normalizeLabel(this.nextLabel) ?? this.localize('next');
     const spent = isPrevious
       ? current <= 1
       : this.indeterminate
@@ -692,8 +694,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isFirst = edge === 'first';
     const current = this.currentPage;
     const label = isFirst
-      ? (this.firstLabel === '' ? '' : normalizeLabel(this.firstLabel) ?? this.localize('paginationFirstPage'))
-      : (this.lastLabel === '' ? '' : normalizeLabel(this.lastLabel) ?? this.localize('paginationLastPage'));
+      ? normalizeLabel(this.firstLabel) ?? this.localize('paginationFirstPage')
+      : normalizeLabel(this.lastLabel) ?? this.localize('paginationLastPage');
     const spent = isFirst ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isFirst ? 1 : this.calculatedTotalPages;
     const inactive = this.controlsDisabled || spent;
@@ -819,7 +821,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private renderPageField(): TemplateResult {
-    const pageLabel = (this.pageLabel === '' ? '' : normalizeLabel(this.pageLabel) ?? this.localize('paginationPage'));
+    const pageLabel = normalizeLabel(this.pageLabel) ?? this.localize('paginationPage');
     // The field grows with the digits it must show (the last page or the typed draft), so a
     // four-digit page is not clipped by the fixed control width.
     const digits = Math.max(2, this.indeterminate ? 0 : String(this.calculatedTotalPages).length, this.draftPage.length);
@@ -848,6 +850,12 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         ? nothing
         : html`<span part="page-count" aria-hidden="true"> / ${this.formatLocaleNumber(this.calculatedTotalPages)}</span>`}
     </span>`;
+  }
+
+  constructor() {
+    super();
+    // A control that disables itself while focused (the spent next/last button) hands focus on.
+    repairControlFocusOnUpdate(this, () => this.renderRoot.querySelectorAll<HTMLElement>('[part~="page-current"], button, input'));
   }
 
   override render(): TemplateResult | typeof nothing {

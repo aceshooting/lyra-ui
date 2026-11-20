@@ -3,6 +3,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -14,7 +15,8 @@ import { scrollEdgePosition } from '../../../internal/scroll-overflow.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -292,8 +294,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   override render(): TemplateResult {
     const label =
-      hostAriaLabel(this) ??
-      (this.label || this.localize('scrollerLabel'));
+      (hostAriaLabel(this) === '' || this.accessibleLabel === '')
+        ? ''
+        : resolveAccessibleName(this, this.label, this.localize('scrollerLabel'));
     const vertical = this.orientation === 'vertical';
     return html`<div part="base" @keydown=${this.onBaseKeyDown}>
       ${this.controls

@@ -313,7 +313,7 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
-it('forwards host aria-label changes, including an empty one, to the viewport', async () => {
+it('forwards host aria-label changes, with an empty one falling back to the localized name, to the viewport', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="" .strings=${{ zoomableFrameLabel: 'Localized zoom surface' }}></lr-pan-zoom>
   `);
@@ -324,7 +324,7 @@ it('forwards host aria-label changes, including an empty one, to the viewport', 
   expect(base.hasAttribute('role')).to.equal(false);
   expect(base.hasAttribute('aria-label')).to.equal(false);
   expect(viewport.getAttribute('role')).to.equal('group');
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
 
   el.setAttribute('aria-label', 'Updated zoom surface');
   await el.updateComplete;
@@ -332,7 +332,7 @@ it('forwards host aria-label changes, including an empty one, to the viewport', 
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
@@ -475,4 +475,21 @@ it('zooms out and resets from the focused viewport keyboard controls', async () 
   expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('data-zoom')).to.equal('1');
   expect(changes).to.deep.equal([1.75, 1]);
   expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
+});
+
+it('keeps keyboard focus in the controls when a zoom button disables itself at its limit', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom zoom="1" max-zoom="1.25" zoom-step="0.25"></lr-pan-zoom>`);
+  const zoomIn = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in"]')!;
+  await focusByKeyboard(zoomIn);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(zoomIn.disabled).to.equal(true);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('zoom-out');
+});
+
+it('keeps the focusable viewport named when the host aria-label is empty or blank', async () => {
+  for (const value of ['', '   ']) {
+    const el = (await fixture(html`<lr-pan-zoom aria-label=${value}></lr-pan-zoom>`)) as LyraPanZoom;
+    expect(el.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal('Zoomable content');
+  }
 });

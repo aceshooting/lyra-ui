@@ -13,6 +13,10 @@ import '../components/lr-phone-input.js';
 import '../components/lr-token-input.js';
 import '../components/lr-model-select.js';
 import '../components/lr-voice-picker.js';
+import '../components/lr-slider.js';
+import '../components/lr-otp-input.js';
+import '../components/lr-code-editor.js';
+import '../components/lr-signature-pad.js';
 
 type Field = HTMLElement & {
   label: string;
@@ -25,7 +29,7 @@ type Field = HTMLElement & {
 
 const ROLE_OWNER = 'input:not([type="hidden"]), textarea, [role="combobox"], select, button[aria-haspopup], [role="group"]';
 const TAGS = ['select', 'combobox', 'input', 'time-input', 'textarea', 'locale-picker', 'unit-picker', 'date-input',
-  'phone-input', 'token-input', 'model-select', 'voice-picker'];
+  'phone-input', 'token-input', 'model-select', 'voice-picker', 'slider', 'otp-input', 'code-editor', 'signature-pad'];
 
 async function make(name: string, attrs: Partial<Field> = {}, dir?: string): Promise<Field> {
   const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 320px"></div>`);

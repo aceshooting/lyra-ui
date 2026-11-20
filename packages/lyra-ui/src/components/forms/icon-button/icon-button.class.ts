@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import {
   syncAriaControlsElements,
   acquireResolvedAriaRelationship,
@@ -82,7 +83,7 @@ function namesControl(nodes: Iterable<Node>): boolean {
 /** `<lr-icon-button>` — an accessible icon-only action button.
  *
  * Its accessible name is the host `aria-label` (forwarded by presence, including an explicitly empty
- * value), then `label`, then a name the slotted content already carries; the localized generic
+ * value; whitespace-only is ignored), then `label`, then a name the slotted content already carries; the localized generic
  * fallback applies only when none of them supplies one.
  *
  * Set `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted
@@ -517,7 +518,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
           ? this.triggerPressed : nothing;
     const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
       ? this.triggerCurrent : nothing;
-    const label = hostAriaLabel(this) ?? (this.label || (this.contentNamed ? nothing : this.localize('iconButtonLabel')));
+    const label = hostAriaLabel(this) ?? normalizeLabel(this.label) ??
+      (this.contentNamed ? nothing : this.localize('iconButtonLabel'));
     const content = html`${this.icon || this.src
       ? html`<lr-icon
           name=${this.icon || nothing}

@@ -206,9 +206,11 @@ describe('graph spatial views', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="spatial-canvas"]').length).to.equal(0);
   });
 
-  it('uses the host accessible name and keeps community membership counts distinct', async () => {
+  it('leaves the host accessible name on the host group and keeps community membership counts distinct', async () => {
     const el = await fixture<LyraGraph>(html`<lr-graph view="3d" aria-label="Host graph" label="Other name" .nodes=${nodes}></lr-graph>`);
-    expect(el.shadowRoot!.querySelector('[part="spatial-canvas"]')!.getAttribute('aria-label')).to.equal('Host graph');
+    // The host group owns the authored name; the 3D surface keeps only its purpose name.
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(el.shadowRoot!.querySelector('[part="spatial-canvas"]')!.getAttribute('aria-label')).to.equal('3D view');
     el.view = 'list';
     el.nodes = [{ ...nodes[0]!, communityId: 'group' }, nodes[1]!];
     el.communities = [{ id: 'group', label: 'Both', memberIds: ['near', 'near', 'far'] }];

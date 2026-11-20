@@ -55,7 +55,8 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
-host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
+host `aria-label` makes the host the sole named semantic owner (the host takes the `region` role
+through `ElementInternals`); an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
 localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is

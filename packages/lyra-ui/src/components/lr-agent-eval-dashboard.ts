@@ -1,3 +1,5 @@
+export type { AgentStatusValue } from './agent-tools/agent-status-presentation.js';
+export type { AgentRunActivateDetail } from './agent-tools/run-events.js';
 export * from './agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js';
 import './lr-lite-chart.js';
 import './lr-stat.js';

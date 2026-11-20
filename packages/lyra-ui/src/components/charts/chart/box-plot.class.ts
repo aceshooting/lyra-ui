@@ -917,7 +917,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    *  rendered cell as empty text -- mirrors `LyraChart.datasetLabel()`'s fallback shape, reusing
    *  this file's own existing `chartSeriesLabel` fallback (see `markAnnouncement()`). */
   private seriesDisplayLabel(series: LyraBoxPlotSeries): string {
-    return series.label || this.localize('chartSeriesLabel');
+    return normalizeLabel(series.label) ?? this.localize('chartSeriesLabel');
   }
 
   private formatValue(value: number, surface: 'export', metadata?: LyraChartFormatterMetadata): string | number;
@@ -1130,9 +1130,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       )
       .join(this.localize('chartSummarySeparator'));
     return this.localize('liteChartMarkSummary', undefined, {
-      series: this.datasets[datum.datasetIndex]?.label || this.localize('chartSeriesLabel'),
+      series: normalizeLabel(this.datasets[datum.datasetIndex]?.label) ?? this.localize('chartSeriesLabel'),
       label:
-        datum.label ??
+        normalizeLabel(datum.label) ??
         this.localize('chartPointLabel', undefined, {
           n: numberFormat.format(datum.index + 1),
         }),
@@ -1322,7 +1322,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           };
           return this.validPoint(point) ? html`
           <tr>
-            <th scope="row">${isolateHtml(this.labels[index] || this.localize('chartPointLabel', undefined, {
+            <th scope="row">${isolateHtml(normalizeLabel(this.labels[index]) ?? this.localize('chartPointLabel', undefined, {
               n: numberFormat.format(index + 1),
             }), direction)}</th>
             <td>${isolateHtml(this.seriesDisplayLabel(series), direction)}</td>

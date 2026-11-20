@@ -1,3 +1,4 @@
+export type { SemanticVariant } from '../internal/semantic-variant.js';
 export * from './overlays/chip/chip.class.js';
 import { LyraChip } from './overlays/chip/chip.class.js';
 import { defineElement } from '../internal/prefix.js';

@@ -9,19 +9,29 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-connector-manager`
 
+`frame: LyraFrame = 'card'` (reflected) is the shared container-frame knob: `'plain'` drops the
+panel's border, fill, padding and radius for embedding in a container that already draws a border.
+The card itself paints from `--lr-panel-frame-bg` (default `var(--lr-color-surface)`),
+`--lr-panel-frame-border-color` (default `var(--lr-color-border)`), `--lr-panel-frame-radius`
+(default `var(--lr-radius-xs)`) and `--lr-panel-frame-padding` (default `var(--lr-space-s)`),
+shared by `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager` and
+`lr-background-runs`, so one declaration retunes all four.
+
 Set `--lr-decision-legend-font-size` to size the panel legend. Positive and negative statuses use `--lr-decision-positive-color` and `--lr-decision-negative-color`.
 
 `lr-connector-manager` displays host-owned connector records and emits explicit requests through
 `lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A
 disconnected connector offers Connect, a connected connector offers Disconnect, an errored
-connector offers Retry, and a connecting connector has no available action. The component never
+connector offers Retry, and a connecting connector has no available action. A row whose `status`
+is outside that set (a newer server state) still renders, as a neutral localized "Unknown" status
+with no action, and a `kind` outside `'mcp' | 'connector'` simply omits the kind label. The component never
 reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
 that the host has already localized. Assign a new `.connectors` array after host updates; the
 component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
@@ -31,7 +41,7 @@ the next action appears.
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
-remains empty.
+remains empty visually, but the fieldset keeps the localized accessible name when the legend is blank.
 
 **CSS parts:**
 

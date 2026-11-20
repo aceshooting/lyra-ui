@@ -132,11 +132,13 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
 `<lr-dialog>`/`<lr-tool-result-dialog>` read). `--lr-tool-select-dialog-search-min-height` (default
-`auto`), `--lr-tool-select-dialog-search-font-size` (default `inherit`),
-`--lr-tool-select-dialog-search-padding-inline` (default `var(--lr-space-m)`),
-`--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
-`--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
-the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
+`var(--lr-form-control-height)`), `--lr-tool-select-dialog-search-font-size` (default
+`var(--lr-form-control-font-size)`), `--lr-tool-select-dialog-search-padding-inline` (default
+`var(--lr-form-control-padding-inline)`), `--lr-tool-select-dialog-search-padding-block` (default
+`var(--lr-form-control-padding-block)`) and `--lr-tool-select-dialog-search-radius` (default
+`var(--lr-form-control-radius)`) size the search field, so by default it follows the same
+form-control chain as `<lr-tool-param-form>`'s fields; point the height at another
+`--lr-form-control-height-*` tier to pick a different density. The trailing
 inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
 component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
 `--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.

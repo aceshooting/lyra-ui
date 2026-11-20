@@ -28,6 +28,8 @@ record is retained. Interactive descendants (including open-shadow native contro
 import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 ```
 
+The default entry registers the `lr-pagination` pager the first time `paginate` renders it.
+
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
 Collection inputs are clone-owned readonly snapshots: reassign `data`, `columns`, `groupBy`, and controlled
 arrays after changes. Same-array rebinding/in-place mutation is ignored; call `requestUpdate()` after

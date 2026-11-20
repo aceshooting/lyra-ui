@@ -9,6 +9,7 @@ import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
 import { renderApproveAction, renderDenyAction } from '../approval-action-buttons.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -251,7 +252,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     return request;
   }
 
-  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
+  static override styles = [LyraElement.styles, sizes, nativeModalCarrierStyles, styles];
 
   private _open = false;
   private _pendingAction: ToolApprovalDialogPending = null;

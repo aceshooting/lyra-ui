@@ -445,3 +445,10 @@ describe('<lr-funnel> dropoff visibility', () => {
   });
 
 });
+
+it('uses the localized default name for a whitespace-only label', async () => {
+  const el = await fixture<LyraFunnel>(html`<lr-funnel label="   " .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+  const reference = await fixture<LyraFunnel>(html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+  expect(part(el, 'stages')!.getAttribute('aria-label')!.trim()).to.not.equal('');
+  expect(part(el, 'stages')!.getAttribute('aria-label')).to.equal(part(reference, 'stages')!.getAttribute('aria-label'));
+});

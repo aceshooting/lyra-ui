@@ -465,3 +465,18 @@ describe('lr-table row and cell lookup', () => {
     expect(element.cellElement('c', 'name')?.textContent?.trim()).to.equal('Gamma');
   });
 });
+
+it('names the expand toggle with the localized default when the label callback is blank or throws', async () => {
+  const element = await expandable();
+  const names = async (callback: (row: Row, expanded: boolean) => string): Promise<string[]> => {
+    element.rowExpandLabel = callback;
+    await element.updateComplete;
+    return toggleButtons(element).map((button) => button.getAttribute('aria-label') ?? '');
+  };
+  for (const callback of [() => '   ', () => '', () => { throw new Error('label'); }]) {
+    const labels = await names(callback);
+    expect(labels.length).to.be.greaterThan(0);
+    expect(labels.filter((label) => label.trim() === '')).to.deep.equal([]);
+  }
+  expect(await names((row) => `Toggle ${row.name}`)).to.include('Toggle Alpha');
+});

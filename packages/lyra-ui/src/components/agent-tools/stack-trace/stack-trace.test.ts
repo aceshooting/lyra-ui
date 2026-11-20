@@ -809,3 +809,18 @@ it('honors existing state-specific message overrides until a stable label is sup
   await el.updateComplete;
   expect(button.textContent!.trim()).to.equal('Library frames (2)');
 });
+
+describe('capped scroll region', () => {
+  it('makes a capped raw trace with no copy button keyboard-scrollable only while it overflows', async () => {
+    const raw = Array.from({ length: 40 }, (_, i) => `unparseable line ${i}`).join('\n');
+    const el = await fixture<LyraStackTrace>(
+      html`<lr-stack-trace max-height="4rem" without-copy-button .trace=${raw}></lr-stack-trace>`,
+    );
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await waitUntil(() => base.getAttribute('tabindex') === '0', 'overflowing trace takes a tab stop');
+    expect(base.getAttribute('role')).to.equal('group');
+    await expect(el).to.be.accessible();
+    el.maxHeight = '';
+    await waitUntil(() => !base.hasAttribute('tabindex'), 'an uncapped trace drops the stop');
+  });
+});

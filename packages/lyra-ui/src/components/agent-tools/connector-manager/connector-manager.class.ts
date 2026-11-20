@@ -4,16 +4,18 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './connector-manager.styles.js';
 import '../../forms/button/button.class.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type AgentConnectorKind = 'mcp' | 'connector';
@@ -30,8 +32,26 @@ export interface AgentConnector {
   error?: string;
 }
 
+/** A rendered row: a foreign `status` becomes `'unknown'` and a foreign `kind` is dropped, so a
+ * record from a newer server stays visible instead of vanishing. */
+type NormalizedConnector = Omit<AgentConnector, 'kind' | 'status'> & {
+  kind?: AgentConnectorKind;
+  status: AgentConnectorStatus | 'unknown';
+};
+
 function admittedId(row: AgentConnector): string | undefined {
-  return typeof row.name === 'string' && KINDS.includes(row.kind) && STATUSES.includes(row.status) ? row.id : undefined;
+  return typeof row.name === 'string' ? row.id : undefined;
+}
+
+const normalizedByAdmitted = new WeakMap<readonly AgentConnector[], NormalizedConnector[]>();
+
+function normalizeConnector(row: AgentConnector): NormalizedConnector {
+  const { kind, status, ...rest } = row;
+  return {
+    ...rest,
+    ...(KINDS.includes(kind) ? { kind } : {}),
+    status: STATUSES.includes(status) ? status : 'unknown',
+  };
 }
 
 export interface LyraConnectorManagerEventMap {
@@ -45,11 +65,12 @@ const KIND_LABEL_KEY: Record<AgentConnectorKind, string> = {
   mcp: 'connectorManagerKindMcp',
   connector: 'connectorManagerKindConnector',
 };
-const STATUS_LABEL_KEY: Record<AgentConnectorStatus, string> = {
+const STATUS_LABEL_KEY: Record<NormalizedConnector['status'], string> = {
   disconnected: 'connectorManagerStatusDisconnected',
   connecting: 'connectorManagerStatusConnecting',
   connected: 'connectorManagerStatusConnected',
   error: 'statusError',
+  unknown: 'statusUnknown',
 };
 const ACTION_LABEL_KEY: Record<ConnectorAction, string> = {
   connect: 'connectorManagerConnect',
@@ -66,7 +87,9 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * `<lr-connector-manager>` — a controlled, provider-neutral connector list. It emits explicit
  * connect/disconnect/retry requests and never reads credentials, starts a server, or performs
  * network work. A `connecting` record has no action until the host supplies a new status. Error
- * text is caller data that the host has already localized. Collections are detached snapshots;
+ * text is caller data that the host has already localized. A row whose `status` is outside the
+ * known set still renders, as a neutral localized "Unknown" status with no action, and a foreign
+ * `kind` omits `[part="kind"]`. Collections are detached snapshots;
  * blank ids are skipped, duplicate ids retain the first valid item, and at most 100 rows render.
  * Rows are keyed by id. An acted-on connector's status changes are announced, and focus on its
  * vanished action waits on its `status` until the next action appears.
@@ -75,6 +98,11 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * @event lr-connector-action - A connector action was requested. `detail: { connectorId, action }`.
  *   The host owns the operation and the controlled `connectors` array.
  * @csspart base - The fieldset and group.
+ * @cssprop [--lr-panel-frame-bg=var(--lr-color-surface)] - Fill of `[part='base']`. Shared by every
+ *   fieldset panel of this family, so one declaration retunes them together.
+ * @cssprop [--lr-panel-frame-border-color=var(--lr-color-border)] - Border colour of `[part='base']`.
+ * @cssprop [--lr-panel-frame-radius=var(--lr-radius-xs)] - Corner radius of `[part='base']`.
+ * @cssprop [--lr-panel-frame-padding=var(--lr-space-s)] - Padding of `[part='base']`.
  * @cssprop --lr-decision-legend-font-size - Font size of the decision panel legend.
  * @cssprop --lr-decision-positive-color - Text color of a positive status.
  * @cssprop --lr-decision-negative-color - Text color of a negative status.
@@ -116,6 +144,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     connectorManagerStatusDisconnected: LYRA_DEFAULT_connectorManagerStatusDisconnected,
     retry: LYRA_DEFAULT_retry,
     statusError: LYRA_DEFAULT_statusError,
+    statusUnknown: LYRA_DEFAULT_statusUnknown,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -129,6 +158,12 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   @property() label?: string;
   /** Disables every available connector action. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
+   *  keeps the bordered, filled, padded panel; `'plain'` removes the border, fill, padding and
+   *  corner radius, so a panel nested in a container that already draws a border (a transcript
+   *  bubble, a card) does not double it. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private dispatchingAction = false;
   private readonly sink = new AnnouncementSinkController(this, { eager: ['polite'] });
@@ -194,22 +229,25 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     }
   }
 
-  private get normalizedConnectors(): AgentConnector[] {
+  private get normalizedConnectors(): NormalizedConnector[] {
     return this.normalizedConnectorsFrom(this.connectors);
   }
 
-  private normalizedConnectorsFrom(source: readonly AgentConnector[]): AgentConnector[] {
-    return firstByIdentityMemo(source, admittedId);
+  private normalizedConnectorsFrom(source: readonly AgentConnector[]): NormalizedConnector[] {
+    const admitted = firstByIdentityMemo(source, admittedId);
+    let normalized = normalizedByAdmitted.get(admitted);
+    if (!normalized) normalizedByAdmitted.set(admitted, (normalized = admitted.map(normalizeConnector)));
+    return normalized;
   }
 
-  private actionFor(connector: AgentConnector): ConnectorAction | null {
+  private actionFor(connector: NormalizedConnector): ConnectorAction | null {
     if (connector.status === 'disconnected') return 'connect';
     if (connector.status === 'connected') return 'disconnect';
     if (connector.status === 'error') return 'retry';
     return null;
   }
 
-  private requestAction(connector: AgentConnector, action: ConnectorAction): void {
+  private requestAction(connector: NormalizedConnector, action: ConnectorAction): void {
     const current = this.normalizedConnectors.find((item) => item.id === connector.id);
     if (this.disabled || !current || this.actionFor(current) !== action || this.dispatchingAction) return;
     this.dispatchingAction = true;
@@ -221,13 +259,13 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     }
   }
 
-  private renderConnector(connector: AgentConnector): TemplateResult {
+  private renderConnector(connector: NormalizedConnector): TemplateResult {
     const action = this.actionFor(connector);
     return html`
       <div part="connector" role="listitem" data-connector-id=${connector.id}>
         <div part="connector-copy">
           <span part="name">${connector.name}</span>
-          <span part="kind">${this.localize(KIND_LABEL_KEY[connector.kind])}</span>
+          ${connector.kind ? html`<span part="kind">${this.localize(KIND_LABEL_KEY[connector.kind])}</span>` : nothing}
           ${connector.description ? html`<span part="description">${connector.description}</span>` : nothing}
           ${connector.error ? html`<span part="error">${connector.error}</span>` : nothing}
         </div>
@@ -254,8 +292,10 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     const connectors = this.normalizedConnectors;
     const visibleLabel = this.label == null ? this.localize('connectorManagerLabel') : this.label;
     const hostLabel = hostAriaLabel(this);
+    // The legend names the fieldset; a blank legend with no host name falls back to the localized default.
+    const groupName = normalizeLabel(hostLabel) ?? (normalizeLabel(visibleLabel) === undefined ? this.localize('connectorManagerLabel') : undefined);
     return html`
-      <fieldset part="base" aria-label=${hostLabel === null ? nothing : hostLabel} ?disabled=${this.disabled}>
+      <fieldset part="base" aria-label=${groupName ?? nothing} ?disabled=${this.disabled}>
         <legend part="legend">${visibleLabel}</legend>
         ${connectors.length === 0
           ? html`<p part="empty">${this.localize('connectorManagerEmpty')}</p>`

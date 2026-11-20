@@ -9,7 +9,8 @@ describe('lr-tool-timeline approval dialog registration', () => {
     expect(customElements.get('lr-tool-approval-dialog') === undefined).to.equal(true);
     plain.entries = [{ id: 'b', name: 'delete', status: 'pending', needsApproval: true, args: {} }];
     await plain.updateComplete;
-    await customElements.whenDefined('lr-tool-approval-dialog');
-    expect(customElements.get('lr-tool-approval-dialog') !== undefined).to.equal(true);
+    expect(customElements.get('lr-tool-approval-dialog') !== undefined, 'updateComplete covers the registration').to.equal(true);
+    expect((plain.shadowRoot!.querySelector('lr-tool-approval-dialog') as unknown as { hasUpdated: boolean }).hasUpdated,
+      'and the dialog render').to.equal(true);
   });
 });

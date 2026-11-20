@@ -2619,6 +2619,18 @@ export type LyraQueueChangeEvent =
   | LyraPromptQueueEventMap['lr-queue-change'];
 
 /**
+ * `lr-radio-group-select-request` — dispatched by `<lr-radio-group>`; detail
+ * `LyraRadioGroupEventMap['lr-radio-group-select-request']`.
+ */
+export type LyraRadioGroupSelectRequestEvent = LyraRadioGroupEventMap['lr-radio-group-select-request'];
+
+/**
+ * `lr-radio-select-request` — dispatched by 2 components: `<lr-radio-button>`, `<lr-radio>`;
+ * detail `LyraRadioEventMap['lr-radio-select-request']`.
+ */
+export type LyraRadioSelectRequestEvent = LyraRadioEventMap['lr-radio-select-request'];
+
+/**
  * `lr-rail-resize` — dispatched by `<lr-app-rail>`; detail
  * `LyraAppRailEventMap['lr-rail-resize']`.
  */
@@ -4176,6 +4188,8 @@ export interface LyraGlobalEventMap {
   'lr-question-input': LyraQuestionInputEvent;
   'lr-question-response': LyraQuestionResponseEvent;
   'lr-queue-change': LyraQueueChangeEvent;
+  'lr-radio-group-select-request': LyraRadioGroupSelectRequestEvent;
+  'lr-radio-select-request': LyraRadioSelectRequestEvent;
   'lr-rail-resize': LyraRailResizeEvent;
   'lr-rail-resize-request': LyraRailResizeRequestEvent;
   'lr-rate-change': LyraRateChangeEvent;

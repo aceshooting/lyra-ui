@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
@@ -373,9 +374,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   @state() private activeSuggestion: ActiveSuggestion | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
-  @query('lr-chat-composer') private composer?: LyraChatComposer;
+  @query(tag('chat-composer')) private composer?: LyraChatComposer;
   private descriptionLease?: ResolvedAriaRelationshipLease;
-  @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
+  @query(tag('mention-popover')) private suggestionPopover?: LyraMentionPopover;
   private suggestionAnchor?: HTMLTextAreaElement;
   private pendingSuggestionValue: string | undefined;
   private suggestionNavigationGeneration = 0;

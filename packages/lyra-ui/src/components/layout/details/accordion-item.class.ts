@@ -6,9 +6,11 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { resolveHeadingLevel, type LyraResolvedHeadingLevel } from '../../../internal/heading-level.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './accordion-item.styles.js';
 import { DisclosureMotionController } from './disclosure-motion.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import {
   accordionItemOwnerContext,
   notifyAccordionItemStateChanged,
@@ -196,7 +198,7 @@ export class LyraAccordionItem extends LyraElement {
     const old = this._expanded;
     const panel = this.renderRoot?.querySelector('#panel');
     if (next) this.settledClosed = false;
-    else if (panel) this.disclosureMotion.repairFocus(panel, this.button);
+    else if (panel) repairComposedFocus(panel, this.button);
     this._expanded = next;
     this.requestUpdate('expanded', old);
   }
@@ -312,7 +314,7 @@ export class LyraAccordionItem extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const fallbackLabel = this.label || this.localize('details');
+    const fallbackLabel = normalizeLabel(this.label) ?? this.localize('details');
     const hostLabel = hostAriaLabel(this);
     const level = resolveHeadingLevel(this.effectiveHeadingLevel);
     const button = html`<button

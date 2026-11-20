@@ -1,5 +1,6 @@
+export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './media/av-player/av-player.class.js';
-import './lr-virtual-list.js';
 import { html } from 'lit';
 import { LyraAvPlayer } from './media/av-player/av-player.class.js';
 import { defineElement } from '../internal/prefix.js';
@@ -11,6 +12,11 @@ import {
 } from './viewers/document-viewer/registry.js';
 import { hasSearchableLyraAvCues } from './media/av-player/av-metadata.js';
 
+import { defineLazyChildren } from '../internal/lazy-children.js';
+// The transcript list registers the first time the player has cues.
+defineLazyChildren('av-player', {
+  'virtual-list': () => import('./lr-virtual-list.js'),
+});
 defineElement('av-player', LyraAvPlayer);
 
 const AV_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.ogg', '.oga', '.flac', '.aac', '.mp4', '.m4v', '.webm', '.mov'];

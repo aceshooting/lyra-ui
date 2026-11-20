@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Da yiyi duro',
   carouselResumeRotation: 'Tẹsiwaju yiyi',
   carouselViewport: 'Àwọn sáídì',
-  scrollerLabel: 'Àkóónú tí a lè yí kiri',
   scrollPrevious: 'Yí sí ẹ̀yìn',
   scrollNext: 'Yí síwájú',
   closeNavigation: 'Pá ìtọ́sọ́nà',

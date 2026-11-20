@@ -15,6 +15,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { normalizeChatComposerStatus } from '../../../internal/chat-composer-status.js';
 import type { ChatComposerStatus, ChatComposerWrap } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunCancelDetail, AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
@@ -35,8 +36,9 @@ import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../agent-
 import type { LyraToolTimeline } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 export type { ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import { styles } from './agent-workspace.styles.js';
-import { autocorrectConverter, normalizeAutocorrect, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, normalizeAutocorrect, trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { lengthLimitConverter } from '../../../internal/length-constraints.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceInputLimit, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings/conversation.generated.js';
@@ -270,7 +272,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
   /** First unread message index, forwarded to the transcript viewport. */
-  @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
+  @property({ attribute: 'unread-start-index', converter: blankNumberConverter(null) }) unreadStartIndex: number | null = null;
 
   /** Turns off the built-in details pane, even when data is present. */
   @property({ type: Boolean, attribute: 'without-details', reflect: true }) withoutDetails = false;
@@ -357,8 +359,17 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     this.inputAnnouncements.adopted();
   }
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('agent-workspace', this.renderRoot) ?? this.childRegistration;
     const notice = this.inputLimitMessages().join(' ');
     if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.inputAnnouncements.announcePolite(notice);
     this.lastInputNotice = notice;
@@ -387,7 +398,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   private builtInToolTimeline(): LyraToolTimeline | null {
     if (this.withoutDetails || this.hasSlotted('details')) return null;
-    return this.renderRoot?.querySelector<LyraToolTimeline>(tag('tool-timeline')) ?? null;
+    // `:defined` skips a timeline whose deferred registration has not resolved yet.
+    return this.renderRoot?.querySelector<LyraToolTimeline>(`${tag('tool-timeline')}:defined`) ?? null;
   }
 
   /** Closes a vetoed approval in the built-in tool timeline after the host persists its decision.
@@ -605,6 +617,15 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         this.effectiveCitations.length > 0 ||
         this.effectiveContextSegments.length > 0,
     );
+  }
+
+  constructor() {
+    super();
+    // The details pane keeps its own landmark and name, and takes a tab stop only while it scrolls.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="details"]');
+      return [el && { el, role: false }];
+    });
   }
 
   override render(): TemplateResult {

@@ -46,7 +46,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   is active, leaving hidden selections untouched.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
-  while an explicit empty string stays empty
+  while an empty or whitespace-only string falls back to the localized name too
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,

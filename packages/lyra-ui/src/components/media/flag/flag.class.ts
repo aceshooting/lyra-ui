@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -474,7 +475,7 @@ export class LyraFlag extends LyraElement {
       const fallbackUrl = this.fallback
         ? safeMediaSrc(this.fallback, this.ownerDocument?.defaultView?.URL ?? globalThis.URL)
         : null;
-      const fallbackAlt = hostAriaLabel(this) ?? this.label ?? '';
+      const fallbackAlt = hostAriaLabel(this) ?? normalizeLabel(this.label) ?? '';
       return html`<slot name="fallback"
         >${fallbackUrl
           ? html`<img part="fallback-image" src=${fallbackUrl} alt=${fallbackAlt} /><span class="ring" aria-hidden="true"></span>`
@@ -488,7 +489,8 @@ export class LyraFlag extends LyraElement {
     if (!url && state.status !== 'loading') return html``;
     const code = this.code;
     const alt = hostAriaLabel(this)
-      ?? this.label
+      ?? normalizeLabel(this.label)
+      ?? (this.label === '' ? '' : null)
       ?? (code ? displayNameFor(code, this.effectiveLocale) : '');
     return html`
       ${state.status === 'loading'

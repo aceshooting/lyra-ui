@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resolveAccessibleName } from '../../../internal/accessible-name.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './button-group.styles.js';
 
@@ -45,7 +46,10 @@ export class LyraButtonGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const accessibleLabel = hostAriaLabel(this) ?? (this.accessibleLabel === '' ? '' : this.label || nothing);
+    const accessibleLabel =
+      hostAriaLabel(this) === '' || this.accessibleLabel === ''
+        ? ''
+        : resolveAccessibleName(this, this.label) ?? nothing;
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }
 }

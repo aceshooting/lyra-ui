@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { shouldIgnoreNavigationKey, isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
@@ -244,7 +245,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     return this._stream;
   }
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   @query('[part="trigger"]') private trigger?: HTMLButtonElement;
   private describedByReflected = false;
 

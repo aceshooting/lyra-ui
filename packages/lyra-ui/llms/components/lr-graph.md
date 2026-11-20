@@ -326,8 +326,9 @@ boolean; color?: string; dash?: number[]; curvature?: number }` (source/target a
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
-  inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
-  its localized node/edge-count fallback
+  inner renderer drops its parallel role/name, and the 3D surface keeps only its localized
+  `graphView3d` purpose name. Removing the attribute restores the inner owner and its localized
+  node/edge-count fallback. The 3D surface follows the same `label`-first precedence as the 2D view.
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect

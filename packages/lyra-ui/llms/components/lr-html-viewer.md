@@ -27,13 +27,15 @@ preview.
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A nonempty host `aria-label`
-makes the host the sole named semantic owner; an explicitly empty host label keeps the shadow
+makes the host the sole named semantic owner (the host takes the `document` role through
+`ElementInternals`); an explicitly empty host label keeps the shadow
 `document` role with an empty name, and an absent host label falls back to `name` or the localized
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
-The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
-It leaves the tab order when the content fits.
+The viewer body becomes a keyboard scroll region named by the localized `scrollerLabel`
+("Scrollable content") while its content exceeds its allocation, so it never repeats the viewer's
+own name. It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.

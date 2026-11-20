@@ -1,3 +1,4 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, svg, type TemplateResult } from 'lit';
@@ -265,14 +266,14 @@ export class LyraGauge extends LyraElement {
     renderedText: string,
     renderedLabel: string
   ): string {
-    if (renderedText === fullText && renderedLabel === (this.label ?? '')) return '';
-    if (this.label && fullText) {
+    if (renderedText === fullText && renderedLabel === (normalizeLabel(this.label) ?? '')) return '';
+    if (normalizeLabel(this.label) && fullText) {
       return this.localize('gaugeValueLabel', undefined, {
-        label: this.label,
+        label: normalizeLabel(this.label) ?? '',
         value: fullText,
       });
     }
-    return this.label || fullText;
+    return normalizeLabel(this.label) || fullText;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -306,7 +307,7 @@ export class LyraGauge extends LyraElement {
       this.removeAttribute('aria-valuemin');
       this.removeAttribute('aria-valuemax');
     }
-    const defaultName = this.label || this.localize('gaugeLabel');
+    const defaultName = normalizeLabel(this.label) ?? this.localize('gaugeLabel');
     const fallbackValueLabel =
       this.displayText && (!Number.isFinite(this.value) || lo === hi)
         ? this.localize('gaugeValueLabel', undefined, {
@@ -343,7 +344,7 @@ export class LyraGauge extends LyraElement {
   private renderRadial(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label ?? '', RADIAL_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(normalizeLabel(this.label) ?? '', RADIAL_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
@@ -371,7 +372,7 @@ export class LyraGauge extends LyraElement {
             aria-hidden="true"
           >${text}</text>`
         : nothing}
-      ${this.label
+      ${normalizeLabel(this.label)
         ? svg`<text
             part="label"
             x="50"
@@ -385,7 +386,7 @@ export class LyraGauge extends LyraElement {
   private renderLinear(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, LINEAR_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label ?? '', LINEAR_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(normalizeLabel(this.label) ?? '', LINEAR_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     // Under RTL the meter must still visually fill and read in the same
@@ -414,7 +415,7 @@ export class LyraGauge extends LyraElement {
           stroke-dashoffset=${dashoffset}
         ></line>
       </svg>
-      ${this.label
+      ${normalizeLabel(this.label)
         ? svg`<text
             part="label"
             x=${startX}%
@@ -436,7 +437,7 @@ export class LyraGauge extends LyraElement {
   private renderRing(): TemplateResult {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
-    const label = abbreviateSvgText(this.label ?? '', RADIAL_LABEL_CHARACTERS);
+    const label = abbreviateSvgText(normalizeLabel(this.label) ?? '', RADIAL_LABEL_CHARACTERS);
     const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
     return html`<svg
@@ -464,7 +465,7 @@ export class LyraGauge extends LyraElement {
             aria-hidden="true"
           >${text}</text>`
         : nothing}
-      ${this.label
+      ${normalizeLabel(this.label)
         ? svg`<text
             part="label"
             x="50"

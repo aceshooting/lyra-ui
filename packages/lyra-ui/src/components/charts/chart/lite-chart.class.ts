@@ -1,4 +1,5 @@
 import { emitPreparedSourceSelection } from './chart-legend-visibility.js';
+import { tag } from '../../../internal/prefix.js';
 import { preparedDataChanged } from '../../../internal/chart-prepared-property.js';
 import { syncChartHeight } from './chart-surface-shared.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -996,7 +997,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private syncCategoryPositions = new Map<number, number>();
 
   @query('svg') private svgEl?: SVGSVGElement;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
   private resizeObserverDocument?: Document;
   private resizeObserverTarget?: SVGSVGElement;
@@ -1843,7 +1844,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   ): IsolatableMessage | undefined {
     const mark = marks[index];
     if (!mark) return undefined;
-    const series = this.displayDatasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
+    const series = normalizeLabel(this.displayDatasets[mark.datasetIndex]?.label) ?? this.localize('chartSeriesLabel');
     const custom = this.formatter?.({
       value: mark.value,
       surface: 'spoken',
@@ -1944,7 +1945,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const showTableTotals = this.effectiveType === 'bar' && this.stacked && this.tableTotals;
     return this.dataTableRows = recordSample.rowIndexes.map(
       (index) => {
-        const label = this.displayLabels[index] ?? '';
+        const label = normalizeLabel(this.displayLabels[index]) ?? '';
         return html`<tr>
         <th scope="row">${isolateHtml(
           label || getNumberFormat(this.effectiveLocale).format(index + 1),
@@ -3187,7 +3188,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   ${recordSample.seriesIndexes.map((datasetIndex) => {
                     const series = this.displayDatasets[datasetIndex]!;
                     return html`<th scope="col">${isolateHtml(
-                      series.label || this.localize('chartSeriesLabel'),
+                      normalizeLabel(series.label) ?? this.localize('chartSeriesLabel'),
                       direction,
                     )}</th>`;
                   })}

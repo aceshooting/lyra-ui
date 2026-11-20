@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -316,7 +317,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   @state() private hasHeaderSlot = false;
   @state() private hasSummarySlot = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
 
   // Both read (for this update's decisions) then overwritten (at the end of `updated()`) --
   // `willUpdate()` needs the *previous* run id to decide whether to reset `retryAttempt`, and

@@ -1,3 +1,9 @@
+export type { LyraEntity } from './retrieval/entity-card/entity-card.class.js';
+export type { LyraGraphCamera, LyraGraphCommunity, LyraGraphEdge, LyraGraphNode, LyraGraphView } from './retrieval/graph/graph-model.js';
+export type { LyraGraphNodeRenderErrorDetail, LyraGraphNodeRenderer } from './retrieval/graph/graph-node-renderer.js';
+export type { GraphSource, LyraGraphFit, LyraGraphNodeLabelsMode, LyraGraphRenderer } from './retrieval/graph/graph.class.js';
+export type { Engine3dFallbackDetail, Engine3dPreference } from '../internal/engine-3d.js';
+export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
 import { LyraKnowledgeGraphExplorer } from './retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
 import { defineElement } from '../internal/prefix.js';

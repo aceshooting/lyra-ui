@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoadFailed: 'Qaama kana fe’uun hin danda’amne.',
   noData: 'Odeeffannoon hin jiru',
   legendTypeShown: '{label} agarsiifame',
   legendTypeHidden: '{label} dhokate',
@@ -20,6 +21,7 @@ const strings: LyraLocaleStrings = {
   tableLoadFailed: 'Odeeffannoo fe\'uun hin danda\'amne',
   zoomOut: 'Xiqqeessi',
   zoomIn: 'Guddisi',
+  scrollerLabel: 'Qabiyyee garagalchuu danda\'amu',
   clear: 'Haqi',
   open: 'Bani',
   close: 'Cufi',

@@ -52,7 +52,7 @@ variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-b
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
 - `accessibleLabel: string | null` (attribute `aria-label`) — titles the iframe; a host
-  `aria-label` attribute does the same, and an empty attribute stays an empty title. Without
+  `aria-label` attribute does the same; an empty or blank value is ignored. Without
   either (or with an empty property) the iframe gets its localized purpose title.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;

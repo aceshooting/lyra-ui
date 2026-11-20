@@ -3,7 +3,8 @@ import { html, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { resolveEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
 import { watchEngineStyle } from '../../../internal/engine-admission.js';
@@ -548,7 +549,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   }
 
   override render() {
-    const label = hostAriaLabel(this) ?? (this.name || this.localize('modelViewerLabel'));
+    const label = viewerSemanticLabel(this, normalizeLabel(this.name) ?? this.localize('modelViewerLabel'));
+    const role = viewerSemanticRole(this, 'region');
     const ready = this.status === 'ready';
     const href = this.src.length <= MODEL_SOURCE_MAX_BYTES ? safeDownloadHref(this.src, this.ownerDocument?.defaultView?.URL ?? URL) : null;
     const controls: ReadonlyArray<readonly [ModelAction, string]> = [
@@ -560,7 +562,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       ['out', this.localize('zoomOut')],
       ['fit', this.localize('modelViewerFit')],
     ];
-    return html`<section part="base" tabindex="-1" role="region" aria-label=${label}>
+    return html`<section part="base" tabindex="-1" role=${role ?? nothing} aria-label=${label ?? nothing}>
       <div part="viewport" role="group" aria-label=${this.localize('modelViewerViewport')} aria-busy=${String(this.status === 'loading')} tabindex=${ready ? '0' : '-1'} ?data-ready=${ready} ?hidden=${this.status === 'idle' || this.status === 'empty' || this.status === 'error'} @keydown=${this.keydown}></div>
       <div part="toolbar">${controls.map(([action, label]) => html`<button part="control" type="button" ?disabled=${!ready} @click=${() => this.move(action)}>${label}</button>`)}</div>
       <p part="instructions">${this.localize('modelViewerInstructions')}</p>

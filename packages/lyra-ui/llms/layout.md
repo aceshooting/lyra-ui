@@ -2572,8 +2572,8 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
   `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
-  Every supplied string, including an empty one, is honored literally; only absence uses the
-  localized navigation fallback. A host-level `aria-label` attribute (including an explicit empty
+  A blank or whitespace-only string is treated as unset and uses the localized navigation
+  fallback. A host-level `aria-label` attribute (including an explicit empty
   value) takes precedence.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the host `aria-label` as a
   property; overrides `label` and the localized default on the landmark and the mobile dialog.
@@ -3892,7 +3892,7 @@ The chip's decorative `details` subtree is hidden from assistive technology.
 **Properties:**
 
 - `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
-  an explicit `label=""` stays empty. When both are absent, the localized `menuLabel` ("Menu") names it.
+  a blank or whitespace-only `label` is treated as unset. When both are absent, the localized `menuLabel` ("Menu") names it.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every menu the bar opens,
   nested submenus included, in the browser top layer wherever the Popover API exists, so it paints
   above a sibling surface stacked higher than a `z-index`ed fixed or sticky header it sits in. Placed
@@ -4418,7 +4418,9 @@ batch flush supersedes that older batch.
 **Keyboard:** ArrowUp/ArrowDown move between enabled options and stop at the ends. Home/End move
 the search caret to the start/end of the query. When the caret is already at that boundary, the
 key jumps to the first/last enabled option. PageUp/PageDown move by one visible page and scroll
-the active option into view. Enter selects the keyboard-active command once per press.
+the active option into view. Enter selects the keyboard-active command once per press. These keys
+act only while the search field (or the dialog surface) has focus: Enter or Space on the focused
+clear button clears the query instead of running a command.
 Shift, Alt, Ctrl, and Meta chords, IME composition, and previously handled keys pass through.
 Pointer hover highlights a row visually. Click selects the hovered row. A non-empty query announces its localized result
 count through the shared polite announcement sink; a query matching nothing announces
@@ -4925,7 +4927,7 @@ move, resize, collision, and layout-change requests; the host owns persistence a
 If every layout cell has authored `[cell-id]` content, use
 `components/layout/dashboard-grid/dashboard-grid-register.js`. It registers the grid and empty
 state; import `lr-widget.js` and `lr-widget-renderer.js` too when default cells can be created.
-The default entry registers that widget stack.
+The default entry registers that widget stack the first time the grid creates a default cell.
 
 Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
 movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and
@@ -6449,8 +6451,8 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
   presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
   `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
   example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
-- `label?: string` — the landmark name when no host `aria-label` is set; any supplied string,
-  including an empty one, is literal.
+- `label?: string` — the landmark name when no host `aria-label` is set; a blank or
+  whitespace-only string is treated as unset and uses the localized default.
 - `mobileBreakpoint?: string` (attribute `mobile-breakpoint`) — a bare number or a `px`, `rem` or
   `em` length. The menu collapses while its own content-box inline size is at or below it (the same
   `<=` comparison and name as `lr-page`). Unlike `lr-page` and `lr-app-rail` there is no default:

@@ -1,4 +1,6 @@
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
 import type { RangeDragState } from '../../../internal/range-drag.js';
@@ -20,7 +22,7 @@ import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { falseDefaultBooleanConverter, literalSetConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
@@ -603,11 +605,18 @@ export class LyraSlider extends LyraSliderBase {
    *  The resolved name is set on the interactive `role="slider"` element — or, in `range` mode,
    *  on the `role="group"` wrapping both handles, since each handle then owns its own
    *  start/end name. A host attribute wins by presence, including an explicitly empty value that
-   *  suppresses visible/property/localized fallbacks and visible-label linkage. With neither a
+   *  suppresses visible-label linkage; a whitespace-only one is ignored. With neither a
    *  host `aria-label` nor this property, the localized generic `sliderLabel` message applies so
    *  the focusable thumb is never nameless (the same pattern as `<lr-input>`/`<lr-textarea>`'s
    *  built-in generic labels). */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
 
   /** Plain-text description of what the slider controls, rendered below the track and wired to
    *  every handle through `aria-describedby`. Use the `hint` slot instead for rich content. */
@@ -1465,8 +1474,7 @@ export class LyraSlider extends LyraSliderBase {
   /** The accessible name of the control as a whole — the single thumb's own
    *  name, or the `role="group"` name wrapping both range handles. */
   private resolvedLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    return hostLabel !== null ? hostLabel : this.label || this.localize('sliderLabel');
+    return hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('sliderLabel');
   }
 
   /** Position one absolutely-placed child along the current value axis. */
@@ -1574,11 +1582,11 @@ export class LyraSlider extends LyraSliderBase {
       presence: this.slotPresence, idPrefix: 'slider', hint: this.hint,
       errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
     });
-    const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
+    const hasLabel = this.withLabel || this.hasLabelSlot || normalizeLabel(this.label) !== undefined;
     const hasReference = this.hasReferenceSlot;
     const describedBy = supporting.describedBy;
     const invalid = supporting.hasError || (this._hasInteracted && !this.internals.validity.valid);
-    const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;
+    const labelledBy = hasLabel && hostAriaLabel(this) === null ? LABEL_ID : undefined;
     const valuePercent = this.percentOf(this.value);
     const offsetPercent = this.percentOf(
       this.indicatorOffset === undefined

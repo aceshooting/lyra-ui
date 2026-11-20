@@ -95,7 +95,7 @@ export class LyraSkeleton extends LyraElement {
       this.announcementFrame.schedule(() => {
         sink.announcePolite(this.label ?? this.localize('loading'));
       });
-    });
+    }, () => undefined); // A failed chunk drops this announcement; the next label or announce change retries it.
   }
 
   protected override willUpdate(changed: PropertyValues): void {

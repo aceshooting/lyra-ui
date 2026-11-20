@@ -1,3 +1,4 @@
+import { tag } from '../../../internal/prefix.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
@@ -69,6 +70,9 @@ function embeddingIcon(): SVGTemplateResult {
 function otherIcon(): SVGTemplateResult {
   return iconFrame(svg`<circle cx="12" cy="12" r="8"></circle>`);
 }
+
+/** Token counts at or above this switch to compact notation ("123K", "1M") so they fit their column. */
+const COMPACT_TOKEN_THRESHOLD = 100_000;
 
 const KIND_ICON: Record<LyraSpan['kind'], () => SVGTemplateResult> = {
   agent: agentIcon,
@@ -410,10 +414,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <span part="status-text" data-status=${span.status}>${this.localize(STATUS_LABEL_KEY[span.status])}</span>
       ${!this.withoutBars ? html`<span part="bar-track"><span part="bar" data-status=${span.status}
         style=${`--_lr-trace-tree-bar-start:${start}%;inline-size:${width}%`}></span></span>` : nothing}
-      <span part="duration">${this.formatDuration(span.endMs === undefined ? undefined : span.endMs - span.startMs)}</span>
-      ${this.withTokens ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatLocaleNumber(finiteCount(span.tokensIn)) : ''}</span>
-        <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatLocaleNumber(finiteCount(span.tokensOut)) : ''}</span>` : nothing}
-      ${this.withCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
+      ${this.renderMetricCells(span, this.formatDuration(span.endMs === undefined ? undefined : span.endMs - span.startMs))}
     </span>`;
   }
 
@@ -444,9 +445,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Accessible name of the tree when the host has no aria-label. Omission localizes the default. */
   @property() label?: string;
-  /** Adds tokens-in/tokens-out columns. */
+  /** Adds tokens-in/tokens-out columns. Counts of 100,000 or more render in compact notation
+   *  (`1.2M`); the row's accessible name keeps the exact count. */
   @property({ type: Boolean, attribute: 'with-tokens', reflect: true }) withTokens = false;
-  /** Adds a cost column, rendering `costText` verbatim. */
+  /** Adds a cost column, rendering `costText` verbatim; text wider than the column is ellipsized
+   *  with the full value on `title`. */
   @property({ type: Boolean, attribute: 'with-cost', reflect: true }) withCost = false;
   /** Suppresses the inline duration bar, for dense/narrow embeddings. */
   @property({ type: Boolean, attribute: 'without-bars', reflect: true }) withoutBars = false;
@@ -455,7 +458,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @state() private collapsedIds = new Set<string>();
   @state() private focusedId: string | null = null;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   private previousStatuses = new Map<string, LyraSpan['status']>();
   private pendingAnnouncements: string[] = [];
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
@@ -581,6 +584,28 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   private formatDuration(ms: number | undefined): string {
     return ms == null ? '' : formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
+  }
+
+  /**
+   * The trailing duration/tokens/cost cells. Each sits in a fixed-width track shared by every row,
+   * so a value wider than its track is ellipsized rather than painted over the neighbouring
+   * column, with the full text on `title`. Counts of six digits or more use compact notation so
+   * they still fit; the row's accessible name always carries the exact figure.
+   */
+  private renderMetricCells(span: LyraSpan, durationLabel: string): TemplateResult {
+    const cell = (part: string, text: string): TemplateResult =>
+      html`<span part=${part} title=${text || nothing}>${text}</span>`;
+    const tokens = (value: number | undefined): string =>
+      this.validTokenMetric(value) ? this.formatTokenCount(finiteCount(value)) : '';
+    return html`${cell('duration', durationLabel)}${this.withTokens
+      ? html`${cell('tokens-in', tokens(span.tokensIn))}${cell('tokens-out', tokens(span.tokensOut))}`
+      : nothing}${this.withCost ? cell('cost', span.costText ?? '') : nothing}`;
+  }
+
+  private formatTokenCount(value: number): string {
+    return value < COMPACT_TOKEN_THRESHOLD
+      ? this.formatLocaleNumber(value)
+      : this.formatLocaleNumber(value, { notation: 'compact', maximumFractionDigits: 1 });
   }
 
   private validTokenMetric(value: number | undefined): value is number {
@@ -926,12 +951,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
               ><span part="bar" data-status=${span.status} style=${`--_lr-trace-tree-bar-start:${startPct}%;inline-size:${widthPct}%`}></span
             ></span>`
           : nothing}
-        <span part="duration">${durationLabel}</span>
-        ${this.withTokens
-          ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatLocaleNumber(finiteCount(span.tokensIn)) : ''}</span>
-              <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatLocaleNumber(finiteCount(span.tokensOut)) : ''}</span>`
-          : nothing}
-        ${this.withCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
+        ${this.renderMetricCells(span, durationLabel)}
       </div>
     `;
   }

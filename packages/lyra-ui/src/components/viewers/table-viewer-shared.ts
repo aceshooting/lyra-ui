@@ -1,5 +1,6 @@
 import { literalSetConverter } from '../../internal/converters.js';
 import { bdi } from '../../internal/bidi.js';
+import { normalizeLabel } from '../../internal/accessible-name.js';
 import type { LyraTabularSource, LyraWorkbookSource, LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraWorkbookHit, LyraSourceSearchResult } from '../../data-sources.js';
 import { SourceRequestController, sourceCount, sourceRevision, type SourceRequestLease } from '../../internal/source-request-controller.js';
 import { LyraResourceLimitError, isResourceLimitError } from '../../internal/resource-loader.js';
@@ -314,8 +315,9 @@ export class TableViewerController<M extends { row: number; col: number }> {
     if (!colHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${place}>${bdi(text)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === activeHighlightId);
     const primary = active ?? colHighlights[0]!;
-    const accessibleLabel = primary.highlight.label
-      ? this.hooks.localize('cellHighlightWithLabel', undefined, { value: text, label: primary.highlight.label })
+    const highlightLabel = normalizeLabel(primary.highlight.label);
+    const accessibleLabel = highlightLabel
+      ? this.hooks.localize('cellHighlightWithLabel', undefined, { value: text, label: highlightLabel })
       : this.hooks.localize('highlightWithLabel', undefined, { label: text });
     // The outer cell keeps its table role; the nested native button carries activation.
     return html`<div
@@ -494,7 +496,8 @@ interface TabularSourceHooks {
   source(): LyraTabularSource | LyraWorkbookSource | undefined;
   cancelAnchor(): void;
   readonly workbook: boolean;
-  renderSheetTabs?(names: readonly string[], active: number, select: (index: number) => void): TemplateResult;
+  /** Renders the sheet tabs with `content` (the active sheet's table) inside the active panel. */
+  renderSheetTabs?(names: readonly string[], active: number, select: (index: number) => void, content: TemplateResult): TemplateResult;
   header(): boolean;
   columnLimit(): number;
   locale(): string;
@@ -806,15 +809,7 @@ export class TableViewerSourceController implements ReactiveController {
       const height = Math.max(1, resolveCssTokenLength(view?.getComputedStyle(this.host).getPropertyValue('--lr-size-3rem').trim() || '3rem', { host: this.host }) ?? 48);
       const header = this.hooks.header();
       const search = this.hooks.workbook ? (this.bound as LyraWorkbookSource).search : this.sheet.data.search;
-      return html`
-        ${this.hooks.workbook && this.sheets.length > 1 ? this.hooks.renderSheetTabs?.(
-          this.sheets.map(sheet => sheet.name), this.sheetIndex, index => {
-            if (Number.isInteger(index) && index >= 0 && index < this.sheets.length && index !== this.sheetIndex) {
-              this.hooks.cancelAnchor();
-              try { if (this.selectSheet(index)) this.notify(); } catch (error) { this.fail(error); }
-            }
-          },
-        ) ?? nothing : nothing}
+      const content = html`
         ${this.busy ? html`<p part="spinner" class="empty-note">${this.hooks.localize('loadingDocument')}</p>` : nothing}
         ${typeof search !== 'function' ? html`<p part="search-status" class="empty-note">${this.hooks.localize('sourceSearchUnavailable')}</p>` : nothing}
         <div part=${this.hooks.headerPart === 'header-cell' ? 'table' : 'sheet'} role="table" aria-label=${this.hooks.workbook ? this.sheet.name : this.hooks.label(this.rows)} aria-rowcount=${this.rows + Number(header)} aria-colcount=${this.columns}
@@ -828,6 +823,16 @@ export class TableViewerSourceController implements ReactiveController {
             @lr-visible-range-change=${this.onRange} @lr-virtual-scroll=${(event: Event) => event.stopPropagation()} @lr-load-more=${(event: Event) => event.stopPropagation()}
           ></lr-virtual-list>
         </div>`;
+      const tabs = this.hooks.workbook && this.sheets.length > 1 ? this.hooks.renderSheetTabs?.(
+          this.sheets.map(sheet => sheet.name), this.sheetIndex, index => {
+            if (Number.isInteger(index) && index >= 0 && index < this.sheets.length && index !== this.sheetIndex) {
+              this.hooks.cancelAnchor();
+              try { if (this.selectSheet(index)) this.notify(); } catch (error) { this.fail(error); }
+            }
+          },
+          content,
+        ) : undefined;
+      return tabs ?? content;
     } catch (error) {
       if (!current()) return html``;
       this.fail(error);

@@ -11,7 +11,6 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'ప్రదర్శించడానికి రూపొందించిన వీక్షణ ఏదీ లేదు.',
   genViewInvalid: 'ఈ రూపొందించిన వీక్షణను ప్రదర్శించలేము.',
   genViewLoading: 'కాంపోనెంట్ లోడ్ అవుతోంది…',
-  genViewLoadFailed: 'ఈ కాంపోనెంట్‌ను లోడ్ చేయలేకపోయాం.',
   genViewInvalidState: 'ఈ ఫీల్డ్ విలువను ఉపయోగించలేము.',
   genViewActionDenied: 'ఈ చర్య అందుబాటులో లేదు.',
   genViewConfirmationRequired: 'ఈ చర్యకు అప్లికేషన్ నుంచి నిర్ధారణ అవసరం.',

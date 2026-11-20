@@ -1600,3 +1600,9 @@ describe('image frame ring overlay', () => {
     expect(skeleton.getAttribute('shape')).to.equal('circle');
   });
 });
+
+it('ignores a whitespace-only label and keeps the derived region name as alt', async () => {
+  const el = (await fixture(html`<lr-flag country="fr" label="   "></lr-flag>`)) as LyraFlag;
+  await waitUntil(() => el.shadowRoot!.querySelector('img') !== null, 'no image');
+  expect((el.shadowRoot!.querySelector('img')!.getAttribute('alt') ?? '').trim()).to.not.equal('');
+});

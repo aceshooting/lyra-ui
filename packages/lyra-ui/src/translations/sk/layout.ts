@@ -17,7 +17,6 @@ const strings: LyraLocaleStrings = {
   carouselPauseRotation: 'Pozastaviť rotáciu',
   carouselResumeRotation: 'Obnoviť rotáciu',
   carouselViewport: 'Snímky',
-  scrollerLabel: 'Posúvateľný obsah',
   scrollPrevious: 'Posunúť dozadu',
   scrollNext: 'Posunúť dopredu',
   closeNavigation: 'Zavrieť navigáciu',

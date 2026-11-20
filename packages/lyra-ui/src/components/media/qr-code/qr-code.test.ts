@@ -1955,3 +1955,11 @@ describe('lr-qr-code paint batching', () => {
     }
   });
 });
+
+it('uses the value as the name when label is whitespace-only', () => {
+  // Not connected, so the optional peer is never requested (its load diagnostic would leak).
+  const el = document.createElement('lr-qr-code') as LyraQrCode;
+  el.value = 'https://example.com/x';
+  el.label = '   ';
+  expect((el as unknown as { accessibleName(): string }).accessibleName()).to.equal('https://example.com/x');
+});

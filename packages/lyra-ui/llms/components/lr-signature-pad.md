@@ -19,6 +19,8 @@
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
 resize, zoom or theme change never redraws or distorts them; the surface fills its allocation's

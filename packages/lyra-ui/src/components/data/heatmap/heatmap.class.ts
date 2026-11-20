@@ -1576,6 +1576,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.selectionContext = this.captureSelectionContext();
     if (changed.has('matrixSource') && !this.matrixSource) changed.set('data', undefined);
     if (this.matrixSource) {
+      this.clearGeneratedSemantics();
       if (this.matrixController) sourceWillUpdate(this as unknown as HeatmapSourceHost, changed);
       return;
     }
@@ -1834,6 +1835,21 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     } finally {
       this.syncingGeneratedSemantics = false;
     }
+    }
+  }
+
+  /** Drops the host role/label this component generated for plain data, so source mode never
+   *  keeps a stale one (an author's own values are never touched). */
+  private clearGeneratedSemantics(): void {
+    if (this.generatedAriaLabel === '') return;
+    this.syncingGeneratedSemantics = true;
+    try {
+      if (this.authorRole === null && this.getAttribute('role') === 'group') this.removeAttribute('role');
+      if (this.authorAriaLabel === null && this.getAttribute('aria-label') === this.generatedAriaLabel)
+        this.removeAttribute('aria-label');
+      this.generatedAriaLabel = '';
+    } finally {
+      this.syncingGeneratedSemantics = false;
     }
   }
 
