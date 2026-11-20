@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Gebruik maximaal {max} tekens.',
   feedbackSingleReasonDescription: 'Kies maximaal één reden.',
   suggestionsLabel: 'Voorgestelde prompts',
+  model: 'Model',
   selectModel: 'Selecteer een model…',
   modelSelectNoModels: 'Geen modellen',
   modelSelectRequired: 'Kies een model.',

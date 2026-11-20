@@ -38,7 +38,8 @@ import {
 import { styles } from './navigation-menu.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_navigation } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_navigation } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** What a floating panel is positioned against: the whole item row, or its own trigger. */

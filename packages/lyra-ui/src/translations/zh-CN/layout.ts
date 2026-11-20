@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: '命令',
   panelToggle: '切换面板',
   dockPanelResize: '调整面板大小',
+  navigation: '导航',
   responsivePanel: '面板',
   breadcrumb: '面包屑导航',
   resizeDivider: '调整面板{a}与面板{b}之间的分隔条',

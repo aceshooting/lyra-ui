@@ -17,8 +17,8 @@ import '../../forms/slider/slider.class.js';
 import { CATALOG_PICKER_CHILD_EVENTS, containShadowChildEvents } from '../../../internal/child-event-containment.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_model } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_model, LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'Előugró panel',
   rating: 'Értékelés',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Bezárás: {snippet}',

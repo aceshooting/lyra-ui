@@ -5,14 +5,23 @@ import { parseSync } from 'oxc-parser';
 // These private implementation helpers remain importable by source tests. They have no production
 // importer, so their declarations and runtime bodies need not be emitted into the public package.
 const TEST_ONLY_EXPORTS = Object.freeze({
+  'components/media/map/map-hash': ['removeMapHash', 'chooseMapInitialView'],
+  'components/media/map/map-hit-test': ['selectMapHit'],
+  'components/media/map/map-scene-line-encoding': ['decodeTileVertex'],
+  'components/utility/icon/icon-resource': ['__clearIconResourceCacheForTesting'],
   'components/viewers/ebook-viewer/ebook-loader': ['__setEpubJsForTesting'],
+  'components/viewers/include/include-resource': ['__clearIncludeResourceCacheForTesting'],
   'components/viewers/pptx-viewer/pptx-loader': ['__setPptxRendererForTesting'],
+  'internal/anchored-overlay-runtime': ['__setAnchoredOverlayRuntimeLoaderForTesting'],
   'internal/aria-controls': ['describeElement', 'undescribeElement'],
+  'internal/autoloader-loaders': ['setAutoloaderLoaderForTesting'],
   'internal/converters': ['trueDefaultBooleanFromAttributeConverter'],
   'internal/deprecated-aliases': ['invertAlias'],
   'internal/delimited-data': ['parseDelimitedGrid', 'parseDelimitedRecords'],
   'internal/papaparse-loader': ['loadPapaParse'],
   'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
+  'internal/lazy-hierarchy-source': ['__resetHierarchySourceRuntimeForTesting'],
+  'internal/shiki/core': ['__resetShikiCoreEngineForTesting', '__setShikiHighlighterCoreLoaderForTesting'],
   'internal/shiki/full': ['__setShikiModuleLoaderForTesting'],
   'internal/resource-loader': ['assertTableSize'],
   'theme/theme': ['applyLyraThemeBootstrapForTesting'],

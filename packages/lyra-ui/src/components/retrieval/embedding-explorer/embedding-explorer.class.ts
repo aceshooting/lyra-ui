@@ -38,7 +38,7 @@ import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit, LYRA_DEFAULT_embeddingExplorerSpatialBin, LYRA_DEFAULT_embeddingExplorerSpatialBounds, LYRA_DEFAULT_embeddingExplorerSpatialError, LYRA_DEFAULT_embeddingExplorerSpatialLoading, LYRA_DEFAULT_embeddingExplorerSpatialSummary } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const WIDTH = 640;
@@ -180,10 +180,6 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     embeddingExplorerEmpty: LYRA_DEFAULT_embeddingExplorerEmpty,
     embeddingExplorerLabel: LYRA_DEFAULT_embeddingExplorerLabel,
     embeddingExplorerPoint: LYRA_DEFAULT_embeddingExplorerPoint,
@@ -203,17 +199,10 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
     largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
     largeDataLimit: LYRA_DEFAULT_largeDataLimit,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    model: LYRA_DEFAULT_model,
-    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     previous: LYRA_DEFAULT_previous,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

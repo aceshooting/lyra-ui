@@ -27,6 +27,8 @@ the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
 Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
+The plain list's `[part="body"]` is a tab stop only while it overflows its cap, so a keyboard user
+can scroll a long log while a short one adds no stop; the virtual list is its own keyboard target.
 
 `--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
 set the header's pointer feedback.

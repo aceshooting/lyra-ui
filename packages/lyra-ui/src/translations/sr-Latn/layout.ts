@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Komande',
   panelToggle: 'Uključi/isključi panel',
   dockPanelResize: 'Promeni veličinu panela',
+  navigation: 'Navigacija',
   responsivePanel: 'Panel',
   breadcrumb: 'Putanja navigacije',
   resizeDivider: 'Promeni položaj razdelnika između panela {a} i panela {b}',

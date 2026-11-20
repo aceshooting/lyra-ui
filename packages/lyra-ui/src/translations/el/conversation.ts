@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Χρησιμοποιήστε έως {max} χαρακτήρες.',
   feedbackSingleReasonDescription: 'Επιλέξτε το πολύ μία αιτία.',
   suggestionsLabel: 'Προτεινόμενα ερωτήματα',
+  model: 'Μοντέλο',
   selectModel: 'Επιλογή μοντέλου…',
   modelSelectNoModels: 'Δεν υπάρχουν μοντέλα',
   modelSelectRequired: 'Επιλέξτε ένα μοντέλο.',

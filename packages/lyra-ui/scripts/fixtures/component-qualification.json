@@ -673,7 +673,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 490,
+              "line": 493,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12077,7 +12077,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 316,
+              "line": 318,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12290,7 +12290,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 316,
+              "line": 318,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20446,7 +20446,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1081,
+              "line": 1082,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20880,7 +20880,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/ebook-viewer/ebook-viewer.class.ts",
-              "line": 9,
+              "line": 744,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31102,7 +31102,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 781,
+              "line": 760,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39000,7 +39000,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.class.ts",
-              "line": 460,
+              "line": 461,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42621,7 +42621,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1081,
+              "line": 1082,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56706,7 +56706,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/test-results/test-results.class.ts",
-              "line": 484,
+              "line": 489,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -61088,7 +61088,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1081,
+              "line": 1082,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

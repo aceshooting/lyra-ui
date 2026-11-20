@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'فرمان‌ها',
   panelToggle: 'تغییر وضعیت پنل',
   dockPanelResize: 'تغییر اندازهٔ پنل',
+  navigation: 'راهبری',
   responsivePanel: 'پنل',
   breadcrumb: 'مسیر صفحه',
   resizeDivider: 'تغییر اندازهٔ جداکنندهٔ پنل {a} و پنل {b}',

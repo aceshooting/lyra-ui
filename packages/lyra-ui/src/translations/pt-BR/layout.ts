@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Comandos',
   panelToggle: 'Alternar o painel',
   dockPanelResize: 'Redimensionar o painel',
+  navigation: 'Navegação',
   responsivePanel: 'Painel',
   breadcrumb: 'Trilha de navegação',
   resizeDivider: 'Redimensionar o divisor entre o painel {a} e o painel {b}',

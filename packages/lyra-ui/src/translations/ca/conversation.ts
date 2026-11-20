@@ -66,6 +66,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Feu servir com a màxim {max} caràcters.',
   feedbackSingleReasonDescription: 'Trieu com a màxim un motiu.',
   suggestionsLabel: 'Indicacions suggerides',
+  model: 'Model',
   selectModel: 'Seleccioneu un model…',
   modelSelectNoModels: 'No hi ha models',
   modelSelectRequired: 'Trieu un model.',

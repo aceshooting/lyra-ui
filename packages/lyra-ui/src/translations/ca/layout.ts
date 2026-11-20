@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Ordres',
   panelToggle: 'Commuta el tauler',
   dockPanelResize: 'Redimensiona el tauler',
+  navigation: 'Navegació',
   responsivePanel: 'Tauler',
   breadcrumb: 'Ruta de navegació',
   resizeDivider: 'Redimensiona el separador entre el tauler {a} i el tauler {b}',

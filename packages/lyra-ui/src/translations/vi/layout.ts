@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Lệnh',
   panelToggle: 'Bật/tắt bảng điều khiển',
   dockPanelResize: 'Đổi kích thước bảng',
+  navigation: 'Điều hướng',
   responsivePanel: 'Bảng',
   breadcrumb: 'Điều hướng đường dẫn',
   resizeDivider: 'Đổi kích thước vạch ngăn giữa bảng {a} và bảng {b}',

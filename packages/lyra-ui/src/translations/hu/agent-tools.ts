@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Bemeneti tokenek',
   tokensOut: 'Kimeneti tokenek',
   cost: 'Költség',
+  duration: 'Időtartam',
   spanWaterfall: 'Szakaszok idővonala',
   spanStartedAtOffset: 'kezdés: +{value}',
   compareResponseA: 'A válasz',

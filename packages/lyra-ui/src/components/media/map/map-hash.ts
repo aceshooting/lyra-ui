@@ -105,7 +105,8 @@ export function replaceMapHash(fragment: string, option: unknown, cameraInput: u
   const output = `${parsed.prefix || '#'}${tokens.join('&')}`;
   return output.length <= MAX_FRAGMENT && tokens.length <= MAX_TOKENS ? written(output) : unchanged(fragment, 'invalid');
 }
-/** Explicit cleanup owns all exact matching fields, even duplicate or malformed values. */
+/** Explicit cleanup owns all exact matching fields, even duplicate or malformed values.
+ *  @internal Source-test helper; not emitted into the built package. */
 export function removeMapHash(fragment: string, option: unknown): MapHashWriteResult {
   const enabled = admitMapHashOption(option); if (enabled.status !== 'enabled') return unchanged(fragment, enabled.status);
   const parsed = fragmentOf(fragment, enabled.key); if (!parsed) return unchanged(fragment, 'invalid');
@@ -121,7 +122,8 @@ export function normalizeMapInitialBounds(value: unknown): MapInitialBounds | un
   if (!number(west, -180, 180) || !number(east, -180, west + 360) || !number(south, -90, 90) || !number(north, -90, 90) || south > north) return undefined;
   return Object.freeze([Object.freeze([west, south] as const), Object.freeze([west > east ? east + 360 : east, north] as const)] as const);
 }
-/** Deterministic initial choice; malformed/disabled hash falls through to bounds or camera. */
+/** Deterministic initial choice; malformed/disabled hash falls through to bounds or camera.
+ *  @internal Source-test helper; not emitted into the built package. */
 export function chooseMapInitialView(input: unknown): MapInitialView {
   const keys = fields(input, ['fragment', 'hash', 'bounds', 'camera']); if (!keys) return Object.freeze({ kind: 'invalid' });
   const fragment = keys.includes('fragment') ? own(input, 'fragment') : '';

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Opdrachten',
   panelToggle: 'Paneel omschakelen',
   dockPanelResize: 'Paneelgrootte aanpassen',
+  navigation: 'Navigatie',
   responsivePanel: 'Paneel',
   breadcrumb: 'Broodkruimelpad',
   resizeDivider: 'Scheiding tussen paneel {a} en paneel {b} aanpassen',

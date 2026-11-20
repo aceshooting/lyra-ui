@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'الأوامر',
   panelToggle: 'تبديل اللوحة',
   dockPanelResize: 'تغيير حجم اللوحة',
+  navigation: 'التنقل',
   responsivePanel: 'لوحة',
   breadcrumb: 'مسار التنقل',
   resizeDivider: 'تغيير حجم الفاصل بين اللوحة {a} واللوحة {b}',

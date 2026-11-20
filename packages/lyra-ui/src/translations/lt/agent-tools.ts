@@ -169,6 +169,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Įvesties žetonai',
   tokensOut: 'Išvesties žetonai',
   cost: 'Kaina',
+  duration: 'Trukmė',
   spanWaterfall: 'Intervalų laiko juosta',
   spanStartedAtOffset: 'pradėta +{value}',
   compareResponseA: 'Atsakymas A',

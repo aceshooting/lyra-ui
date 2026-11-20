@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: '팝오버',
   rating: '평가',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: '닫기: {snippet}',

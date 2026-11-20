@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Команди',
   panelToggle: 'Превключи панела',
   dockPanelResize: 'Преоразмери панела',
+  navigation: 'Навигация',
   responsivePanel: 'Панел',
   breadcrumb: 'Навигационна пътека',
   resizeDivider: 'Преоразмери разделителя между панел {a} и панел {b}',

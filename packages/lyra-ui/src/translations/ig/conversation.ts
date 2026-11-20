@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Jiri mkpụrụedemede {max} ma ọ bụ ihe na-erughị ya.',
   feedbackSingleReasonDescription: 'Họrọ ihe kpatara ya na-agaghị agafe otu.',
   suggestionsLabel: 'Arịrịọ ndị akwadoro',
+  model: 'Nlereanya',
   selectModel: 'Họrọ nlereanya…',
   modelSelectNoModels: 'Enweghị nlereanya',
   modelSelectRequired: 'Biko họrọ nlereanya.',

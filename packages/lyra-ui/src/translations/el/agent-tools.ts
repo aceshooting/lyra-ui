@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Εισερχόμενα tokens',
   tokensOut: 'Εξερχόμενα tokens',
   cost: 'Κόστος',
+  duration: 'Διάρκεια',
   spanWaterfall: 'Χρονολόγιο τμημάτων',
   spanStartedAtOffset: 'έναρξη στο +{value}',
   compareResponseA: 'Απάντηση A',

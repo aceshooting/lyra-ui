@@ -113,7 +113,9 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  * @csspart toggle - The collapse/expand chevron button, when `collapsible`.
  * @csspart body - The scrollable region wrapping the code (or the loading
  *   skeleton); respects `max-height`, `hidden` while `collapsible` and
- *   `collapsed`.
+ *   `collapsed`. Always a tab stop (`role="group"`, `tabindex="0"`), deliberately not gated on
+ *   overflow: it hosts the gutter's line keyboard handling and selection, and the stop must not
+ *   come and go while streamed or highlighted code grows past `max-height`.
  * @csspart pre - The rendered `<pre>` — shiki's own in the highlighted path,
  *   this component's own plain one in the fallback path.
  * @csspart limit - The localized notice when source exceeds the syntax-highlighting ceiling.

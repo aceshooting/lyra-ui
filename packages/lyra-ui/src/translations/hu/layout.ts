@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Parancsok',
   panelToggle: 'Panel megjelenítése/elrejtése',
   dockPanelResize: 'Panel átméretezése',
+  navigation: 'Navigáció',
   responsivePanel: 'Panel',
   breadcrumb: 'Morzsamenü',
   resizeDivider: 'Elválasztó átméretezése a panelek között: {a} és {b}',

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Komennot',
   panelToggle: 'Näytä tai piilota paneeli',
   dockPanelResize: 'Muuta paneelin kokoa',
+  navigation: 'Navigointi',
   responsivePanel: 'Paneeli',
   breadcrumb: 'Murupolku',
   resizeDivider: 'Muuta paneelien {a} ja {b} välisen jakajan kokoa',

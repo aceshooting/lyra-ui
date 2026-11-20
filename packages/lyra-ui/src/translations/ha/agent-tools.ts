@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Token ɗin da aka shigar',
   tokensOut: 'Token ɗin da aka fitar',
   cost: 'Kuɗi',
+  duration: 'Tsawon lokaci',
   spanWaterfall: 'Jadawalin lokacin tazara',
   spanStartedAtOffset: 'ya fara a +{value}',
   compareResponseA: 'Amsa A',

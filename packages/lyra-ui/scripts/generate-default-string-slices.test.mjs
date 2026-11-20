@@ -277,8 +277,9 @@ export class LyraGraphSample extends LyraElement {
     // that cannot be read off the call expression keeps the broad literal walk of helper modules
     // switched on, and that walk is how a traversed edge makes itself observable here. With a
     // purely literal key the helpers' own literals are (correctly) ignored, and this test could no
-    // longer distinguish a traversed runtime edge from a skipped type-only one.
-    return this.localize('direct') + this.localize(RUNTIME_IMPORT_KEYS.label);
+    // longer distinguish a traversed runtime edge from a skipped type-only one. The key is a call
+    // result so it stays open: a bare imported key map now resolves closed through its module.
+    return this.localize('direct') + this.localize(String(RUNTIME_IMPORT_KEYS.label));
   }
 }
 `,
@@ -563,6 +564,83 @@ export class LyraTypedFieldSample extends LyraElement {
   }
 } finally {
   await rm(typedFieldFixture, { recursive: true, force: true });
+}
+
+// A class that hands a `localize` forwarder to an imported controller, passes one where a helper
+// names its parameter `localize`, reads an imported key map, and annotates a forwarder parameter
+// with an imported closed union attributes each key to the module that localizes it. The graph
+// stays closed, so a helper's incidental 'collapse' literal never enters the slice. A forwarder
+// handed over under any other name stays open and keeps the conservative walk.
+const linkedCatalog = `
+type Key = 'collapse' | 'sampleReason' | 'sampleControllerLiteral' | 'sampleCount' | 'sampleTyped' | 'sampleTypedOther';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  collapse: 'Collapse',
+  sampleReason: 'Reason',
+  sampleControllerLiteral: 'Controller',
+  sampleCount: '{count} items',
+  sampleTyped: 'Typed',
+  sampleTypedOther: 'Typed other',
+};
+`;
+const linkedFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-linked-'));
+try {
+  const internal = path.join(linkedFixture, 'src', 'internal');
+  const linkedDir = path.join(linkedFixture, 'src', 'components', 'utility', 'linked-sample');
+  const openDir = path.join(linkedFixture, 'src', 'components', 'utility', 'renamed-forwarder-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(linkedDir, { recursive: true });
+  await mkdir(openDir, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), linkedCatalog);
+  await writeFile(path.join(internal, 'visibility-helper.ts'),
+    `export const isCollapsed = (value: string): boolean => value === 'collapse';\n`);
+  await writeFile(path.join(internal, 'sample-keys.ts'), `export const SAMPLE_REASON = { lost: 'sampleReason' } as const;
+export type SampleTypedKey = 'sampleTyped' | 'sampleTypedOther';
+`);
+  await writeFile(path.join(internal, 'sample-controller.ts'), `import { SAMPLE_REASON } from './sample-keys.js';
+import { isCollapsed } from './visibility-helper.js';
+export class SampleController {
+  constructor(private readonly options: { localize: (key: string) => string }) {}
+  text(reason: keyof typeof SAMPLE_REASON): string {
+    void isCollapsed('open');
+    return this.options.localize(SAMPLE_REASON[reason]) + this.options.localize('sampleControllerLiteral');
+  }
+}
+export function sampleCountText(localize: (key: string, values: Record<string, number>) => string, count: number): string {
+  return localize('sampleCount', { count });
+}
+`);
+  await writeFile(path.join(linkedDir, 'linked-sample.class.ts'), `import { LyraElement } from '../../../internal/lyra-element.js';
+import { SampleController, sampleCountText } from '../../../internal/sample-controller.js';
+import { SAMPLE_REASON, type SampleTypedKey } from '../../../internal/sample-keys.js';
+
+export class LyraLinkedSample extends LyraElement {
+  private readonly controller = new SampleController({ localize: key => this.localize(key) });
+  private readonly typedMessage = (key: SampleTypedKey) => this.localize(key);
+  render() {
+    return this.controller.text('lost') + sampleCountText((key, values) => this.localize(key, undefined, values), 2) +
+      this.localize(SAMPLE_REASON.lost) + this.typedMessage('sampleTyped');
+  }
+}
+`);
+  await writeFile(path.join(openDir, 'renamed-forwarder-sample.class.ts'), `import { LyraElement } from '../../../internal/lyra-element.js';
+import { SampleController } from '../../../internal/sample-controller.js';
+
+export class LyraRenamedForwarderSample extends LyraElement {
+  private readonly controller = new SampleController({ message: key => this.localize(key) } as never);
+  render() { return this.controller.text('lost'); }
+}
+`);
+  await generateDefaultStringSlices({ packageDir: linkedFixture, write: true, exclusions: {} });
+  const linked = await readFile(path.join(linkedDir, 'linked-sample.class.ts'), 'utf8');
+  for (const key of ['sampleReason', 'sampleControllerLiteral', 'sampleCount', 'sampleTyped', 'sampleTypedOther']) {
+    assert.match(linked, new RegExp(`LYRA_DEFAULT_${key}\\b`), `the linked key '${key}' is reachable`);
+  }
+  assert.doesNotMatch(linked, /LYRA_DEFAULT_collapse\b/, 'a closed linked graph keeps the incidental literal out');
+  const renamed = await readFile(path.join(openDir, 'renamed-forwarder-sample.class.ts'), 'utf8');
+  assert.match(renamed, /LYRA_DEFAULT_collapse\b/, 'a forwarder under another name keeps the conservative walk');
+  assert.match(renamed, /LYRA_DEFAULT_sampleControllerLiteral\b/, 'the receiving module still contributes its keys');
+} finally {
+  await rm(linkedFixture, { recursive: true, force: true });
 }
 
 
@@ -1204,7 +1282,8 @@ try {
 
 const actualConversationDefaults = await readFile(new URL('../src/internal/default-strings/conversation.generated.ts', import.meta.url), 'utf8');
 for (const key of ['genViewEmpty', 'genViewInvalid', 'genViewLoading', 'genViewLoadFailed', 'genViewInvalidState', 'genViewActionDenied', 'genViewConfirmationRequired']) {
-  assert.deepEqual([...inputFamilyIndex.keyToFamilies.get(key)], ['conversation'], `${key} remains available in the translation family`);
+  // lr-agent-question also renders genViewLoadFailed itself, so agent-tools may co-own a key.
+  assert.ok(inputFamilyIndex.keyToFamilies.get(key)?.has('conversation'), `${key} remains available in the translation family`);
   assert.doesNotMatch(actualConversationDefaults, new RegExp(`LYRA_DEFAULT_${key}\\b`), `${key} has no unused UI fallback export`);
 }
 

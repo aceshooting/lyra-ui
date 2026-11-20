@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} یا اوہدے توں گھٹ اکھر ورتو۔',
   feedbackSingleReasonDescription: 'ودھ توں ودھ اک وجہ چنو۔',
   suggestionsLabel: 'تجویز کیتے پرامپٹ',
+  model: 'ماڈل',
   selectModel: 'ماڈل چنو…',
   modelSelectNoModels: 'کوئی ماڈل نئیں',
   modelSelectRequired: 'براہ کرم اک ماڈل چنو۔',

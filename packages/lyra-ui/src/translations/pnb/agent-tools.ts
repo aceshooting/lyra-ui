@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'ان پٹ ٹوکن',
   tokensOut: 'آؤٹ پٹ ٹوکن',
   cost: 'لاگت',
+  duration: 'دورانیہ',
   spanWaterfall: 'اسپین ٹائم لائن',
   spanStartedAtOffset: '+{value} تے شروع ہویا',
   compareResponseA: 'جواب A',

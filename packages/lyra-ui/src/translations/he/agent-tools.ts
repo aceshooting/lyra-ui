@@ -167,6 +167,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'אסימוני קלט',
   tokensOut: 'אסימוני פלט',
   cost: 'עלות',
+  duration: 'משך',
   spanWaterfall: 'ציר זמן של מקטעים',
   spanStartedAtOffset: 'התחיל ב-+{value}',
   compareResponseA: "תגובה א'",

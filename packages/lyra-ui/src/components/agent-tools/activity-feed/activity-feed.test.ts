@@ -611,12 +611,15 @@ it('ships activity-feed stories for blank semantics and rich virtual entry-text 
   expect(getComputedStyle(text).fontStyle).to.equal('italic');
 });
 
-it('renders a visible focus ring on [part="body"] when it is the tabbable scroll region', async () => {
+it('makes [part="body"] a tab stop only while it overflows, with a visible focus ring', async () => {
   const el = (await fixture(
     html`<lr-activity-feed expanded .entries=${makeEntries(3)}></lr-activity-feed>`,
   )) as LyraActivityFeed;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
-  expect(body.getAttribute('tabindex')).to.equal('0');
+  expect(body.hasAttribute('tabindex'), 'a list that fits adds no tab stop').to.equal(false);
+  el.style.setProperty('--lr-activity-feed-max-height', '1rem');
+  await waitUntil(() => body.getAttribute('tabindex') === '0', 'an overflowing list becomes keyboard-scrollable');
+  expect(body.getAttribute('role')).to.equal('list');
   expect(getComputedStyle(body).outlineStyle).to.equal('none');
   await focusByKeyboard(body);
   expect(el.shadowRoot!.activeElement === body).to.be.true;
@@ -1472,7 +1475,7 @@ describe('focus repair', () => {
 
   it('moves focus to the header when expanded becomes false while focus was inside the body', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded style="--lr-activity-feed-max-height: 1rem" .entries=${makeEntries(2)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     body.focus();
@@ -1543,7 +1546,7 @@ describe('focus repair', () => {
   it('does not move focus away from an unaffected focused entry when a new entry is appended', async () => {
     const entries = makeEntries(2);
     const el = (await fixture(
-      html`<lr-activity-feed expanded .entries=${entries}></lr-activity-feed>`,
+      html`<lr-activity-feed expanded style="--lr-activity-feed-max-height: 1rem" .entries=${entries}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     body.focus();
@@ -1833,7 +1836,7 @@ describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () =
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraActivityFeed>(html`
-      <lr-activity-feed data-lr-theme-scope expanded .entries=${makeEntries(3)} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-activity-feed>
+      <lr-activity-feed data-lr-theme-scope expanded .entries=${makeEntries(3)} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}; --lr-activity-feed-max-height: 1rem`}></lr-activity-feed>
     `);
     for (const part of ['header', 'body']) {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;

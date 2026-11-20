@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Kmandi',
   panelToggle: 'Biddel il-pannell',
   dockPanelResize: 'Ibdel id-daqs tal-pannell',
+  navigation: 'Navigazzjoni',
   responsivePanel: 'Pannell',
   breadcrumb: 'Mogħdija tan-navigazzjoni',
   resizeDivider: 'Ibdel id-daqs tad-diviżorju bejn il-pannell {a} u l-pannell {b}',

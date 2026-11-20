@@ -736,14 +736,23 @@ describe('live-mode auto-scroll via composed lr-content-settled (property-driven
   }
 });
 
+// A capped body with enough transcript to overflow it, so the scroll region takes its tab stop.
+const LONG_TRANSCRIPT = 'Long reasoning transcript. '.repeat(40);
+const CAPPED_BODY = '--lr-thinking-panel-max-block-size: 3rem';
+
 describe('body keyboard accessibility', () => {
-  it('is a focusable, named group so a keyboard-only reader can scroll a long transcript', async () => {
+  it('is a tab stop only while a short body overflows, and stays a named group either way', async () => {
     const el = (await fixture(
       html`<lr-thinking-panel label="Reasoning" expanded>content</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(body.hasAttribute('tabindex'), 'a body that fits adds no tab stop').to.equal(false);
+    expect(body.getAttribute('role')).to.equal('group');
+    expect(body.getAttribute('aria-label')).to.equal('Reasoning');
 
-    expect(body.getAttribute('tabindex')).to.equal('0');
+    el.style.cssText = CAPPED_BODY;
+    el.textContent = LONG_TRANSCRIPT;
+    await waitUntil(() => body.getAttribute('tabindex') === '0', 'an overflowing transcript becomes keyboard-scrollable');
     expect(body.getAttribute('role')).to.equal('group');
     expect(body.getAttribute('aria-label')).to.equal('Reasoning');
 
@@ -910,15 +919,14 @@ it('exposes a component-scoped pending color', async () => {
 });
 
 describe('the tabbable scroll region\'s own affordances', () => {
-  // [part='body'] is unconditionally tabindex="0" -- a real, always-focusable, independently
-  // scrollable region (the class file cites lr-code-block and lr-virtual-list as sharing this
-  // convention). Both of those pair the tabindex with a :focus-visible outline; without one a
+  // An overflowing [part='body'] is tabindex="0" -- a real, focusable, independently scrollable
+  // region (the class file cites lr-code-block and lr-virtual-list as sharing this convention). Both of those pair the tabindex with a :focus-visible outline; without one a
   // keyboard user tabbing in gets no indication at all, and a mouse user gets no cue that the
   // region is separately scrollable. Both assertions read the *rendered* computed result rather
   // than the stylesheet text, so a rule that never actually matches the part still fails.
   async function panelBody(): Promise<{ el: LyraThinkingPanel; body: HTMLElement }> {
     const el = (await fixture(html`
-      <lr-thinking-panel expanded>Long reasoning transcript</lr-thinking-panel>
+      <lr-thinking-panel expanded style=${CAPPED_BODY}>${LONG_TRANSCRIPT}</lr-thinking-panel>
     `)) as LyraThinkingPanel;
     const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     expect(body.getAttribute('tabindex')).to.equal('0');
@@ -951,8 +959,8 @@ describe('the tabbable scroll region\'s own affordances', () => {
   for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
     it(`keeps header and scroll-region focus rings inward with authored offset ${offset}`, async () => {
       const el = await fixture<LyraThinkingPanel>(html`
-        <lr-thinking-panel data-lr-theme-scope expanded style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}>
-          Long reasoning transcript
+        <lr-thinking-panel data-lr-theme-scope expanded style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}; ${CAPPED_BODY}`}>
+          ${LONG_TRANSCRIPT}
         </lr-thinking-panel>
       `);
       for (const part of ['header', 'body']) {
@@ -1188,7 +1196,7 @@ for (const connection of ['constructed', 'connected before rendering'] as const)
 
 it('moves focus from the body or its slotted content to the header on external collapse', async () => {
   const el = await fixture<LyraThinkingPanel>(html`
-    <lr-thinking-panel expanded><button type="button">Read more</button></lr-thinking-panel>
+    <lr-thinking-panel expanded style=${CAPPED_BODY}>${LONG_TRANSCRIPT}<button type="button">Read more</button></lr-thinking-panel>
   `);
   const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
   const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;

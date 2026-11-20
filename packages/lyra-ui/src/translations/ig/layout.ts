@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Iwu',
   panelToggle: 'Gbanwee panel',
   dockPanelResize: 'Gbanwee nha panel',
+  navigation: 'Nnyagharị',
   responsivePanel: 'Ogwe',
   breadcrumb: 'Akara ụzọ',
   resizeDivider: 'Gbanwee nha nkewa panel {a} na panel {b}',

@@ -66,6 +66,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'יש להשתמש ב-{max} תווים לכל היותר.',
   feedbackSingleReasonDescription: 'אפשר לבחור סיבה אחת לכל היותר.',
   suggestionsLabel: 'הנחיות מוצעות',
+  model: 'מודל',
   selectModel: 'בחר מודל…',
   modelSelectNoModels: 'אין מודלים',
   modelSelectRequired: 'נא לבחור מודל.',

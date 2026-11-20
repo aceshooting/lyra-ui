@@ -164,6 +164,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Token ndị e tinyere',
   tokensOut: 'Token ndị e wepụtara',
   cost: 'Ọnụ ahịa',
+  duration: 'Ogologo oge',
   spanWaterfall: 'Usoro oge oghere',
   spanStartedAtOffset: 'malitere na +{value}',
   compareResponseA: 'Nzaghachi A',

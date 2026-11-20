@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '請使用不超過{max}個字元。',
   feedbackSingleReasonDescription: '最多選擇一個原因。',
   suggestionsLabel: '建議的提示詞',
+  model: '模型',
   selectModel: '選擇模型…',
   modelSelectNoModels: '無可用模型',
   modelSelectRequired: '請選擇一個模型。',

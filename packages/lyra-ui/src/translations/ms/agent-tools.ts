@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Token masuk',
   tokensOut: 'Token keluar',
   cost: 'Kos',
+  duration: 'Tempoh',
   spanWaterfall: 'Garis masa span',
   spanStartedAtOffset: 'bermula pada +{value}',
   compareResponseA: 'Jawapan A',

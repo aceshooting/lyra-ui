@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Umarni',
   panelToggle: 'Buɗe/rufe allo',
   dockPanelResize: 'Canza girman faifan aiki',
+  navigation: 'Kewayawa',
   responsivePanel: 'Faifan aiki',
   breadcrumb: 'Hanyar kewayawa',
   resizeDivider: 'Canza girman mai raba faifan aiki {a} da {b}',

@@ -33,6 +33,7 @@ export const LYRA_DEFAULT_drilldownRuns: LyraMessage = 'Agent runs';
 export const LYRA_DEFAULT_drilldownUntitledNode: LyraMessage = 'Untitled step';
 export const LYRA_DEFAULT_filterBarActiveFilters: LyraMessage = 'Active filters';
 export const LYRA_DEFAULT_filterBarReset: LyraMessage = 'Reset filters';
+export const LYRA_DEFAULT_navigation: LyraMessage = 'Navigation';
 export const LYRA_DEFAULT_panelToggle: LyraMessage = 'Toggle panel';
 export const LYRA_DEFAULT_reorderMoveCancelled: LyraMessage = 'Reorder cancelled.';
 export const LYRA_DEFAULT_reorderMovePending: LyraMessage = 'Reorder pending.';

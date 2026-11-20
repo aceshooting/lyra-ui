@@ -70,6 +70,7 @@ export const LYRA_DEFAULT_messagePartError: LyraMessage = 'Part failed';
 export const LYRA_DEFAULT_messagePartRetry: LyraMessage = 'Retry this part';
 export const LYRA_DEFAULT_messagePartsLabel: LyraMessage = 'Message content';
 export const LYRA_DEFAULT_messagePartsWindowNotice: LyraMessage = 'Earlier parts hidden: {count}.';
+export const LYRA_DEFAULT_model: LyraMessage = 'Model';
 export const LYRA_DEFAULT_modelSelectNoModels: LyraMessage = 'No models';
 export const LYRA_DEFAULT_modelSelectRequired: LyraMessage = 'Please choose a model.';
 export const LYRA_DEFAULT_newMessages: LyraMessage = 'New messages';

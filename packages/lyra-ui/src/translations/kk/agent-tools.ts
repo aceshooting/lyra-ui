@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Кіріс токендері',
   tokensOut: 'Шығыс токендері',
   cost: 'Құны',
+  duration: 'Ұзақтығы',
   spanWaterfall: 'Аралықтар уақыт шкаласы',
   spanStartedAtOffset: 'басталуы: +{value}',
   compareResponseA: 'А жауабы',

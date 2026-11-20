@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Mga command',
   panelToggle: 'I-toggle ang panel',
   dockPanelResize: 'Baguhin ang laki ng panel',
+  navigation: 'Pag-navigate',
   responsivePanel: 'Panel',
   breadcrumb: 'Trail ng nabigasyon',
   resizeDivider: 'Baguhin ang laki ng divider sa pagitan ng panel {a} at panel {b}',

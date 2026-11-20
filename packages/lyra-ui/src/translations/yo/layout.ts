@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Àwọn àṣẹ',
   panelToggle: 'Fi hàn/Fi pánẹ́ẹ̀lì pamọ́',
   dockPanelResize: 'Yí ìwọ̀n pánẹ́lì padà',
+  navigation: 'Ìtọ́sọ́nà',
   responsivePanel: 'Pánẹ́lì',
   breadcrumb: 'Àmì ọ̀nà',
   resizeDivider: 'Yí ìwọ̀n ìpín láàárín pánẹ́lì {a} àti {b} padà',

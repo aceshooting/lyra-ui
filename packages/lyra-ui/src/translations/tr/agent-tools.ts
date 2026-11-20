@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Girdi belirteçleri',
   tokensOut: 'Çıktı belirteçleri',
   cost: 'Maliyet',
+  duration: 'Süre',
   spanWaterfall: 'Aralık zaman çizelgesi',
   spanStartedAtOffset: '+{value} anında başladı',
   compareResponseA: 'A yanıtı',

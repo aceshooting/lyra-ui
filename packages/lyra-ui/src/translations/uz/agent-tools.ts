@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Kiritilgan tokenlar',
   tokensOut: 'Chiqarilgan tokenlar',
   cost: 'Narx',
+  duration: 'Davomiylik',
   spanWaterfall: 'Span vaqt jadvali',
   spanStartedAtOffset: '+{value} da boshlandi',
   compareResponseA: 'A javobi',

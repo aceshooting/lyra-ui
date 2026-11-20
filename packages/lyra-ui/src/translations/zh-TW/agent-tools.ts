@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: '輸入 token',
   tokensOut: '輸出 token',
   cost: '費用',
+  duration: '時長',
   spanWaterfall: '跨度時間線',
   spanStartedAtOffset: '開始於 +{value}',
   compareResponseA: '回覆 A',

@@ -31,6 +31,7 @@ export const LYRA_DEFAULT_kbdShiftWord: LyraMessage = 'Shift';
 export const LYRA_DEFAULT_kbdShortcutSeparator: LyraMessage = '+';
 export const LYRA_DEFAULT_kbdSpaceWord: LyraMessage = 'Space';
 export const LYRA_DEFAULT_kbdTabWord: LyraMessage = 'Tab';
+export const LYRA_DEFAULT_popover: LyraMessage = 'Popover';
 export const LYRA_DEFAULT_rating: LyraMessage = 'Rating';
 export const LYRA_DEFAULT_toastContentIncomplete: LyraMessage = 'Notification with incomplete content';
 export const LYRA_DEFAULT_toastOverflow: LyraMessage = 'Notifications not shown: {count}.';

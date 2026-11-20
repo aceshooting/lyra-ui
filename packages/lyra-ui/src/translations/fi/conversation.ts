@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Käytä enintään {max} merkkiä.',
   feedbackSingleReasonDescription: 'Valitse enintään yksi syy.',
   suggestionsLabel: 'Ehdotetut kehotteet',
+  model: 'Malli',
   selectModel: 'Valitse malli…',
   modelSelectNoModels: 'Ei malleja',
   modelSelectRequired: 'Valitse malli.',

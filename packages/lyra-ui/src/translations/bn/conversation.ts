@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max}টি বা তার কম অক্ষর ব্যবহার করুন।',
   feedbackSingleReasonDescription: 'সর্বোচ্চ একটি কারণ বেছে নিন।',
   suggestionsLabel: 'প্রস্তাবিত প্রম্পট',
+  model: 'মডেল',
   selectModel: 'একটি মডেল বেছে নিন…',
   modelSelectNoModels: 'কোনো মডেল নেই',
   modelSelectRequired: 'একটি মডেল বেছে নিন।',

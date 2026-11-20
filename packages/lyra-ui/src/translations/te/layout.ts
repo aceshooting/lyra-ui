@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'కమాండ్‌లు',
   panelToggle: 'ప్యానెల్‌ను చూపించు/దాచు',
   dockPanelResize: 'ప్యానెల్ పరిమాణాన్ని మార్చండి',
+  navigation: 'నావిగేషన్',
   responsivePanel: 'ప్యానెల్',
   breadcrumb: 'నావిగేషన్ మార్గం',
   resizeDivider: 'ప్యానెల్ {a} మరియు ప్యానెల్ {b} మధ్య విభాజక పరిమాణాన్ని మార్చండి',

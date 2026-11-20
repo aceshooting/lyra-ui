@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'ഇൻപുട്ട് ടോക്കണുകൾ',
   tokensOut: 'ഔട്ട്പുട്ട് ടോക്കണുകൾ',
   cost: 'ചെലവ്',
+  duration: 'ദൈർഘ്യം',
   spanWaterfall: 'സ്പാൻ സമയരേഖ',
   spanStartedAtOffset: '+{value}ൽ ആരംഭിച്ചു',
   compareResponseA: 'മറുപടി A',

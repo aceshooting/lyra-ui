@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'Popover',
   rating: 'Betyg',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Stäng: {snippet}',

@@ -65,11 +65,11 @@ reports user scroll release or re-engagement; direct `follow` assignments do not
 
 **CSS parts:** `base`, `header`, `label`, `duration`, `toggle`, `body`
 
-`[part="body"]` is unconditionally `tabindex="0"`: it is a capped-height, independently scrollable
-region whose content (plain text, a non-interactive `<lr-streaming-text>`) is often not focusable
-itself, so without its own tab stop a keyboard user could never scroll it — the same convention
-`<lr-code-block>`'s `[part="body"]` and `<lr-virtual-list>`'s `[part="base"]` follow. It therefore
-carries both affordances that go with a real tab stop: an inward `--lr-focus-ring-*` outline while
+`[part="body"]` takes `tabindex="0"` while its content overflows the cap: it is a capped-height,
+independently scrollable region whose content (plain text, a non-interactive `<lr-streaming-text>`)
+is often not focusable itself, so without its own tab stop a keyboard user could never scroll it. A
+body that fits adds no tab stop; it stays a `role="group"` named from `label` either way. While it
+is a tab stop it carries both affordances that go with one: an inward `--lr-focus-ring-*` outline while
 `:focus-visible` (inward so the region's own `overflow` cannot clip it), and a subtler
 `--lr-color-border` outline on pointer hover, so a mouse user also sees that the transcript is a
 separately scrollable region. Collapsing the panel moves focus from the body or its slotted content

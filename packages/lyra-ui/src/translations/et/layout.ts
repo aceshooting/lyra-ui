@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Käsud',
   panelToggle: 'Lülita paneel sisse/välja',
   dockPanelResize: 'Muuda paneeli suurust',
+  navigation: 'Navigeerimine',
   responsivePanel: 'Paneel',
   breadcrumb: 'Leivapururada',
   resizeDivider: 'Muuda paneelide {a} ja {b} vahelise eraldaja asukohta',

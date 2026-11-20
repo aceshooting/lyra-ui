@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Ba commande',
   panelToggle: 'Bongola panneau',
   dockPanelResize: 'Bongola bonene ya panneau',
+  navigation: 'Nzela ya kotambola',
   responsivePanel: 'Panneau',
   breadcrumb: 'Fil d’Ariane',
   resizeDivider: 'Bongola bonene ya séparateur kati ya panneau {a} na panneau {b}',

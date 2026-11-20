@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Use {max} characters or less.',
   feedbackSingleReasonDescription: 'You fit choose one reason or leave am.',
   suggestionsLabel: 'Prompts wey dem suggest',
+  model: 'Model',
   selectModel: 'Select one model…',
   modelSelectNoModels: 'No model dey',
   modelSelectRequired: 'Abeg choose model.',

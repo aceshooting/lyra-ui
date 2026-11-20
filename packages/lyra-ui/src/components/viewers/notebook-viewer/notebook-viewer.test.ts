@@ -1953,7 +1953,7 @@ describe('virtualized cell part styling', () => {
     const notebook = {
       nbformat: 4,
       nbformat_minor: 5,
-      cells: [{ cell_type: 'raw', source: 'x'.repeat(400) }],
+      cells: [{ cell_type: 'raw', source: 'x'.repeat(400) }, { cell_type: 'raw', source: 'short' }],
     };
     const wrapper = await fixture<HTMLElement>(
       html`<div style="width: 320px"><lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer></div>`,
@@ -1962,10 +1962,11 @@ describe('virtualized cell part styling', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector(
       '[part="raw-source"]',
     ) !== null);
-    const raw = rowRoot(el).querySelector('[part="raw-source"]') as HTMLElement;
-    expect(raw.getAttribute('tabindex')).to.equal('0');
-    expect(getComputedStyle(raw).overflowX).to.equal('auto');
-    expect(raw.scrollWidth).to.be.greaterThan(raw.clientWidth);
+    const [raw, short] = Array.from(rowRoot(el).querySelectorAll<HTMLElement>('[part="raw-source"]'));
+    await waitUntil(() => raw!.getAttribute('tabindex') === '0', 'the overflowing raw cell becomes a tab stop');
+    expect(getComputedStyle(raw!).overflowX).to.equal('auto');
+    expect(raw!.scrollWidth).to.be.greaterThan(raw!.clientWidth);
+    expect(short!.hasAttribute('tabindex'), 'a raw cell that fits adds no tab stop').to.equal(false);
   });
 
   /** A design token's own rendered value, resolved by a throwaway probe in the same shadow root and

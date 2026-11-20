@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Gunakan maksimal {max} karakter.',
   feedbackSingleReasonDescription: 'Pilih paling banyak satu alasan.',
   suggestionsLabel: 'Perintah yang disarankan',
+  model: 'Model AI',
   selectModel: 'Pilih model…',
   modelSelectNoModels: 'Tidak ada model',
   modelSelectRequired: 'Pilih model.',

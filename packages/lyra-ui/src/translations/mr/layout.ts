@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'कमांड',
   panelToggle: 'पॅनेल टॉगल करा',
   dockPanelResize: 'पॅनेलचा आकार बदला',
+  navigation: 'नेव्हिगेशन',
   responsivePanel: 'पॅनेल',
   breadcrumb: 'नेव्हिगेशन मार्ग',
   resizeDivider: 'पॅनेल {a} आणि पॅनेल {b} मधील विभाजकाचा आकार बदला',

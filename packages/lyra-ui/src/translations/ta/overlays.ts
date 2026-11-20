@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'மேல்தோன்றும் பலகம்',
   rating: 'மதிப்பீடு',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'மூடு: {snippet}',

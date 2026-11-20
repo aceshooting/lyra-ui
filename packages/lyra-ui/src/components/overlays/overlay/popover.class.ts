@@ -64,7 +64,8 @@ import { styles } from './overlay.styles.js';
 import { glassPopoverStyles } from './popover-glass.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_popover } from '../../../internal/default-strings/overlays.generated.js';
+import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */

@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Tokkenota galan',
   tokensOut: 'Tokkenota bahan',
   cost: 'Baasii',
+  duration: 'Turtii',
   spanWaterfall: 'Tarree yeroo kutaa',
   spanStartedAtOffset: '+{value} irratti jalqabe',
   compareResponseA: 'Deebii A',

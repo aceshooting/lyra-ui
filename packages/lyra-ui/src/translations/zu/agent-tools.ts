@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Amathokheni angenayo',
   tokensOut: 'Amathokheni aphumayo',
   cost: 'Izindleko',
+  duration: 'Isikhathi',
   spanWaterfall: 'Umugqa wesikhathi wesigaba',
   spanStartedAtOffset: 'kuqale ngo-+{value}',
   compareResponseA: 'Impendulo A',

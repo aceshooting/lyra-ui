@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Àwọn àmì tí a fi sínú rẹ̀',
   tokensOut: 'Àwọn àmì tó jáde',
   cost: 'Ìnáwó',
+  duration: 'Àkókò',
   spanWaterfall: 'Ìlà àkókò àárín',
   spanStartedAtOffset: 'bẹ̀rẹ̀ ní +{value}',
   compareResponseA: 'Ìdáhùn A',

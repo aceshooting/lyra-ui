@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Syötetyt tokenit',
   tokensOut: 'Tuotetut tokenit',
   cost: 'Kustannus',
+  duration: 'Kesto',
   spanWaterfall: 'Jännevälien aikajana',
   spanStartedAtOffset: 'alkoi kohdassa +{value}',
   compareResponseA: 'Vastaus A',

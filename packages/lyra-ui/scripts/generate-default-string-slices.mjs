@@ -2,6 +2,7 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -153,10 +154,12 @@ function collectParameterNames(pattern, sink) {
  * and re-admit exactly the incidental literals this narrowing exists to remove.
  *
  * Deliberately just this one file. A component-local forwarder is NOT plumbing -- e.g.
- * `document-compare.class.ts`'s `versionLabel(version, fallbackKey)` and `kbd.class.ts`'s
- * `parseShortcut(..., (key) => this.localize(key))` both take the key as a parameter, but their
- * real key literals sit at the call sites, so those graphs must stay "dynamic" and get the broad
- * walk or the messages silently vanish and the raw key name renders to the user.
+ * `document-compare.class.ts`'s `versionLabel(version, fallbackKey)` takes the key as a parameter,
+ * but its real key literals sit at the call sites, so that graph must stay "dynamic" and resolve
+ * them (or get the broad walk), or the messages silently vanish and the raw key name renders to
+ * the user. A forwarder handed to an imported helper (`kbd.class.ts`'s
+ * `parseShortcut(..., (key) => this.localize(key))`) is attributed to that helper instead; see
+ * resolveDynamicLocalizeKeys().
  */
 function isLocalizeForwarderModule(file) {
   return file.endsWith(path.join('internal', 'lyra-element.ts'));
@@ -278,12 +281,44 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
  * The closed-resolution core of {@link dynamicLocalizeCallKeys}. `closed` is true only when every
  * dynamic key argument in the module resolves, through module-local declarations, object maps,
  * private or readonly fields and in-module call arguments, to string literals alone. A key that
- * reaches an import, a call result, a public field, a loop binding or a method parameter leaves the
- * module open, and an open module keeps the conservative whole-graph literal walk.
+ * reaches a call result, a public field, a loop binding or a method parameter leaves the module
+ * open, and an open module keeps the conservative whole-graph literal walk.
+ *
+ * With a `linker` (createModuleLinker()), three cross-module shapes close too, so a key is
+ * attributed to the module that actually localizes it:
+ * - an imported constant key map (`this.localize(ENGINE_3D_REASON_MESSAGE[reason])`) resolves to
+ *   the string literals of its declaration in the exporting module;
+ * - a parameter annotated with a closed string-literal union, local or imported
+ *   (`(key: Engine3dMessageKey) => this.localize(key)`), resolves to exactly those literals;
+ * - a forwarder `(key) => this.localize(key)` handed straight to an imported, non-class runtime
+ *   module, either as a `localize` property of an object argument or as an argument whose
+ *   parameter in the callee is named `localize`, adds nothing here: the receiving module is in the
+ *   same import graph and its own `options.localize(...)`/`localize(...)` calls carry the keys.
+ *
+ * `request` is the linker's internal entry point: it resolves one export of this module (a value's
+ * literals, a type alias's literal union, or a function parameter's name) instead of its calls.
  */
-function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
+function resolveDynamicLocalizeKeys(program, catalogKeys, file = '', linker = undefined, request = undefined) {
   const exemptForwardedParameters = isLocalizeForwarderModule(file);
   let closed = true;
+  const imports = new Map();
+  for (const node of program.body) {
+    if (node.type !== 'ImportDeclaration' || typeof node.source?.value !== 'string') continue;
+    for (const specifier of node.specifiers ?? []) {
+      if (specifier.type !== 'ImportSpecifier') continue;
+      imports.set(specifier.local.name, {
+        source: node.source.value,
+        imported: specifier.imported?.name ?? specifier.imported?.value,
+        typeOnly: node.importKind === 'type' || specifier.importKind === 'type',
+      });
+    }
+  }
+  const importedBinding = (name, { types = false } = {}) => {
+    const binding = imports.get(name);
+    if (!binding || !linker || (binding.typeOnly && !types)) return undefined;
+    const target = linker.target(file, binding.source);
+    return target ? { file: target, imported: binding.imported } : undefined;
+  };
   const openFields = new Set();
   const parents = new WeakMap();
   const declarations = new Map();
@@ -406,6 +441,12 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
       : declaration.type === 'TSTypeAliasDeclaration' && !declaration.typeParameters ? declaredType(declaration.typeAnnotation, depth + 1) : undefined;
   };
   const stringLiteralTypes = (type, depth = 0) => {
+    const reference = typeNode(type);
+    if (reference?.type === 'TSTypeReference' && reference.typeName?.type === 'Identifier' &&
+      !reference.typeArguments && !typeDeclarations.has(reference.typeName.name)) {
+      const binding = importedBinding(reference.typeName.name, { types: true });
+      return binding ? linker.exported(binding.file, 'type', binding.imported)?.literals : undefined;
+    }
     const node = declaredType(type, depth);
     if (node?.type === 'TSLiteralType' && typeof node.literal?.value === 'string') return [node.literal.value];
     if (node?.type !== 'TSUnionType' || depth > 8) return undefined;
@@ -444,6 +485,48 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
     const type = field === undefined ? undefined : fieldTypes.get(field);
     const literals = type ? propertyLiteralTypes(type, property) : undefined;
     return literals?.length ? literals : undefined;
+  };
+
+  // A parameter annotated with a closed literal union: `(key: Engine3dMessageKey) => ...`.
+  const parameterLiteralTypes = ({ functionNode, parameterIndex }) => {
+    let parameter = functionNode.params?.[parameterIndex];
+    if (parameter?.type === 'AssignmentPattern') parameter = parameter.left;
+    const literals = parameter?.typeAnnotation ? stringLiteralTypes(parameter.typeAnnotation) : undefined;
+    return literals?.length ? literals : undefined;
+  };
+  // Adds an imported binding's resolved literals; false when the linker cannot close it.
+  const addImportedValueKeys = (name) => {
+    const binding = importedBinding(name);
+    const resolved = binding ? linker.exported(binding.file, 'value', binding.imported) : undefined;
+    if (!resolved) return false;
+    for (const key of resolved.found) found.add(key);
+    return resolved.closed;
+  };
+  // An imported runtime callee whose module joins this import graph; a class module owns its own slice.
+  const importedCallee = (call) => {
+    if (call?.type !== 'CallExpression' && call?.type !== 'NewExpression') return undefined;
+    const callee = unwrapExpression(call.callee);
+    const binding = callee?.type === 'Identifier' && !declarations.has(callee.name) ? importedBinding(callee.name) : undefined;
+    return binding && !binding.file.endsWith('.class.ts') ? binding : undefined;
+  };
+  // `localize: (key) => this.localize(key)` in an object handed to an imported runtime callee, or
+  // `(key, values) => this.localize(key, ...)` passed where the callee -- imported, or a function of
+  // this module, whose own `localize(...)` calls are then resolved here -- names its parameter `localize`.
+  const isEscapingLocalizeForwarder = ({ functionNode }) => {
+    const parent = parents.get(functionNode);
+    if (parent?.type === 'Property' && parent.value === functionNode && propertyName(parent) === 'localize') {
+      const object = parents.get(parent);
+      const call = object?.type === 'ObjectExpression' ? parents.get(object) : undefined;
+      return importedCallee(call) !== undefined && call.arguments.includes(object);
+    }
+    if (parent?.type !== 'CallExpression' && parent?.type !== 'NewExpression') return false;
+    const index = parent.arguments.indexOf(functionNode);
+    const local = unwrapExpression(parent.callee);
+    if (index >= 0 && local?.type === 'Identifier' && !imports.has(local.name)) {
+      return functionParameterName(program, local.name, index) === 'localize';
+    }
+    const callee = importedCallee(parent);
+    return index >= 0 && callee !== undefined && linker.exported(callee.file, 'param', callee.imported, index)?.name === 'localize';
   };
 
   const found = new Set();
@@ -510,17 +593,28 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
     if (literal !== undefined) {
       if (catalogKeys.has(literal)) found.add(literal);
     } else if (node.type === 'Identifier') {
-      const declared = declarations.get(node.name) ?? [];
+      const parameter = containingParameter(node);
+      const typedParameter = parameter ? parameterLiteralTypes(parameter) : undefined;
+      // The type closes a typed parameter; a same-named declaration elsewhere is another binding.
+      const declared = typedParameter ? [] : declarations.get(node.name) ?? [];
       for (const value of declared) resolveExpression(value);
-      if (containingParameter(node)) {
+      if (typedParameter) {
+        for (const key of typedParameter) if (catalogKeys.has(key)) found.add(key);
+      } else if (parameter) {
         for (const value of parameterArguments(node)) resolveExpression(value);
-      } else if (declared.length === 0) {
-        // An imported binding, a loop variable or a global: its values live outside this module.
+      } else if (declared.length === 0 && !addImportedValueKeys(node.name)) {
+        // A loop variable, a global or an import the linker cannot close: its values live outside.
         closed = false;
       }
     } else if (node.type === 'MemberExpression') {
-      const typed = typedMemberKeys(node);
-      if (typed) {
+      const owner = unwrapExpression(node.object);
+      const importedMap = owner?.type === 'Identifier' && !declarations.has(owner.name) &&
+        importedBinding(owner.name) !== undefined;
+      const typed = importedMap ? undefined : typedMemberKeys(node);
+      if (importedMap) {
+        // An imported key map: every value of its declaration in the exporting module.
+        if (!addImportedValueKeys(owner.name)) closed = false;
+      } else if (typed) {
         for (const key of typed) if (catalogKeys.has(key)) found.add(key);
       } else {
         for (const value of memberValueNodes(node)) resolveExpression(value);
@@ -545,6 +639,17 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
     resolvingValues.delete(node);
   }
 
+  if (request) return resolveExportRequest(program, request, {
+    declarations,
+    typeDeclarations,
+    resolveExpression,
+    stringLiteralTypes,
+    result: () => ({ found, closed }),
+    open: () => { closed = false; },
+    linker,
+    file,
+  });
+
   visitAst(program, (node) => {
     if (node.type !== 'CallExpression') return;
     let keyArgIndex;
@@ -556,11 +661,126 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
     const literalKeys = new Set();
     collectKeyLiterals(argument, literalKeys);
     if (literalKeys.size > 0) return;
-    const forwarded = exemptForwardedParameters && unwrapExpression(argument)?.type === 'Identifier' &&
-      containingParameter(unwrapExpression(argument)) !== undefined;
-    if (!forwarded) resolveExpression(argument);
+    const key = unwrapExpression(argument);
+    const parameter = key?.type === 'Identifier' ? containingParameter(key) : undefined;
+    if (parameter && exemptForwardedParameters) return;
+    if (parameter && !parameterLiteralTypes(parameter) && isEscapingLocalizeForwarder(parameter)) return;
+    resolveExpression(argument);
   });
   return { found, closed };
+}
+
+/** One module's export bindings: exported name -> `{ local }` or `{ source, imported }` (re-export). */
+function exportBindings(program) {
+  const bindings = new Map();
+  for (const node of program.body) {
+    if (node.type !== 'ExportNamedDeclaration') continue;
+    const declaration = node.declaration;
+    if (declaration?.type === 'VariableDeclaration') {
+      for (const declarator of declaration.declarations) {
+        if (declarator.id?.type === 'Identifier') bindings.set(declarator.id.name, { local: declarator.id.name });
+      }
+    } else if (declaration?.id?.type === 'Identifier') {
+      bindings.set(declaration.id.name, { local: declaration.id.name });
+    }
+    for (const specifier of node.specifiers ?? []) {
+      const exported = specifier.exported?.name ?? specifier.exported?.value;
+      const local = specifier.local?.name ?? specifier.local?.value;
+      if (exported === undefined || local === undefined) continue;
+      bindings.set(exported, typeof node.source?.value === 'string' ? { source: node.source.value, imported: local } : { local });
+    }
+  }
+  return bindings;
+}
+
+/**
+ * Answers a linker request against one module: `value` resolves an exported constant's string
+ * literals, `type` an exported type alias's closed literal union, `param` the name of an exported
+ * function's parameter at `index`. Anything else is reported open/unknown.
+ */
+function resolveExportRequest(program, request, context) {
+  const binding = exportBindings(program).get(request.name);
+  if (binding?.source !== undefined) {
+    const target = context.linker.target(context.file, binding.source);
+    return target ? context.linker.exported(target, request.kind, binding.imported, request.index) : undefined;
+  }
+  const local = binding?.local;
+  if (request.kind === 'value') {
+    const values = local === undefined ? [] : context.declarations.get(local) ?? [];
+    if (values.length === 0) context.open();
+    for (const value of values) context.resolveExpression(value);
+    return context.result();
+  }
+  if (request.kind === 'type') {
+    if (local === undefined || !context.typeDeclarations.has(local)) return undefined;
+    const literals = context.stringLiteralTypes({ type: 'TSTypeReference', typeName: { type: 'Identifier', name: local } });
+    return literals?.length ? { literals } : undefined;
+  }
+  if (request.kind === 'param' && local !== undefined) {
+    const name = functionParameterName(program, local, request.index);
+    return name === undefined ? undefined : { name };
+  }
+  return undefined;
+}
+
+/** The name of parameter `index` of a top-level function (declaration or `const` initializer). */
+function functionParameterName(program, local, index) {
+  for (const node of program.body) {
+    const declaration = node.type === 'ExportNamedDeclaration' ? node.declaration : node;
+    let fn;
+    if (declaration?.type === 'FunctionDeclaration' && declaration.id?.name === local) fn = declaration;
+    else if (declaration?.type === 'VariableDeclaration') {
+      const init = unwrapExpression(declaration.declarations.find((declarator) => declarator.id?.name === local)?.init);
+      if (isFunctionNode(init)) fn = init;
+    }
+    if (fn) return parameterIdentifier(fn.params?.[index]);
+  }
+  return undefined;
+}
+
+/**
+ * Lets resolveDynamicLocalizeKeys() follow a relative import into another runtime source module.
+ * Requests are memoized per module and export; a request re-entered while it is being answered
+ * (an import cycle) is reported unknown, which keeps the requesting module open.
+ */
+function createModuleLinker(sourceRoot, sourceCache, catalogKeys) {
+  const programs = new Map();
+  const answers = new Map();
+  const program = (file) => {
+    if (programs.has(file)) return programs.get(file);
+    let parsed = null;
+    if (isRuntimeHelper(file, file, sourceRoot)) {
+      let source = sourceCache.get(file);
+      if (source === undefined) {
+        try {
+          source = readFileSync(file, 'utf8');
+          sourceCache.set(file, source);
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error;
+        }
+      }
+      if (source !== undefined) parsed = parseProgram(file, withoutGeneratedBlocks(source));
+    }
+    programs.set(file, parsed);
+    return parsed;
+  };
+  const linker = {
+    target(fromFile, specifier) {
+      return dependencyCandidates(fromFile, specifier).find((candidate) => program(candidate) !== null);
+    },
+    exported(file, kind, name, index) {
+      // The catalog-wide key union closes nothing: a parameter typed with it can receive any key.
+      if (kind === 'type' && file.endsWith(path.join('internal', 'localization-types.ts'))) return undefined;
+      const key = [kind, file, name, index ?? ''].join('\0');
+      if (answers.has(key)) return answers.get(key);
+      answers.set(key, undefined);
+      const parsed = program(file);
+      const answer = parsed ? resolveDynamicLocalizeKeys(parsed, catalogKeys, file, linker, { kind, name, index }) : undefined;
+      answers.set(key, answer);
+      return answer;
+    },
+  };
+  return linker;
 }
 
 /**
@@ -766,6 +986,7 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
   // Phase 1: walk the graph once, parsing each reachable module and recording whether any of them
   // needs the broad walk. Parsed programs are kept so phase 2 never re-parses.
   const programs = [];
+  const linker = createModuleLinker(sourceRoot, sourceCache, catalogKeys);
   let graphHasDynamicKey = false;
   const visitFile = async (file) => {
     if (visited.has(file) || !isRuntimeHelper(rootFile, file, sourceRoot)) return;
@@ -781,8 +1002,9 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
     const clean = withoutGeneratedBlocks(source);
     const program = parseProgram(file, clean);
     const dynamic = hasDynamicLocalizeKey(program, file);
-    // A dynamic key that resolves entirely to module-local literals needs no whole-graph walk.
-    const resolved = dynamic ? resolveDynamicLocalizeKeys(program, catalogKeys, file) : undefined;
+    // A dynamic key that resolves entirely to literals (module-local or through linked imports)
+    // needs no whole-graph walk.
+    const resolved = dynamic ? resolveDynamicLocalizeKeys(program, catalogKeys, file, linker) : undefined;
     programs.push({ file, program, dynamicKeys: resolved?.found });
     if (resolved && !resolved.closed) graphHasDynamicKey = true;
     for (const specifier of runtimeImports(program)) {

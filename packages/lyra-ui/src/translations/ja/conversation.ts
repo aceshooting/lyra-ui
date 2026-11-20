@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max}文字以内で入力してください。',
   feedbackSingleReasonDescription: '理由は最大1つ選択できます。',
   suggestionsLabel: 'おすすめのプロンプト',
+  model: 'モデル',
   selectModel: 'モデルを選択…',
   modelSelectNoModels: 'モデルがありません',
   modelSelectRequired: 'モデルを選択してください。',

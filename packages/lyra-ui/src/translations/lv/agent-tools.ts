@@ -167,6 +167,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Ievades marķieri',
   tokensOut: 'Izvades marķieri',
   cost: 'Izmaksas',
+  duration: 'Ilgums',
   spanWaterfall: 'Posmu laika skala',
   spanStartedAtOffset: 'sākts +{value}',
   compareResponseA: 'Atbilde A',

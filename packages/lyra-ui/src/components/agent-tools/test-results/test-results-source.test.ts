@@ -222,6 +222,28 @@ describe('test-results failure announcements', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]'));
     await waitUntil(() => [...document.querySelectorAll('[data-lr-live-region="polite"]')].some(node => node.textContent!.includes('Result page unavailable')));
   });
+
+  it('announces the provider\'s filtered count once a status-filter page settles, but not on mount', async () => {
+    const polite = () => [...document.querySelectorAll('[data-lr-live-region="polite"]')].map(node => node.textContent ?? '').join(' ');
+    const summary = { total: 3, passed: 2, failed: 1, skipped: 0, running: 0 };
+    const row = (id: string, status: 'passed' | 'failed', order = 0) => ({ key: JSON.stringify(['suite', id]), order,
+      value: { suiteId: 'suite', suiteName: 'Suite', test: { id, name: id, status } } });
+    let release!: () => void;
+    const source = provider(async ({ query }) => {
+      if (!query.statuses.length) return { total: 3, rows: [row('a', 'passed'), row('b', 'passed', 1), row('c', 'failed', 2)], summary };
+      await new Promise<void>((resolve) => { release = resolve; });
+      return { total: 1, rows: [row('c', 'failed')], summary };
+    });
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .dataSource=${source}></lr-test-results>`);
+    await ready(el);
+    expect(polite()).to.not.include('Showing');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-toggle"][data-status="failed"]')!.click();
+    await waitUntil(() => !!release, 'the filtered page is requested');
+    await el.updateComplete;
+    expect(polite(), 'nothing is counted before the filtered page settles').to.not.include('Showing');
+    release();
+    await waitUntil(() => polite().includes('Showing 1 of 3 tests.'), 'the settled filtered count is announced');
+  });
 });
 
 describe('test-results route separation', () => {

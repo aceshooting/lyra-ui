@@ -51,8 +51,8 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_toggleNavigation } from '../../../internal/default-strings/layout.generated.js';
-import { LYRA_DEFAULT_navigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_navigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_toggleNavigation } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraAppRailMode, LyraAppRailModeInput, LyraAppRailPreferredMode } from './app-rail-mode.js';

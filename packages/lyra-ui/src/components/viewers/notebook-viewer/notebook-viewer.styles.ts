@@ -105,7 +105,7 @@ export const styles = css`
     overflow: auto;
     ${interactiveTransition}
   }
-  /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control
+  /* no-pressed-state: raw-source is a <pre> scroll surface (a tab stop while it overflows), not a control
      -- the tint tells the pointer which cell it is about to scroll, and mousedown there starts a
      text selection rather than activating anything. */
   lr-virtual-list::part(raw-source):hover {

@@ -173,6 +173,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'الرموز الواردة',
   tokensOut: 'الرموز الصادرة',
   cost: 'التكلفة',
+  duration: 'المدة',
   spanWaterfall: 'المخطط الزمني للفترات',
   spanStartedAtOffset: 'بدأت عند +{value}',
   compareResponseA: 'الردّ أ',

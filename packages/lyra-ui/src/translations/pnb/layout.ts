@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'کمانڈاں',
   panelToggle: 'پینل ٹوگل کرو',
   dockPanelResize: 'پینل دا سائز بدلو',
+  navigation: 'راہنمائی',
   responsivePanel: 'پینل',
   breadcrumb: 'بریڈ کرمب',
   resizeDivider: 'پینل {a} تے پینل {b} دے وچکار دی وکھری پٹی دا سائز بدلو',

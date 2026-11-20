@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'အမိန့်များ',
   panelToggle: 'အကန့်ကို ဖွင့်/ပိတ်ရန်',
   dockPanelResize: 'ဘောင် အရွယ်အစားပြောင်းရန်',
+  navigation: 'လမ်းညွှန်မှု',
   responsivePanel: 'ဘောင်',
   breadcrumb: 'လမ်းကြောင်းညွှန်',
   resizeDivider: 'ဘောင် {a} နှင့် ဘောင် {b} ကြား ပိုင်းခြားမျဉ်း အရွယ်အစားပြောင်းရန်',

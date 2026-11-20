@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Paréntah',
   panelToggle: 'Ganti panél',
   dockPanelResize: 'Robah ukuran panel',
+  navigation: 'Napigasi',
   responsivePanel: 'Panel',
   breadcrumb: 'Runtuyan navigasi',
   resizeDivider: 'Robah ukuran pamisah antara panel {a} jeung panel {b}',

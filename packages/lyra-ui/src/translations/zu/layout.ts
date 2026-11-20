@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Imiyalo',
   panelToggle: 'Shintsha iphaneli',
   dockPanelResize: 'Shintsha usayizi wephaneli',
+  navigation: 'Ukuzulazula',
   responsivePanel: 'Iphaneli',
   breadcrumb: 'Umzila wokuzulazula',
   resizeDivider: 'Shintsha usayizi wesihlukanisi phakathi kwephaneli {a} nephaneli {b}',

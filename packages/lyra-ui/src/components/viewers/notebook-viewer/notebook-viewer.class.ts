@@ -1,3 +1,4 @@
+import { scrollRegion } from '../../../internal/scroll-region-directive.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
@@ -561,7 +562,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   the matched highlight's `id` equals `activeHighlightId`.
  * @csspart cell-gutter - The `In [n]`/`Out [n]` label column.
  * @csspart cell-source - A cell's source content.
- * @csspart raw-source - A horizontally scrollable raw-cell source surface.
+ * @csspart raw-source - A horizontally scrollable raw-cell source surface; a tab stop only while it
+ *   overflows, so a keyboard user can scroll it.
  * @csspart outputs - The wrapper around a code cell's outputs.
  * @csspart output - One output (`data-output-type`, `data-stream`).
  * @csspart output-error - Added alongside `output` on a stderr stream or an error output.
@@ -1289,7 +1291,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
                 @lr-line-activate=${this.stopOwnedEvent}
                 @lr-text-select=${this.stopOwnedEvent}
               ></lr-code-block>`
-            : html`<pre part="raw-source" tabindex="0">${joinSource(c.source)}</pre>`}
+            : html`<pre part="raw-source" ${scrollRegion({ role: false })}>${joinSource(c.source)}</pre>`}
         ${c.cell_type === 'code' && c.outputs?.length
           ? html`<div part="outputs">${c.outputs.map((o, i) => this.renderOutput(index, o, i))}</div>`
           : nothing}

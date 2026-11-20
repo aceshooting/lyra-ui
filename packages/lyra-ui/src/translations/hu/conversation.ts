@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Legfeljebb {max} karaktert használjon.',
   feedbackSingleReasonDescription: 'Legfeljebb egy okot válasszon.',
   suggestionsLabel: 'Javasolt promptok',
+  model: 'Modell',
   selectModel: 'Válasszon modellt…',
   modelSelectNoModels: 'Nincsenek modellek',
   modelSelectRequired: 'Válasszon modellt.',

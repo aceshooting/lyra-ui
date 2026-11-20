@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Kommandoar',
   panelToggle: 'Veksle panel',
   dockPanelResize: 'Endre storleik på panelet',
+  navigation: 'Navigasjon',
   responsivePanel: 'Panel',
   breadcrumb: 'Brødsmulesti',
   resizeDivider: 'Endre storleik på skiljelinja mellom panel {a} og panel {b}',

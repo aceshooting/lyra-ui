@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'စာလုံးရေ {max} သို့မဟုတ် ထိုထက်နည်းစွာ အသုံးပြုပါ။',
   feedbackSingleReasonDescription: 'အကြောင်းပြချက် အများဆုံးတစ်ခု ရွေးပါ။',
   suggestionsLabel: 'အကြံပြုထားသော prompt များ',
+  model: 'မော်ဒယ်',
   selectModel: 'မော်ဒယ်တစ်ခု ရွေးပါ…',
   modelSelectNoModels: 'မော်ဒယ် မရှိပါ',
   modelSelectRequired: 'မော်ဒယ်တစ်ခု ရွေးပါ။',

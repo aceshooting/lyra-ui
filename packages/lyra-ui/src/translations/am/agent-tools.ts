@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'የግቤት ቶከኖች',
   tokensOut: 'የውጤት ቶከኖች',
   cost: 'ወጪ',
+  duration: 'ቆይታ',
   spanWaterfall: 'የክፍተት የጊዜ ሰሌዳ',
   spanStartedAtOffset: 'በ+{value} ተጀምሯል',
   compareResponseA: 'ምላሽ A',

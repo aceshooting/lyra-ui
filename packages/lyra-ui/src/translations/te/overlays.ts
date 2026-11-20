@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'పాప్‌ఓవర్',
   rating: 'రేటింగ్',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'మూసివేయండి: {snippet}',

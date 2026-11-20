@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Tokeni zinazoingia',
   tokensOut: 'Tokeni zinazotoka',
   cost: 'Gharama',
+  duration: 'Muda',
   spanWaterfall: 'Ratiba ya vipindi',
   spanStartedAtOffset: 'ilianza baada ya +{value}',
   compareResponseA: 'Jibu A',

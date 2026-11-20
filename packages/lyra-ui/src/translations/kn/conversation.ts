@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} ಅಥವಾ ಕಡಿಮೆ ಅಕ್ಷರಗಳನ್ನು ಬಳಸಿ.',
   feedbackSingleReasonDescription: 'ಹೆಚ್ಚೆಂದರೆ ಒಂದು ಕಾರಣವನ್ನು ಆಯ್ಕೆಮಾಡಿ.',
   suggestionsLabel: 'ಸೂಚಿಸಿದ ಪ್ರಾಂಪ್ಟ್‌ಗಳು',
+  model: 'ಮಾದರಿ',
   selectModel: 'ಮಾದರಿ ಆಯ್ಕೆಮಾಡಿ…',
   modelSelectNoModels: 'ಮಾದರಿಗಳಿಲ್ಲ',
   modelSelectRequired: 'ಮಾದರಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.',

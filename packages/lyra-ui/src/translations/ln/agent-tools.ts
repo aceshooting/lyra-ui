@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Ba token oyo ekoti',
   tokensOut: 'Ba token oyo ebimi',
   cost: 'Coût',
+  duration: 'Durée',
   spanWaterfall: 'Calendrier ya span',
   spanStartedAtOffset: 'ebandaki na +{value}',
   compareResponseA: 'Eyano A',

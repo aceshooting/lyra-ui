@@ -167,6 +167,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Ulazni tokeni',
   tokensOut: 'Izlazni tokeni',
   cost: 'Trošak',
+  duration: 'Trajanje',
   spanWaterfall: 'Vremenska linija raspona',
   spanStartedAtOffset: 'započeto u +{value}',
   compareResponseA: 'Odgovor A',

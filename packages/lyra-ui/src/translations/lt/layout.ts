@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Komandos',
   panelToggle: 'Perjungti skydelį',
   dockPanelResize: 'Keisti skydelio dydį',
+  navigation: 'Naršymas',
   responsivePanel: 'Skydelis',
   breadcrumb: 'Naršymo kelias',
   resizeDivider: 'Keisti skirtuko tarp skydelių {a} ir {b} padėtį',

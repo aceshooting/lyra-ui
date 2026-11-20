@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'கட்டளைகள்',
   panelToggle: 'பலகத்தைக் காட்டு/மறை',
   dockPanelResize: 'பலகை அளவை மாற்று',
+  navigation: 'வழிசெலுத்தல்',
   responsivePanel: 'பலகை',
   breadcrumb: 'வழித்தடம்',
   resizeDivider: 'பலகை {a} மற்றும் {b} இடையேயுள்ள பிரிப்பியின் அளவை மாற்று',

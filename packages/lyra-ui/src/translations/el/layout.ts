@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Εντολές',
   panelToggle: 'Εναλλαγή πλαισίου',
   dockPanelResize: 'Αλλαγή μεγέθους πλαισίου',
+  navigation: 'Πλοήγηση',
   responsivePanel: 'Πλαίσιο',
   breadcrumb: 'Διαδρομή πλοήγησης',
   resizeDivider: 'Αλλαγή μεγέθους διαχωριστικού μεταξύ του πλαισίου {a} και του πλαισίου {b}',

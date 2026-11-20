@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'ପପଓଭର୍',
   rating: 'ମୂଲ୍ୟାୟନ',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'ବନ୍ଦ କରନ୍ତୁ: {snippet}',

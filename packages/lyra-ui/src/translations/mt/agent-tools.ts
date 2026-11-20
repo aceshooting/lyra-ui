@@ -171,6 +171,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Tokens deħlin',
   tokensOut: 'Tokens ħerġin',
   cost: 'Spiża',
+  duration: 'Tul',
   spanWaterfall: 'Kronoloġija tal-spans',
   spanStartedAtOffset: 'beda f’+{value}',
   compareResponseA: 'Tweġiba A',

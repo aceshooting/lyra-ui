@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'ان پٽ ٽوڪن',
   tokensOut: 'آئوٽ پٽ ٽوڪن',
   cost: 'خرچ',
+  duration: 'مدو',
   spanWaterfall: 'اسپين جي وقتي ترتيب',
   spanStartedAtOffset: '+{value} تي شروع ٿيو',
   compareResponseA: 'جواب A',

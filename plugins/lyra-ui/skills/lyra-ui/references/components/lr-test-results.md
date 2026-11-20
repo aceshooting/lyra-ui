@@ -132,7 +132,8 @@ row's disclosure.
 
 **Events:** cancelable `lr-toggle-request` (`detail: { suiteId, testId, expanded }`, the requested state), `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), cancelable `lr-filter-request` (`detail: { statuses: TestStatus[] }`, the requested filter set; `preventDefault()` keeps the current filter), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
-component updates its own `statusFilter` first, then emits). A filter change announces how many tests remain shown,
+component updates its own `statusFilter` first, then emits). A filter change announces how many tests remain shown
+(with `dataSource`, once the filtered page settles: its `total` out of the whole-run `summary.total`),
 and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
 detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
 globally unique. Manual expansion state is keyed by that same suite+test pair.

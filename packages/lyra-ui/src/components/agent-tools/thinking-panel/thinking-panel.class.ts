@@ -11,6 +11,7 @@ import { formatShortDuration, safeDurationMs } from '../../../internal/duration.
 import { literalSetConverter, trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -128,8 +129,8 @@ export interface LyraThinkingPanelEventMap {
  * @csspart duration - The formatted duration / "Thinking…" placeholder, when shown.
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart body - The wrapper around the default slot, `hidden` while
- * collapsed. Independently keyboard-focusable (`tabindex="0"`, `role="group"`
- * named from `label`) since it's its own capped-height scrollable region.
+ * collapsed; a `role="group"` named from `label`. While its content overflows the capped height
+ * it is its own tab stop (`tabindex="0"`) so a keyboard user can scroll it; a short body adds none.
  * @cssprop [--lr-thinking-panel-max-block-size=var(--lr-size-16rem)] - Cap on how tall the
  *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  * @cssprop [--lr-thinking-panel-pending-color=var(--lr-color-brand)] - Live pending-state color.
@@ -354,15 +355,20 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     return this.mode === 'live' ? { text: this.localize('thinking'), pending: true } : null;
   }
 
-  // `[part="body"]` is `tabindex="0"` because it's a capped-height,
-  // independently-scrollable region -- with no other focusable content of
-  // its own (e.g. plain text, or a non-interactive `<lr-streaming-text>`),
-  // it would otherwise be unreachable by keyboard, same reasoning
-  // code-block.class.ts's and virtual-list.class.ts's own identical `[part="body"]`/
-  // `[part="base"]` tabindex document. `role="group"` (rather than a page
-  // landmark role) plus `aria-label` gives it an accessible name without
-  // claiming navigation significance for what is, structurally, just one
-  // part of a larger message.
+  // `[part="body"]` is a capped-height, independently-scrollable region. With no other focusable
+  // content of its own (plain text, or a non-interactive `<lr-streaming-text>`) an overflowing
+  // transcript would be unreachable by keyboard, so it takes `tabindex="0"` while -- and only
+  // while -- it overflows. `role="group"` (rather than a page landmark role) plus `aria-label`
+  // gives it an accessible name without claiming navigation significance for what is,
+  // structurally, just one part of a larger message, so the region keeps that role.
+  constructor() {
+    super();
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+      return [el && { el, role: false }];
+    });
+  }
+
   override render(): TemplateResult {
     const duration = this.durationDisplay;
     // Explicit property overrides outrank catalogs, including when they equal the built-in English
@@ -391,7 +397,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
           id=${this.bodyId}
           role="group"
           aria-label=${hostAriaLabel(this) ?? label}
-          tabindex="0"
           ?hidden=${!this.expanded}
           @scroll=${this.onScroll}
         >

@@ -125,7 +125,8 @@ function select(features: unknown, rules: readonly MapHitRule[], existing: reado
   }
   return winningRule ? Object.freeze({ status: 'hit', hit: snapshot(winner, winningRule), featureIndex }) : status('none');
 }
-/** The engine's order breaks ties. Geometry/visibility is owned by its rendered-feature query. */
+/** The engine's order breaks ties. Geometry/visibility is owned by its rendered-feature query.
+ *  @internal Source-test helper; not emitted into the built package. */
 export function selectMapHit(features: unknown, rules: unknown, existingLayerIds: unknown): MapHitResult {
   const admitted = admitMapHitRules(rules); if (admitted.status !== 'ready') return invalid('rules');
   const layers = admittedLayers(existingLayerIds); if (!layers) return invalid('layers');

@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'Cửa sổ bật lên',
   rating: 'Đánh giá',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Đóng: {snippet}',

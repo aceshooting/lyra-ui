@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Mga token na input',
   tokensOut: 'Mga token na output',
   cost: 'Gastos',
+  duration: 'Tagal',
   spanWaterfall: 'Daloy ng mga span',
   spanStartedAtOffset: 'nagsimula sa +{value}',
   compareResponseA: 'Tugon A',

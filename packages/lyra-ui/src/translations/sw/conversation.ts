@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Tumia vibambo {max} au vichache zaidi.',
   feedbackSingleReasonDescription: 'Chagua sababu moja tu au usichague yoyote.',
   suggestionsLabel: 'Mapendekezo ya maagizo',
+  model: 'Muundo',
   selectModel: 'Chagua muundo…',
   modelSelectNoModels: 'Hakuna miundo',
   modelSelectRequired: 'Chagua muundo.',

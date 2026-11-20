@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: '명령어',
   panelToggle: '패널 전환',
   dockPanelResize: '패널 크기 조정',
+  navigation: '탐색',
   responsivePanel: '패널',
   breadcrumb: '이동경로',
   resizeDivider: '패널 {a}와 패널 {b} 사이의 크기 조정 구분자',

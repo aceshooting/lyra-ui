@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Gumamit ng {max} character o mas kaunti.',
   feedbackSingleReasonDescription: 'Pumili ng hanggang isang dahilan.',
   suggestionsLabel: 'Mga iminumungkahing prompt',
+  model: 'Modelo',
   selectModel: 'Pumili ng modelo…',
   modelSelectNoModels: 'Walang modelo',
   modelSelectRequired: 'Pumili ng modelo.',

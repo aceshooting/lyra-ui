@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} ta yoki undan kam belgi ishlating.',
   feedbackSingleReasonDescription: 'Ko‘pi bilan bitta sabab tanlang.',
   suggestionsLabel: 'Tavsiya etilgan promptlar',
+  model: 'Model',
   selectModel: 'Modelni tanlang…',
   modelSelectNoModels: 'Modellar yoʻq',
   modelSelectRequired: 'Modelni tanlang.',

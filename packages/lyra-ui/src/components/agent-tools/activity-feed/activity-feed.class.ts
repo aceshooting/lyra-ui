@@ -23,6 +23,7 @@ import {
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatTimeOfDay, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { LyraVirtualList, LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './activity-feed.styles.js';
@@ -157,6 +158,8 @@ function variantDotPart(variant: LyraVariant): string {
  *   (`post-hoc`).
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart body - The scrollable region containing the entries (or the internal virtual-list).
+ *   While the plain list overflows its capped height it is a tab stop so a keyboard user can
+ *   scroll it; a short list adds none, and the virtual list owns its own keyboard target.
  * @csspart entry - One entry row; carries `data-variant`.
  * @csspart entry-icon - The literal `icon` hint, or a variant dot when unset.
  * @csspart variant-dot - The variant dot rendered inside `entry-icon` when the entry sets no
@@ -684,6 +687,16 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return loss ? this.localize('activityFeedInputLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(loss.retained), total: getNumberFormat(this.effectiveLocale).format(loss.source) }) : '';
   }
 
+  constructor() {
+    super();
+    // The plain list keeps its own `role="list"` and name; it only gains a tab stop while it
+    // overflows. The virtual list is its own scroller and keyboard target.
+    trackScrollRegions(this, () => {
+      const el = this.renderRoot.querySelector<HTMLElement>('[part="body"]:not([data-virtualized])');
+      return [el && { el, role: false }];
+    });
+  }
+
   override render(): TemplateResult {
     const entries = this.normalizedEntries;
     const fallbackLabel = this.localize('activityFeedLabel');
@@ -714,7 +727,6 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           part="body"
           id=${this.bodyId}
           role=${virtualized ? nothing : 'list'}
-          tabindex=${virtualized ? nothing : '0'}
           aria-label=${virtualized ? nothing : listAriaLabel}
           ?hidden=${!this.expanded}
           ?data-virtualized=${virtualized}

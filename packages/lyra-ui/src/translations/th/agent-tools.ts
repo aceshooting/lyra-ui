@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'โทเค็นขาเข้า',
   tokensOut: 'โทเค็นขาออก',
   cost: 'ค่าใช้จ่าย',
+  duration: 'ระยะเวลา',
   spanWaterfall: 'ไทม์ไลน์ช่วง',
   spanStartedAtOffset: 'เริ่มที่ +{value}',
   compareResponseA: 'คำตอบ A',

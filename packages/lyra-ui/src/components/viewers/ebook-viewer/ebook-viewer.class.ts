@@ -4,13 +4,13 @@ import { createRef, ref, type Ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DEFAULT_CANVAS_COLOR } from '../../../internal/canvas-color.js';
-import {
-  LyraUserFacingError,
-  readResponseArrayBuffer,
-  resolveOwnerFetchTarget,
-} from '../../../internal/resource-loader.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
-import { discardBody } from '../../../internal/viewer-source-controller.js';
+import {
+  ViewerSourceController,
+  ViewerSourceUrlNotAllowedError,
+  type ViewerSourceToken,
+} from '../../../internal/viewer-source-controller.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -33,10 +33,7 @@ import type {
   TextSelectRect,
 } from '../../../internal/document-anchors.js';
 import { textQuoteContextScore } from '../../../internal/document-anchors.js';
-import {
-  getEpubJs,
-  type EpubBook,
-} from './ebook-loader.js';
+import { getEpubJs } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { guardEpubUnloadListener } from './epub-unload-guard.js';
 import { styles } from './ebook-viewer.styles.js';
@@ -613,6 +610,15 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private paintedHighlightCfis: string[] = [];
   private searchAnnotationCfi?: string;
   private readonly announcements = new ViewerAnnouncementController(this);
+  // The fetch, URL gate, abort and body cleanup. `generation` still guards everything opened from
+  // the response -- the rendition, its events, search and anchors -- because those outlive it.
+  private readonly source = new ViewerSourceController(this, {
+    load: (response, token) => this.openBook(response, token),
+    onError: (error) => {
+      if (error instanceof ViewerSourceUrlNotAllowedError) this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
+      else this.failCurrentLoad(error);
+    },
+  });
 
   constructor() {
     super();
@@ -779,44 +785,27 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
-    const signal = this.beginAbortableLoad();
+    ++this.generation;
     this.teardown();
     if (!this.src?.trim()) {
+      this.source.cancel();
       this.ebookState = { kind: 'idle' };
       return;
     }
-    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
-    if (!fetchTarget) {
-      this.failWithLocalizedMessage(() => this.localize('documentPreviewUrlNotAllowed'));
-      return;
-    }
     this.ebookState = { kind: 'loading' };
-    let data: ArrayBuffer | undefined;
-    let factory: ((data: ArrayBuffer) => EpubBook) | null;
-    try {
-      [data, factory] = await Promise.all([
-        fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined).then((response) => {
-          if (!this.isCurrentLoad(generation, fetchTarget.view) || signal?.aborted) {
-            discardBody(response);
-            return undefined;
-          }
-          if (!response.ok) {
-            discardBody(response);
-            throw new Error(`${response.status} ${response.statusText}`);
-          }
-          return readResponseArrayBuffer(response);
-        }),
-        getEpubJs(),
-      ]);
-      if (!data || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      await assertEpubArchiveWithinLimits(data, undefined, undefined, { signal });
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
-    } catch (error) {
-      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
-      this.failCurrentLoad(error);
-      return;
-    }
+    await this.source.begin(this.src);
+  }
+
+  /** Opens the fetched archive as the current book. Runs only for the controller's current, ok
+   *  response; the optional peer loads alongside the body read, so a failed fetch never imports it. */
+  private async openBook(response: Response, token: ViewerSourceToken): Promise<void> {
+    const generation = this.generation;
+    const ownerView = token.view;
+    const { signal } = token;
+    const [data, factory] = await Promise.all([this.source.readArrayBuffer(response), getEpubJs()]);
+    if (this.source.isStale(token) || !this.isCurrentLoad(generation, ownerView)) return;
+    await assertEpubArchiveWithinLimits(data, undefined, undefined, { signal });
+    if (this.source.isStale(token) || !this.isCurrentLoad(generation, ownerView)) return;
     if (!factory) {
       this.failWithLocalizedMessage(() => this.localize('ebookViewerMissingLibrary'));
       return;
@@ -837,21 +826,21 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       const rendition = normalizeRendition(rawRendition);
       if (!rendition) throw new Error('EPUB peer returned an unusable rendition.');
       await book.ready;
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) {
+      if (!this.isCurrentLoad(generation, ownerView)) {
         this.destroyBook(book);
         candidateBook = undefined;
         return;
       }
       book.getNavigation();
       await rendition.display(this.location || undefined);
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) {
+      if (!this.isCurrentLoad(generation, ownerView)) {
         this.destroyBook(book);
         candidateBook = undefined;
         return;
       }
       this.titleChapterFrames();
       rendition.on('relocated', (loc: unknown) => {
-        if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition)) return;
+        if (!this.isCurrentBookRendition(generation, ownerView, book, rendition)) return;
         this.titleChapterFrames();
         const start = inheritedDataValue(loc, 'start');
         const cfi = inheritedDataValue(start, 'cfi');
@@ -867,7 +856,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         }
       });
       rendition.on('selected', (cfiRange: string, contents: unknown) => {
-        if (!this.isCurrentBookRendition(generation, fetchTarget.view, book, rendition) || typeof cfiRange !== 'string') return;
+        if (!this.isCurrentBookRendition(generation, ownerView, book, rendition) || typeof cfiRange !== 'string') return;
         try {
           const contentsWindow = inheritedDataValue(contents, 'window') as Window | undefined;
           const getSelection = savedCallable(contentsWindow, 'getSelection');
@@ -892,7 +881,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.repaintAnnotations();
     } catch (error) {
       this.destroyBook(candidateBook);
-      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (this.source.isStale(token) || !this.isCurrentLoad(generation, ownerView)) return;
       this.failCurrentLoad(error);
     }
   }

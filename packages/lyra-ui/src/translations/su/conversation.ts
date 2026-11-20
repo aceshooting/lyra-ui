@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Paké paling loba {max} karakter.',
   feedbackSingleReasonDescription: 'Pilih paling loba hiji alesan.',
   suggestionsLabel: 'Saran prompt',
+  model: 'Modél',
   selectModel: 'Pilih modél…',
   modelSelectNoModels: 'Teu aya modél',
   modelSelectRequired: 'Punten pilih modél.',

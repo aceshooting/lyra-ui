@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Amri',
   panelToggle: 'Badilisha mwonekano wa paneli',
   dockPanelResize: 'Badilisha ukubwa wa kidirisha',
+  navigation: 'Urambazaji',
   responsivePanel: 'Kidirisha',
   breadcrumb: 'Njia ya urambazaji',
   resizeDivider: 'Badilisha ukubwa wa kigawanya kati ya vidirisha {a} na {b}',

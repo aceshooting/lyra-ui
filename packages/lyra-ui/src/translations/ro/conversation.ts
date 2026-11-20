@@ -66,6 +66,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Folosește cel mult {max} caractere.',
   feedbackSingleReasonDescription: 'Alege cel mult un motiv.',
   suggestionsLabel: 'Prompturi sugerate',
+  model: 'Model',
   selectModel: 'Selectează un model…',
   modelSelectNoModels: 'Niciun model',
   modelSelectRequired: 'Alege un model.',

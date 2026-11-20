@@ -67,6 +67,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Použite najviac {max} znakov.',
   feedbackSingleReasonDescription: 'Vyberte najviac jeden dôvod.',
   suggestionsLabel: 'Navrhované prompty',
+  model: 'Model',
   selectModel: 'Vyberte model…',
   modelSelectNoModels: 'Žiadne modely',
   modelSelectRequired: 'Vyberte model.',

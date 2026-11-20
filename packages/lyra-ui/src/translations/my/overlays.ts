@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'ပေါ်လာသော အကွက်',
   rating: 'အဆင့်သတ်မှတ်ချက်',
   calloutAnnouncementWithContext: '{context} — {content}',
   closeWithContext: 'ပိတ်ရန်: {snippet}',

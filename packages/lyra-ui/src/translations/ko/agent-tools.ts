@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: '입력 토큰',
   tokensOut: '출력 토큰',
   cost: '비용',
+  duration: '소요 시간',
   spanWaterfall: '스팬 타임라인',
   spanStartedAtOffset: '+{value}에 시작됨',
   compareResponseA: '응답 A',

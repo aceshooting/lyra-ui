@@ -163,6 +163,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: '入力トークン',
   tokensOut: '出力トークン',
   cost: 'コスト',
+  duration: '所要時間',
   spanWaterfall: 'スパンのタイムライン',
   spanStartedAtOffset: '+{value} に開始',
   compareResponseA: '回答 A',

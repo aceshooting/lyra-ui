@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'आगत टोकन',
   tokensOut: 'निर्गत टोकन',
   cost: 'लागत',
+  duration: 'अवधि',
   spanWaterfall: 'स्प्यान समयरेखा',
   spanStartedAtOffset: '+{value} मा सुरु भयो',
   compareResponseA: 'प्रतिक्रिया A',

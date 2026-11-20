@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Командалар',
   panelToggle: 'Панельді ауыстыру',
   dockPanelResize: 'Панель өлшемін өзгерту',
+  navigation: 'Навигация',
   responsivePanel: 'Панель',
   breadcrumb: 'Навигация тізбегі',
   resizeDivider: 'Панельдер арасындағы бөлгіштің өлшемін өзгерту: {a} және {b}',

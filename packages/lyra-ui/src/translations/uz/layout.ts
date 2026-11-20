@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Buyruqlar',
   panelToggle: 'Panelni almashtirish',
   dockPanelResize: 'Panel oʻlchamini oʻzgartirish',
+  navigation: 'Navigatsiya',
   responsivePanel: 'Panel',
   breadcrumb: 'Navigatsiya yoʻli',
   resizeDivider: '{a} va {b} panellari orasidagi ajratgich oʻlchamini oʻzgartirish',

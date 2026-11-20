@@ -186,12 +186,18 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   `<lr-thinking-panel>`'s default slot) can listen for it to drive auto-scroll; see that
  *   component's own docs.
  * @csspart content - The wrapper around the rendered (or plain-text
- *   fallback) output; respects `max-height`.
+ *   fallback) output; respects `max-height`. A non-empty document is always a tab stop
+ *   (`role="document"`, `tabindex="0"`), deliberately not gated on overflow: it is the reading
+ *   target that anchor links, find-in-content and screen-reader browse mode land on, and a
+ *   streaming reply would otherwise gain and lose its stop as tokens arrive.
  * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by
  *   `heading-offset`).
  * @csspart paragraph - Every rendered `<p>`.
  * @csspart list - Every rendered `<ul>`/`<ol>`.
- * @csspart code-block - Every rendered fenced/indented `<pre>`.
+ * @csspart code-block - Every rendered fenced/indented `<pre>`. Each is a tab stop whether or
+ *   not it overflows, like `table-wrapper`: both come from sanitized HTML re-rendered on every
+ *   streamed chunk, where a per-block overflow measurement would re-run layout per token and
+ *   move the reader's tab order under them.
  * @csspart code-block-header - Opt-in language and copy row above a built-in code block.
  * @csspart code-block-language - The source language label in the optional code-block header.
  * @csspart code-block-copy - The native source-copy button in the optional code-block header.

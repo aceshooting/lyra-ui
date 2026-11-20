@@ -27,7 +27,8 @@ export function encodeTileVertex(longitude: number, latitude: number, altitude: 
   return [(worldX * size - tile.x) * TILE_EXTENT, (worldY * size - tile.y) * TILE_EXTENT, altitude];
 }
 
-/** Inverse of `encodeTileVertex()`, returning the unwrapped longitude. */
+/** Inverse of `encodeTileVertex()`, returning the unwrapped longitude.
+ *  @internal Source-test helper; not emitted into the built package. */
 export function decodeTileVertex(x: number, y: number, altitude: number,
   tile: TileOrigin): readonly [number, number, number] {
   const size = 2 ** tile.z;

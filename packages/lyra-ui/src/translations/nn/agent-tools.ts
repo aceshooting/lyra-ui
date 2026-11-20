@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Inndatatoken',
   tokensOut: 'Utdatatoken',
   cost: 'Kostnad',
+  duration: 'Varigheit',
   spanWaterfall: 'Tidslinje for spenn',
   spanStartedAtOffset: 'starta ved +{value}',
   compareResponseA: 'Svar A',

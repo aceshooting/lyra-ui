@@ -118,6 +118,7 @@ export const LYRA_DEFAULT_contextInspectorTruncatedCount: LyraMessage = {
   };
 export const LYRA_DEFAULT_cost: LyraMessage = 'Cost';
 export const LYRA_DEFAULT_deny: LyraMessage = 'Deny';
+export const LYRA_DEFAULT_duration: LyraMessage = 'Duration';
 export const LYRA_DEFAULT_edit: LyraMessage = 'Edit';
 export const LYRA_DEFAULT_evalDatasetAddExample: LyraMessage = 'Add example';
 export const LYRA_DEFAULT_evalDatasetColumnExpectedOutput: LyraMessage = 'Expected output';

@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'Orduithe',
   panelToggle: 'Scoránaigh an painéal',
   dockPanelResize: 'Athraigh méid an phainéil',
+  navigation: 'Nascleanúint',
   responsivePanel: 'Painéal',
   breadcrumb: 'Conair nascleanúna',
   resizeDivider: 'Athraigh méid an roinnteora idir painéal {a} agus painéal {b}',

@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Yi amfani da haruffa {max} ko ƙasa da haka.',
   feedbackSingleReasonDescription: 'Zaɓi dalili guda ɗaya ko kada ka zaɓi ko ɗaya.',
   suggestionsLabel: 'Shawarwarin umarni',
+  model: 'Samfuri',
   selectModel: 'Zaɓi samfuri…',
   modelSelectNoModels: 'Babu samfura',
   modelSelectRequired: 'Da fatan zaɓi samfuri.',

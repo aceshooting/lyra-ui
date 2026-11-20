@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Tokens wey enter',
   tokensOut: 'Tokens wey come out',
   cost: 'How much e cost',
+  duration: 'Time wey e take',
   spanWaterfall: 'Timeline for spans',
   spanStartedAtOffset: 'e start for +{value}',
   compareResponseA: 'Reply A',

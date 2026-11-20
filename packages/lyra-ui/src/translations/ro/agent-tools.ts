@@ -167,6 +167,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Tokenuri intrare',
   tokensOut: 'Tokenuri ieșire',
   cost: 'Cost',
+  duration: 'Durată',
   spanWaterfall: 'Cronologia span-urilor',
   spanStartedAtOffset: 'început la +{value}',
   compareResponseA: 'Răspuns A',

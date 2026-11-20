@@ -171,6 +171,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Comharthaí isteach',
   tokensOut: 'Comharthaí amach',
   cost: 'Costas',
+  duration: 'Fad',
   spanWaterfall: 'Amlíne na réisí',
   spanStartedAtOffset: 'tosaithe ag +{value}',
   compareResponseA: 'Freagra A',

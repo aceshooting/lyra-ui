@@ -66,6 +66,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Izmantojiet ne vairāk kā {max} rakstzīmes.',
   feedbackSingleReasonDescription: 'Izvēlieties ne vairāk kā vienu iemeslu.',
   suggestionsLabel: 'Ieteiktās uzvednes',
+  model: 'Modelis',
   selectModel: 'Atlasiet modeli…',
   modelSelectNoModels: 'Nav modeļu',
   modelSelectRequired: 'Lūdzu, izvēlieties modeli.',

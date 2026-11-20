@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} அல்லது அதற்கும் குறைவான எழுத்துகளைப் பயன்படுத்தவும்.',
   feedbackSingleReasonDescription: 'அதிகபட்சம் ஒரு காரணத்தைத் தேர்ந்தெடுக்கவும்.',
   suggestionsLabel: 'பரிந்துரைக்கப்பட்ட கோரிக்கைகள்',
+  model: 'மாதிரி',
   selectModel: 'ஒரு மாதிரியைத் தேர்ந்தெடு…',
   modelSelectNoModels: 'மாதிரிகள் இல்லை',
   modelSelectRequired: 'ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.',

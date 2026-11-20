@@ -42,7 +42,7 @@ import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
@@ -202,11 +202,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    duration: LYRA_DEFAULT_duration,
     engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
     engine3dError: LYRA_DEFAULT_engine3dError,
     engine3dLoading: LYRA_DEFAULT_engine3dLoading,
@@ -215,12 +210,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
     engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
     engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    model: LYRA_DEFAULT_model,
-    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     panoramaHotspotsLabel: LYRA_DEFAULT_panoramaHotspotsLabel,
     panoramaInstructions: LYRA_DEFAULT_panoramaInstructions,
@@ -228,8 +218,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
     previous: LYRA_DEFAULT_previous,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     videoCaptions: LYRA_DEFAULT_videoCaptions,
     videoCaptionsOff: LYRA_DEFAULT_videoCaptionsOff,
     videoEnterFullscreen: LYRA_DEFAULT_videoEnterFullscreen,

@@ -2348,7 +2348,7 @@ tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted
 `cell-highlighted-neutral`, `cell-highlight-active` (added alongside `cell-highlighted`/
 `cell-highlighted-<tone>` when the matched highlight's `id` equals `activeHighlightId`),
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
-scrollable preformatted surface for a raw cell), `outputs`, `output`
+scrollable preformatted surface for a raw cell, a tab stop only while it overflows), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `output-stream-label` (visually hidden "Error output" prefix on a stderr stream),
 `output-loading` (visually hidden loading text while sanitized output resolves),

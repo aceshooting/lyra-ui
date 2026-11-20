@@ -30,16 +30,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   // them. The bar renders each control by tag name only and no longer imports any of them, so its
   // graph reaches nothing but its own keys and the list became stale in full.
 
-  // Kbd forwards a closed set of kbd* map values through a localize callback. The generic values
-  // below are incidental literals in its own remaining a11y helper graph, not keys the callback
-  // can receive. 'progress' dropped: no longer reachable since LyraElement stopped statically
-  // importing form-control-labels.js (this component is not form-associated); 'popover' is a
-  // genuinely resolvable key here (via the same closed dynamic map), not an incidental literal,
-  // so it needs no exclusion.
-  'src/components/overlays/kbd/kbd.class.ts': Object.freeze([
-    'collapse',
-    'details',
-    'map',
-    'open',
-  ]),
+  // `lr-kbd` needed collapse/details/map/open here while its graph stayed open; its forwarded
+  // kbd* map now resolves to a closed key set, so the call-scoped walk no longer admits them.
 });

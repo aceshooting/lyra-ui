@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'Sisendtokenid',
   tokensOut: 'Väljundtokenid',
   cost: 'Kulu',
+  duration: 'Kestus',
   spanWaterfall: 'Vahemike ajajoon',
   spanStartedAtOffset: 'algas +{value}',
   compareResponseA: 'Vastus A',

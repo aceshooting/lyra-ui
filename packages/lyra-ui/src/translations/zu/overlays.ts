@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'Iwindi elivelayo',
   rating: 'Isilinganiso',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Vala: {snippet}',

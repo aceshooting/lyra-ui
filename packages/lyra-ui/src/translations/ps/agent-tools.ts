@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'دننه ټوکنونه',
   tokensOut: 'بهرني ټوکنونه',
   cost: 'لګښت',
+  duration: 'موده',
   spanWaterfall: 'د برخو مهالوېش',
   spanStartedAtOffset: 'په +{value} پیل شو',
   compareResponseA: 'ځواب A',

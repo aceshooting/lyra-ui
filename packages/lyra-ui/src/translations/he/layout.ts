@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'פקודות',
   panelToggle: 'החלף מצב לוח',
   dockPanelResize: 'שנה את גודל הלוח',
+  navigation: 'ניווט',
   responsivePanel: 'חלונית',
   breadcrumb: 'פירורי לחם',
   resizeDivider: 'שנה את גודל המפריד בין הלוח {a} ללוח {b}',

@@ -12,7 +12,7 @@ import { layoutScale } from '../../../internal/layout-scale.js';
 import { isRovingTargetAvailable, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 export type { LyraGraphNodeRenderContext, LyraGraphNodeMesh, LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
-import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
+import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail, type Engine3dMessageKey } from '../../../internal/engine-3d.js';
 import type { LyraGraphColumns } from '../../../internal/typed-columns.js';
 import { admitGraphEngineColumns, type GraphEngineColumns } from './graph-engine-columns.js';
 import { graphWebglCamera } from './graph-webgl-engine.js';
@@ -123,7 +123,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphCustomNodesError, LYRA_DEFAULT_graphCustomNodesUnavailable, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphGlowUnavailable, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdgeCount, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodeCount, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceShownEdges, LYRA_DEFAULT_graphSourceShownNodes, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdgeCount, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodeCount, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceShownEdges, LYRA_DEFAULT_graphSourceShownNodes, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Complete host-owned node/edge catalog with bounded graph scenes. Source edges require stable IDs. */
@@ -553,10 +553,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
     engine3dError: LYRA_DEFAULT_engine3dError,
     engine3dLoading: LYRA_DEFAULT_engine3dLoading,
@@ -613,19 +609,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphView3d: LYRA_DEFAULT_graphView3d,
     graphViewList: LYRA_DEFAULT_graphViewList,
     largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
-    largeDataLimit: LYRA_DEFAULT_largeDataLimit,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
     next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
@@ -1554,7 +1545,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.emit('lr-engine-fallback', detail);
       this.announcements.announceAssertive(`${this.localize(ENGINE_3D_REASON_MESSAGE[detail.reason])} ${this.localize(ENGINE_3D_SHOWING_MESSAGE[detail.to])}`);
     },
-    engineMessage: (key) => this.localize(key),
+    // Annotated so the default-string slice resolves the closed key set this lazily loaded
+    // controller can request, rather than every literal in the graph.
+    engineMessage: (key: Engine3dMessageKey) => this.localize(key),
     nodeRenderError: (detail) => { this.emit('lr-node-render-error', detail); this.announcements.announceAssertive(this.localize('graphCustomNodesError')); },
     effectNotice: (key) => this.announcements.announceAssertive(this.localize(key === 'graphGlowUnavailable' ? 'graphGlowUnavailable' : 'graphCustomNodesUnavailable')),
     categoryColors: () => this.withCanvasColorResolver((resolve) => Array.from({ length: 8 }, (_, index) => resolve(categoricalPaletteColor(index)))),

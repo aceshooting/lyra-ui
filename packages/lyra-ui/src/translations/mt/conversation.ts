@@ -68,6 +68,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Uża mhux aktar minn {max} karattru.',
   feedbackSingleReasonDescription: 'Agħżel mhux aktar minn raġuni waħda.',
   suggestionsLabel: 'Prompts issuġġeriti',
+  model: 'Mudell',
   selectModel: 'Agħżel mudell…',
   modelSelectNoModels: 'L-ebda mudell',
   modelSelectRequired: 'Jekk jogħġbok agħżel mudell.',

@@ -81,7 +81,7 @@ it('shrinks a one-cell notebook to its content inside the height cap', async () 
   await waitUntil(() => !!list.shadowRoot?.querySelector('[part="raw-source"]'));
   const raw = list.shadowRoot!.querySelector<HTMLElement>('[part="raw-source"]')!;
   expect(getComputedStyle(raw).direction).to.equal('ltr');
-  expect(raw.tabIndex).to.equal(0);
+  expect(raw.hasAttribute('tabindex'), 'a raw cell that fits its width is not a tab stop').to.equal(false);
   const port = list.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const spacer = list.shadowRoot!.querySelector<HTMLElement>('[part="spacer"]')!;
   expect(port.clientHeight).to.be.closeTo(spacer.offsetHeight, 1);

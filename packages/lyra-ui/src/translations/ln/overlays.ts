@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  popover: 'Etanda oyo ebimaka',
   rating: 'Note',
   calloutAnnouncementWithContext: '{context}: {content}',
   closeWithContext: 'Kanga: {snippet}',

@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} ቁምፊዎች ወይም ከዚያ ያነሱ ይጠቀሙ።',
   feedbackSingleReasonDescription: 'ቢበዛ አንድ ምክንያት ይምረጡ።',
   suggestionsLabel: 'የተጠቆሙ ጥያቄዎች',
+  model: 'ሞዴል',
   selectModel: 'ሞዴል ይምረጡ…',
   modelSelectNoModels: 'ሞዴል የለም',
   modelSelectRequired: 'እባክዎ ሞዴል ይምረጡ።',

@@ -147,8 +147,8 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);
   }
-  /* [part='body'] always carries tabindex='0' -- an always-focusable, independently scrollable
-     region, as in lr-code-block's [part='body'] and lr-virtual-list's [part='base']. Without this
+  /* [part='body'] carries tabindex='0' while its content overflows -- an independently scrollable
+     region, like lr-code-block's [part='body'] and lr-virtual-list's [part='base']. Without this
      rule a keyboard user tabbing into the transcript gets no visible indicator. */
   [part="body"]:focus-visible {
     /* Inward so the ring isn't clipped by this element's overflow-block:auto, as lr-code-block. */

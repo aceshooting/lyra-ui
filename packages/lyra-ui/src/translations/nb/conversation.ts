@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: 'Bruk høyst {max} tegn.',
   feedbackSingleReasonDescription: 'Velg høyst én årsak.',
   suggestionsLabel: 'Foreslåtte ledetekster',
+  model: 'Modell',
   selectModel: 'Velg en modell …',
   modelSelectNoModels: 'Ingen modeller',
   modelSelectRequired: 'Velg en modell.',

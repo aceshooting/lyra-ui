@@ -165,6 +165,7 @@ const strings: LyraLocaleStrings = {
   tokensIn: 'توکن‌های ورودی',
   tokensOut: 'توکن‌های خروجی',
   cost: 'هزینه',
+  duration: 'مدت',
   spanWaterfall: 'خط زمانی بازه‌ها',
   spanStartedAtOffset: 'از +{value} شروع شد',
   compareResponseA: 'پاسخ الف',

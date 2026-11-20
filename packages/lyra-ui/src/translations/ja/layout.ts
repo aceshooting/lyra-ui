@@ -31,6 +31,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResults: 'コマンド',
   panelToggle: 'パネルの表示を切り替える',
   dockPanelResize: 'パネルのサイズを変更',
+  navigation: 'ナビゲーション',
   responsivePanel: 'パネル',
   breadcrumb: 'パンくずリスト',
   resizeDivider: 'パネル {a} とパネル {b} の間の仕切りをサイズ変更',

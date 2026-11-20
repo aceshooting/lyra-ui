@@ -65,6 +65,7 @@ const strings: LyraLocaleStrings = {
   feedbackCommentTooLong: '{max} يا ان کان گهٽ اکر استعمال ڪريو.',
   feedbackSingleReasonDescription: 'وڌ ۾ وڌ هڪ سبب چونڊيو.',
   suggestionsLabel: 'تجويز ڪيل پرامپٽ',
+  model: 'ماڊل',
   selectModel: 'ماڊل چونڊيو…',
   modelSelectNoModels: 'ڪي ماڊل ناهن',
   modelSelectRequired: 'مهرباني ڪري ماڊل چونڊيو.',

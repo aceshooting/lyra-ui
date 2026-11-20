@@ -140,7 +140,10 @@ export interface LyraTestResultsEventMap {
  * the complete normalized input. Foreign runtime statuses normalize once to the localized neutral
  * `skipped` fallback. Completion announcements require an explicit same-`runId`
  * `runState="running"` -> `"complete"` transition; clearing data alone is not treated as a
- * completed run.
+ * completed run. A status-filter change announces "Showing {shown} of {total} tests" politely:
+ * from the complete input in memory, or with `dataSource` once the filtered page settles, from the
+ * provider's filtered `total` out of its required whole-run `summary.total` (a failed page
+ * announces its failure instead).
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -258,6 +261,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   private _dataSource?: TestResultsSource;
   private sourceEpoch = 0;
+  /** A status-filter change awaiting its settled provider page, whose count is then announced. */
+  private sourceFilterAnnouncement = false;
   private sourceSyncing = false;
   private sourceInputs?: readonly unknown[];
   private sourceSize?: number;
@@ -295,7 +300,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   get dataSource(): TestResultsSource | undefined { return this._dataSource; }
   set dataSource(value: TestResultsSource | undefined) {
     const old = this._dataSource; this._dataSource = value; this.sourceEpoch++;
-    this.pendingCompletionRun = undefined;
+    this.pendingCompletionRun = undefined; this.sourceFilterAnnouncement = false;
     this.requestUpdate('dataSource', old);
   }
   /** Zero-based provider page. */
@@ -640,6 +645,16 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       this.announcements.announcePolite(this.localize('testResultsLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
       }));
+    }
+    if (this.sourceMode && changed.has('statusFilter') && changed.get('statusFilter') !== undefined) this.sourceFilterAnnouncement = true;
+    const sourceState = this.sourcePages.state;
+    if (this.sourceMode && this.sourceFilterAnnouncement && !sourceState.pending) {
+      this.sourceFilterAnnouncement = false;
+      // The validated summary covers the whole run and `total` the filtered set, so the count
+      // matches the in-memory route; a failed page is announced by the status line instead.
+      const page = sourceState.result;
+      const number = getNumberFormat(this.effectiveLocale);
+      if (page) this.announcements.announcePolite(this.localize('testResultsShownAnnounce', undefined, { shown: number.format(page.total), total: number.format(page.summary!.total) }));
     }
     if (!this.sourceMode && changed.has('statusFilter') && changed.get('statusFilter') !== undefined) {
       const counts = this.completeStatusCounts;
