@@ -11,7 +11,8 @@ import { templateContent } from 'lit/directives/template-content.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
+import { scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
+import { createTextQuoteIndex } from '../../../internal/text-quote-index.js';
 import {
   LyraUserFacingError,
 } from '../../../internal/resource-loader.js';

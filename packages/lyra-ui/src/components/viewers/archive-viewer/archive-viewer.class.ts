@@ -9,13 +9,8 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { LyraUserFacingError } from '../../../internal/resource-loader.js';
-import {
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  scopeFromElement,
-  TEXT_QUOTE_LIMITS,
-  type TextQuoteWorkBudget,
-} from '../../../internal/text-quote.js';
+import { buildQuoteAnchor, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
+import { createTextQuoteIndex, type TextQuoteWorkBudget } from '../../../internal/text-quote-index.js';
 import { formatFileSize } from '../../../internal/bytes.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';

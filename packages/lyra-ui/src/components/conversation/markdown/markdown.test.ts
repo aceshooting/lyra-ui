@@ -16,6 +16,8 @@ import { assertMarkdownTemplateWhitespace } from '../../../../test/contracts/mar
 import { assertMarkdownSanitizerDiagnostics } from '../../../../test/contracts/markdown-diagnostics.js';
 import { assertMarkdownTextSelection } from '../../../../test/contracts/markdown-text-selection.js';
 import { supportsCustomHighlights } from "../../../internal/text-highlights.js";
+import { scopeFromElement } from "../../../internal/text-quote.js";
+import { createTextQuoteIndex } from "../../../internal/text-quote-index.js";
 import type { KatexApi } from "./katex-loader.js";
 import {
   applyMarkdownFragmentAnchor,
@@ -684,7 +686,7 @@ it("uses the rendered root window for reduced-motion fragment and text-quote scr
       applyMarkdownTextQuoteAnchor(root, {
         kind: "text-quote",
         quote: "brown fox",
-      })
+      }, createTextQuoteIndex(scopeFromElement(root)))
     ).to.be.true;
     expect(headingBehavior).to.equal("auto");
     expect(paragraphBehavior).to.equal("auto");

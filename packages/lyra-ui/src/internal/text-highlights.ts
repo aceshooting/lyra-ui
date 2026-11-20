@@ -1,12 +1,7 @@
 import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 import { prioritizedHighlightCandidates } from './anchor-target.js';
-import {
-  rangesFromTextQuoteMatches,
-  TEXT_QUOTE_LIMITS,
-  TEXT_QUOTE_PAINT_LIMIT,
-  type TextQuoteIndex,
-  type TextQuoteMatch,
-} from './text-quote.js';
+import { rangesFromTextQuoteMatches, TEXT_QUOTE_LIMITS, TEXT_QUOTE_PAINT_LIMIT, type TextQuoteMatch } from './text-quote.js';
+import type { TextQuoteIndex } from './text-quote-index.js';
 import { TEXT_SELECTION_RECT_LIMIT } from './text-selection.js';
 import { HIGHLIGHT_TONES } from './highlight-collection.js';
 import { finiteDuration } from './numbers.js';

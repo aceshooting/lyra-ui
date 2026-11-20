@@ -34,6 +34,7 @@ describe('rubric controlled checked values', () => {
     it(`reconciles child checked/group/submission after parent replacement (settled=${settleUserEdit})`, async () => {
       const form = await fixture<HTMLFormElement>(html`<form><lr-rubric-form name="review" .keys=${keys} .value=${{ tags: ['a'] }}></lr-rubric-form></form>`);
       const field = form.querySelector('lr-rubric-form')!;
+      await field.updateComplete;
       const group = field.shadowRoot!.querySelector<LyraCheckboxGroup>('lr-checkbox-group')!;
       const boxes = Array.from(group.querySelectorAll<LyraCheckbox>('lr-checkbox'));
       await Promise.all(boxes.map((box) => box.updateComplete));

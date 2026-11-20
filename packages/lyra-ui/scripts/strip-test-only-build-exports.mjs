@@ -16,7 +16,7 @@ const TEST_ONLY_EXPORTS = Object.freeze({
   'internal/shiki/full': ['__setShikiModuleLoaderForTesting'],
   'internal/resource-loader': ['assertTableSize'],
   'theme/theme': ['applyLyraThemeBootstrapForTesting'],
-  'internal/text-quote': ['resolveTextQuote', 'findTextQuoteMatches'],
+  'internal/text-quote-index': ['resolveTextQuote', 'findTextQuoteMatches'],
 });
 
 function sourceFiles(directory) {

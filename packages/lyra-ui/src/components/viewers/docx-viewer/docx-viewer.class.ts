@@ -23,19 +23,8 @@ import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import {
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  emptyTextQuoteMatches,
-  rangeFromTextQuoteMatch,
-  rangesFromTextQuoteMatches,
-  scopeFromElement,
-  TEXT_QUOTE_LIMITS,
-  type TextQuoteIndex,
-  type TextQuoteMatch,
-  type TextQuoteMatches,
-  type TextQuoteScope,
-} from '../../../internal/text-quote.js';
+import { buildQuoteAnchor, rangeFromTextQuoteMatch, rangesFromTextQuoteMatches, scopeFromElement, TEXT_QUOTE_LIMITS, type TextQuoteMatch, type TextQuoteMatches, type TextQuoteScope } from '../../../internal/text-quote.js';
+import { createTextQuoteIndex, emptyTextQuoteMatches, type TextQuoteIndex } from '../../../internal/text-quote-index.js';
 import {
   acquireHighlightHandle,
   hitTestHighlightRanges,

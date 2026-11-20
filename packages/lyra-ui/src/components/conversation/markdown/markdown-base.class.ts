@@ -10,14 +10,9 @@ import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import {
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  scopeFromElement,
-  IncrementalTextQuoteScope,
-  TEXT_QUOTE_LIMITS,
-  type TextQuoteIndex,
-} from '../../../internal/text-quote.js';
+import { buildQuoteAnchor, scopeFromElement, IncrementalTextQuoteScope, TEXT_QUOTE_LIMITS, type TextQuoteScope } from '../../../internal/text-quote.js';
+import type { TextQuoteIndex } from '../../../internal/text-quote-index.js';
+
 import {
   acquireHighlightHandle,
   paintResolvedHighlights,
@@ -84,6 +79,26 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+type TextQuoteIndexModule = typeof import('../../../internal/text-quote-index.js');
+// Search, highlight and text-quote anchor resolution need the occurrence index; selection anchors
+// need only the scope. The index loads once per page, the first time a view resolves a quote.
+let textQuoteIndexModule: TextQuoteIndexModule | undefined;
+let textQuoteIndexLoad: Promise<TextQuoteIndexModule> | undefined;
+interface MarkdownTextQuoteEntry {
+  readonly root: Element;
+  readonly locale: string;
+  scope: TextQuoteScope;
+  index?: TextQuoteIndex;
+  mappingDirty: boolean;
+}
+function loadTextQuoteIndex(): Promise<TextQuoteIndexModule> {
+  textQuoteIndexLoad ??= import('../../../internal/text-quote-index.js').then(
+    (module) => (textQuoteIndexModule = module),
+    (error: unknown) => { textQuoteIndexLoad = undefined; throw error; },
+  );
+  return textQuoteIndexLoad;
+}
 
 
 /** Per-tag parser state shared by the full and core Markdown elements. */
@@ -260,12 +275,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private readonly parser = new MarkdownParserController();
   private headingTree: MarkdownHeadingItem[] = [];
   private highlightHandle?: HighlightHandle;
-  private textQuoteIndexCache?: {
-    root: Element;
-    locale: string;
-    index: TextQuoteIndex;
-    mappingDirty: boolean;
-  };
+  private textQuoteIndexCache?: MarkdownTextQuoteEntry;
+  private textQuoteIndexPending?: Promise<unknown>;
   private textQuoteLocale?: string;
   private markdownTextScopeBuilds = 0;
   private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
@@ -463,6 +474,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override async getUpdateComplete(): Promise<boolean> {
     await super.getUpdateComplete();
+    await this.textQuoteIndexPending;
     const generation = this.progressiveInputGeneration;
     const remaining = (this.content?.length ?? 0) - (this.progressiveSession?.end ?? 0);
     const cap = Math.ceil(Math.max(0, remaining) / 65_536) + 2;
@@ -861,8 +873,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       return applyMarkdownFragmentAnchor(root, anchor, this.headingTree);
     }
     if (anchor.kind === 'text-quote') {
-      const index = this.markdownTextIndex(root);
-      const found = applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale, index);
+      if (!textQuoteIndexModule) {
+        await loadTextQuoteIndex();
+        if (this.contentRoot() !== root) return false;
+      }
+      const index = this.markdownTextIndex(root)!;
+      const found = applyMarkdownTextQuoteAnchor(root, anchor, index);
       if (!supportsCustomHighlights(this.ownerDocument) && this.highlights.length > 0) {
         this.repaintHighlights();
       }
@@ -874,7 +890,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
     if (!root) return null;
-    const anchor = buildQuoteAnchor(range, this.markdownTextIndex(root).scope);
+    const anchor = buildQuoteAnchor(range, this.markdownTextScope(root).scope);
     if (!supportsCustomHighlights(this.ownerDocument) && this.highlights.length > 0) {
       this.scheduleAfterUpdate(() => this.repaintHighlights());
     }
@@ -905,11 +921,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.highlightRepaintTimer = timer;
   }
 
-  private markdownTextIndex(root: Element): TextQuoteIndex {
+  /** The cached scope entry for the rendered content, rebuilt after a content or locale change. */
+  private markdownTextScope(root: Element): MarkdownTextQuoteEntry {
     const locale = this.effectiveLocale;
     const cached = this.textQuoteIndexCache;
     if (cached?.root === root && cached.locale === locale && !cached.mappingDirty) {
-      return cached.index;
+      return cached;
     }
     if (cached?.mappingDirty) {
       const handle = this.ensureHighlightHandle();
@@ -934,14 +951,31 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (
       cached?.root === root
       && cached.locale === locale
-      && cached.index.rebindScope(scope)
+      && (!cached.index || cached.index.rebindScope(scope))
     ) {
+      cached.scope = scope;
       cached.mappingDirty = false;
-      return cached.index;
+      return cached;
     }
-    const index = createTextQuoteIndex(scope, locale);
-    this.textQuoteIndexCache = { root, locale, index, mappingDirty: false };
-    return index;
+    const entry: MarkdownTextQuoteEntry = { root, locale, scope, mappingDirty: false };
+    this.textQuoteIndexCache = entry;
+    return entry;
+  }
+
+  /** The occurrence index over the rendered content, or undefined while its module loads; the
+   *  load then repaints the highlights. */
+  private markdownTextIndex(root: Element): TextQuoteIndex | undefined {
+    const entry = this.markdownTextScope(root);
+    if (entry.index) return entry.index;
+    if (!textQuoteIndexModule) {
+      this.textQuoteIndexPending ??= loadTextQuoteIndex().then(() => {
+        this.textQuoteIndexPending = undefined;
+        if (this.isConnected) this.repaintHighlights();
+      }, () => { this.textQuoteIndexPending = undefined; });
+      return undefined;
+    }
+    entry.index = textQuoteIndexModule.createTextQuoteIndex(entry.scope, entry.locale);
+    return entry.index;
   }
 
   /** @internal Focused-test seam for one scope per rendered-content generation. */
@@ -951,7 +985,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   /** @internal Focused-test seam for occurrence reuse across quote highlights. */
   protected markdownTextQuoteScanCount(): number {
-    return this.textQuoteIndexCache?.index.scanCount ?? 0;
+    return this.textQuoteIndexCache?.index?.scanCount ?? 0;
   }
 
   private repaintHighlights(): void {
@@ -969,6 +1003,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       return;
     }
     const index = this.markdownTextIndex(root);
+    if (!index) return;
     this.resolvedHighlightRanges = paintResolvedHighlights({
       handle: this.ensureHighlightHandle(),
       highlights: this.highlights,

@@ -25,10 +25,6 @@ import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.j
 import type { LyraSelect } from '../select/select.class.js';
 import '../../layout/segmented/segmented.class.js';
 import '../slider/slider.class.js';
-import '../select/select.class.js';
-import '../combobox/option.class.js';
-import '../checkbox/checkbox.class.js';
-import '../checkbox-group/checkbox-group.class.js';
 import '../textarea/textarea.class.js';
 import {
   getFormOwner,
@@ -382,7 +378,9 @@ export interface LyraRubricFormEventMap {
  * renders `<lr-segmented>` when its `[min, max]`/`step` domain has 10 or
  * fewer integer steps, or `<lr-slider>` otherwise; `category` renders
  * `<lr-select>` (single) or `<lr-checkbox-group>` (`multiple`); `comment`
- * renders `<lr-textarea>`. Both score branches format visible numeric labels with the effective
+ * renders `<lr-textarea>`. The registration entry defines the score and comment controls; the
+ * select and checkbox controls register the first time a category key renders, and
+ * `updateComplete` waits for them. Both score branches format visible numeric labels with the effective
  * locale; segmented item values and submitted rubric values remain stable raw numbers/strings.
  * A key whose `type` is none of the three renders
  * a visible "Unsupported field type" note instead of silently dropping it,
@@ -1035,6 +1033,27 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.description.adopted();
+  }
+
+  private singleCategoryControls?: Promise<unknown>;
+  private multipleCategoryControls?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await Promise.all([this.singleCategoryControls, this.multipleCategoryControls]);
+    return complete;
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    for (const key of this._keys) {
+      if (key.type !== 'category') continue;
+      if (key.multiple) {
+        this.multipleCategoryControls ??= Promise.all([import('../checkbox/checkbox.js'), import('../checkbox-group/checkbox-group.js')]);
+      } else {
+        this.singleCategoryControls ??= Promise.all([import('../select/select.js'), import('../../lr-option.js')]);
+      }
+    }
   }
 
   protected override updated(changed: PropertyValues): void {

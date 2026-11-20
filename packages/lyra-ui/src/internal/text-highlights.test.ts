@@ -11,7 +11,8 @@ import {
   resolveHighlightRanges,
   type HighlightHandle,
 } from './text-highlights.js';
-import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_PAINT_LIMIT } from './text-quote.js';
+import { scopeFromElement, TEXT_QUOTE_PAINT_LIMIT } from './text-quote.js';
+import { createTextQuoteIndex } from './text-quote-index.js';
 import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 
 function makeContent(html: string): HTMLElement {

@@ -1,12 +1,8 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import {
-  IncrementalTextQuoteScope,
-  createTextQuoteIndex,
-  resolveTextQuote,
-  scopeFromElement,
-} from './text-quote.js';
+import { IncrementalTextQuoteScope, scopeFromElement } from './text-quote.js';
+import { createTextQuoteIndex, resolveTextQuote } from './text-quote-index.js';
 
 const fragments = fc.array(fc.constantFrom(
   'a', 'é', 'e\u0301', 'e\u00ad\u0301', 'a\u0315\u0300', '\u0344', '\u1100\u1161\u11a8',

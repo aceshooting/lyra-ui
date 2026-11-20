@@ -1,13 +1,6 @@
 import { expect } from '@open-wc/testing';
-import {
-  IncrementalTextQuoteScope,
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  findTextQuoteMatches,
-  rangeFromTextQuoteMatch,
-  scopeFromElement,
-  scopeFromItems,
-} from './text-quote.js';
+import { IncrementalTextQuoteScope, buildQuoteAnchor, rangeFromTextQuoteMatch, scopeFromElement, scopeFromItems } from './text-quote.js';
+import { createTextQuoteIndex, findTextQuoteMatches } from './text-quote-index.js';
 
 describe('text quote boundaries across live DOM ownership', () => {
   it('uses actual selected text without scoped context when both Text boundaries are outside the corpus', () => {

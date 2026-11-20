@@ -1,22 +1,7 @@
 import { expect } from '@open-wc/testing';
 import type { TextQuoteScope } from './text-quote.js';
-import {
-  TEXT_QUOTE_LIMITS,
-  TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX,
-  TEXT_SELECTION_RECT_LIMIT,
-  boundedSelectionRects,
-  boundedSelectionText,
-  createTextQuoteIndex,
-  emptyTextQuoteMatches,
-  findTextQuoteMatches,
-  normalizeQuoteText,
-  scopeFromElement,
-  scopeFromItems,
-  resolveTextQuote,
-  rangeFromTextQuoteMatch,
-  rangesFromTextQuoteMatches,
-  buildQuoteAnchor,
-} from './text-quote.js';
+import { TEXT_QUOTE_LIMITS, TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX, TEXT_SELECTION_RECT_LIMIT, boundedSelectionRects, boundedSelectionText, normalizeQuoteText, scopeFromElement, scopeFromItems, rangeFromTextQuoteMatch, rangesFromTextQuoteMatches, buildQuoteAnchor } from './text-quote.js';
+import { createTextQuoteIndex, emptyTextQuoteMatches, findTextQuoteMatches, resolveTextQuote } from './text-quote-index.js';
 
 /** Find-then-materialize, mirroring the production pattern every viewer uses
  *  (`findTextQuoteMatches` + `rangesFromTextQuoteMatches`). */

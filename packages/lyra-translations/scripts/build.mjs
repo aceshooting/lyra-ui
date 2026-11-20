@@ -24,12 +24,16 @@ function catalogFiles(directory, prefix = '') {
   return files;
 }
 
-// Only rewrite the compiler's flat string-literal catalog shape. Plurals and other expressions
-// retain their original module representation.
+// Only rewrite the compiler's flat catalog shape: string literals and plural records whose
+// categories are string literals. Any other expression retains its original module representation.
+const STRING_LITERAL = String.raw`"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'`;
+const PLURAL_ENTRY = String.raw`(?:zero|one|two|few|many|other):(?:${STRING_LITERAL})`;
+const CATALOG_VALUE = String.raw`${STRING_LITERAL}|\{${PLURAL_ENTRY}(?:,${PLURAL_ENTRY})*\}`;
+
 function compactCatalog(source) {
   const header = /^(?:import"[^"]+";)?import\{(registerLyraLocale(?:Delta)?)\}from"@aceshooting\/lyra-ui\/localization\.js";const strings=\{/u.exec(source);
   if (!header) return source;
-  const property = /([a-zA-Z]\w*):("(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*')([,}])/gyu;
+  const property = new RegExp(String.raw`([a-zA-Z]\w*):(${CATALOG_VALUE})([,}])`, 'gyu');
   property.lastIndex = header[0].length;
   const keys = [];
   const literals = [];
@@ -51,8 +55,13 @@ function compactCatalog(source) {
   const suffixes = JSON.stringify(keys.map(key => key.slice(prefix.length)).join(' '));
   let values = '[' + literals.join(',') + ']';
   try {
-    const strings = JSON.parse(values);
-    if (strings.every(text => !text.includes('|'))) values = JSON.stringify(strings.join('|')) + '.split("|")';
+    // Plural records keep their literal text and replace an empty placeholder by position.
+    const plurals = [];
+    const strings = literals.map((literal, index) => literal.startsWith('{') ? (plurals.push(index + ':' + literal), '') : JSON.parse(literal));
+    if (strings.every(text => typeof text === 'string' && !text.includes('|'))) {
+      values = JSON.stringify(strings.join('|')) + '.split("|")' +
+        (plurals.length ? '.map((p=>(value,i)=>p[i]??value)({' + plurals.join(',') + '}))' : '');
+    }
   } catch {
     // JavaScript also permits single-quoted strings and escapes outside JSON's grammar.
   }

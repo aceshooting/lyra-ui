@@ -3,7 +3,7 @@ import { warnLocaleFallback } from './dev-warning.js';
 import { DEV_DIAGNOSTICS } from './dev-mode-attribute-warning.js';
 import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
 import { readOwnDataValue } from './data-descriptors.js';
-import { getMessageNumberFormat, getPluralRules } from './intl-cache.js';
+import { getDefaultPluralRules, getMessageNumberFormat } from './intl-cache.js';
 import { isPlainRecord } from './object-guards.js';
 import type {
   LyraLocaleDirection,
@@ -418,6 +418,12 @@ const PLURAL_CATEGORIES = new Set<string>([
 ]);
 const trustedMessageRecords = new WeakSet<object>();
 
+/** Freezes a snapshot this module built and marks it safe for direct property reads. */
+function trusted<T extends object>(snapshot: object): T {
+  trustedMessageRecords.add(Object.freeze(snapshot));
+  return snapshot as T;
+}
+
 function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
   if (!isPlainRecord(value)) return undefined;
   const snapshot = Object.create(null) as Record<string, string>;
@@ -434,10 +440,7 @@ function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
   } catch {
     return undefined;
   }
-  if (typeof snapshot['other'] !== 'string') return undefined;
-  const frozen = Object.freeze(snapshot) as LyraPluralMessage;
-  trustedMessageRecords.add(frozen);
-  return frozen;
+  return typeof snapshot['other'] === 'string' ? trusted(snapshot) : undefined;
 }
 
 function snapshotMessage(value: unknown): LyraMessage | undefined {
@@ -446,18 +449,13 @@ function snapshotMessage(value: unknown): LyraMessage | undefined {
 
 function snapshotCatalog(strings: unknown): LocaleCatalog {
   const snapshot = Object.create(null) as Record<string, LyraMessage>;
-  if (!isPlainRecord(strings)) {
-    const frozen = Object.freeze(snapshot) as LocaleCatalog;
-    trustedMessageRecords.add(frozen);
-    return frozen;
-  }
-  let keys: readonly PropertyKey[];
-  try {
-    keys = Reflect.ownKeys(strings).slice(0, MAX_CATALOG_PROPERTY_READS);
-  } catch {
-    const frozen = Object.freeze(snapshot) as LocaleCatalog;
-    trustedMessageRecords.add(frozen);
-    return frozen;
+  let keys: readonly PropertyKey[] = [];
+  if (isPlainRecord(strings)) {
+    try {
+      keys = Reflect.ownKeys(strings).slice(0, MAX_CATALOG_PROPERTY_READS);
+    } catch {
+      // An unreadable key list yields an empty catalog.
+    }
   }
   let count = 0;
   for (const key of keys) {
@@ -466,7 +464,7 @@ function snapshotCatalog(strings: unknown): LocaleCatalog {
       continue;
     let descriptor: PropertyDescriptor | undefined;
     try {
-      descriptor = Reflect.getOwnPropertyDescriptor(strings, key);
+      descriptor = Reflect.getOwnPropertyDescriptor(strings as object, key);
     } catch {
       continue;
     }
@@ -475,23 +473,14 @@ function snapshotCatalog(strings: unknown): LocaleCatalog {
     const message = snapshotMessage(descriptor.value);
     if (message !== undefined) snapshot[key] = message;
   }
-  const frozen = Object.freeze(snapshot) as LocaleCatalog;
-  trustedMessageRecords.add(frozen);
-  return frozen;
+  return trusted(snapshot);
 }
 
 function mergeCatalogs(
   current: LocaleCatalog | undefined,
   incoming: LocaleCatalog
 ): LocaleCatalog {
-  const merged = Object.assign(
-    Object.create(null),
-    current ?? {},
-    incoming
-  ) as LocaleCatalog;
-  Object.freeze(merged);
-  trustedMessageRecords.add(merged);
-  return merged;
+  return trusted(Object.assign(Object.create(null), current, incoming));
 }
 
 function snapshotLocaleMeta(
@@ -1130,7 +1119,7 @@ function selectPluralMessage(
 ): string {
   if (count === undefined) return message.other;
   const tag = localeCandidates(locale)[0]!;
-  const category = getPluralRules(tag).select(count) as LyraPluralCategory;
+  const category = getDefaultPluralRules(tag).select(count) as LyraPluralCategory;
   for (const candidate of PLURAL_CATEGORY_FALLBACKS[category] ??
     PLURAL_CATEGORY_FALLBACKS.other) {
     const text = message[candidate];

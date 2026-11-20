@@ -1040,17 +1040,13 @@ describe("lr-rubric-form", () => {
     ).to.equal("No data");
   });
 
-  it("registers every sibling control as a side effect of importing rubric-form.js (regression)", async () => {
+  it("registers its score and comment controls as a side effect of importing rubric-form.js (regression)", async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. A component that imports a composed control via its .class.js path renders an
     // un-upgraded, plain HTMLElement for it, silently breaking anything that calls a method on
-    // that control.
+    // that control. The category controls register when a category key first renders.
     expect(customElements.get("lr-segmented")).to.exist;
     expect(customElements.get("lr-slider")).to.exist;
-    expect(customElements.get("lr-select")).to.exist;
-    expect(customElements.get("lr-option")).to.exist;
-    expect(customElements.get("lr-checkbox")).to.exist;
-    expect(customElements.get("lr-checkbox-group")).to.exist;
     expect(customElements.get("lr-textarea")).to.exist;
   });
 

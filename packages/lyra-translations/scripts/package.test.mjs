@@ -186,6 +186,16 @@ test('packs repeated catalog keys while preserving registration arguments and th
   const { call, output, original } = await assemble(mixed);
   assert.ok(Buffer.byteLength(output) < Buffer.byteLength(original));
   assert.deepEqual(Object.entries(call[1]), mixed.map(property => [property.split(':')[0], 'Open']));
+  const plural = { one: '{count} item', many: '{count} items', other: '{count} items' };
+  const withPlurals = entries.map((entry, i) => i % 7 === 3
+    ? entry.split(':')[0] + ':{' + Object.entries(plural).map(([category, text]) => category + ':' + JSON.stringify(text)).join(',') + '}'
+    : entry);
+  const pluralBuild = await assemble([...withPlurals, "documentEditorSingle:{one:'a',other:'b'}"]);
+  assert.ok(Buffer.byteLength(pluralBuild.output) < Buffer.byteLength(pluralBuild.original));
+  assert.deepEqual(Object.entries(pluralBuild.call[1]), [
+    ...Object.entries(strings).map(([key, value], i) => [key, i % 7 === 3 ? plural : value]),
+    ['documentEditorSingle', { one: 'a', other: 'b' }],
+  ]);
   for (const properties of [[], ['short:"small"'], ['plural:{one:"a",other:"b"}']]) {
     const { output, original } = await assemble(properties);
     assert.equal(output, original);

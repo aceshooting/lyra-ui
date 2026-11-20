@@ -1,15 +1,6 @@
 import { expect } from '@open-wc/testing';
-import {
-  IncrementalTextQuoteScope,
-  boundedSelectionText,
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  rangeFromTextQuoteMatch,
-  rangesFromTextQuoteMatches,
-  resolveTextQuote,
-  scopeFromElement,
-  scopeFromItems,
-} from './text-quote.js';
+import { IncrementalTextQuoteScope, boundedSelectionText, buildQuoteAnchor, rangeFromTextQuoteMatch, rangesFromTextQuoteMatches, scopeFromElement, scopeFromItems } from './text-quote.js';
+import { createTextQuoteIndex, resolveTextQuote } from './text-quote-index.js';
 
 describe('text quote public boundary contracts', () => {
   it('matches copied quote text containing a soft hyphen inside a combining sequence', () => {

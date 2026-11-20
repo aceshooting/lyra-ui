@@ -7,19 +7,8 @@ import {
   type DocumentAnchorTargetHooks,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
-import {
-  buildQuoteAnchor,
-  createTextQuoteIndex,
-  emptyTextQuoteMatches,
-  rangeFromTextQuoteMatch,
-  rangesFromTextQuoteMatches,
-  scopeFromElement,
-  TEXT_QUOTE_LIMITS,
-  type TextQuoteIndex,
-  type TextQuoteMatch,
-  type TextQuoteMatches,
-  type TextQuoteScope,
-} from './text-quote.js';
+import { buildQuoteAnchor, rangeFromTextQuoteMatch, rangesFromTextQuoteMatches, scopeFromElement, TEXT_QUOTE_LIMITS, type TextQuoteMatch, type TextQuoteMatches, type TextQuoteScope } from './text-quote.js';
+import { createTextQuoteIndex, emptyTextQuoteMatches, type TextQuoteIndex } from './text-quote-index.js';
 import {
   acquireHighlightHandle,
   paintHighlightTones,

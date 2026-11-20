@@ -22,12 +22,8 @@ import { finiteInteger } from '../../../internal/numbers.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { scrollToHeadingAnchor, scrollToResolvedRange } from '../../../internal/heading-anchor.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import {
-  createTextQuoteIndex,
-  rangeFromTextQuoteMatch,
-  scopeFromElement,
-  type TextQuoteIndex,
-} from '../../../internal/text-quote.js';
+import { rangeFromTextQuoteMatch } from '../../../internal/text-quote.js';
+import type { TextQuoteIndex } from '../../../internal/text-quote-index.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeLinkHref, safeLinkHrefWithin, safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraAnchor } from '../../viewers/document-viewer/anchors.js';
@@ -1348,10 +1344,9 @@ export function applyMarkdownFragmentAnchor(
 export function applyMarkdownTextQuoteAnchor(
   root: Element,
   anchor: Extract<LyraAnchor, { kind: 'text-quote' }>,
-  /** The component's resolved locale. Text-quote matching case-folds, and casing is
-   *  locale-sensitive -- under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
-  locale?: string,
-  index: TextQuoteIndex = createTextQuoteIndex(scopeFromElement(root), locale),
+  /** The occurrence index over `root`'s rendered text, built for the component's resolved locale:
+   *  matching case-folds, and under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
+  index: TextQuoteIndex,
 ): boolean {
   const match = index.resolve(anchor);
   const range = match ? rangeFromTextQuoteMatch(index.scope, match) : null;

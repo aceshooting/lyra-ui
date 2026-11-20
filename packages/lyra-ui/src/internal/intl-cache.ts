@@ -232,6 +232,13 @@ export function getMessageNumberFormat(locale: string): Intl.NumberFormat {
     () => new Intl.NumberFormat(safeLocale, messageNumberOptions));
 }
 
+/** The shared option-less `Intl.PluralRules` for a locale: the same cache entry
+ *  {@link getPluralRules} returns without options, without its option-bag capture. */
+export function getDefaultPluralRules(locale: string): Intl.PluralRules {
+  const safeLocale = resolveIntlLocale(locale);
+  return getCached(pluralRulesCache, safeLocale, () => new Intl.PluralRules(safeLocale));
+}
+
 /** A shared `Intl.DateTimeFormat` for the given locale and options. */
 export function getDateTimeFormat(locale: string | undefined, options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   return getFormatter(
