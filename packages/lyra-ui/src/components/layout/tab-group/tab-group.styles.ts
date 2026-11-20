@@ -152,7 +152,8 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     transition: color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast);
+      border-color var(--lr-transition-fast),
+      background-color var(--lr-transition-fast);
   }
   [data-tab-label] {
     min-inline-size: 0;

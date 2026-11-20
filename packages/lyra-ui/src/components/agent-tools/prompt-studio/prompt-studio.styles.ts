@@ -58,6 +58,8 @@ export const styles = css`
   [part='variable'] input { min-inline-size: 0; padding-inline: var(--lr-space-s); }
   [part='version'] {
     ${iconHitTarget}
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

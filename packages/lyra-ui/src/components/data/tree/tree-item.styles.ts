@@ -107,14 +107,14 @@ export const styles = css`
     ${interactiveTransition}
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet));
+    background: var(--lr-color-neutral-fill-quiet);
     border-radius: var(--lr-radius);
   }
   :where([part='toggle']):active:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
+    background: ${activeFill('var(--lr-color-neutral-fill-quiet)')};
   }
   :where([part='toggle'])[data-pressed]:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
+    background: ${activeFill('var(--lr-color-neutral-fill-quiet)')};
   }
   [part='reorder-handle'] {
     display: inline-flex;

@@ -527,6 +527,14 @@ it('contains unbroken public label, category, and tool content inside a 320px di
     const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
     expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(320);
+    const checkboxRow = checkbox.shadowRoot!.querySelector('[part~="row"]') as HTMLElement;
+    expect(
+      Math.abs(checkboxRow.getBoundingClientRect().width - checkbox.getBoundingClientRect().width),
+      'the row, not the control owner, takes the full width',
+    ).to.be.at.most(1);
+    expect(base.getBoundingClientRect().width, 'the owner keeps its control-box width').to.be.lessThan(
+      checkbox.getBoundingClientRect().width / 2,
+    );
     for (const part of [panel, title, body, category, heading, row, checkbox, disabledReason]) {
       expect(
         part.scrollWidth,

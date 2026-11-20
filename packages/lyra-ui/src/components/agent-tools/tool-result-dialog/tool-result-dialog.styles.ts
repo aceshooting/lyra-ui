@@ -1,6 +1,6 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
-import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
+import { dialogChrome, dialogOpenHost, dialogBackdrop } from '../../../internal/modal-surface.styles.js';
 import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -38,14 +38,7 @@ export const styles = css`
     ${dialogChrome}
   }
   ${dialogOpenHost}
-  [part="backdrop"] {
-    position: absolute;
-    inset: 0;
-    background: var(
-      --lr-tool-result-dialog-overlay-color,
-      var(--_lr-tool-result-dialog-overlay-color)
-    );
-  }
+  ${dialogBackdrop('tool-result-dialog')}
   [part="panel"] {
     position: relative;
     display: flex;

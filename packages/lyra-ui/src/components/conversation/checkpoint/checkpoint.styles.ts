@@ -1,4 +1,4 @@
-import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -60,7 +60,8 @@ export const styles = css`
     cursor: pointer;
     transition:
       background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast);
+      border-color var(--lr-transition-fast),
+      color var(--lr-transition-fast);
   }
   [part='restore-button']:hover:not([aria-disabled='true']) {
     border-color: var(--lr-color-brand);
@@ -111,6 +112,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
+    ${interactiveTransition}
   }
   [part='confirm-button'] {
     border-color: var(--lr-color-brand);

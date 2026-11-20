@@ -140,7 +140,8 @@ export const styles = css`
   /* :where() drops this from (0,3,0) to (0,1,0); at (0,3,0) its cursor: row-resize out-ranks the
      (0,2,0) [part='divider'][aria-disabled='true'] rule below, and a divider beside a collapsed
      pane advertises a drag it refuses. */
-  :host(:where([orientation="vertical"])) [part="divider"] {
+  :host(:where([orientation="vertical"])) [part="divider"],
+  :host(:where([data-effective-orientation="vertical"])) [part="divider"] {
     inline-size: 100%;
     min-inline-size: min(
       100%,
@@ -157,7 +158,8 @@ export const styles = css`
     );
     cursor: row-resize;
   }
-  :host(:where([orientation="vertical"])) [part="divider"]::before {
+  :host(:where([orientation="vertical"])) [part="divider"]::before,
+  :host(:where([data-effective-orientation="vertical"])) [part="divider"]::before {
     inset-block: calc(
       (
           100% -
@@ -178,39 +180,9 @@ export const styles = css`
   :host([data-effective-orientation="horizontal"]) [part="base"] {
     flex-direction: row;
   }
-  /* Same :where() flattening as [orientation='vertical'] above, on both effective-axis variants:
-     these override the authored orientation by source order, and must stay under the
-     [part='divider'][aria-disabled='true'] cursor rule below. */
-  :host(:where([data-effective-orientation="vertical"])) [part="divider"] {
-    inline-size: 100%;
-    min-inline-size: min(
-      100%,
-      var(
-        --lr-multi-split-divider-target-size,
-        var(--_lr-multi-split-divider-target-size)
-      )
-    );
-    max-inline-size: 100%;
-    min-block-size: 0;
-    block-size: var(
-      --lr-multi-split-divider-target-size,
-      var(--_lr-multi-split-divider-target-size)
-    );
-    cursor: row-resize;
-  }
-  :host(:where([data-effective-orientation="vertical"]))
-    [part="divider"]::before {
-    inset-block: calc(
-      (
-          100% -
-            var(
-              --lr-multi-split-divider-thickness,
-              var(--_lr-multi-split-divider-thickness)
-            )
-        ) / 2
-    );
-    inset-inline: 0;
-  }
+  /* The effective-vertical axis shares the authored vertical rules above; the effective-horizontal
+     rules below override the authored orientation by source order and must stay under the
+     [part='divider'][aria-disabled='true'] cursor rule. */
   :host(:where([data-effective-orientation="horizontal"])) [part="divider"] {
     inline-size: var(
       --lr-multi-split-divider-target-size,

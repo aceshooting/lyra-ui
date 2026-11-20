@@ -981,7 +981,7 @@ it('inherits the host font size into the disclosure toggle and its 1em glyph', a
 it('gives the expand/collapse toggle distinct pointer-hover feedback', async function () {
   if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
   const el = (await fixture(html`<lr-tree-item
-    style="--lr-color-surface-hover: rgb(7, 8, 9)"
+    style="--lr-color-neutral-fill-quiet: rgb(7, 8, 9)"
     .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
   ></lr-tree-item>`)) as LyraTreeItem;
   const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
@@ -1001,7 +1001,7 @@ it('gives the expand/collapse toggle pressed feedback distinct from hover', asyn
   if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
   this.timeout(10_000);
   const el = (await fixture(html`<lr-tree-item
-    style="--lr-color-surface-hover: rgb(7, 8, 9); --lr-color-mix-partner: rgb(40, 50, 60); --lr-color-mix-active: 100%"
+    style="--lr-color-neutral-fill-quiet: rgb(7, 8, 9); --lr-color-mix-partner: rgb(40, 50, 60); --lr-color-mix-active: 100%"
     .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
   ></lr-tree-item>`)) as LyraTreeItem;
   const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;

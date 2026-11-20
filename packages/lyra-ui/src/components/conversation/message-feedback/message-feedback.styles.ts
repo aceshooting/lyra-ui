@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -140,6 +140,7 @@ export const styles = css`
     white-space: normal;
     overflow-wrap: anywhere;
     cursor: pointer;
+    ${interactiveTransition}
   }
   /* Hover/press are a background mix, never filter: brightness(). Multiplying every channel
      lightens a dark fill and darkens a light one only by accident, does nothing at all to a pure

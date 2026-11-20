@@ -41,7 +41,8 @@ export const styles = css`
   [part='selection-count'] {
     font-size: var(--lr-font-size-sm);
   }
-  [part='clear-selection'] {
+  [part='clear-selection'],
+  [part='selection-retry'] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: 0;
@@ -54,33 +55,24 @@ export const styles = css`
        snaps while lr-button/lr-icon-button ease. */
     transition: color var(--lr-transition-fast);
   }
-  [part='clear-selection']:hover {
+  [part='clear-selection']:hover,
+  [part='selection-retry']:hover {
     text-decoration: underline;
   }
   /* Pressed deepens the link colour on top of the hovered underline: an underline cannot get more
      underlined, so the press would otherwise be indistinguishable from the hover it starts from.
      The mix follows --lr-color-mix-partner, the text colour, so it darkens a light theme and
      lightens a dark one instead of always doing one of the two. */
-  [part='clear-selection']:active {
-    color: ${activeFill('var(--lr-color-brand)')};
-    text-decoration: underline;
-  }
-  [part='clear-selection']:focus-visible {
-    ${focusRing}
-  }
-  [part='selection-status'] { margin: 0; color: var(--lr-color-text-quiet); }
-  [part='selection-retry'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    border: 0; background: transparent; color: var(--lr-color-brand); font: inherit; cursor: pointer;
-    transition: var(--lr-transition-interactive);
-  }
-  [part='selection-retry']:hover { text-decoration: underline; }
+  [part='clear-selection']:active,
   [part='selection-retry']:active {
     color: ${activeFill('var(--lr-color-brand)')};
     text-decoration: underline;
   }
-  [part='selection-retry']:focus-visible { ${focusRing} }
+  [part='clear-selection']:focus-visible,
+  [part='selection-retry']:focus-visible {
+    ${focusRing}
+  }
+  [part='selection-status'] { margin: 0; color: var(--lr-color-text-quiet); }
   [part='limit'] {
     margin: 0;
     color: var(--lr-color-text-quiet);

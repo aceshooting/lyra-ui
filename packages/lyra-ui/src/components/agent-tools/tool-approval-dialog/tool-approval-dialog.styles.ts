@@ -1,5 +1,5 @@
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
-import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
+import { dialogChrome, dialogOpenHost, dialogBackdrop } from '../../../internal/modal-surface.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -19,14 +19,7 @@ export const styles = css`
     ${dialogChrome}
   }
   ${dialogOpenHost}
-  [part="backdrop"] {
-    position: absolute;
-    inset: 0;
-    background: var(
-      --lr-tool-approval-dialog-overlay-color,
-      var(--_lr-tool-approval-dialog-overlay-color)
-    );
-  }
+  ${dialogBackdrop('tool-approval-dialog')}
   [part="panel"] {
     position: relative;
     display: flex;

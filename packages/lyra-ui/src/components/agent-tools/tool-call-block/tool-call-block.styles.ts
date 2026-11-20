@@ -1,6 +1,6 @@
 import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { containerHost, disclosureHeader } from '../../../internal/layout-fragments.styles.js';
-import { activeFill, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -108,18 +108,11 @@ export const styles = css`
     animation: var(--_lr-motion-animation, lr-tool-status-pulse var(--lr-transition-ambient) infinite);
   }
 
-  [part='toggle'] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    transition: transform var(--lr-transition-fast);
-  }
-  :host(:where([expanded])) [part='toggle'] {
-    transform: rotate(90deg);
-  }
-  /* Only the collapsed chevron mirrors: rotating the asymmetric glyph already points it down. */
-  :host(:where(:not([expanded]):dir(rtl))) [part='toggle'] {
-    transform: scaleX(-1);
-  }
+  ${disclosureChevron({
+    glyph: "[part='toggle']",
+    expanded: ":host(:where([expanded])) [part='toggle']",
+    collapsedRtl: ":host(:where(:not([expanded]):dir(rtl))) [part='toggle']",
+  })}
 
   [part='body'] {
     border-block-start: var(--lr-border-width-thin) solid

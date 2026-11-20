@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-checkpoint.js';
 import type { LyraCheckpoint } from '../../lr-checkpoint.js';
@@ -333,7 +333,10 @@ describe('confirm flow (the default)', () => {
           type: 'move',
           position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
         });
-        expect(getComputedStyle(button).backgroundColor, `${button.textContent!.trim()} hover changes its fill`).to.not.equal(resting);
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== resting,
+          `${button.textContent!.trim()} hover changes its fill`,
+        );
       }
     } finally {
       await resetMouse();

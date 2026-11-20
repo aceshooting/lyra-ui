@@ -1,9 +1,7 @@
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { srOnly } from '../../../internal/a11y.js';
 
 export const styles = css`
-  ${srOnly}
   :host {
     display: block;
     min-inline-size: 0;
@@ -192,6 +190,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
     line-height: var(--lr-line-height-snug);
+    ${interactiveTransition}
   }
   [part='cluster']:hover [part='cluster-count'] {
     background: ${hoverFill('var(--lr-timeline-cluster-bg, var(--lr-color-brand))')};

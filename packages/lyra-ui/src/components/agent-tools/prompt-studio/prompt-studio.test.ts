@@ -97,6 +97,21 @@ it('renders messages, resolves variables in preview, and exposes versions', asyn
   expect(el.shadowRoot!.querySelector('[data-version-id="v1"]')).to.exist;
 });
 
+it('wraps a long unbroken version label inside a narrow column', async () => {
+  const el = (await fixture(
+    html`<div style="inline-size: 240px">
+      <lr-prompt-studio
+        .messages=${messages}
+        .versions=${[{ id: 'v1', label: 'release-candidate-'.repeat(8), messages }]}
+      ></lr-prompt-studio>
+    </div>`,
+  )).querySelector('lr-prompt-studio') as LyraPromptStudio;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[data-version-id="v1"]')!;
+  const nav = el.shadowRoot!.querySelector<HTMLElement>('[part="versions"]')!;
+  expect(button.getBoundingClientRect().right).to.be.at.most(nav.getBoundingClientRect().right + 0.5);
+});
+
 it('normalizes a large message collection once per render while retaining keyed row output', async () => {
   const largeMessages: PromptStudioMessage[] = Array.from({ length: 1_000 }, (_, index) => ({
     id: `message-${index}`,

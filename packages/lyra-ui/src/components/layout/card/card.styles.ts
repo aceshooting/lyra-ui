@@ -127,7 +127,7 @@ export const styles = css`
   [part="base"][data-actionable="true"] {
     border-color: var(--border-color, var(--lr-color-border));
     cursor: pointer;
-    transition: border-color var(--lr-transition-fast);
+    transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
   [part="base"][data-actionable="true"]:not([data-disabled]):hover,
   .linked-shell:hover > [part="base"][data-actionable="true"]:not([data-disabled]) {

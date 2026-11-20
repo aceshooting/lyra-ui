@@ -100760,7 +100760,7 @@
             "name": "--lr-node-palette-item-hover-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))"
+            "default": "var(--lr-color-neutral-fill-quiet)"
           },
           {
             "name": "--lr-node-palette-search-font-size",

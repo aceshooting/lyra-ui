@@ -1189,6 +1189,7 @@ describe('collision="cluster"', () => {
       '[part="cluster-count"]'
     )!;
     const computed = getComputedStyle(count);
+    await waitUntil(() => computed.backgroundColor === 'rgb(1, 2, 3)');
 
     expect(count.getBoundingClientRect().height).to.equal(28);
     expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');

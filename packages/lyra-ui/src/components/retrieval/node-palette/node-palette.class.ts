@@ -206,7 +206,7 @@ export interface LyraNodePaletteEventMap {
  *   search field gains focus; preserves `relatedTarget` and crosses the shadow boundary.
  * @event blur - A realm-correct native `FocusEvent`, relayed exactly once when the internal
  *   search field loses focus; preserves `relatedTarget` and crosses the shadow boundary.
- * @cssprop [--lr-node-palette-item-hover-fill=var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))] - Background of the hovered control.
+ * @cssprop [--lr-node-palette-item-hover-fill=var(--lr-color-neutral-fill-quiet)] - Background of the hovered control.
  * @csspart base - The root wrapper.
  * @csspart search - The search input.
  * @csspart search-clear - The button that clears the search field, rendered only while it has a

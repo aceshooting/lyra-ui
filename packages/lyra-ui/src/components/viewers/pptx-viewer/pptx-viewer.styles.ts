@@ -32,11 +32,6 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lr-space-s);
   }
-  [part="previous-button"],
-  [part="next-button"] {
-    inline-size: var(--lr-size-2rem);
-    block-size: var(--lr-size-2rem);
-  }
   [part="slide-count"] {
     min-inline-size: 0;
     overflow: hidden;

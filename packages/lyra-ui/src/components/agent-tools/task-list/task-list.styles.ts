@@ -1,4 +1,4 @@
-import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -95,17 +95,11 @@ export const styles = [
     button[part="header"]:focus-visible {
       ${focusRingInsetOffset}
     }
-    [part="toggle"] {
-      display: inline-flex;
-      flex: 0 0 auto;
-      transition: transform var(--lr-transition-fast);
-    }
-    :host(:not([collapsed])) [part="toggle"] {
-      transform: rotate(90deg);
-    }
-    :host([collapsed]:dir(rtl)) [part="toggle"] {
-      transform: scaleX(-1);
-    }
+    ${disclosureChevron({
+      glyph: '[part="toggle"]',
+      expanded: ':host(:not([collapsed])) [part="toggle"]',
+      collapsedRtl: ':host([collapsed]:dir(rtl)) [part="toggle"]',
+    })}
     [part="label"] {
       flex: 1 1 auto;
       min-inline-size: 0;

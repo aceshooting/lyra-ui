@@ -37,8 +37,8 @@ export const styles = css`
     color: 'var(--lr-color-text)',
     hoverColor: 'var(--lr-color-text)',
     activeColor: 'var(--lr-color-text)',
-    hoverBackground: 'var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)))',
-    activeBackground: `var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))').cssText})`,
+    hoverBackground: 'var(--lr-flow-controls-hover-bg, var(--lr-color-neutral-fill-quiet))',
+    activeBackground: `var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-neutral-fill-quiet)').cssText})`,
   })}
   [part='zoom-in'],
   [part='zoom-out'],
@@ -48,8 +48,8 @@ export const styles = css`
   }
   ::slotted(button) {
     --_lr-icon-button-color-default: var(--lr-color-text);
-    --_lr-flow-controls-hover-bg: var(--lr-flow-controls-hover-bg, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
-    --_lr-flow-controls-active-bg: var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')});
+    --_lr-flow-controls-hover-bg: var(--lr-flow-controls-hover-bg, var(--lr-color-neutral-fill-quiet));
+    --_lr-flow-controls-active-bg: var(--lr-flow-controls-active-bg, ${activeFill('var(--lr-color-neutral-fill-quiet)')});
     ${iconHitTarget}
     ${iconAction}
     ${interactiveTransition}

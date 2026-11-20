@@ -173,6 +173,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+    ${interactiveTransition}
   }
   lr-virtual-list::part(group-toggle):hover {
     background: var(

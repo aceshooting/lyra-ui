@@ -1714,3 +1714,13 @@ for (const [transition, rebind] of [
     expect(changes).to.equal(0);
   });
 }
+
+it('keeps the start adornment at its natural width while a long label ellipsizes', async () => {
+  const wrap = await fixture(html`<div style="inline-size: 90px">
+    <lr-chip><svg slot="start" viewBox="0 0 10 10" style="inline-size: 16px; block-size: 16px"></svg>A very long chip label that cannot fit</lr-chip>
+  </div>`);
+  const chip = wrap.querySelector('lr-chip') as LyraChip;
+  await chip.updateComplete;
+  const start = chip.shadowRoot!.querySelector<HTMLElement>('[part="start"]')!;
+  expect(start.getBoundingClientRect().width).to.be.at.least(16);
+});

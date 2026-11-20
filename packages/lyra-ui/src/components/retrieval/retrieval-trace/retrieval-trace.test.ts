@@ -768,7 +768,7 @@ describe("lr-retrieval-trace", () => {
     )) as LyraRetrievalTrace;
     await ltr.updateComplete;
     const ltrIcon = ltr.shadowRoot!.querySelector(
-      '[data-id="rewrite"] [part="evidence-toggle-icon"] svg'
+      '[data-id="rewrite"] [part="evidence-toggle-icon"]'
     ) as SVGElement;
     const ltrTransform = getComputedStyle(ltrIcon).transform;
 
@@ -780,7 +780,7 @@ describe("lr-retrieval-trace", () => {
     )) as LyraRetrievalTrace;
     await rtl.updateComplete;
     const rtlIcon = rtl.shadowRoot!.querySelector(
-      '[data-id="rewrite"] [part="evidence-toggle-icon"] svg'
+      '[data-id="rewrite"] [part="evidence-toggle-icon"]'
     ) as SVGElement;
     const rtlTransform = getComputedStyle(rtlIcon).transform;
 

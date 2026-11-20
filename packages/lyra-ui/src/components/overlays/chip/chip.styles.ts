@@ -170,7 +170,7 @@ export const styles = css`
 
   [part='start'] {
     display: inline-flex;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;
@@ -212,7 +212,7 @@ export const styles = css`
 
   [part='end'] {
     display: inline-flex;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;

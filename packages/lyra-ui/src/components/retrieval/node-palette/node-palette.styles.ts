@@ -70,13 +70,13 @@ export const styles = css`
      sweep. */
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
-    background: var(--lr-node-palette-item-hover-fill, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)));
+    background: var(--lr-node-palette-item-hover-fill, var(--lr-color-neutral-fill-quiet));
   }
   /* These items are drag sources (cursor: grab above), so the press is the moment the drag starts:
      deeper fill plus the grabbing cursor. Same :where() shape as the hover rule, so the two tie at
      (0,1,0) and source order hands this one the press. */
   :where([part='item']):active:where(:not([aria-disabled='true'])) {
-    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
+    background: ${activeFill('var(--lr-node-palette-item-hover-fill, var(--lr-color-neutral-fill-quiet))')};
     cursor: grabbing;
   }
   [part='item']:focus-visible {
@@ -96,6 +96,8 @@ export const styles = css`
     grid-column: 2;
   }
   [part='item-label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-medium);
   }
   [part='item-description'] {

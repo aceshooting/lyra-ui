@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css, unsafeCSS, type CSSResult } from 'lit';
 
 /**
  * The centered, safe-area-padded frame every full-viewport dialog host paints inside its own
@@ -20,3 +20,16 @@ export const dialogOpenHost = css`
     display: flex;
   }
 `;
+
+/**
+ * The full-host scrim behind a dialog panel, tinted by the component's public
+ * `--lr-<name>-overlay-color` over its private `--_lr-<name>-overlay-color` default. `name` is the
+ * author-controlled tag stem, never user input.
+ */
+export function dialogBackdrop(name: string): CSSResult {
+  return unsafeCSS(`[part="backdrop"] {
+    position: absolute;
+    inset: 0;
+    background: var(--lr-${name}-overlay-color, var(--_lr-${name}-overlay-color));
+  }`);
+}

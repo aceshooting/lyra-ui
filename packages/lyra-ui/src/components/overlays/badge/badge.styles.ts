@@ -78,7 +78,7 @@ export const styles = css`
   [part='start'],
   [part='end'] {
     display: inline-flex;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;

@@ -1,6 +1,6 @@
 import { iconActionStyles, outlinedActionStyles } from '../../../internal/icon-action.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
-import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
+import { dialogChrome, dialogOpenHost, dialogBackdrop } from '../../../internal/modal-surface.styles.js';
 import { activeFill, focusRing, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -18,14 +18,7 @@ export const styles = css`
     ${dialogChrome}
   }
   ${dialogOpenHost}
-  [part="backdrop"] {
-    position: absolute;
-    inset: 0;
-    background: var(
-      --lr-tool-select-dialog-overlay-color,
-      var(--_lr-tool-select-dialog-overlay-color)
-    );
-  }
+  ${dialogBackdrop('tool-select-dialog')}
   [part="panel"] {
     position: relative;
     display: flex;
@@ -248,7 +241,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part="tool-checkbox"]::part(base) {
+  [part="tool-checkbox"]::part(row) {
     align-items: flex-start;
     box-sizing: border-box;
     inline-size: 100%;

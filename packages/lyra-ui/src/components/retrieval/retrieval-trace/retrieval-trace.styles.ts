@@ -1,4 +1,4 @@
-import { activeFill, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { containerHost, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -62,18 +62,13 @@ export const styles = css`
   }
 
   [part='evidence-toggle-icon'] {
-    flex: 0 0 auto;
-    display: inline-flex;
     color: var(--lr-color-text-quiet);
   }
-  [part='evidence-toggle'][aria-expanded='true'] [part='evidence-toggle-icon'] svg {
-    transform: rotate(90deg);
-  }
-  /* Mirrors this family's own chevron-mirroring convention (see lr-trace-tree): rotation is
-     physical, so a collapsed chevron under RTL points the opposite way from LTR. */
-  :host(:dir(rtl)) [part='evidence-toggle']:not([aria-expanded='true']) [part='evidence-toggle-icon'] svg {
-    transform: rotate(180deg);
-  }
+  ${disclosureChevron({
+    glyph: "[part='evidence-toggle-icon']",
+    expanded: "[part='evidence-toggle'][aria-expanded='true'] [part='evidence-toggle-icon']",
+    collapsedRtl: ":host(:dir(rtl)) [part='evidence-toggle']:not([aria-expanded='true']) [part='evidence-toggle-icon']",
+  })}
 
   [part='evidence-body'] {
     display: flex;
