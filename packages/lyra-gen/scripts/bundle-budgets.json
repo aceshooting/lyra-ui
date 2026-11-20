@@ -8,7 +8,7 @@
     "javascriptHeadroomPercent": 2,
     "cssHeadroomPercent": 4,
     "assetHeadroomPercent": 0,
-    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged. Library-wide accessibility, lifecycle and localization repairs bring gen-view eager JavaScript to 185,520 raw bytes, gen-view lazy JavaScript to 856,852 raw and 249,123 gzip bytes, and chat-composition eager JavaScript to 517,232 raw and 162,850 gzip bytes; these five exceeded ceilings advance to the 2% review limit above their measurements."
+    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged. Library-wide accessibility, lifecycle and localization repairs bring gen-view eager JavaScript to 185,520 raw bytes, gen-view lazy JavaScript to 856,852 raw and 249,123 gzip bytes, and chat-composition eager JavaScript to 517,232 raw and 162,850 gzip bytes; these five exceeded ceilings advance to the 2% review limit above their measurements. The lyra-gen additional-property maps and host properties, with the library repairs they pull in, bring runtime eager JavaScript to 30,202 raw and 10,265 gzip bytes, chat eager JavaScript to 45,582 raw and 14,450 gzip bytes, chat-composition eager JavaScript to 170,189 gzip bytes and chat-composition lazy JavaScript to 299,245 gzip bytes; these six exceeded ceilings advance to the 2% review limit above their measurements."
   },
   "profiles": {
     "parser": {
@@ -38,8 +38,8 @@
     },
     "runtime": {
       "measured": {
-        "eagerJsBytes": 28131,
-        "eagerJsGzipBytes": 9662,
+        "eagerJsBytes": 30202,
+        "eagerJsGzipBytes": 10265,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -49,8 +49,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 28693,
-        "eagerJsGzipBytes": 9855,
+        "eagerJsBytes": 30806,
+        "eagerJsGzipBytes": 10470,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -63,8 +63,8 @@
     },
     "chat": {
       "measured": {
-        "eagerJsBytes": 44051,
-        "eagerJsGzipBytes": 14019,
+        "eagerJsBytes": 45582,
+        "eagerJsGzipBytes": 14450,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -74,8 +74,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 44932,
-        "eagerJsGzipBytes": 14299,
+        "eagerJsBytes": 46493,
+        "eagerJsGzipBytes": 14739,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -114,9 +114,9 @@
     "chat-composition": {
       "measured": {
         "eagerJsBytes": 517232,
-        "eagerJsGzipBytes": 162850,
+        "eagerJsGzipBytes": 170189,
         "lazyJsBytes": 1041533,
-        "lazyJsGzipBytes": 295748,
+        "lazyJsGzipBytes": 299245,
         "eagerCssBytes": 103994,
         "eagerCssGzipBytes": 13457,
         "lazyCssBytes": 0,
@@ -125,9 +125,9 @@
       },
       "ceilings": {
         "eagerJsBytes": 527576,
-        "eagerJsGzipBytes": 166107,
+        "eagerJsGzipBytes": 173592,
         "lazyJsBytes": 1041536,
-        "lazyJsGzipBytes": 295808,
+        "lazyJsGzipBytes": 305229,
         "eagerCssBytes": 108153,
         "eagerCssGzipBytes": 13995,
         "lazyCssBytes": 0,
