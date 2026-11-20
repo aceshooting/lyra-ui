@@ -333,9 +333,11 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // The complete graph bundle measures 463,780 raw bytes across the same 14 files,
-    // up 922 bytes; the next 64-byte boundary leaves 28 bytes.
-    maxRawBytes: 463_808,
+    // The complete graph bundle measures 468,097 raw bytes across 13 files. Consolidation moved
+    // lr-graph onto the shared focus-repair and search helpers; graph's own code shrank, and the
+    // shared helpers it now loads account for the growth. Reviewed exception for 32.0.0; the next
+    // 64-byte boundary leaves 63 bytes.
+    maxRawBytes: 468_160,
   },
 };
 

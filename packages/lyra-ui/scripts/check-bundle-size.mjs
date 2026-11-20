@@ -473,7 +473,8 @@ if (exclusionClaimsOnly) {
     // component -- so the average is a conservative per-import figure, not the marginal cost of
     // adding one more component to an app that already imports others (with code splitting the
     // shared layers are paid once, and the marginal chunk is a couple of KB). The whole sweep is
-    // ~200 esbuild passes and runs in a few seconds, so it stays in the normal check.
+    // ~300 esbuild passes and runs in a few seconds, so it stays in the normal check.
+    // Each tag registers through exactly one canonical entry, dist/components/lr-<tag>.js.
     const componentsDir = join(packageDir, "dist", "components");
     const componentEntries = existsSync(componentsDir)
       ? readdirSync(componentsDir, { withFileTypes: true })
@@ -486,6 +487,9 @@ if (exclusionClaimsOnly) {
           .map((entry) => `dist/components/${entry.name}`)
           .sort()
       : [];
+    if (componentEntries.length === 0) {
+      throw new Error("dist/components contains no lr-<tag>.js registration entries; run the build first");
+    }
     const componentGzipBytes = [];
     for (const entry of componentEntries) {
       componentGzipBytes.push(gzipBytesOf(await bundleEntry(entry)));

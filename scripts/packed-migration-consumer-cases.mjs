@@ -40,6 +40,23 @@ const propertyValues = {
   'readonly LyraGraphLink[]': "[{ id: 'ab', source: 'a', target: 'b' }]",
 };
 
+/** Member names from a published replacement through later successors and retirements. */
+function replacementChain(context, tag, replacement) {
+  const chain = [];
+  let current = replacement;
+  for (let hops = 0; hops < 9 && current && typeof current === 'object'; hops++) {
+    chain.push(current.name);
+    if (['component', 'host-css-property'].includes(current.kind)) break;
+    const successor = (context.successors ?? []).find(item => item.key.tag === tag && item.key.kind === current.kind &&
+      item.key.name === current.name);
+    const historical = context.records?.[compatibilityKey({ scope: 'member', tag, kind: current.kind, name: current.name })];
+    const next = successor?.replacement ?? (historical?.state === 'retired' ? historical.policy?.replacement : null);
+    if (!next || ['component', 'host-css-property'].includes(next.kind)) break;
+    current = next;
+  }
+  return chain;
+}
+
 /** Concrete syntax recipes, with policy identities supplied by the existing compatibility authority. */
 export function createMemberMigrationCases(context, ledger) {
   const profile = ledger.profiles.find(profile => profile.origin === 'lyra-v21');
@@ -55,7 +72,14 @@ export function createMemberMigrationCases(context, ledger) {
     const review = profile.reviews.find(item => item.tag === tag && item.kind === kind && item.name === name);
     const slotContent = kind === 'slot-content' && profile.slotContent.find(item => item.tag === tag && item.slot === name);
     assert.ok(Boolean(rule) !== Boolean(review || slotContent), `Missing or conflicting recipe: ${compatibilityKey(record.key)}`);
-    if (rule) assert.equal(rule.to, record.replacementMember?.name ?? record.policy.replacement.name, 'Ledger and supported policy target differ');
+    if (rule) {
+      // A later major may retire this profile's target again; the rule then names one step of the
+      // recorded successor chain, and the later profile carries the remaining steps.
+      const chain = replacementChain(context, tag, record.policy.replacement);
+      assert.ok(chain.includes(rule.to), `Ledger and supported policy target differ: ${compatibilityKey(record.key)}`);
+      assert.equal(chain.at(-1), record.replacementMember?.name ?? record.policy.replacement.name,
+        `Replacement chain does not end at the supported target: ${compatibilityKey(record.key)}`);
+    }
     const target = rule?.to ?? record.policy.replacement.name;
     // Events and CSS declarations reach nested components. Bind expectations to independently checked
     // exposure rather than assuming a published rename stays global as new components adopt it.

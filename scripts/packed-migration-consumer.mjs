@@ -588,11 +588,20 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, compatibili
       publicTypeRouteByDeclaration.set(fieldDeclarationKey(declaration.key), exposure.key.tag);
     }
     assert.equal(exposure.role, exposure.key.event.endsWith('-request') ? 'request' : 'settled', `Published event role drift: ${exposureKey}`);
-    await readInstalledPackagePath(installedRoot, exposure.publicDeclarationPath);
     const runtimeRoute = await readInstalledPackagePath(installedRoot, exposure.publicRuntimePath);
     const tagExport = packageJson.exports?.[`./components/${exposure.key.tag}.js`];
     assert.ok(tagExport && typeof tagExport === 'object', `Installed package lacks public registration export for ${exposure.key.tag}`);
-    assert.equal(tagExport.types, `./${exposure.publicDeclarationPath.slice('package/'.length)}`, `Installed type route changed for ${exposure.key.tag}`);
+    // The published type route, or the canonical registration entry's own declaration once the
+    // per-directory registration modules are gone; the canonical entry re-exports the class module.
+    const publishedTypes = `./${exposure.publicDeclarationPath.slice('package/'.length)}`;
+    const canonicalTypes = `./dist/components/${exposure.key.tag}.d.ts`;
+    assert.ok([publishedTypes, canonicalTypes].includes(tagExport.types), `Installed type route changed for ${exposure.key.tag}: ${tagExport.types}`);
+    const typeRoute = await readInstalledPackagePath(installedRoot, `package/${tagExport.types.slice(2)}`);
+    if (tagExport.types === canonicalTypes) {
+      const classModule = /(?:^|;)\s*export\s*\*\s*from\s*['"]\.\/([a-z0-9-]+(?:\/[a-z0-9-]+)*\.class)\.js['"]/u.exec(typeRoute)?.[1];
+      assert.ok(classModule, `Canonical type route does not re-export a class module for ${exposure.key.tag}`);
+      await readInstalledPackagePath(installedRoot, `package/dist/components/${classModule}.d.ts`);
+    }
     assert.equal(tagExport.default, `./${exposure.publicRuntimePath.slice('package/'.length)}`, `Installed runtime route changed for ${exposure.key.tag}`);
     assert.ok(runtimeRoute.length > 0, `Installed runtime route is empty: ${exposure.publicRuntimePath}`);
     const emitterDeclaration = await readInstalledPackagePath(installedRoot, exposure.emitterPackedPath.replace(/\.js$/u, '.d.ts'));

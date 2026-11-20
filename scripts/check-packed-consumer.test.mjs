@@ -130,7 +130,7 @@ test('caps measured core and optional graphs without an implicit binary allowanc
 
   for (const [entry, measurement, expectedCeiling] of [
     ['map', 2_595_501, 2_595_520],
-    ['graph', 463_780, 463_808],
+    ['graph', 468_097, 468_160],
   ]) {
     const entryBlock = checkerSource.match(new RegExp(`^  ${entry}: \\{([\\s\\S]*?)^  \\},`, 'mu'))?.[1];
     assert.ok(entryBlock, `${entry} must retain its packed bundle canary`);
