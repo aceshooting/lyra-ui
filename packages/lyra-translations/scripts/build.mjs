@@ -63,13 +63,13 @@ function compactCatalog(source) {
     const strings = literals.map((literal, index) => literal.startsWith('{') ? (plurals.push(index + ':' + literal), '') : JSON.parse(literal));
     if (strings.every(text => typeof text === 'string' && !text.includes('|'))) {
       values = JSON.stringify(strings.join('|')) + '.split("|")' +
-        (plurals.length ? '.map((p=>(value,i)=>p[i]??value)({' + plurals.join(',') + '}))' : '');
+        (plurals.length ? '.map((p=>(v,i)=>p[i]??v)({' + plurals.join(',') + '}))' : '');
     }
   } catch {
     // JavaScript also permits single-quoted strings and escapes outside JSON's grammar.
   }
-  const expression = '((keys,values)=>Object.fromEntries(keys.map((key,i)=>[' +
-    (prefix ? JSON.stringify(prefix) + '+' : '') + 'key,values[i]])))(' + suffixes + '.split(" "),' + values + ')';
+  const expression = '((k,v)=>Object.fromEntries(k.map((x,i)=>[' +
+    (prefix ? JSON.stringify(prefix) + '+' : '') + 'x,v[i]])))(' + suffixes + '.split(" "),' + values + ')';
   const start = header[0].length - 1;
   return Buffer.byteLength(expression) < Buffer.byteLength(source.slice(start, end))
     ? source.slice(0, start) + expression + source.slice(end) : source;

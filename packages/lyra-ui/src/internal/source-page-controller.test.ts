@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraPageRequest, LyraPageResult, LyraPageSource, LyraSourceRecord } from '../data-sources.js';
-import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController, type SourcePageOptions } from './source-page-controller.js';
+import { readOwnSourceField, SOURCE_TEXT_UNIT_LIMIT, SourcePageController, type SourcePageOptions, resolveSourceSelection } from './source-page-controller.js';
 import { setSourcePageScope } from './source-page-scope.js';
 
 type Row = { id: string; text: string };
@@ -64,10 +64,10 @@ describe('SourcePageController', () => {
       return calls === 1 ? [record(0), { ...record(1), order: 0 }] : [record(0), record(1)];
     };
     test.bind(source);
-    expect(await test.control.resolveSelection(['key-0', 'key-1'])).to.equal(undefined);
+    expect(await resolveSourceSelection(test.control, ['key-0', 'key-1'])).to.equal(undefined);
     expect(test.control.state.selectionError).to.be.instanceOf(TypeError);
     expect(test.control.state.selectionPending).to.equal(false);
-    expect((await test.control.resolveSelection(['key-0', 'key-1']))?.map(row => row.order)).to.deep.equal([0, 1]);
+    expect((await resolveSourceSelection(test.control, ['key-0', 'key-1']))?.map(row => row.order)).to.deep.equal([0, 1]);
     expect(calls).to.equal(2);
     expect(test.control.state.selectionError).to.equal(undefined);
     test.disconnect();
@@ -230,11 +230,11 @@ describe('SourcePageController', () => {
     source.lookup = async keys => { sizes.push(keys.length); return [...keys].reverse().map(key => record(Number(key.slice(4)))); };
     const test = setup(); test.bind(source);
     const keys = Array.from({ length: 10_000 }, (_, i) => `key-${9999 - i}`);
-    const rows = await test.control.resolveSelection(keys);
+    const rows = await resolveSourceSelection(test.control, keys);
     expect(rows?.length).to.equal(10_000); expect(rows?.[0]?.order).to.equal(0); expect(rows?.[9999]?.order).to.equal(9999);
     expect(sizes).to.deep.equal(Array(20).fill(500));
     await test.control.request({ search: 'changed' }, 0, 100);
-    expect((await test.control.resolveSelection(keys))?.length).to.equal(10_000); expect(sizes.length).to.equal(20);
+    expect((await resolveSourceSelection(test.control, keys))?.length).to.equal(10_000); expect(sizes.length).to.equal(20);
     test.disconnect();
   });
 
@@ -243,7 +243,7 @@ describe('SourcePageController', () => {
     source.lookup = (_keys, context) => { signal = context.signal; return lookup.promise; };
     source.query = async () => { throw new Error('Page failed'); };
     const test = setup(); test.bind(source);
-    const selection = test.control.resolveSelection(['key-1', 'key-2']); await tick();
+    const selection = resolveSourceSelection(test.control, ['key-1', 'key-2']); await tick();
     expect(await test.control.request({ search: 'new' }, 0, 100)).to.equal(false);
     expect(signal?.aborted).to.equal(false); expect(test.control.state.selectionPending).to.equal(true);
     expect(test.control.state.selectionError).to.equal(undefined);
@@ -257,8 +257,8 @@ describe('SourcePageController', () => {
     const source = provider(); const old = deferred<readonly LyraSourceRecord<Row>[]>(); let calls = 0;
     source.lookup = async () => { calls++; return calls === 1 ? old.promise : [record(999)]; };
     const test = setup(); test.bind(source);
-    const first = test.control.resolveSelection(['key-0']); await tick();
-    const next = Array.from({ length: 100 }, (_, i) => test.control.resolveSelection([`key-${i + 1}`]));
+    const first = resolveSourceSelection(test.control, ['key-0']); await tick();
+    const next = Array.from({ length: 100 }, (_, i) => resolveSourceSelection(test.control, [`key-${i + 1}`]));
     expect(await first).to.equal(undefined); expect(await Promise.all(next.slice(0, -1))).to.deep.equal(Array(99).fill(undefined));
     expect(calls).to.equal(1); old.resolve([record(0)]);
     expect(await next[99]).to.equal(undefined); expect(calls).to.equal(2);
@@ -272,12 +272,12 @@ describe('SourcePageController', () => {
     source.locate = () => { calls++; return calls === 1 ? old.promise : Promise.resolve(9); };
     source.lookup = async keys => { lookups++; return keys.map(key => record(Number(key.slice(4)))); };
     const test = setup(); test.bind(source); await test.control.request({ search: '' }, 0, 1);
-    await test.control.resolveSelection(['key-2']);
+    await resolveSourceSelection(test.control, ['key-2']);
     const first = test.control.locate('key-8'); await tick();
     await test.control.request({ search: 'new' }, 0, 1); expect(await first).to.equal(null);
     const latest = test.control.locate('key-9'); await tick(); expect(calls).to.equal(1);
     old.resolve(8); expect(await latest).to.equal(9);
-    await test.control.resolveSelection(['key-2']); expect(lookups).to.equal(1); test.disconnect();
+    await resolveSourceSelection(test.control, ['key-2']); expect(lookups).to.equal(1); test.disconnect();
   });
 
   it('reconnects latest bounded intents and does not repaint or commit old-document work', async () => {
@@ -334,19 +334,19 @@ describe('SourcePageController', () => {
       expect(await test.control.request({ search: '' }, 0, 2)).to.equal(false);
       expect(test.control.state.result).to.equal(undefined); expect(test.control.state.error).to.be.instanceOf(Error);
     }
-    expect(await test.control.resolveSelection(Array(10_001).fill('key-0'))).to.equal(undefined);
+    expect(await resolveSourceSelection(test.control, Array(10_001).fill('key-0'))).to.equal(undefined);
     expect(test.control.state.selectionError).to.be.instanceOf(Error); test.disconnect();
   });
 
   it('preserves raw selected cache across locale changes but revokes everything on explicit source epochs', async () => {
     const test = setup(); const source = provider(); let calls = 0;
     const lookup = source.lookup; source.lookup = (keys, context) => { calls++; return lookup(keys, context); };
-    test.bind(source); await test.control.resolveSelection(['key-1']);
-    test.bind(source, 0, 'fr'); await test.control.resolveSelection(['key-1']); expect(calls).to.equal(1);
-    test.bind(source, 1, 'fr'); await test.control.resolveSelection(['key-1']); expect(calls).to.equal(2);
+    test.bind(source); await resolveSourceSelection(test.control, ['key-1']);
+    test.bind(source, 0, 'fr'); await resolveSourceSelection(test.control, ['key-1']); expect(calls).to.equal(1);
+    test.bind(source, 1, 'fr'); await resolveSourceSelection(test.control, ['key-1']); expect(calls).to.equal(2);
     const pending = deferred<readonly LyraSourceRecord<Row>[]>(); let signal: AbortSignal | undefined;
     source.lookup = (_keys, context) => { signal = context.signal; return pending.promise; };
-    const selection = test.control.resolveSelection(['key-2']); await tick();
+    const selection = resolveSourceSelection(test.control, ['key-2']); await tick();
     test.bind(provider(), 2); expect(await selection).to.equal(undefined); expect(signal?.aborted).to.equal(true);
     pending.resolve([record(2)]); await tick();
     expect(test.control.state.selectionError).to.equal(undefined); expect(test.control.state.selectionPending).to.equal(false);
@@ -406,7 +406,7 @@ for (const capability of ['query', 'lookup', 'locate'] as const) {
       return (...args: unknown[]) => { calls++; return Reflect.apply(original, source, args); };
     } });
     const result = capability === 'query' ? await test.control.request({ search: '' }, 0, 1)
-      : capability === 'lookup' ? await test.control.resolveSelection(['key-0']) : await test.control.locate('key-0');
+      : capability === 'lookup' ? await resolveSourceSelection(test.control, ['key-0']) : await test.control.locate('key-0');
     expect(calls).to.equal(0);
     expect(result).to.equal(capability === 'query' ? false : capability === 'lookup' ? undefined : null);
     expect(await test.control.request({ search: 'current' }, 0, 1)).to.equal(true);
@@ -444,7 +444,7 @@ for (const channel of ['page', 'selection'] as const) {
         expect(await test.control.request({ search: 'first' }, 0, 1)).to.equal(false);
         expect(laterReads).to.equal(0);
       } else {
-        expect((await test.control.resolveSelection(['key-0']))?.map(value => value.key)).to.deep.equal(['key-0']);
+        expect((await resolveSourceSelection(test.control, ['key-0']))?.map(value => value.key)).to.deep.equal(['key-0']);
         expect(laterReads).to.equal(1); expect(test.control.state.selectionError).to.equal(undefined);
       }
       expect(await nextPage).to.equal(true); expect(test.control.state.result?.rows[0]?.key).to.equal('key-1');
@@ -463,7 +463,7 @@ for (const lane of ['page', 'selection', 'locate'] as const) {
     const first = setup({}, owner); first.bind(source);
     if (lane === 'locate') await first.control.request({ search: '' }, 0, 1);
     const run = (test: { control: SourcePageController<Row, Query> }) => lane === 'page' ? test.control.request({ search: '' }, 0, 1)
-      : lane === 'selection' ? test.control.resolveSelection(['key-0']) : test.control.locate('key-0');
+      : lane === 'selection' ? resolveSourceSelection(test.control, ['key-0']) : test.control.locate('key-0');
     const old = run(first); await tick(); expect(calls).to.equal(1);
     first.disconnect();
     const current = setup({}, owner); current.bind(source);

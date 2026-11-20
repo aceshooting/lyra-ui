@@ -1,6 +1,6 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { SourcePageController, resolveSourceSelection } from '../../../internal/source-page-controller.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { collectionSupport, publicCollectionTruncation, writeNormalizedOwnedCollection, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
@@ -463,7 +463,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.sourceSelectionInputs = inputs; this.sourceSelectionFailed = false;
     const owner = this.ownerDocument; const lifecycle = this.sourceLifecycle;
     const canonicalIds = canonicalIdentityList(ids);
-    void this.sourcePages.resolveSelection(canonicalIds).then(records => {
+    void resolveSourceSelection(this.sourcePages, canonicalIds).then(records => {
       const completedRevision = source.revision;
       if (completedRevision !== revision || lifecycle !== this.sourceLifecycle || !this.isConnected || this.ownerDocument !== owner || this.dataSource !== source || this.sourceEpoch !== epoch || this.selectedChunkIds !== ids) return;
       if (!records) { this.sourceSelectionFailed = true; this.sourceStateVersion++; return; }

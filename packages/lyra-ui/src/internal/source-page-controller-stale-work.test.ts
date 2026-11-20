@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraPageResult, LyraPageSource, LyraSourceRecord } from '../data-sources.js';
-import { SourcePageController, type SourcePageOptions } from './source-page-controller.js';
+import { SourcePageController, type SourcePageOptions, resolveSourceSelection } from './source-page-controller.js';
 import { setSourcePageScope } from './source-page-scope.js';
 
 type Row = { id: string; text: string };
@@ -163,13 +163,13 @@ describe('SourcePageController source validation and stale work', () => {
     source.lookup = (keys, context) => {
       if (!first) return lookup(keys, context);
       first = false;
-      context.signal.addEventListener('abort', () => { nested = test.control.resolveSelection(['key-2']); }, { once: true });
+      context.signal.addEventListener('abort', () => { nested = resolveSourceSelection(test.control, ['key-2']); }, { once: true });
       return pendingLookup.promise;
     };
     test.bind(source);
-    const stale = test.control.resolveSelection(['key-1']);
+    const stale = resolveSourceSelection(test.control, ['key-1']);
     await tick();
-    const outer = test.control.resolveSelection(['key-3']);
+    const outer = resolveSourceSelection(test.control, ['key-3']);
     expect(await stale).to.equal(undefined);
     expect(await outer).to.equal(undefined);
     // The revoked lookup keeps its physical permit until the provider settles it.
@@ -184,11 +184,11 @@ describe('SourcePageController source validation and stale work', () => {
     let nested: Promise<readonly LyraSourceRecord<Row>[] | undefined> | undefined;
     const keys = new Proxy(['key-1'], {
       getOwnPropertyDescriptor(target, key) {
-        nested ??= test.control.resolveSelection(['key-2']);
+        nested ??= resolveSourceSelection(test.control, ['key-2']);
         return Reflect.getOwnPropertyDescriptor(target, key);
       },
     });
-    expect(await test.control.resolveSelection(keys)).to.equal(undefined);
+    expect(await resolveSourceSelection(test.control, keys)).to.equal(undefined);
     expect((await nested)?.map((row) => row.key)).to.deep.equal(['key-2']);
     expect(test.control.state.selectionPending).to.equal(false);
     test.disconnect();
@@ -205,9 +205,9 @@ describe('SourcePageController source validation and stale work', () => {
     });
     test.bind(provider());
     rebind = true;
-    expect(await test.control.resolveSelection(['key-1'])).to.equal(undefined);
+    expect(await resolveSourceSelection(test.control, ['key-1'])).to.equal(undefined);
     expect(test.control.state.selectionError).to.equal(undefined);
-    expect((await test.control.resolveSelection(['key-1']))?.map((row) => row.key)).to.deep.equal(['key-1']);
+    expect((await resolveSourceSelection(test.control, ['key-1']))?.map((row) => row.key)).to.deep.equal(['key-1']);
     test.disconnect();
   });
 

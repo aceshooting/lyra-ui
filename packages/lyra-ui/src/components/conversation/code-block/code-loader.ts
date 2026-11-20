@@ -1,5 +1,4 @@
-import { GREYCAT_LANGUAGE } from './greycat-language.js';
-import type { ShikiHighlighter, ShikiLanguageInput } from '../../../internal/shiki/core.js';
+import { normalizeShikiLanguage, type ShikiHighlighter } from '../../../internal/shiki/core.js';
 import { loadShikiLanguage as loadLanguage } from '../../../internal/shiki/full.js';
 
 export {
@@ -18,12 +17,18 @@ export {
   shikiHasLoadedLanguage,
 } from '../../../internal/shiki/full.js';
 
-const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
-  gcl: GREYCAT_LANGUAGE,
-  greycat: GREYCAT_LANGUAGE,
-};
+/** The component's additional grammars, by language name; each loads the first time it is needed. */
+const CUSTOM_LANGUAGE_NAMES = new Set(['gcl', 'greycat']);
 
 /** Loads a bundled language or one of the component's additional grammars. */
-export function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Promise<boolean> {
-  return loadLanguage(hl, lang, CUSTOM_LANGUAGES);
+export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Promise<boolean> {
+  const normalized = normalizeShikiLanguage(lang);
+  if (!CUSTOM_LANGUAGE_NAMES.has(normalized)) return loadLanguage(hl, lang);
+  let grammar;
+  try {
+    ({ GREYCAT_LANGUAGE: grammar } = await import('./greycat-language.js'));
+  } catch {
+    return false;
+  }
+  return loadLanguage(hl, lang, { [normalized]: grammar });
 }

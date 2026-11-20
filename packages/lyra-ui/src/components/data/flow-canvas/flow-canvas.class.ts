@@ -497,8 +497,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.sourcePages?.bind(undefined); this.sourceScene?.bind(undefined); this.sourceOverviewRequests?.setSource(undefined, undefined);
     this.cancelModelBoundGestures(); this.autoPositions.clear(); this.measuredSizes.clear();
     this.renderResolved = undefined; this.rovingCache = undefined; this.companionStructure = undefined;
-    this._selectedNodeIds = this.sourceMode ? this._requestedSelectedNodeIds : this.snapshotSelectedIds(this._requestedSelectedNodeIds, new Set(this._nodes.map(node => node.id)));
-    this._selectedEdgeIds = this.sourceMode ? this._requestedSelectedEdgeIds : this.snapshotSelectedIds(this._requestedSelectedEdgeIds, new Set(this._edges.map(edge => edge.id)));
+    this._selectedNodeIds = this.selectedIdsAmong(this._requestedSelectedNodeIds, this._nodes);
+    this._selectedEdgeIds = this.selectedIdsAmong(this._requestedSelectedEdgeIds, this._edges);
     this.sourceState++;
   }
   private sourceAuthority(): () => boolean {
@@ -832,10 +832,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.selectionSources.isRebind('selectedNodeIds', value, this._selectedNodeIds)) return;
     const previous = this._selectedNodeIds;
     this._requestedSelectedNodeIds = this.sanitizeSelectionCandidates(value);
-    this._selectedNodeIds = this.sourceMode ? this._requestedSelectedNodeIds : this.snapshotSelectedIds(
-      this._requestedSelectedNodeIds,
-      new Set(this.modelNodes.map((node) => node.id)),
-    );
+    this._selectedNodeIds = this.selectedIdsAmong(this._requestedSelectedNodeIds, this.modelNodes);
     this.requestUpdate('selectedNodeIds', previous);
   }
 
@@ -852,10 +849,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.selectionSources.isRebind('selectedEdgeIds', value, this._selectedEdgeIds)) return;
     const previous = this._selectedEdgeIds;
     this._requestedSelectedEdgeIds = this.sanitizeSelectionCandidates(value);
-    this._selectedEdgeIds = this.sourceMode ? this._requestedSelectedEdgeIds : this.snapshotSelectedIds(
-      this._requestedSelectedEdgeIds,
-      new Set(this.modelEdges.map((edge) => edge.id)),
-    );
+    this._selectedEdgeIds = this.selectedIdsAmong(this._requestedSelectedEdgeIds, this.modelEdges);
     this.requestUpdate('selectedEdgeIds', previous);
   }
 
@@ -877,10 +871,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return Object.freeze(selected);
   }
 
-  private snapshotSelectedIds(
-    value: readonly string[],
-    validIds: ReadonlySet<string>,
-  ): readonly string[] {
+  /** The requested ids that name a current item (all of them in source mode, whose items load later). */
+  private selectedIdsAmong(value: readonly string[], items: readonly { readonly id: string }[]): readonly string[] {
+    if (this.sourceMode) return value;
+    const validIds = new Set(items.map((item) => item.id));
     const selected = value.filter((candidate) => validIds.has(candidate));
     return selected.length === value.length ? value : Object.freeze(selected);
   }
@@ -1170,26 +1164,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.mirrorAnnouncement('');
     this.resizeObserver.clear();
     this.observedNodeEls.clear();
-    if (this.geometryRaf != null) {
-      this.cancelOwnerAnimationFrame(this.geometryRaf);
-      this.geometryRaf = null;
-    }
-    if (this.layoutRaf != null) {
-      this.cancelOwnerAnimationFrame(this.layoutRaf);
-      this.layoutRaf = null;
-    }
-    if (this.companionRaf != null) {
-      this.cancelOwnerAnimationFrame(this.companionRaf);
-      this.companionRaf = null;
-    }
-    if (this.viewportChangeRaf != null) {
-      this.cancelOwnerAnimationFrame(this.viewportChangeRaf);
-      this.viewportChangeRaf = null;
-    }
-    if (this.wheelMeasureRaf != null) {
-      this.cancelOwnerAnimationFrame(this.wheelMeasureRaf);
-      this.wheelMeasureRaf = null;
-      this.wheelMeasure = null;
+    if (this.wheelMeasureRaf != null) this.wheelMeasure = null;
+    for (const frame of ['geometryRaf', 'layoutRaf', 'companionRaf', 'viewportChangeRaf', 'wheelMeasureRaf'] as const) {
+      const handle = this[frame];
+      if (handle == null) continue;
+      this.cancelOwnerAnimationFrame(handle);
+      this[frame] = null;
     }
     this.endBackgroundPan(false);
     this.endNodeDrag(false);
@@ -1288,13 +1268,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.cancelModelBoundGestures();
       this.pruneNodeCaches();
       this.syncAuthoredCards();
-      const nodeIds = new Set(this.modelNodes.map((node) => node.id));
-      this._selectedNodeIds = this.sourceMode ? this._requestedSelectedNodeIds : this.snapshotSelectedIds(this._requestedSelectedNodeIds, nodeIds);
+      this._selectedNodeIds = this.selectedIdsAmong(this._requestedSelectedNodeIds, this.modelNodes);
     }
     if (changed.has('edges')) {
       this.cancelModelBoundGestures();
-      const edgeIds = new Set(this.modelEdges.map((edge) => edge.id));
-      this._selectedEdgeIds = this.sourceMode ? this._requestedSelectedEdgeIds : this.snapshotSelectedIds(this._requestedSelectedEdgeIds, edgeIds);
+      this._selectedEdgeIds = this.selectedIdsAmong(this._requestedSelectedEdgeIds, this.modelEdges);
     }
     if (
       (changed.has('readonly') && this.readonly) ||
@@ -2905,24 +2883,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const handleEl = path.find((el) => isHtmlElement(el) && el.dataset['handleKind'] === 'input') as
       | HTMLElement
       | undefined;
-    const targetHandle = handleEl?.dataset['handleId'] ?? 'in';
-    this.emit(
-      'lr-connect',
-      Object.freeze({
-        source: state.sourceId,
-        target: targetNodeId,
-        sourceHandle: state.sourceHandle,
-        targetHandle,
-      }),
-    );
-    const sourceNode = nodeById(this.modelNodes, state.sourceId);
-    const targetNode = nodeById(this.modelNodes, targetNodeId);
-    this.announcer.announce(
-      this.localize('flowConnectCommitted', undefined, {
-        source: sourceNode ? this.nodeAccessibleText(sourceNode) : state.sourceId,
-        target: targetNode ? this.nodeAccessibleText(targetNode) : targetNodeId,
-      }),
-    );
+    this.commitConnection(state.sourceId, targetNodeId, state.sourceHandle, handleEl?.dataset['handleId'] ?? 'in');
   };
 
   /** Same rule as `isInvalidConnectTarget()`, callable after `connectState` has already been
@@ -3026,22 +2987,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const sourceOutputs = nodeById(this.modelNodes, sourceId)?.outputs ?? DEFAULT_FLOW_OUTPUTS;
     const targetInputs = target.inputs ?? DEFAULT_FLOW_INPUTS;
     if (this.sourceMode || !this.connectable || this.readonly) return;
-    this.emit(
-      'lr-connect',
-      Object.freeze({
-        source: sourceId,
-        target: target.id,
-        sourceHandle: sourceOutputs[0]?.id ?? 'out',
-        targetHandle: targetInputs[0]?.id ?? 'in',
-      }),
-    );
-    const source = nodeById(this.modelNodes, sourceId);
-    this.announcer.announce(
-      this.localize('flowConnectCommitted', undefined, {
-        source: source ? this.nodeAccessibleText(source) : sourceId,
-        target: this.nodeAccessibleText(target),
-      }),
-    );
+    this.commitConnection(sourceId, target.id, sourceOutputs[0]?.id ?? 'out', targetInputs[0]?.id ?? 'in', target);
+  }
+
+  /** Emits `lr-connect` and announces it; names read after the event, as listeners may rename nodes. */
+  private commitConnection(source: string, target: string, sourceHandle: string, targetHandle: string, targetNode?: FlowNode): void {
+    this.emit('lr-connect', Object.freeze({ source, target, sourceHandle, targetHandle }));
+    const name = (id: string, node = nodeById(this.modelNodes, id)): string => node ? this.nodeAccessibleText(node) : id;
+    this.announcer.announce(this.localize('flowConnectCommitted', undefined, { source: name(source), target: name(target, targetNode) }));
   }
 
   private cancelKeyboardConnect(): void {
@@ -3113,6 +3066,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       const selected = selectedEdges.has(edge.id);
       const path = this.edgePathD(sourcePt, targetPt);
       const tone = this.edgeTone(edge);
+
       return svg`<g data-edge-id=${edge.id} ${ref(element => { if (element) this.edgeWrappers.set(edge.id, element as SVGElement); else this.edgeWrappers.delete(edge.id); })}>
         <path
           part="edge-hit-area"

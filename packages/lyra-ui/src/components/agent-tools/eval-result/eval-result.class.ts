@@ -1,7 +1,7 @@
 import type { EvalRunResult } from './eval-run-result.js';
 export type { EvalRunResult } from './eval-run-result.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraSourceRevision } from '../../../data-sources.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { SourcePageController, resolveSourceSelection } from '../../../internal/source-page-controller.js';
 
 import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize } from '../../../internal/source-paging.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -346,7 +346,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     const owner = this.ownerDocument;
     this.sourcePair = []; this.sourceReviewMemo = undefined; this.pairFailure = undefined;
     const keys = [...new Set([selected, baseline].filter((id): id is string => typeof id === 'string' && id.length > 0))];
-    void this.sourcePages.resolveSelection(keys).then(records => {
+    void resolveSourceSelection(this.sourcePages, keys).then(records => {
       if (!this.isConnected || this.ownerDocument !== owner || this.pairVersion !== version || !this.sourceMode) return;
       if (records) this.sourcePair = records;
       this.sourceStateVersion++;

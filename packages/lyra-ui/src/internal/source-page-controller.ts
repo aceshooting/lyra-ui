@@ -98,18 +98,19 @@ function initialState<T, S>(): SourcePageState<T, S> {
 /** Coordinates bounded domain pages and independent explicit-key selection transactions. */
 export class SourcePageController<T, Q, S = undefined> implements ReactiveController {
   private snapshot = initialState<T, S>();
-  private binding?: SourcePageBinding<T, Q, S>;
+  /** @internal */ binding?: SourcePageBinding<T, Q, S>;
   private bindVersion = 0;
   private pageVersion = 0;
-  private selectionVersion = 0;
+  /** @internal */ selectionVersion = 0;
   private locateVersion = 0;
   private connected: boolean;
   private notification?: object;
   private lastPage?: PageIntent<Q>;
-  private lastSelection?: readonly string[];
-  private readonly cache = new Map<string, LyraSourceRecord<T> | null>();
+  /** @internal */ lastSelection?: readonly string[];
+  /** @internal Set by the first selection, so a reconnect can replay it. */ replaySelection?: (controller: SourcePageController<T, Q, S>, keys: readonly string[]) => Promise<unknown>;
+  /** @internal */ readonly cache = new Map<string, LyraSourceRecord<T> | null>();
   private readonly pageLane: Lane<boolean> = { channel: 'page', canceled: false, scheduled: false };
-  private readonly selectionLane: Lane<readonly LyraSourceRecord<T>[] | undefined> = { channel: 'selection', canceled: undefined, scheduled: false };
+  /** @internal */ readonly selectionLane: Lane<readonly LyraSourceRecord<T>[] | undefined> = { channel: 'selection', canceled: undefined, scheduled: false };
   private readonly locateLane: Lane<number | null> = { channel: 'locate', canceled: null, scheduled: false };
   private readonly authority: SourceRequestController<Channel>;
   private readonly options: SourcePageOptions<T, Q, S>;
@@ -200,67 +201,6 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
     }, error => this.patch({ pending: false, result: undefined, error }));
   }
 
-  resolveSelection(keys: readonly string[]): Promise<readonly LyraSourceRecord<T>[] | undefined> {
-    const transaction = ++this.selectionVersion;
-    this.patch({ selectionPending: true, selectionError: undefined });
-    this.stop(this.selectionLane);
-    if (transaction !== this.selectionVersion) return Promise.resolve(undefined);
-    let accepted: readonly string[];
-    try {
-      const values = list(keys, 10_000);
-      const budget = { used: 0 };
-      const unique = new Set<string>();
-      for (let i = 0; i < values.length; i++) unique.add(textValue(field(values, i), budget, true));
-      accepted = Object.freeze([...unique]);
-      if (transaction !== this.selectionVersion) return Promise.resolve(undefined);
-    } catch (error) {
-      if (transaction === this.selectionVersion) { this.lastSelection = undefined; this.patch({ selectionPending: false, selectionError: error }); }
-      return Promise.resolve(undefined);
-    }
-    this.lastSelection = accepted;
-    const wanted = new Set(accepted);
-    for (const key of this.cache.keys()) if (!wanted.has(key)) this.cache.delete(key);
-    if (!this.usable() || !this.binding) { this.patch({ selectionPending: false }); return Promise.resolve(undefined); }
-    const source = this.binding.source;
-    return this.enqueue(this.selectionLane, async (context, current) => {
-      const staged = new Map<string, LyraSourceRecord<T> | null>();
-      const missing = accepted.filter(key => !this.cache.has(key));
-      const budget = { used: accepted.reduce((sum, key) => sum + key.length, 0) };
-      for (let offset = 0; offset < missing.length; offset += 500) {
-        if (!current()) return undefined;
-        const batch = Object.freeze(missing.slice(offset, offset + 500));
-        const lookup = source.lookup;
-        if (!current()) return undefined;
-        const raw = await Reflect.apply(lookup, source, [batch, context]);
-        if (!current()) return undefined;
-        const rows = list(raw, batch.length);
-        const requested = new Set(batch);
-        const seen = new Set<string>();
-        for (let i = 0; i < rows.length; i++) {
-          const item = this.projectRecord(field(rows, i), budget, current);
-          if (!current()) return undefined;
-          if (!requested.has(item.key) || seen.has(item.key)) throw new TypeError('Invalid selected source key');
-          seen.add(item.key); staged.set(item.key, item);
-        }
-        for (const key of batch) if (!seen.has(key)) staged.set(key, null);
-      }
-      if (!current()) return undefined;
-      const result: LyraSourceRecord<T>[] = [];
-      const orders = new Set<number>();
-      for (const key of accepted) {
-        const item = staged.has(key) ? staged.get(key) : this.cache.get(key);
-        if (item) {
-          if (orders.has(item.order)) throw new TypeError('Duplicate selected source order');
-          orders.add(item.order); result.push(item);
-        }
-      }
-      result.sort((a, b) => a.order - b.order);
-      for (const [key, item] of staged) this.cache.set(key, item);
-      this.patch({ selectionPending: false, selectionError: undefined });
-      return Object.freeze(result);
-    }, error => this.patch({ selectionPending: false, selectionError: error }));
-  }
-
   locate(key: string): Promise<number | null> {
     const transaction = ++this.locateVersion;
     this.stop(this.locateLane);
@@ -279,7 +219,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
     }, () => {});
   }
 
-  private projectRecord(raw: unknown, budget: { used: number }, current: Current): LyraSourceRecord<T> {
+  /** @internal */ projectRecord(raw: unknown, budget: { used: number }, current: Current): LyraSourceRecord<T> {
     const key = textValue(field(raw, 'key'), budget, true);
     const order = sourceCount(field(raw, 'order'));
     const input = Object.freeze({ key, order, value: field(raw, 'value') });
@@ -359,7 +299,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
     return result;
   }
 
-  private enqueue<R>(lane: Lane<R>, run: Job<R>['run'], fail: Job<R>['fail']): Promise<R> {
+  /** @internal */ enqueue<R>(lane: Lane<R>, run: Job<R>['run'], fail: Job<R>['fail']): Promise<R> {
     let settle!: (value: R) => void;
     const done = new Promise<R>(resolve => { settle = resolve; });
     lane.current = { run, fail, settle };
@@ -367,7 +307,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
     return done;
   }
 
-  private stop<R>(lane: Lane<R>, abort = true): void {
+  /** @internal */ stop<R>(lane: Lane<R>, abort = true): void {
     const job = lane.current;
     lane.current = undefined;
     job?.settle(lane.canceled);
@@ -415,9 +355,9 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
     });
   }
 
-  private usable(): boolean { return this.connected && this.host.isConnected; }
+  /** @internal */ usable(): boolean { return this.connected && this.host.isConnected; }
 
-  private patch(change: Partial<SourcePageState<T, S>>): void {
+  /** @internal */ patch(change: Partial<SourcePageState<T, S>>): void {
     this.snapshot = Object.freeze({ ...this.snapshot, ...change });
     this.notify();
   }
@@ -449,9 +389,79 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
       const page = this.lastPage;
       const selection = this.lastSelection;
       if (page) void this.request(page.query, page.page, page.pageSize);
-      if (selection) void this.resolveSelection(selection);
+      if (selection) void this.replaySelection?.(this, selection);
       this.notify();
     }
   }
   hostDisconnected(): void { this.connected = false; this.reset(); }
+}
+
+/**
+ * Resolves explicit record keys through the bound source's `lookup`, as one cancellable selection
+ * transaction of `controller`. A standalone function rather than a method so a component that never
+ * resolves selections does not ship it; the controller replays the last selection on reconnect.
+ */
+export function resolveSourceSelection<T, Q, S>(
+  controller: SourcePageController<T, Q, S>,
+  keys: readonly string[],
+): Promise<readonly LyraSourceRecord<T>[] | undefined> {
+  const transaction = ++controller.selectionVersion;
+  controller.patch({ selectionPending: true, selectionError: undefined });
+  controller.stop(controller.selectionLane);
+  if (transaction !== controller.selectionVersion) return Promise.resolve(undefined);
+  let accepted: readonly string[];
+  try {
+    const values = list(keys, 10_000);
+    const budget = { used: 0 };
+    const unique = new Set<string>();
+    for (let i = 0; i < values.length; i++) unique.add(textValue(field(values, i), budget, true));
+    accepted = Object.freeze([...unique]);
+    if (transaction !== controller.selectionVersion) return Promise.resolve(undefined);
+  } catch (error) {
+    if (transaction === controller.selectionVersion) { controller.lastSelection = undefined; controller.patch({ selectionPending: false, selectionError: error }); }
+    return Promise.resolve(undefined);
+  }
+  controller.lastSelection = accepted;
+  controller.replaySelection = resolveSourceSelection;
+  const wanted = new Set(accepted);
+  for (const key of controller.cache.keys()) if (!wanted.has(key)) controller.cache.delete(key);
+  if (!controller.usable() || !controller.binding) { controller.patch({ selectionPending: false }); return Promise.resolve(undefined); }
+  const source = controller.binding.source;
+  return controller.enqueue(controller.selectionLane, async (context, current) => {
+    const staged = new Map<string, LyraSourceRecord<T> | null>();
+    const missing = accepted.filter(key => !controller.cache.has(key));
+    const budget = { used: accepted.reduce((sum, key) => sum + key.length, 0) };
+    for (let offset = 0; offset < missing.length; offset += 500) {
+      if (!current()) return undefined;
+      const batch = Object.freeze(missing.slice(offset, offset + 500));
+      const lookup = source.lookup;
+      if (!current()) return undefined;
+      const raw = await Reflect.apply(lookup, source, [batch, context]);
+      if (!current()) return undefined;
+      const rows = list(raw, batch.length);
+      const requested = new Set(batch);
+      const seen = new Set<string>();
+      for (let i = 0; i < rows.length; i++) {
+        const item = controller.projectRecord(field(rows, i), budget, current);
+        if (!current()) return undefined;
+        if (!requested.has(item.key) || seen.has(item.key)) throw new TypeError('Invalid selected source key');
+        seen.add(item.key); staged.set(item.key, item);
+      }
+      for (const key of batch) if (!seen.has(key)) staged.set(key, null);
+    }
+    if (!current()) return undefined;
+    const result: LyraSourceRecord<T>[] = [];
+    const orders = new Set<number>();
+    for (const key of accepted) {
+      const item = staged.has(key) ? staged.get(key) : controller.cache.get(key);
+      if (item) {
+        if (orders.has(item.order)) throw new TypeError('Duplicate selected source order');
+        orders.add(item.order); result.push(item);
+      }
+    }
+    result.sort((a, b) => a.order - b.order);
+    for (const [key, item] of staged) controller.cache.set(key, item);
+    controller.patch({ selectionPending: false, selectionError: undefined });
+    return Object.freeze(result);
+  }, error => controller.patch({ selectionPending: false, selectionError: error }));
 }

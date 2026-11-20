@@ -17,7 +17,7 @@ import { GraphSourceCompositionController } from './graph-source-composition.js'
 import { tag } from '../../../internal/prefix.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
 import { GraphSourceController } from './graph-source-controller.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { SourcePageController, resolveSourceSelection } from '../../../internal/source-page-controller.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
 import { findSourceRow } from '../../../internal/source-row.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
@@ -694,7 +694,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.sourceMode || this.sourceComposition.profile?.empty) return undefined;
     const profile = this.sourceComposition.profile, currentSource = this.sourceAuthority();
     const current = () => currentSource() && this.sourceComposition.profile === profile;
-    const records = await this.sourcePages.resolveSelection(keys);
+    const records = await resolveSourceSelection(this.sourcePages, keys);
     return records && current() ? Object.freeze({ records, current }) : undefined;
   }, async key => {
     if (!this.sourceMode || this.sourceComposition.profile?.empty) return undefined;
@@ -869,7 +869,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private async ensureSourceScene(key: string, current: () => boolean): Promise<GraphSourceRecord | undefined> {
-    const records = await this.sourcePages.resolveSelection([key]);
+    const records = await resolveSourceSelection(this.sourcePages, [key]);
     if (!current() || !records) return undefined;
     const record = records.find(row => row.key === key);
     if (!record) { this.sourceMissing = true; this.sourceState++; return undefined; }

@@ -7,7 +7,7 @@ import { setSourcePageScope, sourcePageScope, shareSourcePageQueries } from '../
 import { cursorIds } from './document-library-cursor.js';
 import type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
 export type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
-import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { SourcePageController, resolveSourceSelection } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { displayedSourcePage, normalizeSourcePage, normalizeSourcePageSize, SourceQueryInputs } from '../../../internal/source-paging.js';
 import { indexByKey } from '../../../internal/keyed-index.js';
@@ -564,7 +564,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     this.sourceSelectionInputs = inputs;
     const owner = this.ownerDocument;
     const lifecycle = this.sourceLifecycleVersion;
-    void this.sourcePages.resolveSelection(ids).then(records => {
+    void resolveSourceSelection(this.sourcePages, ids).then(records => {
       if (!records || lifecycle !== this.sourceLifecycleVersion || !this.isConnected || this.ownerDocument !== owner || this.dataSource !== source || epoch !== this.sourceEpoch + this.explicitRefresh || this._selectedDocumentIds !== ids) return;
       const retained = new Set(records.map(record => record.key));
       const accepted = Object.freeze(ids.filter(id => retained.has(id)));
