@@ -3035,11 +3035,11 @@
       },
       "themeInput": "--lr-theme-size-0-8rem",
       "valueNameClassification": "component-role",
-      "canonicalRole": "--lr-lite-chart-legend-font-size",
+      "canonicalRole": "--lr-date-picker-title-font-size",
       "compatibility": {
         "name": "--lr-size-0-8rem",
         "status": "retained",
-        "aliasOf": "--lr-lite-chart-legend-font-size"
+        "aliasOf": "--lr-date-picker-title-font-size"
       },
       "evidence": [
         "src/components/forms/date-picker/date-picker.styles.ts"

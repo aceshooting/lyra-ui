@@ -53,7 +53,7 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — names the `nav` landmark by attribute
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the `nav` landmark by attribute
   presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
   `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
   example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
@@ -195,7 +195,7 @@ hover opening.
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — forwarded by presence to the link or button,
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded by presence to the link or button,
   including an explicitly empty value.
 - `href: string = ''` — link URL, sanitized; a safe value makes a link item.
 - `target: string = ''` — native link target. Any non-empty value forces `noopener noreferrer`.
@@ -209,7 +209,8 @@ hover opening.
   when the item cannot disclose: it is a link item, or its `panel` slot is empty once slot content can
   be inspected. Within one menu only one item is open at a time.
 
-**Methods:** `focus(options?)` and `click()` forward to the link or button.
+**Methods:** `focus(options?)` and `click()` forward to the link or button, and `blur(): void`
+removes focus from it.
 
 **Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, source }`,
 where `expanded` is the new state and `source` is `'user' | 'programmatic' | 'peer'`, the same

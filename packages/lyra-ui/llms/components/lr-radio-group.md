@@ -87,7 +87,9 @@ those events. Before a user activation moves the selection, the group dispatches
 holds the current selection), like the request events of `lr-checkbox-group` and
 `lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
 listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
-built-in commit. `lr-activate` still follows either way.
+built-in commit. `lr-activate` still follows either way. `lr-invalid` (no detail) is the group's
+cancelable alias of a failed validity check; `preventDefault()` also cancels the native `invalid`
+event behind it.
 
 ```js
 group.addEventListener('lr-radio-group-select-request', (event) => {

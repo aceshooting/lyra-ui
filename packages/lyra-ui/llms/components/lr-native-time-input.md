@@ -91,6 +91,8 @@ entry for the flush and cancellation rules.
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
 `base` and `input-wrapper`.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 ```html
 <lr-native-time-input
   label="Start time"

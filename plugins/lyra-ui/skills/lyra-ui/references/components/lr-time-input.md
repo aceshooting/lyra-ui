@@ -125,6 +125,8 @@ The label/hint/error chrome wraps unbroken localized content within the host, wh
 adornments shrink and ellipsize. The exact-320px RTL story keeps that copy, the seconds segments,
 fixed-size actions, and the open picker contained.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 `error` is ordinary visible validation text referenced by the segmented input through
 `aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
 content, like every sibling field. Style the invalid state with `:state(user-invalid)` or

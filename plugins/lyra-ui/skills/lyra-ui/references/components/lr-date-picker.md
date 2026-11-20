@@ -388,6 +388,8 @@ compatibility name `base` (a nested wrapper inside `date-input`), and permanent 
 `label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
 `error`.
 
+On `lr-date-input`, `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
 endpoint remains visible in `value` but contributes the empty string to `FormData` until the second
 endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,

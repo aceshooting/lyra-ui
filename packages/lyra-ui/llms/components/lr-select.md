@@ -380,6 +380,8 @@ only while `with-unknown-option` is set), `option-overflow` (the localized count
 rows), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
 `lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
 (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are

@@ -154,6 +154,8 @@ other — so a consumer replacing the button chrome keeps the same up/down orien
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
 component ever renders.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,

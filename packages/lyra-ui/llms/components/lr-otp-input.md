@@ -75,6 +75,8 @@ form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom
 `required`, `form`, `validity`, `validationMessage`, `willValidate`, `getForm()`, `checkValidity()`,
 `reportValidity()`, and `setCustomValidity()`).
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 **Methods:** `focus()`, `blur()`, `click()`, `select()`,
 `setSelectionRange(start, end, direction?)`, `setRangeText(replacement, start?, end?, selectMode?)`,
 `clear()`, `resetValidity()`, and `formStateRestoreCallback(state, reason)`. `clear()` empties a
@@ -192,6 +194,8 @@ Active and invalid states are independently themeable through
 `--lr-otp-input-active-border-color`, `--lr-otp-input-active-ring-color`, and
 `--lr-otp-input-invalid-border-color`, with the shared focus color and the shared invalid border
 (`--lr-form-control-invalid-border-color`, then `--lr-color-danger`) as fallbacks.
+
+`--lr-otp-input-hover-border-color` (default `var(--lr-color-brand)`) is the border of a hovered segment that is neither active nor invalid.
 
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,

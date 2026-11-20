@@ -314,7 +314,11 @@ rendered as authored, not neutralized.
 on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
-take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
+take precedence when specified. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`)
+and `--lr-markdown-code-copy-color-active` (default `var(--lr-markdown-code-copy-color-hover)`) set
+the copy glyph color while hovered and pressed, and `--lr-markdown-code-copy-success-color` /
+`--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`)
+its color after a successful or failed copy. `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
 property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a

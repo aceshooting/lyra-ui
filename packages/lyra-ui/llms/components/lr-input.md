@@ -232,6 +232,8 @@ yields entirely to those actions. A shrink-to-fit container still sizes the fiel
 intrinsic width. Label, hint, and error text wrap at unbroken boundaries. The
 `Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
 above, and the reference implementation every other labelled control in the library shares, so

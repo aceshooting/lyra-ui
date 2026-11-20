@@ -182,7 +182,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 296
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 300
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -8312,6 +8312,8 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
 `retry-button`, `error`, `hint`
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 The `help-text` attribute, `helpText` property and `help-text` slot supply supporting text.
 The hint container also exposes the `form-control-help-text` part.
 The selection getters return `null` before the input renders.
@@ -8925,6 +8927,8 @@ only while `with-unknown-option` is set), `option-overflow` (the localized count
 rows), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
 `lr-change`/`lr-input` detail `value` narrow to `string` when `Multiple` is `false` and `string[]`
 (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored surface are
@@ -9490,6 +9494,8 @@ compatibility name `base` (a nested wrapper inside `date-input`), and permanent 
 `label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
 `error`.
 
+On `lr-date-input`, `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
 endpoint remains visible in `value` but contributes the empty string to `FormData` until the second
 endpoint is selected. `min`/`max`, past/future limits, disabled dates/weekdays, the predicate,
@@ -9672,6 +9678,8 @@ and `dateTimeFormat(locale, options)`.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
+
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
@@ -10696,6 +10704,8 @@ yields entirely to those actions. A shrink-to-fit container still sizes the fiel
 intrinsic width. Label, hint, and error text wrap at unbroken boundaries. The
 `Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
 above, and the reference implementation every other labelled control in the library shares, so
@@ -11073,6 +11083,8 @@ other — so a consumer replacing the button chrome keeps the same up/down orien
 `hint`, `error`, plus the inherited `clear-button` and `password-toggle`, neither of which this
 component ever renders.
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
 `--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
@@ -11235,6 +11247,8 @@ undersized `--column-width` cannot introduce a second scrollbar.
 The label/hint/error chrome wraps unbroken localized content within the host, while `start`/`end`
 adornments shrink and ellipsize. The exact-320px RTL story keeps that copy, the seconds segments,
 fixed-size actions, and the open picker contained.
+
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
 `error` is ordinary visible validation text referenced by the segmented input through
 `aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
@@ -11407,6 +11421,8 @@ entry for the flush and cancellation rules.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
 `base` and `input-wrapper`.
+
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
 ```html
 <lr-native-time-input
@@ -12779,6 +12795,7 @@ single numeric string entry.
 
 **Properties:**
 
+- `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 - `min: number = 0`
 - `max: number = 100`
 - `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode, where the
@@ -13225,7 +13242,8 @@ size used by the button's form and chrome logic.
 then `lr-change` (both aliases carry `{ checked, value }`) and every activation emits `lr-activate`;
 an owning `lr-radio-group` emits the aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
 not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
-its own alias.
+its own alias. Before a standalone user activation checks it, the button dispatches the cancelable
+`lr-radio-select-request` (`{ checked: true, value }`) exactly as `lr-radio` does.
 
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
 content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
@@ -13262,7 +13280,8 @@ pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-borde
 `--lr-radio-button-checked-hover-bg`, `--lr-radio-button-checked-hover-border-color`,
 `--lr-radio-button-checked-active-bg`, and `--lr-radio-button-checked-active-border-color` hooks
 control checked pointer states. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`)
-is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-hover-border-color`,
+is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-bg`,
+`--lr-radio-border-color`, `--lr-radio-hover-border-color`,
 `--lr-radio-active-border-color`, and `--lr-radio-active-ring-color` remain visible in generated
 metadata but apply only to the base radio's circular chrome. All fallbacks preserve the existing
 brand, on-brand, quiet, and color-mix treatments.
@@ -13345,6 +13364,8 @@ are unaffected. `readonly: boolean = false`; `autocomplete: string = 'one-time-c
 form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom-error`), `disabled`,
 `required`, `form`, `validity`, `validationMessage`, `willValidate`, `getForm()`, `checkValidity()`,
 `reportValidity()`, and `setCustomValidity()`).
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 **Methods:** `focus()`, `blur()`, `click()`, `select()`,
 `setSelectionRange(start, end, direction?)`, `setRangeText(replacement, start?, end?, selectMode?)`,
@@ -13464,6 +13485,8 @@ Active and invalid states are independently themeable through
 `--lr-otp-input-invalid-border-color`, with the shared focus color and the shared invalid border
 (`--lr-form-control-invalid-border-color`, then `--lr-color-danger`) as fallbacks.
 
+`--lr-otp-input-hover-border-color` (default `var(--lr-color-brand)`) is the border of a hovered segment that is neither active nor invalid.
+
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
@@ -13577,7 +13600,9 @@ those events. Before a user activation moves the selection, the group dispatches
 holds the current selection), like the request events of `lr-checkbox-group` and
 `lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
 listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
-built-in commit. `lr-activate` still follows either way.
+built-in commit. `lr-activate` still follows either way. `lr-invalid` (no detail) is the group's
+cancelable alias of a failed validity check; `preventDefault()` also cancels the native `invalid`
+event behind it.
 
 ```js
 group.addEventListener('lr-radio-group-select-request', (event) => {
@@ -13984,6 +14009,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 
 **Properties:**
 
+- `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
@@ -14375,6 +14401,10 @@ value wins:
 - `--lr-color-picker-hue-stops` — the hue ramp's own gradient stops, defaulting to the six-stop sRGB
   hue wheel. Both text directions read the same list; only the gradient's direction differs.
   Override it to theme a wide-gamut or perceptually-uniform ramp.
+- `--lr-color-picker-invalid-border-color` (default
+  `var(--lr-form-control-invalid-border-color, var(--lr-color-danger))`) — the text field border while
+  a rejected (unparseable) entry stays in the field, hovered or not, until the next valid commit, an
+  edit or Escape.
 
 The upstream aliases `--grid-width`, `--grid-height`, `--grid-handle-size`, `--slider-height`, and
 `--slider-handle-size` feed the corresponding Lyra geometry properties above; Shoelace's
@@ -14963,7 +14993,9 @@ direction resolved after any catalog load). Preventing the notifications has no 
 locale that is already committed and already the page locale only closes the popup: no request,
 event or `setLyraLocale()` call. `focus`/`blur` relay once from the
 trigger as native `FocusEvent`s preserving `relatedTarget`. `lr-invalid` is the single
-bubbling/composed, cancelable alias of a failed native validity check.
+bubbling/composed, cancelable alias of a failed native validity check. `lr-load-error`
+(`{ value, error }`) reports a `localeLoader` rejection for a picked locale; the previous value
+stays committed and a retry control is shown.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
 direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
@@ -15017,6 +15049,8 @@ visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present 
 `load-retry` (the retry button shown after a locale load fails), `search-input` (the opt-in
 filter) and `empty` (the no-match message). Search uses the localized `localePickerSearchLabel`
 and `localePickerEmpty` string keys.
+
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -15226,6 +15260,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly end?: string;
     readonly id?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`.
+  `LyraDatePickerSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
+  }`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`.
@@ -15302,6 +15341,15 @@ These named interfaces and helper signatures are available to typed integrations
     parse(input: string, country?: string): LyraPhoneNumberParseResult;
   }`
 
+- **`components-forms-radio-radio-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`.
+  `LyraRadioGroupSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
+    readonly option: LyraRadio;
+    readonly radio: LyraRadio;
+  }`
+
 - **`components-forms-rubric-form-rubric-form-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`.
   `CategoryRubricKey extends RubricKeyBase {
@@ -15362,6 +15410,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly icon?: unknown;
     readonly gemstone?: GemstoneKey;
     readonly disabled?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`.
+  `LyraSwatchPickerSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string | null;
   }`
 
 - **`components-forms-textarea-textarea-contracts`** — Supporting data types and helpers for this component family.
@@ -16124,6 +16177,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 
 **Properties:**
 
+- `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 - `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
   and clearing. Setting it discards an in-progress stroke.
 
@@ -19002,7 +19056,9 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
 closes the legend row, present in both the gradient and the `legendStops` branch),
-`legend-annotation` (one per labeled `annotations` entry)
+`legend-annotation` (one per labeled `annotations` entry), and `description` (the screen-reader-only
+chart description: `description`, or the generated summary while `label` names the chart; absent
+when neither applies)
 
 With `matrixSource` set, additional CSS parts are `source-summary` (complete matrix and displayed viewport summary),
 `source-status` (loading text), `source-error` (localized failure), and `source-exact-window`
@@ -26958,7 +27014,8 @@ own action buttons (see the gotchas below).
 
 **Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
 safe, or the activation button while `actionable` is set without a link. Passive cards remain
-inert.
+inert. `focus(options?)` moves focus to that same native owner (a passive card has no focus target),
+and `blur(): void` removes focus from it.
 
 Changing `href` or `actionable` while the whole-card owner has focus transfers focus across the
 link, activation button, and a programmatically focusable passive base. It never overrides a newer
@@ -27139,7 +27196,7 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
   while the palette is in a hidden or inert subtree. If several connected palettes use the same
   chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
-- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
   combobox also has its own name and announces its active listbox option.
@@ -27299,7 +27356,8 @@ the ladder doesn't cover is a two-line override rather than a fork.
   `collapseAll()` collapses every direct expanded item. Nested accordion items are never included.
 - Accordion item: `expand(): Promise<void>`, `collapse(): Promise<void>`, and
   `toggle(): Promise<void>` initiate the corresponding transition and settle after its rendered
-  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger.
+  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger, and
+  `blur(): void` removes focus from it.
 - Details: `show(): Promise<void>` expands and `hide(): Promise<void>` collapses. Each promise
   settles after its matching `lr-after-show` or `lr-after-hide`; a vetoed, disabled, or
   already-satisfied request resolves without changing state. Assigning `open` runs the same
@@ -27615,7 +27673,7 @@ sets `role="listitem"` on itself. A non-current item without `href` renders a na
 explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
-is a no-op for the current-page label.
+is a no-op for the current-page label. `blur(): void` removes focus from the internal link or button.
 
 Changing `href` or `current` while that native owner has focus transfers focus across the link,
 button, and programmatically focusable current-page label. External focus is preserved.
@@ -29087,6 +29145,11 @@ These named interfaces and helper signatures are available to typed integrations
     icon?: unknown;
     disabled?: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`.
+  `LyraSegmentedSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
+  }`
 
 - **`components-layout-split-panel-split-panel-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`.
@@ -29116,6 +29179,13 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
   `LyraStepperOrientationChangeDetail {
     orientation: LyraOrientation;
+  }`
+
+- **`components-layout-tab-group-tab-group-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`.
+  `LyraTabGroupSelectRequestDetail {
+    readonly value: string;
+    readonly previousValue: string;
   }`
 
 - **`components-layout-virtual-list-virtual-list-contracts`** — Supporting data types and helpers for this component family.
@@ -29190,7 +29260,7 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — names the `nav` landmark by attribute
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the `nav` landmark by attribute
   presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
   `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
   example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
@@ -29332,7 +29402,7 @@ hover opening.
 
 **Properties:**
 
-- `accessibleLabel?: string` (attribute `aria-label`) — forwarded by presence to the link or button,
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded by presence to the link or button,
   including an explicitly empty value.
 - `href: string = ''` — link URL, sanitized; a safe value makes a link item.
 - `target: string = ''` — native link target. Any non-empty value forces `noopener noreferrer`.
@@ -29346,7 +29416,8 @@ hover opening.
   when the item cannot disclose: it is a link item, or its `panel` slot is empty once slot content can
   be inspected. Within one menu only one item is open at a time.
 
-**Methods:** `focus(options?)` and `click()` forward to the link or button.
+**Methods:** `focus(options?)` and `click()` forward to the link or button, and `blur(): void`
+removes focus from it.
 
 **Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, source }`,
 where `expanded` is the new state and `source` is `'user' | 'programmatic' | 'peer'`, the same
@@ -30633,7 +30704,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel` (`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel` (`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. While it is hovered or pressed, `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`) and `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`) set its border and text; `--lr-chip-group-overflow-hover-bg` sets the hover background (default: its resting fill), and `--lr-chip-group-overflow-active-bg` the pressed background (default: the hover background mixed by the press step).
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -32778,6 +32849,13 @@ These named interfaces and helper signatures are available to typed integrations
   `parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[]`
   Import: `@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js`.
   `shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel`
+
+- **`components-overlays-rating-rating-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/rating/rating.class.js`.
+  `LyraRatingChangeRequestDetail {
+    readonly value: number;
+    readonly previousValue: number;
+  }`
 
 - **`components-overlays-toast-toast-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`.
@@ -48669,7 +48747,11 @@ rendered as authored, not neutralized.
 on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
 `--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
-take precedence when specified. `--lr-markdown-max-height` (default `none` — cap on
+take precedence when specified. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`)
+and `--lr-markdown-code-copy-color-active` (default `var(--lr-markdown-code-copy-color-hover)`) set
+the copy glyph color while hovered and pressed, and `--lr-markdown-code-copy-success-color` /
+`--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`)
+its color after a successful or failed copy. `--lr-markdown-max-height` (default `none` — cap on
 `[part="content"]`'s block size, past which the document scrolls internally; the `maxHeight`
 property sets this token inline on `[part="content"]`), `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
@@ -50774,6 +50856,11 @@ controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-he
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
 `--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
+`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover`
+(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` (default
+`var(--lr-code-block-toggle-color-hover)`) set the disclosure glyph color at rest, hovered and
+pressed; `--lr-code-block-gutter-color-hover` (default `inherit`, so it keeps the line-number color)
+sets the hovered line button's text color.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
@@ -54031,6 +54118,12 @@ These named interfaces and helper signatures are available to typed integrations
     iconLibrary?: string;
     detail?: string;
     disabled?: boolean;
+  }`
+
+- **`components-conversation-thread-list-thread-list-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js`.
+  `ThreadListSourcePageChangeDetail {
+    page: number;
   }`
 
 - **`components-conversation-transcript-feed-transcript-feed-contracts`** — Supporting data types and helpers for this component family.
@@ -58987,6 +59080,8 @@ These named interfaces and helper signatures are available to typed integrations
   `ToolRenderContext {
     reportStatus: (status: ToolStatus) => void;
   }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js`.
+  `clearToolRenderers(): void`
 
 - **`components-agent-tools-tool-select-dialog-tool-select-dialog-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`.

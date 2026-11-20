@@ -67,7 +67,8 @@ size used by the button's form and chrome logic.
 then `lr-change` (both aliases carry `{ checked, value }`) and every activation emits `lr-activate`;
 an owning `lr-radio-group` emits the aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
 not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
-its own alias.
+its own alias. Before a standalone user activation checks it, the button dispatches the cancelable
+`lr-radio-select-request` (`{ checked: true, value }`) exactly as `lr-radio` does.
 
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
 content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
@@ -104,7 +105,8 @@ pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-borde
 `--lr-radio-button-checked-hover-bg`, `--lr-radio-button-checked-hover-border-color`,
 `--lr-radio-button-checked-active-bg`, and `--lr-radio-button-checked-active-border-color` hooks
 control checked pointer states. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`)
-is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-hover-border-color`,
+is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-bg`,
+`--lr-radio-border-color`, `--lr-radio-hover-border-color`,
 `--lr-radio-active-border-color`, and `--lr-radio-active-ring-color` remain visible in generated
 metadata but apply only to the base radio's circular chrome. All fallbacks preserve the existing
 brand, on-brand, quiet, and color-mix treatments.

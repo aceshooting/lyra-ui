@@ -87,7 +87,8 @@ the ladder doesn't cover is a two-line override rather than a fork.
   `collapseAll()` collapses every direct expanded item. Nested accordion items are never included.
 - Accordion item: `expand(): Promise<void>`, `collapse(): Promise<void>`, and
   `toggle(): Promise<void>` initiate the corresponding transition and settle after its rendered
-  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger.
+  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger, and
+  `blur(): void` removes focus from it.
 - Details: `show(): Promise<void>` expands and `hide(): Promise<void>` collapses. Each promise
   settles after its matching `lr-after-show` or `lr-after-hide`; a vetoed, disabled, or
   already-satisfied request resolves without changing state. Assigning `open` runs the same

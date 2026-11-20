@@ -50,6 +50,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 
 **Properties:**
 
+- `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 - `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
   and clearing. Setting it discards an in-progress stroke.
 

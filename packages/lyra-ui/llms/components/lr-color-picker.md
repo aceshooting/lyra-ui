@@ -280,6 +280,10 @@ value wins:
 - `--lr-color-picker-hue-stops` — the hue ramp's own gradient stops, defaulting to the six-stop sRGB
   hue wheel. Both text directions read the same list; only the gradient's direction differs.
   Override it to theme a wide-gamut or perceptually-uniform ramp.
+- `--lr-color-picker-invalid-border-color` (default
+  `var(--lr-form-control-invalid-border-color, var(--lr-color-danger))`) — the text field border while
+  a rejected (unparseable) entry stays in the field, hovered or not, until the next valid commit, an
+  edit or Escape.
 
 The upstream aliases `--grid-width`, `--grid-height`, `--grid-handle-size`, `--slider-height`, and
 `--slider-handle-size` feed the corresponding Lyra geometry properties above; Shoelace's

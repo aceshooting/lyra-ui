@@ -28713,7 +28713,8 @@
           {
             "name": "--lr-chunk-inspector-action-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-chunk-inspector-action-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-chunk-inspector-action-hover-bg",
@@ -77832,7 +77833,8 @@
           {
             "name": "--lr-ingestion-queue-action-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-ingestion-queue-action-hover-color",
@@ -77843,7 +77845,8 @@
           {
             "name": "--lr-ingestion-queue-cancel-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-ingestion-queue-cancel-hover-color",
@@ -92478,7 +92481,8 @@
           {
             "name": "--lr-memory-panel-button-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-memory-panel-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-memory-panel-button-hover-bg",
@@ -92507,7 +92511,8 @@
           {
             "name": "--lr-memory-panel-expand-toggle-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-memory-panel-expand-toggle-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-memory-panel-expand-toggle-hover-bg",
@@ -118420,7 +118425,8 @@
           {
             "name": "--lr-provenance-panel-header-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-provenance-panel-header-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-provenance-panel-header-hover-bg",
@@ -123742,7 +123748,8 @@
           {
             "name": "--lr-rag-eval-dashboard-item-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-rag-eval-dashboard-item-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-rag-eval-dashboard-item-hover-bg",
@@ -127422,7 +127429,8 @@
           {
             "name": "--lr-retrieval-compare-chunk-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-retrieval-compare-chunk-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-retrieval-compare-chunk-hover-bg",
@@ -137269,7 +137277,8 @@
           {
             "name": "--lr-source-list-header-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-source-list-header-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-source-list-header-hover-bg",
@@ -137572,12 +137581,14 @@
           {
             "name": "--lr-source-picker-item-active-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-source-picker-item-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-source-picker-item-hover-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
             "name": "--lr-source-picker-mixed-bg",

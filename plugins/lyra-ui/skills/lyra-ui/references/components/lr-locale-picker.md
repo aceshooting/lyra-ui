@@ -176,7 +176,9 @@ direction resolved after any catalog load). Preventing the notifications has no 
 locale that is already committed and already the page locale only closes the popup: no request,
 event or `setLyraLocale()` call. `focus`/`blur` relay once from the
 trigger as native `FocusEvent`s preserving `relatedTarget`. `lr-invalid` is the single
-bubbling/composed, cancelable alias of a failed native validity check.
+bubbling/composed, cancelable alias of a failed native validity check. `lr-load-error`
+(`{ value, error }`) reports a `localeLoader` rejection for a picked locale; the previous value
+stays committed and a retry control is shown.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
 direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
@@ -230,6 +232,8 @@ visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present 
 `load-retry` (the retry button shown after a locale load fails), `search-input` (the opt-in
 filter) and `empty` (the no-match message). Search uses the localized `localePickerSearchLabel`
 and `localePickerEmpty` string keys.
+
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"

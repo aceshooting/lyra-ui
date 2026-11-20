@@ -87,7 +87,8 @@ own action buttons (see the gotchas below).
 
 **Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
 safe, or the activation button while `actionable` is set without a link. Passive cards remain
-inert.
+inert. `focus(options?)` moves focus to that same native owner (a passive card has no focus target),
+and `blur(): void` removes focus from it.
 
 Changing `href` or `actionable` while the whole-card owner has focus transfers focus across the
 link, activation button, and a programmatically focusable passive base. It never overrides a newer

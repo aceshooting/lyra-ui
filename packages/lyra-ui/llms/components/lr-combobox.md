@@ -571,6 +571,8 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
 `retry-button`, `error`, `hint`
 
+`--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
+
 The `help-text` attribute, `helpText` property and `help-text` slot supply supporting text.
 The hint container also exposes the `form-control-help-text` part.
 The selection getters return `null` before the input renders.

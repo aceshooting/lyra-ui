@@ -62,6 +62,7 @@ single numeric string entry.
 
 **Properties:**
 
+- `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 - `min: number = 0`
 - `max: number = 100`
 - `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode, where the

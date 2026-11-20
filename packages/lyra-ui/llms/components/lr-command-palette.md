@@ -70,7 +70,7 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   text input, textarea or contenteditable, so the character stays typeable; every chord is ignored
   while the palette is in a hidden or inert subtree. If several connected palettes use the same
   chord, the last connected palette owns it; activation is idempotently open rather than a toggle.
-- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized dialog name.
   Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
   explicitly empty value is used as-is. Whitespace alone uses the localized default. The search
   combobox also has its own name and announces its active listbox option.

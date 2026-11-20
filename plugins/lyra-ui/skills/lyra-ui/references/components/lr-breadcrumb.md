@@ -44,7 +44,7 @@ sets `role="listitem"` on itself. A non-current item without `href` renders a na
 explicitly empty value; when absent, the default slot supplies its name.
 
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
-is a no-op for the current-page label.
+is a no-op for the current-page label. `blur(): void` removes focus from the internal link or button.
 
 Changing `href` or `current` while that native owner has focus transfers focus across the link,
 button, and programmatically focusable current-page label. External focus is preserved.

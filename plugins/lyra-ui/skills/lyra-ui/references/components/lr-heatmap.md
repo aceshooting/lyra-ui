@@ -610,7 +610,9 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
 closes the legend row, present in both the gradient and the `legendStops` branch),
-`legend-annotation` (one per labeled `annotations` entry)
+`legend-annotation` (one per labeled `annotations` entry), and `description` (the screen-reader-only
+chart description: `description`, or the generated summary while `label` names the chart; absent
+when neither applies)
 
 With `matrixSource` set, additional CSS parts are `source-summary` (complete matrix and displayed viewport summary),
 `source-status` (loading text), `source-error` (localized failure), and `source-exact-window`

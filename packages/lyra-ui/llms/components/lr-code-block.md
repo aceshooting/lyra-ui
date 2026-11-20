@@ -171,6 +171,11 @@ controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-he
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
 `--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
+`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover`
+(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` (default
+`var(--lr-code-block-toggle-color-hover)`) set the disclosure glyph color at rest, hovered and
+pressed; `--lr-code-block-gutter-color-hover` (default `inherit`, so it keeps the line-number color)
+sets the hovered line button's text color.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
 `--lr-code-block-font` (default
