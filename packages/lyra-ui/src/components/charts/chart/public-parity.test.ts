@@ -133,7 +133,7 @@ it('has no redundant positive-polarity legend property — without-legend is the
   expect(Object.getOwnPropertyDescriptor(LyraChart.prototype, 'legend')).to.equal(undefined);
 });
 
-it('does not re-export the internal lockChartType helper from the public chart.ts barrel', async () => {
+it('does not re-export the internal lockChartType helper from the public lr-chart.ts barrel', async () => {
   const barrel = await import('../../lr-chart.js');
   expect('lockChartType' in barrel).to.equal(false);
 });

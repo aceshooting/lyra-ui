@@ -1324,7 +1324,7 @@ it('registers a text/csv renderer that matches .csv files and renders the viewer
     '../document-viewer/registry.js'
   );
   const def = getDefaultDocumentRendererRegistry().get('text/csv');
-  expect(def, 'importing csv-viewer.js registers the renderer').to.exist;
+  expect(def, 'importing lr-csv-viewer.js registers the renderer').to.exist;
   expect(
     def!.matches!({
       name: 'Q3-report.CSV',
@@ -1420,5 +1420,24 @@ it('re-applies an active search when a reconnect reloads the source', async () =
     );
   } finally {
     window.fetch = original;
+  }
+});
+
+it('drops the trailing column divider so the frame alone draws the inline-end edge', async () => {
+  const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer></lr-csv-viewer>`);
+  const restore = fetchText(GRID_CSV);
+  try {
+    el.src = 'https://example.test/people.csv';
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="data-row"]'));
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const header = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-row"] > [role="columnheader"]')];
+    const body = [...list.shadowRoot!.querySelector('[part="data-row"]')!.children] as HTMLElement[];
+    for (const cells of [header, body]) {
+      expect(cells.length).to.equal(2);
+      expect(Number.parseFloat(getComputedStyle(cells[0]!).borderInlineEndWidth)).to.be.greaterThan(0);
+      expect(getComputedStyle(cells[1]!).borderInlineEndWidth).to.equal('0px');
+    }
+  } finally {
+    restore();
   }
 });

@@ -142,7 +142,7 @@ const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STAT
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-tool-result-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop color.
  * @cssprop --lr-tool-result-dialog-maximized-inset - Insets for the maximized panel.
- * @cssprop [--lr-tool-result-dialog-spin=var(--lr-transition-ambient)] - Running-status animation
+ * @cssprop [--lr-tool-result-dialog-spin=var(--lr-duration-ambient) linear] - Running-status animation
  *   duration and timing.
  * @cssprop [--lr-tool-result-dialog-pending-color=var(--lr-color-text-quiet)] - Pending status foreground.
  * @cssprop [--lr-tool-result-dialog-pending-bg=transparent] - Pending status background.

@@ -555,13 +555,13 @@ describe('lr-chart-3d optional renderer', () => {
   });
 
   describe('ownership', () => {
-    it('replaces the renderer when the data, type or hidden categories change, and not for equal-content writes', async () => {
+    it('updates the live renderer in place for data, type, axis and hidden-category changes, and not for equal-content writes', async () => {
       const el = await chart('engine=webgl', columns(3, { category: Uint16Array.of(0, 1, 0), categories: ['a', 'b'] }));
       await ready(el);
       el.xAxis = { label: 'Distance', unit: 'km' };
-      await waitUntil(() => peer.creates === 2);
-      await ready(el);
-      const settled = peer.creates;
+      await waitUntil(() => peer.data.length === 2);
+      expect(peer.data.at(-1)!.value.axes[0]!.label).to.equal('Distance (km)');
+      const settled = peer.data.length;
       el.xAxis = { label: 'Distance', unit: 'km' };
       el.yAxis = {};
       el.zAxis = { label: '', unit: '' };
@@ -569,17 +569,27 @@ describe('lr-chart-3d optional renderer', () => {
       el.engine = 'webgl';
       await el.updateComplete;
       await aTimeout(50);
-      expect([peer.creates, peer.disposed]).to.deep.equal([settled, settled - 1]);
+      expect(peer.data.length).to.equal(settled);
       el.hiddenCategories = new Set([1]);
-      await waitUntil(() => peer.creates === settled + 1);
-      await ready(el);
+      await waitUntil(() => peer.data.length === settled + 1);
       expect(peer.data.at(-1)!.value.positions.length).to.equal(6);
       el.type = 'bubble';
-      await waitUntil(() => peer.creates === settled + 2);
+      await waitUntil(() => peer.data.length === settled + 2);
       el.data = columns(2);
-      await waitUntil(() => peer.creates === settled + 3);
+      await waitUntil(() => peer.data.length === settled + 3);
+      expect(peer.data.map((entry) => entry.revision)).to.deep.equal(peer.data.map((_, index) => index + 1));
+      expect([peer.creates, peer.mounts, peer.disposed, has(el, 'fit-button')]).to.deep.equal([1, 1, 0, true]);
+    });
+
+    it('replaces the renderer when the preference or the data becomes empty', async () => {
+      const el = await chart('engine=webgl');
       await ready(el);
-      expect(peer.disposed).to.equal(peer.creates - 1);
+      el.data = null;
+      await el.updateComplete;
+      expect(peer.disposed).to.equal(1);
+      el.data = columns(3);
+      await waitUntil(() => peer.creates === 2);
+      await ready(el);
     });
 
     it('disposes a late created renderer exactly once after disconnect without mounting it', async () => {

@@ -118,6 +118,20 @@ export function optionalLiteralSetConverter<const T extends string>(
   });
 }
 
+/**
+ * Number-or-CSS-length attributes (`rail-width`, `gap`, `thumb-width`): text `Number()` reads as a
+ * finite number becomes that number of pixels, blank text is unset exactly like a removed
+ * attribute, and anything else (`12rem`, `Infinity`) stays the authored CSS length string. Unset
+ * is Lit's `null` readback, outside the declared type; every reader treats it as unset.
+ */
+export const lengthOrNumberConverter: ComplexAttributeConverter<number | string> = {
+  fromAttribute: (value) => {
+    if (value === null || value.trim() === '') return null as unknown as number;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : value;
+  },
+};
+
 const trueUnlessLiteralFalse = (value: string | null): boolean => value !== 'false';
 
 /** Reflects non-empty strings while keeping the empty/default value absent from markup. */

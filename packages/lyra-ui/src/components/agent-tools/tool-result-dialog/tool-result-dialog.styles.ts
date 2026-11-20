@@ -21,7 +21,7 @@ export const styles = css`
       max(var(--lr-space-l), var(--lr-safe-area-inline-end))
       max(var(--lr-space-l), var(--lr-safe-area-bottom))
       max(var(--lr-space-l), var(--lr-safe-area-inline-start));
-    --_lr-tool-result-dialog-spin: var(--lr-transition-ambient);
+    --_lr-tool-result-dialog-spin: var(--lr-duration-ambient) var(--lr-easing-linear);
     --_lr-tool-result-dialog-pending-color: var(--lr-color-text-quiet);
     --_lr-tool-result-dialog-pending-bg: transparent;
     --_lr-tool-result-dialog-running-color: var(--lr-color-brand);

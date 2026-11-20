@@ -67,7 +67,7 @@ export {
  *
  * A consumer with a bounded, known fence-language set who wants to avoid `<lr-markdown>`'s
  * ~200-language dynamic-import table entirely -- either by setting `languages` here, or to skip
- * the full table's build-output cost outright -- can import `streaming-text-core.js` instead,
+ * the full table's build-output cost outright -- can import `lr-streaming-text-core.js` instead,
  * which composes `<lr-markdown-core>` under the tag `lr-streaming-text-core` and never references
  * the full table at all; see that variant's own class doc.
  *

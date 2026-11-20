@@ -11,7 +11,7 @@ export const styles = css`
     --_lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
     --_lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
     --_lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
-    --_lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
+    --_lr-attachment-chip-spinner-duration: var(--lr-duration-ambient) var(--lr-easing-linear);
     --_lr-attachment-chip-compact-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --_lr-attachment-chip-padding: var(--lr-space-xs) var(--lr-space-s);
     --_lr-attachment-chip-compact-thumbnail-only-padding: var(--lr-size-0-125rem);

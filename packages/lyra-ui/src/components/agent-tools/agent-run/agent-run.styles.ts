@@ -4,7 +4,7 @@ import { activeFill } from '../../../internal/interactive-control.styles.js';
 export const styles = css`
   :host {
     display: block;
-    --_lr-agent-run-spin: var(--lr-transition-ambient);
+    --_lr-agent-run-spin: var(--lr-duration-ambient) var(--lr-easing-linear);
   }
   [part="base"] {
     display: flex;

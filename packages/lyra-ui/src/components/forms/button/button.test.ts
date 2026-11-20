@@ -457,6 +457,8 @@ describe("lr-button", () => {
       '[part="spinner"]'
     ) as HTMLElement;
     expect(getComputedStyle(spinner).animationDuration).to.equal("1.8s");
+    // A full rotation on an eased curve stalls once per turn; the default turns at a constant rate.
+    expect(getComputedStyle(spinner).animationTimingFunction).to.equal("linear");
 
     el.style.setProperty("--lr-button-spinner-duration", "2.4s");
     await el.updateComplete;

@@ -25,8 +25,8 @@ capability — token coalescing, `contentMode` auto-detection, the blinking curs
 surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
-`<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
-entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
+`<lr-markdown-core>` (`components/lr-markdown-core.js`) instead of `<lr-markdown>`, so importing this
+entry point instead of `components/lr-streaming-text.js` never references `<lr-markdown>`'s ~200-language
 dynamic-import table at all. A fenced code block whose language is absent from both `languages` and `languageLoaders`
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.

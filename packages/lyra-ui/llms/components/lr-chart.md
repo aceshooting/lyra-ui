@@ -651,8 +651,8 @@ raw `var(--lr-…)` string and would paint nothing; `<lr-box-plot>` consumes the
 consumer drawing its own canvas overlay beside a chart can match the grid, tick, legend and tooltip
 chrome exactly rather than re-deriving it.
 
-Import the standalone form from `.../chart/chart-colors.js`, not from `.../chart/chart.js`: the
-latter is `<lr-chart>`'s registration entry, so it defines the element (and pulls in `<lr-skeleton>`)
+Import the standalone form from `components/charts/chart/chart-colors.js`, not from
+`components/lr-chart.js`: the latter is `<lr-chart>`'s registration entry, so it defines the element (and pulls in `<lr-skeleton>`)
 as a side effect. `chart-colors.js` is side-effect-free and carries nothing but the palette helpers,
 so a KPI tile that only needs eight color strings stays a ~1KB import.
 

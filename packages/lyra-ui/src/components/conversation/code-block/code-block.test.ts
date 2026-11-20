@@ -1,3 +1,4 @@
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
 import { assertCodeBlockLineKeyboard, assertCodeBlockSelection } from '../../../../test/contracts/code-block-interactions.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
@@ -2456,3 +2457,14 @@ for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3
     }
   });
 }
+
+it('keeps the first line-gutter focus ring inside the scrolling body with no code padding', async () => {
+  const el = await fixture<LyraCodeBlock>(html`
+    <lr-code-block code=${'a\nb'} line-numbers activatable-lines data-lr-theme-scope style="--lr-code-block-padding: 0; --lr-theme-focus-ring-width: 5px"></lr-code-block>
+  `);
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const gutter = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="line-button"]')!;
+  await focusByKeyboard(gutter);
+  expectOutlineInsideClip(gutter, body);
+});

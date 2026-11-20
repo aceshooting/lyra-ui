@@ -5,7 +5,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  BARE_ROUTE_EXCEPTIONS,
   DOC_SPECIFIER_EXCEPTIONS,
+  abbreviatedRouteFindings,
   checkDocumentedSpecifiers,
   checkWorkspaceDocumentedSpecifiers,
   collectDocumentedSpecifiers,
@@ -202,6 +204,38 @@ try {
   ]);
 } finally {
   rmSync(flagsRoot, { recursive: true, force: true });
+}
+
+// Abbreviated prose routes: the per-directory registration module shape the package no longer
+// ships must be reported in every form a reader would copy, while retained routes and the Chart.js
+// library name pass.
+{
+  const exportsMap = {
+    './components/lr-pdf-viewer.js': './dist/components/lr-pdf-viewer.js',
+    './components/lr-markdown-core.js': './dist/components/lr-markdown-core.js',
+    './components/charts/chart/chart-colors.js': './dist/components/charts/chart/chart-colors.js',
+    './theme/*': './dist/theme/*',
+  };
+  const directories = new Set(['pdf-viewer', 'markdown', 'chart']);
+  const text = [
+    'Importing `pdf-viewer.js` loads the class module.',
+    'Also `.../markdown/markdown-core.js` and `../markdown/markdown-core.js`.',
+    'Or `components/viewers/pdf-viewer/pdf-viewer.js`.',
+    'Use `components/lr-pdf-viewer.js` or `components/lr-markdown-core.js`.',
+    'The palette is in `.../chart/chart-colors.js`; the peer is `chart.js`.',
+    'A theme route `theme/gemstones.js` and an unrelated `helper.js` are not judged.',
+    '| module | `pdf-viewer.js` | removed |',
+  ].join('\n');
+  assert.deepEqual(abbreviatedRouteFindings([['doc.md', text]], exportsMap, directories), [
+    'doc.md:1 names `pdf-viewer.js`, which no package.json#exports route provides; registration entries are `components/lr-<tag>.js`',
+    'doc.md:2 names `.../markdown/markdown-core.js`, which no package.json#exports route provides; registration entries are `components/lr-<tag>.js`',
+    'doc.md:2 names `../markdown/markdown-core.js`, which no package.json#exports route provides; registration entries are `components/lr-<tag>.js`',
+    'doc.md:3 names `components/viewers/pdf-viewer/pdf-viewer.js`, which no package.json#exports route provides; registration entries are `components/lr-<tag>.js`',
+  ]);
+  assert.ok(
+    [...BARE_ROUTE_EXCEPTIONS.values()].every((reason) => reason.length > 0),
+    'every bare-route exception states what the name refers to',
+  );
 }
 
 console.log('documented package specifier checks passed.');

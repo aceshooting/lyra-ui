@@ -1,3 +1,4 @@
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -3251,3 +3252,26 @@ it('keeps the keyboard focus ring inside a filled panel so the body does not cli
   expect(parseFloat(outlineWidth)).to.be.greaterThan(0);
   expect(parseFloat(outlineOffset)).to.equal(-parseFloat(outlineWidth));
 });
+
+for (const placement of ['top', 'start'] as const) {
+  it(`keeps the tab and panel focus rings inside their scroll containers (${placement})`, async () => {
+    const group = await fixture<LyraTabGroup>(html`
+      <lr-tab-group placement=${placement} data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px">
+        <lr-tab panel="input">Input</lr-tab>
+        <lr-tab panel="preview">Preview</lr-tab>
+        <lr-tab-panel name="input">Raw input</lr-tab-panel>
+        <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
+      </lr-tab-group>
+    `);
+    await group.updateComplete;
+    await nextFrames();
+    const tablist = group.shadowRoot!.querySelector<HTMLElement>('[part~="tablist"]')!;
+    const body = group.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const [tab] = tabButtons(group);
+    await focusByKeyboard(tab!);
+    expectOutlineInsideClip(tab!, tablist);
+    const [panel] = panels(group);
+    await focusByKeyboard(panel!);
+    expectOutlineInsideClip(panel!, body);
+  });
+}

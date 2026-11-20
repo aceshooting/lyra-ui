@@ -32,7 +32,7 @@ import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataOutcomeCached, type EmojiDataLoadFailure } from './emoji-data-loader.js';
 import type { OptionalPeerFailure } from '../../../internal/optional-peer-failure.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
-// emoji-data-loader.ts); re-exported so `export *` from emoji-picker.js keeps the public paths.
+// emoji-data-loader.ts); re-exported so `export *` from lr-emoji-picker.js keeps the public paths.
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

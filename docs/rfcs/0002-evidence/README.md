@@ -4,6 +4,11 @@ Disposable evidence for [RFC 0002](../0002-tokens-once-per-document.md) under th
 here is part of a package, and nothing here is maintained after the decision. Full result tables are
 in [`results.md`](results.md).
 
+The scripts import the per-directory registration modules
+(`dist/components/<family>/<name>/<name>.js`) that the 27.0.0 and 28.0.0 builds shipped; those
+modules have since been removed in favour of `components/lr-<tag>.js`. Re-run the evidence against a
+27.x or 28.x build, not a current one.
+
 ## Variants
 
 `build.mjs` copies a built `packages/lyra-ui/dist/` into a scratch directory and derives:

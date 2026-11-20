@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInsetOffset, focusRingInwardOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -229,7 +229,7 @@ export const styles = css`
     direction: ltr;
     unicode-bidi: isolate;
     /* A default background so the plain-fallback path still reads as a code block. shiki's own
-       inline background-color (the generated-token-colors exception documented in code-block.ts's
+       inline background-color (the generated-token-colors exception documented in code-block.class.ts's
        tokenize()) overrides it the moment highlighting succeeds, since a style attribute always
        beats an external rule at equal or lower specificity. */
     background: var(--lr-color-surface);
@@ -331,10 +331,11 @@ export const styles = css`
   [part='pre'] button.line-gutter:active {
     background: var(--_lr-code-block-gutter-bg-active);
   }
+  /* The gutter touches the scrolling body's edge when the code padding is zero. */
   [part='pre'] button.line-gutter:focus-visible {
-    ${focusRingInwardOffset}
+    ${focusRingInsetOffset}
   }
-  /* Activates shiki's dual-themes dark variant. codeToHtml() (tokenize() in code-block.ts) renders
+  /* Activates shiki's dual-themes dark variant. codeToHtml() (tokenize() in code-block.class.ts) renders
      each token's LIGHT color inline and stashes its DARK one in the --shiki-dark and
      --shiki-dark-bg properties shiki defines inline on the same elements; reassigning
      color/background-color from those variables in an external stylesheet is shiki's own documented

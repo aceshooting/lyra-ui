@@ -67,8 +67,8 @@ built-in glyph appears)
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
-**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
-i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
+**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-duration-ambient) linear`,
+i.e. `1.8s linear` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
 (default `1.8s ease-in-out` — pending-icon pulse duration/timing).
 `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public

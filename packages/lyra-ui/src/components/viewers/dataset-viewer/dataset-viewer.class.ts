@@ -451,11 +451,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     value: string,
     colIndex: number,
     rowHighlights: ResolvedCellHighlight[],
+    columnCount: number,
     role: 'cell' | 'columnheader' = 'cell'
   ): TemplateResult {
     return this.tableController.renderCell(
       value, colIndex, rowHighlights, role, role === 'columnheader' ? 'header-cell' : 'cell',
-      '--_lr-dataset-viewer-highlight-color', this.activeHighlightId,
+      '--_lr-dataset-viewer-highlight-color', this.activeHighlightId, columnCount,
     );
   }
 
@@ -472,7 +473,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     const last = this.fetchState.kind === 'loaded' && index === this.fetchState.table.rows.length - 1;
     return html`<div part="data-row" role="presentation" style=${last ? `${window.style};--_lr-dataset-viewer-row-divider:0` : window.style}>
       ${window.columns.map((col) =>
-        this.renderCell(row[fields[col]!] ?? '', col, rowHighlights)
+        this.renderCell(row[fields[col]!] ?? '', col, rowHighlights, fields.length)
       )}
     </div>`;
   };
@@ -609,7 +610,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
           >
             <div part="header-row" role="row" aria-rowindex="1" style=${window.style}>
               ${guard([fields, window.columns, headerHighlights, this.activeHighlightId, this.effectiveLocale, this.strings, this.localize('highlightWithLabel'), this.localize('cellHighlightWithLabel')], () => window.columns.map((col) =>
-                this.renderCell(fields[col]!, col, headerHighlights, 'columnheader')
+                this.renderCell(fields[col]!, col, headerHighlights, fields.length, 'columnheader')
               ))}
             </div>
             <lr-virtual-list

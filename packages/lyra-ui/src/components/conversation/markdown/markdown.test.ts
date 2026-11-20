@@ -2039,7 +2039,7 @@ describe("shiki highlighting (real peer)", () => {
     // markdownCodeTransformer() (the shiki `transformers` hook that stamps `language-${lang}` onto
     // the rendered <code>) is module-private, so it can't be imported directly -- instead this
     // temporarily wraps the shared, already-warm loadShikiHighlighter() singleton's own codeToHtml()
-    // to capture the exact transformer object markdown.ts passes it, then exercises both branches of
+    // to capture the exact transformer object markdown.class.ts passes it, then exercises both branches of
     // its class-normalization ternary directly with synthetic hast nodes. Mirrors code-block.test.ts's
     // own "the patch must be undone afterward" convention for monkey-patching this shared singleton.
     const { loadShikiHighlighter } = await import(

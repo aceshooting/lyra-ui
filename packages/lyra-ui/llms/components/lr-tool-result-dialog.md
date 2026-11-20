@@ -92,8 +92,8 @@ tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`,
 `--lr-tool-result-dialog-maximized-inset` (default `max(var(--lr-space-l),
 var(--lr-safe-area-*))` on each side — the inset applied to the panel while `[maximized]`, so the
 panel clears a notch or home indicator; overridable e.g. to leave a persistent app rail visible), and
-`--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
-and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
+`--lr-tool-result-dialog-spin` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`,
+and effectively stopped under reduced motion because that duration collapses to `0.001ms`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
 -danger/-danger-quiet/-warning/-warning-quiet`, `--lr-space-*`, `--lr-radius`, `--lr-shadow`,
 `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-base`.

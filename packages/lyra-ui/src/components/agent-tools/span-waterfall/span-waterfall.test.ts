@@ -555,7 +555,7 @@ describe('lr-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('registers lr-empty as a side effect of importing span-waterfall.js (regression)', async () => {
+  it('registers lr-empty as a side effect of importing lr-span-waterfall.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real component.

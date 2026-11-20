@@ -8,7 +8,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, syncChartHeight } from './chart-surface-shared.js';
+import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, hostWindow, syncChartHeight } from './chart-surface-shared.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { loadBoxPlotPlugin, type BoxPlotModule } from './box-plot-loader.js';
 export { loadBoxPlotAndRegister } from './box-plot-loader.js';
@@ -37,6 +37,7 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   legendVisibilityDetail,
+  proposeLegendToggle,
   normalizeHiddenDatasets,
   type LyraChartLegendVisibilityChangeDetail,
 } from './chart-legend-visibility.js';
@@ -459,7 +460,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.rebuildAfterAnnotationRegistration()
     );
     this.visible = !this.ownerWindow?.IntersectionObserver;
-    this.armReducedMotionWatcher();
+    this.reducedMotionWatch.arm();
     const generation = ++this.loadGeneration;
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod, generation));
     const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
@@ -536,29 +537,19 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.intersectionObserver = undefined;
     this.intersectionGeneration += 1;
     this.visible = true;
-    this.disarmReducedMotionWatcher();
+    this.reducedMotionWatch.disarm();
   }
 
   override adoptedCallback(): void {
     this.canvasTokens.clear();
     super.adoptedCallback();
     this.announcements.adopted();
-    this.disarmReducedMotionWatcher();
-    this.armReducedMotionWatcher();
-  }
-
-  private armReducedMotionWatcher(): void {
+    this.reducedMotionWatch.disarm();
     this.reducedMotionWatch.arm();
   }
 
-  private disarmReducedMotionWatcher(): void {
-    this.reducedMotionWatch.disarm();
-  }
-
   private get ownerWindow(): BrowserWindow | undefined {
-    // Optional-chained for the server-render path: @lit-labs/ssr's element shim has no
-    // `ownerDocument`, and every caller already handles `undefined`.
-    return (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined;
+    return hostWindow(this);
   }
 
   private effectiveHiddenDatasetIndexes(): number[] {
@@ -1378,20 +1369,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const generation = this.activationGeneration;
     if (!chart) return;
     if (index < 0 || index >= this.datasets.length) return;
-    const hidden = this.effectiveHiddenDatasetIndexes();
-    const wasHidden = hidden.includes(index);
-    const nextHidden = wasHidden
-      ? hidden.filter((candidate) => candidate !== index)
-      : [...hidden, index].sort((left, right) => left - right);
-    // A currently hidden series becomes visible; a currently visible one becomes hidden.
-    const visible = wasHidden;
-    const proposed = this.emit(
-      'lr-legend-visibility-change-request',
-      legendVisibilityDetail(index, visible, nextHidden),
-      { cancelable: true },
+    const toggle = proposeLegendToggle(
+      index,
+      this.effectiveHiddenDatasetIndexes(),
+      (detail) => this.emit('lr-legend-visibility-change-request', detail, { cancelable: true }),
+      // A request listener may remove the plot or replace its data; the indexes above are then stale.
+      () => !this.isConnected || this.chart !== chart || this.activationGeneration !== generation,
     );
-    // A request listener may remove the plot or replace its data; the indexes above are then stale.
-    if (proposed.defaultPrevented || !this.isConnected || this.chart !== chart || this.activationGeneration !== generation) return;
+    if (!toggle) return;
+    const { visible, nextHidden } = toggle;
     this.hiddenDatasets = nextHidden;
     const appliedVisibility = { chart, hidden: this.hiddenDatasets };
     this.withCanvasRenderer(() => {

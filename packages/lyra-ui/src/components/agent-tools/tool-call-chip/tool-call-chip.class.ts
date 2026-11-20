@@ -102,7 +102,7 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  * @csspart status-text - The visible text twin of the status glyph/color — carries the state in text, not just color.
  * @csspart duration - The formatted `duration-ms`, when set.
  * @csspart tooltip - The floating detail popup (only meaningful while open).
- * @cssprop [--lr-tool-call-chip-spin=var(--lr-transition-ambient)] - Running-icon animation
+ * @cssprop [--lr-tool-call-chip-spin=var(--lr-duration-ambient) linear] - Running-icon animation
  *   duration and timing.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
  * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Accent color for the status

@@ -80,7 +80,7 @@ test('flags every offending import and reports each one on its own line', () => 
 test('does NOT flag a granular subpath import', () => {
   const text = [
     '```ts',
-    "import { LyraSelect } from '@aceshooting/lyra-ui/components/forms/select/select.js';",
+    "import { LyraSelect } from '@aceshooting/lyra-ui/components/lr-select.js';",
     '```',
   ].join('\n');
   assert.deepEqual(check(text), []);

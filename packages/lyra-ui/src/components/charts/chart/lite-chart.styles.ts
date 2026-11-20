@@ -13,8 +13,8 @@ export const styles = css`
     min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     block-size: auto;
     ${inlineSizeContainer}
-    /* Same token names and fallback chain as chart.ts's --lr-chart-* set, so
-       theming either component themes the other for free. Unlike chart.ts
+    /* Same token names and fallback chain as chart.class.ts's --lr-chart-* set, so
+       theming either component themes the other for free. Unlike chart.class.ts
        (canvas-rendered, cannot consume var() directly), this one is plain
        SVG/DOM, so the CSS below reads them natively -- no getComputedStyle()
        or JS-side resolution needed. */
@@ -42,7 +42,6 @@ export const styles = css`
       'notice'
       'legend'
       'table';
-    gap: var(--lr-space-xs);
   }
   /* layout="scroll": the svg below gets an explicit inline-size (its computed
      content width, set inline per-render since it depends on category
@@ -168,6 +167,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     justify-content: center;
     flex: 0 0 auto;
+    padding-block: var(--lr-space-xs);
   }
   [part='legend-item'] {
     display: inline-flex;
@@ -175,14 +175,14 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    gap: var(--lr-size-0-35em);
-    font-size: var(--lr-size-0-8rem);
+    gap: var(--lr-space-2xs);
+    font-size: var(--lr-font-size-xs);
     color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
   }
   [part='legend-swatch'] {
     inline-size: var(--lr-size-0-7em);
     block-size: var(--lr-size-0-7em);
-    border-radius: var(--lr-size-2px);
+    border-radius: var(--lr-radius-xs);
     flex: 0 0 auto;
   }
   ${forcedColorLegendSwatchStyles}
@@ -192,6 +192,12 @@ export const styles = css`
   }
   ${chartDataTableStyles}
   .notices { grid-area: notice; }
+  /* Empty grid tracks keep a row gap, so spacing lives on the parts that render instead. */
+  .notices,
+  [part='data-table-toggle'],
+  [part='data-table']:not([data-visually-hidden]) {
+    margin-block-start: var(--lr-space-xs);
+  }
   [part='limit'],
   [part='data-truncation'] {
     margin: 0;

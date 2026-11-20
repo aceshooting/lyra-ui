@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { formControlTextWrap } from '../../../internal/form-control.styles.js';
@@ -123,8 +123,10 @@ export const styles = css`
       var(--lr-segmented-hover-color, var(--lr-color-text))
     );
   }
+  /* The scrolling track clips both axes and its padding is thinner than the ring, so the ring is
+     drawn inside the segment. */
   [part="segment"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   /* Inline var() fallbacks, not :host-declared properties: :host is re-declared per size tier and
      would shadow any value a consumer sets on an ancestor, which is exactly what these hooks

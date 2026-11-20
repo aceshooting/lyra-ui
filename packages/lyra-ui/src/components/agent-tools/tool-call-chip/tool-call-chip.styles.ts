@@ -13,7 +13,7 @@ export const styles = css`
     --_lr-tool-call-chip-accent: var(--lr-color-text-quiet);
     --_lr-tool-call-chip-bg: var(--lr-color-surface);
     --_lr-tool-call-chip-border: var(--lr-color-border);
-    --_lr-tool-call-chip-spin: var(--lr-transition-ambient);
+    --_lr-tool-call-chip-spin: var(--lr-duration-ambient) var(--lr-easing-linear);
   }
 
   :host([status="running"]) {

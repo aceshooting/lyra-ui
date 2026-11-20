@@ -199,7 +199,7 @@ export interface LyraWidgetRendererEventMap {
  * or registry releases its prior warning keys before resolving the new generation.
  * A malformed root or nested node fails closed: the prior rendered tree is cleared and exactly one
  * `lr-render-error` describes the rejected update.
- * The normal `widget-renderer.js` registration entry installs the eight mapped custom elements.
+ * The normal `lr-widget-renderer.js` registration entry installs the eight mapped custom elements.
  * Every renderer owns an explicit immutable registry value, defaulting to the frozen built-in
  * registry. A lean consumer imports this side-effect-free class module, defines the renderer,
  * imports only its mapped registrations, and assigns a registry made by

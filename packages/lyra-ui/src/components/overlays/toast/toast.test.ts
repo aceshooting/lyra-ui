@@ -983,7 +983,7 @@ it('create() does not depend on the ambient document factory after adoption', as
 it("create() with no options leaves every field at <lr-toast-item>'s own declared defaults", async () => {
   // create() must not hardcode its own copy of each default -- it should
   // defer entirely to whatever `document.createElement('lr-toast-item')`
-  // already sets, so this stays correct even if toast-item.ts's own
+  // already sets, so this stays correct even if toast-item.class.ts's own
   // property defaults ever change.
   const probe = document.createElement('lr-toast-item') as LyraToastItem;
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;

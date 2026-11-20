@@ -40,8 +40,8 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import './tree-item.class.js';
 import type { LyraTreeItem } from './tree-item.class.js';
 
-// Data types live in ./tree-item.js (extracted to break a type-only import cycle with
-// tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
+// Data types live in ./tree-types.js (extracted to break a type-only import cycle with
+// tree-item.class.ts); re-exported here so `export *` from lr-tree.js keeps the public paths.
 import type { TreeBadge, TreeIdentityContext, LyraTreeNodeData, LyraTreePointerReorderDetail, TreeSelection } from './tree-types.js';
 import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';

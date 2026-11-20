@@ -12,7 +12,7 @@
  * scatter/bubble/radar/polarArea) each keep a plain writable `override type`
  * field instead, since their mirrored WA counterpart leaves `type` settable.
  *
- * Internal only — not re-exported from the public `chart.ts` barrel. The one
+ * Internal only — not re-exported from the public `lr-chart.ts` barrel. The one
  * caller (`histogram.class.ts`) imports this module directly.
  */
 export function lockChartType(ctor: Function, value: string): void {

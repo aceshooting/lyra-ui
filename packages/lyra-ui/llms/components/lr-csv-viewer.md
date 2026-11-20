@@ -163,7 +163,7 @@ through. An inherited or direct public value remains authoritative across that b
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
 
-Importing `csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
+Importing `components/lr-csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
 module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
 that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer-register.js`, which installs the

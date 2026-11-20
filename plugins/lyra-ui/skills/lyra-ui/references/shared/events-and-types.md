@@ -46,7 +46,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   ```
 - **`HTMLElementTagNameMap`** is augmented in the `.class.d.ts` files. `document.querySelector('lr-table')`
   is only typed as `LyraTable` when that class module is in the type graph — importing just the
-  registration entry (`table.js`) also pulls it in, since the entry re-exports the class module.
+  registration entry (`components/lr-table.js`) also pulls it in, since the entry re-exports the class module.
 - **Generics.** Row/item-carrying components are generic over their data type
   (`LyraTable<T>`, `LyraTableEventMap<T>`, …); annotate the element to keep `detail` payloads typed.
 - **Setting object properties from templates** requires a property binding, never an attribute —
@@ -2640,7 +2640,7 @@ These named interfaces and helper signatures are available to typed integrations
   reason: ToolApprovalDialogCloseReason;
 }`
 
-- **`components-agent-tools-tool-param-form-tool-param-types-contracts`** — Public contracts from `components/agent-tools/tool-param-form/tool-param-types.js`.
+- **`components-agent-tools-tool-param-form-tool-param-types-contracts`** — Public contracts from `components/agent-tools/tool-param-form/tool-param-types.ts`, re-exported by `components/agent-tools/tool-param-form/tool-param-form.class.js`.
   String choices use either an `enum` of stored strings or titled `anyOf` entries in array items. Titles are already-localized caller data; `const` is the stored value. See the tool parameter form guide for the flat schema limits and validation behavior.
 
   `ToolParamEnumItems {

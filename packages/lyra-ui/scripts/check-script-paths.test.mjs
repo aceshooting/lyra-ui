@@ -31,21 +31,21 @@ const pkg = {
 };
 assert.equal(resolvePackageExport('@aceshooting/lyra-ui', pkg), './dist/lyra.js');
 assert.equal(
-  resolvePackageExport('@aceshooting/lyra-ui/components/forms/input/input.js', pkg),
-  './dist/components/forms/input/input.js',
+  resolvePackageExport('@aceshooting/lyra-ui/components/lr-input.js', pkg),
+  './dist/components/lr-input.js',
 );
 assert.equal(resolvePackageExport('@aceshooting/lyra-ui/private.js', pkg), null);
 assert.deepEqual(
   extractPackageSpecifiers(
     `
-      import '@aceshooting/lyra-ui/components/forms/input/input.js';
+      import '@aceshooting/lyra-ui/components/lr-input.js';
       await import("@aceshooting/lyra-ui/localization.js");
       // @aceshooting/lyra-ui/private.js is prose, not a quoted fixture specifier.
     `,
     pkg.name,
   ),
   [
-    '@aceshooting/lyra-ui/components/forms/input/input.js',
+    '@aceshooting/lyra-ui/components/lr-input.js',
     '@aceshooting/lyra-ui/localization.js',
   ],
 );
@@ -58,7 +58,7 @@ const write = (relativePath) => {
 };
 try {
   write('src/lyra.ts');
-  write('src/components/forms/input/input.ts');
+  write('src/components/lr-input.ts');
   write('src/localization.ts');
   const result = validatePackedConsumerSpecifiers({
     sources: [
@@ -66,7 +66,7 @@ try {
         file: 'packed.mjs',
         source: [
           "import '@aceshooting/lyra-ui';",
-          "import '@aceshooting/lyra-ui/components/forms/input/input.js';",
+          "import '@aceshooting/lyra-ui/components/lr-input.js';",
           "import '@aceshooting/lyra-ui/localization.js';",
           "import '@aceshooting/lyra-ui/private.js';",
         ].join('\n'),

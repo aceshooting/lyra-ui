@@ -475,7 +475,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     animation: var(--_lr-motion-animation, lr-button-spin
-      var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite);
+      var(--lr-button-spinner-duration, var(--lr-duration-ambient) var(--lr-easing-linear)) infinite);
   }
   :host([loading]) [part~="start"],
   :host([loading]) [part="label"],

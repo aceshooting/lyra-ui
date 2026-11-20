@@ -115,7 +115,7 @@ export const styles = css`
   }
   /* The strip becomes keyboard-reachable (tabindex 0 instead of -1) only while it genuinely
      overflows, because its items are passive and nothing inside it is tabbable -- see
-     timeline.ts's syncScrollTabStop(). A focusable box owes a visible focus indicator.
+     timeline.class.ts's syncScrollTabStop(). A focusable box owes a visible focus indicator.
      no-hover-state: a scroll container is not a pointer target -- it has no cursor: pointer and
      nothing of its own to paint, and tinting the whole strip under the pointer would suggest a
      selection a timeline cannot make. */

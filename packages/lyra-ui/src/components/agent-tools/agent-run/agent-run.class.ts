@@ -209,7 +209,7 @@ export interface LyraAgentRunEventMap {
  * @csspart tools - The `tools` slot.
  * @csspart reasoning - The `reasoning` slot.
  * @csspart output - The `output` slot.
- * @cssprop [--lr-agent-run-spin=var(--lr-transition-ambient)] - Current-step icon spin animation.
+ * @cssprop [--lr-agent-run-spin=var(--lr-duration-ambient) linear] - Current-step icon spin animation.
  * @cssprop [--lr-agent-run-metric-brand-color=var(--lr-color-brand)] - Brand metric value.
  * @cssprop [--lr-agent-run-metric-danger-color=var(--lr-color-danger)] - Danger metric value.
  * @cssprop [--lr-agent-run-metric-success-color=var(--lr-color-success)] - Success metric value.

@@ -1059,7 +1059,7 @@ describe('active-region cssprop escape hatch', () => {
 it('registers an image/svg+xml renderer that matches .svg files and renders the viewer', async () => {
   const { getDefaultDocumentRendererRegistry, loadDocumentRenderer } = await import('../document-viewer/registry.js');
   const def = getDefaultDocumentRendererRegistry().get('image/svg+xml');
-  expect(def, 'importing svg-viewer.js registers the renderer').to.exist;
+  expect(def, 'importing lr-svg-viewer.js registers the renderer').to.exist;
   expect(def!.matches!({ name: 'Diagram.SVG', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' })).to.be.true;
   expect(def!.matches!({ name: 'diagram.png', mimeType: 'image/png', src: 'https://example.test/a.png' })).to.be.false;
   expect(def!.capabilities).to.deep.equal({ anchors: ['region'], search: false, textSelect: false });

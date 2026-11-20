@@ -96,8 +96,10 @@ When a point label is absent or contains only whitespace, the point ID names its
   A visible localized notice (`engine-notice`) and an assertive announcement accompany it. A lost
   context keeps its renderer so a restore can resume it; any other failure retires the renderer
   until an input that restarts the renderer changes. Software rendering is reported the same way.
-- The renderer is replaced when the data, `type`, `hiddenCategories`, the resolved axis titles or the
-  locale change. Colors, fonts, point size and line width come from live tokens and are re-resolved
+- A live renderer keeps its context and camera when the data, `type`, `hiddenCategories`, the resolved
+  axis titles or the locale change; its buffers are replaced in place. Only `engine`, an emptied
+  dataset or a disconnect retires it. `hiddenCategories` reads back a cached read-only snapshot.
+  Colors, fonts, point size and line width come from live tokens and are re-resolved
   when an ancestor's attributes, the box size or a color-scheme, forced-colors or reduced-motion
   preference changes. Categories use `--lr-color-chart-1` to `--lr-color-chart-8` and wrap after eight.
 

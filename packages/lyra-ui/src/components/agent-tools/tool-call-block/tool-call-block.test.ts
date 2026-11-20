@@ -815,3 +815,12 @@ describe('lr-tool-call-block deprecated --lr-tool-call-block-background alias', 
     expect(await fill('--lr-tool-call-block-bg: rgb(4, 5, 6); --lr-tool-call-block-background: rgb(1, 2, 3)')).to.equal('rgb(4, 5, 6)');
   });
 });
+
+it('spins the running glyph at a constant rate over the ambient duration', async () => {
+  const el = await fixture<Block>(html`<lr-tool-call-block status="running"></lr-tool-call-block>`);
+  const glyph = el.shadowRoot!.querySelector('[part="icon"] svg')!;
+  const computed = getComputedStyle(glyph);
+  expect(computed.animationName).to.equal('lr-tool-status-spin');
+  expect(computed.animationDuration).to.equal('1.8s');
+  expect(computed.animationTimingFunction).to.equal('linear');
+});

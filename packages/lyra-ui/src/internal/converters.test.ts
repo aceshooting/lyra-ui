@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import {
   autocorrectConverter,
   declaredDefaultConverter,
+  lengthOrNumberConverter,
   literalSetConverter,
   optionalLiteralSetConverter,
   presenceTrueDefaultBooleanConverter,
@@ -127,4 +128,19 @@ it('serializes autocorrect through its enumerated on/off vocabulary', () => {
   expect(autocorrectConverter.fromAttribute?.('off', undefined)).to.equal(false);
   expect(autocorrectConverter.toAttribute?.(true, undefined)).to.equal('on');
   expect(autocorrectConverter.toAttribute?.(false, undefined)).to.equal('off');
+});
+
+describe('lengthOrNumberConverter', () => {
+  const read = (value: string | null) => (lengthOrNumberConverter.fromAttribute as (value: string | null) => unknown)(value);
+
+  it('reads finite numbers as pixels, blank as unset and other text as a CSS length', () => {
+    expect(read('12')).to.equal(12);
+    expect(read(' 1e3 ')).to.equal(1000);
+    expect(read('-5')).to.equal(-5);
+    expect(read('12px')).to.equal('12px');
+    expect(read('Infinity')).to.equal('Infinity');
+    expect(read('')).to.equal(null);
+    expect(read('   ')).to.equal(null);
+    expect(read(null)).to.equal(null);
+  });
 });

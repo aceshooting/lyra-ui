@@ -102,7 +102,7 @@ export const styles = css`
   }
   /* A three-quarter arc spins; a full ring would look identical at every frame. */
   :host(:where([status='running'])) [part='icon'] svg {
-    animation: var(--_lr-motion-animation, lr-tool-status-spin var(--lr-transition-ambient) infinite);
+    animation: var(--_lr-motion-animation, lr-tool-status-spin var(--lr-duration-ambient) var(--lr-easing-linear) infinite);
   }
   :host(:where([status='pending'])) [part='icon'] svg {
     animation: var(--_lr-motion-animation, lr-tool-status-pulse var(--lr-transition-ambient) infinite);

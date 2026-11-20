@@ -1,3 +1,4 @@
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   aTimeout,
@@ -2011,4 +2012,22 @@ it('leaves the keyboard focus ring on the native action', async () => {
   expect(base.matches(':focus-visible')).to.equal(true);
   expect(getComputedStyle(base).outlineStyle).to.not.equal('none');
   expect(getComputedStyle(button).outlineStyle).to.equal('none');
+});
+
+it('keeps the edge actions focus rings inside the scrolling toolbar surface', async () => {
+  const el = (await fixture(html`<lr-selection-toolbar
+    open
+    text="selected"
+    data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px"
+    .rect=${new DOMRect(200, 200, 100, 20)}
+  ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  await el.updateComplete;
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  const actions = [...el.shadowRoot!.querySelectorAll<HTMLElement & { updateComplete: Promise<unknown> }>('lr-button[data-action]')];
+  await Promise.all(actions.map((action) => action.updateComplete));
+  for (const action of [actions[0]!, actions[actions.length - 1]!]) {
+    const base = action.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    await focusByKeyboard(base);
+    expectOutlineInsideClip(base, toolbar);
+  }
 });

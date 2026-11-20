@@ -1250,7 +1250,7 @@ test('imported factory aliases and re-exports preserve the same proof across spl
     );
     assert.equal(
       fs.readFileSync(registration, 'utf8'),
-      "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';\n",
+      "import '@aceshooting/lyra-ui/components/lr-widget.js';\n",
     );
     assert.deepEqual(safe.warnings, []);
 
@@ -1393,7 +1393,7 @@ test('supported registration deep imports follow inventory modules; bindings and
     rewriteBarePackages: new Set(['webawesome']),
   });
 
-  assert.match(result.content, /@aceshooting\/lyra-ui\/components\/forms\/widget\/widget\.js/);
+  assert.match(result.content, /@aceshooting\/lyra-ui\/components\/lr-widget\.js/);
   assert.match(result.content, /import \{ WaDataGrid \} from '@awesome\.me\/webawesome/);
   assert.deepEqual(
     result.warnings.map((entry) => entry.warningCode),
@@ -1407,7 +1407,7 @@ test('Web Awesome Pro deep imports use the same proven granular registration map
 
   assert.equal(
     result.content,
-    "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';\n",
+    "import '@aceshooting/lyra-ui/components/lr-widget.js';\n",
   );
   assert.deepEqual(result.warnings, []);
 });
@@ -1433,7 +1433,7 @@ test('multiline and commented import syntax cannot bypass binding-import safety'
   const sideEffectResult = migrateText(sideEffectInput, contract, { file: 'registration.ts' });
   assert.equal(
     sideEffectResult.content,
-    "import /* registration metadata */ '@aceshooting/lyra-ui/components/forms/widget/widget.js';\n",
+    "import /* registration metadata */ '@aceshooting/lyra-ui/components/lr-widget.js';\n",
   );
   assert.deepEqual(sideEffectResult.warnings, []);
 
@@ -1601,7 +1601,7 @@ test('a root package import receives granular registration for root-excluded tar
       fs.readFileSync(source, 'utf8'),
       [
         "import '@aceshooting/lyra-ui/all.js';",
-        "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';",
+        "import '@aceshooting/lyra-ui/components/lr-widget.js';",
         "document.body.innerHTML = '<lr-widget placement=\"start\"></lr-widget><lr-table></lr-table>';",
         '',
       ].join('\n'),
@@ -1642,7 +1642,7 @@ test('automatic markup stays unchanged until the scanned target set proves regis
       report.warnings.every(
         (entry) =>
           entry.warningCode !== 'REGISTRATION_CLOSURE_REQUIRED' ||
-          entry.message.includes('@aceshooting/lyra-ui/components/forms/widget/widget.js'),
+          entry.message.includes('@aceshooting/lyra-ui/components/lr-widget.js'),
       ),
     );
   } finally {
@@ -1733,7 +1733,7 @@ test('a different component deep import does not prove registration for a rewrit
     assert.equal(
       fs.readFileSync(source, 'utf8'),
       [
-        "import '@aceshooting/lyra-ui/components/forms/widget/widget.js';",
+        "import '@aceshooting/lyra-ui/components/lr-widget.js';",
         "document.body.innerHTML = '<wa-data-grid></wa-data-grid>';",
         '',
       ].join('\n'),

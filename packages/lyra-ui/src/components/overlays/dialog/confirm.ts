@@ -10,7 +10,7 @@ const CONFIRM_DEFAULT_STRINGS = Object.freeze({
 });
 
 export interface ConfirmOptions {
-  /** Dialog title -- rendered as a slotted `<h2>`, which also drives the dialog's accessible name (see dialog.ts). */
+  /** Dialog title -- rendered as a slotted `<h2>`, which also drives the dialog's accessible name (see dialog.class.ts). */
   title: string;
   /** Optional supporting text rendered below the title. */
   description?: string;

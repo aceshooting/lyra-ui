@@ -26,8 +26,7 @@ chip-only definition requires neither options nor an adapter — a stable filter
 the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
 guarded where it is used rather than rejected outright.
 
-**Registration.** `components/lr-filter-bar.js` (the default entry, also
-`components/lr-filter-bar.js`) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
+**Registration.** `components/lr-filter-bar.js` (the default entry) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
 and each filter type's control — `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
 `<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` — plus
 `<lr-spinner>` (the `loading` status) the first time a bar renders it, so a bar that only declares

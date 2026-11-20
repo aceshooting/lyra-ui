@@ -122,7 +122,7 @@ const releaseNavigationFixture = buildComponentFile(
       {
         family: 'forms',
         className: 'LyraFixture',
-        importPath: '@aceshooting/lyra-ui/components/forms/fixture/fixture.js',
+        importPath: '@aceshooting/lyra-ui/components/lr-fixture.js',
         status: 'stable',
         since: '1.0.0',
         deprecations: [],
@@ -192,7 +192,7 @@ const sharedSectionFacts = new Map([
     {
       family: 'forms',
       className: 'LyraPrimaryFixture',
-      importPath: '@aceshooting/lyra-ui/components/forms/fixture/primary-fixture.js',
+      importPath: '@aceshooting/lyra-ui/components/lr-primary-fixture.js',
       status: 'stable',
       since: '1.0.0',
       deprecations: [],
@@ -205,7 +205,7 @@ const sharedSectionFacts = new Map([
     {
       family: 'forms',
       className: 'LyraSecondaryFixture',
-      importPath: '@aceshooting/lyra-ui/components/forms/fixture/secondary-fixture.js',
+      importPath: '@aceshooting/lyra-ui/components/lr-secondary-fixture.js',
       status: 'stable',
       since: '1.0.0',
       deprecations: [],
@@ -272,7 +272,7 @@ const slotDeprecationFixture = buildComponentFile(
       {
         family: 'forms',
         className: 'LyraFixture',
-        importPath: '@aceshooting/lyra-ui/components/forms/fixture/fixture.js',
+        importPath: '@aceshooting/lyra-ui/components/lr-fixture.js',
         status: 'stable',
         since: '1.0.0',
         deprecations: [

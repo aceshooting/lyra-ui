@@ -111,7 +111,7 @@ for (const [specifier, doc] of seenPaths) {
   const source = path.join(packageDir, 'src', specifier.replace(/\.js$/, '.ts'));
   if (!existsSync(source)) {
     problems.push(
-      `${doc} documents \`@aceshooting/lyra-ui/${specifier}\`, which has no source module (expected src/${specifier.replace(/\.js$/, '.ts')}). Component entry points are \`components/<family>/<dir>/<file>.js\`.`,
+      `${doc} documents \`@aceshooting/lyra-ui/${specifier}\`, which has no source module (expected src/${specifier.replace(/\.js$/, '.ts')}). Registration entries are \`components/lr-<tag>.js\`; side-effect-free class modules are \`components/<family>/<dir>/<file>.class.js\`.`,
     );
   }
 }

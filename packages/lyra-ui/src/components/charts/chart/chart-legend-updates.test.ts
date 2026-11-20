@@ -206,3 +206,25 @@ it('keeps box-plot table/export complete and coalesced locale/direction live', a
   expect(runtime.isDatasetVisible(0)).to.equal(true);
   expect(el.exportData('csv')).to.equal(exported);
 });
+
+describe('legend value totals', () => {
+  it('reuse the computed entries across renders and recompute when the data, display or locale changes', async () => {
+    const el = await fixture<LyraChart>(html`<lr-chart type="line" without-animation legend-display="value"
+      .labels=${['A', 'B']} .datasets=${[{ label: 'First', data: [1, 2] }, { label: 'Second', data: [3, 4] }]}></lr-chart>`);
+    await settled(el);
+    const memo = () => (el as unknown as { legendMemo?: { entries: { value?: number }[]; total: number } }).legendMemo;
+    const first = memo();
+    expect(first?.entries.map((entry) => entry.value)).to.deep.equal([3, 7]);
+    el.requestUpdate('canvasPresentation', null);
+    await el.updateComplete;
+    expect(memo()).to.equal(first);
+    el.datasets = [{ label: 'First', data: [5, 6] }, { label: 'Second', data: [3, 4] }];
+    await el.updateComplete;
+    expect(memo()).to.not.equal(first);
+    expect(memo()!.entries.map((entry) => entry.value)).to.deep.equal([11, 7]);
+    const afterData = memo();
+    el.locale = 'de-DE';
+    await el.updateComplete;
+    expect(memo()).to.not.equal(afterData);
+  });
+});

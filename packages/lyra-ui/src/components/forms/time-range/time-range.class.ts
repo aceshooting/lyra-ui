@@ -326,7 +326,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
   private _disabled = false;
   // Tracked separately from the consumer's own `disabled` -- a fieldset
   // cascade must never mutate that IDL property/attribute itself (mirrors
-  // combobox.ts's/slider.ts's identical `_fieldsetDisabled`/
+  // combobox.class.ts's/slider.class.ts's identical `_fieldsetDisabled`/
   // `effectiveDisabled` pattern), only the combined getter below.
   private _fieldsetDisabled = false;
 

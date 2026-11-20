@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingOffsetFrom, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingOffsetFrom, focusRingRoom, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -13,7 +13,7 @@ export const styles = css`
       --lr-scroller-shadow-color,
       var(--shadow-color, var(--lr-color-surface))
     );
-    --_lr-scroller-ring-room: calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset));
+    --_lr-scroller-ring-room: ${focusRingRoom};
     --_lr-scroller-effective-shadow-size: var(
       --lr-scroller-shadow-size,
       var(--shadow-size, var(--lr-size-2rem))
@@ -85,10 +85,13 @@ export const styles = css`
     background: linear-gradient(to right, var(--_lr-scroller-effective-shadow-color), transparent);
   }
 
+  /* The viewport clips the scroll axis too: room at the content's ends keeps the first and last
+     items' focus rings whole when scrolled to either edge. */
   [part="content"] {
     display: flex;
     gap: var(--lr-scroller-gap, var(--lr-space-s));
     min-inline-size: max-content;
+    padding-inline: var(--_lr-scroller-ring-room);
   }
 
   :host([orientation="vertical"]) {
@@ -120,6 +123,8 @@ export const styles = css`
     flex-direction: column;
     min-block-size: max-content;
     min-inline-size: 100%;
+    box-sizing: border-box;
+    padding: var(--_lr-scroller-ring-room);
   }
 
   :host([orientation="vertical"]) [part="start-shadow"],

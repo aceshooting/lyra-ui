@@ -3,7 +3,7 @@
   "components": [
     {
       "tag": "lr-resize-observer",
-      "registrationModule": "src/components/utility/resize-observer/resize-observer.ts",
+      "registrationModule": "src/components/lr-resize-observer.ts",
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
@@ -26,7 +26,7 @@
     },
     {
       "tag": "lr-static",
-      "registrationModule": "src/components/utility/static/static.ts",
+      "registrationModule": "src/components/lr-static.ts",
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
@@ -41,7 +41,7 @@
     },
     {
       "tag": "lr-widget",
-      "registrationModule": "src/components/forms/widget/widget.ts",
+      "registrationModule": "src/components/lr-widget.ts",
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
@@ -90,7 +90,7 @@
     },
     {
       "tag": "lr-table",
-      "registrationModule": "src/components/data/table/table.ts",
+      "registrationModule": "src/components/lr-table.ts",
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {
@@ -105,7 +105,7 @@
     },
     {
       "tag": "lr-include",
-      "registrationModule": "src/components/viewers/include/include.ts",
+      "registrationModule": "src/components/lr-include.ts",
       "rootIncluded": true,
       "optionalPeers": [],
       "surface": {

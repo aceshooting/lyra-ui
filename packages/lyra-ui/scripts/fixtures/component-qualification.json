@@ -4229,7 +4229,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 547,
+              "line": 548,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5183,7 +5183,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5506,7 +5506,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6564,7 +6564,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8950,7 +8950,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19109,7 +19109,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21217,7 +21217,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 123,
+              "line": 131,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23633,7 +23633,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.class.ts",
-              "line": 276,
+              "line": 275,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27649,7 +27649,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31011,7 +31011,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 478,
+              "line": 477,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31221,7 +31221,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31584,7 +31584,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39573,7 +39573,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 523,
+              "line": 509,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41089,7 +41089,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41393,7 +41393,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43974,7 +43974,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 431,
+              "line": 427,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44181,7 +44181,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48449,7 +48449,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 501,
+              "line": 502,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52486,7 +52486,7 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper-consumer-regression.test.ts",
-              "line": 42,
+              "line": 9,
               "kind": "rendered RTL test signal"
             }
           ]

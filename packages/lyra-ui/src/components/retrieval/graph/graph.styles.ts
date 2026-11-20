@@ -255,7 +255,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="node"] {
-    /* --lr-graph-node-fill is set inline per node (see graph.ts) from LyraGraphNode.color, falling
+    /* --lr-graph-node-fill is set inline per node (see graph.class.ts) from LyraGraphNode.color, falling
        back to the brand token. An inline style declaration
        always wins the cascade over this selector, so fill has to be set here, not via the
        presentation attribute, for a per-node color to apply. */

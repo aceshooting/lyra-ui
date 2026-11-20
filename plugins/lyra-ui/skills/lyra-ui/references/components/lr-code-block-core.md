@@ -26,7 +26,7 @@ this component's own module never imports or calls that function at all. It only
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
 plus the JavaScript engine by default, seeded with the resolved grammars in `languages`; a lazy grammar
 is loaded only when requested), so a consumer
-importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
+importing this entry point instead of `components/lr-code-block.js` gets a build genuinely free of shiki's full
 language table.
 
 Direction behaves exactly as described for `<lr-code-block>` (**Direction** above).

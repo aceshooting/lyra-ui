@@ -101,7 +101,7 @@ export function checkRootBarrelImports(file, text) {
         `${rel(file)}:${line} imports the bare root barrel (\`${shown}\`) -- that reaches every ` +
           `component's exports, leaving the example's cost to whatever tree-shaking the consumer's ` +
           `build happens to do. Use a granular subpath instead, ` +
-          `e.g. \`${PACKAGE_NAME}/components/<family>/<name>/<name>.js\`.`,
+          `e.g. \`${PACKAGE_NAME}/components/lr-<tag>.js\`.`,
       );
     }
   }

@@ -40,7 +40,7 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/sh
 // class module (see coding-conventions.md's "Tree-shakeable exports"), which is what makes
 // `filter-bar-register.ts` (the lean registration entry -- see its own header comment) actually
 // lean: registering only `<lr-filter-bar>` and leaving every composed control's own registration
-// to whichever entry, default or per-control, the consumer separately imports. `filter-bar.ts`
+// to whichever entry, default or per-control, the consumer separately imports. `lr-filter-bar.ts`
 // (the default entry) registers the button and chips up front and each filter type's control the
 // first time a bar renders it; `updateComplete` waits for those registrations.
 

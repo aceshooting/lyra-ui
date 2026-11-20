@@ -5,6 +5,19 @@
  */
 @import 'tailwindcss';
 
+/* Preflight's * { margin: 0; padding: 0; border: 0 solid } is a document rule, so it outranks every
+   shadow :host rule whatever the layer order -- it would strip the callout panel, the zoomable frame
+   and standalone menu borders, and the modal hosts' viewport gutter. revert-layer inside the SAME
+   layer rolls those three properties back to the component's own :host values. */
+@layer base {
+  :where(lr-callout, lr-zoomable-frame, lr-menu, lr-dialog, lr-lightbox, lr-tool-approval-dialog,
+    lr-tool-result-dialog, lr-tool-select-dialog) {
+    margin: revert-layer;
+    padding: revert-layer;
+    border: revert-layer;
+  }
+}
+
 html,
 body {
   min-block-size: 100%;

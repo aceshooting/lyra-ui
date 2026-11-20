@@ -171,7 +171,7 @@ a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
-Importing `pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
+Importing `components/lr-pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
 module immediately, before any PDF is ever opened — `pdfjs-dist` itself is the only thing that
 entry actually defers. A granular consumer (not importing the `all.js` compatibility bundle) who
 wants the class module deferred too can instead import

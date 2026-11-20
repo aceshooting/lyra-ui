@@ -1,3 +1,5 @@
+import '../../lr-button.js';
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import {
   hoverUntilMatched,
@@ -2177,4 +2179,23 @@ it("resolves a host aria-describedby onto its textarea", async () => {
   const el = wrapper.querySelector("lr-chat-composer") as LyraChatComposer;
   await el.updateComplete;
   expect(describedByIds(el.input!)).to.include("composer-hint");
+});
+
+it('keeps slotted toolbar focus rings inside the scrolling actions-row toolbar', async () => {
+  const el = await fixture<LyraChatComposer>(html`
+    <lr-chat-composer actions-layout="below" toolbar-placement="actions" data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px">
+      <lr-button slot="toolbar">Attach</lr-button>
+      <lr-button slot="toolbar">Model</lr-button>
+    </lr-chat-composer>
+  `);
+  await el.updateComplete;
+  const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+  expect(getComputedStyle(toolbar).overflowX).to.equal('auto');
+  const buttons = [...el.querySelectorAll('lr-button')];
+  await Promise.all(buttons.map((button) => (button as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete));
+  for (const button of [buttons[0]!, buttons[buttons.length - 1]!]) {
+    const base = button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    await focusByKeyboard(base);
+    expectOutlineInsideClip(base, toolbar);
+  }
 });

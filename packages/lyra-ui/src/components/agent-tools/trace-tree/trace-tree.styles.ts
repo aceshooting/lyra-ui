@@ -290,7 +290,8 @@ export const styles = css`
         calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: var(--_lr-motion-animation, lr-trace-tree-stripe var(--lr-transition-ambient) infinite);
+    animation: var(--_lr-motion-animation, lr-trace-tree-stripe
+      var(--lr-trace-tree-stripe-speed, var(--lr-duration-ambient)) var(--lr-easing-linear) infinite);
   }
   /* background-position animates in physical coordinates, so RTL needs an explicit mirrored keyframe
      track to sweep inline-start -> inline-end too. */

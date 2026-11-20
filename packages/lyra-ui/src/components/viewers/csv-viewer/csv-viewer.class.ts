@@ -421,11 +421,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     value: unknown,
     colIndex: number,
     rowHighlights: ResolvedCellHighlight[],
-    role: 'cell' | 'columnheader'
+    role: 'cell' | 'columnheader',
+    columnCount: number
   ): TemplateResult {
     return this.table.renderCell(
       cell(value), colIndex, rowHighlights, role, 'cell',
-      '--_lr-csv-viewer-highlight-color', this.activeHighlightId,
+      '--_lr-csv-viewer-highlight-color', this.activeHighlightId, columnCount,
     );
   }
 
@@ -449,7 +450,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
           row[index],
           index,
           rowHighlights,
-          header ? 'columnheader' : 'cell'
+          header ? 'columnheader' : 'cell',
+          count
         )
       ))}
     </div>`;

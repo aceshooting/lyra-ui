@@ -176,7 +176,7 @@ export const styles = css`
      So a transparent ::before widens the hit area instead of the handle box, floored at 24px via
      max() below: the drag area never shrinks with the dot at small tiers, and only grows past 24px
      once the scaled 28px base overtakes the floor (m and up). Purely additive -- onPointerMove
-     (time-range.ts) measures only [part="base"]'s rect and e.clientX/e.clientY, never the handle's
+     (time-range.class.ts) measures only [part="base"]'s rect and e.clientX/e.clientY, never the handle's
      own, and a pointerdown inside the ::before still reports e.target as the real handle, since
      pseudo-elements have no event target. */
   [part^="handle"]::before {

@@ -55,3 +55,8 @@ export function createCanvasChart(
     throw error;
   }
 }
+
+/** The host's window, or `undefined` on the server-render path, whose element shim has no `ownerDocument`. */
+export function hostWindow(host: Element): (Window & typeof globalThis) | undefined {
+  return (host.ownerDocument?.defaultView as (Window & typeof globalThis) | null | undefined) ?? undefined;
+}

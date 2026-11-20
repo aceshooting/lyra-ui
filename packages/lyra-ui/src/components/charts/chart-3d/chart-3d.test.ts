@@ -271,7 +271,8 @@ describe('lr-chart-3d selection and hidden categories', () => {
     await el.updateComplete;
     expect([...el.hiddenCategories]).to.deep.equal([0]);
     expect(buttonIds(el)).to.deep.equal(['row-1']);
-    (el.hiddenCategories as Set<number>).add(1);
+    expect(el.hiddenCategories).to.equal(el.hiddenCategories);
+    expect(() => (el.hiddenCategories as Set<number>).add(1)).to.throw(TypeError);
     expect([...el.hiddenCategories]).to.deep.equal([0]);
     el.hiddenCategories = {} as unknown as ReadonlySet<number>;
     await el.updateComplete;

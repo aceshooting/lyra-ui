@@ -6,7 +6,6 @@ import { eventCollectionSupport } from '../../../internal/collection-snapshot.js
 import {
   html,
   nothing,
-  type ComplexAttributeConverter,
   type TemplateResult,
   type PropertyValues,
 } from 'lit';
@@ -16,6 +15,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { lengthOrNumberConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import {
@@ -69,16 +69,7 @@ interface WidgetRendererEl extends HTMLElement {
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], area[href], input, select, textarea, summary, label, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], [role="spinbutton"], [role="textbox"], [role="combobox"], [role="option"], [role="menuitem"], [tabindex]:not([part="cell"])';
-/** `row-height`/`gap`: any value `Number()` reads as a number parses exactly as the former
- *  number-only attributes did; any other value stays the authored CSS length string. */
-const DASHBOARD_LENGTH_CONVERTER: ComplexAttributeConverter<number | string> = {
-  fromAttribute: (value) => {
-    // Attribute removal retains Lit's null readback.
-    if (value === null) return value as unknown as number;
-    const number = Number(value);
-    return Number.isNaN(number) ? value : number;
-  },
-};
+
 const GEOMETRY_KEYS = ['cellId', 'x', 'y', 'w', 'h', 'minW', 'maxW', 'minH', 'maxH', 'locked'] as const;
 const sortedByLayout = new WeakMap<readonly LyraDashboardCell[], readonly LyraDashboardCell[]>();
 const assignedWidgets = new WeakMap<Element, unknown>();
@@ -327,11 +318,11 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
    *  of pixels, or a CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved to pixels when the grid
    *  renders -- `rem` against the document root, `em` against this element. A numeric attribute
    *  value parses to a number. */
-  @property({ attribute: 'row-height', converter: DASHBOARD_LENGTH_CONVERTER })
+  @property({ attribute: 'row-height', converter: lengthOrNumberConverter })
   rowHeight: number | string = 80;
   /** Gap between cells on both axes: a number of pixels, or a CSS length resolved like
    *  `rowHeight`. A numeric attribute value parses to a number. */
-  @property({ converter: DASHBOARD_LENGTH_CONVERTER }) gap: number | string = 8;
+  @property({ converter: lengthOrNumberConverter }) gap: number | string = 8;
   private collisionValue: LyraDashboardCollisionPolicy = 'reject';
   /** How a move/resize that would overlap another cell is resolved. Foreign runtime values
    * normalize to the safe `reject` policy. */

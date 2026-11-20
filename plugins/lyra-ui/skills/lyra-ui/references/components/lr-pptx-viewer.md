@@ -105,7 +105,7 @@ filenames, declaring `{ anchors: ['text-quote', 'fragment', 'page'], search: tru
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
 
-Importing `pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
+Importing `components/lr-pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
 class module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who
 wants that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer-register.js`, which installs the

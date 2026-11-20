@@ -302,13 +302,16 @@ export class TableViewerController<M extends { row: number; col: number }> {
     part: 'cell' | 'header-cell',
     colorVar: string,
     activeHighlightId: string | null,
+    columnCount: number,
   ): TemplateResult {
-    if (!rowHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${bdi(text)}</div>`;
+    // The frame already draws the table's inline-end edge, so the last column drops its divider.
+    const place = colIndex === columnCount - 1 ? `grid-column:${colIndex + 1};--_lr-table-column-divider:0` : `grid-column:${colIndex + 1}`;
+    if (!rowHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${place}>${bdi(text)}</div>`;
     let byColumn = this.columnHighlights.get(rowHighlights);
     if (!byColumn) { byColumn = new Map(); this.columnHighlights.set(rowHighlights, byColumn); }
     let colHighlights = byColumn.get(colIndex);
     if (!colHighlights) { colHighlights = tableHighlightsForColumn(rowHighlights, colIndex); byColumn.set(colIndex, colHighlights); }
-    if (!colHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${`grid-column:${colIndex + 1}`}>${bdi(text)}</div>`;
+    if (!colHighlights.length) return html`<div part=${part} role=${role} aria-colindex=${colIndex + 1} style=${place}>${bdi(text)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const accessibleLabel = primary.highlight.label
@@ -320,7 +323,7 @@ export class TableViewerController<M extends { row: number; col: number }> {
       role=${role}
       aria-colindex=${colIndex + 1}
       ?data-active=${!!active}
-      style=${`grid-column:${colIndex + 1};${active ? `${colorVar}: var(--lr-color-warning, var(--lr-color-brand))` : ''}`}
+      style=${`${place};${active ? `${colorVar}: var(--lr-color-warning, var(--lr-color-brand))` : ''}`}
     >
       <button
         part="cell-highlight-action"
@@ -786,7 +789,7 @@ export class TableViewerSourceController implements ReactiveController {
     const highlights = this.chrome.highlightsForRow(rawRow, this.hooks.workbook ? this.sheet?.name : undefined);
     return html`<div part="data-row" role="presentation" aria-busy=${slot ? 'false' : 'true'} style=${`${style};height:${height}px;overflow:hidden`}>
       ${this.windowColumns.map((column, position) => this.chrome.renderCell(slot?.values?.[index - slot.row]?.[position] ?? '', column, highlights,
-        'cell', 'cell', this.hooks.colorVar, this.hooks.activeHighlight()))}
+        'cell', 'cell', this.hooks.colorVar, this.hooks.activeHighlight(), this.columns))}
     </div>`;
   }
   render(): TemplateResult {
@@ -817,7 +820,7 @@ export class TableViewerSourceController implements ReactiveController {
         <div part=${this.hooks.headerPart === 'header-cell' ? 'table' : 'sheet'} role="table" aria-label=${this.hooks.workbook ? this.sheet.name : this.hooks.label(this.rows)} aria-rowcount=${this.rows + Number(header)} aria-colcount=${this.columns}
           @scroll=${(event: Event) => { this.chrome.scrollColumns(this, event.currentTarget as HTMLElement); }}>
           ${header ? html`<div part="header-row" role="row" aria-rowindex="1" style=${window.style}>${this.labels.map((column, index) => this.chrome.renderCell(column.label, this.columnStart + index,
-            this.chrome.highlightsForRow(1, this.hooks.workbook ? this.sheet?.name : undefined), 'columnheader', this.hooks.headerPart, this.hooks.colorVar, this.hooks.activeHighlight()))}</div>` : nothing}
+            this.chrome.highlightsForRow(1, this.hooks.workbook ? this.sheet?.name : undefined), 'columnheader', this.hooks.headerPart, this.hooks.colorVar, this.hooks.activeHighlight(), this.columns))}</div>` : nothing}
           <lr-virtual-list part=${this.hooks.headerPart === 'header-cell' ? nothing : 'rows'} exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
             .source=${this.sourceRows} .rowHeight=${height} .renderItem=${this.chrome.rowRenderer(this, [this.paint, window.columns, height, header, this.hooks.activeHighlight()], (_row, index) => this.row(index, window.style, height))}
             .activeItemId=${this.activeRow} item-role="row" .rowIndexOffset=${Number(header)}

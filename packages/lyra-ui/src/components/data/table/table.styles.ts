@@ -276,7 +276,7 @@ export const styles = css`
   [part='header-cell'][data-sortable]:active {
     background: var(--lr-table-sortable-header-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
   }
-  /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.ts's focusedColKey()) can
+  /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.class.ts's focusedColKey()) can
      land on any column, so every header cell needs its own focus indicator. */
   [part='header-cell']:focus-visible {
     ${focusRingInsetOffset}
@@ -576,7 +576,7 @@ export const styles = css`
   [part='header-cell'][data-sticky],
   [part='cell'][data-sticky] {
     position: sticky;
-    /* Set per-column by table.ts's stickyOffsets()/updated(), which measures each earlier sticky
+    /* Set per-column by table.class.ts's stickyOffsets()/updated(), which measures each earlier sticky
        column's rendered width so several stack instead of all pinning to the same edge. Falls back
        to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);

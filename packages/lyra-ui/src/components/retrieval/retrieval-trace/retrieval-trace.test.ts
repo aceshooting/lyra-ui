@@ -714,7 +714,7 @@ describe("lr-retrieval-trace", () => {
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
   });
 
-  it("registers lr-span-waterfall, lr-chunk-inspector and lr-empty as a side effect of importing retrieval-trace.js (regression)", async () => {
+  it("registers lr-span-waterfall, lr-chunk-inspector and lr-empty as a side effect of importing lr-retrieval-trace.js (regression)", async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real component.

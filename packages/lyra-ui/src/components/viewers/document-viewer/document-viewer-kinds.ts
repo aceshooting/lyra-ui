@@ -4,7 +4,7 @@
  * `<lr-document-viewer>` actually opens a matching file. Importing this single module is the
  * one-line equivalent of importing each `*-viewer-register.js` entry individually.
  *
- * `<lr-document-viewer>` itself must still be imported separately (`document-viewer.js`); this
+ * `<lr-document-viewer>` itself must still be imported separately (`lr-document-viewer.js`); this
  * module only wires the built-in kind registry, matching how each individual
  * `*-viewer-register.js` entry already works.
  */

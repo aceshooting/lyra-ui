@@ -44,7 +44,7 @@ it("lists lr-table's known composed-child registrations", async () => {
   expect(table, 'registrations.json must have an entry for lr-table').to.not.equal(undefined);
   expect(table?.entry).to.equal('./components/lr-table.js');
   expect(table?.registrationModule).to.equal('src/components/lr-table.ts');
-  // table.ts imports empty.js/pagination.js/spinner.js/skeleton.js -- their full registration
+  // lr-table.ts imports lr-empty.js/lr-pagination.js/lr-spinner.js/lr-skeleton.js -- their full registration
   // entries, not the side-effect-free *.class.js -- before defining lr-table itself.
   expect(table?.registers).to.deep.equal([
     'lr-empty',

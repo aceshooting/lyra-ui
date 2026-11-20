@@ -41,7 +41,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Re-exported so `markdown.ts`'s `export *` keeps exposing this from the same public path as
+/** Re-exported so `lr-markdown.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
 export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** Peer-neutral public alias matching the upstream static `getMarked()` signature without

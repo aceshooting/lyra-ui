@@ -195,7 +195,7 @@ export const styles = css`
       transform: rotate(360deg);
     }
   }
-  /* Only in the DOM for a checked type="checkbox" item (see menu-item.ts's render()), so unlike
+  /* Only in the DOM for a checked type="checkbox" item (see menu-item.class.ts's render()), so unlike
      [part='icon'] above it needs no [hidden] toggling -- there is no always-present <slot> child
      here to keep visually empty. */
   [part='checkmark'] {
@@ -203,7 +203,7 @@ export const styles = css`
     flex: 0 0 auto;
     color: var(--_lr-glass-brand-text, var(--lr-color-brand));
   }
-  /* Only in the DOM for a submenu parent (see menu-item.ts's render()), so it needs no [hidden]
+  /* Only in the DOM for a submenu parent (see menu-item.class.ts's render()), so it needs no [hidden]
      bookkeeping either. */
   [part='submenu-icon'] {
     display: inline-flex;

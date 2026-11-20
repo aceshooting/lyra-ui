@@ -166,8 +166,8 @@ logical tree item and focus owner), `source-label` (row content), `source-toggle
 or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
 (localized projection or row failure).
 
-**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
+**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-duration-ambient) linear`, i.e.
+`1.8s linear`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
 icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `size` is `s` or smaller;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s

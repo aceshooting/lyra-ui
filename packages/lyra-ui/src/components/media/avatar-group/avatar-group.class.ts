@@ -15,7 +15,7 @@ import {
   LYRA_VARIANT_VALUES,
 } from '../../../internal/variant-values.js';
 import { styles } from './avatar-group.styles.js';
-// Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
+// Type-only import — erased at build. Importing the value module (`lr-avatar.ts`/`lr-avatar.js`) here
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
 // component must not do: consumers register `lr-avatar` themselves.
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';

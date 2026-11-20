@@ -12,14 +12,13 @@ import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
   html,
   nothing,
-  type ComplexAttributeConverter,
   type TemplateResult,
   type PropertyValues,
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { lengthOrNumberConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
@@ -62,18 +61,6 @@ export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';
 const NON_NAVIGATION_CLICK = '[part~="toggle"], [part~="header-actions"], [part~="meta"], [part~="end"]';
 
 const APP_RAIL_FRAME = optionalLiteralSetConverter<LyraFrame>(['card', 'plain']);
-
-/** Width attributes: any value `Number()` reads as a number parses exactly as the pixel-only
- *  attributes these replace did; any other value stays the authored CSS length string. */
-const RAIL_WIDTH_CONVERTER: ComplexAttributeConverter<number | string | undefined> = {
-  fromAttribute: (value) => {
-    // A removed attribute writes `null` back, exactly as the pixel-only attributes' `Number`
-    // conversion did; `null` is outside the declared type but every read treats it as unset.
-    if (value === null) return value as unknown as undefined;
-    const number = Number(value);
-    return Number.isNaN(number) ? value : number;
-  },
-};
 
 const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'open',
@@ -715,7 +702,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `em`, `vw`, `vh`; a bare number is pixels) resolved live against the document root (`rem`) or
    *  this element (`em`); a drag or keyboard resize writes a number of pixels. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
-  @property({ attribute: 'rail-width', converter: RAIL_WIDTH_CONVERTER, noAccessor: true })
+  @property({ attribute: 'rail-width', converter: lengthOrNumberConverter, noAccessor: true })
   railWidth?: number | string;
 
   static {
@@ -732,20 +719,20 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     definePersistedProperty(this.prototype, 'railWidth', {
       initial: undefined,
       attribute: 'rail-width',
-      converter: RAIL_WIDTH_CONVERTER,
+      converter: lengthOrNumberConverter,
     });
   }
 
   /** Minimum `railWidth` a drag/keyboard resize can reach: a CSS length or a number of pixels,
    *  resolved like `railWidth`.
    *  @default 190 */
-  @property({ attribute: 'min-rail-width', converter: RAIL_WIDTH_CONVERTER, useDefault: true })
+  @property({ attribute: 'min-rail-width', converter: lengthOrNumberConverter, useDefault: true })
   minRailWidth: number | string = 190;
 
   /** Maximum `railWidth` a drag/keyboard resize can reach: a CSS length or a number of pixels,
    *  resolved like `railWidth`.
    *  @default 440 */
-  @property({ attribute: 'max-rail-width', converter: RAIL_WIDTH_CONVERTER, useDefault: true })
+  @property({ attribute: 'max-rail-width', converter: lengthOrNumberConverter, useDefault: true })
   maxRailWidth: number | string = 440;
 
   /** A width input in pixels: a number as given, a CSS length resolved live against this element,

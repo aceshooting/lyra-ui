@@ -6,7 +6,7 @@ export const styles = css`
     display: block;
     /* Categorical palette for words with no explicit color/group, cycled by index and reused
        per-group once a group's first color is assigned. Data-driven, so retheme-able custom
-       properties rather than literals in word-cloud.ts, as with lr-heatmap's
+       properties rather than literals in word-cloud.class.ts, as with lr-heatmap's
        --lr-heatmap-scale-lo/-hi. */
     --_lr-word-cloud-color-1-default: var(--lr-color-brand);
     --_lr-word-cloud-color-2-default: var(--lr-color-success);

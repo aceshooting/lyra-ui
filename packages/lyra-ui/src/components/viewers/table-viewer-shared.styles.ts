@@ -1,4 +1,12 @@
 import { css, type CSSResult } from 'lit';
+
+/**
+ * A column divider the last column drops: renderCell() zeroes the private width there, because the
+ * frame already draws the table's inline-end edge.
+ */
+export const tableColumnDivider = css`
+  border-inline-end: var(--_lr-table-column-divider, var(--lr-border-width-thin)) solid var(--lr-color-border-subtle);
+`;
 import { activeFill, focusRingShorthandInward, iconHitTarget, interactiveTransition } from '../../internal/interactive-control.styles.js';
 
 /** Grid chrome shared by the csv and spreadsheet viewers; `maxHeight` is the viewer's own `var()` hook. */
@@ -35,7 +43,7 @@ export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
   [part='cell'],
   lr-virtual-list::part(cell) {
     padding: var(--lr-space-2xs) var(--lr-space-xs);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    ${tableColumnDivider}
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

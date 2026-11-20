@@ -1,3 +1,4 @@
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
@@ -3320,5 +3321,18 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
       expect(warnings).to.have.length(0);
       expect(el.value).to.deep.equal(changed);
     });
+  }
+});
+
+it('keeps the remove and edit focus rings inside the clipping token', async () => {
+  const el = await fixture<LyraTokenInput>(html`
+    <lr-token-input editable data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px" .value=${['alpha']}></lr-token-input>
+  `);
+  const token = el.shadowRoot!.querySelector<HTMLElement>('[part="token"]')!;
+  expect(getComputedStyle(token).overflowX).to.equal('hidden');
+  for (const part of ['token-label', 'remove']) {
+    const target = token.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    await focusByKeyboard(target);
+    expectOutlineInsideClip(target, token);
   }
 });

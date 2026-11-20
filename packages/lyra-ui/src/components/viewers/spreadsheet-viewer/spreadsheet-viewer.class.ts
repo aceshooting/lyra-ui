@@ -495,11 +495,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     value: unknown,
     colIndex: number,
     rowHighlights: ResolvedCellHighlight[],
-    role: 'cell' | 'columnheader'
+    role: 'cell' | 'columnheader',
+    columnCount: number
   ): TemplateResult {
     return this.table.renderCell(
       cell(value, this.effectiveLocale), colIndex, rowHighlights, role, 'cell',
-      '--_lr-spreadsheet-viewer-highlight-color', this.activeHighlightId,
+      '--_lr-spreadsheet-viewer-highlight-color', this.activeHighlightId, columnCount,
     );
   }
 
@@ -523,7 +524,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
           row[index],
           index,
           rowHighlights,
-          header ? 'columnheader' : 'cell'
+          header ? 'columnheader' : 'cell',
+          count
         )
       ))}</div
     >`;

@@ -1,7 +1,6 @@
 import {
   html,
   nothing,
-  type ComplexAttributeConverter,
   type PropertyValues,
   type TemplateResult,
 } from 'lit';
@@ -14,6 +13,7 @@ import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { lengthOrNumberConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 import type {
@@ -38,18 +38,6 @@ const DIGIT_BUFFER_MS = 500;
 const MAX_PAGE_COUNT = 100_000;
 const DEFAULT_ALLOCATION_WIDTH = 320;
 const DEFAULT_THUMB_WIDTH = 96;
-
-/** `thumb-width`: a value `Number()` reads as a number parses exactly as the former number-only
- *  attribute did; any other value stays the authored CSS length string. */
-const THUMB_WIDTH_CONVERTER: ComplexAttributeConverter<number | string> = {
-  fromAttribute: (value) => {
-    // A removed attribute writes `null` back, exactly as the number-only conversion did; `null` is
-    // outside the declared type but every read treats it as unset.
-    if (value === null) return value as unknown as number;
-    const number = Number(value);
-    return Number.isNaN(number) ? value : number;
-  },
-};
 
 export type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
 
@@ -85,8 +73,6 @@ export interface LyraPageRailEventMap {
 }
 
 type ThumbnailState = 'pending' | 'ready' | 'unavailable';
-
-
 
 /**
  * `<lr-page-rail>` — a virtualized vertical thumbnail rail for page-addressed documents, with
@@ -173,7 +159,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
    *  length (`px`, `rem`, `em`, `vw`, `vh`, or `%` of the rail's width) resolved to pixels when a
    *  thumbnail renders -- `rem` against the document root, `em` against this element. A numeric
    *  attribute value parses to a number; an unresolvable value falls back to the default. */
-  @property({ attribute: 'thumb-width', converter: THUMB_WIDTH_CONVERTER })
+  @property({ attribute: 'thumb-width', converter: lengthOrNumberConverter })
   thumbWidth: number | string = 96;
   /** Overrides the computed accessible name. */
   @property() label = '';

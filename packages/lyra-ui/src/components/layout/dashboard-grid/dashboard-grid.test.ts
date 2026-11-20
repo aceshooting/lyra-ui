@@ -3782,7 +3782,7 @@ describe("row-height and gap accept CSS lengths", () => {
     );
     expect(computed(el)).to.deep.equal(["80px", "8px"]);
     const empty = await populated(html`<lr-dashboard-grid gap=""></lr-dashboard-grid>`);
-    expect(empty.gap, "an empty value still parses as the number it always did").to.equal(0);
-    expect(computed(empty)[1]).to.equal("0px");
+    expect(empty.gap, "a blank value is unset, like a removed attribute").to.equal(null);
+    expect(computed(empty)[1]).to.equal("8px");
   });
 });

@@ -356,7 +356,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   // independently-scrollable region -- with no other focusable content of
   // its own (e.g. plain text, or a non-interactive `<lr-streaming-text>`),
   // it would otherwise be unreachable by keyboard, same reasoning
-  // code-block.ts's and virtual-list.ts's own identical `[part="body"]`/
+  // code-block.class.ts's and virtual-list.class.ts's own identical `[part="body"]`/
   // `[part="base"]` tabindex document. `role="group"` (rather than a page
   // landmark role) plus `aria-label` gives it an accessible name without
   // claiming navigation significance for what is, structurally, just one

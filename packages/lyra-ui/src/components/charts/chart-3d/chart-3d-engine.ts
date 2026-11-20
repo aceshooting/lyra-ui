@@ -144,7 +144,23 @@ export class Chart3dEngineController {
     cursor: number,
     camera?: LyraChart3dCamera,
   ): void {
-    if (this.data !== data || this.container !== container || this.preference !== preference) {
+    // A data-only change on a live renderer replaces its buffers in place; the context, the camera
+    // and the mounted DOM survive. Anything else retires the renderer.
+    const inPlace =
+      this.data !== data && this.container === container && this.preference === preference &&
+      !!data?.positions.length && !!this.engine && this.configured && !this.contextLost;
+    if (inPlace) {
+      const engine = this.engine!;
+      const generation = this.generation;
+      this.data = data;
+      this.hover = -1;
+      try {
+        engine.setData(data!, ++this.revision);
+      } catch {
+        if (generation === this.generation && this.engine === engine) this.fail('error');
+      }
+      if (generation !== this.generation || this.engine !== engine) return;
+    } else if (this.data !== data || this.container !== container || this.preference !== preference) {
       const generation = this.invalidate();
       if (generation !== this.generation) return;
       this.data = data;

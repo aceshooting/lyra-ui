@@ -451,7 +451,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   ```
 - **`HTMLElementTagNameMap`** is augmented in the `.class.d.ts` files. `document.querySelector('lr-table')`
   is only typed as `LyraTable` when that class module is in the type graph — importing just the
-  registration entry (`table.js`) also pulls it in, since the entry re-exports the class module.
+  registration entry (`components/lr-table.js`) also pulls it in, since the entry re-exports the class module.
 - **Generics.** Row/item-carrying components are generic over their data type
   (`LyraTable<T>`, `LyraTableEventMap<T>`, …); annotate the element to keep `detail` payloads typed.
 - **Setting object properties from templates** requires a property binding, never an attribute —
@@ -2480,6 +2480,29 @@ The reset then sorts before Lyra's layers, and Tailwind's own utilities after `l
 markers and link underlines inside `lr-typography` survive the reset because the scope restates
 them. An authored `type` on a list or `align` on a cell does not: presentational hints lose to every
 author rule, so under a reset set `list-style-type` (or `text-align`) with a class instead.
+
+Layer order cannot protect a component's own host box. Any page rule that matches the element
+outranks the `:host` rule inside its shadow root, whatever layer either sits in, so a reset's
+`* { margin: 0; padding: 0; border: 0 solid }` strips the panel padding and border of
+`<lr-callout>`, the border of `<lr-zoomable-frame>` and of a standalone `<lr-menu>`, and the
+viewport gutter of `<lr-dialog>`, `<lr-lightbox>`, `<lr-tool-approval-dialog>`,
+`<lr-tool-result-dialog>` and `<lr-tool-select-dialog>`. Roll those three properties back inside the
+reset's **own** layer; `revert-layer` there returns each host to the component's defaults while your
+later-layer or unlayered rules still win:
+
+```css
+/* after the reset, in the same layer */
+@layer base {
+  :where(lr-callout, lr-zoomable-frame, lr-menu, lr-dialog, lr-lightbox, lr-tool-approval-dialog,
+    lr-tool-result-dialog, lr-tool-select-dialog) {
+    margin: revert-layer;
+    padding: revert-layer;
+    border: revert-layer;
+  }
+}
+```
+
+The same rule in a later layer, or unlayered, does not work: it reverts only to the reset's value.
 
 ### Bundle-specific override hooks
 
@@ -6980,7 +7003,7 @@ These named interfaces and helper signatures are available to typed integrations
   reason: ToolApprovalDialogCloseReason;
 }`
 
-- **`components-agent-tools-tool-param-form-tool-param-types-contracts`** — Public contracts from `components/agent-tools/tool-param-form/tool-param-types.js`.
+- **`components-agent-tools-tool-param-form-tool-param-types-contracts`** — Public contracts from `components/agent-tools/tool-param-form/tool-param-types.ts`, re-exported by `components/agent-tools/tool-param-form/tool-param-form.class.js`.
   String choices use either an `enum` of stored strings or titled `anyOf` entries in array items. Titles are already-localized caller data; `const` is the stored value. See the tool parameter form guide for the flat schema limits and validation behavior.
 
   `ToolParamEnumItems {

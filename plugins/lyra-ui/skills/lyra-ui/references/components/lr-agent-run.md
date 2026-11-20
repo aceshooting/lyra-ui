@@ -101,8 +101,8 @@ The fallback task list keeps its state across equivalent step updates and handle
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
 (carries `data-variant`), `metric` (one metric label/value pair), `empty`.
 
-**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
+**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-duration-ambient) linear`, i.e.
+`1.8s linear`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
 current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `size` is `s` or smaller; both are ignored

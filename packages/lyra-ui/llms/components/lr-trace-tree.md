@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -160,6 +160,9 @@ secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
 above: an inline `var()` fallback rather than a `:host` declaration, so either can be set on the
 element or any ancestor, and they exist because `::part(row)[data-active]` is invalid CSS.
+`--lr-trace-tree-stripe-speed` (default `var(--lr-duration-ambient)`) is a `running` span's
+striped-bar animation duration, the same bare-duration hook as `--lr-span-waterfall-stripe-speed`;
+the stripe crawls at a constant rate.
 `--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
 semantic `aria-level` remains exact at deeper levels.
 

@@ -1,6 +1,6 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, focusRing, focusRingInwardOffset, focusRingOffsetFrom, focusRingOffsetInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, focusRingInwardOffset, focusRingShorthandInsetPastFrame, focusRingOffsetFrom, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS } from 'lit';
 import { tag } from '../../../internal/prefix.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -205,8 +205,11 @@ export const styles = css`
     pointer-events: none;
     opacity: var(--lr-opacity-disabled);
   }
+  /* The tablist scrolls on both axes and every tab touches its block edges, so an outer ring would
+     lose its top and bottom. The ring is drawn inside, stepped past the hairline the tab overhangs
+     onto the tablist's clipped rule. */
   [part="tab"]:focus-visible {
-    ${focusRingInwardOffset}
+    ${focusRingShorthandInsetPastFrame}
     border-radius: var(--lr-radius);
   }
   [part="panel"] {
@@ -248,12 +251,9 @@ export const styles = css`
     ${focusRingOffsetFrom('--lr-tab-group-panel-hover-outline-offset')}
     border-radius: var(--lr-radius);
   }
-  /* A filled panel touches the clipping boundary of the body. Keep its focus ring inside. */
-  :host([fill]) [part="panel"]:focus-visible {
-    ${focusRingOffsetInset}
-  }
+  /* The panel fills the scrolling body edge to edge, so its focus ring is drawn inside. */
   [part="panel"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
     border-radius: var(--lr-radius);
   }
   @media (prefers-reduced-motion: reduce) {

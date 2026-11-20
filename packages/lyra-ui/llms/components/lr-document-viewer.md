@@ -178,7 +178,7 @@ actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the ta
 registers. `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer-kinds.js`
 imports and re-exports all built-in kinds at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
-individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+individually. `<lr-document-viewer>` itself (`components/lr-document-viewer.js`) is always a separate import.
 A lazy registration's declared capabilities apply unless its loaded definition declares its own.
 
 ```html

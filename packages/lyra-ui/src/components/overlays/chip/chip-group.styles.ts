@@ -26,7 +26,7 @@ export const styles = css`
     display: none !important;
   }
   /* Local pill styling rather than a real <lr-chip> in the shadow DOM: keeps the group
-     self-contained instead of depending on chip.ts's internal shape, the way this family's
+     self-contained instead of depending on chip.class.ts's internal shape, the way this family's
      overlay-shaped components duplicate rather than nest one another. */
   [part='overflow-indicator'] {
     display: inline-flex;

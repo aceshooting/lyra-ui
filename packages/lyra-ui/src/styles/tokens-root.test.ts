@@ -7,7 +7,7 @@ import '../components/lr-card.js';
 import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 
 // Captured at module evaluation, i.e. BEFORE the `before()` hook links the stylesheet and before any
-// Lyra element connects, but after `card.js` registered lr-card: since 28.0.0 registering the first
+// Lyra element connects, but after `lr-card.js` registered lr-card: since 28.0.0 registering the first
 // Lyra class adopts the layer into the document, so it already exists at document scope.
 const baselineNames = ['--lr-color-brand', '--lr-color-border', '--lr-space-m', '--lr-radius'];
 const baseline = new Map(

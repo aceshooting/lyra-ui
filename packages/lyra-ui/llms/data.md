@@ -3206,7 +3206,7 @@ Declarative items receive no automatic ID fallback.
 **Renamed in 8.0.0 — breaking:** the child element is `<lr-tree-item>` (class `LyraTreeItem`), not
 `<lr-tree-node>`/`LyraTreeNode`. It was the only child element in the library whose tag diverged
 from both upstreams, so `wa-tree-item`/`sl-tree-item` markup had nothing to rename to. The shared
-data types moved to `tree-types.ts` to free the name and are still re-exported from `tree.js`. A
+data types moved to `tree-types.ts` to free the name and are still re-exported from `components/lr-tree.js`. A
 leftover `<lr-tree-node>` is an unregistered tag: it never
 upgrades, `<lr-tree>` does not count it as an item at all, and the tree renders its empty state
 with the stale markup sitting inert in the light DOM — no error anywhere.

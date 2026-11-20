@@ -109,7 +109,7 @@ export interface LyraResponsivePanelEventMap {
  * heading element (`h1`–`h6` or `[role="heading"]`) among the slotted header
  * content wins if present, otherwise the header slot's full text content is
  * used, mirroring lr-dialog's `detectHeading()`/`headingText` fallback (see
- * dialog.ts's module doc for why this uses `aria-label`, a copied string,
+ * dialog.class.ts's module doc for why this uses `aria-label`, a copied string,
  * rather than `aria-labelledby`: the header content is light DOM while
  * `[part="panel"]` lives in this element's shadow tree, and an ID-reference
  * attribute can't resolve across that boundary). A panel opened without a

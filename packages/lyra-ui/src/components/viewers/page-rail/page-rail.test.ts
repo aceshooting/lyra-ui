@@ -1057,7 +1057,7 @@ describe('lr-page-rail', () => {
     }
   });
 
-  it('registers lr-virtual-list, lr-skeleton, and lr-file-icon as a side effect of importing page-rail.js (regression)', async () => {
+  it('registers lr-virtual-list, lr-skeleton, and lr-file-icon as a side effect of importing lr-page-rail.js (regression)', async () => {
     // Importing a composed sub-component's *.class.js module alone never calls defineElement --
     // only its real barrel (*.js) does. Rendering an un-registered dependency silently produces a
     // plain, un-upgraded HTMLElement instead of the real component.

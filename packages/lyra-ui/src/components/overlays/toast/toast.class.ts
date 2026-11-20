@@ -396,7 +396,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     // <lr-toast-item> already carries its own property defaults, so
     // falling back to a literal here (e.g. `?? 5000`) would duplicate those
     // defaults in a second place that has no way of staying in sync if the
-    // property declaration in toast-item.ts ever changes.
+    // property declaration in toast-item.class.ts ever changes.
     if (options.variant !== undefined) item.variant = options.variant;
     if (options.duration !== undefined) item.duration = options.duration;
     if (options.size !== undefined) item.size = options.size;

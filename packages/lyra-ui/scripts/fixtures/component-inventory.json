@@ -3685,7 +3685,7 @@
             "name": "--lr-agent-run-spin",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           }
         ],
         "cssStates": [],
@@ -9884,7 +9884,7 @@
             "name": "--lr-attachment-chip-spinner-duration",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           },
           {
             "name": "--lr-attachment-chip-thumbnail-radius",
@@ -17976,7 +17976,7 @@
             "name": "--lr-button-spinner-duration",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           },
           {
             "name": "--lr-button-width",
@@ -145476,7 +145476,7 @@
             "name": "--lr-task-list-spin",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           },
           {
             "name": "--lr-task-list-success-color",
@@ -156774,7 +156774,7 @@
             "name": "--lr-tool-call-chip-spin",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           },
           {
             "name": "--lr-transition-ambient",
@@ -157787,7 +157787,7 @@
             "name": "--lr-tool-result-dialog-spin",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) linear"
           },
           {
             "name": "--lr-tool-result-dialog-success-bg",
@@ -160752,6 +160752,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-trace-tree-stripe-speed",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-duration-ambient)"
           },
           {
             "name": "--lr-trace-tree-success-color",

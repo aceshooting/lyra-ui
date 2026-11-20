@@ -6,7 +6,7 @@ let nativeNameConstructor: typeof Intl.DisplayNames | undefined;
 
 /**
  * ISO 3166-1 alpha-2 shape: exactly two ASCII letters, case-insensitive.
- * Shared by `flag.ts` (validating `country`) and `languageToCountry` below
+ * Shared by `flag.class.ts` (validating `country`) and `languageToCountry` below
  * (validating a language tag's region subtag), because both values end up
  * passed to the peer package `@aceshooting/lyra-flags`' `flagUrl()`, which
  * naively interpolates its `code` argument into a `new URL('./flags/${code}.svg',

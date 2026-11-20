@@ -1843,7 +1843,7 @@ describe('languages lazy grammar loaders', () => {
 });
 
 describe('shiki engine seam public reachability', () => {
-  it('re-exports setShikiCoreEngine from the public code-block-core.js entry, not only shiki-types.js', async () => {
+  it('re-exports setShikiCoreEngine from the public lr-code-block-core.js entry, not only shiki-types.js', async () => {
     // A consumer asked for a callable engine seam. Before this, the function was
     // only importable from the internal `shiki-types.js` support module, which has no
     // package.json#exports entry at all -- so no consumer-supported path could ever reach it.

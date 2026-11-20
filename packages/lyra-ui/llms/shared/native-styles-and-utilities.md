@@ -229,6 +229,29 @@ markers and link underlines inside `lr-typography` survive the reset because the
 them. An authored `type` on a list or `align` on a cell does not: presentational hints lose to every
 author rule, so under a reset set `list-style-type` (or `text-align`) with a class instead.
 
+Layer order cannot protect a component's own host box. Any page rule that matches the element
+outranks the `:host` rule inside its shadow root, whatever layer either sits in, so a reset's
+`* { margin: 0; padding: 0; border: 0 solid }` strips the panel padding and border of
+`<lr-callout>`, the border of `<lr-zoomable-frame>` and of a standalone `<lr-menu>`, and the
+viewport gutter of `<lr-dialog>`, `<lr-lightbox>`, `<lr-tool-approval-dialog>`,
+`<lr-tool-result-dialog>` and `<lr-tool-select-dialog>`. Roll those three properties back inside the
+reset's **own** layer; `revert-layer` there returns each host to the component's defaults while your
+later-layer or unlayered rules still win:
+
+```css
+/* after the reset, in the same layer */
+@layer base {
+  :where(lr-callout, lr-zoomable-frame, lr-menu, lr-dialog, lr-lightbox, lr-tool-approval-dialog,
+    lr-tool-result-dialog, lr-tool-select-dialog) {
+    margin: revert-layer;
+    padding: revert-layer;
+    border: revert-layer;
+  }
+}
+```
+
+The same rule in a later layer, or unlayered, does not work: it reverts only to the reset's value.
+
 ### Bundle-specific override hooks
 
 The bundles consume the ordinary shared color, typography, spacing, border, radius, focus, size,

@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, focusRingRoom, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
@@ -81,9 +81,11 @@ export const styles = css`
     display: none;
   }
   [part="actions"] {
-    --_lr-widget-ring-room: calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset));
-    padding-block: var(--_lr-widget-ring-room);
-    margin-block: calc(-1 * var(--_lr-widget-ring-room));
+    /* The row scrolls inline, which clips both axes: room on every side keeps the slotted actions'
+       focus rings whole, and the equal negative margin keeps them where they were. */
+    --_lr-widget-ring-room: ${focusRingRoom};
+    padding: var(--_lr-widget-ring-room);
+    margin: calc(-1 * var(--_lr-widget-ring-room));
     display: flex;
     flex: 0 1 auto;
     align-items: center;

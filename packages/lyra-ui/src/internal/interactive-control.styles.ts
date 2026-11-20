@@ -22,6 +22,13 @@ export const focusRingShorthand = css`
   outline-offset: var(--lr-focus-ring-offset);
 `;
 
+/**
+ * The room an overflow container leaves around focusable children so their outer focus ring
+ * paints whole: the ring width plus the configured offset, never negative. A value, for padding
+ * (paired with an equal negative margin where the children must not move).
+ */
+export const focusRingRoom = css`max(0px, calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)))`;
+
 /** Keyboard focus outline pulled inward by the configured outer offset, for controls that cannot paint outside their box. */
 export const focusRingInwardOffset = css`
   outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

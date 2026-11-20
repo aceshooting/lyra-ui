@@ -52,7 +52,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, syncChartHeight } from './chart-surface-shared.js';
+import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, hostWindow, syncChartHeight } from './chart-surface-shared.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
@@ -94,6 +94,8 @@ import {
 } from './chart-forced-colors.js';
 import {
   legendVisibilityDetail,
+  proposeLegendToggle,
+  emitPreparedSourceSelection as emitSourceSelection,
   normalizeHiddenDatasets,
   type LyraChartLegendVisibilityChangeDetail,
   type LyraChartDatumVisibilityChangeDetail,
@@ -391,6 +393,17 @@ interface ChartStyleOptions {
 }
 
 type BrowserWindow = Window & typeof globalThis;
+
+/** One legend button's source dataset, label and summed value with the scale its share needs. */
+interface LegendEntry {
+  index: number;
+  datasetIndex: number;
+  dataset: EffectiveChartData['datasets'][number];
+  label: string;
+  value: number | undefined;
+  valueScale: number;
+  scaledValue: number;
+}
 
 /**
  * Recursively merges `override` onto `base`, matching JSON-merge semantics:
@@ -1023,7 +1036,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.preparedChanged = true;
     this.preparedPending = this.spatial.loading;
     this.preparedRequestFailed = this.spatial.error;
-    this.descriptionMemo = undefined;
+    this.descriptionMemo = this.legendMemo = undefined;
     this.dataTableRows = undefined;
     super.requestUpdate('spatialView', null);
     if (!this.spatial.loading || this.spatial.error) this.wakeSpatialWaiters();
@@ -1247,7 +1260,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.preparedModel = result.model;
       this.preparedChanged = true;
       this.preparedEffective = undefined;
-      this.descriptionMemo = undefined;
+      this.descriptionMemo = this.legendMemo = undefined;
       this.dataTableRows = undefined;
       return true;
     } catch {
@@ -2231,7 +2244,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
     // Loading and accessible DOM can settle while the first visibility decision is pending.
     this.visible = !this.ownerWindow?.IntersectionObserver;
-    this.armReducedMotionWatcher();
+    this.reducedMotionWatch.arm();
     const ownerWindow = this.ownerWindow;
     const ResizeObserverCtor = ownerWindow?.ResizeObserver;
     if (ResizeObserverCtor) {
@@ -2352,7 +2365,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.intersectionObserver = undefined;
     this.intersectionGeneration += 1;
     this.visible = true;
-    this.disarmReducedMotionWatcher();
+    this.reducedMotionWatch.disarm();
   }
 
   override adoptedCallback(): void {
@@ -2363,24 +2376,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     super.adoptedCallback();
     this.announcements.adopted();
     this.requestUpdate();
-    this.disarmReducedMotionWatcher();
-    this.armReducedMotionWatcher();
-  }
-
-  private armReducedMotionWatcher(): void {
+    this.reducedMotionWatch.disarm();
     this.reducedMotionWatch.arm();
   }
 
-  private disarmReducedMotionWatcher(): void {
-    this.reducedMotionWatch.disarm();
-  }
-
   private get ownerWindow(): BrowserWindow | undefined {
-    // Optional-chained for the server-render path: @lit-labs/ssr's element shim has no
-    // `ownerDocument`, and every caller already handles `undefined`.
-    return (
-      (this.ownerDocument?.defaultView as BrowserWindow | null | undefined) ?? undefined
-    );
+    return hostWindow(this);
   }
 
   private computedStyle(element: Element = this): CSSStyleDeclaration {
@@ -2561,7 +2562,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * reactive `@state` property — from `updated()` would schedule a second,
    * redundant update pass; `willUpdate()` runs before this cycle's render is
    * considered complete, so the same set just folds into the render already
-   * in progress. Same rationale as `toast-item.ts`'s `willUpdate()`-vs-
+   * in progress. Same rationale as `toast-item.class.ts`'s `willUpdate()`-vs-
    * `updated()` split.
    */
   protected override willUpdate(changed: PropertyValues): void {
@@ -2952,7 +2953,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `chart.styles.ts`, each layered over an existing semantic token) via
    * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
    * consume CSS `var()` directly — same constraint documented on
-   * `heatmap.ts`'s `labelColor()`/`noDataFill()`/`scaleEndpoints()` — so this
+   * `heatmap.class.ts`'s `labelColor()`/`noDataFill()`/`scaleEndpoints()` — so this
    * is called fresh from `buildConfig()` on every draw rather than cached.
    */
   private themeColors(): ThemeColors { return this.canvasTokens.themeColors(true); }
@@ -3666,17 +3667,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /** @internal Specialized distributions may retain only their existing aggregate activation. */
   protected emitPreparedSourceSelection(datasetIndex: number, index: number): void {
-    const model = this.preparedModel;
-    const series = model?.series[datasetIndex];
-    if (model && series) {
-      if (model.kind === 'series') {
-        const point = series.samples[index];
-        if (point) this.emit('lr-source-point-select', { revision: model.revision, seriesId: series.id, sourceIndex: point.sourceIndex, point: Object.freeze({ x: point.x, y: point.y }) });
-      } else {
-        const categoryId = model.categoryIds[index], value = series.values[index];
-        if (categoryId !== undefined && value !== undefined) this.emit('lr-source-category-select', { revision: model.revision, seriesId: series.id, categoryId, value, observationCount: model.categoryCounts[index]! });
-      }
-    }
+    emitSourceSelection((name, detail) => this.emit(name, detail), this.preparedModel, datasetIndex, index);
   }
 
   /** @internal Specialized distributions may describe observations outside their plotted bins. */
@@ -5036,6 +5027,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private descriptionMemo?: { keys: readonly unknown[]; value: string };
+  /** Legend entries and their total, rebuilt only when an input that reaches them changes. */
+  private legendMemo?: { keys: readonly unknown[]; entries: LegendEntry[]; total: number };
 
   private chartDescription(): string {
     if (this.description) return this.description;
@@ -5285,13 +5278,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.invalidateSpatialReveal(); this.spatial?.reset();
       this.preparedDirty = true;
       this.preparedRequests?.refresh();
-      this.descriptionMemo = undefined;
+      this.descriptionMemo = this.legendMemo = undefined;
     }
     if (this.spatialActive && this.spatial) {
       if (key === 'viewport') this.spatial.configure(this.viewport, normalizeChartRecordLimit(this.maxRecords));
       if (key === 'selectedPointId') this.spatial.setSelected(this.selectedPointId);
     }
-    if (key === undefined) this.descriptionMemo = undefined;
+    if (key === undefined) this.descriptionMemo = this.legendMemo = undefined;
     if (key === undefined || chartTableKeys.has(key)) {
       this.legendDataGeneration = {};
       this.dataTableRows = undefined;
@@ -5479,19 +5472,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!chart) return;
     const datasetCount = this.effectiveData().datasets.length;
     if (datasetIndex < 0 || datasetIndex >= datasetCount) return;
-    const hidden = this.effectiveHiddenDatasetIndexes();
-    const wasHidden = hidden.includes(datasetIndex);
-    const nextHidden = wasHidden
-      ? hidden.filter((index) => index !== datasetIndex)
-      : [...hidden, datasetIndex].sort((left, right) => left - right);
-    // A currently hidden dataset becomes visible; a currently visible one becomes hidden.
-    const visible = wasHidden;
-    const proposed = this.emit(
-      'lr-legend-visibility-change-request',
-      legendVisibilityDetail(datasetIndex, visible, nextHidden),
-      { cancelable: true }
+    const toggle = proposeLegendToggle(
+      datasetIndex,
+      this.effectiveHiddenDatasetIndexes(),
+      (detail) => this.emit('lr-legend-visibility-change-request', detail, { cancelable: true }),
+      () => !this.isConnected || this.chart !== chart || generation !== this.legendDataGeneration,
     );
-    if (proposed.defaultPrevented || this.chart !== chart || generation !== this.legendDataGeneration) return;
+    if (!toggle) return;
+    const { visible, nextHidden } = toggle;
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
     // accepted user choice survives Chart.js reconstruction and can be persisted by a host.
     this.hiddenDatasets = nextHidden;
@@ -5551,7 +5539,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // while subsequent data or theme updates always start with fresh values.
     const sources = new Map<number, readonly unknown[]>();
     const colorCache = new Map<string, Map<string, string>>();
-    const entries = (datumMode ? sample.rowIndexes : sample.seriesIndexes).map((index) => {
+    const keys = [effective, sample, datumMode, needValues, this.strings, this.effectiveLocale, this.formatter, this.valueFormatter];
+    const memo = this.legendMemo?.keys.every((key, index) => key === keys[index]) ? this.legendMemo : undefined;
+    const entries: LegendEntry[] = memo?.entries ?? (datumMode ? sample.rowIndexes : sample.seriesIndexes).map((index) => {
       const datasetIndex = datumMode ? 0 : index;
       const dataset = effective.datasets[datasetIndex]!;
       let value: number | undefined;
@@ -5581,7 +5571,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // Preserve each sum's scale before computing shares: saturating finite totals would make
     // differently sized datasets above Number.MAX_VALUE appear equal.
     const maximum = entries.reduce((largest, entry) => Math.max(largest, entry.valueScale), 0);
-    const total = maximum ? entries.reduce((sum, entry) => sum + Math.abs(entry.scaledValue) * (entry.valueScale / maximum), 0) : 0;
+    let total = memo?.total ?? 0;
+    if (!memo) {
+      total = maximum ? entries.reduce((sum, entry) => sum + Math.abs(entry.scaledValue) * (entry.valueScale / maximum), 0) : 0;
+      this.legendMemo = { keys, entries, total };
+    }
     const controlledHidden = normalizeHiddenDatasets(
       this.canonicalHiddenDatasets(),
       effective.datasets.length

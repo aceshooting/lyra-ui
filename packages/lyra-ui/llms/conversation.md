@@ -456,7 +456,7 @@ absent from its explicit map. That loader includes the default ~200-language dyn
 whose bundled lookup table a bundler cannot statically narrow away.
 This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
-`markdown.js` gets a build genuinely free of shiki's full language table.
+`components/lr-markdown.js` gets a build genuinely free of shiki's full language table.
 
 Direction behaves exactly as described for `<lr-markdown>` (**Direction** above). Plain fences accept
 `--lr-markdown-code-block-bg` in both palettes.
@@ -2060,8 +2060,8 @@ capability — token coalescing, `contentMode` auto-detection, the blinking curs
 surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
-`<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
-entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
+`<lr-markdown-core>` (`components/lr-markdown-core.js`) instead of `<lr-markdown>`, so importing this
+entry point instead of `components/lr-streaming-text.js` never references `<lr-markdown>`'s ~200-language
 dynamic-import table at all. A fenced code block whose language is absent from both `languages` and `languageLoaders`
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
@@ -2530,7 +2530,7 @@ this component's own module never imports or calls that function at all. It only
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
 plus the JavaScript engine by default, seeded with the resolved grammars in `languages`; a lazy grammar
 is loaded only when requested), so a consumer
-importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
+importing this entry point instead of `components/lr-code-block.js` gets a build genuinely free of shiki's full
 language table.
 
 Direction behaves exactly as described for `<lr-code-block>` (**Direction** above).
@@ -4193,7 +4193,7 @@ const view = html`<lr-widget-renderer
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
 `bindingState` (this one-field example binds `/name`). The direct class route supplies the
 default type mappings but defines only `lr-widget-renderer`; register every mapped custom element
-you use yourself. The normal `widget-renderer.js` entry also registers the eight default mapped
+you use yourself. The normal `components/lr-widget-renderer.js` entry also registers the eight default mapped
 elements, so do not import it on this route.
 
 ```html
@@ -5321,22 +5321,22 @@ These named interfaces and helper signatures are available to typed integrations
   The opt-in module owns the separate reviewed binary and fetches it only when called.
   Its license notices and version/hash provenance remain beside the packaged asset.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
-  `.../markdown/markdown-core.js`).
+  `@aceshooting/lyra-ui/components/lr-markdown-core.js`).
   `ShikiEngineOption = 'javascript' | ShikiRegexEngineFactory`
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
-  `.../markdown/markdown-core.js`).
+  `@aceshooting/lyra-ui/components/lr-markdown-core.js`).
   `ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>`
   A factory `setShikiCoreEngine()` accepts directly: called once per distinct `languages` object
   the first time it is used.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
-  `.../markdown/markdown-core.js`).
+  `@aceshooting/lyra-ui/components/lr-markdown-core.js`).
   `resolvedShikiLanguages(languages: Readonly<Record<string, ShikiLanguageSource>>): Record<string, ShikiLanguageInput>`
   The already-resolved subset of a `languages` map that may also contain lazy loaders -- the subset
   `loadShikiHighlighterCore()` seeds a `HighlighterCore` with at creation. Returns the same object
   unchanged when there is no loader, preserving identity-keyed core reuse for a caller that never
   uses one.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
-  `.../markdown/markdown-core.js`).
+  `@aceshooting/lyra-ui/components/lr-markdown-core.js`).
   `ensureShikiLanguageLoaded(core: ShikiHighlighterCore, key: string, source: ShikiLanguageSource): Promise<boolean>`
   Resolves one `languages` entry that may be a lazy loader, loading it into `core` via
   `HighlighterCore.loadLanguage()` the first time a given (core, key) pair is seen, memoized after
@@ -5377,7 +5377,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ShikiLanguageLoader`. Full code-block and Markdown expose concrete `languages` and separate
   `languageLoaders` maps.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
-  `.../markdown/markdown-core.js`).
+  `@aceshooting/lyra-ui/components/lr-markdown-core.js`).
   `ShikiRegexEngine {
     createScanner(patterns: readonly (string | RegExp)[]): unknown;
     createString(value: string): unknown;

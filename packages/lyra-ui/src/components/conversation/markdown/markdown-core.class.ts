@@ -37,7 +37,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
+/** Re-exported so `lr-markdown-core.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
 export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
 /** Peer-neutral public alias matching the full variant's `getMarked()` signature. */
@@ -66,7 +66,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * identical to `<lr-markdown>` -- only fenced-code-block highlighting differs: this component's
  * own module never textually contains a call to (or import of) `loadShikiHighlighter` (the
  * ~200-language default dynamic-import table `<lr-markdown>` can call). A consumer
- * importing this entry point instead of `markdown.js` gets a genuinely shiki-full-table-free
+ * importing this entry point instead of `lr-markdown.js` gets a genuinely shiki-full-table-free
  * build. A fenced block whose language isn't a key in `languages` always renders the plain-text
  * fallback -- there is no default/full-table highlighter here to fall back to, mirroring
  * `<lr-code-block-core>`'s identical contract for the sibling component.

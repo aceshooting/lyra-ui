@@ -250,8 +250,8 @@ hover and press. For removed historical tokens, see the [release history archive
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
 own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
 (default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
-`--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) is
-the `loading` spinner's rotation period; that token itself collapses to `0.001ms linear` under
+`--lr-button-spinner-duration` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`) is
+the `loading` spinner's rotation period and timing; that token itself collapses to `0.001ms` under
 `prefers-reduced-motion`, so the spinner effectively stops.
 
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,

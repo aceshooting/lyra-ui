@@ -168,6 +168,8 @@ export interface LyraTraceTreeEventMap {
  * @cssprop [--lr-trace-tree-max-indent=var(--lr-size-12rem)] - Maximum visual nesting indentation;
  *   semantic `aria-level` remains exact at deeper levels.
  * @cssprop [--lr-trace-tree-running-stripe-bg=var(--lr-color-brand-quiet)] - Running stripe contrast.
+ * @cssprop [--lr-trace-tree-stripe-speed=var(--lr-duration-ambient)] - Animation duration for a
+ *   running span's striped bar; the stripe always crawls at a constant (linear) rate.
  * @status stable
  * @since 4.0.0
  */

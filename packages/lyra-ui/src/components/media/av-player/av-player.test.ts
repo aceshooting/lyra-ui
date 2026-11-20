@@ -3214,7 +3214,7 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   } = await import('../../viewers/document-viewer/registry.js');
   const registry = getDefaultDocumentRendererRegistry();
   const def = registry.get('audio/mpeg');
-  expect(def, 'importing av-player.js registers the renderer').to.exist;
+  expect(def, 'importing lr-av-player.js registers the renderer').to.exist;
   expect(registry.get('audio/wav'), 'audio MIME types share one definition').to.equal(def);
   const resolvedDefinition = await loadDocumentRenderer(def!);
 

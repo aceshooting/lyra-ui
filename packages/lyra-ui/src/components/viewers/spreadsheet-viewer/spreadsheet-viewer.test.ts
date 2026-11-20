@@ -1934,7 +1934,7 @@ it('registers the same renderer under both spreadsheet MIME types', async () => 
   const registry = getDefaultDocumentRendererRegistry();
   const xlsx = registry.get(XLSX_MIME);
   const xls = registry.get('application/vnd.ms-excel');
-  expect(xlsx, 'importing spreadsheet-viewer.js registers the renderer').to
+  expect(xlsx, 'importing lr-spreadsheet-viewer.js registers the renderer').to
     .exist;
   expect(xls, 'both MIME types share one definition').to.equal(xlsx);
 

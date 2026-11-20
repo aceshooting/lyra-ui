@@ -1,5 +1,5 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlFocusHalo, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
@@ -244,8 +244,9 @@ export const styles = css`
       ${activeFill('var( --lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
+  /* The token clips its overflow for the ellipsis, so its actions draw their rings inside. */
   [part="remove"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   [part="remove"][aria-disabled="true"] {
     cursor: default;
@@ -279,7 +280,7 @@ export const styles = css`
     );
   }
   [part="token-label"]:focus-visible {
-    ${focusRing}
+    ${focusRingInsetOffset}
   }
   :host(:disabled) [part="token-label"] {
     cursor: default;

@@ -18,18 +18,18 @@ export const styles = css`
   :host {
     ${blockHost}
     /* Sequential ramp endpoints for the data-driven cell colors. Canvas can't consume var(), so
-       heatmap.ts resolves these through getComputedStyle and interpolates between them; tokens,
+       heatmap.class.ts resolves these through getComputedStyle and interpolates between them; tokens,
        not literals, so hosts retheme the ramp without raw hex in the public API. */
     --_lr-heatmap-scale-lo: var(--lr-color-brand-quiet);
     --_lr-heatmap-scale-hi: var(--lr-color-brand);
     /* No-data cell fill (the -1 sentinel / NaN case), resolved like the ramp above -- a token so
-       hosts can retheme it rather than a literal in heatmap.ts. */
+       hosts can retheme it rather than a literal in heatmap.class.ts. */
     --_lr-heatmap-no-data-fill: var(--lr-color-no-data);
     /* Canvas-drawn axis/month/weekday label font, resolved like the ramp above. */
     --_lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
     /* [part="tooltip"] is real DOM, so it consumes these var()s directly -- no getComputedStyle.
        Own tokens rather than bare --lr-color-surface/-text so a host can retheme just the heatmap
-       tooltip, as chart.ts does with its own tooltip properties. */
+       tooltip, as chart.class.ts does with its own tooltip properties. */
     --_lr-heatmap-tooltip-bg: var(--lr-color-surface);
     --_lr-heatmap-tooltip-color: var(--lr-color-text);
     /* Canvas-drawn focus ring on the keyboard-focused cell, resolved like the ramp above. Own

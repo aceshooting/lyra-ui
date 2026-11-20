@@ -442,7 +442,7 @@ it('renders [part="reveal-columns-button"] and sets hasHiddenPriorityColumns whe
   await el.updateComplete;
   // The real hidden-state is measured (offsetParent) after render, in
   // updated() — self-corrects a frame later than the initial paint, mirroring
-  // lite-chart.ts's plotWidth/plotHeight ResizeObserver settle pattern, so
+  // lite-chart.class.ts's plotWidth/plotHeight ResizeObserver settle pattern, so
   // poll for the settled state instead of assuming a single updateComplete
   // covers the resulting cascaded update.
   await waitUntil(() => el.hasHiddenPriorityColumns === true);

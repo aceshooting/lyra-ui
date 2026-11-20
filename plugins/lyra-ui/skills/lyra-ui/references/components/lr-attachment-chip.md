@@ -139,7 +139,7 @@ or direct public value remains authoritative; `--lr-attachment-chip-compact-thum
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap at the compact density (`size="s"` and below);
-`--lr-attachment-chip-spinner-duration` (default `var(--lr-transition-ambient)`) controls the
+`--lr-attachment-chip-spinner-duration` (default `var(--lr-duration-ambient) linear`) controls the
 indeterminate rotation's duration and easing and stops under reduced motion.
 `--lr-attachment-chip-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) and
 `--lr-attachment-chip-compact-padding` (default `var(--lr-size-0-125rem) var(--lr-space-xs)`) make

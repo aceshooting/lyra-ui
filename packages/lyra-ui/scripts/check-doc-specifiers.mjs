@@ -15,7 +15,7 @@
 // The lesson both share is that a naming convention over the SOURCE tree cannot see a promise made
 // in prose. This check reads the promises instead: it starts from what is written down, not from
 // what the file tree happens to look like, so it catches the next one whatever it is called.
-import { readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
@@ -147,6 +147,80 @@ function resolvesThroughExports(specifier, exportsMap, packageName) {
   return false;
 }
 
+// Abbreviated module routes in prose: `components/<...>.js` without the package prefix,
+// `.../<dir>/<file>.js`, `../<dir>/<file>.js`, and a bare `<name>.js`. A reader resolves each against
+// the package as readily as a full specifier, so a route the exports map does not list is the same
+// hard failure. The bare form is only judged when `<name>` is a component directory, because that is
+// exactly the per-directory registration module shape the package no longer ships; any other bare
+// file name is not claimed to be a module of this package at all.
+const ABBREVIATED_ROUTE_PATTERN = /`((?:\.\.\.\/|\.\.\/|components\/)?(?:[a-z0-9-]+\/)*([a-z0-9][a-z0-9-]*)\.js)`/g;
+
+/**
+ * Bare `<name>.js` file names that coincide with a component directory but name something else.
+ * Each entry states what it names.
+ */
+export const BARE_ROUTE_EXCEPTIONS = Object.freeze(
+  new Map([['chart.js', 'the Chart.js peer library, not a module of this package']]),
+);
+
+/** Component directory names (`src/components/<family>/<dir>/`) of a package, or an empty set. */
+export function componentDirectoryNames(packageDir) {
+  const names = new Set();
+  const root = join(packageDir, 'src', 'components');
+  let families;
+  try {
+    families = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return names;
+  }
+  for (const family of families) {
+    if (!family.isDirectory()) continue;
+    for (const entry of readdirSync(join(root, family.name), { withFileTypes: true })) {
+      if (entry.isDirectory()) names.add(entry.name);
+    }
+  }
+  return names;
+}
+
+/**
+ * Reports abbreviated `.js` routes in `documents` (`[label, text]` pairs) that no
+ * `package.json#exports` key provides. `exportsMap` is the package's exports map and
+ * `componentDirectories` the names `componentDirectoryNames()` returns.
+ */
+export function abbreviatedRouteFindings(documents, exportsMap, componentDirectories) {
+  const keys = Object.keys(exportsMap).map((key) => key.replace(/^\.\//, ''));
+  const exact = new Set(keys);
+  const wildcards = keys.filter((key) => key.includes('*')).map((key) => key.split('*'));
+  const listed = (route) => exact.has(route)
+    || wildcards.some(([prefix, suffix]) => route.startsWith(prefix) && route.endsWith(suffix));
+  const findings = [];
+  for (const [label, text] of documents) {
+    text.split('\n').forEach((line, index) => {
+      if (line.startsWith('| module |')) return;
+      for (const match of line.matchAll(ABBREVIATED_ROUTE_PATTERN)) {
+        const [, route, stem] = match;
+        let resolved;
+        if (route.startsWith('components/')) {
+          resolved = listed(route);
+        } else if (route.startsWith('.../') || route.startsWith('../')) {
+          const tail = route.replace(/^\.{2,3}\//, '');
+          resolved = keys.some((key) => key === tail || key.endsWith(`/${tail}`));
+        } else if (route.includes('/')) {
+          continue;
+        } else {
+          resolved = !componentDirectories.has(stem) || BARE_ROUTE_EXCEPTIONS.has(route);
+        }
+        if (resolved) continue;
+        findings.push(
+          `${label}:${index + 1} names \`${route}\`, which no package.json#exports route provides; `
+          + 'registration entries are `components/lr-<tag>.js`',
+        );
+      }
+    });
+  }
+  return findings;
+}
+
 export function checkDocumentedSpecifiers(
   packageDir = defaultPackageDir,
   exceptionList = DOC_SPECIFIER_EXCEPTIONS,
@@ -192,6 +266,14 @@ export function checkDocumentedSpecifiers(
       `${specifier} is documented as an import in ${[...files].sort().join(', ')} but does not `
       + 'resolve through package.json#exports',
     );
+  }
+  const componentDirectories = componentDirectoryNames(packageDir);
+  if (componentDirectories.size > 0) {
+    const documents = scannedFiles(packageDir).map((file) => [
+      relative(packageDir, file).replaceAll('\\', '/'),
+      readFileSync(file, 'utf8'),
+    ]);
+    findings.push(...abbreviatedRouteFindings(documents, exportsMap, componentDirectories));
   }
   return { findings };
 }

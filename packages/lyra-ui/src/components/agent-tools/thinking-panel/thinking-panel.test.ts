@@ -15,7 +15,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 expectStaleAttribute('lr-thinking-panel', 'appearance');
 
 // MutationObserver callbacks are microtasks and the resulting auto-scroll is
-// coalesced to a single requestAnimationFrame (see thinking-panel.ts's
+// coalesced to a single requestAnimationFrame (see thinking-panel.class.ts's
 // onContentMutated) -- two nested frames reliably lands after that rAF has
 // run, the same wait idiom lr-virtual-list's own tests already use for an
 // identical rAF-coalesced recompute.

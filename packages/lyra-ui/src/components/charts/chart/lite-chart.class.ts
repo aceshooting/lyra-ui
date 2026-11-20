@@ -1,3 +1,4 @@
+import { emitPreparedSourceSelection } from './chart-legend-visibility.js';
 import { preparedDataChanged } from '../../../internal/chart-prepared-property.js';
 import { syncChartHeight } from './chart-surface-shared.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -383,7 +384,7 @@ export interface LyraLiteChartEventMap {
  *
  * Because this renders real DOM (not canvas), it reuses `lr-chart`'s
  * `--lr-chart-*` theme tokens directly via CSS `var()` — no
- * `getComputedStyle()`-based re-theming step is needed the way `chart.ts`
+ * `getComputedStyle()`-based re-theming step is needed the way `chart.class.ts`
  * needs one for its canvas.
  *
  * By default (`layout="fit"`) the plot always squeezes to the measured host
@@ -2187,21 +2188,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private emitPoint(datasetIndex: number, index: number): void {
     if (!this.isConnected) return;
-    const model = this.preparedModel;
     const generation = this.activationGeneration;
-    if (model) {
-      const series = model.series[datasetIndex];
-      if (!series) return;
-      if (model.kind === 'series') {
-        const point = series.samples[index];
-        if (!point) return;
-        this.emit('lr-source-point-select', { revision: model.revision, seriesId: series.id, sourceIndex: point.sourceIndex, point: Object.freeze({ x: point.x, y: point.y }) });
-      } else {
-        const categoryId = model.categoryIds[index], value = series.values[index];
-        if (categoryId === undefined || value === undefined) return;
-        this.emit('lr-source-category-select', { revision: model.revision, seriesId: series.id, categoryId, value, observationCount: model.categoryCounts[index]! });
-      }
-    }
+    const model = this.preparedModel;
+    if (model && !emitPreparedSourceSelection((name, detail) => this.emit(name, detail), model, datasetIndex, index)) return;
     // A source-select listener may replace the data or remove the chart; stop once the mark is stale.
     if (!this.isConnected || generation !== this.activationGeneration) return;
     const label = this.datumLabel(datasetIndex, index);

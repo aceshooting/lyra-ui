@@ -2,6 +2,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
+import {
+  abbreviatedRouteFindings,
+  componentDirectoryNames,
+} from '../packages/lyra-ui/scripts/check-doc-specifiers.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const preview = readFileSync(join(root, '.storybook/preview.js'), 'utf8');
@@ -113,6 +117,23 @@ for (const [name, source] of [
     if (source.includes(unsupported)) {
       throw new Error(`${name} guide documents retired package route ${unsupported}`);
     }
+  }
+}
+{
+  const lyraPackageDir = join(root, 'packages/lyra-ui');
+  const lyraExports = JSON.parse(readFileSync(join(lyraPackageDir, 'package.json'), 'utf8')).exports;
+  const routeFindings = abbreviatedRouteFindings(
+    [
+      ['.storybook/GettingStarted.mdx', gettingStartedGuide],
+      ['.storybook/Migrating.mdx', migratingGuide],
+      ['.storybook/LocalizationAndRtl.mdx', localizationGuide],
+      ['.storybook/Theming.mdx', themingGuide],
+    ],
+    lyraExports,
+    componentDirectoryNames(lyraPackageDir),
+  );
+  if (routeFindings.length > 0) {
+    throw new Error(`Storybook guides name unexported module routes:\n  ${routeFindings.join('\n  ')}`);
   }
 }
 for (const required of [

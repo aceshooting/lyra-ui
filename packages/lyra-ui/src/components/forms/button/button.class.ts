@@ -202,7 +202,7 @@ export interface LyraButtonEventMap {
  * effect there.
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
- * @cssprop [--lr-button-spinner-duration=var(--lr-transition-ambient)] - Timing of the `loading` spinner.
+ * @cssprop [--lr-button-spinner-duration=var(--lr-duration-ambient) linear] - Timing of the `loading` spinner.
  * @cssprop [--lr-button-accent=var(--lr-color-fill-loud)] - Text/glyph color for the chrome-less
  * appearances (`outlined`, `plain`, `link`), i.e. the active `variant`'s loud fill used as a
  * foreground. `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry

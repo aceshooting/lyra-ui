@@ -889,7 +889,7 @@ describe('lr-graph-query-builder', () => {
     ).to.equal('rtl');
   });
 
-  it('registers every composed sibling control as a side effect of importing graph-query-builder.js (regression)', async () => {
+  it('registers every composed sibling control as a side effect of importing lr-graph-query-builder.js (regression)', async () => {
     expect(customElements.get('lr-select')).to.exist;
     expect(customElements.get('lr-option')).to.exist;
     expect(customElements.get('lr-input')).to.exist;

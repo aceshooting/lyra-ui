@@ -26,7 +26,7 @@ import {
 import { styles } from './table.styles.js';
 import { chevronIcon, closeIcon, sortIcon } from '../../../internal/icons.js';
 import { minMax } from '../../../internal/numbers.js';
-// Type-only: registration (and the code) of the composed `<lr-empty>` comes from `table.ts`.
+// Type-only: registration (and the code) of the composed `<lr-empty>` comes from `lr-table.ts`.
 import type {} from '../../overlays/empty/empty.class.js';
 import {
   literalSetConverter,
@@ -950,14 +950,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `priority` column flipping hidden/visible from an *external* width
    *  change (a window resize, an ancestor flex-layout reflow, ...) is caught
    *  even though no Lit-tracked property changed. Mirrors
-   *  lite-chart.ts's connectedCallback()/disconnectedCallback() ResizeObserver
+   *  lite-chart.class.ts's connectedCallback()/disconnectedCallback() ResizeObserver
    *  lifecycle. */
   private resizeObserver?: ResizeObserver;
   /** Owner-bound rAF for the coalesced `resizeObserver` callback below — an animated ancestor resize (a
    *  CSS transition/drag on a containing panel) can fire the observer once per animation frame,
    *  and each tick's full synchronous read+write pass (offsetParent over every priority header,
    *  a fresh `[data-col-key]` query per sticky column, an aria-valuenow write per resize handle)
-   *  would otherwise run unbatched on every single one of them. Mirrors lite-chart.ts's/
+   *  would otherwise run unbatched on every single one of them. Mirrors lite-chart.class.ts's/
    *  heatmap.class.ts's own `drawRafId` coalescing pattern. */
   private layoutFrame: OwnedAnimationFrame | null = null;
   /** The `[part='base']` element `resizeObserver` is currently observing —

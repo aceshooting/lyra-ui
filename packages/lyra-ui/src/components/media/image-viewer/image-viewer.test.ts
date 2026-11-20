@@ -2477,7 +2477,7 @@ it("registers one shared image renderer across every raster MIME type", async ()
     "image/bmp",
   ];
   const def = registry.get("image/png");
-  expect(def, "importing image-viewer.js registers the renderer").to.exist;
+  expect(def, "importing lr-image-viewer.js registers the renderer").to.exist;
   for (const mime of mimes) {
     expect(registry.get(mime), `${mime} shares one definition`).to.equal(def);
   }

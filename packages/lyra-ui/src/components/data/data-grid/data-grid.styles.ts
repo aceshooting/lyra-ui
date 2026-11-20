@@ -293,6 +293,10 @@ export const styles = css`
     overflow: hidden;
     text-align: start;
   }
+  /* The frame draws the grid's inline-end edge, so the last column's divider would double it. */
+  :where([part~="header-cell"], [part~="cell"], [part~="footer-cell"]):last-child {
+    border-inline-end-width: 0;
+  }
 
   [part~="header-cell"] {
     position: relative;

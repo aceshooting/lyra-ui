@@ -140,7 +140,7 @@ export interface LyraAttachmentChipEventMap {
  * available unless `without-preview` is set.
  * @csspart remove-button - The remove (×) affordance, rendered unless `without-remove-button` is
  * set.
- * @cssprop [--lr-attachment-chip-spinner-duration=var(--lr-transition-ambient)] - Duration and
+ * @cssprop [--lr-attachment-chip-spinner-duration=var(--lr-duration-ambient) linear] - Duration and
  * easing of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion.
  * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
  * status text, spinner, and progress fill. Its private default changes per `status`

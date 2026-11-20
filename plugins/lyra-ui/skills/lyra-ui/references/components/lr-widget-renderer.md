@@ -170,7 +170,7 @@ const view = html`<lr-widget-renderer
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
 `bindingState` (this one-field example binds `/name`). The direct class route supplies the
 default type mappings but defines only `lr-widget-renderer`; register every mapped custom element
-you use yourself. The normal `widget-renderer.js` entry also registers the eight default mapped
+you use yourself. The normal `components/lr-widget-renderer.js` entry also registers the eight default mapped
 elements, so do not import it on this route.
 
 ```html

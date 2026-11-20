@@ -1,3 +1,4 @@
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
@@ -1914,4 +1915,16 @@ describe("lr-segmented activation event", () => {
       "re-deriving selectedItem in willUpdate() is not a user activation"
     ).to.equal(0);
   });
+});
+
+it('keeps a focused segment ring inside the scrolling track', async () => {
+  const el = await fixture<LyraSegmented>(html`
+    <lr-segmented data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px" .items=${items()} value="week"></lr-segmented>
+  `);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const segments = segmentButtons(el);
+  for (const segment of [segments[0]!, segments[segments.length - 1]!]) {
+    await focusByKeyboard(segment);
+    expectOutlineInsideClip(segment, base);
+  }
 });

@@ -576,7 +576,7 @@ describe('lr-agent-trace', () => {
     expect((el.shadowRoot!.querySelector('[part="handoffs"]')) == null).to.be.true;
   });
 
-  it('registers lr-trace-tree, lr-graph-legend, and lr-handoff-divider as a side effect of importing agent-trace.js (regression)', async () => {
+  it('registers lr-trace-tree, lr-graph-legend, and lr-handoff-divider as a side effect of importing lr-agent-trace.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement() -- only the barrel
     // (*.js) does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real composed component.

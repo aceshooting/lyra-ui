@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { focusRingRoom, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -26,7 +26,8 @@ export const styles = css`
     overflow: auto;
     box-sizing: border-box;
     gap: var(--lr-space-2xs);
-    padding: var(--lr-space-2xs);
+    /* The surface scrolls, which clips its actions' outer focus rings unless the padding leaves room. */
+    padding: max(var(--lr-space-2xs), ${focusRingRoom});
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts): a floating surface
        retints with every other popup, not with the page behind it. */
     ${overlaySurface}

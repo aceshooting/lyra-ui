@@ -155,7 +155,7 @@ function component(tag, maturity, optionalPeers = []) {
     tag,
     family: 'utility',
     classModule: `src/components/utility/${name}/${name}.class.ts`,
-    registrationModule: `src/components/utility/${name}/${name}.ts`,
+    registrationModule: `src/components/${tag}.ts`,
     optionalPeers,
     maturity: { status: maturity },
   };

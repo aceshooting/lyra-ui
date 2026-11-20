@@ -1042,7 +1042,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   private onKeyDown = (e: KeyboardEvent): void => {
     if (isLiveDisabled(this)) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-      // Prevent Space from scrolling the page, matching the `table.ts`
+      // Prevent Space from scrolling the page, matching the `table.class.ts`
       // sortable-header/row convention for role-based clickable elements.
       e.preventDefault();
       this.openPicker();

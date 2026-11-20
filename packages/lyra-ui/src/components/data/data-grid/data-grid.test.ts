@@ -888,3 +888,16 @@ describe("grid-line colour tier", () => {
     expect(Object.values(controls(element)).map(toRgba)).to.deep.equal(Array(2).fill([10, 20, 30, 255]));
   });
 });
+
+it('drops the last column divider so the frame alone draws the inline-end edge', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>`);
+  const lastOf = (part: string) => {
+    const row = element.shadowRoot!.querySelector(`[part="${part}"]`)!;
+    return [...row.children] as HTMLElement[];
+  };
+  for (const cells of [lastOf('header'), lastOf('row')]) {
+    expect(cells.length).to.be.greaterThan(1);
+    expect(Number.parseFloat(getComputedStyle(cells[0]!).borderInlineEndWidth)).to.be.greaterThan(0);
+    expect(getComputedStyle(cells[cells.length - 1]!).borderInlineEndWidth).to.equal('0px');
+  }
+});

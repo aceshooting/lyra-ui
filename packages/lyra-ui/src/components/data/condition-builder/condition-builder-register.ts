@@ -1,5 +1,5 @@
 // Lean entry for conditions without date fields or multi-value enum operators.
-// Import date-input.js and combobox.js when those field types can be supplied.
+// Import lr-date-input.js and lr-combobox.js when those field types can be supplied.
 export * from './condition-builder.class.js';
 import { LyraConditionBuilder } from './condition-builder.class.js';
 import { defineElement } from '../../../internal/prefix.js';

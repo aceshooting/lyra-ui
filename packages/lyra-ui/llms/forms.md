@@ -2529,8 +2529,8 @@ hover and press. For removed historical tokens, see the [release history archive
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
 own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
 (default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
-`--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) is
-the `loading` spinner's rotation period; that token itself collapses to `0.001ms linear` under
+`--lr-button-spinner-duration` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`) is
+the `loading` spinner's rotation period and timing; that token itself collapses to `0.001ms` under
 `prefers-reduced-motion`, so the spinner effectively stops.
 
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
@@ -4582,7 +4582,7 @@ and a second selected-name row.
 
 The consuming Lit component imports these granular entries and lists
 `gemstoneSelectedGlyphStyles` in its `static styles` ahead of the CSS that follows.
-`components/forms/icon-button/icon-button-register.js` can replace `icon-button.js` when no icon
+`components/forms/icon-button/icon-button-register.js` can replace `components/lr-icon-button.js` when no icon
 button in the application uses `icon` or `src`:
 
 ```ts

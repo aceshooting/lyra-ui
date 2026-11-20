@@ -1,4 +1,4 @@
-import '@aceshooting/lyra-ui/components/forms/widget/widget.js';
+import '@aceshooting/lyra-ui/components/lr-widget.js';
 
 document.querySelector('lr-widget')?.newMethod();
 document.querySelector('lr-widget').newProperty = 'value';

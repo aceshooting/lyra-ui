@@ -14517,6 +14517,7 @@ export interface LyraComponentTypeMap {
       | '--lr-trace-tree-row-pressed-bg'
       | '--lr-trace-tree-running-color'
       | '--lr-trace-tree-running-stripe-bg'
+      | '--lr-trace-tree-stripe-speed'
       | '--lr-trace-tree-success-color'
       | '--lr-trace-tree-toggle-hover-bg';
     attributeAliases: {

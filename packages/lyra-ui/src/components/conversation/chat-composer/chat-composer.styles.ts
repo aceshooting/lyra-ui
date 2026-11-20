@@ -1,4 +1,4 @@
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingRoom, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -107,7 +107,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
-    /* A concrete, unitless line-height so the auto-resize logic (chat-composer.ts's
+    /* A concrete, unitless line-height so the auto-resize logic (chat-composer.class.ts's
        resizeTextarea()) can read a real pixel value back out of getComputedStyle() -- the UA
        default of "normal" has no single resolved px figure to measure rows against. */
     line-height: var(--lr-line-height-normal);
@@ -197,6 +197,12 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: auto;
+    /* A scrolling row clips both axes: the room keeps slotted controls' focus rings whole and the
+       equal negative margin keeps them where they were. */
+    padding: ${focusRingRoom};
+    margin-block: calc(-1 * ${focusRingRoom});
+    margin-inline-start: calc(-1 * ${focusRingRoom});
+    margin-inline-end: calc(var(--lr-space-s) - ${focusRingRoom});
   }
   :host([actions-layout='below'][toolbar-placement='actions'][toolbar-align='end']) [part='toolbar'] {
     justify-content: safe flex-end;

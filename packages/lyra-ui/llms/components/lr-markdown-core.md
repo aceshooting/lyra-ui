@@ -26,7 +26,7 @@ absent from its explicit map. That loader includes the default ~200-language dyn
 whose bundled lookup table a bundler cannot statically narrow away.
 This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
-`markdown.js` gets a build genuinely free of shiki's full language table.
+`components/lr-markdown.js` gets a build genuinely free of shiki's full language table.
 
 Direction behaves exactly as described for `<lr-markdown>` (**Direction** above). Plain fences accept
 `--lr-markdown-code-block-bg` in both palettes.

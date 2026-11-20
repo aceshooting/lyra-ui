@@ -1,4 +1,4 @@
-import { tableCellHighlightStyles } from '../table-viewer-shared.styles.js';
+import { tableCellHighlightStyles, tableColumnDivider } from '../table-viewer-shared.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -56,7 +56,7 @@ export const styles = css`
   }
   [part='header-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    ${tableColumnDivider}
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -72,7 +72,7 @@ export const styles = css`
   }
   lr-virtual-list::part(cell) {
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    ${tableColumnDivider}
     border-block-end: var(--_lr-dataset-viewer-row-divider, var(--lr-border-width-thin)) solid var(--lr-color-border-subtle);
     overflow: hidden;
     text-overflow: ellipsis;

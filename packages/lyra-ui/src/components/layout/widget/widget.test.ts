@@ -1,3 +1,5 @@
+import '../../lr-button.js';
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -3423,4 +3425,23 @@ describe("lr-widget view activation event", () => {
       "a host writing `activeViewId` is not a user activation"
     ).to.equal(0);
   });
+});
+
+it('keeps the focus rings of the first and last slotted actions inside the scrolling actions row', async () => {
+  const el = await fixture<LyraWidget>(html`
+    <lr-widget label="Revenue" data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px">
+      <lr-button slot="actions">Refresh</lr-button>
+      <lr-button slot="actions">Export</lr-button>
+      Panel body.
+    </lr-widget>
+  `);
+  await el.updateComplete;
+  const actions = el.shadowRoot!.querySelector<HTMLElement>('[part="actions"]')!;
+  const buttons = [...el.querySelectorAll('lr-button')];
+  await Promise.all(buttons.map((button) => (button as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete));
+  for (const button of [buttons[0]!, buttons[buttons.length - 1]!]) {
+    const base = button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    await focusByKeyboard(base);
+    expectOutlineInsideClip(base, actions);
+  }
 });

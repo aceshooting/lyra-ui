@@ -55,8 +55,8 @@ built-in glyph appears)
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
-**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
-i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
+**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-duration-ambient) linear`,
+i.e. `1.8s linear` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
 (default `1.8s ease-in-out` — pending-icon pulse duration/timing).
 `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public
@@ -439,8 +439,8 @@ tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`,
 `--lr-tool-result-dialog-maximized-inset` (default `max(var(--lr-space-l),
 var(--lr-safe-area-*))` on each side — the inset applied to the panel while `[maximized]`, so the
 panel clears a notch or home indicator; overridable e.g. to leave a persistent app rail visible), and
-`--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
-and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
+`--lr-tool-result-dialog-spin` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`,
+and effectively stopped under reduced motion because that duration collapses to `0.001ms`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
 -danger/-danger-quiet/-warning/-warning-quiet`, `--lr-space-*`, `--lr-radius`, `--lr-shadow`,
 `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-base`.
@@ -1948,8 +1948,8 @@ logical tree item and focus owner), `source-label` (row content), `source-toggle
 or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
 (localized projection or row failure).
 
-**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
+**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-duration-ambient) linear`, i.e.
+`1.8s linear`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
 icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `size` is `s` or smaller;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
@@ -2292,6 +2292,9 @@ secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
 above: an inline `var()` fallback rather than a `:host` declaration, so either can be set on the
 element or any ancestor, and they exist because `::part(row)[data-active]` is invalid CSS.
+`--lr-trace-tree-stripe-speed` (default `var(--lr-duration-ambient)`) is a `running` span's
+striped-bar animation duration, the same bare-duration hook as `--lr-span-waterfall-stripe-speed`;
+the stripe crawls at a constant rate.
 `--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
 semantic `aria-level` remains exact at deeper levels.
 
@@ -3132,8 +3135,8 @@ The fallback task list keeps its state across equivalent step updates and handle
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
 (carries `data-variant`), `metric` (one metric label/value pair), `empty`.
 
-**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
+**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-duration-ambient) linear`, i.e.
+`1.8s linear`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
 current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `size` is `s` or smaller; both are ignored

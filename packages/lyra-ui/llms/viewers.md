@@ -422,7 +422,7 @@ actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the ta
 registers. `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer-kinds.js`
 imports and re-exports all built-in kinds at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
-individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+individually. `<lr-document-viewer>` itself (`components/lr-document-viewer.js`) is always a separate import.
 A lazy registration's declared capabilities apply unless its loaded definition declares its own.
 
 ```html
@@ -1041,7 +1041,7 @@ filenames, declaring `{ anchors: ['text-quote', 'fragment', 'page'], search: tru
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
 
-Importing `pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
+Importing `components/lr-pptx-viewer.js` (this component's own registration entry) loads `<lr-pptx-viewer>`'s
 class module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who
 wants that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer-register.js`, which installs the
@@ -1611,7 +1611,7 @@ a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
-Importing `pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
+Importing `components/lr-pdf-viewer.js` (this component's own registration entry) loads `<lr-pdf-viewer>`'s class
 module immediately, before any PDF is ever opened — `pdfjs-dist` itself is the only thing that
 entry actually defers. A granular consumer (not importing the `all.js` compatibility bundle) who
 wants the class module deferred too can instead import
@@ -1814,7 +1814,7 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
-Importing `spreadsheet-viewer.js` (this component's own registration entry) loads
+Importing `components/lr-spreadsheet-viewer.js` (this component's own registration entry) loads
 `<lr-spreadsheet-viewer>`'s class module immediately. A granular consumer (not importing the
 `all.js` compatibility bundle) who wants that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.js`, which
@@ -1986,7 +1986,7 @@ through. An inherited or direct public value remains authoritative across that b
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
 
-Importing `csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
+Importing `components/lr-csv-viewer.js` (this component's own registration entry) loads `<lr-csv-viewer>`'s class
 module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
 that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer-register.js`, which installs the
@@ -2392,7 +2392,7 @@ The registration entry also matches extensionless `application/*+xml` MIME essen
 parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
 fallback matcher.
 
-Importing `xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
+Importing `components/lr-xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
 module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
 that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer-register.js`, which installs the
@@ -2809,10 +2809,8 @@ but working state, since the `lr-json-viewer` fallback below it still renders th
 size of `[part="base"]`, matching every other viewer in this family. It is also settable via the
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
-The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
-`components/lr-geojson-viewer.js`). The former `components/lr-geojson-view.js`,
-`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
-in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
+The canonical tag is registered by importing `components/lr-geojson-viewer.js`. The former
+`lr-geojson-view` tag-shaped, per-directory and class routes were removed in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
 Remote resources are capped at 4 MiB (4,194,304 bytes) before JSON parsing; exceeding that bound
 surfaces the localized `documentPreviewResourceTooLarge` message instead of the map. Lyra supports
 native MapLibre v5 and v6; consumers must import its CSS and configure that peer before connecting

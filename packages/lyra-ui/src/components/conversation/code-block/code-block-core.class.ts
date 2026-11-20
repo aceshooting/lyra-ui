@@ -303,7 +303,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
       // it can resolve well after this element has disconnected (or been torn
       // down for good). Bail out rather than mutate @state on a dead instance
       // and kick off syncHighlight()'s own further async grammar load for
-      // nothing. Mirrors chart.ts's/markdown.ts's/lr-code-block's identical
+      // nothing. Mirrors chart.class.ts's/markdown.class.ts's/lr-code-block's identical
       // connectedCallback() guard for the same race.
       if (
         !this.isConnected ||

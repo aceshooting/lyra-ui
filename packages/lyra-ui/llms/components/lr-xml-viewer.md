@@ -31,7 +31,7 @@ The registration entry also matches extensionless `application/*+xml` MIME essen
 parameters, case and outer whitespace. Exact registered MIME keys retain precedence over this
 fallback matcher.
 
-Importing `xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
+Importing `components/lr-xml-viewer.js` (this component's own registration entry) loads `<lr-xml-viewer>`'s class
 module immediately. A granular consumer (not importing the `all.js` compatibility bundle) who wants
 that deferred too can instead import
 `@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer-register.js`, which installs the

@@ -268,7 +268,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @csspart item-detail - The item's optional `detail` text.
  * @csspart item-children - The nested `role="list"` wrapper around a top-level item's children.
  * @csspart limit - Visible notice when the plan exceeds the shared render cap.
- * @cssprop [--lr-task-list-spin=var(--lr-transition-ambient)] - Running-status icon spin
+ * @cssprop [--lr-task-list-spin=var(--lr-duration-ambient) linear] - Running-status icon spin
  *   animation duration/timing.
  * @cssprop [--lr-task-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
  *   `[part="header"]` padding while `size` is `s` or smaller.

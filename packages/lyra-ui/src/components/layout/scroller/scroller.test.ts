@@ -1,3 +1,6 @@
+import '../../lr-button.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectOutlineInsideClip } from '../../../../test/focus-outline.js';
 import { expect, fixture, html, waitUntil } from "@open-wc/testing";
 import "../../lr-scroller.js";
 import type { LyraScroller } from "./scroller.class.js";
@@ -1023,3 +1026,24 @@ describe("double-click jumps to an edge", () => {
   });
 
 });
+
+for (const orientation of ['horizontal', 'vertical'] as const) {
+  it(`keeps the edge items' focus rings inside the ${orientation} viewport`, async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller label="Items" orientation=${orientation} data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px; inline-size: 240px; block-size: 160px">
+        ${[1, 2, 3, 4, 5, 6, 7, 8].map((n) => html`<lr-button style=${orientation === 'vertical' ? 'display:block' : ''}>Item ${n}</lr-button>`)}
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const buttons = [...el.querySelectorAll('lr-button')];
+    await Promise.all(buttons.map((button) => (button as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete));
+    for (const button of [buttons[0]!, buttons[buttons.length - 1]!]) {
+      const base = button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      const atStart = button === buttons[0];
+      viewport.scrollTo({ left: atStart ? 0 : viewport.scrollWidth, top: atStart ? 0 : viewport.scrollHeight, behavior: 'instant' });
+      await focusByKeyboard(base, el.parentElement!);
+      expectOutlineInsideClip(base, viewport);
+    }
+  });
+}

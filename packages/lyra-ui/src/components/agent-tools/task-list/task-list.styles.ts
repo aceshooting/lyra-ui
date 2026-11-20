@@ -7,7 +7,7 @@ export const styles = [
   css`
     :host {
       display: block;
-      --_lr-task-list-spin: var(--lr-transition-ambient);
+      --_lr-task-list-spin: var(--lr-duration-ambient) var(--lr-easing-linear);
     }
     .source-task { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--lr-space-2xs) var(--lr-space-xs); min-inline-size: 0; }
     .source-task [part="item-detail"], .source-task slot { grid-column: 2; }

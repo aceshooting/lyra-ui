@@ -26,7 +26,7 @@ export const styles = css`
     overflow-y: hidden;
   }
   /* The track becomes focusable only while it is read-only AND genuinely overflowing, because a
-     read-only strip has no tabbable step left inside it (stepper.ts's syncScrollTabStop()). A
+     read-only strip has no tabbable step left inside it (stepper.class.ts's syncScrollTabStop()). A
      focusable box owes a visible focus indicator, so it gets the same ring [part="step"] carries.
      No :hover twin: a scroll container is not a pointer target -- it has no cursor: pointer and
      nothing of its own to light up -- and tinting the whole strip under the pointer would read as
@@ -44,7 +44,7 @@ export const styles = css`
     -webkit-mask-image: none;
     mask-image: none;
   }
-  /* orientationBreakpoint's live axis, present only while that feature is opted into (stepper.ts's
+  /* orientationBreakpoint's live axis, present only while that feature is opted into (stepper.class.ts's
      updateEffectiveOrientation()), so it overrides the authored orientation rules above on source
      order alone at equal specificity whenever the effective axis diverges. */
   :host([data-effective-orientation="vertical"]) [part="base"] {
@@ -83,7 +83,7 @@ export const styles = css`
     ${disabledControl}
   }
   /* A read-only strip is a progress display, not a locked control: the steps stop being buttons
-     altogether (stepper.ts's render()), so only the click affordance is withdrawn. Deliberately no
+     altogether (stepper.class.ts's render()), so only the click affordance is withdrawn. Deliberately no
      --lr-opacity-disabled here -- 'disabled' says "you may not do this", read-only says "there is
      nothing to do here", and a dimmed progress display reads as broken rather than informational.
      Matches lr-slider's and lr-rating's own read-only rules. The disabled rule above cannot reach

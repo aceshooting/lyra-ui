@@ -795,7 +795,7 @@ describe('lr-trace-tree', () => {
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('registers lr-live-region and lr-empty as a side effect of importing trace-tree.js (regression)', async () => {
+  it('registers lr-live-region and lr-empty as a side effect of importing lr-trace-tree.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. A component that imports its dependencies via the .class.js path renders an
     // un-upgraded, plain HTMLElement for them, silently breaking anything that calls a method on
@@ -1450,4 +1450,16 @@ describe('lr-trace-tree active-row press', () => {
       await resetMouse();
     }
   });
+});
+
+it('crawls the running stripe linearly and exposes its duration hook', async () => {
+  const running: LyraSpan[] = [{ id: 't', name: 'search', kind: 'tool', startMs: 0, status: 'running' }];
+  const el = (await fixture(html`<lr-trace-tree .spans=${running}></lr-trace-tree>`)) as LyraTraceTree;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector<HTMLElement>('[data-id="t"] [part="bar"]')!;
+  expect(getComputedStyle(bar).animationTimingFunction).to.equal('linear');
+  expect(getComputedStyle(bar).animationDuration).to.equal('1.8s');
+  el.style.setProperty('--lr-trace-tree-stripe-speed', '3s');
+  expect(getComputedStyle(bar).animationDuration).to.equal('3s');
+  expect(getComputedStyle(bar).animationTimingFunction).to.equal('linear');
 });

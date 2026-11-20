@@ -244,7 +244,7 @@ and a second selected-name row.
 
 The consuming Lit component imports these granular entries and lists
 `gemstoneSelectedGlyphStyles` in its `static styles` ahead of the CSS that follows.
-`components/forms/icon-button/icon-button-register.js` can replace `icon-button.js` when no icon
+`components/forms/icon-button/icon-button-register.js` can replace `components/lr-icon-button.js` when no icon
 button in the application uses `icon` or `src`:
 
 ```ts

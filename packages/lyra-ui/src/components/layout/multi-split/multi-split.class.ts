@@ -840,7 +840,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // No-op on first mount (`baseEl` doesn't exist until the first render —
     // `firstUpdated()` below arms it then) but does the real work on a
     // reconnect, whose shadow DOM content survives disconnect. Mirrors
-    // lite-chart.ts's identical connectedCallback/firstUpdated split for its
+    // lite-chart.class.ts's identical connectedCallback/firstUpdated split for its
     // own ResizeObserver.
     if (this.responsiveObservationEnabled) this.armCollapseObserver();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
@@ -912,7 +912,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  `collapse !== 'none'` re-arm path in `syncCollapseObserver()` still
    *  needs a freshly measured container width and stays in `updated()` --
    *  see `armCollapseObserver()`'s own doc comment for why *that* one is the
-   *  documented exception instead (mirrors virtual-list.ts's
+   *  documented exception instead (mirrors virtual-list.class.ts's
    *  `attachContainerListeners()`). */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);

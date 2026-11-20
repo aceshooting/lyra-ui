@@ -286,13 +286,15 @@ describe('TableViewerController', () => {
     table.willUpdate(new Map([['highlights', []]]), [{ id: 'h', label: 'note', anchor: { kind: 'cell-range', range: 'A1' } }] as unknown as LyraHighlight[], 'h', false);
     const target = document.createElement('div');
     host.append(target);
-    render(table.renderCell('x', 0, table.highlightsForRow(1), 'cell', 'cell', '--_c', 'h'), target);
+    render(table.renderCell('x', 0, table.highlightsForRow(1), 'cell', 'cell', '--_c', 'h', 4), target);
     const cell = target.firstElementChild!;
     expect(cell.getAttribute('part')).to.equal('cell cell-highlight');
     expect(cell.hasAttribute('data-active')).to.equal(true);
     (cell.querySelector('button') as HTMLButtonElement).click();
     expect(events).to.deep.equal(['h']);
-    render(table.renderCell('y', 3, table.highlightsForRow(1), 'columnheader', 'header-cell', '--_c', null), target);
+    expect((cell as HTMLElement).style.getPropertyValue('--_lr-table-column-divider')).to.equal('');
+    render(table.renderCell('y', 3, table.highlightsForRow(1), 'columnheader', 'header-cell', '--_c', null, 4), target);
     expect(target.firstElementChild!.getAttribute('part')).to.equal('header-cell');
+    expect((target.firstElementChild as HTMLElement).style.getPropertyValue('--_lr-table-column-divider')).to.equal('0');
   });
 });

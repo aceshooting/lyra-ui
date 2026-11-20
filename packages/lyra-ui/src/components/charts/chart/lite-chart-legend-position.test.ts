@@ -66,4 +66,20 @@ describe('lr-lite-chart legend position', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('data-legend-position')).to.equal(false);
     expect(el.shadowRoot!.querySelectorAll('[part="legend"]').length).to.equal(0);
   });
+
+  it('leaves no stray row gaps for empty tracks and styles the legend from the shared type and radius tokens', async () => {
+    const el = await mount(undefined);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(parseFloat(getComputedStyle(base).rowGap) || 0).to.equal(0);
+    const { plot, legend } = rects(el);
+    const padding = parseFloat(getComputedStyle(el.shadowRoot!.querySelector('[part="legend"]')!).paddingBlockStart);
+    expect(legend.top - plot.bottom).to.be.closeTo(0, 1);
+    expect(padding).to.be.above(0);
+    el.style.setProperty('--lr-font-size-xs', '30px');
+    el.style.setProperty('--lr-radius-xs', '9px');
+    await el.updateComplete;
+    const item = el.shadowRoot!.querySelector('[part="legend-item"]')!;
+    const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]')!;
+    expect([getComputedStyle(item).fontSize, getComputedStyle(swatch).borderTopLeftRadius]).to.deep.equal(['30px', '9px']);
+  });
 });

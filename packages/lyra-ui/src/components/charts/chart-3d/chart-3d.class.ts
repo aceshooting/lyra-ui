@@ -41,7 +41,7 @@ import { styles } from './chart-3d.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart3dCategory, LYRA_DEFAULT_chart3dEmpty, LYRA_DEFAULT_chart3dFit, LYRA_DEFAULT_chart3dInstructions, LYRA_DEFAULT_chart3dLabel, LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chart3dRow, LYRA_DEFAULT_chart3dSize, LYRA_DEFAULT_chart3dXAxis, LYRA_DEFAULT_chart3dYAxis, LYRA_DEFAULT_chart3dZAxis } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -73,6 +73,16 @@ const MAX_CATEGORY_INDEX = 65535;
 
 const sameAxis = (left: LyraChart3dAxis, right: LyraChart3dAxis): boolean =>
   (left.label ?? '') === (right.label ?? '') && (left.unit ?? '') === (right.unit ?? '');
+
+/** A detached snapshot whose mutators throw, so a cached copy can never drift from the live set. */
+function readonlySnapshot(source: ReadonlySet<number>): ReadonlySet<number> {
+  const snapshot = new Set(source);
+  const refuse = (): never => {
+    throw new TypeError('hiddenCategories is read-only; assign a new Set to change it.');
+  };
+  for (const name of ['add', 'delete', 'clear'] as const) Object.defineProperty(snapshot, name, { value: refuse });
+  return Object.freeze(snapshot);
+}
 
 /**
  * `<lr-chart-3d>` — a bounded three-dimensional scatter, bubble or source-order line chart over
@@ -146,6 +156,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     chart3dXAxis: LYRA_DEFAULT_chart3dXAxis,
     chart3dYAxis: LYRA_DEFAULT_chart3dYAxis,
     chart3dZAxis: LYRA_DEFAULT_chart3dZAxis,
+    clear: LYRA_DEFAULT_clear,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
@@ -205,6 +216,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   private _zAxis: LyraChart3dAxis = Object.freeze({});
   private _camera?: LyraChart3dCamera;
   private _hidden: ReadonlySet<number> = new Set();
+  private _hiddenSnapshot?: ReadonlySet<number>;
   private engineData?: Chart3dEngineData;
   private engineInputs: readonly unknown[] = [];
 
@@ -240,9 +252,6 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     const previous = this._data;
     const revision = ++this.dataRevision;
     this._data = value;
-    this.renderer.invalidate();
-    // Disposing a renderer or reading a hostile shell can re-enter this setter; the newest wins.
-    if (revision !== this.dataRevision) return;
     const result = value == null ? null : admitChart3dData(value);
     if (revision !== this.dataRevision) return;
     this.issue = result && !result.ok ? result.issue : undefined;
@@ -279,7 +288,6 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (next === this._type) return;
     const previous = this._type;
     this._type = next;
-    this.renderer.invalidate();
     this.requestUpdate('type', previous);
   }
 
@@ -293,7 +301,6 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (sameAxis(next, this._xAxis)) return;
     const previous = this._xAxis;
     this._xAxis = next;
-    this.renderer.invalidate();
     this.requestUpdate('xAxis', previous);
   }
 
@@ -307,7 +314,6 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (sameAxis(next, this._yAxis)) return;
     const previous = this._yAxis;
     this._yAxis = next;
-    this.renderer.invalidate();
     this.requestUpdate('yAxis', previous);
   }
 
@@ -321,7 +327,6 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     if (sameAxis(next, this._zAxis)) return;
     const previous = this._zAxis;
     this._zAxis = next;
-    this.renderer.invalidate();
     this.requestUpdate('zAxis', previous);
   }
 
@@ -346,7 +351,7 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
    */
   @property({ attribute: false, noAccessor: true })
   get hiddenCategories(): ReadonlySet<number> {
-    return new Set(this._hidden);
+    return (this._hiddenSnapshot ??= readonlySnapshot(this._hidden));
   }
   set hiddenCategories(value: ReadonlySet<number>) {
     const hidden = new Set<number>();
@@ -358,10 +363,19 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
     } catch {
       // A value that is not a Set normalizes to no hidden categories.
     }
-    if (hidden.size === this._hidden.size && [...hidden].every((index) => this._hidden.has(index))) return;
+    if (hidden.size === this._hidden.size) {
+      let same = true;
+      for (const index of hidden) {
+        if (!this._hidden.has(index)) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
+    }
     const previous = this._hidden;
     this._hidden = hidden;
-    this.renderer.invalidate();
+    this._hiddenSnapshot = undefined;
     this.rebuildRows();
     this.requestUpdate('hiddenCategories', previous);
   }

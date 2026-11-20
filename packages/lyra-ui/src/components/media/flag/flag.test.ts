@@ -42,7 +42,7 @@ function assertiveAnnouncements(): string[] {
 async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // Resolving a flag now involves two sequential dynamic imports on a cold start (the
   // `@aceshooting/lyra-flags` peer package, then that specific code's own lazy loader module —
-  // see flag.ts's bundle-size note) instead of one, so give this more headroom than the
+  // see flag.class.ts's bundle-size note) instead of one, so give this more headroom than the
   // library default (1000ms) to avoid flaking under load. Even 15000ms can be exhausted by the
   // coverage-instrumented 300+ file run before the two cold dynamic imports receive CPU time —
   // same class of issue as lr-graph's setup and code-block.test.ts's Shiki wait.

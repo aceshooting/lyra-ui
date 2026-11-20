@@ -2,16 +2,17 @@
 // Component-dependency checker: every `<lr-*>` element a component renders into its own shadow
 // root must be *registered* by that component's registration entry, reachable through the entry's
 // own transitive imports.
-// The bug this catches, in the exact shape it shipped in (`tool-result-view`, 8.0.0):
+// The bug this catches, in the shape it shipped in (`tool-result-view`, 8.0.0), restated with
+// today's tag-shaped registration entries:
 //   tool-result-view.class.ts   import '../../utility/copy-button/copy-button.class.js';  // pure
 //                               ... html`<lr-copy-button part="fallback-copy">`
-//   tool-result-view.ts         import '../../utility/json-viewer/json-viewer.js';
-//                               import '../../overlays/skeleton/skeleton.js';
-//                               // <- no copy-button.js
+//   lr-tool-result-view.ts      import './lr-json-viewer.js';
+//                               import './lr-skeleton.js';
+//                               // <- no lr-copy-button.js
 // The class module deliberately imports the side-effect-FREE `*.class.js` (that split is what
 // makes the package tree-shakeable), so nothing in the graph ever calls `defineElement('copy-
 // button', ...)`. A consumer taking the granular import path the package actively recommends --
-// `import '@aceshooting/lyra-ui/dist/components/lr-tool-result-view.js'`
+// `import '@aceshooting/lyra-ui/components/lr-tool-result-view.js'`
 // -- then gets an un-upgraded `<lr-copy-button>`: no error, no warning, an inert element that
 // renders as an empty inline box. The root barrel (`lyra.js`) imports every registration entry, so
 // it hides the defect completely -- including from a colocated `*.test.ts` that imports only its

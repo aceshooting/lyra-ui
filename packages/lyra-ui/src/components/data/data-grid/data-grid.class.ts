@@ -59,7 +59,7 @@ import {
   sortRows,
 } from './data-grid-processing.js';
 // Type-only: the tag-map typings of the composed menu. Registration (and the code) comes from the
-// side-effectful `data-grid.ts` entry, so this class module stays side-effect-free.
+// side-effectful `lr-data-grid.ts` entry, so this class module stays side-effect-free.
 import type {} from '../../overlays/overlay/dropdown.class.js';
 import type {} from '../../layout/menu/dropdown-item.class.js';
 import { styles } from './data-grid.styles.js';
