@@ -140,7 +140,7 @@ export const styles = css`
     /* Sits over the tablist's own border-block-end so the selected accent underline replaces it
        pixel for pixel. */
     border-block-end: var(--lr-border-width-medium) solid transparent;
-    margin-block-end: var(--lr-size-neg-1px);
+    margin-block-end: calc(-1 * var(--track-width, var(--lr-border-width-thin)));
     padding: var(--lr-space-s) var(--lr-space-xs);
     font: inherit;
     font-weight: var(--lr-font-weight-medium);

@@ -867,3 +867,9 @@ it('drops a pending keyboard change when the element is removed before keyup', a
   reattached.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(changes).to.deep.equal([]);
 });
+
+it('speaks the position as the range value text', async () => {
+  const el = await fixture<LyraImageComparer>(html`<lr-image-comparer position="35" aria-label="Comparison"></lr-image-comparer>`);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  expect(input.getAttribute('aria-valuetext')).to.match(/35/);
+});

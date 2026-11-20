@@ -71,7 +71,12 @@ with a development warning while it is open, and `focusContent()` returns `false
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
 
-The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
+The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. Two names cover the same dismissal, one per anchor kind, both with the same `LyraMapAnchorCloseDetail`:
+
+| Anchor | Veto before | Notification after | Fired by |
+|---|---|---|---|
+| Child `<lr-map-anchor>` | `lr-map-anchor-dismiss-request` | `lr-map-anchor-dismiss` | the anchor |
+| Map's `anchor` slot | `lr-map-anchor-close-request` | `lr-map-anchor-close` | the map |
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.

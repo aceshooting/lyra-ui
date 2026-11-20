@@ -13,7 +13,7 @@
 - Drawing counts and vertex names use the active locale's numbering system.
 - Whitespace-only anchor names fall back to the next usable label.
 - Slot-anchor dismissal, pick cancellation and globe and terrain control changes can be vetoed before the map commits them.
-- Child anchors emit `lr-map-anchor-dismiss-request` and `lr-map-anchor-dismiss`. The existing close events remain available during migration.
+- Child anchors emit `lr-map-anchor-dismiss-request` and `lr-map-anchor-dismiss`. The map's slot anchor keeps `lr-map-anchor-close-request` and `lr-map-anchor-close`; the two vocabularies are separate and share one detail type.
 - Legend requests respect listener assignments, including a write of the current value, and discard pending changes when a listener reconnects the map.
 - Authored `aria-busy` takes precedence on the map host until removed.
 - Long gradient captions wrap without collapsing the ramp.

@@ -225,7 +225,7 @@ export const styles = css`
     margin-block-end: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;

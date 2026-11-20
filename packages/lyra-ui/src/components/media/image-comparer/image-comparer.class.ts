@@ -7,6 +7,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { formatProgressPercent } from '../../../internal/progress-value.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteRange, isSliderKey } from '../../../internal/numbers.js';
 import { preserveRangeKeyboardShortcut } from '../../../internal/range-keyboard-shortcut.js';
@@ -284,6 +285,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
           step="1"
           .value=${String(this.normalizedPosition)}
           aria-label=${label}
+          aria-valuetext=${formatProgressPercent(this.effectiveLocale, this.normalizedPosition)}
           aria-orientation=${this.orientation}
           @input=${this.onInput}
           @change=${this.onChange}

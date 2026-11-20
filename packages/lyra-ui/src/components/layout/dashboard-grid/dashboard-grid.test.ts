@@ -1483,7 +1483,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     expect(resizeDetail).to.be.undefined;
   });
 
-  it("keeps physical Right=grow and Left=shrink under RTL", async () => {
+  it("follows the visual direction under RTL: Left grows and Right shrinks", async () => {
     const host = (await fixture(html`
       <div dir="rtl">
         <lr-dashboard-grid cells-resizable></lr-dashboard-grid>
@@ -1502,7 +1502,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
 
     cell.dispatchEvent(
       new KeyboardEvent("keydown", {
-        key: "ArrowRight",
+        key: "ArrowLeft",
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -1511,7 +1511,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     );
     cell.dispatchEvent(
       new KeyboardEvent("keydown", {
-        key: "ArrowLeft",
+        key: "ArrowRight",
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,

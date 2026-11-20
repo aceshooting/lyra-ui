@@ -185,6 +185,7 @@ export const styles = css`
     width: var(--_lr-map-canvas-width, 100%);
     height: var(--_lr-map-canvas-height, 100%);
     overflow: hidden;
+    container-type: size;
   }
   /* MapLibre creates these nodes inside the container above, so inside this shadow root: page-level
      peer CSS cannot reach them, and the wrapper owns their layout and interaction rules. */
@@ -333,7 +334,8 @@ export const styles = css`
     position: relative;
     inline-size: auto;
     max-inline-size: 100%;
-    max-block-size: none;
+    max-block-size: calc(100cqb - var(--lr-space-s) - var(--lr-space-s));
+    overflow: auto;
     min-inline-size: var(--lr-icon-button-size);
     padding: var(--lr-space-m);
     padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-xs));

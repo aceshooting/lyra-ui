@@ -12326,7 +12326,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1208,
+              "line": 1211,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39262,7 +39262,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 368,
+              "line": 370,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

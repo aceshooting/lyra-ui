@@ -13566,8 +13566,10 @@ here exactly as they do on `lr-input`. It marks the **group**, not the individua
 hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
-`calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
-options and its messages, scaled by `size` through the shared control ladder — and
+`calc(var(--lr-form-control-height) * 0.1)`) — the vertical gap between the group's label, its
+options and its messages, scaled by `size` through the shared control ladder —
+`--lr-radio-group-option-gap` (default `calc(var(--lr-form-control-height) * 0.2)`), the gap
+between adjacent options (the same split as `lr-checkbox-group`), and
 `--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), the border around the options
 while the group is `:state(user-invalid)`.
 
@@ -24605,6 +24607,7 @@ on the panel.
 `var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
+`--lr-virtual-list-active-row-background` (background of the `active-item-id` row; default a subtle currentColor tint),
 `--lr-virtual-list-row-mark-bg` (default `revert`),
 `--lr-virtual-list-row-mark-color` (default `revert`),
 `--lr-virtual-list-row-mark-radius` (default `0`), and
@@ -27243,7 +27246,7 @@ layout proposals; the caller accepts them by assigning `layout`.
 snap pitch), `gap: number | string = 8` (both axes), `collision: 'reject' | 'push' | 'overlap' =
 'reject'`, `cellsDraggable: boolean = false` (attribute `cells-draggable` — pointer drag plus
 Ctrl/Cmd+Arrow), `cellsResizable: boolean = false` (attribute `cells-resizable` — the resize handle
-plus Ctrl/Cmd+Shift+Arrow), `readonly: boolean = false` (reflected — disables every gesture
+plus Ctrl/Cmd+Shift+Arrow; both use the visual arrow direction, so under `dir="rtl"` ArrowLeft widens a cell and ArrowRight narrows it), `readonly: boolean = false` (reflected — disables every gesture
 grid-wide), `accessibleLabel: string | null = null` (attribute `aria-label`, falls back to a
 localized grid name). `rowHeight` and `gap` take a number of pixels or a CSS length (`px`, `rem`,
 `em`, `vw`, `vh`), resolved to pixels when the grid renders — `rem` against the document root, `em`
@@ -37684,7 +37687,12 @@ with a development warning while it is open, and `focusContent()` returns `false
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
 
-The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
+The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. Two names cover the same dismissal, one per anchor kind, both with the same `LyraMapAnchorCloseDetail`:
+
+| Anchor | Veto before | Notification after | Fired by |
+|---|---|---|---|
+| Child `<lr-map-anchor>` | `lr-map-anchor-dismiss-request` | `lr-map-anchor-dismiss` | the anchor |
+| Map's `anchor` slot | `lr-map-anchor-close-request` | `lr-map-anchor-close` | the map |
 
 **Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
 close glyph.

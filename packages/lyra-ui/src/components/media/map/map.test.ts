@@ -196,6 +196,21 @@ it('draws popup and legend edges in the subtle border tier but keeps the control
   expect(toRgba(getComputedStyle(second).borderBlockStartColor)).to.deep.equal([7, 8, 9, 255]);
 });
 
+it('caps marker popup content to the map height and scrolls the overflow', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  el.style.blockSize = '200px';
+  const container = document.createElement('div');
+  container.setAttribute('part', 'container');
+  const popup = document.createElement('div');
+  popup.className = 'maplibregl-popup-content';
+  popup.style.blockSize = '800px';
+  container.append(popup);
+  el.shadowRoot!.append(container);
+
+  expect(popup.getBoundingClientRect().height).to.be.below(200);
+  expect(getComputedStyle(popup).overflowY).to.equal('auto');
+});
+
 it('retunes the scale-bar bracket border from the shared border-width-medium token', async () => {
   const { el } = await connectedMapWithoutMaplibre('--lr-theme-border-width-medium: 6px');
   const scale = document.createElement('div');

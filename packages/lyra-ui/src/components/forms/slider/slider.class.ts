@@ -1211,9 +1211,8 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   /** Each active handle can reach the full domain because crossing pushes its sibling. */
-  private reachableBounds(handle: SliderHandle): { min: number; max: number } {
+  private reachableBounds(): { min: number; max: number } {
     const { lo, hi } = this.domain();
-    void handle;
     return { min: lo, max: hi };
   }
 
@@ -1285,7 +1284,7 @@ export class LyraSlider extends LyraSliderBase {
     const action = rangeKeyAction(e.key, this.effectiveDirection === 'rtl');
     if (action === undefined) return;
     e.preventDefault();
-    const bounds = this.reachableBounds(handle);
+    const bounds = this.reachableBounds();
     const next = action === 'min' ? bounds.min : action === 'max' ? bounds.max
       : this.directionalStep(this.valueForHandle(handle), action);
     if (this.assignValueFor(handle, next)) {
@@ -1501,7 +1500,7 @@ export class LyraSlider extends LyraSliderBase {
     invalid: boolean,
   ): TemplateResult {
     const value = this.valueForHandle(handle);
-    const bounds = this.reachableBounds(handle);
+    const bounds = this.reachableBounds();
     const percent = this.percentOf(value);
     // A direct JS property write bypasses the reflected-attribute converter, so re-normalize here
     // too -- an out-of-vocabulary orientation must never reach aria-orientation.

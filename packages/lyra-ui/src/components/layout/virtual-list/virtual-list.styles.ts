@@ -96,6 +96,10 @@ export const styles = css`
        private default tier behind --lr-positioning-strategy, so every authored value still wins. */
     --_lr-positioning-strategy-default: fixed;
   }
+  /* The row announced as current (aria-current) also paints a marker; set the token to transparent to opt out. */
+  [part="row"][aria-current="true"] {
+    background: var(--lr-virtual-list-active-row-background, color-mix(in srgb, currentColor 8%, transparent));
+  }
   /* will-change: transform makes each row its own stacking context and rows carry no z-index, so
      they paint in DOM order: anything overflowing a row (an lr-menu popup, a tooltip, an outward
      focus ring) paints under the following rows however high its own z-index, which only orders

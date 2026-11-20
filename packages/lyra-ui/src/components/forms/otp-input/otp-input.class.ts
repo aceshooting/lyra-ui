@@ -200,7 +200,9 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssprop [--lr-otp-input-segment-radius=var(--lr-form-control-radius,var(--lr-radius))] -
  *   Corner radius of each segment.
  * @cssprop [--lr-otp-input-active-border-color=var(--lr-focus-ring-color)] - Active segment border.
- * @cssprop [--lr-otp-input-active-ring-color=var(--lr-focus-ring-color)] - Active segment outer ring.
+ * @cssprop [--lr-otp-input-active-ring-color=var(--lr-focus-ring-color)] - Active segment inset ring.
+ * @cssprop [--lr-otp-input-hover-border-color=var(--lr-color-brand)] - Border color of a hovered
+ *   segment that is neither active nor invalid.
  * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-form-control-invalid-border-color,var(--lr-color-danger))] -
  *   Segment border while the field is user-invalid.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the

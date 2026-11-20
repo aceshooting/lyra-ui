@@ -31,6 +31,7 @@ export const styles = css`
     );
     display: inline-block;
     --_lr-cell-size: var(--lr-size-2-25rem);
+    --_lr-date-picker-title-size: var(--lr-size-0-9375rem);
     --_lr-date-picker-month-gap: var(--lr-space-l);
     --_lr-date-picker-header-gap: var(--lr-space-s);
     --_lr-date-picker-radius: var(--lr-radius);
@@ -40,9 +41,11 @@ export const styles = css`
      internal/sizes.styles.ts. */
   :host([size="2xs"]) {
     --_lr-cell-size: var(--lr-size-1-5rem);
+    --_lr-date-picker-title-size: var(--lr-size-0-75rem);
   }
   :host([size="xs"]) {
     --_lr-cell-size: var(--lr-size-1-75rem);
+    --_lr-date-picker-title-size: var(--lr-size-0-8rem);
   }
   :host([size="s"]),
   :host([size="small"]) {
@@ -51,9 +54,11 @@ export const styles = css`
   :host([size="l"]),
   :host([size="large"]) {
     --_lr-cell-size: var(--lr-size-2-5rem);
+    --_lr-date-picker-title-size: var(--lr-size-1-0625rem);
   }
   :host([size="xl"]) {
     --_lr-cell-size: var(--lr-size-3rem);
+    --_lr-date-picker-title-size: var(--lr-size-1-25rem);
   }
   :host([disabled]) {
     opacity: var(--lr-opacity-disabled);
@@ -115,7 +120,7 @@ export const styles = css`
     cursor: pointer;
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
-    font-size: var(--lr-size-0-9375rem);
+    font-size: var(--_lr-date-picker-title-size);
     /* Hover below repaints color, and active also fills a background, so both channels need to
        ease; without this this control's paint snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
@@ -433,7 +438,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
     white-space: normal;
     overflow-wrap: anywhere;
     min-inline-size: 0;

@@ -3785,15 +3785,16 @@ it("removeFile() guards against a stale/out-of-range index and against disabled 
   )) as LyraFileInput;
   el.files = [makeFile("a.csv", "text/csv")];
   await el.updateComplete;
-  const privateEl = el as unknown as { removeFile(index: number): void };
+  const privateEl = el as unknown as { removeFile(index: number, file: File): void };
+  const only = el.files[0]!;
 
-  expect(() => privateEl.removeFile(-1)).not.to.throw();
-  expect(() => privateEl.removeFile(5)).not.to.throw();
+  expect(() => privateEl.removeFile(-1, only)).not.to.throw();
+  expect(() => privateEl.removeFile(5, only)).not.to.throw();
   expect(el.files.length).to.equal(1);
 
   el.disabled = true;
   await el.updateComplete;
-  privateEl.removeFile(0);
+  privateEl.removeFile(0, only);
   expect(
     el.files.length,
     "disabled must block removeFile even when called directly"
@@ -4585,4 +4586,26 @@ it("paints file rows from --lr-file-input-file-bg/-border-color", async () => {
   await el.updateComplete;
   const row = getComputedStyle(el.shadowRoot!.querySelector('[part="file"]')!);
   expect([row.backgroundColor, row.borderTopColor]).to.deep.equal(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
+});
+
+it("a remove click ignores a row whose file was replaced after render", async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  const a = makeFile("a.csv", "text/csv"), b = makeFile("b.csv", "text/csv");
+  el.files = [a, b];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="remove-button"]')[0]!;
+  el.files = [b];
+  button.click();
+  expect(el.files.map((file) => file.name)).to.deep.equal(["b.csv"]);
+});
+
+it("turning multiple off with several files held keeps the first and emits the value events", async () => {
+  const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+  el.files = [makeFile("a.csv", "text/csv"), makeFile("b.csv", "text/csv")];
+  await el.updateComplete;
+  const changed = oneEvent(el, "lr-change");
+  el.multiple = false;
+  const event = (await changed) as CustomEvent<{ value: readonly File[] }>;
+  expect(event.detail.value.map((file) => file.name)).to.deep.equal(["a.csv"]);
+  expect(el.files.length).to.equal(1);
 });

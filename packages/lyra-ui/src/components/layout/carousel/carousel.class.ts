@@ -465,11 +465,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.focusedNavButton = active?.matches('[part~="navigation-button"]')
       ? (active as HTMLButtonElement)
       : undefined;
-    if (
-      (changed.has('currentSlide') ||
-        changed.has('slidesPerPage')) &&
-      this.slideSlot
-    ) {
+    if (this.slideSlot) {
       const normalized = this.normalizedIndex();
       if (this.currentSlide !== normalized) {
         // A bare `currentSlide` write is clamped silently (no event on a direct set, matching
@@ -478,8 +474,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         // mirroring changeTo()'s and the scroll-settle handler's own emit-after-write pattern.
         // The event waits for the render, so a listener reads the corrected DOM and may assign
         // properties without re-entering this update.
-        const forcedBySibling =
-          changed.has('slidesPerPage') && !changed.has('currentSlide');
+        const forcedBySibling = !changed.has('currentSlide');
         this.currentSlide = normalized;
         if (forcedBySibling) {
           this.scheduleAfterUpdate(() => {
@@ -515,7 +510,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       (enabled ?? this.viewport)?.focus();
     }
     if (changed.has('loop') && this.hasUpdated) this.armSlideContentObserver();
-    this.syncSlides();
+    // willUpdate() already clamped the active index for this cycle: no state write from updated().
+    this.syncSlides(false);
     if (
       this.loopClonesDirty ||
       changed.has('loop') ||
@@ -735,7 +731,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.snapshots.clear();
   }
 
-  private syncSlides(): void {
+  private syncSlides(clampActive = true): void {
     const slides = this.slideElements();
     const assigned = new Set(slides);
     let removedSlide = false;
@@ -751,7 +747,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     if (removedSlide && !this.loop) this.armSlideContentObserver();
     const current = this.normalizedIndex(slides.length);
-    if (this.currentSlide !== current) {
+    if (clampActive && this.currentSlide !== current) {
       // Reached when a light-DOM mutation (a slide removed, or made inert/hidden) shrinks the
       // slide set out from under the active index -- never from a direct `currentSlide` write,
       // which `willUpdate()` already normalizes earlier in the same update cycle. Emit so a

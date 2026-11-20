@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -115,8 +115,10 @@ here exactly as they do on `lr-input`. It marks the **group**, not the individua
 hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
-`calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
-options and its messages, scaled by `size` through the shared control ladder — and
+`calc(var(--lr-form-control-height) * 0.1)`) — the vertical gap between the group's label, its
+options and its messages, scaled by `size` through the shared control ladder —
+`--lr-radio-group-option-gap` (default `calc(var(--lr-form-control-height) * 0.2)`), the gap
+between adjacent options (the same split as `lr-checkbox-group`), and
 `--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), the border around the options
 while the group is `:state(user-invalid)`.
 

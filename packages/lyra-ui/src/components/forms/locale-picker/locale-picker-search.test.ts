@@ -661,3 +661,16 @@ describe('lr-locale-picker optional text filtering', () => {
     });
   }
 });
+
+describe('lr-locale-picker search field radius', () => {
+  it('routes the public radius token to the search field as it does to the options', async () => {
+    setFlagUrlResolver(async () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E');
+    after(() => setFlagUrlResolver(null));
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker searchable open locale="en"
+      value="en" style="--lr-locale-picker-radius: 13px" .locales=${CATALOG}></lr-locale-picker>`);
+    await el.updateComplete;
+    expect(getComputedStyle(input(el)).borderTopLeftRadius).to.equal('13px');
+    const option = el.shadowRoot!.querySelector<HTMLElement>('[part="option"]')!;
+    expect(getComputedStyle(option).borderTopLeftRadius).to.equal('13px');
+  });
+});

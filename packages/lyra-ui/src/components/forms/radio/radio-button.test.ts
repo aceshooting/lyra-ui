@@ -3,6 +3,8 @@ import '../../lr-radio-button.js';
 import '../../lr-checkbox.js';
 import '../../lr-radio.js';
 import '../../lr-radio-group.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-checkbox.js';
 import type { LyraRadioButton } from './radio-button.class.js';
 import type { LyraRadioGroup } from './radio-group.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
@@ -514,13 +516,13 @@ describe('lr-radio-button contiguous run geometry', () => {
       html`<lr-radio-group orientation="horizontal">
         <lr-radio-button>A</lr-radio-button><lr-radio-button>B</lr-radio-button>
       </lr-radio-group>`,
-      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-row-gap: 0">
+      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-option-gap: 0">
         <lr-radio-button>A</lr-radio-button><lr-radio>Plain</lr-radio><lr-radio-button>B</lr-radio-button>
       </lr-radio-group>`,
-      html`<lr-radio-group style="--lr-radio-group-row-gap: 0">
+      html`<lr-radio-group style="--lr-radio-group-option-gap: 0">
         <lr-radio-button>A</lr-radio-button><lr-radio-button>B</lr-radio-button>
       </lr-radio-group>`,
-      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-row-gap: 0; inline-size: 4rem">
+      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-option-gap: 0; inline-size: 4rem">
         <lr-radio-button>Alpha</lr-radio-button><lr-radio-button>Beta</lr-radio-button>
       </lr-radio-group>`,
     ]) {
@@ -536,7 +538,7 @@ describe('lr-radio-button contiguous run geometry', () => {
   it('collapses only an actually adjacent horizontal run and reconciles live order in LTR and RTL', async () => {
     for (const direction of ['ltr', 'rtl'] as const) {
       const group = await fixture(html`
-        <lr-radio-group dir=${direction} orientation="horizontal" style="--lr-radio-group-row-gap: 0">
+        <lr-radio-group dir=${direction} orientation="horizontal" style="--lr-radio-group-option-gap: 0">
           <lr-radio-button id="a">A</lr-radio-button>
           <lr-radio-button id="b">B</lr-radio-button>
           <lr-radio-button id="c">C</lr-radio-button>
@@ -588,4 +590,21 @@ it('paints the resting checkbox box, radio circle and radio button from public t
   expect(paint('lr-checkbox', 'box')).to.equal('rgb(1, 2, 3) rgb(4, 5, 6)');
   expect(paint('lr-radio', 'circle')).to.equal('rgb(7, 8, 9) rgb(10, 11, 12)');
   expect(paint('lr-radio-button', 'button')).to.equal('rgb(13, 14, 15) rgb(16, 17, 18)');
+});
+
+describe('lr-radio-group and lr-checkbox-group spacing parity', () => {
+  it('uses the same label-to-options and option-to-option gaps as the checkbox group', async () => {
+    const wrap = await fixture(html`<div>
+      <lr-radio-group label="R"><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group>
+      <lr-checkbox-group label="C"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>
+    </div>`);
+    const radio = wrap.querySelector('lr-radio-group') as HTMLElement & { updateComplete: Promise<unknown> };
+    const check = wrap.querySelector('lr-checkbox-group') as HTMLElement & { updateComplete: Promise<unknown> };
+    await Promise.all([radio.updateComplete, check.updateComplete]);
+    const gaps = (el: HTMLElement, part: string) => [
+      getComputedStyle(el.shadowRoot!.querySelector('[part="form-control"]')!).rowGap,
+      getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!).rowGap,
+    ];
+    expect(gaps(radio, 'radios')).to.deep.equal(gaps(check, 'options'));
+  });
 });

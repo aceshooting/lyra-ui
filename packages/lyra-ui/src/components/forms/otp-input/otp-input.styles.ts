@@ -112,6 +112,13 @@ export const styles = css`
        on the row's edge segments. */
     box-shadow: inset 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));
   }
+  /* Hover steps the segment borders like the sibling text fields. The native input overlays the
+     whole row, so the pointer is over the field, never one segment: every idle segment steps
+     together. The active and invalid segments keep their own edge, and the contained appearance
+     has no segment border to step. */
+  :host(:where(:not(:disabled, [appearance='contained']))) [part~='field']:hover [part~='segment']:where(:not([part~='active'], [part~='invalid'])) {
+    border-color: var(--lr-otp-input-hover-border-color, var(--lr-color-brand));
+  }
   [part~='invalid'] {
     border-color: var(
       --lr-otp-input-invalid-border-color,

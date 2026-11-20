@@ -632,7 +632,8 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     const { key } = event;
     if (!this.typeBuffer.accepts(event)) return false;
     if (key === ' ' && this.typeBuffer.text === '') return false;
-    if (key === ' ') event.preventDefault();
+    // The character belongs to this trigger, even when an editable selection remains elsewhere.
+    event.preventDefault();
     const locale = this.options.locale();
     this.typeBuffer.add(key, locale);
     const rows = this.effectiveEntries;

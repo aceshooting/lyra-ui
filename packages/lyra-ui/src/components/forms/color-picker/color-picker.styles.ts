@@ -513,6 +513,14 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
+  /* A rejected (unparseable) entry stays in the field and keeps this edge, hovered or not, until
+     the next valid commit, an edit or Escape. */
+  :host(:not(:disabled):not([readonly])) [part~="input"][data-rejected] {
+    border-color: var(
+      --lr-color-picker-invalid-border-color,
+      var(--lr-form-control-invalid-border-color, var(--lr-color-danger))
+    );
+  }
   [part~="input"]:where(:focus-visible) {
     ${focusRing}
   }

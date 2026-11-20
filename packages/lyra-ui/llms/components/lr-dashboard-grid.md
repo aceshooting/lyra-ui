@@ -36,7 +36,7 @@ layout proposals; the caller accepts them by assigning `layout`.
 snap pitch), `gap: number | string = 8` (both axes), `collision: 'reject' | 'push' | 'overlap' =
 'reject'`, `cellsDraggable: boolean = false` (attribute `cells-draggable` — pointer drag plus
 Ctrl/Cmd+Arrow), `cellsResizable: boolean = false` (attribute `cells-resizable` — the resize handle
-plus Ctrl/Cmd+Shift+Arrow), `readonly: boolean = false` (reflected — disables every gesture
+plus Ctrl/Cmd+Shift+Arrow; both use the visual arrow direction, so under `dir="rtl"` ArrowLeft widens a cell and ArrowRight narrows it), `readonly: boolean = false` (reflected — disables every gesture
 grid-wide), `accessibleLabel: string | null = null` (attribute `aria-label`, falls back to a
 localized grid name). `rowHeight` and `gap` take a number of pixels or a CSS length (`px`, `rem`,
 `em`, `vw`, `vh`), resolved to pixels when the grid renders — `rem` against the document root, `em`

@@ -3179,6 +3179,7 @@ export interface LyraComponentTypeMap {
       | '--lr-color-picker-grid-inline-size'
       | '--lr-color-picker-hover-border-color'
       | '--lr-color-picker-hue-stops'
+      | '--lr-color-picker-invalid-border-color'
       | '--lr-color-picker-opacity-gradient'
       | '--lr-color-picker-palette-swatch-size'
       | '--lr-color-picker-radius'
@@ -9607,6 +9608,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-offset'
       | '--lr-otp-input-active-border-color'
       | '--lr-otp-input-active-ring-color'
+      | '--lr-otp-input-hover-border-color'
       | '--lr-otp-input-invalid-border-color'
       | '--lr-otp-input-mask-char'
       | '--lr-otp-input-placeholder-color'
@@ -11120,6 +11122,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
       | '--lr-radio-group-invalid-border-color'
+      | '--lr-radio-group-option-gap'
       | '--lr-radio-group-row-gap';
     attributeAliases: {
       'aria-label'?: LyraRadioGroup['accessibleLabel'];
@@ -15055,6 +15058,7 @@ export interface LyraComponentTypeMap {
       | 'lr-visible-range-change';
     cssNames:       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width'
+      | '--lr-virtual-list-active-row-background'
       | '--lr-virtual-list-height'
       | '--lr-virtual-list-hover-outline-color'
       | '--lr-virtual-list-hover-outline-offset'

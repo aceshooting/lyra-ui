@@ -4,9 +4,10 @@ import { formControlLabelDisplay, formControlLabelTypography, formControlRequire
 export const groupStyles = css`
   :host {
     /* The group's own chrome rides the shared size ladder (internal/sizes.styles.ts): the row gap
-       is a fraction of the tier's control height, not a fixed space token, so it stays in
-       proportion to the options beside it. */
-    --_lr-radio-group-row-gap: calc(var(--lr-form-control-height) * 0.2);
+       and the option gap are fractions of the tier's control height, not fixed space tokens, so
+       they stay in proportion to the options beside them (same split as the checkbox group). */
+    --_lr-radio-group-row-gap: calc(var(--lr-form-control-height) * 0.1);
+    --_lr-radio-group-option-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
   }
   [part="base"] {
@@ -30,7 +31,7 @@ export const groupStyles = css`
   [part~='radios'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-radio-group-row-gap, var(--_lr-radio-group-row-gap));
+    gap: var(--lr-radio-group-option-gap, var(--_lr-radio-group-option-gap));
   }
   :host([orientation="horizontal"]) [part~="radios"] {
     flex-direction: row;

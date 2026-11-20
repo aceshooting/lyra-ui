@@ -367,6 +367,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-color-picker-radius=var(--lr-radius)] - Trigger, grid, and panel corner radius.
  * @cssprop [--lr-color-picker-border-color=var(--lr-color-border)] - Resting trigger border color.
  * @cssprop [--lr-color-picker-hover-border-color=var(--lr-color-brand)] - Hover border color.
+ * @cssprop [--lr-color-picker-invalid-border-color=var(--lr-form-control-invalid-border-color,var(--lr-color-danger))] - Text field border while a rejected entry is kept.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` on the trigger while it is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the focus outline is
@@ -603,6 +604,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    *  `uppercase` attributes that arrive alongside it, whatever order they land in. */
   private valueNeedsParse = false;
   private pendingInput: string | undefined;
+  /** Whether the draft in `pendingInput` was committed and could not be parsed as a color. */
+  @state() private inputRejected = false;
   private localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
 
@@ -1233,6 +1236,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       return;
     }
     this.pendingInput = (event.target as HTMLInputElement).value;
+    this.inputRejected = false;
   };
 
   private onFieldChange = (event: Event): void => {
@@ -1245,12 +1249,22 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     }
     const parsed = parseColor(field.value, this.ownerDocument);
     if (parsed) this.commitColor(parsed);
-    this.pendingInput = undefined;
+    // An unparseable, non-empty entry stays visible and flagged instead of silently reverting.
+    this.inputRejected = !parsed && field.value.trim() !== '';
+    this.pendingInput = this.inputRejected ? field.value : undefined;
     this.requestUpdate();
   };
 
   private onFieldKeyDown = (event: KeyboardEvent): void => {
     if (isLiveDisabled(this) || this.readonly || shouldIgnoreNavigationKey(event)) return;
+    if (event.key === 'Escape' && this.inputRejected) {
+      // Escape abandons the rejected draft first; the panel's own Escape stays for the next press.
+      event.preventDefault();
+      event.stopPropagation();
+      this.pendingInput = undefined;
+      this.inputRejected = false;
+      return;
+    }
     if (event.key !== 'Enter') return;
     event.preventDefault();
     this.onFieldChange(event);
@@ -1520,6 +1534,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private renderPanelBody(invalid: boolean): TemplateResult {
     const entries = this.normalizedSwatches();
     const fieldValue = this.pendingInput ?? this.getFormattedValue(this.activeFormat());
+    const rejected = this.inputRejected && this.pendingInput !== undefined;
     return html`
       <span class="glass-scroll-layer" aria-hidden="true"></span>
       ${this.renderGrid()}
@@ -1541,7 +1556,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           .value=${live(fieldValue)}
           aria-label=${this.localize('colorPickerValueField')}
           aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${invalid ? 'true' : 'false'}
+          aria-invalid=${invalid || rejected ? 'true' : 'false'}
+          ?data-rejected=${rejected}
           ?disabled=${this.effectiveDisabled}
           ?readonly=${this.readonly}
           @input=${this.onFieldInput}

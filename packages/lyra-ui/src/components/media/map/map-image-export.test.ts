@@ -31,6 +31,17 @@ describe('map frame image export', () => {
     expect([...ctx.getImageData(0, 0, 1, 1).data]).to.deep.equal([255, 0, 0, 255]);
     const footer = ctx.getImageData(0, 32, canvas.width, canvas.height - 32).data; expect(footer.some((value, index) => index % 4 === 0 && value < 100)).to.equal(true);
   });
+  it('paints the attribution strip with the map surface and text colors', async () => {
+    const item = setup(); const host = document.createElement('div');
+    host.style.setProperty('--lr-color-surface', 'rgb(10, 20, 30)'); host.style.setProperty('--lr-color-text', 'rgb(240, 240, 240)');
+    host.append(item.source); document.body.append(host);
+    try {
+      const bitmap = await createImageBitmap(await exportMapImage({}, item.service));
+      const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d')!; ctx.drawImage(bitmap, 0, 0); bitmap.close();
+      expect([...ctx.getImageData(canvas.width - 1, canvas.height - 1, 1, 1).data]).to.deep.equal([10, 20, 30, 255]);
+    } finally { host.remove(); }
+  });
   it('checks visible-style transparency before attribution and accepts legitimate solid styles', async () => {
     const item = setup(); item.ctx.clearRect(0, 0, 64, 32); await failure(exportMapImage({}, item.service), 'blank-frame');
     item.ctx.fillStyle = '#123456'; item.ctx.fillRect(0, 0, 64, 32); expect((await exportMapImage({}, item.service)).type).to.equal('image/png');

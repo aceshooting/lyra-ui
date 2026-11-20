@@ -164,6 +164,19 @@ it('keeps the loaded image rendered when a highlight omits its anchor', async ()
   expect(el.shadowRoot!.querySelectorAll('img').length).to.equal(1);
 });
 
+it('skips a highlight with a null anchor or a throwing getter and keeps the rest', async () => {
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${LOADABLE_PNG}></lr-image-viewer>`);
+  await stubImageLoad(el);
+  const hostile = { id: 'hostile', get anchor(): never { throw new Error('hostile getter'); } };
+  el.highlights = [
+    { id: 'null-anchor', anchor: null }, hostile,
+    { id: 'ok', anchor: { kind: 'region', rect: { x: 1, y: 2, width: 3, height: 4 } } },
+  ] as unknown as LyraHighlight[];
+  await el.updateComplete;
+  const rendered = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight"]')];
+  expect(rendered.map((node) => node.dataset['highlightId'])).to.deep.equal(['ok']);
+});
+
 describe("defaults", () => {
   it("defaults to empty src/name/alt, fit contain, zoom 1, rotation 0, not annotatable", async () => {
     const el = (await fixture(

@@ -278,11 +278,18 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    * click on `<lr-button>` retargets to the host, but its composed path still contains the
    * internal native `<button>`.
    */
+  /** True when the user drag-selected text inside this card: that mouseup also fires a click. */
+  private hasSelectionInside(): boolean {
+    const root = this.getRootNode() as Partial<Document>;
+    const selection = root.getSelection?.() ?? globalThis.getSelection?.();
+    return Boolean(selection && !selection.isCollapsed && selection.containsNode(this, true));
+  }
+
   private onBaseClick = (e: Event): void => {
     // The activation button is `pointer-events: none`, so a pointer press lands on the card
     // content and reaches this listener instead -- native `disabled` alone therefore closes only
     // the keyboard path, and this guard is what closes the pointer one.
-    if (this.disabled || e.defaultPrevented) return;
+    if (this.disabled || e.defaultPrevented || this.hasSelectionInside()) return;
     const origin = e.composedPath()[0];
     if (
       isElementNode(origin) &&
@@ -299,7 +306,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // Returning BEFORE the stopPropagation() below is deliberate: a disabled card swallows its own
     // navigation proxy, not the consumer's click event.
     if (this.disabled) return;
-    if (e.defaultPrevented || containsNestedInteractive(e, e.currentTarget)) return;
+    if (e.defaultPrevented || this.hasSelectionInside() || containsNestedInteractive(e, e.currentTarget)) return;
     // Replace the proxy source click with the native anchor click. Without containment, both
     // composed events escape the card and one physical activation looks like two application
     // clicks even though navigation happens only once.

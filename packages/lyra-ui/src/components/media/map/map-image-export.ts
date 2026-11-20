@@ -1,3 +1,4 @@
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import { LyraMapImageExportError, type LyraMapImageExportErrorCode, type LyraMapImageExportOptions, type LyraMapImageExportType } from './map-image-export-error.js';
 
@@ -128,14 +129,17 @@ export function exportMapImage(input: unknown, services: MapImageExportServices,
           const scale = cssWidth > 0 ? width / cssWidth : 1;
           const pad = Math.round(8 * scale), pitch = Math.max(1, Math.round(16 * scale));
           const rtl = source.ownerDocument.defaultView?.getComputedStyle(source).direction === 'rtl';
-          ctx.font = `${12 * scale}px sans-serif`; ctx.direction = rtl ? 'rtl' : 'ltr';
+          const themeScope = source.parentElement ?? source;
+          const family = source.ownerDocument.defaultView?.getComputedStyle(themeScope).getPropertyValue('--lr-font').trim() || 'sans-serif';
+          const stripFont = `${12 * scale}px ${family}`;
+          ctx.font = stripFont; ctx.direction = rtl ? 'rtl' : 'ltr';
           const lines = linesOf(ctx, attribution, width - 2 * pad, Math.round(24 * scale)), totalHeight = height + 2 * pad + lines.length * pitch;
           if (!dimensions(width, totalHeight)) throw new LyraMapImageExportError('limit');
           // Resizing clears the bitmap: preserve the already captured source pixels locally.
           canvas.height = totalHeight; ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) throw new LyraMapImageExportError('capture-failed'); ctx.putImageData(image, 0, 0);
-          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, height, width, totalHeight - height);
-          ctx.fillStyle = '#111111'; ctx.font = `${12 * scale}px sans-serif`; ctx.textBaseline = 'top'; ctx.direction = rtl ? 'rtl' : 'ltr'; ctx.textAlign = 'start';
+          ctx.fillStyle = resolveCanvasColor(themeScope, 'var(--lr-color-surface)', '#ffffff'); ctx.fillRect(0, height, width, totalHeight - height);
+          ctx.fillStyle = resolveCanvasColor(themeScope, 'var(--lr-color-text)', '#111111'); ctx.font = stripFont; ctx.textBaseline = 'top'; ctx.direction = rtl ? 'rtl' : 'ltr'; ctx.textAlign = 'start';
           for (let index = 0; index < lines.length; index++) ctx.fillText(lines[index]!, rtl ? width - pad : pad, height + pad + index * pitch);
         }
         if (!current()) { finish(undefined, 'cancelled'); return; }

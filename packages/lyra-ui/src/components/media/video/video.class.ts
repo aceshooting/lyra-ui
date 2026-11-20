@@ -1169,11 +1169,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               .value=${String(this.currentTime)}
               aria-label=${this.localize('playbackPosition')}
               aria-valuetext=${positionText}
-              aria-describedby="video-progress-description"
               ?disabled=${max <= 0}
               @input=${this.onTimelineInput}
             >
-            <span id="video-progress-description" class="sr-only">${positionText}</span>
             <span part="timeline-track">
               <span part="timeline-indicator" style=${styleMap({ 'inline-size': `${progress}%` })}></span>
             </span>

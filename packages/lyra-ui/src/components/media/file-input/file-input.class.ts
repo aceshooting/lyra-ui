@@ -466,6 +466,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   *  subsequent classification rejects nothing. */
   @state() private rejectedFiles: readonly LyraFileInputRejectedFile[] = Object.freeze([]);
   @state() private touched = false;
+  private truncatedSelection = false;
   /** Bumped whenever an out-of-band revalidation (a validator's `observedAttributes` firing)
    *  changes published validity, so the rendered `[part="error"]` text refreshes without any
    *  reactive property of this host having changed. */
@@ -638,7 +639,10 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (changed.has('multiple') || changed.has('directory') || changed.has('files')) {
-      if (!this.effectiveMultiple && this._files.length > 1) this.files = this._files.slice(0, 1);
+      if (!this.effectiveMultiple && this._files.length > 1) {
+        this.files = this._files.slice(0, 1);
+        this.truncatedSelection = true;
+      }
       else this.syncFormValue();
     }
   }
@@ -671,6 +675,13 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   // on private `@state()` fields, which `keyof this` does not include.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.truncatedSelection) {
+      // Turning `multiple` off with several files held keeps the first; a controlled host learns of it.
+      this.truncatedSelection = false;
+      const value = Object.freeze([...this._files]);
+      emitValueEvents(this, 'input', { value }, detail => this.emit('lr-input', detail));
+      emitValueEvents(this, 'change', { value }, detail => this.emit('lr-change', detail));
+    }
     if (changed.has('validators')) {
       this.updateValidity();
       this.syncValidatorAttributeObserver();
@@ -1106,8 +1117,9 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     return this.localize('fileInputDefaultLabel');
   }
 
-  private removeFile(index: number): void {
-    if (isLiveDisabled(this) || index < 0 || index >= this._files.length) return;
+  private removeFile(index: number, file: File): void {
+    // The row was rendered for `file`; a host that replaced `files` since leaves the current record alone.
+    if (isLiveDisabled(this) || index < 0 || this._files[index] !== file) return;
     this.touched = true;
     const hadFocus = shadowFocusTarget(this)?.matches('[part="remove-button"]');
     this.files = this._files.filter((_, candidate) => candidate !== index);
@@ -1142,7 +1154,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
         type="button"
         ?disabled=${this.effectiveDisabled}
         aria-label=${this.localize('removeWithContext', undefined, { label: file.name })}
-        @click=${() => this.removeFile(index)}
+        @click=${() => this.removeFile(index, file)}
       >${closeIcon()}</button>
     </div>`;
   }

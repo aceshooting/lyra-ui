@@ -224,6 +224,7 @@ export const styles = css`
 
   .select-control > select {
     appearance: none;
+    font: inherit;
     padding-inline-start: var(--lr-space-s);
     padding-inline-end: var(--lr-space-l);
   }

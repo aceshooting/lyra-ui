@@ -130,6 +130,26 @@ describe('lr-code-editor resize="auto"', () => {
   });
 });
 
+describe('lr-code-editor resize="auto" with an empty value', () => {
+  it('keeps rows sizing instead of fitting the wrapped placeholder', async () => {
+    const holder = await fixture<HTMLElement>(html`
+      <div style="inline-size: 160px">
+        <lr-code-editor id="plain" resize="auto" without-line-numbers></lr-code-editor>
+        <lr-code-editor id="hinted" resize="auto" without-line-numbers
+          placeholder=${'a long wrapped placeholder '.repeat(12)}></lr-code-editor>
+      </div>
+    `);
+    const plain = holder.querySelector('#plain') as LyraCodeEditor;
+    const hinted = holder.querySelector('#hinted') as LyraCodeEditor;
+    await Promise.all([plain.updateComplete, hinted.updateComplete]);
+    // wait-reason: the initial resize-observer fit must settle before heights are compared.
+    await aTimeout(100);
+    expect(textareaOf(hinted).getBoundingClientRect().height).to.equal(
+      textareaOf(plain).getBoundingClientRect().height,
+    );
+  });
+});
+
 describe('lr-code-editor rows', () => {
   it('returns to the declared default when the attribute is removed', async () => {
     const el = await fixture<LyraCodeEditor>(html`<lr-code-editor></lr-code-editor>`);

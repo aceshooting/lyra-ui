@@ -5,6 +5,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import '../../lr-otp-input.js';
 import '../../lr-input.js';
 import '../../lr-button.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 const controlOf = (el: Element): HTMLInputElement =>
@@ -2491,4 +2492,29 @@ it('publishes data-invalid after interaction and keeps the resting segment borde
 it('forwards the host name to its native control', async () => {
   const el = (await fixture(html`<lr-otp-input name="code"></lr-otp-input>`)) as LyraOtpInput;
   expect(el.shadowRoot!.querySelector('input[part="control"]')!.getAttribute('name')).to.equal('code');
+});
+
+describe('lr-otp-input segment hover feedback', () => {
+  it('steps the border of a hovered idle segment through the hover token and leaves a disabled one alone', async () => {
+    const el = await fixture<LyraOtpInput>(html`
+      <lr-otp-input data-lr-theme-scope
+        label="Code"
+        style="--lr-transition-fast: 0s; --lr-otp-input-hover-border-color: rgb(1, 2, 3)"
+      ></lr-otp-input>
+    `);
+    const segments = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="segment"]')];
+    const idle = segments[segments.length - 1]!;
+    const resting = getComputedStyle(idle).borderTopColor;
+    try {
+      await hoverUntilMatched(el.shadowRoot!.querySelector<HTMLElement>('[part~="field"]')!, 'the pointer reached the field');
+      await waitUntil(() => getComputedStyle(idle).borderTopColor === 'rgb(1, 2, 3)', 'hover border applied');
+      expect(resting).to.not.equal('rgb(1, 2, 3)');
+      el.disabled = true;
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(getComputedStyle(idle).borderTopColor).to.not.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
+  });
 });

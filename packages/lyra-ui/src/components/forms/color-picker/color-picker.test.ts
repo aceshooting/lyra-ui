@@ -1889,6 +1889,35 @@ it("commits a text entry typed into the panel input", async () => {
   expect((part(el, "input") as HTMLInputElement).value).to.equal("#663399");
 });
 
+it("keeps an unparseable text entry visible and flagged until a valid commit or Escape", async () => {
+  const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
+  const input = part(el, "input") as HTMLInputElement;
+  input.value = "#12x";
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal("#ff0000");
+  expect(input.value).to.equal("#12x");
+  expect(input.getAttribute("aria-invalid")).to.equal("true");
+  expect(input.hasAttribute("data-rejected")).to.equal(true);
+
+  const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+  input.dispatchEvent(escape);
+  await el.updateComplete;
+  expect(escape.defaultPrevented).to.equal(true);
+  expect(el.open).to.equal(true);
+  expect(input.value).to.equal("#ff0000");
+  expect(input.getAttribute("aria-invalid")).to.equal("false");
+
+  input.value = "nonsense";
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  await el.updateComplete;
+  input.value = "#00ff00";
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal("#00ff00");
+  expect(input.getAttribute("aria-invalid")).to.equal("false");
+});
+
 it("canonicalizes modern browser-parseable CSS colors through the browser color pipeline", async () => {
   const el = await opened(html`<lr-color-picker label="A"></lr-color-picker>`);
   const input = part(el, "input") as HTMLInputElement;

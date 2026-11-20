@@ -769,12 +769,16 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const ids = new Set<string>();
     const result: NormalizedRegionHighlight[] = [];
     for (const highlight of this.highlights) {
-      if (!highlight || typeof highlight.id !== 'string' || highlight.id.trim().length === 0 || ids.has(highlight.id)) continue;
-      if (highlight.anchor.kind !== 'region') continue;
-      const rect = normalizeImageRegionRect(highlight.anchor.rect);
-      if (!rect) continue;
-      ids.add(highlight.id);
-      result.push({ highlight, rect });
+      // A record is caller data: a missing anchor or a throwing getter skips that record only.
+      try {
+        if (!highlight || typeof highlight.id !== 'string' || highlight.id.trim().length === 0 || ids.has(highlight.id)) continue;
+        const anchor = highlight.anchor;
+        if (!anchor || typeof anchor !== 'object' || anchor.kind !== 'region') continue;
+        const rect = normalizeImageRegionRect(anchor.rect);
+        if (!rect) continue;
+        ids.add(highlight.id);
+        result.push({ highlight, rect });
+      } catch { /* hostile record */ }
     }
     this.regionHighlights = [source, result];
     return result;

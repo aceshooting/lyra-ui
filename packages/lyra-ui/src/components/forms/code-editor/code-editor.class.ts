@@ -878,6 +878,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
     textarea.style.blockSize = 'auto';
     textarea.style.overflowY = 'hidden';
+    // An empty textarea's scrollHeight can include its wrapped placeholder; keep `rows` sizing.
+    if (textarea.value === '') return;
     const computed = this.ownerDocument.defaultView?.getComputedStyle(textarea);
     if (!computed) return;
     const border =

@@ -2092,7 +2092,14 @@ describe('lr-video control surface', () => {
     expect(progress.disabled, 'source reset').to.be.true;
   });
 
-  it('speaks the native timeline value and describes it with localized clock time', async () => {
+  it('renders the caption and rate selects in the component font', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full" style="font-family: monospace; font-size: 21px"></lr-video>`);
+    const select = el.shadowRoot!.querySelector<HTMLSelectElement>('.select-control > select')!;
+    expect(getComputedStyle(select).fontSize).to.equal('21px');
+    expect(getComputedStyle(select).fontFamily).to.equal(getComputedStyle(el).fontFamily);
+  });
+
+  it('speaks the native timeline value once, in localized clock time', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video lang="ar-EG" .strings=${{ avPlayerPosition: '{current} sur {duration}' }}></lr-video>
     `);
@@ -2107,8 +2114,7 @@ describe('lr-video control surface', () => {
 
     const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
     expect(progress.getAttribute('aria-valuetext')).to.equal('٠:٠٥ sur ١:٠١');
-    const descriptionId = progress.getAttribute('aria-describedby')!;
-    expect(el.shadowRoot!.getElementById(descriptionId)?.textContent).to.equal('٠:٠٥ sur ١:٠١');
+    expect(progress.hasAttribute('aria-describedby'), 'the value text is spoken once').to.be.false;
 
     const plain = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
     const plainMedia = nativeVideo(plain);
@@ -2119,14 +2125,8 @@ describe('lr-video control surface', () => {
     plainMedia.dispatchEvent(new Event('loadedmetadata'));
     plainMedia.dispatchEvent(new Event('timeupdate'));
     await plain.updateComplete;
-    expect(
-      plain.shadowRoot!.getElementById(
-        plain.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-describedby')!,
-      )?.textContent,
-      'the English fallback renders with no locale registered',
-    ).to.equal('0:05 of 1:01');
     const plainProgress = plain.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
-    expect(plainProgress.getAttribute('aria-valuetext')).to.equal('0:05 of 1:01');
+    expect(plainProgress.getAttribute('aria-valuetext'), 'the English fallback renders with no locale registered').to.equal('0:05 of 1:01');
     plainMedia.currentTime = 30;
     plainMedia.dispatchEvent(new Event('timeupdate'));
     await plain.updateComplete;

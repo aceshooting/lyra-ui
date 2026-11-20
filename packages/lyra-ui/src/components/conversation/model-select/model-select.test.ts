@@ -3689,3 +3689,20 @@ describe("explicitly empty host aria-label", () => {
     ).to.equal("Model");
   });
 });
+
+describe("lr-model-select closed-catalog type-ahead key ownership", () => {
+  it("claims a typed printable key (default prevented) and selects the matching entry", async () => {
+    const el = await fixture<LyraModelSelect>(
+      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+    );
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    const event = new KeyboardEvent("keydown", { key: "m", bubbles: true, cancelable: true });
+    trigger.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(true);
+    expect(el.value).to.equal("mistral");
+    // A leading Space keeps its activation meaning and is not claimed by type-ahead.
+    const space = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    el.shadowRoot!.querySelector('[part="trigger"]')!.dispatchEvent(space);
+    expect(el.value).to.equal("mistral");
+  });
+});

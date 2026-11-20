@@ -32106,6 +32106,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-color-picker-invalid-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-form-control-invalid-border-color,var(--lr-color-danger))"
+          },
+          {
             "name": "--lr-color-picker-opacity-gradient",
             "deprecated": null,
             "hasDefault": false
@@ -104725,6 +104731,12 @@
             "default": "var(--lr-focus-ring-color)"
           },
           {
+            "name": "--lr-otp-input-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-otp-input-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -121918,10 +121930,16 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-radio-group-row-gap",
+            "name": "--lr-radio-group-option-gap",
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-form-control-height) * 0.2)"
+          },
+          {
+            "name": "--lr-radio-group-row-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(var(--lr-form-control-height) * 0.1)"
           }
         ],
         "cssStates": [
@@ -166899,6 +166917,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "auto"
+          },
+          {
+            "name": "--lr-virtual-list-active-row-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, currentColor 8%, transparent)"
           },
           {
             "name": "--lr-virtual-list-height",

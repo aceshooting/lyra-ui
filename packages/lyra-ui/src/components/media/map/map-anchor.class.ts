@@ -8,6 +8,7 @@ import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { OwnedTimeout } from '../../../internal/owned-timer.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorCloseReason, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 import { MAP_ANCHOR_SEAM, type MapAnchorChildOperation, type MapAnchorOwner } from './map-anchor-seam.js';
@@ -128,6 +129,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
   private autofocusPending = false;
   private attachmentRevision = 0;
   private requestingClose = false;
+  private readonly unattachedWarning = new OwnedTimeout(this);
 
   override connectedCallback(): void {
     this.attachmentRevision += 1;
@@ -141,6 +143,7 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
 
   override disconnectedCallback(): void {
     this.attachmentRevision += 1;
+    this.unattachedWarning.cancel();
     super.disconnectedCallback();
     this.attachTo(undefined);
   }
@@ -223,8 +226,8 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
     this.owner?.[MAP_ANCHOR_SEAM](this, changed.has('lngLat') || (changed.has('open') && this.open) ? 'request' : 'sync');
     if (!litDevWarnings() || !this.open || this.owner) return;
     // A map that upgrades or renders after this anchor attaches it through its slotchange first.
-    setTimeout(() => {
-      if (this.open && !this.owner && this.isConnected && this.detachment) {
+    this.unattachedWarning.schedule(0, () => {
+      if (this.open && !this.owner && this.detachment) {
         devWarnOnce(`lyra-map-anchor-unattached:${this.detachment}`,
           `<${this.localName}> is open but not rendered through a map's anchors slot (${this.detachment === 'map' ? 'no map' : this.detachment === 'slot' ? 'another slot' : 'nested in another anchor'}), so it stays hidden.`);
       }

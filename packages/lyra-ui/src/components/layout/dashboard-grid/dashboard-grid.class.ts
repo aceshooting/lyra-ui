@@ -193,7 +193,7 @@ export interface LyraDashboardGridEventMap {
  * keys/Home/End move the roving focus (RTL-aware: physical Left/Right always match what the
  * cursor visually does, matching `lr-flow-canvas`'s own convention). While a cell has focus,
  * Ctrl/Cmd+Arrow moves it by one grid unit and Ctrl/Cmd+Shift+Arrow resizes it by one grid unit
- * (Right/Down grow, Left/Up shrink) -- the full keyboard-operable equivalent of the pointer
+ * (Right/Down grow, Left/Up shrink; under RTL the visual direction applies, so ArrowLeft widens) -- the full keyboard-operable equivalent of the pointer
  * drag/resize gestures below, per this library's accessibility bar (no pointer-only interaction).
  *
  * Collision: every move/resize request -- pointer or keyboard -- is resolved through `collision`
@@ -794,10 +794,13 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   private keyboardResize(cell: LyraDashboardCell, key: string): boolean {
     if (!this.cellsResizable || this.readonly || cell.locked) return false;
+    // Visual contract, matching keyboardMove(): the arrow pointing toward the growing inline-end
+    // edge widens the cell, so under RTL ArrowLeft widens and ArrowRight narrows.
+    const rtlFlip = this.effectiveDirection === 'rtl' ? -1 : 1;
     let dw = 0;
     let dh = 0;
-    if (key === 'ArrowRight') dw = 1;
-    else if (key === 'ArrowLeft') dw = -1;
+    if (key === 'ArrowRight') dw = rtlFlip;
+    else if (key === 'ArrowLeft') dw = -rtlFlip;
     else if (key === 'ArrowDown') dh = 1;
     else if (key === 'ArrowUp') dh = -1;
     else return false;

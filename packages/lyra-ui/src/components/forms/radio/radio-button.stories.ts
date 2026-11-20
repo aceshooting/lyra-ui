@@ -188,7 +188,7 @@ export const ActualRunGeometry: StoryObj = {
         name="adjacent"
         label="Actually adjacent"
         orientation="horizontal"
-        style="--lr-radio-group-row-gap: 0"
+        style="--lr-radio-group-option-gap: 0"
       >
         <lr-radio-button value="day" checked>Day</lr-radio-button>
         <lr-radio-button value="week">Week</lr-radio-button>
@@ -203,7 +203,7 @@ export const ActualRunGeometry: StoryObj = {
         name="wrapped"
         label="Wrapped"
         orientation="horizontal"
-        style="--lr-radio-group-row-gap: 0; inline-size: var(--lr-size-8rem)"
+        style="--lr-radio-group-option-gap: 0; inline-size: var(--lr-size-8rem)"
       >
         <lr-radio-button value="alpha" checked>Alpha</lr-radio-button>
         <lr-radio-button value="beta">Beta</lr-radio-button>

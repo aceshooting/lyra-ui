@@ -2530,3 +2530,20 @@ it('mixes range-day hover and press over the range fill instead of replacing it'
     await resetMouse();
   }
 });
+
+it("routes the radius token to preset buttons and scales the month title with the size tier", async () => {
+  const sizes = new Map<string, number>();
+  for (const size of ['2xs', 'm', 'xl']) {
+    const el = (await fixture(html`
+      <lr-date-picker mode="range" size=${size} style="--lr-date-picker-radius: 11px"></lr-date-picker>
+    `)) as LyraDatePicker;
+    el.presets = [{ label: 'Last week', start: '2026-08-13', end: '2026-08-19' }];
+    await el.updateComplete;
+    const preset = el.shadowRoot!.querySelector<HTMLElement>('[part~="preset-button"]')!;
+    expect(getComputedStyle(preset).borderTopLeftRadius).to.equal('11px');
+    const title = el.shadowRoot!.querySelector<HTMLElement>('[part="title"]')!;
+    sizes.set(size, Number.parseFloat(getComputedStyle(title).fontSize));
+  }
+  expect(sizes.get('2xs')!).to.be.lessThan(sizes.get('m')!);
+  expect(sizes.get('xl')!).to.be.greaterThan(sizes.get('m')!);
+});
