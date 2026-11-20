@@ -222,6 +222,14 @@ export interface LyraFileInputEventMap {
  * the hint, the validation error, the rejection list, and each selected file's formatted size.
  * Retuned per `size` tier.
  * @cssprop [--lr-file-input-file-radius=var(--lr-radius)] - Corner radius of each `[part="file"]` row.
+ * @cssprop [--lr-file-input-file-bg=var(--lr-color-surface-raised)] - Background of each
+ *   `[part="file"]` row.
+ * @cssprop [--lr-file-input-file-border-color=var(--lr-color-border-subtle)] - Border color of each
+ *   `[part="file"]` row.
+ * @cssprop [--lr-file-input-remove-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
+ *   `[part="remove-button"]`.
+ * @cssprop --lr-file-input-remove-active-bg - Background of a pressed remove button. Defaults to the
+ *   hover background mixed by the press step.
  * @cssprop [--lr-file-input-thumbnail-size=var(--lr-icon-button-size)] - Size of each
  * `[part="file-thumbnail"]`, rethemeable independently of the remove button's hit area.
  * @cssprop [--lr-file-input-thumbnail-radius=var(--lr-radius-xs)] - Corner radius of each thumbnail.

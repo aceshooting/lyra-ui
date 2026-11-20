@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -218,6 +219,15 @@ export const styles = css`
       var(--_lr-multi-split-divider-hover-color)
     );
   }
+  /* Keyboard focus tints the hairline like hover, matching lr-split-panel and lr-dock-panel, so
+     the hover token restyles the focused divider too. Before :active, so a focused drag still
+     shows the pressed mix. */
+  [part="divider"]:focus-visible::before {
+    background: var(
+      --lr-multi-split-divider-hover-color,
+      var(--_lr-multi-split-divider-hover-color)
+    );
+  }
   /* Pointer capture holds :active for the whole gesture, so the deeper mix persists from mousedown
      to release; a divider beside a collapsed pane never reaches it -- [aria-disabled='true'] below
      removes its pointer events. */
@@ -306,4 +316,5 @@ export const styles = css`
   ::slotted([data-panel-collapsed]) {
     overflow: hidden;
   }
+  ${forcedColorsDivider("[part='divider']::before", "[part='divider']:is(:hover, :focus-visible, :active)::before")}
 `;

@@ -62,8 +62,9 @@ export const styles = css`
   input.control:focus-visible {
     ${focusRing}
   }
-  input.control:where(:hover):where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
+  /* A read-only (const) field is not editable, so it keeps its resting edge under the pointer. */
+  input.control:where(:hover):where(:not(:disabled, [readonly])) {
+    border-color: var(--lr-tool-param-form-control-hover-border-color, var(--lr-color-brand));
   }
   input.control[aria-invalid='true'] {
     border-color: var(--lr-tool-param-form-invalid-border-color, var(--lr-color-danger));

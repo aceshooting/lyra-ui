@@ -13,8 +13,8 @@ const buttonChromeStyles = css`
        an empty 2xs tier remains a conformant target. */
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-1-5rem));
     padding-inline: var(--lr-form-control-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-surface-raised);
+    border: var(--lr-border-width-thin) solid var(--lr-radio-button-border-color, var(--lr-color-border));
+    background: var(--lr-radio-button-bg, var(--lr-color-surface-raised));
     color: var(--lr-color-text);
     font: inherit;
     font-size: var(--lr-form-control-font-size);

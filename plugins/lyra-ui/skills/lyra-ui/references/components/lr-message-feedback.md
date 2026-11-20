@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -136,3 +136,9 @@ required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow
 attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
 reading them. Unset, each falls back to exactly the token its rule used before.
+The submit button takes `--lr-message-feedback-submit-bg` (default `var(--lr-color-brand)`),
+`--lr-message-feedback-submit-color` (default `var(--lr-color-on-brand)`),
+`--lr-message-feedback-submit-border-color` (default `var(--lr-color-border)`),
+`--lr-message-feedback-submit-hover-bg` and `--lr-message-feedback-submit-active-bg` (each defaulting to
+its own fill mixed by the hover or press step); the comment field's hover edge is
+`--lr-message-feedback-comment-hover-border-color` (default `var(--lr-color-brand)`).

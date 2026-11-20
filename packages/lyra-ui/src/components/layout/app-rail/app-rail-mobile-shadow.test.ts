@@ -1,6 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
+import { toRgba } from '../../../../test/color-contrast.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraAppRail } from './app-rail.class.js';
 import '../../lr-app-rail.js';
@@ -99,4 +100,11 @@ describe('app rail mobile panel paint', () => {
       expect(panel(el).hasAttribute('data-sliding')).to.equal(false);
     } finally { await setReducedMotion('no-preference'); }
   });
+});
+
+it('paints the open mobile panel from the shared modal surface family', async () => {
+  const el = await fixture<LyraAppRail>(html`<lr-app-rail data-lr-surface="solid" style="--lr-transition-base:0ms;--lr-overlay-surface: rgb(1, 2, 3); --lr-overlay-shadow-modal: 0 0 0 3px rgb(255, 0, 0);"><button>One</button></lr-app-rail>`);
+  mobile(el); el.open = true; await el.updateComplete;
+  expect(toRgba(getComputedStyle(panel(el)).backgroundColor)).to.deep.equal([1, 2, 3, 255]);
+  expect(getComputedStyle(panel(el)).boxShadow).to.equal(resolvedInShadow(el, 'box-shadow: 0 0 0 3px rgb(255, 0, 0)', 'box-shadow'));
 });

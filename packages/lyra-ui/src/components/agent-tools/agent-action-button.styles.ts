@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../internal/forced-colors.styles.js';
 import { activeFill, disabledControl, focusRing, hoverFill } from '../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -58,4 +59,5 @@ export const agentActionButtonStyles = css`
   @media (prefers-reduced-motion: reduce) {
     button[data-agent-action] { transition: none; }
   }
+  ${forcedColorsPart("button[data-agent-action][aria-pressed='true']")}
 `;

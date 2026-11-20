@@ -685,3 +685,21 @@ describe('code-block header frame nonce without Web Crypto', () => {
     }
   });
 });
+
+it('paints the fenced copy glyph hover from --lr-markdown-code-copy-color-hover', async () => {
+  const el = document.createElement('lr-markdown') as LyraMarkdown;
+  el.codeBlockHeader = true;
+  el.withoutSyntaxHighlighting = true;
+  el.style.setProperty('--lr-markdown-code-copy-color-hover', 'rgb(1, 2, 3)');
+  el.content = '```\ncode\n```';
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  host.append(el);
+  await waitUntil(() => Boolean(el.shadowRoot?.querySelector('[part="code-block-copy"]')));
+  const copy = el.shadowRoot!.querySelector<HTMLElement>('[part="code-block-copy"]')!;
+  try {
+    await hoverUntilMatched(copy, 'the copy control never hovered');
+    await waitUntil(() => getComputedStyle(copy).color === 'rgb(1, 2, 3)', 'the copy hover color token paints');
+  } finally {
+    await resetMouse();
+  }
+});

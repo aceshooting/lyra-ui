@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
@@ -59,4 +60,5 @@ export const styles = css`
   [part='empty'] { color: var(--lr-color-text-quiet); }
   [part='limit'], [part='metrics-limit'], [part='metric-unavailable'] { margin: 0; color: var(--lr-color-text-quiet); }
   @container ${compactContainerQuery} { [part='metrics'] { grid-template-columns: 1fr; } [part='run'] { grid-template-columns: 1fr; } [part='run-meta'] { justify-content: flex-start; } }
+  ${forcedColorsPart("[part='metric'][aria-pressed='true']")}
 `;

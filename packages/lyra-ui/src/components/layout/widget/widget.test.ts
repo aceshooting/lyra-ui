@@ -3455,3 +3455,11 @@ describe("scrollable body", () => {
     expect(body.hasAttribute("tabindex")).to.equal(false);
   });
 });
+
+it("paints the fullscreen panel from the shared modal surface family", async () => {
+  const el = (await fixture(html`<lr-widget fullscreen data-lr-surface="solid" style="--lr-overlay-surface: rgb(1, 2, 3); --lr-overlay-shadow-modal: 0 0 0 3px rgb(255, 0, 0);">content</lr-widget>`)) as LyraWidget;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(getComputedStyle(base).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(base).boxShadow).to.equal(resolvedInShadow(el, "box-shadow: 0 0 0 3px rgb(255, 0, 0)", "box-shadow"));
+});

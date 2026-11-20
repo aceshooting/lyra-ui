@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -232,3 +232,5 @@ retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }
 **Optional peer deps:** none.
 
 ---
+
+**Pointer-state tokens:** `--lr-ingestion-queue-action-hover-color` (default `var(--lr-color-brand)`), `--lr-ingestion-queue-action-active-bg`, `--lr-ingestion-queue-cancel-hover-color` (default `var(--lr-color-danger)`), `--lr-ingestion-queue-cancel-active-bg`.

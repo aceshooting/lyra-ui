@@ -138,8 +138,8 @@ export const styles = css`
   lr-virtual-list::part(retry-button):hover:not(:disabled),
   [part='item-action-button']:hover:where(:not(:disabled)),
   lr-virtual-list::part(item-action-button):hover:not(:disabled) {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+    border-color: var(--lr-ingestion-queue-action-hover-color, var(--lr-color-brand));
+    color: var(--lr-ingestion-queue-action-hover-color, var(--lr-color-brand));
   }
   /* Pressed keeps the hover's retinted border and label and adds the fill the hover has none of --
      the button's own --lr-color-surface base mixed toward --lr-color-mix-partner. */
@@ -148,20 +148,20 @@ export const styles = css`
   lr-virtual-list::part(retry-button):active:not(:disabled),
   [part='item-action-button']:active:where(:not(:disabled)),
   lr-virtual-list::part(item-action-button):active:not(:disabled) {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    background: ${activeFill('var(--lr-color-surface)')};
+    border-color: var(--lr-ingestion-queue-action-hover-color, var(--lr-color-brand));
+    color: var(--lr-ingestion-queue-action-hover-color, var(--lr-color-brand));
+    background: var(--lr-ingestion-queue-action-active-bg, ${activeFill('var(--lr-color-surface)')});
   }
   [part="cancel-button"]:hover:where(:not(:disabled)),
   lr-virtual-list::part(cancel-button):hover:not(:disabled) {
-    border-color: var(--lr-color-danger);
-    color: var(--lr-color-danger);
+    border-color: var(--lr-ingestion-queue-cancel-hover-color, var(--lr-color-danger));
+    color: var(--lr-ingestion-queue-cancel-hover-color, var(--lr-color-danger));
   }
   [part="cancel-button"]:active:where(:not(:disabled)),
   lr-virtual-list::part(cancel-button):active:not(:disabled) {
-    border-color: var(--lr-color-danger);
-    color: var(--lr-color-danger);
-    background: ${activeFill('var(--lr-color-surface)')};
+    border-color: var(--lr-ingestion-queue-cancel-hover-color, var(--lr-color-danger));
+    color: var(--lr-ingestion-queue-cancel-hover-color, var(--lr-color-danger));
+    background: var(--lr-ingestion-queue-cancel-active-bg, ${activeFill('var(--lr-color-surface)')});
   }
   [part="source-retry"]:focus-visible,
   [part="retry-button"]:focus-visible,

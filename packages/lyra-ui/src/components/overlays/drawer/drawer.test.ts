@@ -651,6 +651,9 @@ it("steps its edge-anchored panel back to the lower modal tier, overriding the d
   // silently lost the cascade, the panel would still carry lr-dialog's xl step.
   expect(drawerTier, "l and xl are distinct steps").to.not.equal(dialogTier);
   expect(getComputedStyle(panel).boxShadow).to.equal(drawerTier);
+  // Only the default steps down: a consumer modal elevation still reaches the drawer panel.
+  el.style.setProperty("--lr-overlay-shadow-modal", "none");
+  expect(getComputedStyle(panel).boxShadow).to.equal("none");
   el.close("api");
 });
 

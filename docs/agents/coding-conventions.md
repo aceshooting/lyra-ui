@@ -237,7 +237,7 @@
   records `/* state-fallback-ok: <reason> */` above the consuming rule. `lr-switch` shipped the
   defect: `--lr-switch-track-fill` masked the checked track entirely.
 - **An unqualified pointer token applies in every state.** An explicit pointer token whose name
-  carries no state (`--lr-switch-track-hover-fill`, `--lr-checkbox-hover-border`) applies in every
+  carries no state (`--lr-switch-track-hover-fill`, `--lr-checkbox-hover-border-color`) applies in every
   state. A control that needs a different pointer paint in one state ships a state-named pointer
   token for it, and that token owns that state (`--lr-radio-button-checked-hover-*`,
   `--lr-pagination-current-hover-bg`, `--lr-time-input-column-selected-hover-bg`). Unset, either

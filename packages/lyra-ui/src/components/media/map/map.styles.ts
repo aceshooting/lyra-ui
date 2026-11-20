@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, disabledControl, focusRing, focusRingInset, focusRingShorthandInward, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mapOverlayPanel, mapOverlayPanelLayer, mapOverlayCloseButton, mapOverlayCloseButtonHover, mapOverlayCloseButtonActive } from '../../../internal/map-overlay-panel.styles.js';
@@ -47,16 +48,16 @@ export const styles = css`
     overflow-wrap: anywhere;
     cursor: pointer;
   }
-  [part='scene-toggle']:where(:hover), button[part='scene-item']:where(:hover), [part='scene-pagination'] button:where(:hover) {
+  [part='scene-toggle']:where(:not(:disabled):hover), button[part='scene-item']:where(:not(:disabled):hover), [part='scene-pagination'] button:where(:not(:disabled):hover) {
     --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
-  [part='scene-toggle']:where(:active), button[part='scene-item']:where(:active), [part='scene-pagination'] button:where(:active) {
+  [part='scene-toggle']:where(:not(:disabled):active), button[part='scene-item']:where(:not(:disabled):active), [part='scene-pagination'] button:where(:not(:disabled):active) {
     --_lr-map-action-fill: var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part='scene-toggle']:focus-visible, button[part='scene-item']:focus-visible, [part='scene-pagination'] button:focus-visible {
     ${focusRing}
   }
-  [part='scene-pagination'] button:where(:disabled) { ${disabledControl} }
+  :is([part='scene-toggle'], button[part='scene-item'], [part='scene-pagination'] button):where(:disabled) { ${disabledControl} }
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
   .initialization-controls { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
@@ -115,14 +116,14 @@ export const styles = css`
     cursor: pointer;
   }
   [part='pick-controls'] button, [part='drawing-controls'] button, [part='anchor-close'] { position: relative; }
-  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:hover) {
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:not(:disabled):hover) {
     --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
-  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:active) {
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:not(:disabled):active) {
     --_lr-map-action-fill: var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):focus-visible { ${focusRing} }
-  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:disabled) { cursor: default; }
+  :is([part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close']):where(:disabled) { ${disabledControl} }
   [part='drawing-handles'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   [part='drawing-vertex'] {
     ${iconHitTarget}
@@ -130,9 +131,9 @@ export const styles = css`
     display: grid; place-items: center; touch-action: none; padding: 0; border: 0; background: transparent; color: var(--lr-color-text); cursor: grab;
   }
   [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-map-drawing-color, var(--lr-color-brand)); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
-  [part='drawing-vertex']:where(:hover) > span { background: var(--lr-map-drawing-vertex-hover-bg, ${hoverFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
-  [part='drawing-vertex']:where(:active) { cursor: grabbing; }
-  [part='drawing-vertex']:where(:active) > span { background: var(--lr-map-drawing-vertex-active-bg, ${activeFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
+  [part='drawing-vertex']:where(:not(:disabled):hover) > span { background: var(--lr-map-drawing-vertex-hover-bg, ${hoverFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
+  [part='drawing-vertex']:where(:not(:disabled):active) { cursor: grabbing; }
+  [part='drawing-vertex']:where(:not(:disabled):active) > span { background: var(--lr-map-drawing-vertex-active-bg, ${activeFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
   [part='drawing-measurements'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
   [part='drawing-measurement'] {
     position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
@@ -144,7 +145,7 @@ export const styles = css`
   [part='drawing-measurement'][data-kind='area'] { font-weight: var(--lr-font-weight-semibold); }
   [part='drawing-summary'] { position: relative; align-self: center; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
   [part='drawing-vertex']:focus-visible { ${focusRing} }
-  [part='drawing-vertex']:where(:disabled) { cursor: default; }
+  [part='drawing-vertex']:where(:disabled) { ${disabledControl} }
   [part='drawing-status'] { position: relative; border-radius: var(--lr-radius-button); color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }
   [part='base'] {
     position: relative;
@@ -233,8 +234,13 @@ export const styles = css`
   .maplibregl-marker[role='button'] {
     cursor: pointer;
   }
+  /* A halo, not brightness(): multiplying every channel leaves a pure black or white marker
+     unchanged, while a drop-shadow follows any marker silhouette in any colour. */
   .maplibregl-marker[role='button']:hover {
-    filter: brightness(0.9);
+    filter: drop-shadow(0 0 var(--lr-size-2px) var(--lr-map-marker-hover-halo-color, var(--lr-color-brand)));
+  }
+  .maplibregl-marker[role='button']:active {
+    filter: drop-shadow(0 0 calc(2 * var(--lr-size-2px)) var(--lr-map-marker-hover-halo-color, var(--lr-color-brand)));
   }
   .maplibregl-marker[role='button']:focus-visible {
     ${focusRingShorthandInward}
@@ -447,9 +453,8 @@ export const styles = css`
     align-self: flex-start;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    /* WCAG 2.5.8, matching the interactive legend rows above. */
+    /* WCAG 2.5.8, matching the interactive legend rows above, in both axes. */
     ${iconHitTarget}
-    min-width: 0;
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -467,14 +472,17 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  button[part='legend-disclosure']:where(:hover) {
+  button[part='legend-disclosure']:where(:not(:disabled):hover) {
     background: ${hoverFill('transparent')};
   }
-  button[part='legend-disclosure']:where(:active) {
+  button[part='legend-disclosure']:where(:not(:disabled):active) {
     background: ${activeFill('transparent')};
   }
   button[part='legend-disclosure']:where(:focus-visible) {
     ${focusRing}
+  }
+  button[part='legend-disclosure']:where(:disabled) {
+    ${disabledControl}
   }
   /* The shared icon set ships one right-pointing chevron and asks callers to rotate the WRAPPING
      part, never the svg. Collapsed points along the reading direction; expanded points down in
@@ -598,7 +606,6 @@ export const styles = css`
        icon-button floor in both axes. The panel's own max-block-size + overflow:auto above
        contains the taller list. */
     ${iconHitTarget}
-    min-width: 0;
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -615,14 +622,17 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  button[part~='legend-toggle']:where(:hover) {
+  button[part~='legend-toggle']:where(:not(:disabled):hover) {
     background: ${hoverFill('transparent')};
   }
-  button[part~='legend-toggle']:where(:active) {
+  button[part~='legend-toggle']:where(:not(:disabled):active) {
     background: ${activeFill('transparent')};
   }
   button[part~='legend-toggle']:where(:focus-visible) {
     ${focusRing}
+  }
+  button[part~='legend-toggle']:where(:disabled) {
+    ${disabledControl}
   }
   /* Opacity dims only the decorative, aria-hidden swatch; the label re-colors through the quiet
      text token instead. Opacity on the whole button would drop the label below 4.5:1. */
@@ -793,12 +803,14 @@ export const styles = css`
   .maplibregl-ctrl-group button:where(:not(:first-child)) {
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
+  /* The native controls share the scene, pick and drawing actions' pointer tokens, keeping their
+     own brand-tinted defaults. */
   .maplibregl-ctrl-group button:hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
   }
   .maplibregl-ctrl-group button:active:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-map-action-active-bg, ${activeFill('var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet))')});
   }
   .maplibregl-ctrl-group button:focus-visible {
     ${focusRingShorthandInward}
@@ -818,9 +830,9 @@ export const styles = css`
     stroke-linejoin: round;
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']) {
-    --_map-scene-control-fill: var(--lr-color-brand-quiet);
+    --_map-scene-control-fill: var(--lr-map-control-pressed-bg, var(--lr-color-brand-quiet));
     background: var(--_map-scene-control-fill);
-    color: var(--lr-color-brand);
+    color: var(--lr-map-control-pressed-color, var(--lr-color-brand));
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):hover:where(:not(:disabled)) {
     background: ${hoverFill('var(--_map-scene-control-fill)')};
@@ -942,10 +954,18 @@ export const styles = css`
   .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
     display: block;
   }
-  .maplibregl-ctrl-attrib-button:hover,
-  .maplibregl-ctrl-attrib-button:active,
+  /* Open is the expanded state, painted like a pressed scene control; hover and press follow the
+     shared action pointer tokens and stay distinct from it. */
   .maplibregl-ctrl-attrib:where([open]) .maplibregl-ctrl-attrib-button {
-    background: var(--lr-color-brand-quiet);
+    --_map-attrib-fill: var(--lr-map-control-pressed-bg, var(--lr-color-brand-quiet));
+    --_map-attrib-hover-fill: ${hoverFill('var(--_map-attrib-fill)')};
+    background: var(--_map-attrib-fill);
+  }
+  .maplibregl-ctrl-attrib-button:hover {
+    background: var(--lr-map-action-hover-bg, var(--_map-attrib-hover-fill, var(--lr-color-brand-quiet)));
+  }
+  .maplibregl-ctrl-attrib-button:active {
+    background: var(--lr-map-action-active-bg, ${activeFill('var(--_map-attrib-fill, var(--lr-color-brand-quiet))')});
   }
   .maplibregl-ctrl-attrib-button:focus-visible {
     ${focusRingShorthandInward}
@@ -1012,5 +1032,12 @@ export const styles = css`
       text-decoration-line: line-through;
       text-decoration-thickness: var(--lr-border-width-medium);
     }
+    /* Author fills are replaced here, so hover on a native control gets a system-colour edge. */
+    .maplibregl-ctrl-group button:hover:not(:disabled),
+    .maplibregl-ctrl-attrib-button:hover {
+      outline: var(--lr-border-width-thin) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
   }
+  ${forcedColorsPart(".maplibregl-ctrl-group button:is([aria-pressed='true'], [aria-pressed='mixed']), .maplibregl-ctrl-attrib[open] .maplibregl-ctrl-attrib-button")}
 `;

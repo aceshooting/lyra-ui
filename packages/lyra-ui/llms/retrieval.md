@@ -1466,6 +1466,8 @@ set the step, not the depth. Plus shared tokens otherwise.
 
 ---
 
+**Pointer-state tokens:** `--lr-source-picker-item-hover-bg`, `--lr-source-picker-item-active-bg`.
+
 ## `lr-provenance-panel`
 
 The grounding breakdown for one answer: a sectioned disclosure panel (Entities / Relationships /
@@ -1671,7 +1673,7 @@ virtualized navigator), `source-row` (a hierarchy row with global position metad
 (loading, empty and global-count status), and `source-error` (failure and retry status).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-link-color` (default `var(--lr-color-border)`) and `--lr-mind-map-link-width` (default `1.5`) style the links; `--lr-mind-map-node-fill` (default `var(--lr-color-brand)`) fills each topic circle. `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 `--lr-mind-map-label-halo` (default `var(--lr-color-surface)`) — halo stroke behind topic labels.
@@ -2398,6 +2400,8 @@ retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }
 **Optional peer deps:** none.
 
 ---
+
+**Pointer-state tokens:** `--lr-ingestion-queue-action-hover-color` (default `var(--lr-color-brand)`), `--lr-ingestion-queue-action-active-bg`, `--lr-ingestion-queue-cancel-hover-color` (default `var(--lr-color-danger)`), `--lr-ingestion-queue-cancel-active-bg`.
 
 ## `lr-knowledge-base`
 
@@ -3628,8 +3632,9 @@ activation behavior describes the legacy route with `source` null.
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
 `selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
-including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
-`--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
+including `auto` for `viewBox`-derived aspect-ratio sizing; it is the fallback behind
+`--lr-embedding-explorer-height`, so a consumer value of that property wins, and a value the browser
+cannot parse falls back to `auto`);
 `label?: string` names the plot after an authored host `aria-label` and before the JS-only
 `accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
 attribute or `label`, `accessibleLabel` names the plot. A non-blank authored host `aria-label` governs the plot name too, so a competing internal generic label is not exposed; an empty or whitespace-only value falls through to the next name, ending at the localized default. Non-finite
@@ -3672,7 +3677,7 @@ point, and `pagination` with its `page-button` previous and next actions.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
-(default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
+(default `360px`) — the `block-size` of `[part="plot"]`; when unset, the `height` property supplies it. A consumer's
 own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
 `min-block-size` floor still raises it. Unspecified clusters cycle through the canonical
 `--lr-color-chart-1`, `--lr-color-chart-2`, `--lr-color-chart-3`, `--lr-color-chart-4`,

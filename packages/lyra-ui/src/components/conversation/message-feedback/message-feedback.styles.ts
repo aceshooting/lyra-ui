@@ -121,7 +121,7 @@ export const styles = css`
      stronger than any momentary pressed tint and outlasts the mouse button, so a competing
      mousedown flash would only add noise. */
   :where([part="comment"]):hover:where(:not(:disabled)) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-message-feedback-comment-hover-border-color, var(--lr-color-brand));
   }
   [part="comment"]::placeholder {
     color: var(--lr-color-text-quiet);
@@ -132,10 +132,11 @@ export const styles = css`
     max-inline-size: 100%;
     padding-inline: var(--lr-space-m);
     padding-block: var(--lr-space-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    --_lr-message-feedback-submit-fill: var(--lr-message-feedback-submit-bg, var(--lr-color-brand));
+    border: var(--lr-border-width-thin) solid var(--lr-message-feedback-submit-border-color, var(--lr-color-border));
     border-radius: var(--lr-radius);
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: var(--_lr-message-feedback-submit-fill);
+    color: var(--lr-message-feedback-submit-color, var(--lr-color-on-brand));
     font: inherit;
     white-space: normal;
     overflow-wrap: anywhere;
@@ -152,10 +153,10 @@ export const styles = css`
      :hover, so an ungated rule made the one control the user cannot activate look like the most
      activatable thing on the panel. */
   :where([part="submit-button"]):hover:where(:not(:disabled)) {
-    background: ${hoverFill('var(--lr-color-brand)')};
+    background: var(--lr-message-feedback-submit-hover-bg, ${hoverFill('var(--_lr-message-feedback-submit-fill)')});
   }
   :where([part="submit-button"]):active:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-brand)')};
+    background: var(--lr-message-feedback-submit-active-bg, ${activeFill('var(--_lr-message-feedback-submit-fill)')});
   }
   /* Matches the thumb buttons' disabled treatment, so every control reads as unavailable from the
      same two signals: dimmed fill and not-allowed cursor. */

@@ -99,8 +99,10 @@ export const styles = css`
   }
   /* Brand edge plus the opt-in halo; :focus so a pointer focus reads too. */
   [part="textarea"]:focus {
-    outline: none;
     border-color: var(--lr-textarea-focus-border-color, var(--lr-color-brand));
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     ${formControlFocusHalo}
   }
   /* The host's :disabled state blocks hover feedback, and the focused field keeps its own edge. */

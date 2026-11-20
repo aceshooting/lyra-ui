@@ -48,6 +48,8 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * Not to be confused with the drawer-specific `--size` CSS custom property below, which maps to
  * this same panel's own `inline-size`/`block-size` for the active axis.
  * @cssprop --size - Mapped drawer size for the active axis.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation of the panel; its
+ *   default is one step below lr-dialog's, since the sheet is flush with three viewport edges.
  * @cssprop --backdrop-filter - Mapped backdrop-filter alias.
  * @cssprop --spacing - Web Awesome shared region spacing.
  * @cssprop --header-spacing - Shoelace header padding.

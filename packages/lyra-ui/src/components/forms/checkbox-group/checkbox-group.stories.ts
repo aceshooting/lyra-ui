@@ -157,7 +157,7 @@ export const ScopedInvalidTheme: Story = {
         label="Required topics"
         name="topics"
         required
-        style="--lr-checkbox-group-invalid-border: var(--lr-color-warning)"
+        style="--lr-checkbox-group-invalid-border-color: var(--lr-color-warning)"
       >
         <lr-checkbox value="news">News</lr-checkbox>
         <lr-checkbox value="product">Product updates</lr-checkbox>

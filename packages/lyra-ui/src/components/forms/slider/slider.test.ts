@@ -2389,3 +2389,16 @@ describe("retired show-value alias", () => {
     expect(readout(aliasLast!) !== null).to.equal(true);
   });
 });
+
+it('paints the track, indicator and markers from lr-prefixed tokens over the upstream aliases', async () => {
+  const el = await fixture<LyraSlider>(html`<lr-slider
+    with-markers
+    value="50"
+    style="--track-color-inactive: red; --track-color-active: red; --lr-slider-track-bg: rgb(1, 2, 3); --lr-slider-indicator-bg: rgb(4, 5, 6); --lr-slider-marker-bg: rgb(7, 8, 9)"
+  ></lr-slider>`);
+  await el.updateComplete;
+  const paint = (part: string) => getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!).backgroundColor;
+  expect(paint('track')).to.equal('rgb(1, 2, 3)');
+  expect(paint('indicator')).to.equal('rgb(4, 5, 6)');
+  expect(paint('marker')).to.equal('rgb(7, 8, 9)');
+});

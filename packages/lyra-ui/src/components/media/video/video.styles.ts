@@ -119,8 +119,13 @@ export const styles = css`
     );
   }
 
+  /* Pressed mixes one step further from the hover fill, so retuning the hover token retints the
+     press too; its own token opts out. */
   [part='poster-play-button']:active {
-    background: ${activeFill('var(--poster-play-button-background, var(--lr-color-surface-overlay))')};
+    background: var(
+      --lr-video-poster-play-button-active-bg,
+      ${activeFill('var(--lr-video-poster-play-button-hover-bg, var(--poster-play-button-background, var(--lr-color-surface-overlay)))')}
+    );
   }
 
   [part='poster-play-button']:focus-visible,
@@ -246,14 +251,14 @@ export const styles = css`
   [part='controls'] button:hover,
   [part='controls'] select:hover,
   [data-control='volume']:hover {
-    border-color: var(--lr-color-border-strong);
-    background: ${hoverFill('var(--controls-background, var(--lr-color-overlay-strong))')};
+    border-color: var(--lr-video-controls-hover-border-color, var(--lr-color-border-strong));
+    background: var(--lr-video-controls-hover-bg, ${hoverFill('var(--controls-background, var(--lr-color-overlay-strong))')});
   }
 
   [part='controls'] button:active,
   [part='controls'] select:active,
   [data-control='volume']:active {
-    background: ${activeFill('var(--controls-background, var(--lr-color-overlay-strong))')};
+    background: var(--lr-video-controls-active-bg, ${activeFill('var(--lr-video-controls-hover-bg, var(--controls-background, var(--lr-color-overlay-strong)))')});
   }
 
   [part='timeline'] {

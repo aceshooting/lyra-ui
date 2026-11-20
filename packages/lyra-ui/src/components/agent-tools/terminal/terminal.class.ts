@@ -8,6 +8,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import {
   Announcer,
   AnnouncementSinkController,
@@ -309,7 +310,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     'lr-text-select',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, agentActionButtonStyles, styles, srOnly];
 
   /** Text that replaces the buffer whenever it changes; use `write()` to append instead. */
   @property() content = '';
@@ -1125,7 +1126,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           ? html`
               <div part="toolbar">
                 ${!this.withoutCopyButton
-                  ? html`<button part="copy-button" type="button" data-copy-status=${this.copyFeedback.status} @click=${this.onCopy}>
+                  ? html`<button part="copy-button" data-agent-action="neutral" type="button" data-copy-status=${this.copyFeedback.status} @click=${this.onCopy}>
                       ${this.copyFeedback.status === 'success'
                         ? this.localize('copied')
                         : this.copyFeedback.status === 'error'
@@ -1134,7 +1135,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
                     </button>`
                   : nothing}
                 ${this.downloadable
-                  ? html`<button part="download-button" type="button" @click=${this.onDownload}>
+                  ? html`<button part="download-button" data-agent-action="neutral" type="button" @click=${this.onDownload}>
                       ${this.localize('terminalDownload')}
                     </button>`
                   : nothing}
@@ -1160,7 +1161,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
             @lr-virtual-scroll=${this.stopVirtualScroll}
           ></lr-virtual-list>
           ${!this.follow && this.lines.length > 0
-            ? html`<button part="jump-to-latest" type="button" @click=${this.jumpToLatest}>
+            ? html`<button part="jump-to-latest" data-agent-action="brand" type="button" @click=${this.jumpToLatest}>
                 ${this.localize('jumpToLatest')}
               </button>`
             : nothing}

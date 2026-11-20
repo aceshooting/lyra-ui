@@ -149,6 +149,9 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * custom properties inherit down and not sideways, it is *not* readable from a sibling node in your
  * tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`,
  * `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control.
+ * @cssprop [--lr-radio-bg=var(--lr-color-surface)] - Background of `[part='circle']`.
+ * @cssprop [--lr-radio-border-color=var(--lr-color-border)] - Border color of an unchecked
+ *   `[part='circle']` at rest.
  * @cssprop [--lr-radio-checked-border-color=var(--lr-color-brand)] - Border color of `[part='circle']`
  * while `checked`. Retint just this control's checked ring without touching the shared
  * `--lr-color-brand` token every other component also reads.

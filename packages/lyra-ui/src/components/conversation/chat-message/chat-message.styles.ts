@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -269,10 +269,15 @@ export const styles = css`
     }
   }
 
+  /* The retry action of a failed message is the one recovery path, so it keeps the shared
+     --lr-icon-button-size hit-area floor despite its compact text. */
   [part='retry-button'] {
+    ${iconHitTarget}
+    box-sizing: border-box;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-chat-message-retry-border-color, var(--lr-color-danger));

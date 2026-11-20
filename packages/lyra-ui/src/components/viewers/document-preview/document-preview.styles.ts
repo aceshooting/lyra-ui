@@ -124,11 +124,18 @@ export const styles = css`
       var(--lr-color-neutral)
     );
   }
+  /* A border colour alone matched a warning-toned region and collapsed under forced colours, so
+     the active region also gets a thick offset outline, as in lr-svg-viewer. */
   [part="region-highlight"]:where([data-active]) {
     border-color: var(
       --lr-document-preview-active-border,
       var(--lr-color-warning, var(--lr-color-brand))
     );
+    outline: var(--lr-border-width-thick) solid var(
+      --lr-document-preview-active-border,
+      var(--lr-color-warning, var(--lr-color-brand))
+    );
+    outline-offset: var(--lr-border-width-thick);
   }
   [part="region-highlight-target"]:hover + [part="region-highlight"] {
     background: color-mix(
@@ -153,14 +160,16 @@ export const styles = css`
   [part="region-highlight-action"] {
     ${iconHitTarget}
     ${nativeControlSurface}
+    background: var(--lr-document-preview-action-background, var(--lr-color-surface));
+    ${interactiveTransition}
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
   [part="region-highlight-action"]:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-document-preview-action-hover-background, var(--lr-color-surface-raised));
   }
   [part="region-highlight-action"]:active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-document-preview-action-active-background, ${activeFill('var(--lr-document-preview-action-hover-background, var(--lr-color-surface-raised))')});
   }
   [part="region-highlight-action"]:focus-visible {
     ${focusRingShorthand}

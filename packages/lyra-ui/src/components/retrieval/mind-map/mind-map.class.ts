@@ -106,6 +106,10 @@ const NAV_KEYS = new Set([
  *   subtree-size-weighted sample of the full visible set (never floating nodes with no path back
  *   to the root), so both the SVG and the parallel sr-only tree stay representative above the cap.
  * @cssprop [--lr-mind-map-ring-gap=6rem] - Radius step per depth ring.
+ * @cssprop [--lr-mind-map-link-color=var(--lr-color-border)] - Stroke color of the links between
+ *   topics.
+ * @cssprop [--lr-mind-map-link-width=1.5] - Stroke width of the links, in SVG user units.
+ * @cssprop [--lr-mind-map-node-fill=var(--lr-color-brand)] - Fill of a topic node's circle.
  * @cssprop [--lr-mind-map-source-block-size=20rem] - Block size of the diagram box in source mode;
  * the diagram scales to fit it and scrolls when it still overflows.
  * @cssprop [--lr-mind-map-label-halo=var(--lr-color-surface)] - Halo stroke behind topic labels so

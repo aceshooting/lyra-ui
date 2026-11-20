@@ -1595,6 +1595,9 @@ describe("region highlights (image format)", () => {
       ...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]'),
     ] as HTMLElement[];
     expect(actions.length).to.equal(2);
+    el.style.setProperty("--lr-document-preview-action-background", "rgb(1, 2, 3)");
+    expect(getComputedStyle(actions[0]!).backgroundColor).to.equal("rgb(1, 2, 3)");
+    el.style.removeProperty("--lr-document-preview-action-background");
     el.style.fontFamily = 'Georgia, serif';
     expect(getComputedStyle(actions[0]!).fontFamily).to.equal(getComputedStyle(el).fontFamily);
     const first = actions[0]!.getBoundingClientRect();
@@ -1919,6 +1922,13 @@ describe("active-region cssprop escape hatch", () => {
     ) as HTMLElement;
     return { el, region };
   }
+
+  it("marks the active region with an offset outline, not only a border colour", async () => {
+    const { region } = await activeRegion();
+    expect(getComputedStyle(region).outlineStyle).to.equal("solid");
+    const width = parseFloat(getComputedStyle(region).outlineWidth);
+    expect(width).to.be.greaterThan(0);
+  });
 
   it("recolors the active region border from an ancestor via --lr-document-preview-active-border", async () => {
     const { region } = await activeRegion(

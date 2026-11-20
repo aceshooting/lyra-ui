@@ -77,6 +77,14 @@ interface TrackedChipFocus {
  * @cssprop --lr-chip-group-overflow-bg - Overflow indicator background.
  * @cssprop --lr-chip-group-overflow-color - Overflow indicator text color.
  * @cssprop --lr-chip-group-overflow-border-color - Overflow indicator border color.
+ * @cssprop [--lr-chip-group-overflow-hover-border-color=var(--lr-color-brand)] - Overflow indicator
+ *   border color while hovered or pressed.
+ * @cssprop [--lr-chip-group-overflow-hover-color=var(--lr-color-text)] - Overflow indicator text
+ *   color while hovered or pressed.
+ * @cssprop --lr-chip-group-overflow-hover-bg - Overflow indicator hover background. Defaults to its
+ *   resting fill.
+ * @cssprop --lr-chip-group-overflow-active-bg - Overflow indicator pressed background. Defaults to
+ *   the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

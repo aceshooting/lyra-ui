@@ -94,7 +94,7 @@ export const styles = css`
 
   [part='label'] {
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part='start'][hidden],

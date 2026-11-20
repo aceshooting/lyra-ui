@@ -49,10 +49,10 @@ export const styles = css`
     max-block-size: 100%;
     border-radius: 0;
     /* Modal layer, one step below lr-dialog's --lr-overlay-shadow-modal default: an edge-anchored
-       sheet is flush with three viewport edges, so only the inward edge casts anything. A fixed
-       step rather than a second family arm, so this rule deliberately opts out of the modal
-       elevation tier. The fill and edge colour stay the inherited overlay-surface family. */
-    box-shadow: var(--lr-shadow-l);
+       sheet is flush with three viewport edges, so only the inward edge casts anything. Only the
+       default steps down; a consumer --lr-overlay-shadow-modal still reaches every modal panel.
+       The fill and edge colour stay the inherited overlay-surface family. */
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-l));
   }
   :host([placement="top"]) [part~="panel"],
   :host([placement="bottom"]) [part~="panel"] {

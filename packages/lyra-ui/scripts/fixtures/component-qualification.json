@@ -3568,7 +3568,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1394,
+              "line": 1402,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4243,7 +4243,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 551,
+              "line": 556,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10494,7 +10494,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 136,
+              "line": 154,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11702,7 +11702,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 310,
+              "line": 318,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11915,7 +11915,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 310,
+              "line": 318,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18596,7 +18596,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.class.ts",
-              "line": 10,
+              "line": 11,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27519,7 +27519,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 246,
+              "line": 252,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29156,7 +29156,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
-              "line": 798,
+              "line": 802,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50569,7 +50569,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 817,
+              "line": 822,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51125,7 +51125,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 560,
+              "line": 562,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53835,7 +53835,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-              "line": 49,
+              "line": 50,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55848,15 +55848,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "test": "stops the jump-to-latest opacity transition under reduced motion",
-              "kind": "reduced-motion test signal"
-            }
-          ]
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -55927,7 +55922,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 929,
+              "line": 930,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55951,6 +55946,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -56773,7 +56769,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 868,
+              "line": 870,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57579,7 +57575,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 1014,
+              "line": 1017,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57796,7 +57792,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 1014,
+              "line": 1017,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57997,7 +57993,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 521,
+              "line": 523,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58185,7 +58181,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 521,
+              "line": 523,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62386,7 +62382,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.class.ts",
-              "line": 34,
+              "line": 35,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -64058,7 +64054,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.class.ts",
-              "line": 26,
+              "line": 27,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

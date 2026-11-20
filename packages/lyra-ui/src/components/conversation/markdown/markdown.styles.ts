@@ -296,7 +296,11 @@ export const styles = css`
     flex-shrink: 0;
     --_lr-icon-button-background-default: var(--lr-markdown-code-copy-bg, transparent);
     --_lr-icon-button-background-hover-default: var(--lr-markdown-code-copy-bg-hover, var(--lr-color-brand-quiet));
-    --_lr-icon-button-color-hover-default: var(--lr-color-brand);
+    --_lr-icon-button-color-hover-default: var(--lr-markdown-code-copy-color-hover, var(--lr-color-brand));
+    --_lr-icon-button-color-active-default: var(
+      --lr-markdown-code-copy-color-active,
+      var(--lr-markdown-code-copy-color-hover, var(--lr-color-brand))
+    );
     --_lr-icon-button-background-active-default: var(--lr-markdown-code-copy-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]) svg {
@@ -318,9 +322,9 @@ export const styles = css`
     }
   }
   [part~='code-block-copy-success']:where([data-lr-code-chrome]) {
-    color: var(--lr-color-success);
+    color: var(--lr-markdown-code-copy-success-color, var(--lr-color-success));
   }
   [part~='code-block-copy-error']:where([data-lr-code-chrome]) {
-    color: var(--lr-color-danger);
+    color: var(--lr-markdown-code-copy-error-color, var(--lr-color-danger));
   }
 `;

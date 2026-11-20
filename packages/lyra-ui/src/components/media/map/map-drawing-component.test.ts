@@ -656,4 +656,27 @@ describe('lr-map drawing integration', () => {
     }
   });
 
+  it('paints disabled drawing actions as disabled and keeps the hover fill off them', async () => {
+    const { element } = await drawing('line');
+    const root = element.shadowRoot!;
+    const undo = root.querySelector<HTMLButtonElement>('[part="drawing-undo"]')!;
+    const cancel = root.querySelector<HTMLButtonElement>('[part="drawing-cancel"]')!;
+    expect(undo.disabled).to.equal(true);
+    expect(cancel.disabled).to.equal(false);
+    const probe = document.createElement('span');
+    probe.style.opacity = 'var(--lr-opacity-disabled)';
+    root.append(probe);
+    expect(getComputedStyle(undo).opacity).to.equal(getComputedStyle(probe).opacity);
+    probe.remove();
+    expect(getComputedStyle(undo).cursor).to.equal('not-allowed');
+    expect(getComputedStyle(cancel).opacity).to.equal('1');
+    const restingFill = getComputedStyle(undo).getPropertyValue('--_lr-map-action-fill');
+    try {
+      await sendMouse({ type: 'move', position: [Math.round(undo.getBoundingClientRect().x + 4), Math.round(undo.getBoundingClientRect().y + 4)] });
+      await waitUntil(() => undo.matches(':hover'), 'the disabled action never reported :hover');
+      expect(getComputedStyle(undo).getPropertyValue('--_lr-map-action-fill')).to.equal(restingFill);
+    } finally {
+      await resetMouse();
+    }
+  });
 });

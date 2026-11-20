@@ -21,6 +21,7 @@ export const styles = css`
     z-index: var(--lr-layer-content);
   }
   ${tableCellHighlightStyles({
+    tag: 'spreadsheet-viewer',
     color: css`var(--lr-spreadsheet-viewer-highlight-color, var(--_lr-spreadsheet-viewer-highlight-color, var(--lr-color-brand)))`,
     padding: css`var(--lr-space-2xs) var(--lr-space-xs)`,
     outlineOffset: css`var(--lr-spreadsheet-viewer-highlight-outline-offset, calc(-1 * var(--lr-border-width-medium)))`,

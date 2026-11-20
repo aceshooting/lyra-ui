@@ -61,6 +61,8 @@ import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds } from 
  * @csspart cost - The verbatim `costText`. Only rendered when set.
  * @csspart latency - The formatted `latencyMs`. Only rendered when it's a finite number.
  * @csspart tooltip - The floating detail breakdown, only meaningful while open.
+ * @cssprop [--lr-usage-badge-hover-bg=var(--lr-color-surface-raised)] - Background of the hovered
+ *   badge while it is focusable (it reveals a breakdown tooltip).
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the anchored breakdown tooltip.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge

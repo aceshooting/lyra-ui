@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -366,6 +366,6 @@ an extension-only `accept` list.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
 
-Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
+Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius, `--lr-file-input-file-bg` (default `var(--lr-color-surface-raised)`) and `--lr-file-input-file-border-color` (default `var(--lr-color-border-subtle)`) paint it, and `--lr-file-input-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) / `--lr-file-input-remove-active-bg` tint its remove button. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
 
 ---

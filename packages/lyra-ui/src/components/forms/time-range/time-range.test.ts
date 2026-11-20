@@ -2437,3 +2437,14 @@ it('keeps the declared default for a blank numeric attribute instead of coercing
   const props = el as unknown as Record<string, unknown>;
   expect(['min', 'max', 'start', 'end', 'step'].map((key) => props[key])).to.deep.equal([0, 100, 0, 100, 1]);
 });
+
+it('paints the track and selected range from public tokens', async () => {
+  const el = await fixture<LyraTimeRange>(html`<lr-time-range
+    min="0" max="100" start="20" end="80"
+    style="--lr-time-range-track-bg: rgb(1, 2, 3); --lr-time-range-range-bg: rgb(4, 5, 6)"
+  ></lr-time-range>`);
+  await el.updateComplete;
+  const paint = (part: string) => getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`)!).backgroundColor;
+  expect(paint('track')).to.equal('rgb(1, 2, 3)');
+  expect(paint('range')).to.equal('rgb(4, 5, 6)');
+});

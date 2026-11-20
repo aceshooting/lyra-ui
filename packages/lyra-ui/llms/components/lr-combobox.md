@@ -597,7 +597,7 @@ With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
-`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-5rem)`), `--show-duration`,
+`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`,
 `--hide-duration`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
@@ -812,7 +812,7 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Additional API surface:**
 
-- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
+- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-12rem)`, the same as `lr-select`), rather than wrapped.
 
 ---
 

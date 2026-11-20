@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -114,6 +114,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
+Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`

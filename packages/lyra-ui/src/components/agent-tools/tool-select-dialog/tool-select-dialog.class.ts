@@ -319,6 +319,7 @@ interface ToolProjection {
  * @cssprop --lr-overlay-border - Shared floating-surface edge colour of the panel.
  * @cssprop --lr-overlay-radius - Shared floating-surface corner radius of the panel.
  * @cssprop --lr-overlay-surface - Shared floating-surface fill of the panel.
+ * @cssprop [--lr-tool-select-dialog-search-hover-border-color=var(--lr-color-brand)] - Border color of the hovered `[part="search-input"]`.
  * @status stable
  * @since 4.0.0
  */

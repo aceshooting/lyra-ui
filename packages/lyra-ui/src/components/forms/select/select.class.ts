@@ -403,18 +403,22 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   default `m` -- so a select is exactly as tall as an `<lr-button>`/`<lr-input>` of that tier.
  * @cssprop [--lr-select-font-size=var(--lr-form-control-font-size)] - Trigger font size, from the
  *   active `size` tier.
- * @cssprop --lr-select-tag-padding - Padding inside a `multiple`-mode chip. Doesn't vary by `size`.
- * @cssprop --lr-select-tag-font-size - Chip text size. Doesn't vary by `size`.
+ * @cssprop --lr-select-tag-padding - Padding inside a `multiple`-mode chip. Defaults to the active
+ *   `size` tier's chip padding, the same ladder `lr-combobox` uses for its tags.
+ * @cssprop --lr-select-tag-font-size - Chip text size. Defaults to the active `size` tier's chip text
+ *   size, as in `lr-combobox`.
+ * @cssprop [--lr-select-tag-bg=var(--lr-color-brand-quiet)] - Chip background.
+ * @cssprop [--lr-select-tag-color=var(--lr-color-text)] - Chip text color.
+ * @cssprop [--lr-select-tag-radius=var(--lr-radius)] - Chip corner radius.
  * @cssprop [--lr-select-unknown-value-border-style=dashed] - Border style of an `[part='unknown-value']`
  *   chip (a `multiple`-mode tag whose committed value matches no current option).
  * @cssprop [--lr-select-unknown-value-border-color=var(--lr-color-border)] - Border color of the
  *   same unknown-value chip.
  * @cssprop [--lr-select-option-badge-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part='option-badge']` "not in catalog" badge.
- * @cssprop [--lr-select-tag-remove-hover-bg=var(--lr-color-brand-quiet)] - Background of a
+ * @cssprop [--lr-select-tag-remove-hover-bg=color-mix(in srgb, currentColor 16%, transparent)] - Background of a
  *   hovered `[part='tag__remove-button']`. The pressed state mixes from this same token. Scoped
- *   independently of `--lr-select-trigger-hover-bg`/`--lr-select-option-active-bg`, which already
- *   scope the same shared `--lr-color-brand-quiet` token for their own purposes.
+ *   independently of `--lr-select-trigger-hover-bg`/`--lr-select-option-active-bg`.
  * @cssprop [--tag-max-size=var(--lr-size-12rem)] - Maximum inline size of one selected-value tag.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Listbox enter-transition timing.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Listbox exit-transition timing.

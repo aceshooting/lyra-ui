@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import '../../lr-radio-button.js';
+import '../../lr-checkbox.js';
 import '../../lr-radio.js';
 import '../../lr-radio-group.js';
 import type { LyraRadioButton } from './radio-button.class.js';
@@ -569,4 +570,22 @@ describe('lr-radio-button contiguous run geometry', () => {
       expect(radii(b!)[1]).to.be.greaterThan(0);
     }
   });
+});
+
+it('paints the resting checkbox box, radio circle and radio button from public tokens', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div
+    style="--lr-checkbox-bg: rgb(1, 2, 3); --lr-checkbox-border-color: rgb(4, 5, 6); --lr-radio-bg: rgb(7, 8, 9); --lr-radio-border-color: rgb(10, 11, 12); --lr-radio-button-bg: rgb(13, 14, 15); --lr-radio-button-border-color: rgb(16, 17, 18)"
+  >
+    <lr-checkbox>Box</lr-checkbox>
+    <lr-radio value="a">Circle</lr-radio>
+    <lr-radio-button value="b">Button</lr-radio-button>
+  </div>`);
+  const paint = (tag: string, part: string) => {
+    const host = wrapper.querySelector(tag)!;
+    const cs = getComputedStyle(host.shadowRoot!.querySelector(`[part~="${part}"]`)!);
+    return `${cs.backgroundColor} ${cs.borderTopColor}`;
+  };
+  expect(paint('lr-checkbox', 'box')).to.equal('rgb(1, 2, 3) rgb(4, 5, 6)');
+  expect(paint('lr-radio', 'circle')).to.equal('rgb(7, 8, 9) rgb(10, 11, 12)');
+  expect(paint('lr-radio-button', 'button')).to.equal('rgb(13, 14, 15) rgb(16, 17, 18)');
 });

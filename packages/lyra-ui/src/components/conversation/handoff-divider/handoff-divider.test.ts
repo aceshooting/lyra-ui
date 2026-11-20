@@ -1,5 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import '../../lr-handoff-divider.js';
+import '../../lr-stream-status.js';
 import type { LyraHandoffDivider } from '../../lr-handoff-divider.js';
 
 it('defaults to toAgent="", fromAgent="", label=""', async () => {
@@ -147,4 +149,27 @@ it('honors component paint and spacing tokens', async () => {
 it('keeps the visible label as the accessible name when the host override contains only whitespace', async () => {
   const el = await fixture(html`<lr-handoff-divider aria-label="   " label="Review complete"></lr-handoff-divider>`);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Review complete');
+});
+
+it('keeps its rules and the stream dot visible under forced colors', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-handoff-divider to-agent="Reviewer"></lr-handoff-divider>
+    <lr-stream-status></lr-stream-status>
+    <div style="background-color: Canvas"></div>
+  </div>`);
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    const canvas = getComputedStyle(wrapper.lastElementChild!).backgroundColor;
+    const line = wrapper.querySelector('lr-handoff-divider')!.shadowRoot!.querySelector('[part="line"]')!;
+    expect(getComputedStyle(line).backgroundColor).not.to.equal(canvas);
+    const dot = wrapper.querySelector('lr-stream-status')!.shadowRoot!.querySelector('[part="indicator"]')!;
+    expect(getComputedStyle(dot).borderTopStyle).to.equal('solid');
+  } finally {
+    await setForcedColors('none');
+  }
 });

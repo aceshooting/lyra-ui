@@ -10,6 +10,7 @@ import type { LyraVideo } from '../../lr-video.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 function childVideos(el: LyraVideoPlaylist): LyraVideo[] {
   return [...el.children].filter((child): child is LyraVideo => child.localName === 'lr-video');
@@ -1683,4 +1684,24 @@ describe('non-current row state tokens', () => {
       await resetMouse();
     }
   });
+});
+
+it('keeps the current item distinguishable under forced colors', async () => {
+  const el = await fixture<LyraVideoPlaylist>(html`
+    <lr-video-playlist .items=${[{ title: 'One' }, { title: 'Two' }]}></lr-video-playlist>
+  `);
+  await waitUntil(() => items(el).length === 2, 'both rows render');
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    const [current, other] = items(el).map((button) => getComputedStyle(button));
+    expect(current!.backgroundColor).not.to.equal(other!.backgroundColor);
+    expect(current!.outlineStyle).to.equal('solid');
+  } finally {
+    await setForcedColors('none');
+  }
 });

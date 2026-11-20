@@ -47,7 +47,7 @@ export const styles = css`
   ${formControlSupportingTone}
   :host([data-invalid]) [part~="options"] {
     outline: var(--lr-border-width-thin) solid
-      var(--lr-checkbox-group-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+      var(--lr-checkbox-group-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
     border-radius: var(--lr-radius);
   }
   [part="form-control"],

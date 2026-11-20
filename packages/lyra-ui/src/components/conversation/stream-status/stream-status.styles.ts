@@ -128,4 +128,12 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* The connection dot is a background fill that forced colours would drop; an edge keeps it
+     visible (the phase text still names the state). */
+  @media (forced-colors: active) {
+    [part='indicator'] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+      box-sizing: border-box;
+    }
+  }
 `;

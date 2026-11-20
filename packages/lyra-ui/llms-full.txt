@@ -8321,7 +8321,7 @@ With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
-`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-5rem)`), `--show-duration`,
+`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`,
 `--hide-duration`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
@@ -8536,7 +8536,7 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Additional API surface:**
 
-- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
+- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-12rem)`, the same as `lr-select`), rather than wrapped.
 
 ---
 
@@ -8929,9 +8929,12 @@ gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-ra
 radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
 radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` changes its private
 default to `--lr-radius-pill`. `--lr-select-tag-padding`
-(default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
-`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius their private defaults do
-**not** vary by `size` tier, and inherited or direct public values win.
+and `--lr-select-tag-font-size` size a `multiple`-mode chip; their private defaults follow the
+`size` tier with the same chip ladder `lr-combobox` uses (at `m`, `var(--lr-size-0-1rem)
+var(--lr-size-0-4rem)` and `var(--lr-font-size-sm)`), and inherited or direct public values win.
+`--lr-select-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-select-tag-color` (default
+`var(--lr-color-text)`) and `--lr-select-tag-radius` (default `var(--lr-radius)`) paint the chip, with
+the same defaults as `lr-combobox`'s `--lr-combobox-tag-*`.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 
@@ -9007,11 +9010,10 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `[part='option-badge']` "not in catalog" badge `with-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
-`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`--lr-select-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)`) retints a hovered
 `[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
 state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
-`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
-purposes.
+`--lr-select-option-active-bg` above.
 
 **Optional peer deps:** none.
 
@@ -11926,6 +11928,8 @@ rtl`).
 - `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
 - `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
 - `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-track-bg` — Unselected track color. Default: `var(--lr-color-border)`.
+- `--lr-time-range-range-bg` — Selected-range fill. Default: `var(--lr-color-brand)`.
 - `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
 - `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
 - `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.
@@ -12414,12 +12418,12 @@ slot), `error`, and `hint` / `form-control-help-text` on the supporting-text wra
 below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
-State paint is independently themeable through `--lr-checkbox-hover-border`,
-`--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
-`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
+State paint is independently themeable through `--lr-checkbox-hover-border-color`,
+`--lr-checkbox-active-border-color`, `--lr-checkbox-active-ring-color`, `--lr-checkbox-invalid-border-color`,
+`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border-color`; every default preserves the
 corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
-`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
-`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
+`--lr-checkbox-hover-border-color` / `--lr-checkbox-active-border-color` falls back to
+`--lr-checkbox-checked-border-color`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 
@@ -12456,7 +12460,9 @@ substitute the one you actually use:
 }
 ```
 
-`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+`--lr-checkbox-bg` (default `var(--lr-color-surface)`) and `--lr-checkbox-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='box']` at rest.
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border-color`
 (default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
 `indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
 `--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's
@@ -12897,7 +12903,10 @@ value readout, label, references, error, and hint as those flex items wrap.
 track row, including the space reserved for the endpoint hit targets. A horizontal track row
 fills its inline allocation. Set the token on the slider or an ancestor. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
-than overriding this runtime value. The thumb has independent paint hooks:
+than overriding this runtime value. `--lr-slider-track-bg` (default `var(--lr-color-border)`),
+`--lr-slider-indicator-bg` (default `var(--lr-color-brand)`) and `--lr-slider-marker-bg` (default
+`var(--lr-color-surface)`) paint the track, filled indicator and tick marks, winning over the
+`--track-color-*` aliases. The thumb has independent paint hooks:
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
 (default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
 `var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the
@@ -13101,10 +13110,12 @@ an empty-label control; the visible density can still grow with the shared size 
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
   see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
+`--lr-radio-bg` (default `var(--lr-color-surface)`) and `--lr-radio-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='circle']` at rest.
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
-`--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
+`--lr-checkbox-checked-bg`/`-border-color` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The checked radio circle keeps its surface color behind the dot. The
 `--lr-radio-button-checked-bg` hook applies to the button appearance.
@@ -13203,6 +13214,8 @@ siblings are never guessed into a run. `--lr-radio-button-gap` (default `var(--l
 spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
 and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:
+`--lr-radio-button-bg` (default `var(--lr-color-surface-raised)`) / `--lr-radio-button-border-color`
+(default `var(--lr-color-border)`) paint the unchecked resting button;
 `--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
 `--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked
 pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-border-color`, and
@@ -13509,7 +13522,7 @@ A required but pristine group keeps `aria-invalid="false"` on its internal radio
 error is projected only after interaction (a selection, or focus leaving the group) or a native
 validity check (`reportValidity()`, or form-level validation), while explicit error chrome is
 immediate. While the group matches `:state(user-invalid)` the option collection is outlined with
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), and a disabled group dims its
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), and a disabled group dims its
 label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
@@ -13555,7 +13568,7 @@ hidden and no glyph is painted.
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder — and
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), the border around the options
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), the border around the options
 while the group is `:state(user-invalid)`.
 
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
@@ -13663,7 +13676,7 @@ and messages, and `--lr-checkbox-group-option-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
 `size` through the shared control ladder. WA's `--gap` alias is the value used by the rendered
 option layout and defaults to `--lr-checkbox-group-option-gap`.
-`--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
+`--lr-checkbox-group-invalid-border-color` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
 **`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto
@@ -13878,6 +13891,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
 - `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
 - `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-token-color` — Token chip text color. Default: `var(--lr-color-text)`.
+- `--lr-token-input-token-radius` — Token chip corner radius. Default: `var(--lr-radius)` (`pill` rounds it fully), the same as the `lr-select` and `lr-combobox` chips.
 - `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
   background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label
@@ -17205,7 +17220,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
-Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states.
+Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states. `--lr-table-control-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-table-control-active-bg` do the same for the filter field, editable cells and cell editor, row-expand toggle, more button and reveal-columns button.
 
 **Methods:**
 
@@ -22841,7 +22856,7 @@ hit region expands independently; use `--divider-width` for the painted line and
 
 Read `omittedViews` after assigning `views` for the number of input positions beyond the 256-position limit.
 
-The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+Fullscreen paints the shared modal surface family (`--lr-overlay-surface`, `--lr-overlay-shadow-modal`, behind `--lr-widget-bg`), like `lr-dialog`. The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
@@ -23754,7 +23769,11 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. Each is an inline `var()` fallback at the point
+colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+(defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
+other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
+an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the
+completed check mark. Each is an inline `var()` fallback at the point
 of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
 scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
@@ -25083,7 +25102,7 @@ presentations is on screen, for magnifier and braille users, rather than announc
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
-boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
+boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`) affects only the open mobile
 panel; no value can paint elevation while closed. Prefer that token over an unqualified
 `::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
 `lr-app-rail[mode="mobile"][open]::part(panel)`.
@@ -25122,7 +25141,7 @@ paired with a non-`visible` other axis computes as `auto` instead (still clippin
 tokens to `visible` together to actually stop the clipping, accepting that wide header/footer
 content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `var(--lr-color-surface)` — `[part="base"]`'s background, the docked non-overlay presentation) and
-`--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
+`--lr-app-rail-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))` — `[part="panel"]`'s
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
@@ -25700,8 +25719,8 @@ stops short of the top of the viewport instead of covering it; it has no effect 
 `--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
 `shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
 on the inline presentation),
-`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
+`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
 they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
@@ -27270,8 +27289,8 @@ cannot contribute intrinsic size itself; the state-aware floor prevents it from 
 preceding cell or gap while short cells without a handle (a `readonly` grid, or a cell's own
 `locked`) retain content-derived sizing.
 Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
-inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
-stack. This does not seize overflow from child-owned widgets: custom content can still declare
+inherit `overflow-wrap: break-word`, so an unbroken consumer-authored text run cannot widen a 320px
+stack, while consumer flex, grid and table content keeps its own min-content size. This does not seize overflow from child-owned widgets: custom content can still declare
 `overflow: auto` and `white-space: nowrap` to retain a contained internal scrollport.
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
@@ -28062,8 +28081,10 @@ var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-acti
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-toggle-active-color` (default `var(--lr-color-brand)`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
-`--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+`--lr-page-navigation-drawer-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-page-navigation-drawer-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`).
+Behind these hooks the drawer reads the same shared modal family as `lr-dialog` and `lr-drawer`
+(`--lr-overlay-surface`, `--lr-overlay-shadow-modal`), so one declaration retints every modal panel.
 
 The sticky banner, header, subheader, menu and aside each paint an opaque surface. Their background
 properties are `--lr-page-banner-bg`, `--lr-page-header-bg`, `--lr-page-subheader-bg`,
@@ -28079,7 +28100,8 @@ sticky offsets use the three configured height properties. Enable `auto-sticky-o
 whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
 hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
 viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
-Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
+Every region has a zero-minimum inline size and `overflow-wrap: break-word` (which, unlike
+`anywhere`, leaves consumer content's min-content size intact); the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 
 Import only the Page registration when it is the only layout component this bundle needs:
@@ -29236,8 +29258,8 @@ message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`)
 surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
 deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
 spacing. The item joins the shared overlay-surface family for its fill and edge
-(`--lr-overlay-surface`, `--lr-overlay-border`) but keeps its own unscrimmed `--lr-shadow-l`
-elevation. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
+(`--lr-overlay-surface`, `--lr-overlay-border`) and reads `--lr-overlay-shadow-modal` with the
+lower unscrimmed `--lr-shadow-l` as its default. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
 accent color.
 
 The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
@@ -29601,9 +29623,9 @@ the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-
 since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
 paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
 `--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
-the elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport — so on
-this tag `--lr-overlay-radius` and `--lr-overlay-shadow-modal` are overridden and only the fill and
-edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
+the default elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport —
+so on this tag `--lr-overlay-radius` is overridden, while the fill, edge colour and a consumer
+`--lr-overlay-shadow-modal` still take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
@@ -30175,7 +30197,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. Its hover and press take `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`), `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`), `--lr-chip-group-overflow-hover-bg` (default: the resting fill) and `--lr-chip-group-overflow-active-bg`.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -32984,7 +33006,7 @@ also apply. The flat source rows own logical treeitem semantics.
   means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Source mode otherwise
-  uses a `var(--lr-size-20rem)` height ceiling. Values that do not parse
+  uses `--lr-json-viewer-max-height`, then a `var(--lr-size-20rem)` height ceiling. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `layout: 'auto' | 'inline' | 'stacked' = 'auto'` (type `LyraJsonViewerLayout`) — how a scalar row places
@@ -35249,7 +35271,7 @@ Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (defaul
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
 `--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
 `--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
-Scene, pick and drawing buttons accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`.
+Scene, pick and drawing buttons, the native zoom, compass, geolocate and scene controls, and the compact attribution button accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`. A pressed or mixed scene control and the open attribution button paint `--lr-map-control-pressed-bg` (default `var(--lr-color-brand-quiet)`), with the scene glyph in `--lr-map-control-pressed-color` (default `var(--lr-color-brand)`); a hovered or pressed interactive marker shows a `--lr-map-marker-hover-halo-color` halo (default `var(--lr-color-brand)`). Under forced colors, pressed controls and the open attribution button take the system highlight.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -38248,7 +38270,7 @@ an extension-only `accept` list.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
 
-Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
+Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius, `--lr-file-input-file-bg` (default `var(--lr-color-surface-raised)`) and `--lr-file-input-file-border-color` (default `var(--lr-color-border-subtle)`) paint it, and `--lr-file-input-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) / `--lr-file-input-remove-active-bg` tint its remove button. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
 
 ---
 
@@ -38288,7 +38310,7 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
-The divider takes `--lr-image-comparer-divider-color`. Style the handle with
+The divider takes `--lr-image-comparer-divider-color` at rest, `--lr-image-comparer-divider-hover-color` (default `var(--lr-color-brand)`) while the drag surface is hovered and `--lr-image-comparer-divider-active-color` mid-drag. Style the handle with
 `--lr-image-comparer-handle-bg`, `--lr-image-comparer-handle-color`, and
 `--lr-image-comparer-handle-border-color`. The divider uses system colors in forced-colors mode.
 
@@ -38702,7 +38724,7 @@ previous entry, reassigning `file` several times before the next paint leaks not
   `File` nor `preview-src` supplies a source. The viewer's footer omits its download link for unsafe
   source schemes.
 
-Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners.
+Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners; `--lr-attachment-chip-thumbnail-bg` (default `var(--lr-color-surface)`) paints its background. Under forced colors the upload progress keeps a CanvasText track edge and a Highlight fill.
 
 ---
 
@@ -40111,7 +40133,8 @@ root, so no selection binding is installed.
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek; arrow keys step, PageUp/PageDown take larger steps), `timeline-playhead` (the non-interactive current-position line), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,
-`data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
+`data-match`, `data-active-match`), `cue-unavailable` (added alongside `cue` on an inert loading or
+unavailable source placeholder row, which paints no hover or press feedback), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
 `cue-time`, `cue-speaker`, `cue-text`, `error`, and `anchor-live-region` (an aria-hidden, non-live
@@ -40159,7 +40182,8 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+The timeline's hover and scrub take `--lr-av-player-timeline-hover-border-color` (default
+`var(--lr-color-brand)`) and `--lr-av-player-timeline-active-bg`. Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
 color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
 step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
@@ -40307,7 +40331,11 @@ avoiding a disappearing/reappearing semantic target.
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-bg` (default is the existing hover color mix) and
-`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`), plus
+`--lr-video-poster-play-button-active-bg` for its press. The control-bar buttons, selects and volume
+take `--lr-video-controls-hover-bg`, `--lr-video-controls-hover-border-color` (default
+`var(--lr-color-border-strong)`) and `--lr-video-controls-active-bg`; each press defaults to its hover
+fill mixed one step further.
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and
@@ -44378,7 +44406,7 @@ the component itself from the clamped `progress` property, so overriding it only
 repaint the fraction. `--lr-document-preview-active-border` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
-border so the active region can be recolored without touching the rest. Like the library's other
+border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other
 state hooks it is an inline `var()` fallback at the point of use rather than a `:host` declaration,
 so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
 invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
@@ -44396,6 +44424,7 @@ Plus shared tokens
 and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
+Region highlight action buttons accept `--lr-document-preview-action-background` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-background`.
 
 **Optional peer deps:** none directly — the `unsupported` slot is commonly used to compose
 `<lr-code-block>` (which has its own optional `shiki` peer dependency; see that component's own
@@ -44788,6 +44817,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
+Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -45614,6 +45644,8 @@ surfaces the localized `documentPreviewResourceTooLarge` message instead of a pa
 The fetched-text path yields between dialect detection, structural admission and materialization;
 each parse pass remains synchronous.
 
+**Pointer-state tokens:** `--lr-dataset-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-dataset-viewer-cell-action-active-bg`.
+
 ## `lr-contact-viewer`
 
 `maxContacts` (attribute `max-contacts`) limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
@@ -46058,6 +46090,8 @@ be an Office Open XML workbook: OpenDocument and Numbers packages are refused, a
 archive admission before SheetJS parsing, and between sheet projections; each parse/projection
 pass remains synchronous.
 
+**Pointer-state tokens:** `--lr-spreadsheet-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-spreadsheet-viewer-cell-action-active-bg`.
+
 ## `lr-csv-viewer`
 
 Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
@@ -46224,6 +46258,8 @@ between dialect detection, structural admission and materialization; each parse 
 synchronous.
 
 ---
+
+**Pointer-state tokens:** `--lr-csv-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-csv-viewer-cell-action-active-bg`.
 
 ## `lr-include`
 
@@ -46392,6 +46428,7 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
+Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.
 
 ## `lr-page-rail`
 
@@ -46792,7 +46829,8 @@ or retry button), `source-status` (loading, full-source count or empty text), an
 `search-status` discloses unavailable or partial global provider search.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
-of the scrollable body; also settable via the `max-height` property.
+of the scrollable body; also settable via the `max-height` property. In source mode an unset
+property leaves a consumer value of this token in control, with a `var(--lr-size-20rem)` fallback.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the _current_ search match, leaving every other match on its dashed
 `--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
@@ -46846,6 +46884,8 @@ Reaching the rendered-row budget shows the existing localized `limit` notice; co
 the parsed document remain intact. Search still visits the complete admitted document within its
 separate search budgets, while a `node-path` outside the rendered window reports `found: false`
 until it can be rendered.
+
+**Syntax tokens:** `--lr-xml-viewer-attribute-name-color` (default `var(--lr-color-chart-1)`), `--lr-xml-viewer-attribute-value-color` (default `var(--lr-color-success)`).
 
 ## `lr-document-compare`
 
@@ -48392,7 +48432,7 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-color-active` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
 
 ## `lr-chat-message`
 
@@ -50474,7 +50514,7 @@ const view = html`<lr-code-block-core
 
 ---
 
-**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons.
+**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` set the disclosure glyph color per state, and `--lr-code-block-gutter-color-hover` (default `inherit`) the hovered line button's text.
 
 ## `lr-model-settings-panel`
 
@@ -50887,6 +50927,12 @@ required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow
 attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
 reading them. Unset, each falls back to exactly the token its rule used before.
+The submit button takes `--lr-message-feedback-submit-bg` (default `var(--lr-color-brand)`),
+`--lr-message-feedback-submit-color` (default `var(--lr-color-on-brand)`),
+`--lr-message-feedback-submit-border-color` (default `var(--lr-color-border)`),
+`--lr-message-feedback-submit-hover-bg` and `--lr-message-feedback-submit-active-bg` (each defaulting to
+its own fill mixed by the hover or press step); the comment field's hover edge is
+`--lr-message-feedback-comment-hover-border-color` (default `var(--lr-color-brand)`).
 
 ## `lr-push-to-talk`
 
@@ -51677,6 +51723,8 @@ form-control values when `size` is set. `--lr-thread-list-search-clear-size` (de
 `var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
+`--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search
+field's edge.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,
@@ -51732,7 +51780,7 @@ pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in 
 
 ## `lr-checkpoint`
 
-Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`; its hover and press with `--lr-checkpoint-button-hover-border-color`, `--lr-checkpoint-button-hover-color` and `--lr-checkpoint-button-active-bg`. The confirm and cancel buttons take `--lr-checkpoint-confirm-bg`, `--lr-checkpoint-confirm-color`, `--lr-checkpoint-confirm-border-color`, `--lr-checkpoint-confirm-hover-bg`, `--lr-checkpoint-confirm-active-bg`, `--lr-checkpoint-cancel-bg`, `--lr-checkpoint-cancel-color`, `--lr-checkpoint-cancel-hover-bg` and `--lr-checkpoint-cancel-active-bg`. All three actions are at least `--lr-icon-button-size` in both axes.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores
@@ -51831,6 +51879,9 @@ library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corn
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-usage-badge>`; set the custom property on `:root`, a theme, or one clipping
 ancestor to change every unset usage badge beneath it.
+
+`--lr-usage-badge-hover-bg` (default `var(--lr-color-surface-raised)`) is the hover background of a
+focusable badge.
 
 ```html
 <lr-chat-message message-role="assistant" status="sent">
@@ -52300,6 +52351,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `var(--lr-opacity-disabled)`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
+- The preview button rests on `--lr-voice-picker-trigger-border-color` and `--lr-voice-picker-trigger-fill`, and takes `--lr-voice-picker-trigger-hover-border-color` on hover, so it follows the trigger beside it.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
 
@@ -53630,6 +53682,8 @@ duration"`). A host `aria-label` remains on the host and is not cloned onto that
 
 ---
 
+**Pointer-state tokens:** `--lr-tool-call-chip-hover-border-color` (default `var(--lr-color-brand)`).
+
 ## `lr-tool-result-view`
 
 Unknown status values resolve to `success`. A committed status change emits `lr-status-change` with `{ status }`.
@@ -54212,6 +54266,8 @@ checkboxes for editing.
 
 **Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
+**Pointer-state tokens:** `--lr-tool-select-dialog-search-hover-border-color` (default `var(--lr-color-brand)`).
+
 ## `lr-thinking-panel`
 
 A collapsible panel for an AI agent's intermediate reasoning/"thinking" transcript, kept visually
@@ -54369,6 +54425,8 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
 
 ---
 
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.
+
 ## `lr-stack-trace`
 
 Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus
@@ -54491,6 +54549,8 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
   component uses the verbatim `raw` fallback.
 
 ---
+
+**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-pressed-bg`.
 
 ## `lr-tool-approval-dialog`
 
@@ -54972,6 +55032,8 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
 ---
+
+**Pointer-state tokens:** `--lr-tool-param-form-control-hover-border-color` (default `var(--lr-color-brand)`).
 
 ## `lr-result-card` / `lr-result-field`
 
@@ -55472,6 +55534,8 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
+
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.
 
 ## `lr-terminal`
 
@@ -57427,6 +57491,8 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.
+
 ## `lr-mcp-app`
 
 The loading message overlays the frame. Set `--lr-mcp-app-frame-height` to override the negotiated frame height.
@@ -58576,6 +58642,8 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
   block.redactedFields = ['args.apiKey'];
 </script>
 ```
+
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.
 
 ## `lr-change-review`
 
@@ -60484,6 +60552,8 @@ set the step, not the depth. Plus shared tokens otherwise.
 
 ---
 
+**Pointer-state tokens:** `--lr-source-picker-item-hover-bg`, `--lr-source-picker-item-active-bg`.
+
 ## `lr-provenance-panel`
 
 The grounding breakdown for one answer: a sectioned disclosure panel (Entities / Relationships /
@@ -60689,7 +60759,7 @@ virtualized navigator), `source-row` (a hierarchy row with global position metad
 (loading, empty and global-count status), and `source-error` (failure and retry status).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-link-color` (default `var(--lr-color-border)`) and `--lr-mind-map-link-width` (default `1.5`) style the links; `--lr-mind-map-node-fill` (default `var(--lr-color-brand)`) fills each topic circle. `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 `--lr-mind-map-label-halo` (default `var(--lr-color-surface)`) — halo stroke behind topic labels.
@@ -61416,6 +61486,8 @@ retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }
 **Optional peer deps:** none.
 
 ---
+
+**Pointer-state tokens:** `--lr-ingestion-queue-action-hover-color` (default `var(--lr-color-brand)`), `--lr-ingestion-queue-action-active-bg`, `--lr-ingestion-queue-cancel-hover-color` (default `var(--lr-color-danger)`), `--lr-ingestion-queue-cancel-active-bg`.
 
 ## `lr-knowledge-base`
 
@@ -62646,8 +62718,9 @@ activation behavior describes the legacy route with `source` null.
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
 `selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
-including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
-`--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
+including `auto` for `viewBox`-derived aspect-ratio sizing; it is the fallback behind
+`--lr-embedding-explorer-height`, so a consumer value of that property wins, and a value the browser
+cannot parse falls back to `auto`);
 `label?: string` names the plot after an authored host `aria-label` and before the JS-only
 `accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
 attribute or `label`, `accessibleLabel` names the plot. A non-blank authored host `aria-label` governs the plot name too, so a competing internal generic label is not exposed; an empty or whitespace-only value falls through to the next name, ending at the localized default. Non-finite
@@ -62690,7 +62763,7 @@ point, and `pagination` with its `page-button` previous and next actions.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
-(default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
+(default `360px`) — the `block-size` of `[part="plot"]`; when unset, the `height` property supplies it. A consumer's
 own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
 `min-block-size` floor still raises it. Unspecified clusters cycle through the canonical
 `--lr-color-chart-1`, `--lr-color-chart-2`, `--lr-color-chart-3`, `--lr-color-chart-4`,

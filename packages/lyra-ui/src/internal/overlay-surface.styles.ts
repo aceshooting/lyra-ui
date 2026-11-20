@@ -64,6 +64,9 @@ import { css } from 'lit';
  *   menu or submenu floating over page content on all four edges.
  * - `--lr-overlay-shadow-modal` (default `--lr-shadow-xl`) — a dialog or drawer panel, which sits
  *   on the top layer over a scrim and carries the top step of the elevation scale.
+ *   Edge-flush drawer-class panels (lr-drawer, the lr-page and lr-app-rail mobile drawers, the
+ *   lr-responsive-panel overlay) and the unscrimmed toast read the same name with the lower
+ *   `--lr-shadow-l` as their default, so one consumer value still reaches every modal surface.
  *
  * Keeping those two out of this file also keeps the manifest honest: every consumer hook a shared
  * sheet reads is advertised on every component that composes it

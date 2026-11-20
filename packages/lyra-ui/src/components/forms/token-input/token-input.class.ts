@@ -205,6 +205,9 @@ const stringArrayConverter = {
  * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius. `pill` changes its
  *   private default to `--lr-radius-pill`; an inherited or direct public value still wins.
  * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
+ * @cssprop [--lr-token-input-token-color=var(--lr-color-text)] - Token chip text color.
+ * @cssprop [--lr-token-input-token-radius=var(--lr-radius)] - Token chip corner radius, matching the
+ *   `lr-select` and `lr-combobox` chips rather than the field radius (`pill` rounds it fully).
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
  * @cssprop [--lr-token-input-edit-hover-bg=var(--lr-token-input-action-hover-bg)] - Editable token
  *   label hover background, independently themeable from the remove action.

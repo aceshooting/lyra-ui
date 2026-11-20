@@ -121,6 +121,8 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * @cssprop [--lr-source-picker-depth=0] - Internal indent plumbing, not a retheming knob: the row's
  *   own nesting depth, written inline onto `[part="item"]` as a plain number and multiplied by
  *   `--lr-source-picker-indent-size` to produce the indent.
+ * @cssprop --lr-source-picker-item-hover-bg - Hover background of a source `[part="item"]` row. Defaults to the shared hover mix over transparent.
+ * @cssprop --lr-source-picker-item-active-bg - Pressed background of a source row. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

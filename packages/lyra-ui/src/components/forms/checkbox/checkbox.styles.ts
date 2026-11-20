@@ -68,32 +68,32 @@ export const styles = css`
        rather than inherited, the checkmark stays proportional to the box at every tier; at "m" it
        resolves to the same 1rem the surrounding text carries by default. */
     font-size: var(--lr-form-control-font-size);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-checkbox-border-color, var(--lr-color-border));
     border-radius: var(
       --lr-checkbox-box-radius,
       calc(var(--lr-form-control-radius) * 0.6)
     );
-    background: var(--lr-color-surface);
+    background: var(--lr-checkbox-bg, var(--lr-color-surface));
     color: var(--lr-color-on-brand);
     transition: var(--lr-transition-interactive), box-shadow var(--lr-transition-fast);
   }
   :host(:not(:disabled)) .checkbox-layout:hover [part~="box"] {
-    border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));
+    border-color: var(--lr-checkbox-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed as a ring, not a fill: the box's own fill is the state readout (page surface unchecked,
      brand checked), and tinting it under the thumb would wash out the checkmark or read as a
      half-toggled box. A ring is unambiguous in both states and visibly more than the hover's
      border-colour step -- the soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
   :host(:not(:disabled)) .checkbox-layout:active [part~="box"] {
-    border-color: var(--lr-checkbox-active-border, var(--lr-color-brand));
+    border-color: var(--lr-checkbox-active-border-color, var(--lr-color-brand));
     box-shadow: 0 0 0 var(--lr-border-width-medium)
-      var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
+      var(--lr-checkbox-active-ring-color, var(--lr-color-brand-quiet));
   }
   :host(:not(:disabled)) .checkbox-layout:hover [part~="box"]:is([part~="checked"], [part~="indeterminate"]) {
-    border-color: var(--lr-checkbox-hover-border, var(--lr-checkbox-checked-border, var(--lr-color-brand)));
+    border-color: var(--lr-checkbox-hover-border-color, var(--lr-checkbox-checked-border-color, var(--lr-color-brand)));
   }
   :host(:not(:disabled)) .checkbox-layout:active [part~="box"]:is([part~="checked"], [part~="indeterminate"]) {
-    border-color: var(--lr-checkbox-active-border, var(--lr-checkbox-checked-border, var(--lr-color-brand)));
+    border-color: var(--lr-checkbox-active-border-color, var(--lr-checkbox-checked-border-color, var(--lr-color-brand)));
   }
   [part~="checked"],
   [part~="indeterminate"] {
@@ -101,13 +101,13 @@ export const styles = css`
        --lr-source-picker-checked-bg/-border pair, so a consumer can retint just this control's
        checked/indeterminate fill without hijacking the shared --lr-color-brand token. */
     background: var(--lr-checkbox-checked-bg, var(--lr-color-brand));
-    border-color: var(--lr-checkbox-checked-border, var(--lr-color-brand));
+    border-color: var(--lr-checkbox-checked-border-color, var(--lr-color-brand));
   }
   /* A persistent visible affordance for a required-but-unmet checkbox, matching
      lr-combobox/lr-select's data-invalid styling hook: the native validation bubble only shows
      momentarily around reportValidity()/form submission. */
   :host([data-invalid]) [part~="box"] {
-    border-color: var(--lr-checkbox-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+    border-color: var(--lr-checkbox-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
 
   [part~="checkmark"] {

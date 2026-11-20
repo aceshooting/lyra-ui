@@ -4,7 +4,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import '../../lr-video.js';
 import '../../lr-video-playlist.js';
 import type { LyraVideo } from '../../lr-video.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
@@ -3095,4 +3095,18 @@ it('names an unlabeled caption track by its language instead of the raw code', a
   const name = (el as unknown as { captionLanguageName(l: string): string | undefined }).captionLanguageName('fr');
   expect(name).to.equal('French');
   expect((el as unknown as { captionLanguageName(l: string): string | undefined }).captionLanguageName('  ')).to.equal(undefined);
+});
+
+it('paints control-bar hover from --lr-video-controls-hover-bg', async () => {
+  const el = await fixture<LyraVideo>(html`<lr-video
+    style="--lr-video-controls-hover-bg: rgb(1, 2, 3); --lr-video-controls-hover-border-color: rgb(4, 5, 6)"
+  ></lr-video>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"] button')!;
+  try {
+    await hoverUntilMatched(button, 'the control button never hovered');
+    await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)', 'the controls hover token paints');
+    await waitUntil(() => getComputedStyle(button).borderTopColor === 'rgb(4, 5, 6)', 'the controls hover border token paints');
+  } finally {
+    await resetMouse();
+  }
 });

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +18,7 @@
 
 Read `omittedViews` after assigning `views` for the number of input positions beyond the 256-position limit.
 
-The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+Fullscreen paints the shared modal surface family (`--lr-overlay-surface`, `--lr-overlay-shadow-modal`, behind `--lr-widget-bg`), like `lr-dialog`. The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in

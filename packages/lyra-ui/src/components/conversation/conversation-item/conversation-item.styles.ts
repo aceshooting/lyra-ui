@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
@@ -231,6 +232,14 @@ export const styles = css`
     [part~='base'],
     [part='rename-button'] {
       transition: none !important;
+    }
+  }
+  /* The open row's tint and bar are author fills that forced colours drop, so the row takes the
+     shared system-colour state paint and the bar contrasts with it. */
+  ${forcedColorsPart(":host([active]) [part~='base']")}
+  @media (forced-colors: active) {
+    [part='active-indicator'] {
+      background-color: HighlightText;
     }
   }
 `;

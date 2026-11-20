@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -225,7 +225,10 @@ value readout, label, references, error, and hint as those flex items wrap.
 track row, including the space reserved for the endpoint hit targets. A horizontal track row
 fills its inline allocation. Set the token on the slider or an ancestor. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
-than overriding this runtime value. The thumb has independent paint hooks:
+than overriding this runtime value. `--lr-slider-track-bg` (default `var(--lr-color-border)`),
+`--lr-slider-indicator-bg` (default `var(--lr-color-brand)`) and `--lr-slider-marker-bg` (default
+`var(--lr-color-surface)`) paint the track, filled indicator and tick marks, winning over the
+`--track-color-*` aliases. The thumb has independent paint hooks:
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
 (default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
 `var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the

@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRing } from './interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from './interactive-control.styles.js';
 
 /** Flat hierarchy chrome shared by the source adapters. */
 export const hierarchySourceStyles = css`
@@ -13,8 +13,11 @@ export const hierarchySourceStyles = css`
     color: var(--lr-color-text); --_source-row-fill: var(--lr-color-surface); background: var(--_source-row-fill);
     transition: var(--lr-transition-interactive);
   }
-  [part~='source-row']:where(:hover) { background: color-mix(in srgb, var(--_source-row-fill), var(--lr-color-text) 8%); }
-  [part~='source-row']:where(:active) { background: color-mix(in srgb, var(--_source-row-fill), var(--lr-color-text) 12%); }
+  /* The shared hover and press steps from the row's own fill; a host maps its public row tokens onto
+     --_source-row-hover-fill / --_source-row-active-fill, which stay invalid (so the mix applies)
+     while those tokens are unset. */
+  [part~='source-row']:where(:hover) { background: var(--_source-row-hover-fill, ${hoverFill('var(--_source-row-fill)')}); }
+  [part~='source-row']:where(:active) { background: var(--_source-row-active-fill, ${activeFill('var(--_source-row-fill)')}); }
   [part~='source-row']:where([aria-selected='true']) { --_source-row-fill: var(--lr-color-brand-fill-quiet); }
   [part~='source-row']:where([aria-disabled='true']) { cursor: default; opacity: var(--lr-opacity-disabled); }
   [part~='source-row']:where(:focus-visible), .source-tree:where(:focus-visible), [part~='source-toggle']:where(:focus-visible) {
@@ -28,7 +31,7 @@ export const hierarchySourceStyles = css`
     transition: var(--lr-transition-interactive);
   }
   [part~='source-toggle']:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
-  [part~='source-toggle']:where(:active) { background: color-mix(in srgb, var(--lr-color-neutral-fill-quiet), var(--lr-color-text) 12%); }
+  [part~='source-toggle']:where(:active) { background: ${activeFill('var(--lr-color-neutral-fill-quiet)')}; }
   [part~='source-toggle']:where(:disabled) { cursor: default; opacity: var(--lr-opacity-disabled); }
   .source-toggle-space { inline-size: var(--lr-icon-button-size); flex-shrink: 0; }
   [part~='source-status'], [part~='source-error'] { padding: var(--lr-space-xs); overflow-wrap: anywhere; }

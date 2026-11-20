@@ -80,6 +80,7 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   ${tableCellHighlightStyles({
+    tag: 'dataset-viewer',
     color: css`var(--lr-dataset-viewer-highlight-color, var(--_lr-dataset-viewer-highlight-color, var(--lr-color-brand)))`,
     padding: css`var(--lr-space-xs) var(--lr-space-s)`,
   })}

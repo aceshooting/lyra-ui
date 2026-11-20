@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,6 +60,9 @@ library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corn
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-usage-badge>`; set the custom property on `:root`, a theme, or one clipping
 ancestor to change every unset usage badge beneath it.
+
+`--lr-usage-badge-hover-bg` (default `var(--lr-color-surface-raised)`) is the hover background of a
+focusable badge.
 
 ```html
 <lr-chat-message message-role="assistant" status="sent">

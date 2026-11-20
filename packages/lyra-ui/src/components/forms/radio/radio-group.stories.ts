@@ -118,7 +118,7 @@ export const ReactivationAndInvalid: StoryObj = {
     docs: {
       description: {
         story:
-          '`lr-activate` fires on every activation, including a click on the option that is already selected. A required group outlines its options (`--lr-radio-group-invalid-border`) once focus has left it without a choice.',
+          '`lr-activate` fires on every activation, including a click on the option that is already selected. A required group outlines its options (`--lr-radio-group-invalid-border-color`) once focus has left it without a choice.',
       },
     },
   },

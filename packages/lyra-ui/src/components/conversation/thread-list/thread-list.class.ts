@@ -296,6 +296,8 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  * @csspart row-item-meta - Data mode: the row item's `meta` wrapper.
  * @csspart row-item-timestamp - Data mode: the row item's `<time>` element.
  * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
+ * @cssprop [--lr-thread-list-search-hover-border-color=var(--lr-color-brand)] - Border color of the
+ *   hovered `[part="search-input"]`.
  * @cssprop [--lr-thread-list-search-padding=var(--lr-space-s)] - Gutter around the built-in search
  *   field. Deliberately not tiered by `size`, which sizes the field itself.
  * @cssprop [--lr-thread-list-search-gap=var(--lr-space-xs)] - Gap between the search field and its

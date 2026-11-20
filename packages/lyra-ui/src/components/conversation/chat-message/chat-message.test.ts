@@ -2035,3 +2035,13 @@ it("names the retry button by the author, never the opaque message id", async ()
   expect(label).to.not.contain("msg_8f3a91");
   expect(label.startsWith("Retry")).to.equal(true);
 });
+
+it("floors the retry button at the icon-button hit area", async () => {
+  const el = await fixture<LyraChatMessage>(
+    html`<lr-chat-message status="failed" style="--lr-icon-button-size: 44px"></lr-chat-message>`
+  );
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="retry-button"]')!;
+  const box = button.getBoundingClientRect();
+  expect(box.height).to.be.at.least(44);
+  expect(box.width).to.be.at.least(44);
+});

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,7 +50,7 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
-The divider takes `--lr-image-comparer-divider-color`. Style the handle with
+The divider takes `--lr-image-comparer-divider-color` at rest, `--lr-image-comparer-divider-hover-color` (default `var(--lr-color-brand)`) while the drag surface is hovered and `--lr-image-comparer-divider-active-color` mid-drag. Style the handle with
 `--lr-image-comparer-handle-bg`, `--lr-image-comparer-handle-color`, and
 `--lr-image-comparer-handle-border-color`. The divider uses system colors in forced-colors mode.
 

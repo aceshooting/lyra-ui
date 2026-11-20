@@ -205,6 +205,14 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-code-copy-bg=transparent] - Fenced copy control background at rest.
  * @cssprop [--lr-markdown-code-copy-bg-hover=var(--lr-color-brand-quiet)] - Fenced copy control hover background.
  * @cssprop --lr-markdown-code-copy-bg-active - Fenced copy control pressed background.
+ * @cssprop [--lr-markdown-code-copy-color-hover=var(--lr-color-brand)] - Fenced copy control glyph
+ *   color while hovered.
+ * @cssprop [--lr-markdown-code-copy-color-active=var(--lr-markdown-code-copy-color-hover)] - Fenced
+ *   copy control glyph color while pressed.
+ * @cssprop [--lr-markdown-code-copy-success-color=var(--lr-color-success)] - Fenced copy control color
+ *   after a successful copy.
+ * @cssprop [--lr-markdown-code-copy-error-color=var(--lr-color-danger)] - Fenced copy control color
+ *   after a failed copy.
  * @cssprop [--lr-markdown-max-height=none] - Cap on `[part="content"]`'s block size, past which
  *   the document scrolls internally. The `maxHeight` property sets this token inline on
  *   `[part="content"]`.

@@ -144,7 +144,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * between the group's label, options and messages, scaled by `size`.
  * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
  * adjacent options, scaled by `size`.
- * @cssprop [--lr-checkbox-group-invalid-border=var(--lr-color-danger)] - Border around the option
+ * @cssprop [--lr-checkbox-group-invalid-border-color=var(--lr-color-danger)] - Border around the option
  * collection while invalid chrome is visible.
  * @cssprop [--gap=var(--lr-checkbox-group-option-gap)] - WA-compatible option gap.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to

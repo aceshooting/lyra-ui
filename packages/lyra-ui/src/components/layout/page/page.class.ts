@@ -176,10 +176,13 @@ export interface LyraPageEventMap {
  *   pressed default or slotted navigation toggle.
  * @cssprop [--lr-page-navigation-backdrop-bg=var(--lr-color-overlay)] - Background of the open
  *   mobile navigation backdrop.
- * @cssprop [--lr-page-navigation-drawer-bg=var(--lr-color-surface-overlay)] - Background of the
+ * @cssprop [--lr-page-navigation-drawer-bg=var(--lr-overlay-surface, var(--lr-color-surface-container-highest))] - Background of the
  *   mobile navigation drawer.
- * @cssprop [--lr-page-navigation-drawer-shadow=var(--lr-shadow-l)] - Shadow of the mobile
+ * @cssprop [--lr-page-navigation-drawer-shadow=var(--lr-overlay-shadow-modal, var(--lr-shadow-l))] - Shadow of the mobile
  *   navigation drawer.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared modal surface
+ *   fill behind the navigation drawer hook, so one declaration retints it with lr-dialog.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation behind the navigation drawer hook.
  * @cssprop [--lr-page-banner-bg=var(--lr-color-surface)] - Opaque background of the sticky banner,
  *   so scrolled content never shows through; unpainted when `disable-sticky` names `banner`.
  * @cssprop [--lr-page-header-bg=var(--lr-color-surface)] - Opaque background of the sticky header,

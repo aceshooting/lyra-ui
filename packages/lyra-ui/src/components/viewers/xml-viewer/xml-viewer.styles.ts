@@ -147,10 +147,10 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='attribute-name'] {
-    color: var(--lr-color-chart-1);
+    color: var(--lr-xml-viewer-attribute-name-color, var(--lr-color-chart-1));
   }
   [part='attribute-value'] {
-    color: var(--lr-color-success);
+    color: var(--lr-xml-viewer-attribute-value-color, var(--lr-color-success));
     overflow-wrap: anywhere;
   }
   /* --lr-xml-viewer-match-bg indirection, same rationale as --lr-xml-viewer-match-color above. */
@@ -228,6 +228,11 @@ export const styles = css`
     ${focusRingShorthand}
   }
   [part='copy-button'] {
+    ${iconHitTarget}
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-xml-viewer-action-background, var(--lr-color-surface));

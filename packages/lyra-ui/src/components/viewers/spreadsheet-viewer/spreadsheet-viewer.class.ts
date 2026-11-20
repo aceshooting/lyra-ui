@@ -163,6 +163,8 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   before it scrolls internally. The `maxHeight` property sets this token inline on
  *   `[part="base"]`.
  * @csspart search-status - Notice when a data source has no global search capability.
+ * @cssprop [--lr-spreadsheet-viewer-cell-action-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a highlighted cell's `[part="cell-highlight-action"]`.
+ * @cssprop --lr-spreadsheet-viewer-cell-action-active-bg - Pressed background of that action. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

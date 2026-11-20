@@ -65,6 +65,10 @@ it('keeps data paint visible in forced colors', async () => {
     const el = wrapper.firstElementChild!;
     const swatch = getComputedStyle(el.shadowRoot!.querySelector('[part="legend-swatch"]')!);
     expect(swatch.borderTopStyle).to.equal('solid');
+    // The word keeps the colour its legend swatch keys it to.
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="word"]') !== null, 'a word renders');
+    const word = getComputedStyle(el.shadowRoot!.querySelector('[part="word"]')!);
+    expect(word.fill).to.equal(swatch.backgroundColor);
   } finally {
     await setForcedColors('none');
   }

@@ -215,9 +215,9 @@ export const styles = css`
     gap: var(--lr-space-s);
     min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-border-width-thin) solid var(--lr-file-input-file-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-file-input-file-radius, var(--lr-radius));
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-file-input-file-bg, var(--lr-color-surface-raised));
   }
   [part="file-thumbnail"] {
     display: inline-flex;
@@ -272,11 +272,11 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="remove-button"]:hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-file-input-remove-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-text);
   }
   [part="remove-button"]:active:where(:not(:disabled)) {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-file-input-remove-active-bg, ${activeFill('var(--lr-file-input-remove-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part="remove-button"]:focus-visible {
     ${focusRingShorthand}

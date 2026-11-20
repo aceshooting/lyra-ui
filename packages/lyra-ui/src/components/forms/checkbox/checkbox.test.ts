@@ -1381,7 +1381,7 @@ describe("checked-state cssprop escape hatch", () => {
     const el = (await fixture(
       html`<lr-checkbox
         checked
-        style="--lr-checkbox-checked-bg: rgb(1, 2, 3); --lr-checkbox-checked-border: rgb(4, 5, 6);"
+        style="--lr-checkbox-checked-bg: rgb(1, 2, 3); --lr-checkbox-checked-border-color: rgb(4, 5, 6);"
       ></lr-checkbox>`
     )) as LyraCheckbox;
     const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
@@ -1813,7 +1813,7 @@ describe("lr-checkbox hover and press feedback", () => {
   it("lets a consumer retint hover, press, and invalid paint independently", async () => {
     const el = (await fixture(html`
       <lr-checkbox data-lr-theme-scope
-        style="--lr-transition-fast: 0s; --lr-checkbox-hover-border: rgb(1, 2, 3); --lr-checkbox-active-border: rgb(4, 5, 6); --lr-checkbox-active-ring: rgb(7, 8, 9);"
+        style="--lr-transition-fast: 0s; --lr-checkbox-hover-border-color: rgb(1, 2, 3); --lr-checkbox-active-border-color: rgb(4, 5, 6); --lr-checkbox-active-ring-color: rgb(7, 8, 9);"
         >Terms</lr-checkbox
       >
     `)) as LyraCheckbox;
@@ -1844,7 +1844,7 @@ describe("lr-checkbox hover and press feedback", () => {
       await resetMouse();
     }
 
-    el.style.setProperty("--lr-checkbox-invalid-border", "rgb(10, 11, 12)");
+    el.style.setProperty("--lr-checkbox-invalid-border-color", "rgb(10, 11, 12)");
     el.setAttribute("data-invalid", "");
     expect(getComputedStyle(box).borderTopColor).to.equal("rgb(10, 11, 12)");
   });
@@ -2343,12 +2343,12 @@ describe('lr-checkbox-toggle-request', () => {
 // brand default under the pointer. Unset hover/active hooks now fall back to the checked border.
 describe("lr-checkbox checked border under the pointer", () => {
   for (const state of ["checked", "indeterminate"] as const) {
-    it(`keeps --lr-checkbox-checked-border while ${state} and hovered or pressed`, async () => {
+    it(`keeps --lr-checkbox-checked-border-color while ${state} and hovered or pressed`, async () => {
       const el = (await fixture(html`
         <lr-checkbox data-lr-theme-scope
           ?checked=${state === "checked"}
           ?indeterminate=${state === "indeterminate"}
-          style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30);"
+          style="--lr-transition-fast: 0s; --lr-checkbox-checked-border-color: rgb(10, 20, 30);"
           >Terms</lr-checkbox
         >
       `)) as LyraCheckbox;
@@ -2379,7 +2379,7 @@ describe("lr-checkbox checked border under the pointer", () => {
     const el = (await fixture(html`
       <lr-checkbox data-lr-theme-scope
         checked
-        style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30); --lr-checkbox-hover-border: rgb(1, 2, 3);"
+        style="--lr-transition-fast: 0s; --lr-checkbox-checked-border-color: rgb(10, 20, 30); --lr-checkbox-hover-border-color: rgb(1, 2, 3);"
         >Terms</lr-checkbox
       >
     `)) as LyraCheckbox;

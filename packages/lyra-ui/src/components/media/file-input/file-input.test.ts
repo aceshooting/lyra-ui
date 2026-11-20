@@ -4576,3 +4576,13 @@ it('rejects a spoofed File restore before creating a thumbnail or form state', a
   expect(() => el.formStateRestoreCallback(fake, 'restore')).to.not.throw();
   expect(el.files.length).to.equal(0);
 });
+
+it("paints file rows from --lr-file-input-file-bg/-border-color", async () => {
+  const el = (await fixture(
+    html`<lr-file-input style="--lr-file-input-file-bg: rgb(1, 2, 3); --lr-file-input-file-border-color: rgb(4, 5, 6)"></lr-file-input>`
+  )) as LyraFileInput;
+  el.files = [makeFile("a.csv", "text/csv")];
+  await el.updateComplete;
+  const row = getComputedStyle(el.shadowRoot!.querySelector('[part="file"]')!);
+  expect([row.backgroundColor, row.borderTopColor]).to.deep.equal(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
+});

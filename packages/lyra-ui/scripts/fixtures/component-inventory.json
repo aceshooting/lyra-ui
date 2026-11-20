@@ -7261,7 +7261,7 @@
             "name": "--lr-app-rail-panel-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-overlay)"
+            "default": "var(--lr-overlay-surface, var(--lr-color-surface-container-highest))"
           },
           {
             "name": "--lr-app-rail-panel-inset-block-start",
@@ -7315,7 +7315,7 @@
             "name": "--lr-app-rail-panel-shadow",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-shadow-l)"
+            "default": "var(--lr-overlay-shadow-modal, var(--lr-shadow-l))"
           },
           {
             "name": "--lr-app-rail-peek-bg",
@@ -7416,6 +7416,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
           }
         ],
         "cssStates": [],
@@ -8568,6 +8580,17 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-approval-queue-row-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-approval-queue-row-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-approval-queue-selected-border",
             "deprecated": null,
@@ -9943,6 +9966,12 @@
             "default": "var(--lr-duration-ambient) linear"
           },
           {
+            "name": "--lr-attachment-chip-thumbnail-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-attachment-chip-thumbnail-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -11249,6 +11278,10 @@
             "deprecated": null
           },
           {
+            "name": "cue-unavailable",
+            "deprecated": null
+          },
+          {
             "name": "error",
             "deprecated": null
           },
@@ -11358,6 +11391,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-av-player-timeline-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-av-player-timeline-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-av-player-transcript-height",
@@ -25669,16 +25714,28 @@
             "default": 1
           },
           {
-            "name": "--lr-checkbox-active-border",
+            "name": "--lr-checkbox-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-checkbox-active-ring",
+            "name": "--lr-checkbox-active-ring-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-checkbox-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-checkbox-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-checkbox-box-radius",
@@ -25699,19 +25756,19 @@
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-checkbox-checked-border",
+            "name": "--lr-checkbox-checked-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-checkbox-hover-border",
+            "name": "--lr-checkbox-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-checkbox-invalid-border",
+            "name": "--lr-checkbox-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -26460,7 +26517,7 @@
             "default": "var(--lr-checkbox-group-option-gap)"
           },
           {
-            "name": "--lr-checkbox-group-invalid-border",
+            "name": "--lr-checkbox-group-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -26940,6 +26997,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-checkpoint-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
             "name": "--lr-checkpoint-button-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -26958,6 +27021,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-checkpoint-button-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-checkpoint-button-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-checkpoint-button-padding-inline",
             "deprecated": null,
             "hasDefault": true,
@@ -26968,6 +27043,57 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius-pill)"
+          },
+          {
+            "name": "--lr-checkpoint-cancel-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-checkpoint-cancel-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-checkpoint-cancel-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-checkpoint-cancel-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-checkpoint-confirm-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-checkpoint-confirm-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-checkpoint-confirm-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-checkpoint-confirm-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-checkpoint-confirm-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-checkpoint-gap",
@@ -27595,6 +27721,11 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-chip-group-overflow-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-chip-group-overflow-bg",
             "deprecated": null,
             "hasDefault": false
@@ -27617,6 +27748,23 @@
           },
           {
             "name": "--lr-chip-group-overflow-expanded-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chip-group-overflow-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chip-group-overflow-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-chip-group-overflow-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
@@ -28981,6 +29129,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-code-block-gutter-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-code-block-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -29056,6 +29210,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-code-block-toggle-color-hover)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -29575,6 +29747,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-code-block-gutter-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-code-block-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -29650,6 +29828,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-code-block-toggle-color-hover)"
+          },
+          {
+            "name": "--lr-code-block-toggle-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -33982,7 +34178,7 @@
             "name": "--tag-max-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-size-5rem)"
+            "default": "var(--lr-size-12rem)"
           }
         ],
         "cssStates": [
@@ -40592,6 +40788,17 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-csv-viewer-cell-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-csv-viewer-cell-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-csv-viewer-header-row-bg",
             "deprecated": null,
             "hasDefault": false
@@ -44361,6 +44568,17 @@
             "name": "--lr-dataset-viewer-border-radius",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-dataset-viewer-cell-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-dataset-viewer-cell-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-dataset-viewer-header-row-bg",
@@ -51309,6 +51527,23 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-document-preview-action-active-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-document-preview-action-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-document-preview-action-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
             "name": "--lr-document-preview-active-border",
             "deprecated": null,
             "hasDefault": true,
@@ -52095,6 +52330,23 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-docx-viewer-action-active-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-docx-viewer-action-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-docx-viewer-action-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
           {
             "name": "--lr-docx-viewer-highlight-accent-bg",
             "deprecated": null,
@@ -53996,7 +54248,7 @@
             "name": "--lr-overlay-shadow-modal",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-shadow-xl)"
+            "default": "var(--lr-shadow-l)"
           },
           {
             "name": "--lr-overlay-surface",
@@ -62705,6 +62957,18 @@
             "default": "var(--lr-space-l)"
           },
           {
+            "name": "--lr-file-input-file-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-file-input-file-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
             "name": "--lr-file-input-file-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -62739,6 +63003,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-file-input-remove-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-file-input-remove-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-file-input-thumbnail-radius",
@@ -72051,6 +72326,23 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-highlight-layer-action-active-background",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-highlight-layer-action-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-highlight-layer-action-hover-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
             "name": "--lr-highlight-layer-danger-bg",
             "deprecated": null,
             "hasDefault": false
@@ -75188,10 +75480,21 @@
             "default": "var(--lr-icon-button-size)"
           },
           {
+            "name": "--lr-image-comparer-divider-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-image-comparer-divider-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-image-comparer-divider-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-image-comparer-divider-width",
@@ -76717,6 +77020,28 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-ingestion-queue-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-ingestion-queue-action-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-ingestion-queue-cancel-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-ingestion-queue-cancel-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
           {
             "name": "--lr-ingestion-queue-max-height",
             "deprecated": null,
@@ -87645,6 +87970,18 @@
             "default": 0.75
           },
           {
+            "name": "--lr-map-control-pressed-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-map-control-pressed-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-map-drawing-color",
             "deprecated": null,
             "hasDefault": true,
@@ -87701,6 +88038,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0.5
+          },
+          {
+            "name": "--lr-map-marker-hover-halo-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-map-popup-close-button-active-bg",
@@ -89118,6 +89461,30 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-markdown-code-copy-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-code-copy-color-hover)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-error-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-success-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
             "name": "--lr-markdown-code-header-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -89987,6 +90354,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-code-copy-color-hover)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-error-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-markdown-code-copy-success-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
           },
           {
             "name": "--lr-markdown-code-header-bg",
@@ -93647,6 +94038,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-message-feedback-comment-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-message-feedback-down-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -93663,6 +94060,34 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-message-feedback-submit-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-message-feedback-submit-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-message-feedback-submit-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-message-feedback-submit-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
+          },
+          {
+            "name": "--lr-message-feedback-submit-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-message-feedback-up-active-bg",
@@ -94652,6 +95077,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-mind-map-link-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-mind-map-link-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1.5
+          },
+          {
+            "name": "--lr-mind-map-node-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-mind-map-node-hover-halo",
@@ -105097,6 +105540,18 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
+          },
+          {
             "name": "--lr-page-aside-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -105160,13 +105615,13 @@
             "name": "--lr-page-navigation-drawer-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-overlay)"
+            "default": "var(--lr-overlay-surface, var(--lr-color-surface-container-highest))"
           },
           {
             "name": "--lr-page-navigation-drawer-shadow",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-shadow-l)"
+            "default": "var(--lr-overlay-shadow-modal, var(--lr-shadow-l))"
           },
           {
             "name": "--lr-page-navigation-toggle-active-bg",
@@ -119616,6 +120071,18 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-radio-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-radio-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-radio-button-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -120410,6 +120877,18 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-radio-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-radio-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-radio-button-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -120420,6 +120899,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radio-button-hover-border-color)"
+          },
+          {
+            "name": "--lr-radio-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-radio-button-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-radio-button-checked-active-bg",
@@ -121421,7 +121912,7 @@
             "default": 0
           },
           {
-            "name": "--lr-radio-group-invalid-border",
+            "name": "--lr-radio-group-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -125175,6 +125666,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
+          },
+          {
             "name": "--lr-responsive-panel-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -125208,13 +125711,13 @@
             "name": "--lr-responsive-panel-overlay-panel-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-overlay)"
+            "default": "var(--lr-overlay-surface, var(--lr-color-surface-container-highest))"
           },
           {
             "name": "--lr-responsive-panel-overlay-panel-shadow",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-shadow-l)"
+            "default": "var(--lr-overlay-shadow-modal, var(--lr-shadow-l))"
           },
           {
             "name": "--lr-responsive-panel-padding",
@@ -131328,6 +131831,18 @@
             "default": "var(--lr-form-control-radius)"
           },
           {
+            "name": "--lr-select-tag-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-select-tag-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-select-tag-font-size",
             "deprecated": null,
             "hasDefault": false
@@ -131338,10 +131853,16 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-select-tag-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
             "name": "--lr-select-tag-remove-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "color-mix(in srgb, currentColor 16%, transparent)"
           },
           {
             "name": "--lr-select-trigger-active-bg",
@@ -134599,6 +135120,18 @@
             "default": "var(--lr-space-s)"
           },
           {
+            "name": "--lr-slider-indicator-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-slider-marker-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-slider-row-size",
             "deprecated": null,
             "hasDefault": true,
@@ -134639,6 +135172,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 8
+          },
+          {
+            "name": "--lr-slider-track-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-slider-track-length",
@@ -135766,6 +136305,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-1-25rem)"
+          },
+          {
+            "name": "--lr-source-picker-item-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-source-picker-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-source-picker-mixed-bg",
@@ -137537,6 +138086,17 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-spreadsheet-viewer-cell-action-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-spreadsheet-viewer-cell-action-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-spreadsheet-viewer-header-row-bg",
             "deprecated": null,
             "hasDefault": false
@@ -137935,6 +138495,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-stack-trace-internal-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-stack-trace-internal-toggle-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-stack-trace-max-height",
@@ -138916,6 +139487,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-stepper-check-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
+          },
+          {
             "name": "--lr-stepper-current-color",
             "deprecated": null,
             "hasDefault": true,
@@ -138946,6 +139523,18 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-stepper-error-index-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-neutral-fill-normal)"
+          },
+          {
+            "name": "--lr-stepper-error-index-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-neutral-on-normal)"
+          },
+          {
             "name": "--lr-stepper-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -138956,6 +139545,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-stepper-index-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-neutral-fill-normal)"
+          },
+          {
+            "name": "--lr-stepper-index-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-neutral-on-normal)"
           }
         ],
         "cssStates": [],
@@ -144994,6 +145595,17 @@
             "default": "var(--lr-space-xs) var(--lr-space-s)"
           },
           {
+            "name": "--lr-table-control-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-table-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-table-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -146151,10 +146763,32 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-task-list-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-task-list-header-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-task-list-incomplete-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-task-list-item-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-task-list-item-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-task-list-pending-color",
@@ -148996,6 +149630,17 @@
             "default": "var(--lr-space-2xs) var(--lr-space-s)"
           },
           {
+            "name": "--lr-thinking-panel-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-thinking-panel-header-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-thinking-panel-max-block-size",
             "deprecated": null,
             "hasDefault": true,
@@ -149948,6 +150593,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-thread-list-search-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-thread-list-search-min-height",
@@ -151875,10 +152526,22 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-time-range-range-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-time-range-size-scale",
             "deprecated": null,
             "hasDefault": true,
             "default": 1
+          },
+          {
+            "name": "--lr-time-range-track-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-time-range-track-size",
@@ -154130,6 +154793,12 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
             "name": "--lr-overlay-surface",
             "deprecated": null,
             "hasDefault": true,
@@ -155886,6 +156555,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-token-input-token-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
             "name": "--lr-token-input-token-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -155895,6 +156570,12 @@
             "name": "--lr-token-input-token-padding",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-token-input-token-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
           }
         ],
         "cssStates": [
@@ -157188,6 +157869,17 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-tool-call-block-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-tool-call-block-header-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tool-call-block-radius",
             "deprecated": null,
             "hasDefault": true,
@@ -157538,6 +158230,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-tool-call-chip-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-tool-call-chip-spin",
@@ -157939,6 +158637,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-tool-param-form-control-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-tool-param-form-invalid-border-color",
@@ -159453,6 +160157,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-font-size)"
+          },
+          {
+            "name": "--lr-tool-select-dialog-search-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-tool-select-dialog-search-min-height",
@@ -164524,6 +165234,12 @@
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-usage-badge-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
           }
         ],
         "cssStates": [],
@@ -165234,6 +165950,27 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-on-strong-overlay)"
+          },
+          {
+            "name": "--lr-video-controls-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-video-controls-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-video-controls-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
+          },
+          {
+            "name": "--lr-video-poster-play-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-video-poster-play-button-hover-bg",
@@ -168205,6 +168942,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-xl)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
+          },
+          {
             "name": "--lr-scroll-fade-size",
             "deprecated": null,
             "hasDefault": true,
@@ -169335,6 +170084,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
+          },
+          {
+            "name": "--lr-xml-viewer-attribute-name-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-chart-1)"
+          },
+          {
+            "name": "--lr-xml-viewer-attribute-value-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success)"
           },
           {
             "name": "--lr-xml-viewer-highlight-accent-bg",
@@ -227383,7 +228144,7 @@
             "member": "--tag-max-size",
             "upstreamHasDefault": false,
             "targetHasDefault": true,
-            "target": "var(--lr-size-5rem)"
+            "target": "var(--lr-size-12rem)"
           }
         ],
         "deprecationEquivalences": [

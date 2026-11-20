@@ -451,7 +451,7 @@ Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (defaul
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
 `--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
 `--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
-Scene, pick and drawing buttons accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`.
+Scene, pick and drawing buttons, the native zoom, compass, geolocate and scene controls, and the compact attribution button accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`. A pressed or mixed scene control and the open attribution button paint `--lr-map-control-pressed-bg` (default `var(--lr-color-brand-quiet)`), with the scene glyph in `--lr-map-control-pressed-color` (default `var(--lr-color-brand)`); a hovered or pressed interactive marker shows a `--lr-map-marker-hover-halo-color` halo (default `var(--lr-color-brand)`). Under forced colors, pressed controls and the open attribution button take the system highlight.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -3451,7 +3451,7 @@ an extension-only `accept` list.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
 
-Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
+Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius, `--lr-file-input-file-bg` (default `var(--lr-color-surface-raised)`) and `--lr-file-input-file-border-color` (default `var(--lr-color-border-subtle)`) paint it, and `--lr-file-input-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) / `--lr-file-input-remove-active-bg` tint its remove button. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
 
 ---
 
@@ -3491,7 +3491,7 @@ remains the sole interaction surface.
 `after`, `divider`, `handle` (the full interaction wrapper), and `input` (the transparent native
 range input).
 
-The divider takes `--lr-image-comparer-divider-color`. Style the handle with
+The divider takes `--lr-image-comparer-divider-color` at rest, `--lr-image-comparer-divider-hover-color` (default `var(--lr-color-brand)`) while the drag surface is hovered and `--lr-image-comparer-divider-active-color` mid-drag. Style the handle with
 `--lr-image-comparer-handle-bg`, `--lr-image-comparer-handle-color`, and
 `--lr-image-comparer-handle-border-color`. The divider uses system colors in forced-colors mode.
 
@@ -3905,7 +3905,7 @@ previous entry, reassigning `file` several times before the next paint leaks not
   `File` nor `preview-src` supplies a source. The viewer's footer omits its download link for unsafe
   source schemes.
 
-Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners.
+Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners; `--lr-attachment-chip-thumbnail-bg` (default `var(--lr-color-surface)`) paints its background. Under forced colors the upload progress keeps a CanvasText track edge and a Highlight fill.
 
 ---
 
@@ -5314,7 +5314,8 @@ root, so no selection binding is installed.
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek; arrow keys step, PageUp/PageDown take larger steps), `timeline-playhead` (the non-interactive current-position line), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,
-`data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
+`data-match`, `data-active-match`), `cue-unavailable` (added alongside `cue` on an inert loading or
+unavailable source placeholder row, which paints no hover or press feedback), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
 `cue-time`, `cue-speaker`, `cue-text`, `error`, and `anchor-live-region` (an aria-hidden, non-live
@@ -5362,7 +5363,8 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+The timeline's hover and scrub take `--lr-av-player-timeline-hover-border-color` (default
+`var(--lr-color-brand)`) and `--lr-av-player-timeline-active-bg`. Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
 color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
 step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background
@@ -5510,7 +5512,11 @@ avoiding a disappearing/reappearing semantic target.
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-bg` (default is the existing hover color mix) and
-`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`), plus
+`--lr-video-poster-play-button-active-bg` for its press. The control-bar buttons, selects and volume
+take `--lr-video-controls-hover-bg`, `--lr-video-controls-hover-border-color` (default
+`var(--lr-color-border-strong)`) and `--lr-video-controls-active-bg`; each press defaults to its hover
+fill mixed one step further.
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and

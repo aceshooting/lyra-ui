@@ -125,10 +125,10 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="internal-toggle"]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-stack-trace-internal-toggle-hover-bg, var(--lr-color-brand-quiet));
   }
   [part="internal-toggle"]:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-stack-trace-internal-toggle-pressed-bg, ${activeFill('var(--lr-stack-trace-internal-toggle-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part="internal-toggle"]:focus-visible {
     ${focusRingInsetOffset}

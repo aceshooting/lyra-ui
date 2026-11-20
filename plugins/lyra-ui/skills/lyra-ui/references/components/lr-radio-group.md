@@ -71,7 +71,7 @@ A required but pristine group keeps `aria-invalid="false"` on its internal radio
 error is projected only after interaction (a selection, or focus leaving the group) or a native
 validity check (`reportValidity()`, or form-level validation), while explicit error chrome is
 immediate. While the group matches `:state(user-invalid)` the option collection is outlined with
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), and a disabled group dims its
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), and a disabled group dims its
 label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
@@ -117,7 +117,7 @@ hidden and no glyph is painted.
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder — and
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), the border around the options
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), the border around the options
 while the group is `:state(user-invalid)`.
 
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A

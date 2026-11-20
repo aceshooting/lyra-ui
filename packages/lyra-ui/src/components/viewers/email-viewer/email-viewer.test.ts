@@ -2022,3 +2022,22 @@ it('reports a missing parser peer without downloading the message body', async (
     setEmailDeps(undefined);
   }
 });
+
+it('floors the quote toggle and attachment rows at the icon-button hit area', async () => {
+  for (const [eml, part] of [[QUOTED_TEXT_EML, 'quote-toggle'], [ATTACHMENT_EML, 'attachment-button']] as const) {
+    const restore = stubFetch(eml);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer
+        fold-quotes
+        style="--lr-icon-button-size: 44px"
+        src="https://example.test/message.eml"
+      ></lr-email-viewer>`);
+      await untilRendered(el, `[part="${part}"]`);
+      const box = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!.getBoundingClientRect();
+      expect(box.height, `${part} height`).to.be.at.least(44);
+      expect(box.width, `${part} width`).to.be.at.least(44);
+    } finally {
+      restore();
+    }
+  }
+});

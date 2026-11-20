@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -137,12 +137,12 @@ slot), `error`, and `hint` / `form-control-help-text` on the supporting-text wra
 below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
-State paint is independently themeable through `--lr-checkbox-hover-border`,
-`--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
-`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
+State paint is independently themeable through `--lr-checkbox-hover-border-color`,
+`--lr-checkbox-active-border-color`, `--lr-checkbox-active-ring-color`, `--lr-checkbox-invalid-border-color`,
+`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border-color`; every default preserves the
 corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
-`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
-`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
+`--lr-checkbox-hover-border-color` / `--lr-checkbox-active-border-color` falls back to
+`--lr-checkbox-checked-border-color`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 
@@ -179,7 +179,9 @@ substitute the one you actually use:
 }
 ```
 
-`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+`--lr-checkbox-bg` (default `var(--lr-color-surface)`) and `--lr-checkbox-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='box']` at rest.
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border-color`
 (default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
 `indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
 `--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's

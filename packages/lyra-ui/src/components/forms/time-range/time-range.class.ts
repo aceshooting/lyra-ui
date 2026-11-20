@@ -164,6 +164,8 @@ export interface LyraTimeRangeEventMap {
  *   genuinely invalid, but colouring it red on first paint is hostile. A `form.reset()` puts the
  *   control back to pristine, so this stops matching until the user acts again — `invalid` itself
  *   is unaffected, since a `setCustomValidity()` error survives a reset.
+ * @cssprop [--lr-time-range-track-bg=var(--lr-color-border)] - Unselected track color.
+ * @cssprop [--lr-time-range-range-bg=var(--lr-color-brand)] - Selected-range fill.
  * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
  *   preset button (`[data-active]`, i.e. the preset whose button produced the current range).
  *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an

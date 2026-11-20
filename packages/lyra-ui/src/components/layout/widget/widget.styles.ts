@@ -265,8 +265,9 @@ export const styles = css`
     );
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
     /* Top of the scale: fullscreen is a modal layer above [part="backdrop"] and the only state in
-       which this widget stops being resting chrome. */
-    box-shadow: var(--lr-shadow-xl);
+       which this widget stops being resting chrome, so it takes lr-dialog's modal surface family. */
+    background: var(--lr-widget-bg, var(--lr-overlay-surface, var(--lr-color-surface-container-highest)));
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
   }
   :host([fullscreen]) [part="body"] {
     block-size: 100%;

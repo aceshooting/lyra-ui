@@ -77,6 +77,10 @@ function normalizeOrientation(value: unknown): LyraImageComparerOrientation {
  * @cssprop [--handle-size=var(--lr-icon-button-size)] - Retained Shoelace-compat source for
  *   `--lr-image-comparer-handle-size`.
  * @cssprop [--lr-image-comparer-divider-color=var(--lr-color-surface)] - Fill of the dividing line.
+ * @cssprop [--lr-image-comparer-divider-hover-color=var(--lr-color-brand)] - Fill of the dividing
+ *   line while the drag surface is hovered.
+ * @cssprop --lr-image-comparer-divider-active-color - Fill of the dividing line mid-drag. Defaults
+ *   to the hover fill mixed by the press step.
  * @cssprop [--lr-image-comparer-handle-bg=var(--lr-color-surface)] - Fill of the visible handle.
  * @cssprop [--lr-image-comparer-handle-color=var(--lr-color-text)] - Glyph color of the visible handle.
  * @cssprop [--lr-image-comparer-handle-border-color=var(--lr-color-border)] - Border color of the visible handle.

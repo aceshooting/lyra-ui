@@ -72,8 +72,8 @@ export const styles = css`
     color: var(--lr-color-text);
     border-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
     /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
-       the two modal steps. */
-    box-shadow: var(--lr-shadow-l);
+       the two modal steps by default; the shared modal elevation hook still reaches it. */
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-l));
     opacity: 0;
     transform: translateY(var(--lr-size-neg-8px));
     transition: opacity

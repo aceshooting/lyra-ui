@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -153,7 +153,7 @@ the component itself from the clamped `progress` property, so overriding it only
 repaint the fraction. `--lr-document-preview-active-border` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
-border so the active region can be recolored without touching the rest. Like the library's other
+border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other
 state hooks it is an inline `var()` fallback at the point of use rather than a `:host` declaration,
 so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
 invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
@@ -171,6 +171,7 @@ Plus shared tokens
 and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
+Region highlight action buttons accept `--lr-document-preview-action-background` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-background`.
 
 **Optional peer deps:** none directly — the `unsupported` slot is commonly used to compose
 `<lr-code-block>` (which has its own optional `shiki` peer dependency; see that component's own

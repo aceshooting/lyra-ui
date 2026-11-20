@@ -1,5 +1,6 @@
 import { activeFill, focusRing, focusRingInset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { noticeText } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -134,9 +135,10 @@ export const styles = css`
       var(--lr-size-24rem)
     );
   }
-  [part='input-limit'] {
-    margin-block: var(--lr-space-xs);
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
+  [part='input-limit'],
+  [part='details-limit'],
+  [part='search-limit'],
+  p[part='path'] {
+    ${noticeText}
   }
 `;

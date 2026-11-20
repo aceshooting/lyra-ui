@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -147,8 +147,10 @@ var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-acti
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-toggle-active-color` (default `var(--lr-color-brand)`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
-`--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+`--lr-page-navigation-drawer-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-page-navigation-drawer-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`).
+Behind these hooks the drawer reads the same shared modal family as `lr-dialog` and `lr-drawer`
+(`--lr-overlay-surface`, `--lr-overlay-shadow-modal`), so one declaration retints every modal panel.
 
 The sticky banner, header, subheader, menu and aside each paint an opaque surface. Their background
 properties are `--lr-page-banner-bg`, `--lr-page-header-bg`, `--lr-page-subheader-bg`,
@@ -164,7 +166,8 @@ sticky offsets use the three configured height properties. Enable `auto-sticky-o
 whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
 hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
 viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
-Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
+Every region has a zero-minimum inline size and `overflow-wrap: break-word` (which, unlike
+`anywhere`, leaves consumer content's min-content size intact); the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 
 Import only the Page registration when it is the only layout component this bundle needs:

@@ -1,4 +1,5 @@
 import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { layoutScale, toLayoutRect } from '../../../internal/layout-scale.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -767,7 +768,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
         '[part="cluster"]'
       );
       if (!marker) continue;
-      const rect = marker.getBoundingClientRect();
+      const rect = toLayoutRect(marker, marker.getBoundingClientRect());
       markerExtent = Math.max(
         markerExtent,
         this.orientation === 'horizontal' ? rect.width : rect.height
@@ -793,8 +794,9 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       let overhang = 0;
       if (this.scale === 'time' && this.orientation !== 'horizontal') {
         const bottom = base.getBoundingClientRect().bottom;
+        const scaleY = layoutScale(base).y;
         for (const item of this.timelineItems()) {
-          const geometry = this.timeItemGeometry(item, bottom);
+          const geometry = this.timeItemGeometry(item, bottom, scaleY);
           overhang = Math.max(overhang, geometry.bottom);
         }
       }
@@ -835,11 +837,12 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     else this.itemGeometry.clear();
   }
 
-  private timeItemGeometry(item: LyraTimelineItem, baseBottom: number): { bottom: number; extent: number } {
+  /** `baseBottom` is visual; the cached overhang is layout pixels (divided by `scaleY`). */
+  private timeItemGeometry(item: LyraTimelineItem, baseBottom: number, scaleY = 1): { bottom: number; extent: number } {
     let geometry = this.itemGeometry.get(item);
     if (!geometry) {
       geometry = item.getClientRects().length
-        ? { bottom: this.orientation === 'horizontal' ? 0 : item.getBoundingClientRect().bottom - baseBottom,
+        ? { bottom: this.orientation === 'horizontal' ? 0 : (item.getBoundingClientRect().bottom - baseBottom) / scaleY,
           extent: this.orientation === 'horizontal' ? item.offsetTop + item.offsetHeight + 1 : 0 }
         : { bottom: 0, extent: 0 };
       this.itemGeometry.set(item, geometry);

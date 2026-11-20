@@ -128,6 +128,8 @@ export interface LyraStackTraceEventMap {
  *   border.
  * @cssprop [--lr-stack-trace-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.
+ * @cssprop [--lr-stack-trace-internal-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover background of `[part="internal-toggle"]`.
+ * @cssprop --lr-stack-trace-internal-toggle-pressed-bg - Pressed background of the internal-frames toggle. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

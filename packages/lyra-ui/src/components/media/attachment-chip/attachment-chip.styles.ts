@@ -106,7 +106,7 @@ export const styles = css`
     block-size: var(--lr-attachment-chip-thumbnail-size, var(--lr-icon-button-size));
     overflow: hidden;
     border-radius: var(--lr-attachment-chip-thumbnail-radius, calc(var(--lr-radius) * 0.6));
-    background: var(--lr-color-surface);
+    background: var(--lr-attachment-chip-thumbnail-bg, var(--lr-color-surface));
     color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
   }
   [part='thumbnail'] img {
@@ -262,6 +262,15 @@ export const styles = css`
       border-style: solid;
       outline: var(--lr-border-width-medium) double CanvasText;
       outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+    /* The upload progress is data: its track and fill would both take the page background, so
+       the track gets a CanvasText edge and the fill keeps a Highlight paint. */
+    [part='progress'] {
+      outline: var(--lr-border-width-thin) solid CanvasText;
+    }
+    [part='progress-fill'] {
+      forced-color-adjust: none;
+      background-color: Highlight;
     }
   }
 `;

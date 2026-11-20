@@ -24,7 +24,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
-    color: var(--lr-breadcrumb-item-color, var(--lr-color-text));
+    color: var(--lr-breadcrumb-item-color, var(--_lr-breadcrumb-item-color, var(--lr-color-text)));
     text-decoration: none;
     border-radius: var(--lr-radius);
     min-inline-size: 0;
@@ -56,11 +56,11 @@ export const styles = css`
   }
   [part="label"] {
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   :where(a, button)[part="base"]:hover {
     text-decoration: underline;
-    color: var(--lr-breadcrumb-item-hover-color, var(--lr-breadcrumb-item-color, var(--lr-color-text)));
+    color: var(--lr-breadcrumb-item-hover-color, var(--lr-breadcrumb-item-color, var(--_lr-breadcrumb-item-color, var(--lr-color-text))));
   }
   :where(a, button)[part="base"]:active {
     text-decoration: underline;

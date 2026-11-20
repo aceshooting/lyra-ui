@@ -40,7 +40,7 @@ export const groupStyles = css`
   ${formControlSupportingTone}
   :host(:state(user-invalid)) [part~="radios"] {
     outline: var(--lr-border-width-thin) solid
-      var(--lr-radio-group-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+      var(--lr-radio-group-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
     border-radius: var(--lr-radius);
   }
   :host(:disabled) [part~="label"],

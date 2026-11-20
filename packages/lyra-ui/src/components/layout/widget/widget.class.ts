@@ -247,7 +247,12 @@ export interface LyraWidgetEventMap {
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
- * @cssprop [--lr-widget-bg=var(--lr-color-surface)] - Docked background.
+ * @cssprop [--lr-widget-bg=var(--lr-color-surface)] - Background. Fullscreen falls back to the shared
+ *   modal surface `--lr-overlay-surface` instead of the page surface.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared modal surface
+ *   fill of the fullscreen panel behind `--lr-widget-bg`, so one declaration retints it with lr-dialog.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Shared modal elevation of the
+ *   fullscreen panel.
  * @cssprop [--lr-widget-border-color=var(--lr-color-border-subtle)] - Docked border color.
  * @cssprop [--lr-widget-radius=var(--lr-radius)] - Docked corner radius.
  * @cssprop [--lr-widget-gap=var(--lr-space-s)] - Gap between header contents, defaulting to the size tier.

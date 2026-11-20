@@ -268,7 +268,7 @@ export const ScopedStateTheme: Story = {
     <form>
       <lr-checkbox
         required
-        style="--lr-checkbox-hover-border: var(--lr-color-success); --lr-checkbox-active-border: var(--lr-color-warning); --lr-checkbox-active-ring: var(--lr-color-warning-quiet); --lr-checkbox-invalid-border: var(--lr-color-danger);"
+        style="--lr-checkbox-hover-border-color: var(--lr-color-success); --lr-checkbox-active-border-color: var(--lr-color-warning); --lr-checkbox-active-ring-color: var(--lr-color-warning-quiet); --lr-checkbox-invalid-border-color: var(--lr-color-danger);"
         >Accept the terms</lr-checkbox
       >
       <button type="submit">Validate</button>

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -128,3 +128,5 @@ set the step, not the depth. Plus shared tokens otherwise.
   use the first depth-first occurrence; cyclic/repeated object identities are skipped.
 
 ---
+
+**Pointer-state tokens:** `--lr-source-picker-item-hover-bg`, `--lr-source-picker-item-active-bg`.

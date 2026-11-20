@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
+import { noticeText, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -13,6 +13,10 @@ export const styles = css`
     gap: var(--lr-space-l);
     min-inline-size: 0;
     color: var(--lr-color-text);
+  }
+
+  [part='source-status'] {
+    ${noticeText}
   }
 
   [part='empty'] {

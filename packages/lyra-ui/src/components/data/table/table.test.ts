@@ -1423,3 +1423,17 @@ describe('pagination options and parts', () => {
     });
   }
 });
+
+it('paints control hover from --lr-table-control-hover-bg', async () => {
+  const el = (await fixture(html`<lr-table filterable style="--lr-table-control-hover-bg: rgb(1, 2, 3)"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const filter = el.shadowRoot!.querySelector<HTMLElement>('[part="filter"]')!;
+  try {
+    await hoverUntilMatched(filter, 'the filter never hovered');
+    await waitUntil(() => getComputedStyle(filter).backgroundColor === 'rgb(1, 2, 3)', 'the control hover token paints');
+  } finally {
+    await resetMouse();
+  }
+});

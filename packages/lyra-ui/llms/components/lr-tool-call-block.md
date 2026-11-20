@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -119,3 +119,5 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
   block.redactedFields = ['args.apiKey'];
 </script>
 ```
+
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
-- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -191,3 +191,5 @@ be an Office Open XML workbook: OpenDocument and Numbers packages are refused, a
 (`.bin`) parts count against the cell ceiling by size. The fetched-workbook path yields after
 archive admission before SheetJS parsing, and between sheet projections; each parse/projection
 pass remains synchronous.
+
+**Pointer-state tokens:** `--lr-spreadsheet-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-spreadsheet-viewer-cell-action-active-bg`.

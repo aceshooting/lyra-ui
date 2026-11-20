@@ -596,3 +596,19 @@ it('rejects oversized serialized source paths without asking the provider and ke
   expect(await el.scrollToAnchor({ kind: 'node-path', path: [] })).to.equal(true);
   expect(reveals).to.deep.equal(['[]']);
 });
+
+it('lets an ancestor --lr-xml-viewer-max-height size the source tree unless max-height is set', async () => {
+  const blockSize = (el: LyraXmlViewer) => getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('.source-tree')!).blockSize;
+  const wrapper = await fixture<HTMLElement>(html`<div style="--lr-xml-viewer-max-height: 200px"><lr-xml-viewer .strings=${strings} .treeSource=${source(50).provider}></lr-xml-viewer></div>`);
+  const el = wrapper.querySelector('lr-xml-viewer') as LyraXmlViewer;
+  await ready(el);
+  expect(blockSize(el)).to.equal('200px');
+  el.maxHeight = '240px';
+  await el.updateComplete;
+  expect(blockSize(el)).to.equal('240px');
+  el.maxHeight = '';
+  wrapper.style.removeProperty('--lr-xml-viewer-max-height');
+  await el.updateComplete;
+  expect(blockSize(el)).to.equal('320px');
+});
+

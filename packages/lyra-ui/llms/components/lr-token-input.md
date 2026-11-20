@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -201,6 +201,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
 - `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
 - `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-token-color` — Token chip text color. Default: `var(--lr-color-text)`.
+- `--lr-token-input-token-radius` — Token chip corner radius. Default: `var(--lr-radius)` (`pill` rounds it fully), the same as the `lr-select` and `lr-combobox` chips.
 - `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
   background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label

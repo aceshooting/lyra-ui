@@ -48,6 +48,17 @@ export const blockHost = css`
   max-inline-size: 100%;
 `;
 
+/**
+ * Quiet supplementary note beside a component's main content (truncation, capability or load
+ * status): small quiet text with a tokenized block margin instead of the paragraph's UA 1em.
+ */
+export const noticeText = css`
+  margin-block: var(--lr-space-xs);
+  color: var(--lr-color-text-quiet);
+  font-size: var(--lr-font-size-sm);
+  overflow-wrap: break-word;
+`;
+
 /** Wrap guard for a flex or grid item holding caller text: it may shrink below its content and breaks long words. */
 export const wrapGuard = css`
   min-inline-size: 0;

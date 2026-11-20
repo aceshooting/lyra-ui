@@ -1,4 +1,5 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import { revealInOwnScroller } from '../../../internal/reveal-row.js';
 import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -261,6 +262,12 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-highlight-warning-color=var(--lr-color-warning)] - Warning highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-danger-color=var(--lr-color-danger)] - Danger highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-neutral-color=var(--lr-color-neutral)] - Neutral highlight border and hover tint.
+ * @cssprop [--lr-document-preview-action-background=var(--lr-color-surface)] - Resting background of
+ *   the region highlight action buttons.
+ * @cssprop [--lr-document-preview-action-hover-background=var(--lr-color-surface-raised)] - Hover background
+ *   of the region highlight action buttons.
+ * @cssprop --lr-document-preview-action-active-background - Pressed background of the region highlight action buttons. Defaults to
+ *   the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */
@@ -728,7 +735,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       .find((candidate) => candidate.getAttribute('data-id') === region.id);
     if (!regionElement) return false;
     const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
-    regionElement.scrollIntoView({ behavior, block: 'center', inline: 'center' });
+    revealInOwnScroller(regionElement, 'center', behavior);
     return true;
   }
 

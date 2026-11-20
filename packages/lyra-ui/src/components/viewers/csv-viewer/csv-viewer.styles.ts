@@ -16,6 +16,7 @@ export const styles = css`
     background: var(--lr-csv-viewer-header-row-bg, var(--lr-color-surface));
   }
   ${tableCellHighlightStyles({
+    tag: 'csv-viewer',
     color: css`var(--lr-csv-viewer-highlight-color, var(--_lr-csv-viewer-highlight-color, var(--lr-color-brand)))`,
     padding: css`var(--lr-space-2xs) var(--lr-space-xs)`,
   })}

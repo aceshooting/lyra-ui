@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-av-player.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 expectLocaleFallback('tr', ['avPlayerLabel', 'avPlayerPlaybackRate', 'avPlayerPosition', 'avPlayerRateOption',
   'avPlayerTimeline', 'avPlayerTranscript', 'loading', 'sourceSearchUnavailable']);
@@ -561,3 +562,22 @@ it('keeps search intent established synchronously by a canceled provider abort c
   expect(await newer).to.equal(1_000_000);
   expect(events).to.deep.equal(['Cue']);
 });
+
+it('paints an unavailable placeholder row as inert, without the cue hover fill', async () => {
+  const { element } = await mount(provider({ count: 64, getCue: () => null,
+    activeAt: () => ({ index: null, cue: null, validFrom: -Infinity, validUntil: Infinity }) }));
+  const placeholder = () => listOf(element).shadowRoot!.querySelector<HTMLElement>('[part~="cue-unavailable"]');
+  await waitUntil(() => placeholder() !== null, 'no unavailable placeholder row rendered');
+  const row = placeholder()!;
+  expect(row.getAttribute('aria-disabled')).to.equal('true');
+  expect(getComputedStyle(row).cursor).to.equal('default');
+  try {
+    const box = row.getBoundingClientRect();
+    await sendMouse({ type: 'move', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+    await waitUntil(() => row.matches(':hover'), 'the placeholder never reported :hover');
+    expect(getComputedStyle(row).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  } finally {
+    await resetMouse();
+  }
+});
+

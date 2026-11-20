@@ -206,8 +206,8 @@ export interface LyraVoicePickerEventMap {
  *   option, and preview-action corner radius.
  * @cssprop [--lr-voice-picker-preview-active-border=var(--lr-color-brand)] - Active preview border.
  * @cssprop [--lr-voice-picker-preview-active-color=var(--lr-color-brand)] - Active preview icon.
- * @cssprop [--lr-voice-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below.
- * @cssprop [--lr-voice-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background.
+ * @cssprop [--lr-voice-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below. The adjacent `[part='preview-button']` reads it too.
+ * @cssprop [--lr-voice-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background, shared by the preview button.
  * @cssprop [--lr-voice-picker-trigger-hover-border-color=var(--lr-voice-picker-trigger-border-color)] - Trigger border
  * color while the pointer is over it, or while it is pressed. Independent of the resting border
  * color above.

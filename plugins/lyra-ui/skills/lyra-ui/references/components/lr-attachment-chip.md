@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -226,6 +226,6 @@ previous entry, reassigning `file` several times before the next paint leaks not
   `File` nor `preview-src` supplies a source. The viewer's footer omits its download link for unsafe
   source schemes.
 
-Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners.
+Use `--lr-attachment-chip-action-hover-bg` and `--lr-attachment-chip-action-active-bg` for preview, retry, and remove buttons. `--lr-attachment-chip-thumbnail-size` sets the default-density preview size and `--lr-attachment-chip-thumbnail-radius` rounds its corners; `--lr-attachment-chip-thumbnail-bg` (default `var(--lr-color-surface)`) paints its background. Under forced colors the upload progress keeps a CanvasText track edge and a Highlight fill.
 
 ---

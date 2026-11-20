@@ -58,7 +58,7 @@ it('coalesces a bulk value assignment into one reconciliation instead of one per
 
 it('lets a consumer retint the invalid options border independently', async () => {
   const el = (await fixture(html`
-    <lr-checkbox-group style="--lr-checkbox-group-invalid-border: rgb(1, 2, 3)">
+    <lr-checkbox-group style="--lr-checkbox-group-invalid-border-color: rgb(1, 2, 3)">
       <lr-checkbox>A</lr-checkbox>
     </lr-checkbox-group>
   `)) as LyraCheckboxGroup;

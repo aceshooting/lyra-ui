@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -138,7 +138,11 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. Each is an inline `var()` fallback at the point
+colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+(defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
+other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
+an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the
+completed check mark. Each is an inline `var()` fallback at the point
 of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
 scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow

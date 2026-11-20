@@ -1730,3 +1730,15 @@ it('paints a configurable halo behind node label text', async () => {
   expect(style.getPropertyValue('paint-order').split(' ')[0]).to.equal('stroke');
   expect(Number.parseFloat(style.strokeWidth)).to.be.greaterThan(0);
 });
+
+it('paints links and node circles from their public tokens', async () => {
+  const el = await fixture<LyraMindMap>(html`<lr-mind-map
+    .topics=${topics}
+    style="--lr-mind-map-link-color: rgb(1, 2, 3); --lr-mind-map-link-width: 3; --lr-mind-map-node-fill: rgb(4, 5, 6)"
+  ></lr-mind-map>`);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="link"]') !== null, 'links render');
+  const link = getComputedStyle(el.shadowRoot!.querySelector('[part="link"]')!);
+  expect(link.stroke).to.equal('rgb(1, 2, 3)');
+  expect(link.strokeWidth).to.equal('3px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="node"] circle')!).fill).to.equal('rgb(4, 5, 6)');
+});

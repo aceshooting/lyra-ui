@@ -119,7 +119,7 @@ export const styles = css`
       var(--_lr-time-range-track-size)
     );
     border-radius: var(--lr-size-2px);
-    background: var(--lr-color-border);
+    background: var(--lr-time-range-track-bg, var(--lr-color-border));
   }
   [part="range"] {
     position: absolute;
@@ -128,7 +128,7 @@ export const styles = css`
       var(--_lr-time-range-track-size)
     );
     border-radius: var(--lr-size-2px);
-    background: var(--lr-color-brand);
+    background: var(--lr-time-range-range-bg, var(--lr-color-brand));
   }
   [part^="handle"] {
     position: absolute;

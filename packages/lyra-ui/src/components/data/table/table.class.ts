@@ -220,6 +220,11 @@ const DEFAULT_PAGE_SIZE = 100;
  * @cssprop --lr-table-row-active-bg - Active background of the row.
  * @cssprop --lr-table-sortable-header-hover-bg - Hover background of the sortable header.
  * @cssprop --lr-table-sortable-header-active-bg - Active background of the sortable header.
+ * @cssprop [--lr-table-control-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the
+ *   filter field, editable cells and cell editor, row-expand toggle, more button and
+ *   reveal-columns button.
+ * @cssprop --lr-table-control-active-bg - Pressed background of the same controls. Defaults to the
+ *   hover background mixed by the press step.
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.

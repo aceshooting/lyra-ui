@@ -249,7 +249,7 @@ export interface LyraAppRailEventMap {
  *   in each direction. A slotted glyph keeps its own orientation.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once. Casts its elevation
- *   (`--lr-app-rail-panel-shadow`, default `--lr-shadow-l`) only while the overlay is open; closed,
+ *   (`--lr-app-rail-panel-shadow`, default `--lr-overlay-shadow-modal`, then `--lr-shadow-l`) only while the overlay is open; closed,
  *   it is parked just off-canvas without a shadow, so nothing paints along the viewport edge.
  *   Retune that elevation through `--lr-app-rail-panel-shadow`. A `::part(panel)` `box-shadow`
  *   override must be scoped to the open state, `lr-app-rail[mode="mobile"][open]::part(panel)`: an
@@ -315,13 +315,16 @@ export interface LyraAppRailEventMap {
  *   clipping, accepting that wide header/footer content can then scroll/bleed both ways instead.
  * @cssprop [--lr-app-rail-bg=var(--lr-color-surface)] - `[part="base"]`'s background (the docked,
  *   non-overlay presentation); the unset fallback is transparent under frame="plain".
- * @cssprop [--lr-app-rail-panel-bg=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
+ * @cssprop [--lr-app-rail-panel-bg=var(--lr-overlay-surface, var(--lr-color-surface-container-highest))] - `[part="panel"]`'s
  *   background (the mobile overlay presentation) -- kept separate from
  *   `--lr-app-rail-bg`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel is
  *   deliberately themed as a modal surface, not the docked rail chrome.
- * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - `[part="panel"]`'s elevation while the
+ * @cssprop [--lr-app-rail-panel-shadow=var(--lr-overlay-shadow-modal, var(--lr-shadow-l))] - `[part="panel"]`'s elevation while the
  *   mobile overlay is open. Read only in the open state: the closed, off-canvas panel never casts a
  *   shadow, whatever this is set to. Set `none` to remove the open elevation.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared modal surface
+ *   fill behind the mobile panel hook, so one declaration retints it with lr-dialog.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation behind the mobile panel hook.
  * @cssprop [--lr-app-rail-header-padding=var(--lr-space-m)] - `[part="header"]`'s padding.
  * @cssprop --lr-app-rail-header-border - Header block-end border shorthand.
  *   Defaults to a thin subtle border.

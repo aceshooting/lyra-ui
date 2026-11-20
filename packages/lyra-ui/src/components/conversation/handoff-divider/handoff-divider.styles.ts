@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -45,4 +46,5 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  ${forcedColorsDivider("[part='line']")}
 `;

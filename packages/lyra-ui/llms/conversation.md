@@ -588,7 +588,7 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-color-active` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
 
 ## `lr-chat-message`
 
@@ -2670,7 +2670,7 @@ const view = html`<lr-code-block-core
 
 ---
 
-**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons.
+**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` set the disclosure glyph color per state, and `--lr-code-block-gutter-color-hover` (default `inherit`) the hovered line button's text.
 
 ## `lr-model-settings-panel`
 
@@ -3083,6 +3083,12 @@ required because `::part(up-button)[aria-pressed='true']` is invalid CSS (Shadow
 attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-success`/`--lr-color-danger` tokens as the only lever, repainting every other element
 reading them. Unset, each falls back to exactly the token its rule used before.
+The submit button takes `--lr-message-feedback-submit-bg` (default `var(--lr-color-brand)`),
+`--lr-message-feedback-submit-color` (default `var(--lr-color-on-brand)`),
+`--lr-message-feedback-submit-border-color` (default `var(--lr-color-border)`),
+`--lr-message-feedback-submit-hover-bg` and `--lr-message-feedback-submit-active-bg` (each defaulting to
+its own fill mixed by the hover or press step); the comment field's hover edge is
+`--lr-message-feedback-comment-hover-border-color` (default `var(--lr-color-brand)`).
 
 ## `lr-push-to-talk`
 
@@ -3873,6 +3879,8 @@ form-control values when `size` is set. `--lr-thread-list-search-clear-size` (de
 `var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
+`--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search
+field's edge.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,
@@ -3928,7 +3936,7 @@ pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in 
 
 ## `lr-checkpoint`
 
-Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`; its hover and press with `--lr-checkpoint-button-hover-border-color`, `--lr-checkpoint-button-hover-color` and `--lr-checkpoint-button-active-bg`. The confirm and cancel buttons take `--lr-checkpoint-confirm-bg`, `--lr-checkpoint-confirm-color`, `--lr-checkpoint-confirm-border-color`, `--lr-checkpoint-confirm-hover-bg`, `--lr-checkpoint-confirm-active-bg`, `--lr-checkpoint-cancel-bg`, `--lr-checkpoint-cancel-color`, `--lr-checkpoint-cancel-hover-bg` and `--lr-checkpoint-cancel-active-bg`. All three actions are at least `--lr-icon-button-size` in both axes.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores
@@ -4027,6 +4035,9 @@ library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corn
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-usage-badge>`; set the custom property on `:root`, a theme, or one clipping
 ancestor to change every unset usage badge beneath it.
+
+`--lr-usage-badge-hover-bg` (default `var(--lr-color-surface-raised)`) is the hover background of a
+focusable badge.
 
 ```html
 <lr-chat-message message-role="assistant" status="sent">
@@ -4496,6 +4507,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `var(--lr-opacity-disabled)`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
+- The preview button rests on `--lr-voice-picker-trigger-border-color` and `--lr-voice-picker-trigger-fill`, and takes `--lr-voice-picker-trigger-hover-border-color` on hover, so it follows the trigger beside it.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
 

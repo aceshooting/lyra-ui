@@ -96,6 +96,7 @@ export const styles = css`
   [part="highlight-action"] {
     ${iconHitTarget}
     ${nativeControlSurface}
+    background: var(--lr-docx-viewer-action-background, var(--lr-color-surface));
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
@@ -103,11 +104,11 @@ export const styles = css`
   }
 
   [part="highlight-action"]:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-docx-viewer-action-hover-background, var(--lr-color-surface-raised));
   }
 
   [part="highlight-action"]:active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-docx-viewer-action-active-background, ${activeFill('var(--lr-docx-viewer-action-hover-background, var(--lr-color-surface-raised))')});
   }
 
   [part="highlight-action"]:focus-visible {

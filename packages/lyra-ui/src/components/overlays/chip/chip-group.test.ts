@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { LitElement, html as litHtml } from 'lit';
 import '../../lr-chip-group.js';
 import '../../lr-chip.js';
@@ -897,4 +898,19 @@ describe('group semantics', () => {
     expect(base.getAttribute('role')).to.equal('group');
     expect(base.getAttribute('aria-label')).to.equal('Tags');
   });
+});
+
+it('paints the overflow indicator hover from its scoped hover tokens', async () => {
+  const el = (await fixture(fiveChips())) as LyraChipGroup;
+  el.maxVisible = 3;
+  el.style.cssText = '--lr-chip-group-overflow-hover-bg: rgb(1, 2, 3); --lr-chip-group-overflow-hover-border-color: rgb(4, 5, 6)';
+  await el.updateComplete;
+  const indicator = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!;
+  try {
+    await hoverUntilMatched(indicator, 'the overflow indicator never hovered');
+    await waitUntil(() => getComputedStyle(indicator).backgroundColor === 'rgb(1, 2, 3)', 'hover fill token paints');
+    expect(getComputedStyle(indicator).borderTopColor).to.equal('rgb(4, 5, 6)');
+  } finally {
+    await resetMouse();
+  }
 });

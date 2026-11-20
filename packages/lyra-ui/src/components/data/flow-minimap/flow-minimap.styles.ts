@@ -13,7 +13,8 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     block-size: 100%;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The same decorative frame edge as lr-flow-controls and lr-flow-run-status. */
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     overflow: hidden;
@@ -75,6 +76,25 @@ export const styles = css`
   }
   [part='node'] {
     fill: var(--_lr-flow-status-paint, var(--lr-flow-status-color, var(--lr-color-border-strong)));
+  }
+  /* The run status is the only thing a minimap node shows, so forced colours keep its authored
+     fill, edge it in CanvasText, and give each status its own outline pattern as a non-colour cue. */
+  @media (forced-colors: active) {
+    [part='node'] {
+      forced-color-adjust: none;
+      stroke: CanvasText;
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    [part='node'][data-status='running'] {
+      stroke-dasharray: 4 2;
+    }
+    [part='node'][data-status='error'] {
+      stroke-width: 3;
+    }
+    [part='node'][data-status='denied'] {
+      stroke-dasharray: 1 2;
+    }
   }
   [part='aggregate-bin'] {
     fill: var(--lr-color-brand-quiet);

@@ -273,6 +273,10 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  *   `<lr-virtual-list>`'s own viewport keeps its independent, fixed default height (retheme it
  *   directly via `<lr-ingestion-queue>`'s own `lr-virtual-list { --lr-virtual-list-height: ... }`
  *   if needed).
+ * @cssprop [--lr-ingestion-queue-action-hover-color=var(--lr-color-brand)] - Border and label color of a hovered or pressed retry/item action button.
+ * @cssprop --lr-ingestion-queue-action-active-bg - Pressed background of the retry/item action buttons.
+ * @cssprop [--lr-ingestion-queue-cancel-hover-color=var(--lr-color-danger)] - Border and label color of a hovered or pressed cancel button.
+ * @cssprop --lr-ingestion-queue-cancel-active-bg - Pressed background of the cancel button.
  * @status stable
  * @since 4.1.0
  */

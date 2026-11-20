@@ -57,6 +57,24 @@ function bookmarkIcon(): SVGTemplateResult {
  * @cssprop [--lr-checkpoint-button-border-color=var(--lr-color-border)] - Resting border color.
  * @cssprop [--lr-checkpoint-button-radius=var(--lr-radius-pill)] - Corner radius.
  * @cssprop [--lr-checkpoint-button-padding-inline=var(--lr-space-s)] - Inline padding.
+ * @cssprop [--lr-checkpoint-button-hover-border-color=var(--lr-color-brand)] - Restore button
+ *   border color while hovered or pressed.
+ * @cssprop [--lr-checkpoint-button-hover-color=var(--lr-color-brand)] - Restore button text color
+ *   while hovered or pressed.
+ * @cssprop [--lr-checkpoint-button-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Restore button background while pressed.
+ * @cssprop [--lr-checkpoint-confirm-bg=var(--lr-color-brand-quiet)] - Confirm button background.
+ * @cssprop [--lr-checkpoint-confirm-color=var(--lr-color-brand)] - Confirm button text color.
+ * @cssprop [--lr-checkpoint-confirm-border-color=var(--lr-color-brand)] - Confirm button border color.
+ * @cssprop --lr-checkpoint-confirm-hover-bg - Confirm button hover background. Defaults to its own
+ *   fill mixed toward `--lr-color-mix-partner` by the hover step.
+ * @cssprop --lr-checkpoint-confirm-active-bg - Confirm button pressed background. Defaults to its
+ *   own fill mixed by the press step.
+ * @cssprop [--lr-checkpoint-cancel-bg=var(--lr-color-surface)] - Cancel button background.
+ * @cssprop [--lr-checkpoint-cancel-color=var(--lr-color-text)] - Cancel button text color.
+ * @cssprop [--lr-checkpoint-cancel-hover-bg=var(--lr-color-surface-raised)] - Cancel button hover
+ *   background.
+ * @cssprop --lr-checkpoint-cancel-active-bg - Cancel button pressed background. Defaults to the
+ *   hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

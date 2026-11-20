@@ -90,14 +90,14 @@ export const styles = css`
   }
 
   [part='request']:not(:disabled):hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-approval-queue-row-hover-bg, var(--lr-color-surface-raised));
   }
 
   /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner
      (which follows the text colour), so it reads as a distinctly deeper step than hover in both
      light and dark themes. */
   [part='request']:not(:disabled):active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-approval-queue-row-pressed-bg, ${activeFill('var(--lr-approval-queue-row-hover-bg, var(--lr-color-surface-raised))')});
   }
 
   [part='request']:focus-visible {

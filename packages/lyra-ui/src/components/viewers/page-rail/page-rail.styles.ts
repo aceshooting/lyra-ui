@@ -115,4 +115,27 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   ${forcedColorsPart('lr-virtual-list::part(page-current)')}
+  /* Heat dots are data drawn only by a background fill, which forced colours would drop: keep the
+     authored tone, edge it in CanvasText, and give each status tone its own shape. */
+  @media (forced-colors: active) {
+    lr-virtual-list::part(heat-dot) {
+      forced-color-adjust: none;
+      box-sizing: border-box;
+      border: var(--lr-border-width-thin) solid CanvasText;
+    }
+    lr-virtual-list::part(heat-dot-success) {
+      border-radius: 0;
+    }
+    lr-virtual-list::part(heat-dot-warning) {
+      border-radius: 0 50%;
+    }
+    lr-virtual-list::part(heat-dot-danger) {
+      border-radius: 0;
+      border-width: var(--lr-border-width-medium);
+    }
+    lr-virtual-list::part(heat-dot-overflow) {
+      border: 0;
+      color: CanvasText;
+    }
+  }
 `;

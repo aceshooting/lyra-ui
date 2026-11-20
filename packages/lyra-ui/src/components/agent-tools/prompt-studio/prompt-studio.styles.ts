@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery, compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -108,4 +109,5 @@ export const styles = css`
     [part='message-actions'] { flex-direction: row; justify-self: end; }
     [part='remove-message'] { justify-self: end; }
   }
+  ${forcedColorsPart("[part='version'][aria-pressed='true']")}
 `;

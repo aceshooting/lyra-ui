@@ -149,9 +149,17 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  * @cssprop [--lr-code-block-toggle-bg=transparent] - Disclosure control background at rest.
  * @cssprop [--lr-code-block-toggle-bg-hover=var(--lr-color-brand-quiet)] - Disclosure control hover background.
  * @cssprop --lr-code-block-toggle-bg-active - Disclosure control pressed background.
+ * @cssprop [--lr-code-block-toggle-color=var(--lr-color-text-quiet)] - Disclosure control glyph
+ *   color at rest.
+ * @cssprop [--lr-code-block-toggle-color-hover=var(--lr-color-brand)] - Disclosure control glyph
+ *   color while hovered.
+ * @cssprop [--lr-code-block-toggle-color-active=var(--lr-code-block-toggle-color-hover)] -
+ *   Disclosure control glyph color while pressed.
  * @cssprop [--lr-code-block-gutter-bg=transparent] - Line button background at rest.
  * @cssprop [--lr-code-block-gutter-bg-hover=var(--lr-color-brand-quiet)] - Line button hover background.
  * @cssprop --lr-code-block-gutter-bg-active - Line button pressed background.
+ * @cssprop [--lr-code-block-gutter-color-hover=inherit] - Line button text color while hovered;
+ *   unset, it keeps the line-number color.
  * @cssprop [--lr-code-block-line-number-color=var(--lr-color-text-quiet)] - Line number color.
  * @cssprop [--lr-code-block-max-height=none] - Scroll cap applied to `body`. The `max-height`
  *   attribute, when set, writes this same property inline on `body` and therefore wins.

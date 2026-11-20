@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, focusRingShorthand, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -54,7 +54,9 @@ export const styles = css`
     max-inline-size: 100%;
     block-size: auto;
   }
-  [part="body-text"] {
+  /* The folded quote is the same plain-text body, so it wraps and resets margins the same way. */
+  [part="body-text"],
+  [part="quoted"] {
     margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -88,10 +90,15 @@ export const styles = css`
     display: flex;
     min-inline-size: 0;
   }
+  /* A full-width row: the inline floor stays 0 so a long name can shrink and ellipsize, and the
+     block axis keeps the shared --lr-icon-button-size hit-area floor. */
   [part="attachment-button"] {
     display: flex;
     flex: 1;
     min-inline-size: 0;
+    min-block-size: var(--lr-icon-button-size);
+    box-sizing: border-box;
+    align-items: center;
     justify-content: space-between;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -123,6 +130,11 @@ export const styles = css`
     flex: none;
   }
   [part="quote-toggle"] {
+    ${iconHitTarget}
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-block-start: var(--lr-space-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

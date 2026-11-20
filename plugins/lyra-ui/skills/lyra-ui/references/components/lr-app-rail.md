@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -320,7 +320,7 @@ presentations is on screen, for magnifier and braille users, rather than announc
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
-boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
+boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`) affects only the open mobile
 panel; no value can paint elevation while closed. Prefer that token over an unqualified
 `::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
 `lr-app-rail[mode="mobile"][open]::part(panel)`.
@@ -359,7 +359,7 @@ paired with a non-`visible` other axis computes as `auto` instead (still clippin
 tokens to `visible` together to actually stop the clipping, accepting that wide header/footer
 content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `var(--lr-color-surface)` — `[part="base"]`'s background, the docked non-overlay presentation) and
-`--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
+`--lr-app-rail-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))` — `[part="panel"]`'s
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default

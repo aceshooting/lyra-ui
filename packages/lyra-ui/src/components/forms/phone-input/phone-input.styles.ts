@@ -112,6 +112,9 @@ export const styles = css`
 
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-phone-input-focus-border-color, var(--lr-color-brand));
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     ${formControlFocusHalo}
   }
 

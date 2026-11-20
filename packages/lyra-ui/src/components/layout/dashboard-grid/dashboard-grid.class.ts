@@ -213,8 +213,9 @@ export interface LyraDashboardGridEventMap {
  * shrinking columns unreadably. A cell that currently owns a resize handle retains the shared
  * interactive-action block-size floor, so the absolute handle cannot overlap the preceding cell
  * or gap when consumer-authored content is shorter than the handle. Host, grid, cell, and slotted
- * custom-content boundaries all permit intrinsic shrinkage and inherit `overflow-wrap: anywhere`,
- * so an unbroken direct text run cannot widen the stack; a consumer-owned scrollport can still
+ * custom-content boundaries all permit intrinsic shrinkage and inherit `overflow-wrap: break-word`,
+ * so an unbroken direct text run cannot widen the stack while consumer content keeps its own
+ * min-content size; a consumer-owned scrollport can still
  * opt into `overflow: auto`/`white-space: nowrap` and contains its own extent.
  *
  * @customElement lr-dashboard-grid

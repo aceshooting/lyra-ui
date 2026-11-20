@@ -105,6 +105,9 @@ export const styles = css`
   /* State in the part name -- ::part(segment)[data-active] never matches. */
   [part~='active'] {
     border-color: var(--lr-otp-input-active-border-color, var(--lr-focus-ring-color));
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     /* Inset: the segment row scrolls (overflow clips both axes), so an outer ring would be cut off
        on the row's edge segments. */
     box-shadow: inset 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));

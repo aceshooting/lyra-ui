@@ -126,6 +126,7 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  *   tooltip's `fixed` default, read from computed style when it is (re)positioned. Set it once on
  *   `:root`, a theme, or one clipping ancestor to change every unset tool call chip beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-tool-call-chip-hover-border-color=var(--lr-color-brand)] - Border color of the hovered chip.
  * @status stable
  * @since 4.0.0
  */

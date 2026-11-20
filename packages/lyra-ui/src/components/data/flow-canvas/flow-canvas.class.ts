@@ -1,4 +1,6 @@
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
+import { revealInOwnScroller } from '../../../internal/reveal-row.js';
+import { layoutScale } from '../../../internal/layout-scale.js';
 import { CollectionSourceTracker, SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { HostChildrenObserver, OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import type { LyraGraphSource, LyraGraphScene, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraGraphOverview, LyraSourceRecord, LyraSourceBounds } from '../../../data-sources.js';
@@ -192,6 +194,9 @@ interface OwnedAnimationFrame {
   handle: number;
   owner: Window;
 }
+
+/** Viewport geometry for pointer and framing math (see `measureViewport()`). */
+interface ViewportMeasure { left: number; top: number; width: number; height: number; scaleX: number; scaleY: number }
 
 /**
  * `<lr-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws
@@ -561,7 +566,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     } finally { this.sourceSyncing = false; }
   }
   private sourceViewportBounds(): LyraSourceBounds {
-    const rect = this.viewportEl?.getBoundingClientRect() ?? this.getBoundingClientRect();
+    const rect = this.measureViewport() ?? { width: this.clientWidth, height: this.clientHeight };
     const bound = (value: number) => clamp(value, -1_000_000, 1_000_000);
     const x = bound(-this.panX / this.zoomLevel), y = bound(-this.panY / this.zoomLevel);
     return Object.freeze({ x, y, width: Math.max(0, bound((rect.width - this.panX) / this.zoomLevel) - x), height: Math.max(0, bound((rect.height - this.panY) / this.zoomLevel) - y) });
@@ -617,7 +622,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.sourceState++; await this.updateComplete; if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
     if (!target) return false;
-    target.scrollIntoView({ block: 'nearest' }); if (!current()) return false; target.focus(); return current();
+    revealInOwnScroller(target); if (!current()) return false; target.focus({ preventScroll: true }); return current();
   }
   private async focusSourceRecord(
     index: number,
@@ -656,8 +661,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       for (; index >= page * size && index < Math.min(total, (page + 1) * size); index += direction) {
         const button = buttons[index % size];
         if (!button || button.disabled) continue;
-        button.scrollIntoView({ block: 'nearest' });
-        if (current()) button.focus();
+        revealInOwnScroller(button);
+        if (current()) button.focus({ preventScroll: true });
         return;
       }
     }
@@ -1066,7 +1071,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private hasFitOnce = false;
   private rovingCache?: readonly RovingItem[];
   private companionStructure?: Pick<FlowStructureSnapshot, 'nodes' | 'edges'>;
-  private wheelMeasure: { rect: DOMRect; rtl: boolean } | null = null;
+  private wheelMeasure: { rect: ViewportMeasure; rtl: boolean } | null = null;
   private wheelMeasureRaf: OwnedAnimationFrame | null = null;
   private panDrag?: {
     pointerId: number;
@@ -1077,6 +1082,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     startPanX: number;
     startPanY: number;
     rtlFlip: number;
+    scaleX: number;
+    scaleY: number;
   };
 
   private nodeDrag?: {
@@ -1091,6 +1098,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     currentY?: number;
     wrapper: HTMLElement;
     rtlFlip: number;
+    scaleX: number;
+    scaleY: number;
   };
   private nodeIncidentEdges = new Map<string, string[]>();
   /** Per-drag snapshot of the dragged node's incident edges -- edge/node records and shadow-DOM
@@ -1103,7 +1112,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     sourceId: string;
     sourceHandle: string;
     startPt: { x: number; y: number };
-    rect: DOMRect | null;
+    rect: ViewportMeasure | null;
     rtl: boolean;
   };
   private stopConnectListeners?: () => void;
@@ -1857,7 +1866,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private applyFit(requestedPadding = DEFAULT_FIT_PADDING): boolean {
     return this.withFallbackSizes(() => {
     this.fallbackSizes.clear();
-    const rect = this.viewportEl?.getBoundingClientRect();
+    const rect = this.measureViewport();
     if ((!this.sourceMode && this.modelNodes.length === 0) || !rect?.width || !rect.height) return false;
     if (this.sourceMode && !this.sourceWorld) return false;
     const padding = finiteRange(requestedPadding, DEFAULT_FIT_PADDING, 0);
@@ -1897,7 +1906,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const node = nodeById(this.modelNodes, id);
     if (!node) return;
     const resolved = this.resolvedNode(node);
-    const rect = this.viewportEl?.getBoundingClientRect();
+    const rect = this.measureViewport();
     const viewW = rect?.width ?? 0;
     const viewH = rect?.height ?? 0;
     const zoom = options?.zoom != null ? this.clampZoom(options.zoom) : this.zoomLevel;
@@ -1911,10 +1920,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   /** Converts a viewport client coordinate into content (world) coordinates using the current pan and zoom; returns `{ x: 0, y: 0 }` before the viewport renders. */
   toContentPoint(clientX: number, clientY: number): { x: number; y: number } {
-    const rect = this.viewportEl?.getBoundingClientRect();
+    const rect = this.measureViewport();
     if (!rect) return { x: 0, y: 0 };
     const localX = this.localWorldX(clientX, rect);
-    const localY = clientY - rect.top;
+    const localY = (clientY - rect.top) / rect.scaleY;
     return { x: (localX - this.panX) / this.zoomLevel, y: (localY - this.panY) / this.zoomLevel };
   }
 
@@ -1950,7 +1959,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private buildSnapshot(): FlowStructureSnapshot {
     return this.withFallbackSizes(() => {
     this.fallbackSizes.clear();
-    const rect = this.viewportEl?.getBoundingClientRect();
+    const rect = this.measureViewport();
     const bounds = this.effectiveZoomBounds;
     this.companionStructure ??= {
       nodes: Object.freeze(this.modelNodes.map((n) => {
@@ -2021,7 +2030,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private zoomAtCenter(nextZoom: number): void {
-    const rect = this.viewportEl?.getBoundingClientRect();
+    const rect = this.measureViewport();
     this.zoomAtPoint(rect ? rect.width / 2 : 0, rect ? rect.height / 2 : 0, nextZoom);
   }
 
@@ -2043,9 +2052,25 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  canvas's pre-mirror world-local X. Every other pan/zoom/drag calculation stays in plain
    *  physical coordinates because `[part='viewport']`'s own CSS mirrors the whole `.world` layer
    *  under RTL; panning/zoom math never needs to know about RTL beyond this one conversion. */
-  private localWorldX(clientX: number, rect: DOMRect, rtl = isRtl(this)): number {
-    const local = clientX - rect.left;
+  private localWorldX(clientX: number, rect: ViewportMeasure, rtl = isRtl(this)): number {
+    const local = (clientX - rect.left) / rect.scaleX;
     return this.orientation === 'horizontal' && rtl ? rect.width - local : local;
+  }
+
+  private dragScale(): { scaleX: number; scaleY: number } {
+    const { x, y } = this.viewportEl ? layoutScale(this.viewportEl) : { x: 1, y: 1 };
+    return { scaleX: x, scaleY: y };
+  }
+
+  /** The viewport's visual origin with its size in layout pixels and the accumulated ancestor
+   *  scale, so pointer and framing math stays in the world transform's own (layout) units under a
+   *  scaled or zoomed ancestor. */
+  private measureViewport(): ViewportMeasure | undefined {
+    const viewport = this.viewportEl;
+    if (!viewport) return undefined;
+    const box = viewport.getBoundingClientRect();
+    const { x, y } = layoutScale(viewport);
+    return { left: box.left, top: box.top, width: box.width / x, height: box.height / y, scaleX: x, scaleY: y };
   }
 
   /**
@@ -2079,7 +2104,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     // direction can change within a single frame, so both are measured at most once per frame
     // instead of forcing a layout/style recalc on every event.
     if (!this.wheelMeasure) {
-      this.wheelMeasure = { rect: this.viewportEl.getBoundingClientRect(), rtl: isRtl(this) };
+      this.wheelMeasure = { rect: this.measureViewport()!, rtl: isRtl(this) };
       this.wheelMeasureRaf = this.requestOwnerAnimationFrame(() => {
         this.wheelMeasure = null;
         this.wheelMeasureRaf = null;
@@ -2087,7 +2112,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
     const { rect, rtl } = this.wheelMeasure;
     const localX = this.localWorldX(e.clientX, rect, rtl);
-    const localY = e.clientY - rect.top;
+    const localY = (e.clientY - rect.top) / rect.scaleY;
     this.zoomAtPoint(localX, localY, this.zoomLevel * wheelZoomFactor(delta));
   };
 
@@ -2105,6 +2130,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       startPanY: this.panY,
       // Resolved once per gesture: isRtl() reads getComputedStyle, too costly per pointermove.
       rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
+      ...this.dragScale(),
     };
     capturePointer(target, e.pointerId);
     this.viewportEl?.setAttribute('data-panning', '');
@@ -2126,8 +2152,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
     // Panning tracks the pointer's *physical* direction, so under the RTL ancestor mirror the
     // stored panX delta must be negated to still visually follow the cursor.
-    this.panX = drag.startPanX + (e.clientX - drag.startClientX) * drag.rtlFlip;
-    this.panY = drag.startPanY + (e.clientY - drag.startClientY);
+    this.panX = drag.startPanX + ((e.clientX - drag.startClientX) * drag.rtlFlip) / drag.scaleX;
+    this.panY = drag.startPanY + (e.clientY - drag.startClientY) / drag.scaleY;
     this.applyWorldTransform();
     this.scheduleViewportChange();
   };
@@ -2665,6 +2691,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       wrapper,
       // Resolved once per gesture: isRtl() reads getComputedStyle, too costly per pointermove.
       rtlFlip: this.orientation === 'horizontal' && isRtl(this) ? -1 : 1,
+      ...this.dragScale(),
     };
     this.dragEdgeRefs = this.buildDragEdgeRefs(node.id);
     capturePointer(wrapper, e.pointerId);
@@ -2684,8 +2711,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.endNodeDrag(false);
       return;
     }
-    const dx = ((e.clientX - drag.startClientX) * drag.rtlFlip) / this.zoomLevel;
-    const dy = (e.clientY - drag.startClientY) / this.zoomLevel;
+    const dx = ((e.clientX - drag.startClientX) * drag.rtlFlip) / (this.zoomLevel * drag.scaleX);
+    const dy = (e.clientY - drag.startClientY) / (this.zoomLevel * drag.scaleY);
     const x = this.snap(drag.startX + dx);
     const y = this.snap(drag.startY + dy);
     drag.wrapper.style.transform = `translate(${x}px, ${y}px)`;
@@ -2812,7 +2839,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       sourceId: nodeId,
       sourceHandle: handleId,
       startPt,
-      rect: this.viewportEl?.getBoundingClientRect() ?? null,
+      rect: this.measureViewport() ?? null,
       rtl: isRtl(this),
     };
     this.connecting = true;
@@ -2836,7 +2863,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const state = this.connectState;
     if (!state?.rect) return { x: 0, y: 0 };
     const localX = this.localWorldX(clientX, state.rect, state.rtl);
-    const localY = clientY - state.rect.top;
+    const localY = (clientY - state.rect.top) / state.rect.scaleY;
     return { x: (localX - this.panX) / this.zoomLevel, y: (localY - this.panY) / this.zoomLevel };
   }
 

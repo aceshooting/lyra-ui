@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -189,3 +189,5 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
+
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.

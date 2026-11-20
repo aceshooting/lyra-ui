@@ -346,6 +346,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   `data-active`).
  * @csspart transcript - The virtualized cue list (`<lr-virtual-list>` itself).
  * @csspart cue - One transcript row (`aria-current`, `data-match`, `data-active-match`).
+ * @csspart cue-unavailable - Added alongside `cue` on a loading or unavailable source placeholder row,
+ *   which is inert: it paints no hover or press feedback.
  * @csspart cue-current - Added alongside `cue` on the row the playhead is inside. A second part
  *   name rather than an attribute selector, because Shadow Parts forbids an attribute selector
  *   after `::part()`.
@@ -376,6 +378,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   renders, resolved per tone from the `--lr-av-player-marker-*-bg` knobs above. Its hover and
  *   pressed states are colour mixes taken from this value, so setting it directly retints all
  *   three at once for one marker; retint a whole tone through the `-bg` knob instead.
+ * @cssprop [--lr-av-player-timeline-hover-border-color=var(--lr-color-brand)] - Border color of the
+ *   hovered or pressed `[part="timeline"]`.
+ * @cssprop [--lr-av-player-timeline-active-bg=color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Background of the pressed timeline while scrubbing.
  * @cssprop [--lr-av-player-cue-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   `[part="cue"]`. The pressed state mixes further from this same value rather than a separate
  *   knob, so retuning it keeps its pressed step too.
@@ -1584,7 +1589,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private renderCue = (cue: unknown, index: number): TemplateResult => {
     const sourceMode = this._cueSource !== null;
     const slot = sourceMode ? cue as SourceWindowSlot<LyraAvCue> : undefined;
-    if (slot && slot.state !== 'ready') return html`<div part="cue" aria-disabled="true">${slot.state === 'loading'
+    if (slot && slot.state !== 'ready') return html`<div part="cue cue-unavailable" aria-disabled="true">${slot.state === 'loading'
       ? this.localize('loading') : this.localize('avPlayerTranscriptUnavailable')}</div>`;
     const c = slot?.state === 'ready' ? slot.value : cue as LyraAvCue;
     const epoch = this.cueSourceController.epoch;
@@ -1726,7 +1731,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ${(this._cueSource !== null ? this.cueSourceController.count : this.cues.length)
         ? html`<lr-virtual-list
             part="transcript"
-            exportparts="cue:cue, cue-current:cue-current, cue-match:cue-match, cue-active-match:cue-active-match, cue-time:cue-time, cue-speaker:cue-speaker, cue-text:cue-text"
+            exportparts="cue:cue, cue-unavailable:cue-unavailable, cue-current:cue-current, cue-match:cue-match, cue-active-match:cue-active-match, cue-time:cue-time, cue-speaker:cue-speaker, cue-text:cue-text"
             aria-label=${this.localize('avPlayerTranscript')}
             .items=${this._cueSource !== null ? EMPTY_CUES : this.cues}
             .source=${this._cueSource !== null ? this.cueSourceController.window.source : undefined}

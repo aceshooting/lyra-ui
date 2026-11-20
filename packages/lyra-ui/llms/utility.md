@@ -641,7 +641,7 @@ also apply. The flat source rows own logical treeitem semantics.
   means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Source mode otherwise
-  uses a `var(--lr-size-20rem)` height ceiling. Values that do not parse
+  uses `--lr-json-viewer-max-height`, then a `var(--lr-size-20rem)` height ceiling. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `layout: 'auto' | 'inline' | 'stacked' = 'auto'` (type `LyraJsonViewerLayout`) — how a scalar row places

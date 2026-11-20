@@ -79,6 +79,9 @@ export const styles = css`
   :host([open]) [part~='time-input'],
   [part~='time-input']:focus-within {
     border-color: var(--lr-time-input-focus-border-color, var(--lr-color-brand));
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     /* Additive: the brand border above is the accessibility answer to focus and stays exactly as it
        was. Unset, the halo resolves to none, so this paints nothing by default. */
     ${formControlFocusHalo}

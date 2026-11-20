@@ -2550,3 +2550,19 @@ describe("lr-stepper read-only scroll tab stop", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('paints the idle index, error index and completed check from public tokens', async () => {
+  const el = (await fixture(html`<lr-stepper
+    .steps=${[
+      { stepId: 'done', label: 'Done', state: 'completed' as const },
+      { stepId: 'broken', label: 'Broken', state: 'error' as const },
+      { stepId: 'next', label: 'Next', state: 'pending' as const },
+    ]}
+    style="--lr-stepper-check-color: rgb(1, 2, 3); --lr-stepper-error-index-bg: rgb(4, 5, 6); --lr-stepper-index-bg: rgb(7, 8, 9)"
+  ></lr-stepper>`)) as LyraStepper;
+  await el.updateComplete;
+  const root = el.shadowRoot!;
+  expect(getComputedStyle(root.querySelector('[part="step-check"]')!).color).to.equal('rgb(1, 2, 3)');
+  const indices = [...root.querySelectorAll('[part="step-index"]')].map((index) => getComputedStyle(index).backgroundColor);
+  expect(indices).to.deep.equal(['rgb(4, 5, 6)', 'rgb(7, 8, 9)']);
+});

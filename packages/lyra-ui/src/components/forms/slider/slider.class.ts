@@ -217,6 +217,11 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  *   area around it never drops below 1.75rem/28px, whatever this is set to.
  * @cssprop [--lr-slider-track-thickness=calc(var(--lr-slider-thumb-size) * 0.25)] - Thickness of
  *   the track, the filled indicator and (scaled from it) the `with-markers` ticks.
+ * @cssprop [--lr-slider-track-bg=var(--lr-color-border)] - Unfilled track color; takes precedence
+ *   over the `--track-color-inactive` alias.
+ * @cssprop [--lr-slider-indicator-bg=var(--lr-color-brand)] - Filled indicator color; takes
+ *   precedence over the `--track-color-active` alias.
+ * @cssprop [--lr-slider-marker-bg=var(--lr-color-surface)] - Tick-mark color for `with-markers`.
  * @cssprop [--lr-slider-thumb-bg=var(--lr-color-brand)] - Resting thumb background.
  * @cssprop [--lr-slider-thumb-border-color=var(--lr-color-surface)] - Resting thumb border.
  * @cssprop [--lr-slider-thumb-hover-ring-color=var(--lr-color-brand-quiet)] - Thumb ring while

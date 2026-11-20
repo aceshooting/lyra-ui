@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `dompurify` — see `llms/peers.md`
-- **Themeable via** 22 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -138,7 +138,11 @@ avoiding a disappearing/reappearing semantic target.
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-bg` (default is the existing hover color mix) and
-`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`), plus
+`--lr-video-poster-play-button-active-bg` for its press. The control-bar buttons, selects and volume
+take `--lr-video-controls-hover-bg`, `--lr-video-controls-hover-border-color` (default
+`var(--lr-color-border-strong)`) and `--lr-video-controls-active-bg`; each press defaults to its hover
+fill mixed one step further.
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and

@@ -427,6 +427,19 @@ it("renders one lr-breadcrumb-item per path node, marking only the last as curre
   expect(items[1]!.textContent!.trim()).to.equal("EMEA region");
 });
 
+it("lets a consumer --lr-breadcrumb-item-color reach the composed crumbs, defaulting to the brand colour", async () => {
+  const el = await populated();
+  const crumbColor = () => getComputedStyle(el.shadowRoot!.querySelector("lr-breadcrumb-item")!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!).color;
+  const probe = document.createElement("span");
+  probe.style.color = "var(--lr-color-brand)";
+  el.shadowRoot!.append(probe);
+  expect(crumbColor()).to.equal(getComputedStyle(probe).color);
+  probe.remove();
+  el.style.setProperty("--lr-breadcrumb-item-color", "rgb(1, 2, 3)");
+  // The crumb eases its colour change on the interactive transition.
+  await waitUntil(() => crumbColor() === "rgb(1, 2, 3)", "the consumer crumb colour never applied");
+});
+
 it('renders localized breadcrumb text for blank non-current and current node labels', async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel></lr-drilldown-panel>`

@@ -1,4 +1,5 @@
 import { literalSetConverter } from '../../internal/converters.js';
+import { revealInOwnScroller } from '../../internal/reveal-row.js';
 import { bdi } from '../../internal/bidi.js';
 import { normalizeLabel } from '../../internal/accessible-name.js';
 import type { LyraTabularSource, LyraWorkbookSource, LyraTabularColumn, LyraSourceCell, LyraTabularHit, LyraWorkbookHit, LyraSourceSearchResult } from '../../data-sources.js';
@@ -95,11 +96,7 @@ export class TableViewerScrollController {
   }
 
   reveal(target: HTMLElement | undefined): void {
-    target?.scrollIntoView({
-      behavior: prefersReducedMotion(this.host) ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    if (target) revealInOwnScroller(target, 'nearest', prefersReducedMotion(this.host) ? 'auto' : 'smooth');
   }
 }
 

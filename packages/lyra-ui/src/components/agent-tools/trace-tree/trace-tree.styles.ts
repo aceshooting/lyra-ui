@@ -5,6 +5,11 @@ import { mediumContainerQuery, tightContainerQuery } from '../../../internal/con
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
+  /* Provider rows answer the same hover and press tokens as the built-in rows. */
+  [part~='source-row'] {
+    --_source-row-hover-fill: var(--lr-trace-tree-row-hover-bg);
+    --_source-row-active-fill: var(--lr-trace-tree-row-pressed-bg, ${activeFill('var(--lr-trace-tree-row-hover-bg)')});
+  }
   [part~='source-label'] { flex: 1; }
   [part~='source-row']:where([data-active]) {
     --_source-row-fill: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));

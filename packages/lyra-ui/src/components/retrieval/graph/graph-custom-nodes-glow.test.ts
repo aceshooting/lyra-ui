@@ -362,3 +362,22 @@ describe('graph custom node and glow opt-ins', () => {
   });
 
 });
+
+it('lays a 2D notice out inside the fixed-height host as quiet small text', async () => {
+  const { graph } = setup();
+  graph.glow = true;
+  try {
+    await fixture(graph);
+    await waitUntil(() => graph.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'The standard SVG graph is populated', { timeout: 5000 });
+    const notice = graph.shadowRoot!.querySelector<HTMLElement>('[part="glow-notice"]')!;
+    const host = graph.getBoundingClientRect();
+    expect(notice.getBoundingClientRect().bottom).to.be.at.most(host.bottom + 0.5);
+    expect(graph.shadowRoot!.querySelector('svg')!.getBoundingClientRect().bottom).to.be.at.most(notice.getBoundingClientRect().top + 0.5);
+    const probe = document.createElement('span');
+    probe.style.cssText = 'color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm)';
+    graph.shadowRoot!.append(probe);
+    expect(getComputedStyle(notice).color).to.equal(getComputedStyle(probe).color);
+    expect(getComputedStyle(notice).fontSize).to.equal(getComputedStyle(probe).fontSize);
+    probe.remove();
+  } finally { graph.remove(); }
+});

@@ -202,6 +202,15 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  *   selector cannot follow `::part`), so this is the only way to change just the current step's
  *   boldness without hijacking the library-wide `--lr-font-weight-semibold` token.
  * @cssprop [--lr-stepper-error-color=var(--lr-color-danger)] - Text color of an `error` step.
+ * @cssprop [--lr-stepper-index-bg=var(--lr-color-neutral-fill-normal)] - Background of a step's
+ *   `[part='step-index']` outside the current and error states.
+ * @cssprop [--lr-stepper-index-color=var(--lr-color-neutral-on-normal)] - Text color of that index.
+ * @cssprop [--lr-stepper-error-index-bg=var(--lr-color-neutral-fill-normal)] - Background of an
+ *   `error` step's index.
+ * @cssprop [--lr-stepper-error-index-color=var(--lr-color-neutral-on-normal)] - Text color of an
+ *   `error` step's index.
+ * @cssprop [--lr-stepper-check-color=var(--lr-color-success)] - Color of a completed step's
+ *   `[part='step-check']` mark.
  * @cssprop [--lr-stepper-current-index-bg=var(--lr-color-brand)] - Background of the `current` step's
  *   numbered index chip (`step-index`).
  * @cssprop [--lr-stepper-current-index-color=var(--lr-color-on-brand)] - Text color of the `current`

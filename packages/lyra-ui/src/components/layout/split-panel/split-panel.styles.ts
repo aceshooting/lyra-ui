@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -196,4 +197,5 @@ export const styles = css`
   [part~='base'][data-orientation='vertical'] .constraint-max {
     block-size: var(--_lr-split-panel-effective-max);
   }
+  ${forcedColorsDivider("[part~='divider']", "[part~='divider']:is(:hover, :focus-visible, :active, [data-dragging])")}
 `;

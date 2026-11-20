@@ -153,10 +153,13 @@ export interface LyraResponsivePanelEventMap {
  *   docked presentation; overlay presentations use `--lr-responsive-panel-overlay-panel-bg`.
  * @cssprop [--lr-responsive-panel-overlay-color=var(--lr-color-overlay)] - The overlay
  *   presentation's scrim color, applied to `[part="backdrop"]`.
- * @cssprop [--lr-responsive-panel-overlay-panel-bg=var(--lr-color-surface-overlay)] - Background
+ * @cssprop [--lr-responsive-panel-overlay-panel-bg=var(--lr-overlay-surface, var(--lr-color-surface-container-highest))] - Background
  *   of `[part="panel"]` in the overlay presentation.
- * @cssprop [--lr-responsive-panel-overlay-panel-shadow=var(--lr-shadow-l)] - Shadow of
+ * @cssprop [--lr-responsive-panel-overlay-panel-shadow=var(--lr-overlay-shadow-modal, var(--lr-shadow-l))] - Shadow of
  *   `[part="panel"]` in the overlay presentation.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared modal surface
+ *   fill behind the overlay panel hook, so one declaration retints it with lr-dialog.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation behind the overlay panel hook.
  * @cssprop [--lr-responsive-panel-sheet-max-block-size=85dvh] - Maximum height of the
  *   `shape="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
  * @cssprop [--lr-responsive-panel-side-inline-size=var(--lr-size-20rem)] - Width of the

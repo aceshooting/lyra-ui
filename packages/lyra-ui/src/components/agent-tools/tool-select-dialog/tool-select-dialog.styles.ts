@@ -104,7 +104,7 @@ export const styles = css`
      an insertion point and hands the affordance to :focus-visible, so a pressed tint would flash
      for one frame and then be contradicted by the focus ring. */
   :where([part="search-input"]):hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-tool-select-dialog-search-hover-border-color, var(--lr-color-brand));
   }
   [part="search-input"]::placeholder {
     color: var(--lr-color-text-quiet);

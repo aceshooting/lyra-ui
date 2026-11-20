@@ -1,3 +1,4 @@
+import { layoutScale } from '../../../internal/layout-scale.js';
 import { PanoramaPropertyState } from '../../../internal/media-panorama-host.js';
 import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
@@ -170,6 +171,14 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  *   background.
  * @cssprop [--lr-video-poster-play-button-hover-border-color=var(--lr-color-brand)] - Poster
  *   play-button hover border color.
+ * @cssprop --lr-video-poster-play-button-active-bg - Poster play-button pressed background.
+ *   Defaults to the hover background mixed by the press step.
+ * @cssprop --lr-video-controls-hover-bg - Hover background of the control-bar buttons, selects and
+ *   volume. Defaults to `--controls-background` mixed by the hover step.
+ * @cssprop [--lr-video-controls-hover-border-color=var(--lr-color-border-strong)] - Hover border
+ *   color of the same controls.
+ * @cssprop --lr-video-controls-active-bg - Pressed background of the same controls. Defaults to the
+ *   hover background mixed by the press step.
  * @status experimental
  * @since 8.0.0
  */
@@ -365,10 +374,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const track = timeline.getBoundingClientRect();
     const bounds = wrapper.getBoundingClientRect();
     if (width <= 0 || track.width <= 0) return;
-    const half = width / 2;
+    // Rects are visual pixels and offsetWidth/inset are layout pixels: clamp in visual pixels,
+    // then divide the offset by the ancestor scale before writing it.
+    const scale = layoutScale(timeline).x;
+    const half = (width * scale) / 2;
     const centre = track.left + (this.thumbnailPosition / 100) * track.width;
     const clamped = Math.min(Math.max(centre, bounds.left + half), Math.max(bounds.left + half, bounds.right - half));
-    thumbnail.style.insetInlineStart = `${clamped - track.left}px`;
+    thumbnail.style.insetInlineStart = `${(clamped - track.left) / scale}px`;
   };
 
   override adoptedCallback(): void {

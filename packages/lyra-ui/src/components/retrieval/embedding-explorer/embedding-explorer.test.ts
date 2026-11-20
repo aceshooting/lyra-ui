@@ -564,6 +564,20 @@ describe('lr-embedding-explorer', () => {
     expect((await selected).detail).to.deep.equal({ point: first, id: first.id, index: 0 });
   });
 
+  it('lets a consumer --lr-embedding-explorer-height win over the height property', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div style="--lr-embedding-explorer-height: 222px"><lr-embedding-explorer .points=${points}></lr-embedding-explorer></div>`);
+    const el = wrapper.querySelector('lr-embedding-explorer') as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const plot = () => getComputedStyle(el.shadowRoot!.querySelector<SVGElement>('[part="plot"]')!).blockSize;
+    expect(plot()).to.equal('222px');
+    expect(el.style.getPropertyValue('--lr-embedding-explorer-height')).to.equal('');
+    wrapper.style.removeProperty('--lr-embedding-explorer-height');
+    expect(plot()).to.equal('360px');
+    el.height = '300px';
+    await el.updateComplete;
+    expect(plot()).to.equal('300px');
+  });
+
   it('normalizes invalid collection and height inputs without retaining stale output', async () => {
     const el = (await fixture(html`
       <lr-embedding-explorer .points=${points}></lr-embedding-explorer>
@@ -580,7 +594,7 @@ describe('lr-embedding-explorer', () => {
       0
     );
     expect(
-      el.style.getPropertyValue('--lr-embedding-explorer-height')
+      el.style.getPropertyValue('--_lr-embedding-explorer-height')
     ).to.equal('');
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
   });

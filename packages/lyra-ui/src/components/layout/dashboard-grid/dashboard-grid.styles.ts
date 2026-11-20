@@ -13,7 +13,7 @@ export const styles = css`
     ${inlineSizeContainer}
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part="base"] {
@@ -49,7 +49,7 @@ export const styles = css`
     max-inline-size: 100%;
     min-block-size: 0;
     border-radius: var(--lr-radius);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* An absolutely positioned resize handle cannot contribute to the cell's intrinsic block size,
@@ -92,7 +92,7 @@ export const styles = css`
     max-inline-size: 100%;
     min-block-size: 0;
     inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part="cell"][data-dragging],

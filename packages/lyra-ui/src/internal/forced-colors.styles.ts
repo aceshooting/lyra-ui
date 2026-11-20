@@ -60,3 +60,20 @@ export function forcedColorsPart(selector: string): CSSResult {
     }
   `;
 }
+
+/**
+ * Hairlines, splitters and resize handles painted only by `background`, which forced colors
+ * replace with the page background. `rest` names the element that draws the line at rest (empty
+ * for a handle that is transparent until engaged); `engaged` names its hover, drag and focus
+ * states. Both get a system colour, so no `forced-color-adjust` opt-out is needed.
+ */
+export function forcedColorsDivider(rest: string, engaged = ''): CSSResult {
+  const restRule = rest === '' ? '' : `${rest} { background-color: CanvasText; }`;
+  const engagedRule = engaged === '' ? '' : `${engaged} { background-color: Highlight; }`;
+  return css`
+    @media (forced-colors: active) {
+      ${unsafeCSS(restRule)}
+      ${unsafeCSS(engagedRule)}
+    }
+  `;
+}

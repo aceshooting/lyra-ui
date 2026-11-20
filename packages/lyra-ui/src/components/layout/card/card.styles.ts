@@ -4,9 +4,9 @@ import { mediumContainerQuery } from '../../../internal/container-breakpoints.st
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
-// Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
-// standalone card visible while definite allocations (grid tracks, percentages, explicit
-// inline-size) continue to win normally.
+// Only the horizontal card queries its own inline size, so only it takes inline-size containment
+// (which removes content-based intrinsic sizing; the fallback keeps a standalone horizontal card
+// visible). A vertical card sizes by its content in shrink-to-fit contexts.
 // The visible linked content is a sibling of the stretched native link. Built-in, non-interactive
 // regions pass pointer input through to that link; public slots opt back into hit testing so their
 // controls stay independently operable. Plain slotted content delegates its click in the class.
@@ -15,11 +15,13 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    ${inlineSizeContainer}
     /* Single source for the Shoelace-compatible radius hook -- every rule below reads THIS
        instead of repeating var(--border-radius, var(--lr-radius-container)) inline, so there is exactly one
        fallback chain to change instead of several textually-identical copies that can drift. */
     --_lr-card-radius: var(--border-radius, var(--lr-radius-container));
+  }
+  :host([orientation="horizontal"]) {
+    ${inlineSizeContainer}
   }
   [part="base"] {
     position: relative;

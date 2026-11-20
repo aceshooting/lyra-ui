@@ -849,6 +849,33 @@ it("contains long translated labels in a narrow allocation", async () => {
   expect(summary.scrollWidth).to.be.at.most(base.clientWidth);
 });
 
+for (const [width, edges] of [["20rem", true], ["28rem", false], ["28rem", true]] as const) {
+  it(`wraps the controls instead of crushing the summary at ${width}${edges ? " with edges" : ""}`, async () => {
+    const el = await pagination(html`
+      <lr-pagination
+        style="inline-size: ${width}"
+        total="95"
+        page-size="10"
+        with-summary
+        ?with-edges=${edges}
+      ></lr-pagination>
+    `);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const root = el.shadowRoot!;
+    const base = root.querySelector('[part~="base"]') as HTMLElement;
+    const summary = root.querySelector('[part="summary"]') as HTMLElement;
+    const controls = root.querySelector('[part="controls"]') as HTMLElement;
+    const lineHeight = parseFloat(getComputedStyle(summary).lineHeight) || 24;
+    expect(summary.getBoundingClientRect().height).to.be.at.most(lineHeight * 1.5);
+    expect(summary.scrollWidth).to.be.at.most(summary.clientWidth);
+    const baseRect = base.getBoundingClientRect();
+    const controlsRect = controls.getBoundingClientRect();
+    expect(controlsRect.right).to.be.at.most(baseRect.right + 0.5);
+    expect(controlsRect.left).to.be.at.least(baseRect.left - 0.5);
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+  });
+}
+
 it("is accessible", async () => {
   const el = await pagination();
   await expect(el).to.be.accessible();

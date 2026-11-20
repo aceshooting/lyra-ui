@@ -165,6 +165,8 @@ export interface LyraToastItemEventMap {
  *   transition used while hiding.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill of the item.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the item.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation of the item; its
+ *   default is the lower modal step, below lr-dialog's.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, behind
  *   `--lr-toast-item-radius`.
  * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.

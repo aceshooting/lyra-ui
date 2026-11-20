@@ -20,6 +20,7 @@ export const styles = css`
     --_lr-token-input-gap: var(--lr-space-xs);
     --_lr-token-input-token-gap: var(--lr-space-2xs);
     --_lr-token-input-radius: var(--lr-form-control-radius);
+    --_lr-token-input-token-radius: var(--lr-radius);
     /* The row's height floor is the one shared form-control ladder (internal/sizes.styles.ts), so
        --lr-theme-form-control-height-* retunes this control and every sibling field together; it
        matches both tier spellings, so size="small" needs no alias rule. */
@@ -34,6 +35,7 @@ export const styles = css`
   }
   :host([pill]) {
     --_lr-token-input-radius: var(--lr-radius-pill);
+    --_lr-token-input-token-radius: var(--lr-radius-pill);
   }
   /* Inline padding, text size and chip padding stay this component's denser ladder: m runs 0.25rem
      and --lr-font-size-md-sm against the shared ladder's 0.75rem and --lr-font-size-m. The block
@@ -178,9 +180,11 @@ export const styles = css`
       --lr-token-input-token-padding,
       var(--_lr-token-input-token-padding)
     );
-    border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
+    /* Its own radius and text hooks, defaulting like lr-select's and lr-combobox's chips rather
+       than to the field's corner, so one selected-value chip reads the same in all three. */
+    border-radius: var(--lr-token-input-token-radius, var(--_lr-token-input-token-radius));
     background: var(--lr-token-input-token-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-color-text);
+    color: var(--lr-token-input-token-color, var(--lr-color-text));
   }
   [part="token"] > span:first-child {
     min-inline-size: 0;

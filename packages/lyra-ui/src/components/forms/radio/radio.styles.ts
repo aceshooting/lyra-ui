@@ -78,9 +78,9 @@ export const styles = css`
        --lr-icon-button-size capped at the tier's share of the control height. */
     min-inline-size: var(--lr-radio-circle-size, var(--_lr-radio-circle-size));
     min-block-size: var(--lr-radio-circle-size, var(--_lr-radio-circle-size));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-radio-border-color, var(--lr-color-border));
     border-radius: var(--lr-radio-radius, var(--_lr-radio-radius));
-    background: var(--lr-color-surface);
+    background: var(--lr-radio-bg, var(--lr-color-surface));
     transition: border-color var(--lr-transition-fast),
       background-color var(--lr-transition-fast);
   }

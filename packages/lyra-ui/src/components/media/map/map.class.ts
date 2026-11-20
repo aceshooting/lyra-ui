@@ -2155,8 +2155,15 @@ export interface LyraMapEventMap {
  * @csspart drawing-measurements - Decorative layer holding the on-map measurement labels of `drawingMeasurements`.
  * @csspart drawing-measurement - One measurement label; `data-kind` is `segment`, `closing`, `area` or `length`.
  * @csspart drawing-summary - Localized total length (line) or area (polygon) beside the vertex count while `drawingMeasurements` is set.
- * @cssprop [--lr-map-action-hover-bg] - Hover fill for scene, pick and drawing actions.
- * @cssprop [--lr-map-action-active-bg] - Pressed fill for scene, pick and drawing actions.
+ * @cssprop [--lr-map-action-hover-bg] - Hover fill for scene, pick and drawing actions, the native
+ *   zoom, compass, geolocate and scene controls, and the compact attribution button.
+ * @cssprop [--lr-map-action-active-bg] - Pressed fill for the same actions and controls.
+ * @cssprop [--lr-map-control-pressed-bg=var(--lr-color-brand-quiet)] - Fill of a pressed or mixed
+ *   native scene control and of the open compact attribution button.
+ * @cssprop [--lr-map-control-pressed-color=var(--lr-color-brand)] - Glyph color of a pressed or
+ *   mixed native scene control.
+ * @cssprop [--lr-map-marker-hover-halo-color=var(--lr-color-brand)] - Halo color of a hovered or
+ *   pressed interactive marker.
  * @cssprop [--lr-map-drawing-fill-opacity=0.2] - Temporary polygon fill opacity, from zero to one.
  * @cssprop [--lr-map-drawing-stroke-width=2] - Temporary line and preview width in CSS pixels, as a nonnegative number.
  * @cssprop [--lr-map-drawing-vertex-radius=5] - Radius of temporary vertex points in CSS pixels, as a nonnegative number.

@@ -128,6 +128,8 @@ duration"`). A host `aria-label` remains on the host and is not cloned onto that
 
 ---
 
+**Pointer-state tokens:** `--lr-tool-call-chip-hover-border-color` (default `var(--lr-color-brand)`).
+
 ## `lr-tool-result-view`
 
 Unknown status values resolve to `success`. A committed status change emits `lr-status-change` with `{ status }`.
@@ -710,6 +712,8 @@ checkboxes for editing.
 
 **Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
+**Pointer-state tokens:** `--lr-tool-select-dialog-search-hover-border-color` (default `var(--lr-color-brand)`).
+
 ## `lr-thinking-panel`
 
 A collapsible panel for an AI agent's intermediate reasoning/"thinking" transcript, kept visually
@@ -867,6 +871,8 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
 
 ---
 
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.
+
 ## `lr-stack-trace`
 
 Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus
@@ -989,6 +995,8 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
   component uses the verbatim `raw` fallback.
 
 ---
+
+**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-pressed-bg`.
 
 ## `lr-tool-approval-dialog`
 
@@ -1471,6 +1479,8 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
 ---
+
+**Pointer-state tokens:** `--lr-tool-param-form-control-hover-border-color` (default `var(--lr-color-brand)`).
 
 ## `lr-result-card` / `lr-result-field`
 
@@ -1972,6 +1982,8 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
+
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.
 
 ## `lr-terminal`
 
@@ -3931,6 +3943,8 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.
+
 ## `lr-mcp-app`
 
 The loading message overlays the frame. Set `--lr-mcp-app-frame-height` to override the negotiated frame height.
@@ -5080,6 +5094,8 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
   block.redactedFields = ['args.apiKey'];
 </script>
 ```
+
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.
 
 ## `lr-change-review`
 

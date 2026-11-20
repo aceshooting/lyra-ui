@@ -9,6 +9,8 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import "../../lr-multi-split.js";
 import type {
   LyraMultiSplit,
@@ -6070,5 +6072,42 @@ it('rejects non-object, wrong-version, and non-record persisted panel layouts', 
     } finally {
       localStorage.removeItem(fullKey);
     }
+  }
+});
+
+it('tints the focused divider hairline with the hover token, like the sibling splitters', async () => {
+  const el = await fixture<LyraMultiSplit>(html`
+    <lr-multi-split style="inline-size:400px;block-size:160px;--lr-multi-split-divider-hover-color:rgb(1, 2, 3)"
+      ><div>A</div><div>B</div></lr-multi-split
+    >
+  `);
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')!;
+  await focusByKeyboard(divider);
+  await waitUntil(() => getComputedStyle(divider, '::before').backgroundColor === 'rgb(1, 2, 3)',
+    'the focused hairline takes the hover colour');
+});
+
+it('keeps the divider hairline visible under forced colors', async () => {
+  const el = await fixture<LyraMultiSplit>(html`
+    <lr-multi-split style="inline-size:400px;block-size:160px"><div>A</div><div>B</div></lr-multi-split>
+  `);
+  await elementUpdated(el);
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    const divider = el.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')!;
+    const canvas = document.createElement('div');
+    canvas.style.backgroundColor = 'Canvas';
+    el.after(canvas);
+    await waitUntil(() => getComputedStyle(divider, '::before').backgroundColor !== getComputedStyle(canvas).backgroundColor,
+      'the hairline eases into a system colour');
+    canvas.remove();
+  } finally {
+    await setForcedColors('none');
   }
 });

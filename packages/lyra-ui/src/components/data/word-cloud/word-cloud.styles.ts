@@ -131,8 +131,10 @@ export const styles = css`
       forced-color-adjust: none;
       border: var(--lr-border-width-thin) solid CanvasText;
     }
+    /* The legend maps each group to its authored colour, so the words keep theirs too; repainting
+       them CanvasText left a coloured legend keyed to colours no word carried. */
     [part='word'] {
-      fill: CanvasText;
+      forced-color-adjust: none;
     }
     [part='focus-ring'] {
       stroke: Highlight;

@@ -1788,3 +1788,31 @@ describe('shared listbox row geometry', () => {
     expect(Math.abs(ends[0]! - ends[1]!)).to.be.at.most(1);
   });
 });
+
+it('paints and sizes its multiple-mode chips like lr-combobox tags at every size tier', async () => {
+  for (const size of ['xs', 's', 'm', 'xl']) {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <lr-select multiple size=${size} .value=${['a']}><lr-option value="a">Apple</lr-option></lr-select>
+      <lr-combobox multiple size=${size}><lr-option value="a" selected>Apple</lr-option></lr-combobox>
+    </div>`);
+    const select = wrapper.querySelector<LyraSelect>('lr-select')!;
+    const combobox = wrapper.querySelector<LyraCombobox>('lr-combobox')!;
+    await select.updateComplete;
+    await combobox.updateComplete;
+    const chip = (host: HTMLElement) => {
+      const tag = host.shadowRoot!.querySelector('[part~="tag"]');
+      expect(tag !== null, `${host.localName} ${size} renders a chip`).to.equal(true);
+      const cs = getComputedStyle(tag!);
+      return [cs.backgroundColor, cs.borderTopLeftRadius, cs.paddingInlineStart, cs.fontSize, cs.maxInlineSize].join(' | ');
+    };
+    expect(chip(select), size).to.equal(chip(combobox));
+  }
+  const themed = await fixture<LyraSelect>(html`<lr-select
+    multiple
+    .value=${['a']}
+    style="--lr-select-tag-bg: rgb(1, 2, 3); --lr-select-tag-color: rgb(4, 5, 6); --lr-select-tag-radius: 3px"
+  ><lr-option value="a">Apple</lr-option></lr-select>`);
+  await themed.updateComplete;
+  const tag = getComputedStyle(themed.shadowRoot!.querySelector('[part~="tag"]')!);
+  expect([tag.backgroundColor, tag.color, tag.borderTopLeftRadius]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)', '3px']);
+});

@@ -64,6 +64,9 @@ export const styles = css`
   }
   [part~='input-wrapper']:focus-within {
     border-color: var(--lr-input-focus-border-color, var(--lr-color-brand));
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     ${formControlFocusHalo}
   }
   /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated (FormAssociated mixin),

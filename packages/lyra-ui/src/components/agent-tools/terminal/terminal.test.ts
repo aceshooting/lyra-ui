@@ -1573,6 +1573,23 @@ describe('lr-terminal', () => {
     });
   }
 
+  it('floors copy, download and jump-to-latest at the shared action hit area', async () => {
+    const el = (await fixture(html`<lr-terminal
+      downloadable
+      style="--lr-icon-button-size: 44px; --lr-button-size-m: 44px"
+    ></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    await el.updateComplete;
+    await settleVirtualList(el);
+    el.follow = false;
+    await el.updateComplete;
+    for (const part of ['copy-button', 'download-button', 'jump-to-latest']) {
+      const box = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!.getBoundingClientRect();
+      expect(box.height, `${part} height`).to.be.at.least(44);
+      expect(box.width, `${part} width`).to.be.at.least(44);
+    }
+  });
+
   it('gives an interactive (highlight-owning) line a visible :focus-visible outline', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb\nc');

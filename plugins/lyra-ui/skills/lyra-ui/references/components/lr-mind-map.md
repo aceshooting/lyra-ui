@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -137,7 +137,7 @@ virtualized navigator), `source-row` (a hierarchy row with global position metad
 (loading, empty and global-count status), and `source-error` (failure and retry status).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-link-color` (default `var(--lr-color-border)`) and `--lr-mind-map-link-width` (default `1.5`) style the links; `--lr-mind-map-node-fill` (default `var(--lr-color-brand)`) fills each topic circle. `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 `--lr-mind-map-label-halo` (default `var(--lr-color-surface)`) — halo stroke behind topic labels.

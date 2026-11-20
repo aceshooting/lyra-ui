@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
@@ -302,4 +303,5 @@ export const styles = css`
       transition: none !important;
     }
   }
+  ${forcedColorsDivider("[part='handle']", "[part='handle']:is(:hover, :focus-visible, :active)")}
 `;

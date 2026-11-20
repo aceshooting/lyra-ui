@@ -37,7 +37,8 @@ export const styles = css`
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
     border: var(--lr-border-width-thin) dashed var(--lr-chip-group-overflow-border-color, var(--lr-color-border));
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-chip-group-overflow-bg, var(--lr-color-surface));
+    --_lr-chip-group-overflow-fill: var(--lr-chip-group-overflow-bg, var(--lr-color-surface));
+    background: var(--_lr-chip-group-overflow-fill);
     color: var(--lr-chip-group-overflow-color, var(--lr-color-text-quiet));
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -53,8 +54,9 @@ export const styles = css`
   /* Dashed border marks a structural more affordance, distinct at a glance from the
      solid-bordered real chips beside it. */
   [part='overflow-indicator']:hover {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-text);
+    border-color: var(--lr-chip-group-overflow-hover-border-color, var(--lr-color-brand));
+    color: var(--lr-chip-group-overflow-hover-color, var(--lr-color-text));
+    background: var(--lr-chip-group-overflow-hover-bg, var(--_lr-chip-group-overflow-fill));
   }
   /* Pressed adds the fill hover leaves alone, a step further in rather than a restatement. The
      surface mixes toward --lr-color-mix-partner, which follows the text colour, so the tint
@@ -62,9 +64,9 @@ export const styles = css`
      because keyboard activation (Space/Enter on the focused indicator) raises :active with no
      :hover. */
   [part='overflow-indicator']:active {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-text);
-    background: ${activeFill('var(--lr-chip-group-overflow-bg, var(--lr-color-surface))')};
+    border-color: var(--lr-chip-group-overflow-hover-border-color, var(--lr-color-brand));
+    color: var(--lr-chip-group-overflow-hover-color, var(--lr-color-text));
+    background: var(--lr-chip-group-overflow-active-bg, ${activeFill('var(--lr-chip-group-overflow-hover-bg, var(--_lr-chip-group-overflow-fill))')});
   }
   [part='overflow-indicator']:focus-visible {
     ${focusRing}

@@ -2,7 +2,8 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { syncMapControlRows } from './map-control-chrome.js';
-import { resetMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
@@ -402,5 +403,33 @@ describe('lr-map public native control chrome', () => {
     await mutations();
     expect(fresh.part.contains('geolocate-waiting')).to.equal(true);
     expect(stale.part.contains('geolocate-active')).to.equal(false);
+  });
+
+  it('routes native control hover and pressed paint through public tokens', async () => {
+    const { element, root } = await mount();
+    element.style.setProperty('--lr-map-action-hover-bg', 'rgb(1, 2, 3)');
+    element.style.setProperty('--lr-map-control-pressed-bg', 'rgb(4, 5, 6)');
+    const [zoomIn, zoomOut] = [query(root, '[part~="zoom-in"]'), query(root, '[part~="zoom-out"]')];
+    zoomOut.setAttribute('aria-pressed', 'true');
+    expect(getComputedStyle(zoomOut).backgroundColor).to.equal('rgb(4, 5, 6)');
+    try {
+      await hoverUntilMatched(zoomIn, 'zoom-in never hovered');
+      await waitUntil(() => getComputedStyle(zoomIn).backgroundColor === 'rgb(1, 2, 3)', 'the hover token paints');
+    } finally {
+      await resetMouse();
+    }
+    try {
+      await setForcedColors('active');
+    } catch {
+      return;
+    }
+    try {
+      if (!matchMedia('(forced-colors: active)').matches) return;
+      expect(getComputedStyle(zoomOut).outlineStyle).to.equal('solid');
+      await waitUntil(() => getComputedStyle(zoomOut).backgroundColor !== getComputedStyle(zoomIn).backgroundColor,
+        'the pressed control takes a system fill');
+    } finally {
+      await setForcedColors('none');
+    }
   });
 });

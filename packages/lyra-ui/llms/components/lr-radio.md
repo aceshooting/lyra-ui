@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,10 +117,12 @@ an empty-label control; the visible density can still grow with the shared size 
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
   see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
+`--lr-radio-bg` (default `var(--lr-color-surface)`) and `--lr-radio-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='circle']` at rest.
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
-`--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
+`--lr-checkbox-checked-bg`/`-border-color` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The checked radio circle keeps its surface color behind the dot. The
 `--lr-radio-button-checked-bg` hook applies to the button appearance.

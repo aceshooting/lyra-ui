@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -172,4 +172,4 @@ const view = html`<lr-code-block-core
 
 ---
 
-**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons.
+**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` set the disclosure glyph color per state, and `--lr-code-block-gutter-color-hover` (default `inherit`) the hovered line button's text.

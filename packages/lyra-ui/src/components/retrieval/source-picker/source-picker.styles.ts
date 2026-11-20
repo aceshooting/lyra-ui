@@ -1,4 +1,4 @@
-import { activeFill, disclosureChevron, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -23,7 +23,7 @@ export const styles = css`
       --lr-source-picker-checked-bg,
       var(--lr-color-brand-quiet)
     );
-    --lr-checkbox-checked-border: var(
+    --lr-checkbox-checked-border-color: var(
       --lr-source-picker-checked-border,
       var(--lr-color-brand)
     );
@@ -80,20 +80,22 @@ export const styles = css`
     expanded: "[aria-expanded='true'] > [part='disclosure'] svg",
     collapsedRtl: ":host(:dir(rtl)) [aria-expanded='false'] > [part='disclosure'] svg",
   })}
+  /* The shared hover and press steps, so the rows follow --lr-color-mix-hover/-active like every
+     other row; the item rows also take public tokens. */
   [part="disclosure"]:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
+    background: ${hoverFill('transparent')};
   }
   [part="disclosure"]:active {
     background: ${activeFill('transparent')};
   }
   [part="item"]:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
+    background: var(--lr-source-picker-item-hover-bg, ${hoverFill('transparent')});
   }
   /* The row itself is the control -- clicking anywhere in it toggles the source, and the
      [part='checkbox'] inside is a painted div, not a focusable target -- so the row earns its own
      pressed state rather than deferring to something nested. */
   [part="item"]:active {
-    background: ${activeFill('transparent')};
+    background: var(--lr-source-picker-item-active-bg, ${activeFill('var(--lr-source-picker-item-hover-bg, transparent)')});
   }
   [part="item"]:focus-visible {
     ${focusRingInset}

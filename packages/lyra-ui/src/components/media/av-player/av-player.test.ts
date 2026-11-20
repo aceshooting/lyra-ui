@@ -846,6 +846,14 @@ describe('playback controls', () => {
     expect(select.value).to.equal('1.75');
   });
 
+  it('floors the rate select at the icon-button hit area', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP4_SRC} style="--lr-icon-button-size: 44px"></lr-av-player>`)) as LyraAvPlayer;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector<HTMLElement>('[part="rate-select"]')!.getBoundingClientRect();
+    expect(box.height).to.be.at.least(44);
+    expect(box.width).to.be.at.least(44);
+  });
+
   it('renders native rate-select theming, its hover state, and the decorative chevron', async function () {
     this.timeout(10000);
     const el = (await fixture(html`

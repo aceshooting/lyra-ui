@@ -1,3 +1,4 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, disabledControl, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -161,4 +162,5 @@ export const styles = css`
     }
   }
 
+  ${forcedColorsPart("[part='playlist-item'][aria-current='true']")}
 `;

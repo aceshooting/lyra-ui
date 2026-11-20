@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import '../../lr-checkpoint.js';
 import type { LyraCheckpoint } from '../../lr-checkpoint.js';
 
@@ -333,10 +334,8 @@ describe('confirm flow (the default)', () => {
           type: 'move',
           position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
         });
-        await waitUntil(
-          () => getComputedStyle(button).backgroundColor !== resting,
-          `${button.textContent!.trim()} hover changes its fill`,
-        );
+        // The fill eases, so wait for the hover paint to land.
+        await waitUntil(() => getComputedStyle(button).backgroundColor !== resting, `${button.textContent!.trim()} hover changes its fill`);
       }
     } finally {
       await resetMouse();
@@ -502,4 +501,49 @@ it('honors component paint and spacing tokens', async () => {
 it('keeps the visible label as the accessible name when the host override contains only whitespace', async () => {
   const el = await fixture(html`<lr-checkpoint aria-label="   " label="Review complete"></lr-checkpoint>`);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Review complete');
+});
+
+it('floors restore, confirm and cancel at the icon-button hit area and tokenizes their pointer paint', async () => {
+  const el = await fixture<LyraCheckpoint>(html`<lr-checkpoint
+    style="--lr-icon-button-size: 44px; --lr-checkpoint-confirm-hover-bg: rgb(1, 2, 3); --lr-checkpoint-cancel-hover-bg: rgb(4, 5, 6)"
+  ></lr-checkpoint>`);
+  const restore = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="restore-button"]')!;
+  expect(restore.getBoundingClientRect().height).to.be.at.least(44);
+  restore.click();
+  await el.updateComplete;
+  const confirm = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="confirm-button"]')!;
+  const cancel = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel-button"]')!;
+  for (const button of [confirm, cancel]) {
+    const box = button.getBoundingClientRect();
+    expect(box.height, `${button.getAttribute('part')} height`).to.be.at.least(44);
+    expect(box.width, `${button.getAttribute('part')} width`).to.be.at.least(44);
+  }
+  try {
+    await hoverUntilMatched(confirm, 'confirm never hovered');
+    await waitUntil(() => getComputedStyle(confirm).backgroundColor === 'rgb(1, 2, 3)', 'confirm hover token paints');
+    await hoverUntilMatched(cancel, 'cancel never hovered');
+    await waitUntil(() => getComputedStyle(cancel).backgroundColor === 'rgb(4, 5, 6)', 'cancel hover token paints');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('keeps the flanking rules visible under forced colors', async () => {
+  const el = await fixture<LyraCheckpoint>(html`<lr-checkpoint label="Saved"></lr-checkpoint>`);
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    const line = el.shadowRoot!.querySelector<HTMLElement>('[part="line"]')!;
+    const canvas = document.createElement('div');
+    canvas.style.backgroundColor = 'Canvas';
+    el.after(canvas);
+    expect(getComputedStyle(line).backgroundColor).not.to.equal(getComputedStyle(canvas).backgroundColor);
+    canvas.remove();
+  } finally {
+    await setForcedColors('none');
+  }
 });

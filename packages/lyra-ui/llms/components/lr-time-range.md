@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -240,6 +240,8 @@ rtl`).
 - `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
 - `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
 - `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-track-bg` — Unselected track color. Default: `var(--lr-color-border)`.
+- `--lr-time-range-range-bg` — Selected-range fill. Default: `var(--lr-color-brand)`.
 - `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
 - `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
 - `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.

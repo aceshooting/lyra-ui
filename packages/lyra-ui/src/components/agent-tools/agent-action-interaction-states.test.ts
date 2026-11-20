@@ -1,4 +1,4 @@
-import { fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../test/wtr-mouse.js';
 import '../lr-permission-grant.js';
 import '../lr-connector-manager.js';
@@ -6,6 +6,8 @@ import '../lr-background-runs.js';
 import '../lr-message-parts.js';
 import '../lr-stream-status.js';
 import type { MessagePart } from '../../ai/types.js';
+import { setForcedColors } from '../../../test/wtr-media.js';
+import { agentActionButtonStyles } from './agent-action-button.styles.js';
 
 async function assertHoverAndPress(
   button: HTMLButtonElement,
@@ -64,4 +66,27 @@ describe('agent action interaction states', () => {
     await assertComposedButtonHoverAndPress(message.shadowRoot!.querySelector<HTMLElement>('[part~="resume"]')!);
     await assertComposedButtonHoverAndPress(stream.shadowRoot!.querySelector<HTMLElement>('[part="resume"]')!);
   });
+});
+
+it('gives a pressed shared action a system-colour state under forced colors', async () => {
+  const root = await fixture<HTMLDivElement>(html`<div>
+    <style>${agentActionButtonStyles.cssText}</style>
+    <button data-agent-action="filter" aria-pressed="true" id="on">On</button>
+    <button data-agent-action="filter" aria-pressed="false" id="off">Off</button>
+  </div>`);
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    const on = getComputedStyle(root.querySelector('#on')!);
+    const off = getComputedStyle(root.querySelector('#off')!);
+    // The fill eases into the system colour, so wait for the transition to land.
+    await waitUntil(() => on.backgroundColor !== off.backgroundColor, 'the pressed action takes a system fill');
+    expect(on.outlineStyle).to.equal('solid');
+  } finally {
+    await setForcedColors('none');
+  }
 });

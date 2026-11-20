@@ -1,3 +1,4 @@
+import { layoutScale } from '../../../internal/layout-scale.js';
 import { HeatmapMatrixSourceController } from './heatmap-matrix-source-controller.js';
 import { matrixRectangle } from './heatmap-matrix-source.js';
 import { revealSource, sourceCsv, sourceWillUpdate, sourceUpdated, paintSource, renderSource, type HeatmapSourceHost } from './heatmap-source-view.js';
@@ -4137,8 +4138,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private selectionPointerPosition(event: PointerEvent): CellPos | null {
     if (!this.canvas) return null;
+    // hitTest works in the canvas's CSS (layout) pixels; divide out any ancestor scale or zoom.
     const rect = this.canvas.getBoundingClientRect();
-    return this.hitTest(event.clientX - rect.left, event.clientY - rect.top);
+    const scale = layoutScale(this.canvas);
+    return this.hitTest((event.clientX - rect.left) / scale.x, (event.clientY - rect.top) / scale.y);
   }
 
   /** A rendered grid owns its gestures until its inputs or controlled selection are replaced. */

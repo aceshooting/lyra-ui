@@ -258,6 +258,18 @@ interface PendingMessageFeedbackSubmission {
  * @cssprop --lr-icon-button-color-active - Pressed foreground of the rating buttons when unselected.
  * @cssprop --lr-icon-button-color-hover - Hover foreground of the rating buttons when unselected.
  * @cssprop --lr-icon-button-radius - Corner radius of the rating buttons.
+ * @cssprop [--lr-message-feedback-submit-bg=var(--lr-color-brand)] - Background of
+ *   `[part="submit-button"]`.
+ * @cssprop [--lr-message-feedback-submit-color=var(--lr-color-on-brand)] - Text color of the submit
+ *   button.
+ * @cssprop [--lr-message-feedback-submit-border-color=var(--lr-color-border)] - Border color of the
+ *   submit button.
+ * @cssprop --lr-message-feedback-submit-hover-bg - Hover background of the submit button. Defaults
+ *   to its fill mixed by the hover step.
+ * @cssprop --lr-message-feedback-submit-active-bg - Pressed background of the submit button.
+ *   Defaults to its fill mixed by the press step.
+ * @cssprop [--lr-message-feedback-comment-hover-border-color=var(--lr-color-brand)] - Border color
+ *   of the hovered `[part="comment"]` field.
  * @status stable
  * @since 4.0.0
  */

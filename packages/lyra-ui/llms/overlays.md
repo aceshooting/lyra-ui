@@ -284,8 +284,8 @@ message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`)
 surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
 deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
 spacing. The item joins the shared overlay-surface family for its fill and edge
-(`--lr-overlay-surface`, `--lr-overlay-border`) but keeps its own unscrimmed `--lr-shadow-l`
-elevation. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
+(`--lr-overlay-surface`, `--lr-overlay-border`) and reads `--lr-overlay-shadow-modal` with the
+lower unscrimmed `--lr-shadow-l` as its default. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
 accent color.
 
 The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
@@ -649,9 +649,9 @@ the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-
 since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
 paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
 `--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
-the elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport — so on
-this tag `--lr-overlay-radius` and `--lr-overlay-shadow-modal` are overridden and only the fill and
-edge colour take effect. `--lr-dialog-height` is deliberately **not** among the
+the default elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport —
+so on this tag `--lr-overlay-radius` is overridden, while the fill, edge colour and a consumer
+`--lr-overlay-shadow-modal` still take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
 for `top`/`bottom`), which always wins the cascade over `<lr-dialog>`'s `--lr-dialog-height`-driven
@@ -1223,7 +1223,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. Its hover and press take `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`), `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`), `--lr-chip-group-overflow-hover-bg` (default: the resting fill) and `--lr-chip-group-overflow-active-bg`.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,

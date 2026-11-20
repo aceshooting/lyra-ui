@@ -106,3 +106,10 @@ it('dims disabled options with the shared opacity and keeps the option override'
   el.style.setProperty('--lr-voice-picker-option-disabled-opacity', '0.42');
   expect(getComputedStyle(row).opacity).to.equal('0.42');
 });
+
+it('rests the preview button on the trigger border and fill tokens', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-voice-picker']>(html`<lr-voice-picker .catalog=${[{ id: 'a', label: 'Alpha' }]}
+    style="--lr-voice-picker-trigger-border-color: rgb(1, 2, 3); --lr-voice-picker-trigger-fill: rgb(4, 5, 6)"></lr-voice-picker>`);
+  const preview = getComputedStyle(el.shadowRoot!.querySelector('[part="preview-button"]')!);
+  expect([preview.borderTopColor, preview.backgroundColor]).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+});

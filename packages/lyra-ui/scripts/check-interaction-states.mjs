@@ -823,12 +823,7 @@ function templateSourcesFor(styleFile) {
  */
 const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/agent-tools/task-list/task-list.styles.ts:header',
-  'src/components/agent-tools/terminal/terminal.styles.ts:copy-button',
-  'src/components/agent-tools/terminal/terminal.styles.ts:download-button',
   'src/components/agent-tools/trace-tree/trace-tree.styles.ts:row',
-  'src/components/conversation/chat-message/chat-message.styles.ts:retry-button',
-  'src/components/conversation/checkpoint/checkpoint.styles.ts:confirm-button',
-  'src/components/conversation/checkpoint/checkpoint.styles.ts:cancel-button',
   'src/components/conversation/catalog-picker-trigger.styles.ts:trigger',
   'src/components/conversation/catalog-picker-trigger.styles.ts:option',
   'src/components/conversation/thread-list/thread-list.styles.ts:group-toggle',
@@ -850,7 +845,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   // `@media (prefers-reduced-motion: reduce)`, where it is `none`. To the eye they are identical
   // to the block above: a fill that jumps in one frame. They are listed rather than repaired for
   // the same reason, and they discharge the same way.
-  'src/components/agent-tools/terminal/terminal.styles.ts:jump-to-latest',
   'src/components/conversation/message-feedback/message-feedback.styles.ts:submit-button',
   'src/components/data/calendar/calendar.styles.ts:event',
   'src/components/forms/input/time-input.styles.ts:now-button',

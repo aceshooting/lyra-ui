@@ -157,7 +157,7 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @csspart error - Validation text.
  * @cssprop [--lr-radio-group-row-gap=calc(var(--lr-form-control-height) * 0.2)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
- * @cssprop [--lr-radio-group-invalid-border=var(--lr-color-danger)] - Border around the option
+ * @cssprop [--lr-radio-group-invalid-border-color=var(--lr-color-danger)] - Border around the option
  * collection while the group matches `:state(user-invalid)`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any

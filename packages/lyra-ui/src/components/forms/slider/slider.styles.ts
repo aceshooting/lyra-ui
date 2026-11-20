@@ -67,7 +67,7 @@ export const styles = css`
           )
         ) * 0.5
     );
-    background: var(--track-color-inactive, var(--lr-color-border));
+    background: var(--lr-slider-track-bg, var(--track-color-inactive, var(--lr-color-border)));
   }
   [part="indicator"] {
     position: absolute;
@@ -89,7 +89,7 @@ export const styles = css`
           )
         ) * 0.5
     );
-    background: var(--track-color-active, var(--lr-color-brand));
+    background: var(--lr-slider-indicator-bg, var(--track-color-active, var(--lr-color-brand)));
     translate: var(--track-active-offset, 0) 0;
   }
   /* Tick marks for with-markers, painted in the surface color so they stay visible over both the
@@ -118,7 +118,7 @@ export const styles = css`
     );
     transform: translate(-50%, -50%);
     border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface);
+    background: var(--lr-slider-marker-bg, var(--lr-color-surface));
   }
   [part~="thumb"] {
     position: absolute;

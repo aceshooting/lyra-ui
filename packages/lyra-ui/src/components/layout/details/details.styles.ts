@@ -103,13 +103,13 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: clip;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     transition: var(--lr-transition-interactive);
   }
   .summary-content {
     flex: 1 1 auto;
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part='summary']::marker,
   [part='summary']::-webkit-details-marker {
@@ -159,7 +159,7 @@ export const styles = css`
     align-items: center;
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   /* Only the open gate participates in flex sizing. The ordinary hidden fallback must retain
      native display:none; the separate until-found gate below preserves find-in-page behavior. */
@@ -204,7 +204,7 @@ export const styles = css`
     );
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     /* A shrinkable flex child owns the scrollport once the host reaches its size limit. */
     flex: 1 1 auto;
     min-block-size: 0;

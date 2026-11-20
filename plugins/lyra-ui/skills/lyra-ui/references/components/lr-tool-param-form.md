@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -285,3 +285,5 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
 ---
+
+**Pointer-state tokens:** `--lr-tool-param-form-control-hover-border-color` (default `var(--lr-color-brand)`).

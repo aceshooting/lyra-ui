@@ -1,4 +1,4 @@
-import { css, type CSSResult } from 'lit';
+import { css, unsafeCSS, type CSSResult } from 'lit';
 
 /**
  * A column divider the last column drops: renderCell() zeroes the private width there, because the
@@ -94,6 +94,8 @@ export interface TableCellHighlightOptions {
   outlineOffset?: CSSResult;
   /** Sets `cursor: pointer` on the structural highlighted cell. */
   cellCursor?: boolean;
+  /** Component tag without the prefix (for example `csv-viewer`), naming the action's state tokens. */
+  tag: string;
 }
 
 /** Highlighted-cell outline and its nested action button, shared by the three table viewers. */
@@ -102,7 +104,10 @@ export function tableCellHighlightStyles({
   padding,
   outlineOffset = css`calc(-1 * var(--lr-border-width-medium))`,
   cellCursor = true,
+  tag,
 }: TableCellHighlightOptions): CSSResult {
+  const hover = unsafeCSS(`--lr-${tag}-cell-action-hover-bg`);
+  const active = unsafeCSS(`--lr-${tag}-cell-action-active-bg`);
   const cursor = cellCursor ? css`cursor: pointer;` : css``;
   return css`
   /* Body highlights render in lr-virtual-list's shadow root, so they use ::part(); a [data-active]
@@ -133,11 +138,11 @@ export function tableCellHighlightStyles({
   }
   [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(${hover}, var(--lr-color-brand-quiet));
   }
   [part='cell-highlight-action']:active,
   lr-virtual-list::part(cell-highlight-action):active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(${active}, ${activeFill('var(' + hover.cssText + ', var(--lr-color-brand-quiet))')});
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {

@@ -792,3 +792,11 @@ it('uses the themed hover and pressed colors on an unselected handoff', async ()
     await resetMouse();
   }
 });
+
+it('sizes by its content in a shrink-to-fit context rather than a fixed containment fallback', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="display: inline-block"><lr-agent-trace></lr-agent-trace></div>`);
+  const el = wrapper.querySelector('lr-agent-trace') as LyraAgentTrace;
+  await el.updateComplete;
+  expect(getComputedStyle(el).containerType).to.equal('normal');
+});
+

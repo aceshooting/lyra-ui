@@ -1,5 +1,7 @@
+import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, hoverFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { noticeText } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -52,10 +54,10 @@ export const styles = css`
   [part~="source-row"] { flex: 1 1 auto; text-align: start; }
   [part~="source-row"]:where([aria-pressed="true"]) { --_lr-source-fill: var(--lr-color-brand-fill-quiet); }
   [part="source-navigator"] button, [part="source-status"] button { cursor: pointer; }
-  [part="source-navigator"] button:hover, [part="source-status"] button:hover {
+  [part="source-navigator"] button:hover:where(:not(:disabled)), [part="source-status"] button:hover:where(:not(:disabled)) {
     background: ${hoverFill('var(--_lr-source-fill)')};
   }
-  [part="source-navigator"] button:active, [part="source-status"] button:active {
+  [part="source-navigator"] button:active:where(:not(:disabled)), [part="source-status"] button:active:where(:not(:disabled)) {
     background: ${activeFill('var(--_lr-source-fill)')};
   }
   [part="source-navigator"] :where(button, input, select):focus-visible, [part="source-status"] button:focus-visible { ${focusRing} }
@@ -64,6 +66,24 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     block-size: 100%;
+  }
+  /* A column, so a notice after the drawing takes layout space inside the fixed-height host
+     instead of landing below it; the drawing yields the room. */
+  [part="base"]:not(.spatial-base) {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+  }
+  [part="base"] > svg,
+  [part="base"] > [part="canvas"] {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+  [part="limit"],
+  [part="custom-node-notice"],
+  [part="glow-notice"] {
+    flex: none;
+    ${noticeText}
   }
   .spatial-base {
     display: flex;
@@ -375,9 +395,14 @@ export const styles = css`
     stroke: var(--lr-graph-edge-label-halo, var(--lr-color-surface));
     stroke-width: var(--lr-border-width-thick);
   }
+  /* Nodes and community hulls carry data in their authored colours (the hull tint matches the
+     community legend), so they keep them; selected rows and spatial controls get the shared
+     system-colour state paint instead of a fill the palette would erase. */
   @media (forced-colors: active) {
-    [part='node'] {
+    [part='node'],
+    [part='hull'] {
       forced-color-adjust: none;
     }
   }
+  ${forcedColorsPart("[part~='source-row'][aria-pressed='true'], [part='spatial-control'][aria-pressed='true'], [part='spatial-list-item']:is([aria-pressed='true'], [aria-current='true'])")}
 `;

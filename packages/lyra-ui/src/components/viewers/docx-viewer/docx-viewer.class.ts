@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { revealInOwnScroller } from '../../../internal/reveal-row.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -212,6 +213,12 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @cssprop --lr-docx-viewer-search-match-bg - Search-match background.
  * @cssprop --lr-docx-viewer-search-match-active-bg - Active search-match background.
  * @cssprop --lr-docx-viewer-search-match-active-color - Active search-match foreground.
+ * @cssprop [--lr-docx-viewer-action-background=var(--lr-color-surface)] - Resting background of
+ *   the fallback highlight action buttons.
+ * @cssprop [--lr-docx-viewer-action-hover-background=var(--lr-color-surface-raised)] - Hover background
+ *   of the fallback highlight action buttons.
+ * @cssprop --lr-docx-viewer-action-active-background - Pressed background of the fallback highlight action buttons. Defaults to
+ *   the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */
@@ -629,7 +636,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       resolved.range.commonAncestorContainer.nodeType === elementNode
         ? resolved.range.commonAncestorContainer as Element
         : resolved.range.commonAncestorContainer.parentElement;
-    target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
+    if (target) revealInOwnScroller(target);
     this.activateHighlight(highlight.id);
   }
 
@@ -750,7 +757,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private scrollToActiveSearchMatch(): void {
     const active = this.renderRoot.querySelector('mark[part~="search-match-active"]') as HTMLElement | null;
-    active?.scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'center' });
+    if (active) revealInOwnScroller(active, 'center', prefersReducedMotion(this) ? 'auto' : 'smooth');
   }
 
   private clearSearchPaint(): void {

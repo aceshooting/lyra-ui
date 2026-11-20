@@ -1432,6 +1432,27 @@ describe('pan & zoom', () => {
     expect(el.viewport.zoom).to.be.at.least(0.1);
   });
 
+  it('frames and maps pointers in layout pixels under a scaled ancestor', async () => {
+    const mount = async (style: string) => {
+      const wrapper = await fixture<HTMLElement>(html`<div style=${style}><lr-flow-canvas style="width:400px;height:300px" min-zoom="0.1" max-zoom="4"></lr-flow-canvas></div>`);
+      const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+      el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }, { id: 'b', position: { x: 2000, y: 2000 } }];
+      await el.updateComplete;
+      el.fit();
+      return el;
+    };
+    const plain = await mount('');
+    const scaled = await mount('transform: scale(0.5); transform-origin: 0 0');
+    // Node sizes settle independently per mount, so compare framing within a few percent; the
+    // visual-pixel defect frames at half the viewport, far outside this band.
+    expect(scaled.viewport.zoom).to.be.closeTo(plain.viewport.zoom, plain.viewport.zoom * 0.03);
+    scaled.setViewport({ x: 0, y: 0, zoom: 1 });
+    const rect = scaled.shadowRoot!.querySelector('[part="viewport"]')!.getBoundingClientRect();
+    const point = scaled.toContentPoint(rect.left + 50, rect.top + 30);
+    expect(point.x).to.be.closeTo(100, 1);
+    expect(point.y).to.be.closeTo(60, 1);
+  });
+
   it('wheel zooms toward the cursor and emits a throttled lr-viewport-change', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

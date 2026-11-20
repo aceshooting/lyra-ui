@@ -30,15 +30,17 @@ export const styles = css`
       )
     );
     ${iconHitTarget}
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* The adjacent trigger's resting tokens, so retinting the field retints the preview with it. */
+    border: var(--lr-border-width-thin) solid var(--lr-voice-picker-trigger-border-color, var(--lr-color-border));
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
-    background: var(--lr-color-surface);
+    background: var(--lr-voice-picker-trigger-fill, var(--lr-color-surface));
     color: var(--lr-color-text);
     font: inherit;
     cursor: pointer;
     ${interactiveTransition}
   }
   [part='preview-button']:hover:not(:disabled) {
+    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-voice-picker-trigger-border-color, var(--lr-color-border)));
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }

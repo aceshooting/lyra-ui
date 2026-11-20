@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 92 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 92 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,7 +34,7 @@ Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (defaul
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
 `--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
 `--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
-Scene, pick and drawing buttons accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`.
+Scene, pick and drawing buttons, the native zoom, compass, geolocate and scene controls, and the compact attribution button accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`. A pressed or mixed scene control and the open attribution button paint `--lr-map-control-pressed-bg` (default `var(--lr-color-brand-quiet)`), with the scene glyph in `--lr-map-control-pressed-color` (default `var(--lr-color-brand)`); a hovered or pressed interactive marker shows a `--lr-map-marker-hover-halo-color` halo (default `var(--lr-color-brand)`). Under forced colors, pressed controls and the open attribution button take the system highlight.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile

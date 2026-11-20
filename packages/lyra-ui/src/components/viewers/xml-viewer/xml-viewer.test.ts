@@ -1,4 +1,4 @@
-import { setForcedColors } from '../../../../test/wtr-media.js';
+import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { twoFrames, twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -634,6 +634,28 @@ describe('expandDepth and toggling', () => {
 });
 
 describe('copy', () => {
+  it('paints attribute syntax from the attribute color tokens', async () => {
+    const el = (await fixture(html`<lr-xml-viewer
+      .xml=${'<root a="b"></root>'}
+      style="--lr-xml-viewer-attribute-name-color: rgb(1, 2, 3); --lr-xml-viewer-attribute-value-color: rgb(4, 5, 6)"
+    ></lr-xml-viewer>`)) as LyraXmlViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="attribute-name"]') !== null, 'attributes render');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attribute-name"]')!).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attribute-value"]')!).color).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('floors the copy button at the icon-button hit area', async () => {
+    const el = (await fixture(html`<lr-xml-viewer
+      .xml=${SIMPLE_XML}
+      copyable
+      style="--lr-icon-button-size: 44px"
+    ></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"] [part="copy-button"]')!.getBoundingClientRect();
+    expect(box.height).to.be.at.least(44);
+    expect(box.width).to.be.at.least(44);
+  });
+
   it('clears copy feedback on its own after the feedback window elapses', async function () {
     this.timeout(5_000);
     const restore = stubClipboard(navigator, { writeText: async () => {} });
@@ -889,16 +911,17 @@ describe('search', () => {
     const el = (await fixture(
       html`<lr-xml-viewer max-height="6rem" .xml=${`<root>${rows}<needle>found</needle><needle>found</needle></root>`}></lr-xml-viewer>`,
     )) as LyraXmlViewer;
-    const original = HTMLElement.prototype.scrollIntoView;
+    // The capped viewer reveals the match by scrolling its own scrollport only.
+    const original = HTMLElement.prototype.scrollTo;
     const scrolled: Array<string | null> = [];
     const behaviors: Array<ScrollBehavior | undefined> = [];
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, options?: boolean | ScrollIntoViewOptions) {
+    HTMLElement.prototype.scrollTo = function (this: HTMLElement, options?: ScrollToOptions | number) {
       scrolled.push(this.getAttribute('part'));
       behaviors.push(typeof options === 'object' ? options.behavior : undefined);
-    };
+    } as typeof HTMLElement.prototype.scrollTo;
     try {
       expect(await el.search('needle')).to.equal(2);
-      expect(scrolled, 'search() brings its first match on screen').to.deep.equal(['node']);
+      expect(scrolled, 'search() brings its first match on screen').to.deep.equal(['base']);
       expect(behaviors).to.deep.equal(['smooth']);
 
       expect(await el.searchNext()).to.be.true;
@@ -906,7 +929,7 @@ describe('search', () => {
       expect(scrolled.length, 'every navigation step scrolls too').to.equal(3);
       expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
     } finally {
-      HTMLElement.prototype.scrollIntoView = original;
+      HTMLElement.prototype.scrollTo = original;
     }
   });
 
@@ -1974,4 +1997,26 @@ it('names each disclosure action and its XML element in both states', async () =
   await el.updateComplete;
   expect(toggle().getAttribute('aria-label')).to.equal('Hide orders');
   expect(toggle().getAttribute('aria-expanded')).to.equal('true');
+});
+
+it('steps through matches in a capped viewer without scrolling the page or an outer scroller', async () => {
+  const xml = `<root>${Array.from({ length: 80 }, (_, i) => `<item>${i === 70 ? 'needle' : 'hay'}</item>`).join('')}</root>`;
+  const outer = await fixture<HTMLElement>(html`<div style="block-size: 300px; overflow: auto">
+    <div style="block-size: 600px"></div>
+    <lr-xml-viewer max-height="150px" .xml=${xml}></lr-xml-viewer>
+    <div style="block-size: 600px"></div>
+  </div>`);
+  const el = outer.querySelector('lr-xml-viewer') as LyraXmlViewer;
+  await el.updateComplete;
+  await setReducedMotion('reduce');
+  try {
+    expect(await el.search('needle')).to.equal(1);
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-active-match]') !== null);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const scroller = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(scroller.scrollTop, 'the capped viewer revealed the match itself').to.be.greaterThan(0);
+    expect(outer.scrollTop).to.equal(0);
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });

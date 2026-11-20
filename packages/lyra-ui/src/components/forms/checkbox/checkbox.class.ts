@@ -170,18 +170,21 @@ class LyraCheckboxBase extends LyraElement<LyraCheckboxEventMap> {}
  * custom properties inherit down and not sideways, it is *not* readable from a sibling node in your
  * tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size`,
  * `--lr-theme-form-control-height-*` and `--lr-theme-space-s`, which you control.
+ * @cssprop [--lr-checkbox-bg=var(--lr-color-surface)] - Background of an unchecked `[part='box']`.
+ * @cssprop [--lr-checkbox-border-color=var(--lr-color-border)] - Border color of an unchecked
+ *   `[part='box']` at rest.
  * @cssprop [--lr-checkbox-checked-bg=var(--lr-color-brand)] - Background of `[part='box']` while
  * `checked` or `indeterminate`. Retint just this control's checked fill without touching the shared
  * `--lr-color-brand` token every other component also reads.
- * @cssprop [--lr-checkbox-checked-border=var(--lr-color-brand)] - Border color of `[part='box']`
+ * @cssprop [--lr-checkbox-checked-border-color=var(--lr-color-brand)] - Border color of `[part='box']`
  * while `checked` or `indeterminate`.
- * @cssprop [--lr-checkbox-hover-border=var(--lr-color-brand)] - Box border while the enabled
+ * @cssprop [--lr-checkbox-hover-border-color=var(--lr-color-brand)] - Box border while the enabled
  * interactive control is hovered. While checked or indeterminate, unset falls back to
- * `--lr-checkbox-checked-border`.
- * @cssprop [--lr-checkbox-active-border=var(--lr-color-brand)] - Box border while pressed. While
- * checked or indeterminate, unset falls back to `--lr-checkbox-checked-border`.
- * @cssprop [--lr-checkbox-active-ring=var(--lr-color-brand-quiet)] - Outer box ring while pressed.
- * @cssprop [--lr-checkbox-invalid-border=var(--lr-color-danger)] - Box border while invalid chrome
+ * `--lr-checkbox-checked-border-color`.
+ * @cssprop [--lr-checkbox-active-border-color=var(--lr-color-brand)] - Box border while pressed. While
+ * checked or indeterminate, unset falls back to `--lr-checkbox-checked-border-color`.
+ * @cssprop [--lr-checkbox-active-ring-color=var(--lr-color-brand-quiet)] - Outer box ring while pressed.
+ * @cssprop [--lr-checkbox-invalid-border-color=var(--lr-color-danger)] - Box border while invalid chrome
  * is visible.
  * @cssprop [--lr-checkbox-box-radius=calc(var(--lr-form-control-radius) * 0.6)] - Corner radius of
  * `[part='box']`. Retune it without a `::part(box)` rule.

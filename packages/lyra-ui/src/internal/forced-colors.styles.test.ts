@@ -1,6 +1,11 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../test/wtr-media.js';
-import { forcedColorsDataFill, forcedColorsPart, forcedColorsSelected } from './forced-colors.styles.js';
+import {
+  forcedColorsDataFill,
+  forcedColorsDivider,
+  forcedColorsPart,
+  forcedColorsSelected,
+} from './forced-colors.styles.js';
 
 async function enterForcedColors(): Promise<boolean> {
   try {
@@ -21,6 +26,7 @@ async function mount() {
       ${forcedColorsSelected.cssText}
       ${forcedColorsDataFill.cssText}
       ${forcedColorsPart('.custom').cssText}
+      ${forcedColorsDivider('.rule', '.rule.engaged').cssText}
     </style>
     <div class="tint plain"></div>
     <div class="tint" aria-selected="true" id="selected"></div>
@@ -28,6 +34,9 @@ async function mount() {
     <div class="tint" data-active id="active"></div>
     <div class="tint custom" id="custom"></div>
     <div class="fill" data-fill id="fill"></div>
+    <div style="background-color: Canvas" id="canvas"></div>
+    <div class="tint rule" id="rule"></div>
+    <div class="tint rule engaged" id="engaged"></div>
   </div>`);
 }
 
@@ -65,4 +74,24 @@ it('keeps a data fill filled and edged under forced colors', async () => {
   } finally {
     await setForcedColors('none');
   }
+});
+
+it('keeps divider hairlines visible and marks the engaged one under forced colors', async () => {
+  const root = await mount();
+  if (!(await enterForcedColors())) return;
+  try {
+    const canvas = paint(root, '#canvas').backgroundColor;
+    const rule = paint(root, '#rule').backgroundColor;
+    const engaged = paint(root, '#engaged').backgroundColor;
+    expect(rule).not.to.equal(canvas);
+    expect(engaged).not.to.equal(canvas);
+    expect(engaged).not.to.equal(rule);
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('emits no rule for an empty divider selector', () => {
+  expect(forcedColorsDivider('', '.x').cssText).not.to.contain('CanvasText');
+  expect(forcedColorsDivider('.x').cssText).not.to.contain('Highlight');
 });

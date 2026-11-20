@@ -39,7 +39,9 @@ export const styles = css`
        ladder's value is tuned for button icon-beside-label spacing, tighter than a field wants. */
     --_lr-select-gap: var(--lr-space-xs);
     --_lr-select-radius: var(--lr-form-control-radius);
-    --_lr-select-tag-padding: var(--lr-space-2xs) var(--lr-space-xs);
+    /* The multiple-mode chip uses lr-combobox's per-tier chip geometry, so the same selected
+       value reads the same in either field. */
+    --_lr-select-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --_lr-select-tag-font-size: var(--lr-font-size-sm);
     /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
        undeclared -- only this private copy of it is declared -- so a value set on :root or any
@@ -51,16 +53,29 @@ export const styles = css`
        --lr-select-trigger-min-height became dead code. The per-tier floor then falls out of the
        fallback, and any override pins an exact height. */
   }
-  /* Only the decorative expand glyph needs per-tier rules -- it sizes an icon box, not the control
-     row. Both tier spellings are matched as the ladder does, so size="small" cannot take the s
-     tier's padding with the default chevron. */
+  /* Only the decorative expand glyph and the multiple-mode chip need per-tier rules -- they size
+     an icon box and a chip, not the control row. Both tier spellings are matched as the ladder
+     does, so size="small" cannot take the s tier's padding with the default chevron. */
   :host([size="2xs"]),
   :host([size="xs"]) {
     --_lr-select-expand-size: var(--lr-size-1rem);
+    --_lr-select-tag-padding: 0 var(--lr-size-0-25rem);
+    --_lr-select-tag-font-size: var(--lr-font-size-2xs);
   }
   :host([size="s"]),
   :host([size="small"]) {
     --_lr-select-expand-size: var(--lr-size-1-25rem);
+    --_lr-select-tag-padding: var(--lr-size-0-05rem) var(--lr-size-0-3125rem);
+    --_lr-select-tag-font-size: var(--lr-font-size-xs);
+  }
+  :host([size="l"]),
+  :host([size="large"]) {
+    --_lr-select-tag-padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
+    --_lr-select-tag-font-size: var(--lr-font-size-md-sm);
+  }
+  :host([size="xl"]) {
+    --_lr-select-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
+    --_lr-select-tag-font-size: var(--lr-font-size-m);
   }
   ${formControlChrome}
 
@@ -314,8 +329,9 @@ export const styles = css`
     box-sizing: border-box;
     max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-12rem)));
     padding: var(--lr-select-tag-padding, var(--_lr-select-tag-padding));
-    border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface-raised);
+    border-radius: var(--lr-select-tag-radius, var(--lr-radius));
+    background: var(--lr-select-tag-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-select-tag-color, var(--lr-color-text));
     font-size: var(--lr-select-tag-font-size, var(--_lr-select-tag-font-size));
     line-height: var(--lr-line-height-none);
     pointer-events: auto;
@@ -348,12 +364,14 @@ export const styles = css`
     cursor: pointer;
     ${interactiveTransition}
   }
+  /* A currentColor-derived tint, as on lr-combobox's tag remove button: the chip itself is
+     brand-quiet, so a brand-quiet hover would not show on it. */
   [part~="tag__remove-button"]:hover {
     color: var(--lr-color-text);
-    background: var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet));
+    background: var(--lr-select-tag-remove-hover-bg, color-mix(in srgb, currentColor 16%, transparent));
   }
   [part~="tag__remove-button"]:active {
-    background: ${activeFill('var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet))')};
+    background: ${activeFill('var(--lr-select-tag-remove-hover-bg, color-mix(in srgb, currentColor 16%, transparent))')};
   }
   [part~="tag__remove-button"]:focus-visible {
     ${focusRing}

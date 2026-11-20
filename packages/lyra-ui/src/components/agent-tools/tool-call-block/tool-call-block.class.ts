@@ -135,6 +135,8 @@ function argsPresent(args: unknown): boolean {
  * @cssprop [--lr-tool-call-block-radius=var(--lr-radius)] - Card corner radius.
  * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied, neutral while pending or incomplete).
  * @cssprop [--lr-tool-call-block-error-color=var(--lr-color-danger)] - Error section text colour.
+ * @cssprop [--lr-tool-call-block-header-hover-bg=var(--lr-color-brand-quiet)] - Hover background of `[part="header"]`.
+ * @cssprop --lr-tool-call-block-header-pressed-bg - Pressed background of the header. Defaults to the hover background mixed by the press step.
  * @status experimental
  * @since 21.0.0
  */

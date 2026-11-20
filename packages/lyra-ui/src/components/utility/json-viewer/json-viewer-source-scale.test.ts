@@ -400,3 +400,19 @@ it('retires a pending legacy scroll when its search listener installs a provider
   expect(previousBody.style.scrollBehavior).to.equal('');
   expect(previousBody.scrollTop).to.equal(0);
 });
+
+it('lets an ancestor --lr-json-viewer-max-height size the source tree unless max-height is set', async () => {
+  const blockSize = (el: LyraJsonViewer) => getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('.source-tree')!).blockSize;
+  const wrapper = await fixture<HTMLElement>(html`<div style="--lr-json-viewer-max-height: 200px"><lr-json-viewer .strings=${strings} .treeSource=${source(50).provider}></lr-json-viewer></div>`);
+  const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
+  await ready(el);
+  expect(blockSize(el)).to.equal('200px');
+  el.maxHeight = '240px';
+  await el.updateComplete;
+  expect(blockSize(el)).to.equal('240px');
+  el.maxHeight = '';
+  wrapper.style.removeProperty('--lr-json-viewer-max-height');
+  await el.updateComplete;
+  expect(blockSize(el)).to.equal('320px');
+});
+

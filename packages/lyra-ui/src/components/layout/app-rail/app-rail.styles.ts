@@ -261,10 +261,11 @@ export const styles = css`
     );
     /* [part="panel"] is this element's mobile OVERLAY promotion (see the [part="base"] note) -- a
        modal drawer over a scrim, hence the modal-panel surface. Docked in the page's flow,
-       [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
+       [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. The shared modal
+       surface family sits behind the component hook, like lr-drawer. */
     background: var(
       --lr-app-rail-panel-bg,
-      var(--lr-color-surface-overlay)
+      var(--lr-overlay-surface, var(--lr-color-surface-container-highest))
     );
     padding-block-end: var(--lr-safe-area-bottom);
     /* Both axes are tokenized together, unlike [part="base"]/[part="nav"]'s plain overflow-x:clip:
@@ -300,7 +301,10 @@ export const styles = css`
   :host([mode="mobile"][open]) [part="panel"] {
     transform: none;
     /* Keep the modal elevation inside the viewport only while the drawer is visible. */
-    box-shadow: var(--lr-app-rail-panel-shadow, var(--lr-shadow-l));
+    box-shadow: var(
+      --lr-app-rail-panel-shadow,
+      var(--lr-overlay-shadow-modal, var(--lr-shadow-l))
+    );
   }
 
   [part="header"] {
@@ -511,5 +515,5 @@ export const styles = css`
 
   ${glassScrollLayerStyles}
   ${glassSurface(':host(:not([frame="plain"])) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, undefined, true)}
-  ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-color-surface-overlay))`, undefined, true)}
+  ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-overlay-surface, var(--lr-color-surface-container-highest)))`, undefined, true)}
 `;

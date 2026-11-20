@@ -1727,3 +1727,20 @@ describe('content-derived activation name work', () => {
     });
   });
 });
+
+it("sizes a vertical card by its content in a shrink-to-fit context, containing only the horizontal card", async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="display: inline-block"><lr-card>42</lr-card></div>`);
+  const card = wrapper.querySelector("lr-card") as LyraCard;
+  await card.updateComplete;
+  expect(getComputedStyle(card).containerType).to.equal("normal");
+  const probe = document.createElement("div");
+  probe.style.inlineSize = "var(--lr-size-20rem)";
+  card.shadowRoot!.append(probe);
+  const twentyRem = probe.getBoundingClientRect().width;
+  probe.remove();
+  expect(card.getBoundingClientRect().width).to.be.below(twentyRem / 2);
+  card.setAttribute("orientation", "horizontal");
+  await card.updateComplete;
+  expect(getComputedStyle(card).containerType).to.equal("inline-size");
+});
+

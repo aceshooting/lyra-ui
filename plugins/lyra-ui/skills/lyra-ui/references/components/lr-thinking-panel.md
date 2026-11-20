@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -170,3 +170,5 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
   `mode="live"` follows its very first content mutation even before any `scroll` event has fired.
 
 ---
+
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.

@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, focusRingInwardMax, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
@@ -166,4 +167,5 @@ export const styles = css`
       max-inline-size: calc(100% - 2 * var(--lr-space-s));
     }
   }
+  ${forcedColorsDivider("[part='unread-divider']::before, [part='unread-divider']::after")}
 `;

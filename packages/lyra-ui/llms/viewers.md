@@ -170,7 +170,7 @@ the component itself from the clamped `progress` property, so overriding it only
 repaint the fraction. `--lr-document-preview-active-border` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
-border so the active region can be recolored without touching the rest. Like the library's other
+border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other
 state hooks it is an inline `var()` fallback at the point of use rather than a `:host` declaration,
 so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
 invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
@@ -188,6 +188,7 @@ Plus shared tokens
 and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
+Region highlight action buttons accept `--lr-document-preview-action-background` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-background`.
 
 **Optional peer deps:** none directly — the `unsupported` slot is commonly used to compose
 `<lr-code-block>` (which has its own optional `shiki` peer dependency; see that component's own
@@ -580,6 +581,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
+Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -1406,6 +1408,8 @@ surfaces the localized `documentPreviewResourceTooLarge` message instead of a pa
 The fetched-text path yields between dialect detection, structural admission and materialization;
 each parse pass remains synchronous.
 
+**Pointer-state tokens:** `--lr-dataset-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-dataset-viewer-cell-action-active-bg`.
+
 ## `lr-contact-viewer`
 
 `maxContacts` (attribute `max-contacts`) limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
@@ -1850,6 +1854,8 @@ be an Office Open XML workbook: OpenDocument and Numbers packages are refused, a
 archive admission before SheetJS parsing, and between sheet projections; each parse/projection
 pass remains synchronous.
 
+**Pointer-state tokens:** `--lr-spreadsheet-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-spreadsheet-viewer-cell-action-active-bg`.
+
 ## `lr-csv-viewer`
 
 Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
@@ -2016,6 +2022,8 @@ between dialect detection, structural admission and materialization; each parse 
 synchronous.
 
 ---
+
+**Pointer-state tokens:** `--lr-csv-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-csv-viewer-cell-action-active-bg`.
 
 ## `lr-include`
 
@@ -2184,6 +2192,7 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
+Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.
 ## `lr-page-rail`
 
 A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
@@ -2583,7 +2592,8 @@ or retry button), `source-status` (loading, full-source count or empty text), an
 `search-status` discloses unavailable or partial global provider search.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
-of the scrollable body; also settable via the `max-height` property.
+of the scrollable body; also settable via the `max-height` property. In source mode an unset
+property leaves a consumer value of this token in control, with a `var(--lr-size-20rem)` fallback.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the _current_ search match, leaving every other match on its dashed
 `--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
@@ -2637,6 +2647,8 @@ Reaching the rendered-row budget shows the existing localized `limit` notice; co
 the parsed document remain intact. Search still visits the complete admitted document within its
 separate search budgets, while a `node-path` outside the rendered window reports `found: false`
 until it can be rendered.
+
+**Syntax tokens:** `--lr-xml-viewer-attribute-name-color` (default `var(--lr-color-chart-1)`), `--lr-xml-viewer-attribute-value-color` (default `var(--lr-color-success)`).
 
 ## `lr-document-compare`
 

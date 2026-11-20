@@ -9,6 +9,7 @@ import type {
   LyraConversationItemEventMap,
 } from "../../lr-conversation-item.js";
 import { alignmentKeyword } from "../../../../test/computed-alignment.js";
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 type RenameEvent = LyraConversationItemEventMap["lr-rename"];
 const renameCorrelation = (event: RenameEvent): string =>
@@ -2026,5 +2027,32 @@ it('paints the pressed row from the component pressed token', async () => {
   } finally {
     await sendMouse({ type: 'up' });
     await resetMouse();
+  }
+});
+
+it('marks the open row and its indicator under forced colors', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-conversation-item active label="Open"></lr-conversation-item>
+    <lr-conversation-item label="Other"></lr-conversation-item>
+  </div>`);
+  const [open, other] = [...wrapper.querySelectorAll('lr-conversation-item')].map(
+    (item) => item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!,
+  );
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    await waitUntil(() => getComputedStyle(open!).backgroundColor !== getComputedStyle(other!).backgroundColor,
+      'the open row eases into a system fill');
+    expect(getComputedStyle(open!).outlineStyle).to.equal('solid');
+    const bar = (open!.getRootNode() as ShadowRoot).querySelector<HTMLElement>('[part="active-indicator"]');
+    expect(bar !== null, 'the open row renders its indicator').to.equal(true);
+    await waitUntil(() => getComputedStyle(bar!).backgroundColor !== getComputedStyle(open!).backgroundColor,
+      'the indicator contrasts with the open row');
+  } finally {
+    await setForcedColors('none');
   }
 });

@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
@@ -78,13 +79,13 @@ export const styles = css`
     ${focusRing}
   }
   :where([part='filter']):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressing a text field is how you focus it, so it gets the same acknowledgement as every other
      control here: one step past the hovered fill toward --lr-color-mix-partner, and back on
      release. */
   :where([part='filter']):active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-table-control-active-bg, ${activeFill('var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='filter']::placeholder {
     color: var(--lr-color-text-quiet);
@@ -398,11 +399,11 @@ export const styles = css`
      'background' here would lose to it and the pinned column would show no hover or press. */
   :where([part='cell'][data-editable]):hover {
     cursor: pointer;
-    --_lr-table-cell-bg: var(--lr-color-brand-quiet);
+    --_lr-table-cell-bg: var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet));
     background: var(--_lr-table-cell-bg);
   }
   :where([part='cell'][data-editable]):active {
-    --_lr-table-cell-bg: ${activeFill('var(--lr-color-brand-quiet)')};
+    --_lr-table-cell-bg: var(--lr-table-control-active-bg, ${activeFill('var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet))')});
     background: var(--_lr-table-cell-bg);
   }
   [part='cell'][data-editable]:focus-visible {
@@ -439,10 +440,10 @@ export const styles = css`
     ${focusRing}
   }
   :where([part='cell-editor']):hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet));
   }
   :where([part='cell-editor']):active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-table-control-active-bg, ${activeFill('var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet))')});
   }
   /* editType: 'number' renders a native type="number" editor; without this reset the browser's
      spinner buttons show as raw UA chrome in an otherwise fully re-themed field -- the same reset
@@ -540,10 +541,10 @@ export const styles = css`
     ${iconHitTarget}
   }
   [part='row-expand-toggle']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='row-expand-toggle']:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-table-control-active-bg, ${activeFill('var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='row-expand-toggle']:focus-visible {
     ${focusRing}
@@ -661,11 +662,11 @@ export const styles = css`
   }
   [part='more-button']:hover:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='more-button']:active:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:active {
-    background: ${activeFill('var(--lr-color-brand-quiet)')};
+    background: var(--lr-table-control-active-bg, ${activeFill('var(--lr-table-control-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='more-button']:focus-visible,
   [part='reveal-columns-button']:focus-visible {
@@ -676,4 +677,5 @@ export const styles = css`
   }
   ${dataStateSurfaceStyles('error')}
   ${dataStateRetryStyles}
+  ${forcedColorsDivider('', "[part='resize-handle']:is(:hover, :focus-visible, :active, [data-resizing])")}
 `;

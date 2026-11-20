@@ -1,3 +1,4 @@
+import { layoutScale } from '../../../internal/layout-scale.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 import type { LyraTreeNodeData, LyraTreePointerReorderDetail } from './tree-types.js';
 import type { LyraTreeItem } from './tree-item.class.js';
@@ -241,9 +242,11 @@ export class TreePointerReorder {
         const style = gesture.view.getComputedStyle(candidate.row);
         const indent = Number.parseFloat(style.paddingInlineStart) || 0;
         const y = candidate.detail.position === 'before' ? row.top : row.bottom;
-        line.style.left = `${row.left - origin.left + base.scrollLeft + (style.direction === 'rtl' ? 0 : indent)}px`;
-        line.style.top = `${y - origin.top + base.scrollTop}px`;
-        line.style.width = `${Math.max(0, row.width - indent)}px`;
+        // Rect deltas are visual pixels; the indicator's offsets are layout pixels.
+        const scale = layoutScale(base);
+        line.style.left = `${(row.left - origin.left) / scale.x + base.scrollLeft + (style.direction === 'rtl' ? 0 : indent)}px`;
+        line.style.top = `${(y - origin.top) / scale.y + base.scrollTop}px`;
+        line.style.width = `${Math.max(0, row.width / scale.x - indent)}px`;
       }
     }
     if (this.gesture === gesture && this.animation === undefined) this.autoScroll(gesture);

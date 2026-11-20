@@ -973,13 +973,12 @@ describe('lr-highlight-layer', () => {
           Math.round(actionBox.top + actionBox.height / 2),
         ],
       });
+      // The action eases its fill, so wait for the hover paint to land, not merely to start.
       await waitUntil(
-        () => getComputedStyle(action).backgroundColor !== restingBackground,
+        () => getComputedStyle(action).backgroundColor === 'rgb(1, 2, 3)',
         'the grouped highlight action never entered its rendered hover state',
       );
-      expect(getComputedStyle(action).backgroundColor).to.equal(
-        'rgb(1, 2, 3)',
-      );
+      expect(restingBackground).not.to.equal('rgb(1, 2, 3)');
     } finally {
       await resetMouse();
     }

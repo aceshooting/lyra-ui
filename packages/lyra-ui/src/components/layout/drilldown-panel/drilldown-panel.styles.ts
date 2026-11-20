@@ -18,7 +18,9 @@ export const styles = css`
     max-inline-size: 100%;
   }
   lr-breadcrumb-item {
-    --lr-breadcrumb-item-color: var(--lr-color-brand);
+    /* The private default behind the item's public colour, so a consumer --lr-breadcrumb-item-color
+       on this panel or an ancestor still wins. */
+    --_lr-breadcrumb-item-color: var(--lr-color-brand);
     min-inline-size: 0;
     max-inline-size: 100%;
   }

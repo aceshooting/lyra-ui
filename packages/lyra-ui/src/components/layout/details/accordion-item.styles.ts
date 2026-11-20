@@ -96,7 +96,7 @@ export const styles = css`
   [part~="label"] {
     flex: 1 1 auto;
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part~="icon"] {
     display: inline-flex;
@@ -222,7 +222,7 @@ export const styles = css`
         var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
       )
     );
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   @media (prefers-reduced-motion: reduce) {
     [part~="panel"],

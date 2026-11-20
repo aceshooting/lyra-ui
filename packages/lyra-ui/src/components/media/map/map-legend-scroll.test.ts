@@ -74,3 +74,19 @@ for (const direction of ['ltr', 'rtl']) for (const surface of ['glass', 'solid']
     expect(legend.scrollHeight).to.be.at.most(legend.clientHeight);
   });
 }
+
+it('keeps the inline hit-area floor on legend toggles and the disclosure', async () => {
+  const map = await fixture<LyraMap>(html`<lr-map
+    engine="maplibre"
+    style="inline-size:320px;block-size:400px;--lr-icon-button-size:44px"
+  ></lr-map>`);
+  map.legend = [{ color: '#008800', pattern: 'solid', value: 'a', label: 'A', group: 'G' }];
+  map.legendInteractive = true;
+  map.legendCollapsible = true;
+  await map.updateComplete;
+  for (const selector of ['[part~="legend-toggle"]', '[part="legend-disclosure"]']) {
+    const button = map.shadowRoot!.querySelector<HTMLElement>(selector)!;
+    expect(getComputedStyle(button).minWidth, selector).not.to.equal('0px');
+    expect(button.getBoundingClientRect().width, selector).to.be.at.least(44);
+  }
+});

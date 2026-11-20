@@ -292,6 +292,10 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-task-list-radius=var(--lr-radius)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.
+ * @cssprop [--lr-task-list-header-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the collapsible `[part="header"]`.
+ * @cssprop --lr-task-list-header-pressed-bg - Pressed background of the header. Defaults to the hover background mixed by the press step.
+ * @cssprop [--lr-task-list-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a focusable `[part="item"]`.
+ * @cssprop --lr-task-list-item-pressed-bg - Pressed background of a focusable item. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

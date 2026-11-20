@@ -154,6 +154,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @cssprop [--lr-dataset-viewer-header-row-bg=var(--lr-color-brand-quiet)] - Background of
  *   `[part="header-row"]`, independent of the highlight outline above.
  * @csspart search-status - Notice when a data source has no global search capability.
+ * @cssprop [--lr-dataset-viewer-cell-action-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a highlighted cell's `[part="cell-highlight-action"]`.
+ * @cssprop --lr-dataset-viewer-cell-action-active-bg - Pressed background of that action. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

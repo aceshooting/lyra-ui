@@ -1,4 +1,4 @@
-import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
@@ -110,15 +110,17 @@ export const styles = css`
   [part='highlight-action'] {
     ${iconHitTarget}
     ${nativeControlSurface}
+    background: var(--lr-highlight-layer-action-background, var(--lr-color-surface));
+    ${interactiveTransition}
     border-radius: var(--lr-radius-xs);
     pointer-events: auto;
     cursor: pointer;
   }
   [part='highlight-action']:hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-highlight-layer-action-hover-background, var(--lr-color-surface-raised));
   }
   [part='highlight-action']:active {
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    background: var(--lr-highlight-layer-action-active-background, ${activeFill('var(--lr-highlight-layer-action-hover-background, var(--lr-color-surface-raised))')});
   }
   [part='highlight-action']:focus-visible {
     ${focusRingShorthand}

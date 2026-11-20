@@ -1386,6 +1386,14 @@ it('keeps every status distinguishable without color in forced-colors mode', asy
     expect(stylesByStatus.get('uploading')!.borderStyle).to.equal('dashed');
     expect(stylesByStatus.get('error')!.borderStyle).to.equal('double');
     expect(stylesByStatus.get('success')!.outlineStyle).to.equal('double');
+    const uploading = wrapper.querySelector('lr-attachment-chip[status="uploading"]')! as HTMLElement & { progress: number; updateComplete: Promise<unknown> };
+    uploading.progress = 40;
+    await uploading.updateComplete;
+    const track = uploading.shadowRoot!.querySelector<HTMLElement>('[part="progress"]');
+    const fill = uploading.shadowRoot!.querySelector<HTMLElement>('[part="progress-fill"]');
+    expect(track !== null && fill !== null, 'an uploading chip with progress renders its bar').to.equal(true);
+    expect(getComputedStyle(track!).outlineStyle).to.equal('solid');
+    expect(getComputedStyle(fill!).backgroundColor).not.to.equal(getComputedStyle(track!).backgroundColor);
   } finally {
     await setForcedColors('none');
   }

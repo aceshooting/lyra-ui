@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import '../../lr-page-rail.js';
 import type {
   LyraPageRail,
@@ -1600,6 +1601,26 @@ describe('lr-page-rail part reachability through the embedded virtual list', () 
       expect(getComputedStyle(toned).backgroundColor, tone).to.equal(
         resolveDeclaration(vlistRoot, `background: var(${token})`, 'background-color'),
       );
+    }
+  });
+
+  it('keeps heat dots visible and tone-shaped under forced colors', async () => {
+    const { vlistRoot } = await rail({ highlights: heatHighlights('danger', 'accent') });
+    try {
+      await setForcedColors('active');
+    } catch {
+      return;
+    }
+    try {
+      // An engine that only reports the media query, without forcing colours, has nothing to paint.
+      if (!matchMedia('(forced-colors: active)').matches || !CSS.supports('forced-color-adjust', 'none')) return;
+      const danger = getComputedStyle(vlistRoot.querySelector('[part~="heat-dot-danger"]')!);
+      const accent = getComputedStyle(vlistRoot.querySelector('[part~="heat-dot-accent"]')!);
+      expect(danger.borderTopStyle).to.equal('solid');
+      expect(danger.forcedColorAdjust).to.equal('none');
+      expect(danger.borderTopLeftRadius).not.to.equal(accent.borderTopLeftRadius);
+    } finally {
+      await setForcedColors('none');
     }
   });
 

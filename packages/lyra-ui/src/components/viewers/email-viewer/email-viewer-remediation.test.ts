@@ -50,3 +50,17 @@ for (const kind of ['plain', 'html'] as const) {
     expect(await unfolded.search('Target')).to.equal(1);
   });
 }
+
+it('wraps the expanded plain-text quote like the visible body, without the pre UA margin', async () => {
+  const el = await message('plain');
+  el.style.inlineSize = '12rem';
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="quote-toggle"]')!.click();
+  await el.updateComplete;
+  const quoted = el.shadowRoot!.querySelector<HTMLElement>('[part="quoted"]')!;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body-text"]')!;
+  const style = getComputedStyle(quoted);
+  expect(style.whiteSpace).to.equal(getComputedStyle(body).whiteSpace);
+  expect(style.fontFamily).to.equal(getComputedStyle(body).fontFamily);
+  expect(style.marginBlockEnd).to.equal('0px');
+  expect(quoted.scrollWidth).to.be.at.most(quoted.clientWidth);
+});

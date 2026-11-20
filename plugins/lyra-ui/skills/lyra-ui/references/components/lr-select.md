@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -401,9 +401,12 @@ gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-ra
 radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
 radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` changes its private
 default to `--lr-radius-pill`. `--lr-select-tag-padding`
-(default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
-`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius their private defaults do
-**not** vary by `size` tier, and inherited or direct public values win.
+and `--lr-select-tag-font-size` size a `multiple`-mode chip; their private defaults follow the
+`size` tier with the same chip ladder `lr-combobox` uses (at `m`, `var(--lr-size-0-1rem)
+var(--lr-size-0-4rem)` and `var(--lr-font-size-sm)`), and inherited or direct public values win.
+`--lr-select-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-select-tag-color` (default
+`var(--lr-color-text)`) and `--lr-select-tag-radius` (default `var(--lr-radius)`) paint the chip, with
+the same defaults as `lr-combobox`'s `--lr-combobox-tag-*`.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 
@@ -479,11 +482,10 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `[part='option-badge']` "not in catalog" badge `with-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
-`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`--lr-select-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)`) retints a hovered
 `[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
 state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
-`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
-purposes.
+`--lr-select-option-active-bg` above.
 
 **Optional peer deps:** none.
 

@@ -2572,3 +2572,17 @@ it('slides a closed start or end drawer off its own logical edge, mirrored under
   page.navigationPlacement = 'start';
   await offEdge('right', 'rtl start');
 });
+
+it('paints the mobile navigation drawer from the shared modal surface family', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-overlay-surface: rgb(1, 2, 3); --lr-overlay-shadow-modal: 0 0 0 3px rgb(255, 0, 0);">
+      <lr-page style="inline-size: 320px;"><a slot="navigation" href="#x">Nav</a><p id="x">Content</p></lr-page>
+    </div>
+  `);
+  const page = wrapper.querySelector('lr-page') as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const drawer = byPart(page, 'drawer');
+  expect(getComputedStyle(drawer).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(drawer).boxShadow).to.equal(resolvedInShadow(page, 'box-shadow: 0 0 0 3px rgb(255, 0, 0)', 'box-shadow'));
+});

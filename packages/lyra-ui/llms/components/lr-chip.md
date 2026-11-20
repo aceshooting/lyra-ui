@@ -179,7 +179,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. Its hover and press take `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`), `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`), `--lr-chip-group-overflow-hover-bg` (default: the resting fill) and `--lr-chip-group-overflow-active-bg`.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,

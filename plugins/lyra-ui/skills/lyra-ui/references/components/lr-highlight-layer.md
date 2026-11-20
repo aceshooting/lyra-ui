@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,3 +63,4 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
+Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.

@@ -3012,7 +3012,7 @@ const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
     [
       ['--hide-duration', 'var(--lr-transition-fast)'],
       ['--show-duration', 'var(--lr-transition-fast)'],
-      ['--tag-max-size', 'var(--lr-size-5rem)'],
+      ['--tag-max-size', 'var(--lr-size-12rem)'],
     ],
   ],
   [

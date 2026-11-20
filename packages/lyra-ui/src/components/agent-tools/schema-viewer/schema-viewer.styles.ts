@@ -3,7 +3,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
-import { containerHost } from '../../../internal/layout-fragments.styles.js';
+import { containerHost, noticeText } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   ${srOnly}
@@ -72,5 +72,9 @@ export const styles = css`
         var(--lr-json-schema-viewer-max-indent, var(--lr-size-12rem))
       );
     }
+  }
+  [part='limit'],
+  [part='issue-limit'] {
+    ${noticeText}
   }
 `;

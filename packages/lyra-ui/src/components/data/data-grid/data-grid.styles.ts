@@ -1,3 +1,4 @@
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeTint, disabledControl, focusRingInset, focusRingOffset, focusRingOffsetInsetOffset, hoverTint, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
@@ -775,4 +776,5 @@ export const styles = css`
       outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
   }
+  ${forcedColorsDivider('', "[part='resize-handle']:is(:hover, :focus-visible, :active, [data-resizing])")}
 `;

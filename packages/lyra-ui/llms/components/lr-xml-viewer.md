@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 28 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -207,7 +207,8 @@ or retry button), `source-status` (loading, full-source count or empty text), an
 `search-status` discloses unavailable or partial global provider search.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
-of the scrollable body; also settable via the `max-height` property.
+of the scrollable body; also settable via the `max-height` property. In source mode an unset
+property leaves a consumer value of this token in control, with a `var(--lr-size-20rem)` fallback.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
 `[part='node']` holding the _current_ search match, leaving every other match on its dashed
 `--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
@@ -261,3 +262,5 @@ Reaching the rendered-row budget shows the existing localized `limit` notice; co
 the parsed document remain intact. Search still visits the complete admitted document within its
 separate search budgets, while a `node-path` outside the rendered window reports `found: false`
 until it can be rendered.
+
+**Syntax tokens:** `--lr-xml-viewer-attribute-name-color` (default `var(--lr-color-chart-1)`), `--lr-xml-viewer-attribute-value-color` (default `var(--lr-color-success)`).

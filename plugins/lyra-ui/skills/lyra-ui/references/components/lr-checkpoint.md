@@ -9,14 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-checkpoint`
 
-Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`.
+Customize the checkpoint gap and restore button with `--lr-checkpoint-gap`, `--lr-checkpoint-button-bg`, `--lr-checkpoint-button-color`, `--lr-checkpoint-button-border-color`, `--lr-checkpoint-button-radius` and `--lr-checkpoint-button-padding-inline`; its hover and press with `--lr-checkpoint-button-hover-border-color`, `--lr-checkpoint-button-hover-color` and `--lr-checkpoint-button-active-bg`. The confirm and cancel buttons take `--lr-checkpoint-confirm-bg`, `--lr-checkpoint-confirm-color`, `--lr-checkpoint-confirm-border-color`, `--lr-checkpoint-confirm-hover-bg`, `--lr-checkpoint-confirm-active-bg`, `--lr-checkpoint-cancel-bg`, `--lr-checkpoint-cancel-color`, `--lr-checkpoint-cancel-hover-bg` and `--lr-checkpoint-cancel-active-bg`. All three actions are at least `--lr-icon-button-size` in both axes.
 
 An inline conversation restore point: a labeled marker between messages whose Restore affordance
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores

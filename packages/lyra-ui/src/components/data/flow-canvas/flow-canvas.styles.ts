@@ -355,6 +355,19 @@ export const styles = css`
       animation: none;
     }
   }
+  /* Forced colours collapse the brand, success and danger tones onto one system colour, so each
+     status tone also gets its own dash pattern (the dashed running edge keeps its march). */
+  @media (forced-colors: active) {
+    [part='edge'][data-tone='success']:not([data-running], [data-running-static]) {
+      stroke-dasharray: 10 2 2 2;
+    }
+    [part='edge'][data-tone='warning']:not([data-running], [data-running-static]) {
+      stroke-dasharray: 2 2;
+    }
+    [part='edge'][data-tone='danger']:not([data-running], [data-running-static]) {
+      stroke-dasharray: 8 2 2 2 2 2;
+    }
+  }
   @keyframes lr-flow-canvas-march {
     to {
       stroke-dashoffset: -20;

@@ -26,8 +26,8 @@ export const styles = css`
     outline: none;
   }
   [part="link"] {
-    stroke: var(--lr-color-border);
-    stroke-width: 1.5;
+    stroke: var(--lr-mind-map-link-color, var(--lr-color-border));
+    stroke-width: var(--lr-mind-map-link-width, 1.5);
   }
   [part="node"] {
     cursor: pointer;
@@ -42,7 +42,7 @@ export const styles = css`
     pointer-events: stroke;
   }
   [part="node"] circle {
-    fill: var(--lr-color-brand);
+    fill: var(--lr-mind-map-node-fill, var(--lr-color-brand));
     stroke: transparent;
     stroke-width: var(--lr-border-width-thick);
     transition: stroke var(--lr-transition-fast);
@@ -80,5 +80,16 @@ export const styles = css`
     margin-block: var(--lr-space-xs);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
+  }
+  /* Forced colours repaint author strokes, so the hover and press halo and the focus ring take
+     Highlight against the ButtonText nodes rather than merging with them. */
+  @media (forced-colors: active) {
+    [part="node"] circle {
+      fill: ButtonText;
+    }
+    [part="node"]:is(:hover, :active) circle,
+    [part="focus-ring"] {
+      stroke: Highlight;
+    }
   }
 `;

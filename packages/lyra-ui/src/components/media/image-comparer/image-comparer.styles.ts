@@ -187,12 +187,15 @@ export const styles = css`
   /* [part='input'] is a fully-transparent full-bleed native <input type="range">, so hover feedback
      goes on the divider and the whole drag surface responds, not just the small visible handle. */
   [part~="base"]:has([part="input"]:hover) [part="divider"] {
-    background: var(--lr-color-brand);
+    background: var(--lr-image-comparer-divider-hover-color, var(--lr-color-brand));
   }
   /* Same :has() indirection as the hover rule above -- the transparent full-bleed input has
      nothing of its own to tint, so mid-drag the seam deepens past its hover accent. */
   [part~="base"]:has([part="input"]:active) [part="divider"] {
-    background: ${activeFill('var(--lr-color-brand)')};
+    background: var(
+      --lr-image-comparer-divider-active-color,
+      ${activeFill('var(--lr-image-comparer-divider-hover-color, var(--lr-color-brand))')}
+    );
   }
   ${forcedColorsPart('[part="divider"]')}
   @media (forced-colors: active) {

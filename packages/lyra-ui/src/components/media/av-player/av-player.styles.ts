@@ -46,8 +46,12 @@ export const styles = css`
        inline-size/max-inline-size do not override that floor; min-inline-size:0 does. Shrinking is
        not a hard cross-engine guarantee once the option text is long enough, so the @container rule
        below backstops it with lr-video's [part='controls'] select pattern: a fixed max-inline-size
-       once the host is narrow, independent of content length or available flex space. */
-    min-inline-size: 0;
+       once the host is narrow, independent of content length or available flex space. An explicit
+       min-inline-size does the same, so the floor is the shared --lr-icon-button-size hit area
+       (capped at the container) rather than 0, and the block axis keeps the same floor. */
+    min-inline-size: min(100%, var(--lr-icon-button-size));
+    min-block-size: var(--lr-icon-button-size);
+    box-sizing: border-box;
     inline-size: 100%;
     max-inline-size: 100%;
     appearance: none;
@@ -112,13 +116,13 @@ export const styles = css`
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
   [part='timeline']:hover:where(:not([aria-disabled='true'])) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-av-player-timeline-hover-border-color, var(--lr-color-brand));
   }
   /* The timeline is itself the seek target -- a pointer press scrubs -- so it earns a pressed state
      beyond the hover border: the surface shifts while the border keeps the hover accent. */
   [part='timeline']:active:where(:not([aria-disabled='true'])) {
-    border-color: var(--lr-color-brand);
-    background: ${activeFill('var(--lr-color-surface-raised)')};
+    border-color: var(--lr-av-player-timeline-hover-border-color, var(--lr-color-brand));
+    background: var(--lr-av-player-timeline-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part='timeline']:focus-visible {
     ${focusRingShorthand}
@@ -247,6 +251,15 @@ export const styles = css`
      the pointer when the hook is set. */
   lr-virtual-list::part(cue):active {
     background: ${activeFill('var(--lr-av-player-cue-hover-bg, var(--lr-color-brand-quiet))')};
+  }
+  /* After the hover/press rules at the same weight: a placeholder row is not a control. */
+  /* no-pressed-state: an inert placeholder row neutralizes press feedback in this same rule. */
+  lr-virtual-list::part(cue-unavailable),
+  lr-virtual-list::part(cue-unavailable):hover,
+  lr-virtual-list::part(cue-unavailable):active {
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    cursor: default;
   }
   lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));

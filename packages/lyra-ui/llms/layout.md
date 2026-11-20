@@ -554,7 +554,7 @@ hit region expands independently; use `--divider-width` for the painted line and
 
 Read `omittedViews` after assigning `views` for the number of input positions beyond the 256-position limit.
 
-The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+Fullscreen paints the shared modal surface family (`--lr-overlay-surface`, `--lr-overlay-shadow-modal`, behind `--lr-widget-bg`), like `lr-dialog`. The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
@@ -1467,7 +1467,11 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. Each is an inline `var()` fallback at the point
+colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+(defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
+other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
+an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the
+completed check mark. Each is an inline `var()` fallback at the point
 of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
 scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
@@ -2797,7 +2801,7 @@ presentations is on screen, for magnifier and braille users, rather than announc
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
-boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
+boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`) affects only the open mobile
 panel; no value can paint elevation while closed. Prefer that token over an unqualified
 `::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
 `lr-app-rail[mode="mobile"][open]::part(panel)`.
@@ -2836,7 +2840,7 @@ paired with a non-`visible` other axis computes as `auto` instead (still clippin
 tokens to `visible` together to actually stop the clipping, accepting that wide header/footer
 content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `var(--lr-color-surface)` — `[part="base"]`'s background, the docked non-overlay presentation) and
-`--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
+`--lr-app-rail-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))` — `[part="panel"]`'s
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
 docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
@@ -3414,8 +3418,8 @@ stops short of the top of the viewport instead of covering it; it has no effect 
 `--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
 `shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
 on the inline presentation),
-`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
+`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
 they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).
@@ -4984,8 +4988,8 @@ cannot contribute intrinsic size itself; the state-aware floor prevents it from 
 preceding cell or gap while short cells without a handle (a `readonly` grid, or a cell's own
 `locked`) retain content-derived sizing.
 Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
-inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
-stack. This does not seize overflow from child-owned widgets: custom content can still declare
+inherit `overflow-wrap: break-word`, so an unbroken consumer-authored text run cannot widen a 320px
+stack, while consumer flex, grid and table content keeps its own min-content size. This does not seize overflow from child-owned widgets: custom content can still declare
 `overflow: auto` and `white-space: nowrap` to retain a contained internal scrollport.
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
@@ -5776,8 +5780,10 @@ var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-acti
 var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-toggle-active-color` (default `var(--lr-color-brand)`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
-`--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+`--lr-page-navigation-drawer-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-page-navigation-drawer-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`).
+Behind these hooks the drawer reads the same shared modal family as `lr-dialog` and `lr-drawer`
+(`--lr-overlay-surface`, `--lr-overlay-shadow-modal`), so one declaration retints every modal panel.
 
 The sticky banner, header, subheader, menu and aside each paint an opaque surface. Their background
 properties are `--lr-page-banner-bg`, `--lr-page-header-bg`, `--lr-page-subheader-bg`,
@@ -5793,7 +5799,8 @@ sticky offsets use the three configured height properties. Enable `auto-sticky-o
 whose height can change, such as a banner that wraps in a narrow pane. Measured offsets omit
 hidden rows and regions named in `disable-sticky`. The sticky menu and aside use the remaining
 viewport block size. Motion uses Lyra transition tokens and stops under `prefers-reduced-motion`.
-Every region has a zero-minimum inline size and anywhere wrapping; the drawer clamps inside a 320px
+Every region has a zero-minimum inline size and `overflow-wrap: break-word` (which, unlike
+`anywhere`, leaves consumer content's min-content size intact); the drawer clamps inside a 320px
 allocation, and long localized or consumer-provided text cannot widen the Page.
 
 Import only the Page registration when it is the only layout component this bundle needs:

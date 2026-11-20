@@ -1481,3 +1481,21 @@ describe("scrollable body", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("paints the overlay panel from the shared modal surface family", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-overlay-surface: rgb(1, 2, 3); --lr-overlay-shadow-modal: 0 0 0 3px rgb(255, 0, 0);">
+      <lr-responsive-panel mode="overlay" shape="end" open label="Actions"><button>Share</button></lr-responsive-panel>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-responsive-panel") as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+  try {
+    expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(1, 2, 3)");
+    expect(getComputedStyle(panel).boxShadow).to.equal(resolvedInShadow(el, "box-shadow: 0 0 0 3px rgb(255, 0, 0)", "box-shadow"));
+  } finally {
+    el.open = false;
+    await el.updateComplete;
+  }
+});

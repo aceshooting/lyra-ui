@@ -2688,12 +2688,12 @@ describe("narrow allocation", () => {
 
 describe("accessibility", () => {
   it("is accessible with populated, draggable, and resizable cells", async () => {
-    // Rows tall enough for a rendered stat: an overflowing widget body is a scroll region of its own.
+    // Rows too short for a rendered stat: an overflowing widget body is a scroll region of its own.
     const el = (await fixture(
       html`<lr-dashboard-grid
         cells-draggable
         cells-resizable
-        row-height="160"
+        row-height="32"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [

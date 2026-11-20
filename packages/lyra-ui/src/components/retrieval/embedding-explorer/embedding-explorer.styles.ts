@@ -1,7 +1,7 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { focusRingShorthand } from '../../../internal/interactive-control.styles.js';
-import { containerHost } from '../../../internal/layout-fragments.styles.js';
+import { containerHost, noticeText } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -14,15 +14,15 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
 
-  /* The block size arrives as --lr-embedding-explorer-height, set on the host from the height
-     property. An SVG height presentation attribute cannot carry it (any stylesheet declaration
+  /* The block size is the consumer's --lr-embedding-explorer-height, else the height property's
+     private --_lr-embedding-explorer-height written on the host. An SVG height presentation attribute cannot carry it (any stylesheet declaration
      outranks a presentation attribute), and an inline block-size on the SVG would hide the value
      from consumers rethemeing through the custom property. The auto fallback is the viewBox's
      aspect-ratio-preserved size. */
   [part='plot'] {
     display: block;
     inline-size: 100%;
-    block-size: var(--lr-embedding-explorer-height, auto);
+    block-size: var(--lr-embedding-explorer-height, var(--_lr-embedding-explorer-height, auto));
     overflow: visible;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
@@ -105,13 +105,14 @@ export const styles = css`
     stroke-width: var(--lr-border-width-medium);
   }
   [part='bin']:active .bin-region { stroke-width: var(--lr-border-width-thick); }
-  [part='error'] { color: var(--lr-color-danger); }
+  [part='limit'] { ${noticeText} }
+  [part='error'] { ${noticeText} color: var(--lr-color-danger); }
 
   .engine-viewport { display: grid; min-inline-size: 0; }
   .engine-viewport > * { grid-area: 1 / 1; }
   [part='engine'] {
     inline-size: 100%;
-    block-size: var(--lr-embedding-explorer-height, var(--lr-size-20rem));
+    block-size: var(--lr-embedding-explorer-height, var(--_lr-embedding-explorer-height, var(--lr-size-20rem)));
     min-block-size: var(--lr-size-12rem);
     overflow: hidden;
     border-radius: var(--lr-radius-xs);
@@ -151,9 +152,9 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='page-button']:hover { text-decoration: underline; }
+  [part='page-button']:hover:where(:not(:disabled)) { text-decoration: underline; }
   [part='page-button']:focus-visible { ${focusRingShorthand} }
-  [part='page-button']:active { border-color: var(--lr-color-brand); }
+  [part='page-button']:active:where(:not(:disabled)) { border-color: var(--lr-color-brand); }
   [part='page-button']:disabled { background: var(--lr-embedding-explorer-page-disabled-fill, var(--lr-color-surface)); cursor: default; opacity: var(--lr-opacity-disabled); }
   lr-graph-legend::part(item) { padding: 0; color: var(--lr-color-text-quiet); }
   lr-graph-legend::part(label) { overflow-wrap: anywhere; white-space: normal; }

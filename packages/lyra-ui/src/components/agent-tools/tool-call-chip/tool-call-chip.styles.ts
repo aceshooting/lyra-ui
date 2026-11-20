@@ -64,7 +64,7 @@ export const styles = css`
       border-color var(--lr-transition-fast);
   }
   [part="base"]:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-tool-call-chip-hover-border-color, var(--lr-color-brand));
   }
   /* Hover moves the border only, leaving the pressed step nothing to deepen, so pressed tints the
      chip's own fill toward --lr-color-mix-partner, which follows the text colour. The fill is

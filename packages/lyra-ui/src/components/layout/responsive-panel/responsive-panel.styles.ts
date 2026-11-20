@@ -76,15 +76,18 @@ export const styles = css`
        page's own flow and keeps the page surface, while an overlay over a scrim would otherwise be
        the same near-black as the page behind it in dark mode. The bottom-sheet rule below narrows
        this selector, so it inherits both declarations. */
+    /* The shared modal surface family (internal/overlay-surface.styles.ts) behind the component
+       hook, so one --lr-overlay-surface retints this panel together with lr-dialog. */
     background: var(
       --lr-responsive-panel-overlay-panel-bg,
-      var(--lr-color-surface-overlay)
+      var(--lr-overlay-surface, var(--lr-color-surface-container-highest))
     );
-    /* Modal layer, lower step: the panel is flush with every viewport edge (bottom-sheet with all
-       but one), so there is no free edge for a deeper shadow to read against. */
+    /* Modal layer, lower step by default (like lr-drawer): the panel is flush with every viewport
+       edge (bottom-sheet with all but one), so there is no free edge for a deeper shadow to read
+       against. The shared modal elevation hook still reaches it. */
     box-shadow: var(
       --lr-responsive-panel-overlay-panel-shadow,
-      var(--lr-shadow-l)
+      var(--lr-overlay-shadow-modal, var(--lr-shadow-l))
     );
     overflow: auto;
   }
@@ -136,7 +139,7 @@ export const styles = css`
     max-inline-size: 100%;
     padding: var(--lr-responsive-panel-padding, var(--lr-space-m) var(--lr-space-l));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part='header'][hidden] {
     display: none;
@@ -147,7 +150,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     padding: var(--lr-responsive-panel-padding, var(--lr-space-l));
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     overflow: auto;
   }
   /* no-hover-state: a scroll region is not a pointer target; the ring marks keyboard focus only. */
@@ -165,7 +168,7 @@ export const styles = css`
     max-inline-size: 100%;
     padding: var(--lr-responsive-panel-padding, var(--lr-space-m) var(--lr-space-l));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part='footer'][hidden] {
     display: none;

@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
+import { noticeText, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -87,5 +87,9 @@ export const styles = css`
     margin: var(--lr-space-s);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
+  }
+  [part='load-error'] {
+    ${noticeText}
+    color: var(--lr-color-danger);
   }
 `;

@@ -156,9 +156,10 @@ export interface LyraEmbeddingExplorerEventMap {
  *   cluster.
  * @csspart empty - The empty state.
  * @cssprop [--lr-embedding-explorer-selected-stroke=var(--lr-color-brand)] - Stroke color of the selected point.
- * @cssprop [--lr-embedding-explorer-height=360px] - The plot's `block-size`. Set on the host from
- *   the `height` property, whose default supplies the `360px`; a value the browser cannot parse as
- *   a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer's own
+ * @cssprop [--lr-embedding-explorer-height=360px] - The plot's `block-size`. When unset, the
+ *   `height` property supplies it, whose default is `360px`; a `height` the browser cannot parse as
+ *   a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer value on
+ *   the host or any ancestor wins over the property. A consumer's own
  *   `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
  *   `min-block-size` floor still raises it.
  * @cssprop [--lr-color-chart-1=var(--lr-theme-color-chart-1,#0e006e)] - First cluster color.
@@ -487,8 +488,8 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /**
    * The plot's block size, as any CSS length the browser accepts for `block-size` — including
    * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
-   * applied through `--lr-embedding-explorer-height`; an unparseable value leaves that property
-   * unset, so the plot falls back to `auto` rather than collapsing.
+   * the fallback of `--lr-embedding-explorer-height`, so a consumer value of that property still
+   * wins; an unparseable value is dropped, so the plot falls back to `auto` rather than collapsing.
    */
   @property() height = '360px';
   /** Accessible plot name. A non-blank host aria-label takes precedence; a blank value falls back to the localized default. */
@@ -603,16 +604,15 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   }
 
   /**
-   * Publishes `height` as `--lr-embedding-explorer-height`, which `[part='plot']`'s `block-size`
-   * reads. It has to land on the host: custom properties cascade downward into the shadow tree,
-   * never upward from a shadow-tree node. Routing it through a custom property rather than an
-   * inline `block-size` also keeps the value visible to a consumer retheming the property.
+   * Publishes `height` as the private fallback behind `--lr-embedding-explorer-height`, which
+   * `[part='plot']`'s `block-size` reads. Writing the public name inline would shadow a consumer's
+   * value on the host or any ancestor.
    */
   private applyHeight(): void {
     const height = sanitizeCssLength(this.height, 'height');
     if (height)
-      this.style.setProperty('--lr-embedding-explorer-height', height);
-    else this.style.removeProperty('--lr-embedding-explorer-height');
+      this.style.setProperty('--_lr-embedding-explorer-height', height);
+    else this.style.removeProperty('--_lr-embedding-explorer-height');
   }
 
   private position(

@@ -407,6 +407,26 @@ it('keeps node fills under forced colours', async () => {
   }
 });
 
+it('marks the pressed spatial view control with a system-colour state under forced colours', async () => {
+  const el = await mount();
+  await waitUntil(() => el.shadowRoot!.querySelector('[data-spatial-action="list"]') !== null, 'spatial toolbar renders', { timeout: 5000 });
+  const pressed = el.shadowRoot!.querySelector<HTMLElement>('[part="spatial-control"][aria-pressed="true"]')!;
+  const unpressed = el.shadowRoot!.querySelector<HTMLElement>('[part="spatial-control"][aria-pressed="false"]')!;
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    await waitUntil(() => getComputedStyle(pressed).backgroundColor !== getComputedStyle(unpressed).backgroundColor,
+      'the pressed control eases into a system fill');
+    expect(getComputedStyle(pressed).outlineStyle).to.equal('solid');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
 it('leaves modified or composing activation on a 2D node to the browser outside multiple selection', async () => {
   const el = await fixture<LyraGraph>(html`<lr-graph .nodes=${nodes} seed="1"></lr-graph>`);
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'nodes render', { timeout: 5000 });

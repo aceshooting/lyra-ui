@@ -72,18 +72,18 @@ export const styles = css`
     padding: 0;
     border: none;
     background: var(--_lr-code-block-toggle-bg);
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-code-block-toggle-color, var(--lr-color-text-quiet));
     border-radius: var(--lr-radius);
     cursor: pointer;
     ${interactiveTransition}
   }
   [part='toggle']:hover {
     background: var(--_lr-code-block-toggle-bg-hover);
-    color: var(--lr-color-brand);
+    color: var(--lr-code-block-toggle-color-hover, var(--lr-color-brand));
   }
   [part='toggle']:active {
     background: var(--_lr-code-block-toggle-bg-active);
-    color: var(--lr-color-brand);
+    color: var(--lr-code-block-toggle-color-active, var(--lr-code-block-toggle-color-hover, var(--lr-color-brand)));
   }
   [part='toggle'] .chevron {
     display: inline-flex;
@@ -319,6 +319,7 @@ export const styles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+    ${interactiveTransition}
   }
   /* Both pointer arms carry the full [part='pre'] button.line-gutter compound, like the
      :focus-visible rule below. The resting rule directly above is (0,2,1) and declares background:
@@ -327,6 +328,7 @@ export const styles = css`
      rewrite must stay at least as specific as that resting rule. */
   [part='pre'] button.line-gutter:hover {
     background: var(--_lr-code-block-gutter-bg-hover);
+    color: var(--lr-code-block-gutter-color-hover, inherit);
   }
   [part='pre'] button.line-gutter:active {
     background: var(--_lr-code-block-gutter-bg-active);

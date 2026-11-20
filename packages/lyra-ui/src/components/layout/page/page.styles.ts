@@ -107,7 +107,7 @@ export const styles = css`
   [part~="aside"],
   [part~="footer"] {
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   [part~="banner"] {
@@ -314,11 +314,15 @@ export const styles = css`
     padding-block-end: var(--lr-safe-area-bottom);
     padding-inline-start: var(--lr-safe-area-inline-start);
     padding-inline-end: var(--lr-safe-area-inline-end);
+    /* Shared modal surface family behind the component hooks, like lr-drawer. */
     background: var(
       --lr-page-navigation-drawer-bg,
-      var(--lr-color-surface-overlay)
+      var(--lr-overlay-surface, var(--lr-color-surface-container-highest))
     );
-    box-shadow: var(--lr-page-navigation-drawer-shadow, var(--lr-shadow-l));
+    box-shadow: var(
+      --lr-page-navigation-drawer-shadow,
+      var(--lr-overlay-shadow-modal, var(--lr-shadow-l))
+    );
     overflow-y: auto;
     overflow-x: clip;
     transition: transform var(--lr-transition-base);

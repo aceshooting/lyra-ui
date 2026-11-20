@@ -90,7 +90,7 @@ export const styles = css`
      the focus ring, which is stronger than any momentary pressed tint and outlasts the mouse
      button, so a competing mousedown flash would only add noise. */
   [part='search-input']:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-thread-list-search-hover-border-color, var(--lr-color-brand));
   }
   [part='search-input']::placeholder {
     color: var(--lr-color-text-quiet);

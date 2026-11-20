@@ -1,10 +1,12 @@
 import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { containerHost } from '../../../internal/layout-fragments.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
+  /* No containment: nothing here queries this host, and the composed lr-trace-tree is its own
+     query container. */
   :host {
-    ${containerHost}
+    ${blockHost}
   }
 
   :host([frame='card']) [part='base'] {

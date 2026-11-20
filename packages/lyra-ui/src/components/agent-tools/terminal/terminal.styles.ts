@@ -1,4 +1,4 @@
-import { activeFill, focusRing, focusRingInsetOffset, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -51,31 +51,21 @@ export const styles = css`
     gap: var(--lr-terminal-compact-toolbar-gap, var(--lr-space-2xs));
     padding: var(--lr-terminal-compact-toolbar-padding, var(--lr-space-2xs) var(--lr-space-xs));
   }
-  [part='copy-button'],
-  [part='download-button'] {
-    font: inherit;
-    font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-text-quiet);
-    background: none;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    cursor: pointer;
-  }
-  [part='copy-button']:hover,
-  [part='download-button']:hover {
+  /* Box, border, focus ring, disabled state and easing come from the shared agent action sheet,
+     so these buttons match the same-named parts of lr-artifact-panel and lr-stack-trace and clear
+     the --lr-icon-button-size hit-area floor. Only the hover and press fills stay terminal-owned:
+     the button-prefixed selectors outrank the shared sheet's equally specific state rules by
+     source order. */
+  button[part='copy-button']:where(:not(:disabled)):hover,
+  button[part='download-button']:where(:not(:disabled)):hover {
     background: var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressed is the toolbar hover tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner, which follows the text colour -- a distinctly deeper step in both
      light and dark themes. */
-  [part='copy-button']:active,
-  [part='download-button']:active {
+  button[part='copy-button']:where(:not(:disabled)):active,
+  button[part='download-button']:where(:not(:disabled)):active {
     background: var(--lr-terminal-toolbar-button-active-bg, ${activeFill('var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet))')});
-  }
-  [part='copy-button']:focus-visible,
-  [part='download-button']:focus-visible {
-    ${focusRing}
   }
   [part='viewport'] {
     position: relative;
@@ -172,41 +162,16 @@ export const styles = css`
     direction: ltr;
     overflow-x: auto;
   }
+  /* The brand pill reuses the shared agent action chrome (hit-area floor, fill, hover and press
+     mixes, focus ring, easing); only its overlay placement and pill shape are local. The shadow is
+     an overlay step, not a card step: the pill sits over live scrollback, so it must read as a
+     layer above the lines it covers. */
   [part='jump-to-latest'] {
+    --_lr-agent-action-radius: var(--lr-radius-pill);
     position: absolute;
     inset-block-end: var(--lr-space-s);
     inset-inline-end: var(--lr-space-s);
-    font: inherit;
-    font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-on-brand);
-    background: var(--lr-color-brand);
-    border: none;
-    border-radius: var(--lr-radius-pill);
-    padding: var(--lr-space-2xs) var(--lr-space-s);
-    /* Overlay step, not a card step: absolutely positioned over live scrollback, so it must read
-       as a layer above the lines it covers. */
     box-shadow: var(--lr-shadow-m);
-    cursor: pointer;
     z-index: var(--lr-layer-content);
-    transition: opacity var(--lr-transition-fast);
-  }
-  /* Mixes toward --lr-color-mix-partner, which follows the text colour, rather than the
-     filter: brightness() this replaces: multiplying every channel did nothing at all to a pure
-     white or pure black brand colour, and a filter applies to the whole subtree, dragging the
-     pill's own label along with the surface. Mixing always moves, in the direction the surface
-     needs. */
-  [part='jump-to-latest']:hover {
-    background: ${hoverFill('var(--lr-color-brand)')};
-  }
-  [part='jump-to-latest']:active {
-    background: ${activeFill('var(--lr-color-brand)')};
-  }
-  [part='jump-to-latest']:focus-visible {
-    ${focusRing}
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [part='jump-to-latest'] {
-      transition: none !important;
-    }
   }
 `;

@@ -34,6 +34,14 @@ describe('lr-eval-run remediation', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="load-error"]') !== null, 'load error never rendered');
       expect(el.shadowRoot!.querySelector('[part="load-error"]')!.textContent!.trim())
         .to.equal('Could not load the example details. Collapse and expand it to try again.');
+      // Painted as an error notice, not as UA body text with 1em margins.
+      const notice = getComputedStyle(el.shadowRoot!.querySelector('[part="load-error"]')!);
+      const probe = document.createElement('span');
+      probe.style.cssText = 'color: var(--lr-color-danger); margin-block-start: var(--lr-space-xs)';
+      el.shadowRoot!.append(probe);
+      expect(notice.color).to.equal(getComputedStyle(probe).color);
+      expect(notice.marginBlockStart).to.equal(getComputedStyle(probe).marginBlockStart);
+      probe.remove();
       const region = () => el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
       await waitUntil(() => region().includes('Could not load the example details'), 'failure never announced');
       el.requestUpdate();

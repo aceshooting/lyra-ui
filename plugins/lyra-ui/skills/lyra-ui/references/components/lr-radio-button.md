@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -95,6 +95,8 @@ siblings are never guessed into a run. `--lr-radio-button-gap` (default `var(--l
 spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
 and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:
+`--lr-radio-button-bg` (default `var(--lr-color-surface-raised)`) / `--lr-radio-button-border-color`
+(default `var(--lr-color-border)`) paint the unchecked resting button;
 `--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
 `--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked
 pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-border-color`, and

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -67,3 +67,5 @@ state), so the selection is announced, not merely painted. Other request rows ex
 - `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
+
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.

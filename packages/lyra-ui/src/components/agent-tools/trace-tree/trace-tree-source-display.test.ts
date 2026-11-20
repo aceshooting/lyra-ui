@@ -3,6 +3,7 @@ import type { LyraHierarchyRow } from '../../../data-sources.js';
 import type { LyraTraceTree, TraceTreeSource } from './trace-tree.class.js';
 import type { LyraSpan } from './span.js';
 import '../../lr-trace-tree.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const span: LyraSpan = { id: 'work', name: 'Generate answer', detail: 'User-visible explanation', kind: 'tool', status: 'success', startMs: 100, endMs: 125 };
 function provider(values: readonly LyraSpan[], revision = 1) {
@@ -91,3 +92,19 @@ for (const [name, timing] of [
     expect(row(element).querySelector<HTMLElement>('[part="bar"]')!.style.inlineSize).to.equal('25%');
   });
 }
+
+it('paints provider rows from the row hover token', async () => {
+  const data = provider([span]);
+  const element = await fixture<LyraTraceTree>(html`<lr-trace-tree
+    .treeSource=${data.source}
+    style="--lr-trace-tree-row-hover-bg: rgb(1, 2, 3)"
+  ></lr-trace-tree>`);
+  await ready(element);
+  const target = row(element);
+  try {
+    await hoverUntilMatched(target, 'the provider row never hovered');
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the row hover token paints');
+  } finally {
+    await resetMouse();
+  }
+});

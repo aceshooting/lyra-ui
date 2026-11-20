@@ -16,7 +16,7 @@ export const styles = css`
      tooltip -- not activatable, no click handler, nothing on mousedown -- so a pressed tint would
      promise an action the badge does not perform. */
   :where([part='base'][tabindex]):hover {
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-usage-badge-hover-bg, var(--lr-color-surface-raised));
   }
   [part='base'] {
     display: inline-flex;

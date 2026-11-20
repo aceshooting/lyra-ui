@@ -595,7 +595,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private renderSource(): TemplateResult {
     const partial = !this.sourceSearch.exact && Boolean(this.query);
     const count = this.sourceSearch.count;
-    return html`<div class="source-shell" style=${styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
+    return html`<div class="source-shell" style=${sanitizeCssLength(this.maxHeight) ? styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight)! }) : nothing}>
       ${this.copyable && hasHierarchySourceCopy(() => this.treeSource) ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
       ${hierarchySourceView(this.hierarchy, {
         label: hostAriaLabel(this) ?? this.localize('jsonValue'), rtl: this.effectiveDirection === 'rtl', multiple: false,

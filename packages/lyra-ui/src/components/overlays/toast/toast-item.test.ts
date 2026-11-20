@@ -2188,6 +2188,8 @@ it('paints the action at AA text contrast in every variant and color scheme', as
 it('paints its surface with the shared overlay-surface family', async () => {
   const el = await fixture<LyraToastItem>(html`<lr-toast-item duration="0" data-lr-surface="solid" style="--lr-overlay-surface: rgb(1, 2, 3)">Saved</lr-toast-item>`);
   expect(toRgba(getComputedStyle(el.shadowRoot!.querySelector('[part="toast-item"]')!).backgroundColor)).to.deep.equal([1, 2, 3, 255]);
+  el.style.setProperty('--lr-overlay-shadow-modal', 'none');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="toast-item"]')!).boxShadow).to.equal('none');
 });
 
 it('pauses its countdown while the document is hidden', async () => {

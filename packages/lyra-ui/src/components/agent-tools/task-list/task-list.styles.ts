@@ -75,14 +75,14 @@ export const styles = [
     }
     /* Pointer hover and press remain separate from the resting header treatment. */
     :where(button[part="header"]):hover {
-      background: var(--lr-color-brand-quiet);
+      background: var(--lr-task-list-header-hover-bg, var(--lr-color-brand-quiet));
       color: var(--lr-color-brand);
     }
     /* Pressed is the hover tint pushed a further --lr-color-mix-active toward
        --lr-color-mix-partner, which follows the text colour, so it reads as a distinctly deeper
        step than hover in both light and dark themes rather than repeating it. */
     :where(button[part="header"]):active {
-      background: ${activeFill('var(--lr-color-brand-quiet)')};
+      background: var(--lr-task-list-header-pressed-bg, ${activeFill('var(--lr-task-list-header-hover-bg, var(--lr-color-brand-quiet))')});
       color: var(--lr-color-text);
     }
     /* The quiet summary count fails contrast on the hover tint and on the deeper pressed mix, so it
@@ -137,10 +137,10 @@ export const styles = [
       border-radius: var(--lr-radius);
     }
     :where([part="item"][tabindex]):hover {
-      background: var(--lr-color-brand-quiet);
+      background: var(--lr-task-list-item-hover-bg, var(--lr-color-brand-quiet));
     }
     :where([part="item"][tabindex]):active {
-      background: ${activeFill('var(--lr-color-brand-quiet)')};
+      background: var(--lr-task-list-item-pressed-bg, ${activeFill('var(--lr-task-list-item-hover-bg, var(--lr-color-brand-quiet))')});
     }
     [part="item"][tabindex]:focus-visible {
       ${focusRingInsetOffset}
@@ -206,6 +206,11 @@ export const styles = [
       :is([part="item"], .source-task)[data-status="running"] [part="status-icon"] svg {
         animation: none !important;
       }
+    }
+    /* Provider rows answer the same item hover and press tokens as the built-in items. */
+    [part~='source-row'] {
+      --_source-row-hover-fill: var(--lr-task-list-item-hover-bg);
+      --_source-row-active-fill: var(--lr-task-list-item-pressed-bg, ${activeFill('var(--lr-task-list-item-hover-bg)')});
     }
   `,
 ];

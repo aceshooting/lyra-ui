@@ -1,4 +1,5 @@
 import { expect, fixture } from '@open-wc/testing';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { unsafeStatic, html as staticHtml } from 'lit/static-html.js';
 import '../../lr-input.js';
 import '../../lr-time-input.js';
@@ -65,11 +66,37 @@ describe('text and date field appearance parity', () => {
       (el.shadowRoot!.querySelector(field.focus) as HTMLElement).focus();
       await el.updateComplete;
       const cs = getComputedStyle(el.shadowRoot!.querySelector(field.surface)!);
-      cues.push(`${field.tag}: ${cs.borderTopColor} ${cs.outlineStyle}`);
+      cues.push(`${field.tag}: ${cs.borderTopColor} ${cs.outlineStyle} ${cs.outlineColor}`);
     }
     const reference = cues[0]!.split(': ')[1];
     expect(cues).to.deep.equal(FIELDS.map((field) => `${field.tag}: ${reference}`));
-    expect(reference!.endsWith(' none')).to.equal(true);
+    // The outline is a transparent forced-colors hook, so no ring paints in normal colours.
+    expect(reference!.endsWith(' solid rgba(0, 0, 0, 0)')).to.equal(true);
+  });
+
+  it('paints a focus outline on every field under forced colors', async () => {
+    try {
+      await setForcedColors('active');
+    } catch {
+      return;
+    }
+    try {
+      // An engine that only reports the media query, without forcing colours, has nothing to paint.
+      if (!matchMedia('(forced-colors: active)').matches || !CSS.supports('forced-color-adjust', 'none')) return;
+      for (const field of [...FIELDS, { tag: 'lr-otp-input', surface: '[part~="active"]', focus: '' }]) {
+        const el = await mount(field.tag, 'outlined');
+        if (field.focus === '') el.focus();
+        else (el.shadowRoot!.querySelector(field.focus) as HTMLElement).focus();
+        await el.updateComplete;
+        const surface = el.shadowRoot!.querySelector(field.surface);
+        expect(surface !== null, `${field.tag} focused surface`).to.equal(true);
+        const cs = getComputedStyle(surface!);
+        expect(cs.outlineStyle, field.tag).to.equal('solid');
+        expect(cs.outlineColor, field.tag).not.to.equal('rgba(0, 0, 0, 0)');
+      }
+    } finally {
+      await setForcedColors('none');
+    }
   });
   it('repaints token-input, code-editor and signature-pad from the appearance property', async () => {
     const surfaces = [

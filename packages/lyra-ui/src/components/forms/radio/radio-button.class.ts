@@ -71,6 +71,10 @@ import { styles } from './radio-button.styles.js';
  * @csspart label - The default slot wrapper; hidden while it has no real content.
  * @csspart end - The trailing-content wrapper; hidden while both trailing slots are empty.
  * @csspart suffix - Shoelace-compatible alias for `end`; both names are on the same wrapper.
+ * @cssprop [--lr-radio-button-bg=var(--lr-color-surface-raised)] - Background of an unchecked
+ *   `[part='button']` at rest.
+ * @cssprop [--lr-radio-button-border-color=var(--lr-color-border)] - Border color of an unchecked
+ *   `[part='button']` at rest.
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Its private default follows the shared control radius and changes to
  * `--lr-radius-pill` for `pill`; an inherited or direct public value still wins.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 46 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -378,6 +378,8 @@ form-control values when `size` is set. `--lr-thread-list-search-clear-size` (de
 `var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
+`--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search
+field's edge.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
 component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,

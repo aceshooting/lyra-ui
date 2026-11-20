@@ -82,8 +82,8 @@ cannot contribute intrinsic size itself; the state-aware floor prevents it from 
 preceding cell or gap while short cells without a handle (a `readonly` grid, or a cell's own
 `locked`) retain content-derived sizing.
 Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
-inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
-stack. This does not seize overflow from child-owned widgets: custom content can still declare
+inherit `overflow-wrap: break-word`, so an unbroken consumer-authored text run cannot widen a 320px
+stack, while consumer flex, grid and table content keeps its own min-content size. This does not seize overflow from child-owned widgets: custom content can still declare
 `overflow: auto` and `white-space: nowrap` to retain a contained internal scrollport.
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,

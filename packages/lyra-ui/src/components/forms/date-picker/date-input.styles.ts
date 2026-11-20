@@ -93,6 +93,9 @@ export const styles = css`
       --lr-date-input-focus-border-color,
       var(--lr-color-brand)
     );
+    /* Transparent until forced colours paint it: there the brand border alone is too thin a
+       focus cue, as in lr-combobox. */
+    outline: var(--lr-border-width-medium) solid transparent;
     ${formControlFocusHalo}
   }
   :host(:disabled) [part="input-wrapper"] {

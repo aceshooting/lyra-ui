@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 13 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -189,3 +189,5 @@ independent. Streaming record callbacks enforce the same ceilings again. Exceedi
 surfaces the localized `documentPreviewResourceTooLarge` message instead of a partial table.
 The fetched-text path yields between dialect detection, structural admission and materialization;
 each parse pass remains synchronous.
+
+**Pointer-state tokens:** `--lr-dataset-viewer-cell-action-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-dataset-viewer-cell-action-active-bg`.

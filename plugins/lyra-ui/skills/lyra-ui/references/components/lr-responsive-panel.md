@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -95,8 +95,8 @@ stops short of the top of the viewport instead of covering it; it has no effect 
 `--lr-responsive-panel-side-inline-size` (default `var(--lr-size-20rem)` — the width of a
 `shape="start"`/`shape="end"` overlay panel along the inline axis; no effect on any other shape or
 on the inline presentation),
-`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-color-surface-overlay)`), and
-`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-shadow-l)`). The latter two are
+`--lr-responsive-panel-overlay-panel-bg` (default `var(--lr-overlay-surface, var(--lr-color-surface-container-highest))`), and
+`--lr-responsive-panel-overlay-panel-shadow` (default `var(--lr-overlay-shadow-modal, var(--lr-shadow-l))`). The latter two are
 inherited inline fallbacks for `[part="panel"]` only while the effective presentation is overlay;
 they do not affect inline panels. Plus shared tokens (`--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-space-*`, `--lr-radius`, `--lr-shadow`).

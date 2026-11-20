@@ -758,7 +758,7 @@ With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
-`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-5rem)`), `--show-duration`,
+`--lr-combobox-tag-font-size`, `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`,
 `--hide-duration`, and `--lr-combobox-expand-size` (the decorative icon box; each
 standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
 `--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
@@ -973,7 +973,7 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Additional API surface:**
 
-- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
+- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-12rem)`, the same as `lr-select`), rather than wrapped.
 
 ---
 
@@ -1366,9 +1366,12 @@ gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-ra
 radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
 radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` changes its private
 default to `--lr-radius-pill`. `--lr-select-tag-padding`
-(default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
-`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius their private defaults do
-**not** vary by `size` tier, and inherited or direct public values win.
+and `--lr-select-tag-font-size` size a `multiple`-mode chip; their private defaults follow the
+`size` tier with the same chip ladder `lr-combobox` uses (at `m`, `var(--lr-size-0-1rem)
+var(--lr-size-0-4rem)` and `var(--lr-font-size-sm)`), and inherited or direct public values win.
+`--lr-select-tag-bg` (default `var(--lr-color-brand-quiet)`), `--lr-select-tag-color` (default
+`var(--lr-color-text)`) and `--lr-select-tag-radius` (default `var(--lr-radius)`) paint the chip, with
+the same defaults as `lr-combobox`'s `--lr-combobox-tag-*`.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 
@@ -1444,11 +1447,10 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `[part='option-badge']` "not in catalog" badge `with-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
-`--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
+`--lr-select-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)`) retints a hovered
 `[part='tag__remove-button']`'s background without a `::part(tag__remove-button)` rule; the pressed
 state mixes from this same token. Scoped independently of `--lr-select-trigger-hover-bg` and
-`--lr-select-option-active-bg` above, which already scope the identical shared token for their own
-purposes.
+`--lr-select-option-active-bg` above.
 
 **Optional peer deps:** none.
 
@@ -4363,6 +4365,8 @@ rtl`).
 - `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
 - `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
 - `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-track-bg` — Unselected track color. Default: `var(--lr-color-border)`.
+- `--lr-time-range-range-bg` — Selected-range fill. Default: `var(--lr-color-brand)`.
 - `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
 - `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
 - `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.
@@ -4851,12 +4855,12 @@ slot), `error`, and `hint` / `form-control-help-text` on the supporting-text wra
 below), plus shared tokens — `--lr-space-s`, `--lr-icon-button-size`,
 `--lr-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lr-radius`,
 `--lr-transition-fast`, `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
-State paint is independently themeable through `--lr-checkbox-hover-border`,
-`--lr-checkbox-active-border`, `--lr-checkbox-active-ring`, `--lr-checkbox-invalid-border`,
-`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border`; every default preserves the
+State paint is independently themeable through `--lr-checkbox-hover-border-color`,
+`--lr-checkbox-active-border-color`, `--lr-checkbox-active-ring-color`, `--lr-checkbox-invalid-border-color`,
+`--lr-checkbox-checked-bg`, and `--lr-checkbox-checked-border-color`; every default preserves the
 corresponding brand/brand-quiet/danger token. While checked or indeterminate, an unset
-`--lr-checkbox-hover-border` / `--lr-checkbox-active-border` falls back to
-`--lr-checkbox-checked-border`, so a themed checked border survives the pointer.
+`--lr-checkbox-hover-border-color` / `--lr-checkbox-active-border-color` falls back to
+`--lr-checkbox-checked-border-color`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
 
@@ -4893,7 +4897,9 @@ substitute the one you actually use:
 }
 ```
 
-`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border`
+`--lr-checkbox-bg` (default `var(--lr-color-surface)`) and `--lr-checkbox-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='box']` at rest.
+`--lr-checkbox-checked-bg` (default `var(--lr-color-brand)`) and `--lr-checkbox-checked-border-color`
 (default `var(--lr-color-brand)`) recolor `[part='box']`'s background/border while `checked` or
 `indeterminate` — a component-scoped indirection (the same pattern `lr-source-picker`'s own
 `--lr-source-picker-checked-bg`/`-border` pair uses) so a consumer can retint just this control's
@@ -5334,7 +5340,10 @@ value readout, label, references, error, and hint as those flex items wrap.
 track row, including the space reserved for the endpoint hit targets. A horizontal track row
 fills its inline allocation. Set the token on the slider or an ancestor. `--lr-slider-tooltip-distance` carries the
 finite, unit-resolved tooltip offset computed from `tooltipDistance`; set `tooltipDistance` rather
-than overriding this runtime value. The thumb has independent paint hooks:
+than overriding this runtime value. `--lr-slider-track-bg` (default `var(--lr-color-border)`),
+`--lr-slider-indicator-bg` (default `var(--lr-color-brand)`) and `--lr-slider-marker-bg` (default
+`var(--lr-color-surface)`) paint the track, filled indicator and tick marks, winning over the
+`--track-color-*` aliases. The thumb has independent paint hooks:
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
 (default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
 `var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the
@@ -5538,10 +5547,12 @@ an empty-label control; the visible density can still grow with the shared size 
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
   see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
+`--lr-radio-bg` (default `var(--lr-color-surface)`) and `--lr-radio-border-color` (default
+`var(--lr-color-border)`) paint the unchecked `[part='circle']` at rest.
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
 (default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
 while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
-`--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
+`--lr-checkbox-checked-bg`/`-border-color` pair uses) so a consumer can retint just this control's checked
 ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 The checked radio circle keeps its surface color behind the dot. The
 `--lr-radio-button-checked-bg` hook applies to the button appearance.
@@ -5640,6 +5651,8 @@ siblings are never guessed into a run. `--lr-radio-button-gap` (default `var(--l
 spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
 and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:
+`--lr-radio-button-bg` (default `var(--lr-color-surface-raised)`) / `--lr-radio-button-border-color`
+(default `var(--lr-color-border)`) paint the unchecked resting button;
 `--lr-radio-button-hover-bg` / `--lr-radio-button-hover-border-color` and
 `--lr-radio-button-active-bg` / `--lr-radio-button-active-border-color` control the unchecked
 pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-border-color`, and
@@ -5946,7 +5959,7 @@ A required but pristine group keeps `aria-invalid="false"` on its internal radio
 error is projected only after interaction (a selection, or focus leaving the group) or a native
 validity check (`reportValidity()`, or form-level validation), while explicit error chrome is
 immediate. While the group matches `:state(user-invalid)` the option collection is outlined with
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), and a disabled group dims its
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), and a disabled group dims its
 label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
@@ -5992,7 +6005,7 @@ hidden and no glyph is painted.
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
 options and its messages, scaled by `size` through the shared control ladder — and
-`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), the border around the options
+`--lr-radio-group-invalid-border-color` (default `var(--lr-color-danger)`), the border around the options
 while the group is `:state(user-invalid)`.
 
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
@@ -6100,7 +6113,7 @@ and messages, and `--lr-checkbox-group-option-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
 `size` through the shared control ladder. WA's `--gap` alias is the value used by the rendered
 option layout and defaults to `--lr-checkbox-group-option-gap`.
-`--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
+`--lr-checkbox-group-invalid-border-color` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
 **`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto
@@ -6315,6 +6328,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
 - `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
 - `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-token-color` — Token chip text color. Default: `var(--lr-color-text)`.
+- `--lr-token-input-token-radius` — Token chip corner radius. Default: `var(--lr-radius)` (`pill` rounds it fully), the same as the `lr-select` and `lr-combobox` chips.
 - `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
   background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label

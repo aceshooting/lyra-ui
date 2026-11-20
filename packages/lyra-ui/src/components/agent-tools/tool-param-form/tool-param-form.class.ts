@@ -196,6 +196,7 @@ export interface LyraToolParamFormEventMap {
  * invalid but deliberately does not match this, so a consumer's `:state(user-invalid)` styling
  * cannot paint the form red before the user has typed anything. A form reset makes it pristine
  * again.
+ * @cssprop [--lr-tool-param-form-control-hover-border-color=var(--lr-color-brand)] - Border color of a hovered, editable text control; read-only fields keep their resting edge.
  * @status stable
  * @since 4.0.0
  */

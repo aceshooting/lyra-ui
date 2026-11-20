@@ -2455,3 +2455,11 @@ it('keeps the first line-gutter focus ring inside the scrolling body with no cod
   await focusByKeyboard(gutter);
   expectOutlineInsideClip(gutter, body);
 });
+
+it("paints the disclosure glyph from --lr-code-block-toggle-color at rest", async () => {
+  const el = (await fixture(
+    html`<lr-code-block collapsible .code=${jsSample} style="--lr-code-block-toggle-color: rgb(1, 2, 3)"></lr-code-block>`
+  )) as LyraCodeBlock;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  expect(getComputedStyle(toggle).color).to.equal("rgb(1, 2, 3)");
+});

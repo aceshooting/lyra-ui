@@ -222,7 +222,7 @@ export const styles = css`
   [part~="tag"] {
     display: inline-flex;
     min-inline-size: 0;
-    max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-5rem)));
+    max-inline-size: min(100%, var(--tag-max-size, var(--lr-size-12rem)));
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-combobox-tag-padding, var(--_lr-combobox-tag-padding));

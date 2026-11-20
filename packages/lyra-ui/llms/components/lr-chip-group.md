@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 6 custom properties — see `lr-chip.md`
+- **Themeable via** 2 parts, 10 custom properties — see `lr-chip.md`
 - **Documented with** `lr-chip`: see [lr-chip.md](./lr-chip.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

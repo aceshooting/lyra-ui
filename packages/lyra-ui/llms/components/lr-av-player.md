@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -296,7 +296,8 @@ root, so no selection binding is installed.
 **CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
 `timeline` (click-to-seek; arrow keys step, PageUp/PageDown take larger steps), `timeline-playhead` (the non-interactive current-position line), `timeline-marker` (one per `time-range` highlight;
 `data-tone`, `data-active`), `transcript` (the `<lr-virtual-list>` itself), `cue` (`aria-current`,
-`data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
+`data-match`, `data-active-match`), `cue-unavailable` (added alongside `cue` on an inert loading or
+unavailable source placeholder row, which paints no hover or press feedback), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
 `cue-time`, `cue-speaker`, `cue-text`, `error`, and `anchor-live-region` (an aria-hidden, non-live
@@ -344,7 +345,8 @@ resolved per tone from those `-bg` knobs; its hover and pressed states are color
 that value, so setting it directly retints all three states of one marker at once — retint a whole
 tone through the matching `-bg` knob instead.
 
-Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
+The timeline's hover and scrub take `--lr-av-player-timeline-hover-border-color` (default
+`var(--lr-color-brand)`) and `--lr-av-player-timeline-active-bg`. Further cue-state properties tint the transcript: `--lr-av-player-cue-hover-bg` (default
 `var(--lr-color-brand-quiet)`) is the background of a hovered `cue` row, and its pressed state is a
 color mix taken from that same value rather than a separate knob, so retuning it keeps its pressed
 step too. `--lr-av-player-cue-current-bg` (default `var(--lr-color-brand-quiet)`) is the background

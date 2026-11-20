@@ -1,4 +1,5 @@
 import { hasHierarchySourceCopy, hierarchyCopyScope, HierarchySourceCopyController, HierarchySourceSearchController } from '../../../internal/hierarchy-source-search.js';
+import { revealInOwnScroller } from '../../../internal/reveal-row.js';
 import { applyHierarchySourceEffects, captureHierarchySourceEffects, hierarchySourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { KeyedCopyFeedback } from '../../../internal/record-copy-feedback.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
@@ -408,6 +409,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   non-active matches can be recolored without touching the active one.
  * @cssprop [--lr-xml-viewer-match-bg=var(--lr-color-warning-quiet)] - Background of a matching
  *   `[part="tag"]`/`[part="attribute-value"]`.
+ * @cssprop [--lr-xml-viewer-attribute-name-color=var(--lr-color-chart-1)] - Syntax color of attribute names.
+ * @cssprop [--lr-xml-viewer-attribute-value-color=var(--lr-color-success)] - Syntax color of attribute values.
  * @status stable
  * @since 4.0.0
  */
@@ -610,7 +613,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const partial = !this.sourceSearch.exact && Boolean(this.searchQuery);
     const count = this.sourceSearch.count;
     this.renderedHighlights = this.resolveHighlights();
-    return html`<div class="source-shell" style=${styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
+    return html`<div class="source-shell" style=${sanitizeCssLength(this.maxHeight) ? styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight)! }) : nothing}>
       ${this.copyable && hasHierarchySourceCopy(() => this.treeSource) ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
       ${hierarchySourceView(this.hierarchy, {
         label: hostAriaLabel(this) ?? normalizeLabel(this.name) ?? this.localize('xmlViewerLabel'), rtl: this.effectiveDirection === 'rtl', multiple: false,
@@ -1260,10 +1263,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.expandAncestors(JSON.parse(pathKey) as PathSegment[], true);
     await this.updateComplete;
     const active = this.renderRoot.querySelector('[data-active-match]') as HTMLElement | null;
-    active?.scrollIntoView({
-      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
-      block: 'center',
-    });
+    if (active) revealInOwnScroller(active, 'center', prefersReducedMotion(this) ? 'auto' : 'smooth');
   }
 
   private emitSearchChange(): void {

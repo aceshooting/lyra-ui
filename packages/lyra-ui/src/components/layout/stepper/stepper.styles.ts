@@ -155,8 +155,8 @@ export const styles = css`
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-neutral-fill-normal);
-    color: var(--lr-color-neutral-on-normal);
+    background: var(--lr-stepper-index-bg, var(--lr-color-neutral-fill-normal));
+    color: var(--lr-stepper-index-color, var(--lr-color-neutral-on-normal));
     font-size: var(--lr-font-size-xs);
     flex: 0 0 auto;
   }
@@ -164,9 +164,13 @@ export const styles = css`
     background: var(--lr-stepper-current-index-bg, var(--lr-color-brand));
     color: var(--lr-stepper-current-index-color, var(--lr-color-on-brand));
   }
+  [part="step"][data-state="error"] [part="step-index"] {
+    background: var(--lr-stepper-error-index-bg, var(--lr-color-neutral-fill-normal));
+    color: var(--lr-stepper-error-index-color, var(--lr-color-neutral-on-normal));
+  }
   [part="step-check"] {
     display: inline-flex;
-    color: var(--lr-color-success);
+    color: var(--lr-stepper-check-color, var(--lr-color-success));
     flex: 0 0 auto;
   }
   [part="step-label"] {

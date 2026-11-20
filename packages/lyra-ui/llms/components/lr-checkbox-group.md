@@ -112,7 +112,7 @@ and messages, and `--lr-checkbox-group-option-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`), the gap between adjacent options — both scaled by
 `size` through the shared control ladder. WA's `--gap` alias is the value used by the rendered
 option layout and defaults to `--lr-checkbox-group-option-gap`.
-`--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
+`--lr-checkbox-group-invalid-border-color` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
 **`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto

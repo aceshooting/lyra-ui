@@ -1,4 +1,5 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { revealInOwnScroller } from '../../../internal/reveal-row.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -382,7 +383,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
     const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
-    region.scrollIntoView({ behavior, block: 'nearest', inline: 'nearest' });
+    revealInOwnScroller(region, 'nearest', behavior);
     return true;
   }
 

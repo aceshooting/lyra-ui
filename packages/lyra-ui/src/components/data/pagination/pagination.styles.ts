@@ -56,20 +56,28 @@ export const styles = css`
     position: relative;
     display: flex;
     align-items: center;
+    /* Wrap rather than squeeze: when the summary's max-content and the controls no longer fit on
+       one line, the controls move to their own line instead of crushing the summary to a sliver. */
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: var(--lr-pagination-base-gap, var(--lr-space-m));
     min-inline-size: 0;
     font-size: var(--lr-pagination-font-size, var(--_lr-pagination-font-size));
   }
   [part="summary"] {
+    flex: 1 1 auto;
     min-inline-size: 0;
     color: var(--lr-color-text-quiet);
-    overflow-wrap: anywhere;
+    /* break-word, not anywhere: anywhere drops the min-content size to one glyph. */
+    overflow-wrap: break-word;
   }
   [part="controls"] {
     display: flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     flex-wrap: wrap;
+    min-inline-size: 0;
+    /* Stays at the inline end when it wraps onto its own line. */
+    margin-inline-start: auto;
     align-items: center;
     gap: var(--lr-pagination-controls-gap, var(--lr-space-xs));
   }
@@ -389,6 +397,7 @@ export const styles = css`
     }
     [part="controls"] {
       justify-content: space-between;
+      margin-inline-start: 0;
     }
   }
   @media (forced-colors: active) {

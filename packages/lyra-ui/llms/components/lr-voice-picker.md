@@ -266,5 +266,6 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-option-synthetic-border-color` — Synthetic stale-value row border color. Default: `var(--lr-color-border)`.
 - `--lr-voice-picker-option-disabled-opacity` — Opacity of an option row whose catalog entry sets `disabled`. Default: `var(--lr-opacity-disabled)`.
 - `--lr-voice-picker-option-synthetic-font-style` — Synthetic stale-value option-label font style. Default: `italic`.
+- The preview button rests on `--lr-voice-picker-trigger-border-color` and `--lr-voice-picker-trigger-fill`, and takes `--lr-voice-picker-trigger-hover-border-color` on hover, so it follows the trigger beside it.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.

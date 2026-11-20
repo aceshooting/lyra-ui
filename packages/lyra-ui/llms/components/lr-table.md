@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 57 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 57 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -432,7 +432,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
-Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states.
+Page Up and Page Down move focus by a page through available rows. The default text filter ignores case and accents and announces the filtered count. `--lr-table-row-hover-bg`, `--lr-table-row-active-bg`, `--lr-table-sortable-header-hover-bg` and `--lr-table-sortable-header-active-bg` control their respective pointer states. `--lr-table-control-hover-bg` (default `var(--lr-color-brand-quiet)`) and `--lr-table-control-active-bg` do the same for the filter field, editable cells and cell editor, row-expand toggle, more button and reveal-columns button.
 
 **Methods:**
 

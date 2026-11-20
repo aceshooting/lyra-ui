@@ -152,6 +152,8 @@ export interface LyraAttachmentChipEventMap {
  * @cssprop [--lr-attachment-chip-thumbnail-size=var(--lr-icon-button-size)] - Thumbnail size at the
  * default density, rethemeable independently of the action buttons' hit area.
  * @cssprop [--lr-attachment-chip-thumbnail-radius=calc(var(--lr-radius) * 0.6)] - Thumbnail corner radius.
+ * @cssprop [--lr-attachment-chip-thumbnail-bg=var(--lr-color-surface)] - Thumbnail background behind
+ *   the preview image or file glyph.
  * @cssprop [--lr-attachment-chip-action-hover-bg=color-mix(in srgb, var(--lr-color-text) 8%, transparent)] -
  * Hovered retry, preview, and remove button background.
  * @cssprop [--lr-attachment-chip-action-active-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] -

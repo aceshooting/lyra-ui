@@ -48,7 +48,7 @@ const denseLongLabelPoints: EmbeddingPoint[] = [
 export const Default: Story = { render: () => html`<lr-embedding-explorer label="Document embeddings" .points=${points} .selectedPointId=${'3'}></lr-embedding-explorer>` };
 export const Empty: Story = { render: () => html`<lr-embedding-explorer></lr-embedding-explorer>` };
 
-/** `height` sizes the plot through `--lr-embedding-explorer-height`. */
+/** `height` sizes the plot unless a consumer sets `--lr-embedding-explorer-height`. */
 export const CustomHeight: Story = {
   render: () => html`<lr-embedding-explorer height="220px" .points=${points}></lr-embedding-explorer>`,
 };
