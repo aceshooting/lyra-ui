@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'یوازې لومړی {count} قطارونه ښودل شوي.',
   },
   tableAdditionalColumns: 'اضافي ستنونه',
-  treeLimit: 'یوازې لومړی {count} توکي ښودل شوي.',
   treeDefaultLabel: 'ونه',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} زیات شوی',

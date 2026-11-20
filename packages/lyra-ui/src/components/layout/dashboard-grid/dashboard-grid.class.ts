@@ -292,6 +292,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     Object.freeze([]);
   private layoutInput?: unknown;
   private effectiveLayout: readonly LyraDashboardCell[] = Object.freeze([]);
+  private omitted = 0;
+
+  /** Input positions beyond the 1,000-position `layout` limit on the latest assignment. */
+  get omittedCells(): number { return this.omitted; }
 
   /** The grid's immutable, bounded cell snapshot. Assign a new readonly collection to update it
    * (the same array is ignored); every move/resize remains a request event that the host applies
@@ -306,7 +310,8 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     if (value === this.layoutInput) return;
     this.layoutInput = value;
     const previous = this.effectiveLayout;
-    this.authoredLayout = snapshotDashboardLayout(value);
+    this.omitted = 0;
+    this.authoredLayout = snapshotDashboardLayout(value, count => { this.omitted = count; });
     this.effectiveLayout = projectDashboardLayout(
       this.authoredLayout,
       this.safeColumns

@@ -82,7 +82,18 @@ describe('lr-env-list entry ceiling', () => {
     const many = Array.from({ length: 10_003 }, (_, i) => ({ name: `K${i}`, value: 'v' }));
     const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${many}></lr-env-list>`);
     const note = el.shadowRoot!.querySelector('[part="limit"]');
-    expect(note !== null && /10,000/.test(note.textContent ?? '') && /3 more/.test(note.textContent ?? '')).to.equal(true);
+    expect(el.entries.length).to.equal(10_000);
+    expect(el.shadowRoot!.querySelectorAll('[part="name"]').length).to.equal(500);
+    expect(note?.textContent?.trim()).to.equal('Showing the first 500 entries; 9,503 more are not shown.');
+  });
+
+  it('caps rendered rows below the retention ceiling and clears the notice on a small assignment', async () => {
+    const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${Array.from({ length: 501 }, (_, i) => ({ name: `K${i}`, value: 'v' }))}></lr-env-list>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="name"]').length).to.equal(500);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal('Showing the first 500 entries; 1 more are not shown.');
+    el.entries = entries;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
   });
 
   it('shows no notice within the ceiling', async () => {

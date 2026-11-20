@@ -2953,6 +2953,10 @@
             "deprecated": null
           },
           {
+            "name": "metrics-limit",
+            "deprecated": null
+          },
+          {
             "name": "run",
             "deprecated": null
           },
@@ -41822,6 +41826,15 @@
             "default": ""
           },
           {
+            "name": "omittedCells",
+            "attribute": null,
+            "type": "number",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "readonly",
             "attribute": "readonly",
             "type": "boolean",
@@ -56908,6 +56921,10 @@
             "deprecated": null
           },
           {
+            "name": "attachments-limit",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -62559,6 +62576,10 @@
           },
           {
             "name": "file-list",
+            "deprecated": null
+          },
+          {
+            "name": "file-more",
             "deprecated": null
           },
           {
@@ -69457,6 +69478,10 @@
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -107050,6 +107075,10 @@
           },
           {
             "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -167981,6 +168010,15 @@
             "default": ""
           },
           {
+            "name": "omittedViews",
+            "attribute": null,
+            "type": "number",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -169163,6 +169201,10 @@
           },
           {
             "name": "attribute",
+            "deprecated": null
+          },
+          {
+            "name": "attribute-more",
             "deprecated": null
           },
           {

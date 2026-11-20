@@ -699,3 +699,15 @@ it('paints the configured hover fill on its node', async () => {
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });
+
+it('renders at most 200 path elements and discloses the rest in a localized note', async () => {
+  const path: LyraPathElement[] = Array.from({ length: 251 }, (_, index): LyraPathElement => index % 2
+    ? { kind: 'edge', relation: `r${index}` }
+    : { kind: 'node', node: { id: `n${index}`, label: `Node ${index}` } });
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  expect(el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]').length).to.equal(200);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal('Showing 200 of 251 graph items.');
+  el.path = path.slice(0, 3);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});

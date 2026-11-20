@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'మొదటి {count} అడ్డు వరుసలు మాత్రమే చూపబడతాయి.',
   },
   tableAdditionalColumns: 'అదనపు కాలమ్‌లు',
-  treeLimit: 'మొదటి {count} అంశాలు మాత్రమే చూపబడతాయి.',
   treeDefaultLabel: 'ట్రీ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} పెరిగింది',

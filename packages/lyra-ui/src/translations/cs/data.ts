@@ -228,7 +228,6 @@ const strings: LyraLocaleStrings = {
     other: 'Je zobrazeno pouze prvních {count} řádků.',
   },
   tableAdditionalColumns: 'Další sloupce',
-  treeLimit: 'Je zobrazeno pouze prvních {count} položek.',
   treeDefaultLabel: 'Strom',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'nárůst o {value}',

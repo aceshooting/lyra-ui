@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'พรอมป์ในคิว',
   promptQueueEmpty: 'ไม่มีพรอมป์ในคิว',
   promptQueueInputLimit: 'พรอมป์ต์ในคิวหรือไฟล์แนบบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
-  promptQueueAttachmentLimit: 'แสดงไฟล์แนบที่เก็บไว้ {shown} จาก {total} รายการ',
   promptQueueSendNow: 'ส่งตอนนี้',
   selectionToolbarLabel: 'การดำเนินการกับข้อความที่เลือก',
   selectionAsk: 'ถาม',

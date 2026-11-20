@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Εμφανίζονται μόνο οι πρώτες {count} σειρές.',
   },
   tableAdditionalColumns: 'Πρόσθετες στήλες',
-  treeLimit: 'Εμφανίζονται μόνο τα πρώτα {count} στοιχεία.',
   treeDefaultLabel: 'Δέντρο',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'αυξήθηκε κατά {value}',

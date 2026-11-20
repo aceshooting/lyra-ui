@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'ಮೊದಲ {count} ಸಾಲುಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   },
   tableAdditionalColumns: 'ಹೆಚ್ಚುವರಿ ಕಾಲಮ್‌ಗಳು',
-  treeLimit: 'ಮೊದಲ {count} ಐಟಂಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   treeDefaultLabel: 'ಟ್ರೀ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ಹೆಚ್ಚಾಗಿದೆ',

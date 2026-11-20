@@ -204,6 +204,10 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin-block-start: var(--lr-space-xs);
   }
+  [part="file-more"] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--_lr-file-input-detail-font-size);
+  }
   [part="file"] {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;

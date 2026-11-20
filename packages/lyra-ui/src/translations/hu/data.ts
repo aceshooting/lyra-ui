@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Csak az első {count} sor látható.',
   },
   tableAdditionalColumns: 'További oszlopok',
-  treeLimit: 'Csak az első {count} elem látható.',
   treeDefaultLabel: 'Fa',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'növekedés: {value}',

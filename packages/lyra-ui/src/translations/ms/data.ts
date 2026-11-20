@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'Hanya {count} baris pertama ditunjukkan.',
   },
   tableAdditionalColumns: 'Lajur tambahan',
-  treeLimit: 'Hanya {count} item pertama dipaparkan.',
   treeDefaultLabel: 'Pokok',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'meningkat {value}',

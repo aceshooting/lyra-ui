@@ -425,13 +425,16 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   #onAvailabilityMutation(records: MutationRecord[]): void {
     // An inline-style write that touches no visibility declaration (scroll lock, positioner) cannot change availability.
     const touchesVisibility = (value: string | null): boolean => !!value && VISIBILITY_STYLE.test(value);
+    // Only the host, its direct items and composed ancestors decide availability; content inside an item does not.
+    const insideItem = (target: Node): boolean => target !== this && target.parentNode !== this && this.contains(target);
     if (
       records.every(
         (record) =>
-          record.attributeName === 'style' &&
-          isElementNode(record.target) &&
-          !touchesVisibility(record.oldValue) &&
-          !touchesVisibility(record.target.getAttribute('style')),
+          insideItem(record.target) ||
+          (record.attributeName === 'style' &&
+            isElementNode(record.target) &&
+            !touchesVisibility(record.oldValue) &&
+            !touchesVisibility(record.target.getAttribute('style'))),
       )
     ) return;
     this.#reconcileRovingFocus();

@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Indicacions en cua',
   promptQueueEmpty: 'No hi ha indicacions en cua',
   promptQueueInputLimit: 'S’han omès algunes indicacions o fitxers adjunts en cua perquè s’ha arribat a un límit d’entrada.',
-  promptQueueAttachmentLimit: 'Es mostren {shown} de {total} fitxers adjunts conservats.',
   promptQueueSendNow: 'Envia ara',
   selectionToolbarLabel: 'Accions de la selecció',
   selectionAsk: 'Pregunta',

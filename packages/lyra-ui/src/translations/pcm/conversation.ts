@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts wey dey queue',
   promptQueueEmpty: 'No prompt dey queue',
   promptQueueInputLimit: 'Dem leave some prompt wey dey queue or attachment because input don reach im limit.',
-  promptQueueAttachmentLimit: 'Na {shown} out of {total} attachment wey dem keep dey show.',
   promptQueueSendNow: 'Send am now',
   selectionToolbarLabel: 'Wetin you fit do with di selection',
   selectionAsk: 'Ask am',

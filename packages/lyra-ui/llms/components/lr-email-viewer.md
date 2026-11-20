@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `postal-mime` — see `llms/peers.md`
-- **Themeable via** 25 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 26 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -86,11 +86,14 @@ passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
+**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to` (ends with a localized `+N`
+when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
 `attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
-`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`),
+`attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
+those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
 show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the

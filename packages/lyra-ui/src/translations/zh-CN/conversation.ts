@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: '排队的提示词',
   promptQueueEmpty: '没有排队的提示词',
   promptQueueInputLimit: '由于达到输入限制，部分排队的提示词或附件已被省略。',
-  promptQueueAttachmentLimit: '显示已保留的 {total} 个附件中的 {shown} 个。',
   promptQueueSendNow: '立即发送',
   selectionToolbarLabel: '选区操作',
   selectionAsk: '提问',

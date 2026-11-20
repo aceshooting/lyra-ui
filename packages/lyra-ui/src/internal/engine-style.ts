@@ -1,8 +1,52 @@
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import { finiteRange } from './numbers.js';
-import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, type EngineStyle } from './engine-admission.js';
+import { watchThemeChanges } from './theme-watcher.js';
 
-export type { EngineStyle } from './engine-admission.js';
+/** The media features an engine style reads; a change to any of them must re-resolve it. */
+export const ENGINE_STYLE_MEDIA_QUERIES = /* @__PURE__ */ Object.freeze([
+  '(prefers-reduced-motion: reduce)',
+  '(forced-colors: active)',
+  '(prefers-color-scheme: dark)',
+] as const);
+
+/**
+ * Plain style values an optional WebGL engine paints with: concrete CSS colour strings and CSS
+ * pixels. Owned structurally here so the optional companion's declarations stay out of this
+ * library's public type graph.
+ */
+export interface EngineStyle {
+  readonly background: string;
+  readonly foreground: string;
+  readonly muted: string;
+  readonly accent: string;
+  readonly focus: string;
+  /** Categorical colours, indexed by an item's category. */
+  readonly palette: readonly string[];
+  readonly fontFamily: string;
+  readonly fontSize: number;
+  readonly pointSize: number;
+  readonly lineWidth: number;
+  readonly devicePixelRatio: number;
+  readonly reducedMotion: boolean;
+  readonly forcedColors: boolean;
+}
+
+/** The categorical chart tokens, in palette order. */
+export const ENGINE_CHART_PALETTE: readonly string[] = /* @__PURE__ */ Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`);
+
+/** Background, foreground, muted, accent and focus, in that order. */
+const ENGINE_COLOR_TOKENS: readonly string[] = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color'];
+
+/**
+ * Calls `onChange`, at most once per microtask, when an engine's resolved style may have changed:
+ * a theme attribute on the host or a composed ancestor, a stylesheet added, removed, toggled or
+ * edited, a contrast, colour-scheme or forced-colour change, or one of the
+ * {@link ENGINE_STYLE_MEDIA_QUERIES}. It shares the realm's theme observers with every other
+ * watcher; unrelated attribute changes are not reported. Returns the disposer.
+ */
+export function watchEngineStyle(host: Element, onChange: () => void): () => void {
+  return watchThemeChanges(host, onChange, ENGINE_STYLE_MEDIA_QUERIES);
+}
 
 export interface EngineStyleOptions {
   /** Custom properties resolved into `palette`, in order. Defaults to {@link ENGINE_CHART_PALETTE}. */
@@ -17,8 +61,6 @@ export interface EngineStyleOptions {
    */
   readonly probe?: Element | null;
 }
-
-export { ENGINE_CHART_PALETTE, ENGINE_STYLE_MEDIA_QUERIES, engineStyle } from './engine-admission.js';
 
 interface ResolvedEngineStyle {
   readonly key: string;

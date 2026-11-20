@@ -16,6 +16,8 @@
 
 ## `lr-dashboard-grid`
 
+Read `omittedCells` after assigning `layout` for the number of input positions beyond the 1,000-position limit.
+
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 

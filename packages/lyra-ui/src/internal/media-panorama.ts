@@ -7,7 +7,8 @@ import { shouldIgnoreNavigationKey } from './list-navigation.js';
 import { createEngine3dLoader, type Engine3dInstance } from './engine-3d-loader.js';
 import { Engine3dSelection, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason } from './engine-3d.js';
 import { AnnouncementSinkController } from './announcer.js';
-import { engineStyle, observeAdmission, watchEngineStyle } from './engine-admission.js';
+import { observeAdmission } from './engine-admission.js';
+import { resolveEngineStyle, watchEngineStyle, type EngineStyle } from './engine-style.js';
 import type { LyraMessageKey } from './localization.js';
 import { tag } from './prefix.js';
 
@@ -194,13 +195,20 @@ export class PanoramaController {
       const view = owner.defaultView;
       if (view?.ResizeObserver) { this.resize = new view.ResizeObserver(() => { if (current() && this.ready) this.command(resize); }); this.resize.observe(container); }
       // Theme attributes and the style media queries only, never every ancestor attribute.
-      this.cleanups.push(watchEngineStyle(this.host, () => { if (current() && this.ready) this.command(() => engine!.setStyle(this.style())); }));
+      this.cleanups.push(watchEngineStyle(this.host, () => {
+        if (!current() || !this.ready) return;
+        // The resolver returns the same object until an input changes; skip the identical push.
+        const previous = this.lastStyle, style = this.style();
+        if (style !== previous) this.command(() => engine!.setStyle(style));
+      }));
       this.pending = this.loading = false; this.ready = this.selection.renderer === 'webgl'; this.options.changed();
     } catch (error) { if (!current()) { if (!owned) disposePanoramaEngine(engine); return; } this.fail(engine3dFailureReason(error)); }
   }
 
-  private style(): unknown {
-    return engineStyle(this.host, ['--lr-color-brand'], 24, 1);
+  private lastStyle?: EngineStyle;
+
+  private style(): EngineStyle {
+    return this.lastStyle = resolveEngineStyle(this.host, { palette: ['--lr-color-brand'], pointSize: 24, lineWidth: 1 });
   }
 
   private activate(index: number): void {

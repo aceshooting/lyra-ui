@@ -226,7 +226,6 @@ const strings: LyraLocaleStrings = {
     other: 'Tiek rādītas tikai pirmās {count} rindas.',
   },
   tableAdditionalColumns: 'Papildu kolonnas',
-  treeLimit: 'Tiek rādīti tikai pirmie {count} vienumi.',
   treeDefaultLabel: 'Koks',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'palielinājās par {value}',

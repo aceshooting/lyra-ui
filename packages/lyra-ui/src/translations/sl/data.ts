@@ -228,7 +228,6 @@ const strings: LyraLocaleStrings = {
     other: 'Prikazanih je samo prvih {count} vrstic.',
   },
   tableAdditionalColumns: 'Dodatni stolpci',
-  treeLimit: 'Prikazanih je le prvih {count} elementov.',
   treeDefaultLabel: 'Drevo',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'povečanje za {value}',

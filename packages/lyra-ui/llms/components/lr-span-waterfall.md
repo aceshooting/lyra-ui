@@ -133,7 +133,7 @@ Space).
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
-bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
+bar), `meta` (secondary row info; status text and duration show at every width, beside the bar when wide and under it when narrow), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
 The painted bar follows the visible span duration, with a one-border-width floor. Its transparent
 pointer target extends to the shared icon-button size inside the track (36px by default).

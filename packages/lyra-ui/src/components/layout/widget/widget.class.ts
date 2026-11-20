@@ -83,8 +83,9 @@ const MAX_WIDGET_VIEWS = 256;
  * Shallow-copying each view record here, the same way `LyraSegmentedItem`/`LyraStepItem` handle
  * their own `icon` field, keeps `viewId`/`label`/`ariaLabel` bounded and frozen while passing
  * `icon` through untouched. */
-function snapshotWidgetViews(value: unknown): readonly Readonly<LyraWidgetView>[] {
+function snapshotWidgetViews(value: unknown, reportOmitted: (count: number) => void): readonly Readonly<LyraWidgetView>[] {
   if (!Array.isArray(value)) return Object.freeze([]);
+  reportOmitted(Math.max(0, value.length - MAX_WIDGET_VIEWS));
   const seen = new Set<string>();
   const normalized: Readonly<LyraWidgetView>[] = [];
   for (const candidate of value.slice(0, MAX_WIDGET_VIEWS)) {
@@ -398,7 +399,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  private readonly viewSnapshot = new SnapshotProperty(Object.freeze([]), snapshotWidgetViews);
+  private omitted = 0;
+  private readonly viewSnapshot = new SnapshotProperty<readonly Readonly<LyraWidgetView>[]>(Object.freeze([]), value => {
+    this.omitted = 0;
+    return snapshotWidgetViews(value, count => { this.omitted = count; });
+  });
+
+  /** Input positions beyond the 256-position `views` limit on the latest assignment. */
+  get omittedViews(): number { return this.omitted; }
 
   /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen
    *  snapshot (except `icon`, preserved by reference -- see `snapshotWidgetViews`'s doc); mutate a

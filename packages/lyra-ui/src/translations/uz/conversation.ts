@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Navbatdagi promptlar',
   promptQueueEmpty: 'Navbatda prompt yoʻq',
   promptQueueInputLimit: 'Kiritish chegarasiga yetilgani sababli navbatdagi ayrim promptlar yoki ilovalar tushirib qoldirildi.',
-  promptQueueAttachmentLimit: 'Saqlangan {total} ilovadan {shown} tasi koʻrsatilmoqda.',
   promptQueueSendNow: 'Hozir yuborish',
   selectionToolbarLabel: 'Tanlov amallari',
   selectionAsk: 'Soʻrash',

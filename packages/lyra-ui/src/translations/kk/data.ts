@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Алғашқы {count} жол ғана көрсетіледі.',
   },
   tableAdditionalColumns: 'Қосымша бағандар',
-  treeLimit: 'Тек бірінші {count} элемент көрсетіледі.',
   treeDefaultLabel: 'Ағаш',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'өсті: {value}',

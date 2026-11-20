@@ -676,11 +676,14 @@ passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
+**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to` (ends with a localized `+N`
+when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
 `attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
-`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`),
+`attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
+those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
 show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
@@ -2140,7 +2143,8 @@ order is the caller's own reading order; the layer does not re-sort geometricall
 positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
-to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
+to be nonempty and the first item retained when IDs repeat; at most the first 10,000 items and, per
+item, the first 1,000 `rects` positions are read; `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), and `withoutInteraction: boolean = false` (attribute
 `without-interaction`, reflected) — turns off click/keyboard activation. A rectangle is eligible
 only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative; an item
@@ -2561,7 +2565,8 @@ highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`
 `node-path` anchor's trailing `'@attrName'` segment addresses that specific attribute — so a citation
 pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
 tree, rather than resolving indistinguishably from the bare element path),
-`attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
+`attribute-name`, `attribute-value` (`data-match`), `attribute-more` (a localized `+N` count when an
+element has more than the 256 attributes rendered on its row), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on

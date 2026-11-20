@@ -2,7 +2,8 @@ import { OwnedFrame } from '../../../internal/owned-timer.js';
 import type { ReactiveControllerHost } from 'lit';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, engineStyle, observeAdmission } from '../../../internal/engine-admission.js';
+import { observeAdmission } from '../../../internal/engine-admission.js';
+import { ENGINE_STYLE_MEDIA_QUERIES, resolveEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import {
   Engine3dSelection,
@@ -12,7 +13,6 @@ import {
   type Engine3dFallbackReason,
   type Engine3dPreference,
 } from '../../../internal/engine-3d.js';
-import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { normalizeChart3dCamera, type Chart3dEngineData, type LyraChart3dCamera } from './chart-3d-data.js';
 
@@ -43,7 +43,6 @@ interface Chart3dEngineCallbacks {
   camera(camera: LyraChart3dCamera): void;
 }
 
-const colorTokens = [...ENGINE_COLOR_TOKENS, ...ENGINE_CHART_PALETTE];
 
 /**
  * Owns the optional points renderer. Row identity, keyboard interaction and the accessible table
@@ -74,8 +73,7 @@ export class Chart3dEngineController {
   private admission?: () => void;
   private resizeObserver?: ResizeObserver;
   private themeWatcher?: ThemeWatcher;
-  private styleSignature = '';
-  private cachedStyle?: object;
+  private cachedStyle?: EngineStyle;
   private readonly refreshFrame: OwnedFrame;
 
   constructor(
@@ -110,7 +108,6 @@ export class Chart3dEngineController {
       this.host.removeController(this.themeWatcher);
       this.themeWatcher = undefined;
     }
-    this.styleSignature = '';
     this.cachedStyle = undefined;
     const engine = this.engine;
     this.engine = undefined;
@@ -385,18 +382,9 @@ export class Chart3dEngineController {
   }
 
   /** Resolves tokens, fonts, point and line sizes and media preferences into plain values. */
-  private style(): object {
-    const view = this.host.ownerDocument.defaultView!;
-    const computed = view.getComputedStyle(this.host);
-    // The probe carries the point-size and line-width tokens, so their units resolve live.
-    const probe = this.host.shadowRoot?.querySelector('[data-style-probe]');
-    const measured = probe ? view.getComputedStyle(probe) : computed;
-    const signature = JSON.stringify([computed.color, computed.colorScheme, computed.fontSize, computed.fontFamily,
-      measured.inlineSize, measured.borderBlockStartWidth, view.devicePixelRatio,
-      ...ENGINE_STYLE_MEDIA_QUERIES.map((query) => view.matchMedia(query).matches), ...colorTokens.map(name => computed.getPropertyValue(name))]);
-    if (this.cachedStyle && signature === this.styleSignature) return this.cachedStyle;
-    this.styleSignature = signature;
-    return this.cachedStyle = engineStyle(this.host, ENGINE_CHART_PALETTE, finiteRange(Number.parseFloat(measured.inlineSize), 8, 1, 1024),
-      finiteRange(Number.parseFloat(measured.borderBlockStartWidth), 1, 0, 64));
+  private style(): EngineStyle {
+    // The probe carries the point-size and line-width tokens, so their units resolve live; without
+    // one the host's own box carries them.
+    return this.cachedStyle = resolveEngineStyle(this.host, { probe: this.host.shadowRoot?.querySelector('[data-style-probe]') ?? this.host });
   }
 }

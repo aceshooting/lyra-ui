@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'ക്യൂവിലുള്ള പ്രോംപ്റ്റുകൾ',
   promptQueueEmpty: 'പ്രോംപ്റ്റുകളൊന്നും ക്യൂവിലില്ല',
   promptQueueInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചില ഇനങ്ങൾ ഒഴിവാക്കി: ക്യൂവിലെ പ്രോംപ്റ്റുകൾ അല്ലെങ്കിൽ അറ്റാച്ച്‌മെന്റുകൾ.',
-  promptQueueAttachmentLimit: 'സൂക്ഷിച്ച {total} അറ്റാച്ച്‌മെന്റുകളിൽ {shown} എണ്ണം കാണിക്കുന്നു.',
   promptQueueSendNow: 'ഇപ്പോൾ അയയ്ക്കുക',
   selectionToolbarLabel: 'തിരഞ്ഞെടുപ്പ് പ്രവർത്തനങ്ങൾ',
   selectionAsk: 'ചോദിക്കുക',

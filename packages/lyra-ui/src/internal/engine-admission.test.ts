@@ -1,5 +1,6 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import { ENGINE_FENCE_ATTRIBUTES, observeAdmission, observeAncestorFences, watchEngineStyle } from './engine-admission.js';
+import { ENGINE_FENCE_ATTRIBUTES, observeAdmission, observeAncestorFences } from './engine-admission.js';
+import { watchEngineStyle } from './engine-style.js';
 
 interface FakeIntersection {
   deliver(entries: unknown[]): void;
@@ -210,6 +211,36 @@ describe('observeAncestorFences', () => {
     expect(changes).to.equal(1);
     expect([...ENGINE_FENCE_ATTRIBUTES]).to.deep.equal(['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open']);
   });
+
+  it('shares one observer per root across engines instead of one per instance', async () => {
+    const root = mount('');
+    let leaf: Element = root;
+    for (let depth = 0; depth < 40; depth++) {
+      const next = document.createElement('div');
+      leaf.append(next);
+      leaf = next;
+    }
+    const original = Object.getOwnPropertyDescriptor(window, 'MutationObserver')!;
+    const Native = window.MutationObserver;
+    let constructed = 0;
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, writable: true, value: class extends Native {
+      constructor(callback: MutationCallback) { super(callback); constructed++; }
+    } });
+    let changes = 0;
+    const disposers: (() => void)[] = [];
+    try {
+      for (let index = 0; index < 5; index++) disposers.push(observeAncestorFences(leaf, () => changes++));
+    } finally {
+      Object.defineProperty(window, 'MutationObserver', original);
+    }
+    expect(constructed <= 1).to.equal(true);
+    root.setAttribute('inert', '');
+    await waitUntil(() => changes === 5);
+    for (const dispose of disposers) dispose();
+    root.removeAttribute('inert');
+    await settle();
+    expect(changes).to.equal(5);
+  });
 });
 
 describe('watchEngineStyle', () => {
@@ -229,11 +260,20 @@ describe('watchEngineStyle', () => {
       outer.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
       await new Promise((resolve) => setTimeout(resolve));
       expect(calls).to.equal(1);
+      // A stylesheet toggled without any attribute on an ancestor still restyles the engine.
+      const sheet = document.createElement('style');
+      sheet.textContent = ':root { --lr-color-brand: rgb(4, 5, 6); }';
+      document.head.append(sheet);
+      await waitUntil(() => calls === 2);
+      sheet.sheet!.disabled = true;
+      await waitUntil(() => calls === 3);
+      sheet.remove();
+      await waitUntil(() => calls === 4);
       dispose();
       dispose();
       outer.setAttribute('data-lr-theme', 'light');
       await new Promise((resolve) => setTimeout(resolve));
-      expect(calls).to.equal(1);
+      expect(calls).to.equal(4);
     } finally {
       dispose();
       outer.remove();

@@ -25,7 +25,8 @@ import { LYRA_DEFAULT_highlightLayerLabel } from '../../../internal/default-stri
 export interface HighlightLayerItem {
   readonly id: string;
   /** Finite percent-of-box coordinates (the `region` anchor convention). One item may span
-   * multiple rects (a quote wrapping lines); invalid coordinates and negative sizes are omitted. */
+   * multiple rects (a quote wrapping lines); only the first 1,000 positions are read, and invalid
+   * coordinates and negative sizes are omitted. */
   readonly rects: readonly Readonly<{
     x: number;
     y: number;
@@ -37,6 +38,8 @@ export interface HighlightLayerItem {
 }
 
 const MAX_ITEMS = 10_000;
+/** Rectangle positions read per item, matching the PDF viewer's per-highlight ceiling. */
+const MAX_ITEM_RECTS = 1_000;
 /** Minimum time the reduced-motion flash cue stays visible when there is no animation to follow. */
 const FLASH_HOLD_MS = 600;
 
@@ -57,7 +60,8 @@ function snapshotItems(value: unknown): readonly HighlightLayerItem[] {
       if (!Array.isArray(rawRects)) continue;
       seenIds.add(id);
       const rects: SafePercentRect[] = [];
-      for (let rectIndex = 0; rectIndex < rawRects.length; rectIndex += 1) {
+      const rectCount = Math.min(rawRects.length, MAX_ITEM_RECTS);
+      for (let rectIndex = 0; rectIndex < rectCount; rectIndex += 1) {
         const rect = sanitizePercentRect(rawRects[rectIndex]);
         if (rect === undefined) continue;
         rects.push(Object.freeze(rect));

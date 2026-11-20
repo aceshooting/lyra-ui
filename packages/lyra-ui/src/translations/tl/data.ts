@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Tanging ang unang {count} (na) row ang ipinapakita.',
   },
   tableAdditionalColumns: 'Mga karagdagang column',
-  treeLimit: 'Tanging ang unang {count} (na) item ang ipinapakita.',
   treeDefaultLabel: 'Puno',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'tumaas ng {value}',

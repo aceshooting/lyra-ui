@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
   },
   tableAdditionalColumns: 'คอลัมน์เพิ่มเติม',
-  treeLimit: 'แสดงเฉพาะ {count} รายการแรกเท่านั้น',
   treeDefaultLabel: 'ต้นไม้',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'เพิ่มขึ้น {value}',

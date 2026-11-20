@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'ਸਿਰਫ਼ ਪਹਿਲੀਆਂ {count} ਕਤਾਰਾਂ ਹੀ ਦਿਖਾਈਆਂ ਗਈਆਂ ਹਨ।',
   },
   tableAdditionalColumns: 'ਵਾਧੂ ਕਾਲਮ',
-  treeLimit: 'ਸਿਰਫ਼ ਪਹਿਲੀਆਂ {count} ਆਈਟਮਾਂ ਹੀ ਦਿਖਾਈਆਂ ਗਈਆਂ ਹਨ।',
   treeDefaultLabel: 'ਟ੍ਰੀ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ਵਧਿਆ',

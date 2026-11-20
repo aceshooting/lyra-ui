@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Järjekorras viibad',
   promptQueueEmpty: 'Järjekorras viipasid pole',
   promptQueueInputLimit: 'Osa järjekorras viipasid või manuseid jäeti välja, kuna sisendi piirang sai täis.',
-  promptQueueAttachmentLimit: 'Kuvatakse {shown} säilitatud manust {total}-st.',
   promptQueueSendNow: 'Saada kohe',
   selectionToolbarLabel: 'Valiku toimingud',
   selectionAsk: 'Küsi',

@@ -228,7 +228,6 @@ const strings: LyraLocaleStrings = {
     other: 'Показано лише перші {count} рядків.',
   },
   tableAdditionalColumns: 'Додаткові стовпці',
-  treeLimit: 'Показано лише перші {count} елементів.',
   treeDefaultLabel: 'Дерево',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'збільшено на {value}',

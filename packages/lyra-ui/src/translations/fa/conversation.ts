@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'درخواست‌های در صف',
   promptQueueEmpty: 'هیچ درخواستی در صف وجود ندارد',
   promptQueueInputLimit: 'برخی پرسش‌های در صف یا پیوست‌ها به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
-  promptQueueAttachmentLimit: 'از {total} پیوست نگه‌داشته‌شده، {shown} مورد نمایش داده می‌شود.',
   promptQueueSendNow: 'اکنون ارسال کنید',
   selectionToolbarLabel: 'اقدامات انتخاب',
   selectionAsk: 'بپرسید',

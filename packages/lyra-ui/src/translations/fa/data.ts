@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'فقط {count} ردیف اول نشان داده می شود.',
   },
   tableAdditionalColumns: 'ستون‌های بیشتر',
-  treeLimit: 'فقط اولین {count} مورد نشان داده می شود.',
   treeDefaultLabel: 'درخت',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'افزایش {value}',

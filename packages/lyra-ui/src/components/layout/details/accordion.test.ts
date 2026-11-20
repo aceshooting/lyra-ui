@@ -1791,3 +1791,30 @@ it('does not reacquire item ownership after removal before its first update', as
   await waitUntil(() => (el as any).panels.size === 2);
   expect([...((el as any).panels as Set<LyraAccordionItem>)].map(item => item.label)).to.deep.equal(['Latest', 'Second']);
 });
+
+it('ignores mutations inside item content while still reconciling an item that becomes unavailable', async () => {
+  const el = await fixture<LyraAccordion>(html`<lr-accordion>
+    <lr-accordion-item label="A"><div class="content">A body</div></lr-accordion-item>
+    <lr-accordion-item label="B">B body</lr-accordion-item>
+  </lr-accordion>`);
+  const [first] = [...el.querySelectorAll<LyraAccordionItem>('lr-accordion-item')];
+  const accessor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(first!), 'isTabbable')
+    ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Object.getPrototypeOf(first!)), 'isTabbable')!;
+  let writes = 0;
+  Object.defineProperty(first!, 'isTabbable', {
+    configurable: true,
+    get() { return accessor.get!.call(this); },
+    set(value: boolean) { writes++; accessor.set!.call(this, value); },
+  });
+  try {
+    const content = first!.querySelector('.content')!;
+    for (let index = 0; index < 5; index++) content.classList.toggle('busy');
+    content.setAttribute('hidden', '');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(writes).to.equal(0);
+    first!.setAttribute('disabled', '');
+    await waitUntil(() => writes > 0);
+  } finally {
+    Reflect.deleteProperty(first!, 'isTabbable');
+  }
+});

@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Ερωτήματα σε αναμονή',
   promptQueueEmpty: 'Δεν υπάρχουν ερωτήματα σε αναμονή',
   promptQueueInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: μηνύματα προτροπής σε αναμονή ή συνημμένα.',
-  promptQueueAttachmentLimit: 'Εμφανίζονται {shown} από τα {total} διατηρημένα συνημμένα.',
   promptQueueSendNow: 'Αποστολή τώρα',
   selectionToolbarLabel: 'Ενέργειες επιλογής',
   selectionAsk: 'Ερώτηση',

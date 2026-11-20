@@ -115,7 +115,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Leideanna sa scuaine',
   promptQueueEmpty: 'Níl aon leideanna sa scuaine',
   promptQueueInputLimit: 'Fágadh roinnt leideanna nó ceangaltán sa scuaine ar lár mar gur sroicheadh teorainn ionchuir.',
-  promptQueueAttachmentLimit: 'Ceangaltáin choinnithe á dtaispeáint: {shown} as {total}.',
   promptQueueSendNow: 'Seol anois',
   selectionToolbarLabel: 'Gníomhartha roghnúcháin',
   selectionAsk: 'Fiafraigh',

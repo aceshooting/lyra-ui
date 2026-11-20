@@ -230,7 +230,6 @@ const strings: LyraLocaleStrings = {
     other: 'Ní thaispeántar ach an chéad {count} ró.',
   },
   tableAdditionalColumns: 'Colúin bhreise',
-  treeLimit: 'Ní thaispeántar ach an chéad {count} mír.',
   treeDefaultLabel: 'Crann',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'méadaithe {value}',

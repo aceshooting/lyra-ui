@@ -716,6 +716,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           tabindex=${virtualized ? nothing : '0'}
           aria-label=${virtualized ? nothing : listAriaLabel}
           ?hidden=${!this.expanded}
+          ?data-virtualized=${virtualized}
           @scroll=${this.onBodyScroll}
         >
           ${virtualized

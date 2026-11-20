@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: '처음 {count}개 행만 표시됩니다.',
   },
   tableAdditionalColumns: '추가 열',
-  treeLimit: '처음 {count}개 항목만 표시됩니다.',
   treeDefaultLabel: '트리',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} 증가함',

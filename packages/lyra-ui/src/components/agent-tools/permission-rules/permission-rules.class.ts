@@ -71,7 +71,7 @@ const DECISION_LABEL_KEY: Record<PermissionRuleDecision, string> = {
  * @csspart rule-copy - The text area containing the rule label and description.
  * @csspart description - Optional host-supplied rule description.
  * @csspart scope - The localized scope label and host-supplied scope.
- * @csspart decision - The native decision select.
+ * @csspart decision - The native decision select, or the decision as plain text while `readonly`.
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid rules are supplied.
  * @status experimental
@@ -104,7 +104,7 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
   @property() label?: string;
   /** Disables all decision controls. */
   @property({ type: Boolean, reflect: true }) disabled = false;
-  /** Presents decisions without allowing edits. */
+  /** Presents each decision as plain text instead of a select, so nothing looks operable. */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
@@ -148,16 +148,17 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
           ${rule.description ? html`<span part="description">${rule.description}</span>` : nothing}
           <span part="scope">${this.localize('permissionRulesScope', undefined, { scope: ltrIsolate(rule.scope) })}</span>
         </div>
-        <select
-          part="decision"
-          aria-label=${this.localize('permissionRulesDecisionFor', undefined, { label: normalizeLabel(rule.label) ?? normalizeLabel(rule.scope) ?? rule.id })}
-          aria-readonly=${this.readonly ? 'true' : nothing}
-          ?disabled=${this.disabled}
-          .value=${rule.decision}
-          @change=${(event: Event) => this.onDecisionChange(rule, event)}
-        >
-          ${DECISIONS.map((decision) => html`<option value=${decision} ?selected=${rule.decision === decision}>${this.localize(DECISION_LABEL_KEY[decision])}</option>`)}
-        </select>
+        ${this.readonly
+          ? html`<span part="decision" data-readonly>${this.localize(DECISION_LABEL_KEY[rule.decision])}</span>`
+          : html`<select
+              part="decision"
+              aria-label=${this.localize('permissionRulesDecisionFor', undefined, { label: normalizeLabel(rule.label) ?? normalizeLabel(rule.scope) ?? rule.id })}
+              ?disabled=${this.disabled}
+              .value=${rule.decision}
+              @change=${(event: Event) => this.onDecisionChange(rule, event)}
+            >
+              ${DECISIONS.map((decision) => html`<option value=${decision} ?selected=${rule.decision === decision}>${this.localize(DECISION_LABEL_KEY[decision])}</option>`)}
+            </select>`}
       </div>
     `;
   }

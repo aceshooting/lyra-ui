@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Alleen de eerste {count} rijen worden weergegeven.',
   },
   tableAdditionalColumns: 'Aanvullende kolommen',
-  treeLimit: 'Alleen de eerste {count} items worden getoond.',
   treeDefaultLabel: 'Boom',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'gestegen met {value}',

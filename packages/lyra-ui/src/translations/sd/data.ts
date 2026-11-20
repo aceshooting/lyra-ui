@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'صرف پھريون {count} قطارون ڏيکاريل آھن.',
   },
   tableAdditionalColumns: 'اضافي ڪالم',
-  treeLimit: 'صرف پھريون {count} شيون ڏيکاريل آھن.',
   treeDefaultLabel: 'وڻ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} وڌيو',

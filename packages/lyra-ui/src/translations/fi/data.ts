@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Vain ensimmäiset {count} riviä näytetään.',
   },
   tableAdditionalColumns: 'Lisäsarakkeet',
-  treeLimit: 'Vain ensimmäiset {count} kohdetta näytetään.',
   treeDefaultLabel: 'Puu',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'kasvoi {value}',

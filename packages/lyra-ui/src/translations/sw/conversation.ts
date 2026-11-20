@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Maagizo yaliyowekwa kwenye foleni',
   promptQueueEmpty: 'Hakuna maagizo kwenye foleni',
   promptQueueInputLimit: 'Baadhi ya maagizo yaliyo kwenye foleni au viambatisho vimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
-  promptQueueAttachmentLimit: 'Inaonyesha {shown} kati ya viambatisho {total} vilivyohifadhiwa.',
   promptQueueSendNow: 'Tuma sasa',
   selectionToolbarLabel: 'Vitendo vya uteuzi',
   selectionAsk: 'Uliza',

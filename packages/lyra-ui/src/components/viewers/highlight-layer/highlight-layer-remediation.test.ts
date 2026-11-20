@@ -14,6 +14,13 @@ function targets(el: LyraHighlightLayer): HTMLElement[] {
 }
 
 describe('lr-highlight-layer remediation', () => {
+  it('reads at most 1,000 rectangle positions per item', async () => {
+    const rects = Array.from({ length: 1_005 }, (_, index) => ({ x: index % 100, y: 0, width: 1, height: 1 }));
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${[{ id: 'wide', rects }]}></lr-highlight-layer>`);
+    expect(el.items[0]!.rects.length).to.equal(1_000);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]').length).to.equal(1_000);
+  });
+
   it('keeps the snapshot and flash on identity reassignment and clears the flash on replacement or disconnect', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     const snapshot = el.items;

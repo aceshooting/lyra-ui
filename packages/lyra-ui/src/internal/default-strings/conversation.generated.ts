@@ -82,7 +82,6 @@ export const LYRA_DEFAULT_promptInputInputLimit: LyraMessage = 'Some suggestions
 export const LYRA_DEFAULT_promptInputLabel: LyraMessage = 'AI prompt';
 export const LYRA_DEFAULT_promptInputSources: LyraMessage = 'Sources';
 export const LYRA_DEFAULT_promptQueueActionLabel: LyraMessage = '{action}, queued prompt {index}';
-export const LYRA_DEFAULT_promptQueueAttachmentLimit: LyraMessage = 'Showing {shown} of {total} retained attachments.';
 export const LYRA_DEFAULT_promptQueueEmpty: LyraMessage = 'No prompts queued';
 export const LYRA_DEFAULT_promptQueueInputLimit: LyraMessage = 'Some queued prompts or attachments were omitted because an input limit was reached.';
 export const LYRA_DEFAULT_promptQueueItemLabel: LyraMessage = 'Queued prompt {index}';

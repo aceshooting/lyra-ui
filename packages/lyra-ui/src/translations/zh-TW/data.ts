@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: '僅顯示前 {count} 行。',
   },
   tableAdditionalColumns: '額外欄位',
-  treeLimit: '僅顯示前 {count} 項。',
   treeDefaultLabel: '樹狀結構',
   funnelComparisonShare: '{label}：{value}',
   funnelDropoffIncreased: '上升{value}',

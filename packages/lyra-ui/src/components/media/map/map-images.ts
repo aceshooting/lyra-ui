@@ -176,7 +176,8 @@ async function rasterizeMapImage(input: MapImageRasterInput, context: MapImagePr
     const rotatedSize = image.naturalWidth === input.intrinsicHeight && image.naturalHeight === input.intrinsicWidth;
     if (!exactSize && !rotatedSize) return fail('decode');
     canvas = doc.createElement('canvas'); canvas.width = input.width; canvas.height = input.height;
-    const drawing = canvas.getContext('2d');
+    // Drawn once and read back at once: a CPU-backed surface avoids a GPU-to-CPU synchronization.
+    const drawing = canvas.getContext('2d', { willReadFrequently: true });
     if (!drawing) return fail('decode');
     drawing.drawImage(image, 0, 0, input.width, input.height);
     let pixels: ImageData;

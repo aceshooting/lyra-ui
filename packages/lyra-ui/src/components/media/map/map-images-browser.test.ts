@@ -8,6 +8,27 @@ async function ownerContext() {
 
 /** These cases exercise real Image decoding and origin-clean canvas readback, not a decoder fake. */
 describe('map image browser rasterization', () => {
+  it('creates its readback canvas context with the willReadFrequently hint', async () => {
+    const context = await ownerContext();
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    const hints: unknown[] = [];
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, options?: unknown) {
+      if (id === '2d') hints.push((options as CanvasRenderingContext2DSettings | undefined)?.willReadFrequently);
+      return getContext.call(this, id as '2d', options as CanvasRenderingContext2DSettings);
+    } as typeof getContext;
+    try {
+      const result = await prepareMapImages([{
+        id: 'svg', width: 4, height: 4, pixelRatio: 1,
+        source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4" fill="red"/></svg>' },
+      }], context);
+      expect(result.ok).to.equal(true);
+      if (result.ok) result.dispose();
+    } finally {
+      HTMLCanvasElement.prototype.getContext = getContext;
+    }
+    expect(hints.length > 0 && hints.every((hint) => hint === true)).to.equal(true);
+  });
+
   it('decodes sanitized SVG through its data URL into bounded nonblank pixels', async () => {
     const context = await ownerContext();
     const result = await prepareMapImages([{

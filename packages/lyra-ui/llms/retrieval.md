@@ -746,7 +746,8 @@ accepted assignment and announcement.
 **Slots:** none.
 
 **CSS parts:** `base`, `item` (a `<button>`, or a plain `<div>` while `without-interaction` is set), `swatch`,
-`label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
+`label`, `count`, `live-region` (the visually hidden filter-toggle announcement), `limit` (a localized
+note when more than the first 200 valid types are supplied; only those 200 render as rows).
 
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
@@ -1106,7 +1107,8 @@ remain independently addressable).
 
 **CSS parts:** `base` (hosts the delegated roving-tabindex keydown handler), `node` (a `<button>`),
 `relation` (a `<button>`), `arrow` (`aria-hidden`, logical — mirrors under RTL), `empty` (shown when
-`path` is empty).
+`path` is empty), `limit` (a localized note when the path has more than 200 valid elements; only the
+first 200 render, navigate and emit events).
 
 **Themeable custom properties:** shared tokens only.
 

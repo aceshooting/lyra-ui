@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: '排隊的提示詞',
   promptQueueEmpty: '沒有排隊的提示詞',
   promptQueueInputLimit: '由於達到輸入限制，部分排入佇列的提示詞或附件已被省略。',
-  promptQueueAttachmentLimit: '顯示已保留的 {total} 個附件中的 {shown} 個。',
   promptQueueSendNow: '立即傳送',
   selectionToolbarLabel: '選區操作',
   selectionAsk: '提問',

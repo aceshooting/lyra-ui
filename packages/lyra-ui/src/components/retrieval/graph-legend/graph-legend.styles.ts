@@ -72,6 +72,11 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-variant-numeric: tabular-nums;
   }
+  [part='limit'] {
+    margin: var(--lr-space-xs) 0 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   @media (forced-colors: active) {
     [part='swatch'] {
       forced-color-adjust: none;

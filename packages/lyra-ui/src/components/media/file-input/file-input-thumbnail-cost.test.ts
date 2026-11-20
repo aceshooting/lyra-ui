@@ -55,3 +55,16 @@ it('keeps thumbnail reconciliation linear while retaining, replacing and retirin
     URL.revokeObjectURL = revoke;
   }
 });
+
+it('renders at most 200 held file rows and counts the rest in a localized note', async () => {
+  const control = await fixture<LyraFileInput>(html`<lr-file-input multiple label="Files"></lr-file-input>`);
+  control.files = Array.from({ length: 203 }, (_, index) => new File(['x'], `file-${index}.txt`, { type: 'text/plain' }));
+  await control.updateComplete;
+  expect(control.files.length).to.equal(203);
+  expect(control.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(200);
+  expect(control.shadowRoot!.querySelector('[part="file-more"]')?.textContent?.trim()).to.equal('and 3 more not shown.');
+  control.files = control.files.slice(0, 2);
+  await control.updateComplete;
+  expect(control.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(2);
+  expect(control.shadowRoot!.querySelector('[part="file-more"]') === null).to.equal(true);
+});

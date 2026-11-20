@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Na only di first {count} rows dem show.',
   },
   tableAdditionalColumns: 'Di extra columns',
-  treeLimit: 'Na only di first {count} items dem show.',
   treeDefaultLabel: 'Tree',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'increase {value}',

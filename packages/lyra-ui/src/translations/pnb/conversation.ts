@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'قطار وچ پرامپٹ',
   promptQueueEmpty: 'قطار وچ کوئی پرامپٹ نئیں',
   promptQueueInputLimit: 'اِن پُٹ دی حد پوری ہون کارن قطار وچ پئے کجھ پرامپٹ یا اٹیچمنٹ چھڈ دتے گئے نیں۔',
-  promptQueueAttachmentLimit: 'رکھیاں {total} اٹیچمنٹس وچوں {shown} وکھائیاں جا رہیاں نیں۔',
   promptQueueSendNow: 'ہن بھیجو',
   selectionToolbarLabel: 'چناؤ دے عمل',
   selectionAsk: 'پچھو',

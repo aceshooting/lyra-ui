@@ -1,7 +1,8 @@
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { Engine3dSelection, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason, type Engine3dPreference } from '../../../internal/engine-3d.js';
 import { tag } from '../../../internal/prefix.js';
-import { ENGINE_CHART_PALETTE, engineStyle, observeAdmission, watchEngineStyle } from '../../../internal/engine-admission.js';
+import { observeAdmission } from '../../../internal/engine-admission.js';
+import { resolveEngineStyle, watchEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
 import type { EmbeddingRows } from './embedding-explorer-data.js';
 
 export const embeddingPointsLoader = createEngine3dLoader({
@@ -37,6 +38,7 @@ export class EmbeddingEngineController {
   private preference: Engine3dPreference = 'builtin';
   private sourceMode = false;
   private releaseTheme?: () => void;
+  private lastStyle?: EngineStyle;
   private hover = -1;
   private selected = -1;
   private focus = -1;
@@ -102,7 +104,7 @@ export class EmbeddingEngineController {
     if (this.engine && this.ready) {
       const generation = this.generation;
       try {
-        this.engine.setStyle(this.style());
+        this.restyle(this.engine);
         if (generation === this.generation) this.syncState();
       } catch { if (generation === this.generation) this.fail('error'); }
       return;
@@ -171,7 +173,7 @@ export class EmbeddingEngineController {
         },
       });
       if (!current()) { this.dispose(engine); return; }
-      engine.setStyle(this.style());
+      engine.setStyle(this.lastStyle = this.style());
       if (!current()) return;
       engine.setData(rows.data(), ++this.revision);
       if (!current()) return;
@@ -188,13 +190,13 @@ export class EmbeddingEngineController {
       if (view?.ResizeObserver) {
         this.resizeObserver = new view.ResizeObserver(() => {
           if (!current() || !this.ready) return;
-          try { engine!.setStyle(this.style()); resize(); } catch { if (current()) this.fail('error'); }
+          try { this.restyle(engine!); resize(); } catch { if (current()) this.fail('error'); }
         });
         this.resizeObserver.observe(container);
       }
       const refreshStyle = () => {
         if (!current() || !this.ready) return;
-        try { engine!.setStyle(this.style()); } catch { if (current()) this.fail('error'); }
+        try { this.restyle(engine!); } catch { if (current()) this.fail('error'); }
       };
       // Theme attributes and the style media queries only, never every ancestor attribute.
       this.releaseTheme = watchEngineStyle(this.host, refreshStyle);
@@ -208,7 +210,15 @@ export class EmbeddingEngineController {
     }
   }
 
-  private style(): unknown {
-    return engineStyle(this.host, ENGINE_CHART_PALETTE, 12, 1);
+  private style(): EngineStyle {
+    return resolveEngineStyle(this.host, { pointSize: 12, lineWidth: 1 });
+  }
+
+  /** Pushes the style only when a resolved input changed; the resolver returns the same object otherwise. */
+  private restyle(engine: Engine3dInstance): void {
+    const style = this.style();
+    if (style === this.lastStyle) return;
+    this.lastStyle = style;
+    engine.setStyle(style);
   }
 }

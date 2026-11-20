@@ -226,7 +226,6 @@ const strings: LyraLocaleStrings = {
     other: 'רק {count} השורות הראשונות מוצגות.',
   },
   tableAdditionalColumns: 'עמודות נוספות',
-  treeLimit: 'רק {count} הפריטים הראשונים מוצגים.',
   treeDefaultLabel: 'עץ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'גדל {value}',

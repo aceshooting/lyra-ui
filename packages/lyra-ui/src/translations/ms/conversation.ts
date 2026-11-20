@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompt dalam baris gilir',
   promptQueueEmpty: 'Tiada prompt dalam baris gilir',
   promptQueueInputLimit: 'Sebahagian prom dalam baris gilir atau lampiran telah digugurkan kerana had input dicapai.',
-  promptQueueAttachmentLimit: 'Menunjukkan {shown} daripada {total} lampiran yang dikekalkan.',
   promptQueueSendNow: 'Hantar sekarang',
   selectionToolbarLabel: 'Tindakan pilihan',
   selectionAsk: 'Tanya',

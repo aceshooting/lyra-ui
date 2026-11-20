@@ -117,7 +117,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'المُوجّهات في قائمة الانتظار',
   promptQueueEmpty: 'لا توجد مُوجّهات في قائمة الانتظار',
   promptQueueInputLimit: 'حُذف بعض المطالبات المنتظرة أو المرفقات لبلوغ حد الإدخال.',
-  promptQueueAttachmentLimit: 'يُعرض {shown} من أصل {total} مرفقًا محتفظًا به.',
   promptQueueSendNow: 'إرسال الآن',
   selectionToolbarLabel: 'إجراءات التحديد',
   selectionAsk: 'سؤال',

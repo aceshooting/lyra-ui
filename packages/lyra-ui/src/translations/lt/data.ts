@@ -228,7 +228,6 @@ const strings: LyraLocaleStrings = {
     other: 'Rodomos tik pirmosios eilutės: {count}.',
   },
   tableAdditionalColumns: 'Papildomi stulpeliai',
-  treeLimit: 'Rodomi tik pirmieji elementai: {count}.',
   treeDefaultLabel: 'Medis',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'padidėjo {value}',

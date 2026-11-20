@@ -1863,3 +1863,14 @@ it('lets a host veto a header toggle through lr-toggle-request', async () => {
   expect(el.expanded).to.equal(before);
   expect(toggles).to.equal(0);
 });
+
+it('does not add a second scroll region around the virtual list', async () => {
+  const el = (await fixture(html`
+    <lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(300)}></lr-activity-feed>
+  `)) as LyraActivityFeed;
+  await semanticListOwner(el);
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(getComputedStyle(body).overflowY).to.equal('hidden');
+  const list = el.shadowRoot!.querySelector<HTMLElement>('lr-virtual-list')!;
+  expect(list.getBoundingClientRect().height, `list ${list.offsetHeight} body ${body.clientHeight}/${body.scrollHeight}`).to.be.at.most(body.clientHeight);
+});

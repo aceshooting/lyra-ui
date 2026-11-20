@@ -1,5 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import { ENGINE_CHART_PALETTE, ENGINE_STYLE_MEDIA_QUERIES, engineStyle, resolveEngineStyle } from './engine-style.js';
+import { ENGINE_CHART_PALETTE, ENGINE_STYLE_MEDIA_QUERIES, resolveEngineStyle } from './engine-style.js';
 
 const CHART = ['#010101', '#020202', '#030303', '#040404', '#050505', '#060606', '#070707', '#080808'];
 const TOKENS = [
@@ -172,36 +172,6 @@ describe('resolveEngineStyle', () => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', { configurable: true, value: () => null });
     try {
       expect(resolveEngineStyle(host).accent).to.match(/^color\(display-p3 1 0 0\)$/u);
-    } finally {
-      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', getContext);
-    }
-  });
-});
-
-describe('engineStyle', () => {
-  it('resolves the theme colours, the given palette, sizes and bounded window preferences', () => {
-    const host = engineHost();
-    const style = engineStyle(host, ['--lr-color-brand', '--lr-color-chart-2'], 24, 2);
-    expect([style.background, style.foreground, style.muted, style.accent, style.focus]).to.deep.equal([
-      'rgb(255, 255, 255)', 'rgb(16, 32, 48)', 'rgb(64, 80, 96)', 'rgb(9, 105, 218)', 'rgb(255, 0, 0)',
-    ]);
-    expect([...style.palette]).to.deep.equal(['rgb(9, 105, 218)', 'rgb(2, 2, 2)']);
-    expect([style.fontFamily, style.fontSize, style.pointSize, style.lineWidth])
-      .to.deep.equal([getComputedStyle(host).fontFamily, 16, 24, 2]);
-    expect([style.reducedMotion, style.forcedColors]).to.deep.equal([
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches, window.matchMedia('(forced-colors: active)').matches,
-    ]);
-    const ratio = (value: number): number =>
-      withProperty(window, 'devicePixelRatio', value, () => engineStyle(host, [], 1, 1).devicePixelRatio);
-    expect([ratio(10), ratio(0.1), ratio(Number.NaN), ratio(2)]).to.deep.equal([4, 0.25, 1, 2]);
-  });
-
-  it('keeps the resolved colour when the canvas readback is unavailable', () => {
-    const host = engineHost(`${TOKENS}; --lr-color-brand: color(display-p3 1 0 0)`);
-    const getContext = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')!;
-    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', { configurable: true, value: () => null });
-    try {
-      expect(engineStyle(host, ['--lr-color-brand'], 1, 1).palette[0]).to.match(/^color\(display-p3 1 0 0\)$/u);
     } finally {
       Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', getContext);
     }

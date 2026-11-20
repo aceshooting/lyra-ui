@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'ആദ്യത്തെ {count} വരികൾ മാത്രം കാണിക്കുന്നു.',
   },
   tableAdditionalColumns: 'അധിക നിരകൾ',
-  treeLimit: 'ആദ്യത്തെ {count} ഇനങ്ങൾ മാത്രം കാണിക്കുന്നു.',
   treeDefaultLabel: 'ട്രീ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} വർധിച്ചു',

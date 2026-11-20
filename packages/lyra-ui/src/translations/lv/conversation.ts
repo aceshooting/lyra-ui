@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Rindā ievietotās uzvednes',
   promptQueueEmpty: 'Rindā nav uzvedņu',
   promptQueueInputLimit: 'Dažas rindā ievietotās uzvednes vai pielikumi tika izlaisti, jo tika sasniegts ievades ierobežojums.',
-  promptQueueAttachmentLimit: 'Tiek rādīti {shown} no {total} saglabātajiem pielikumiem.',
   promptQueueSendNow: 'Sūtīt tagad',
   selectionToolbarLabel: 'Atlases darbības',
   selectionAsk: 'Jautāt',

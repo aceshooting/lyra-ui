@@ -57,7 +57,7 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_MATCH_LIMIT, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerLimit, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -65,6 +65,8 @@ import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewR
 const MAX_NODES = 50_000;
 const MAX_RENDERED_ROWS = 5_000;
 const MAX_DEPTH = 256;
+/** Attributes rendered per element row; a localized `+N` marker counts the rest. */
+const MAX_RENDERED_ATTRIBUTES = 256;
 
 type PathSegment = number | string;
 
@@ -360,6 +362,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   anchor's trailing `'@attrName'` segment addresses this specific attribute).
  * @csspart attribute-name - An attribute's name.
  * @csspart attribute-value - An attribute's value (`data-match`).
+ * @csspart attribute-more - Localized `+N` count of an element's attributes past the first 256 rendered.
  * @csspart text - A text leaf (`data-match`).
  * @csspart comment - A comment leaf.
  * @csspart cdata - A CDATA section leaf.
@@ -437,6 +440,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
+    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
     sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     treeSourceError: LYRA_DEFAULT_treeSourceError,
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
@@ -1431,7 +1435,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
           : html`<span part="toggle-placeholder" aria-hidden="true"></span>`}
         <span class="syntax"
           >&lt;<span part="tag" ?data-match=${this.searchState.tagMatches.has(pathKey)}>${el.tagName}</span
-          >${Array.from(el.attributes).map(
+          >${Array.from(el.attributes).slice(0, MAX_RENDERED_ATTRIBUTES).map(
             (a) => html` <span part="attribute"
               ${ref(element => { if (element) this.attributeElements.set(attrKey(pathKey, a.name), element); })}
               ?data-active=${this.activeAttr === attrKey(pathKey, a.name)}
@@ -1441,7 +1445,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
                 >${a.value}</span
               >"</span
             >`,
-          )}&gt;</span
+          )}${el.attributes.length > MAX_RENDERED_ATTRIBUTES
+            ? html` <span part="attribute-more">${this.localize('showMoreCollapsed', undefined, {
+                count: getNumberFormat(this.effectiveLocale).format(el.attributes.length - MAX_RENDERED_ATTRIBUTES),
+              })}</span>`
+            : nothing}&gt;</span
         >
         ${!expanded && hasChildren
           ? html`<span class="preview">${this.localize('xmlViewerChildCount', undefined, {

@@ -1092,3 +1092,13 @@ it('rejects a retired geometry observer after adoption into a new owner window',
     nextWindow.ResizeObserver = nextOriginal;
   }
 });
+
+it('shows status text and duration at a wide container width', async () => {
+  const el = (await fixture(html`
+    <div style="inline-size: 900px"><lr-span-waterfall .spans=${SPANS}></lr-span-waterfall></div>
+  `)).querySelector('lr-span-waterfall') as LyraSpanWaterfall;
+  await el.updateComplete;
+  const status = el.shadowRoot!.querySelector<HTMLElement>('[part="status-text"]')!;
+  expect(getComputedStyle(status.parentElement!).display).to.not.equal('none');
+  expect(status.getBoundingClientRect().width).to.be.greaterThan(0);
+});

@@ -23,6 +23,18 @@ describe('lr-agent-eval-dashboard', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('most recent 2 evaluation runs');
     expect(el.shadowRoot!.querySelector('[part="run"]')?.textContent).to.include('Run 0');
   });
+  it('renders at most 100 metric cards plus the active one and discloses the rest', async () => {
+    const metrics = Array.from({ length: 150 }, (_, index) => ({ id: `m${index}`, label: `Metric ${index}`, value: index }));
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} metric-id="m140"></lr-agent-eval-dashboard>`);
+    const cards = [...el.shadowRoot!.querySelectorAll('[part="metric"]')].map((card) => card.getAttribute('data-metric-id'));
+    expect(cards.length).to.equal(101);
+    expect(cards.at(-1)).to.equal('m140');
+    expect(el.shadowRoot!.querySelector('[part="metrics-limit"]')?.textContent?.trim()).to.equal('Only the first 100 items are shown.');
+    el.metrics = metrics.slice(0, 3);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="metric"]').length).to.equal(3);
+    expect(el.shadowRoot!.querySelector('[part="metrics-limit"]') === null).to.equal(true);
+  });
   it('reuses the chart labels and datasets across renders until runs or the active metric change', async () => {
     const metrics = [{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' as const }];
     const runs = [{ id: 'r1', label: 'Run 1', status: 'done' as const, metrics: { pass: 0.9 } }];

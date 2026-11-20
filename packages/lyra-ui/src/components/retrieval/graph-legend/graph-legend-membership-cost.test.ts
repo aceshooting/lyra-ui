@@ -19,3 +19,13 @@ it('resolves hidden membership once per legend render and keeps event-time visib
   buttons[0]!.click();
   expect(legend.hiddenTypes).to.deep.equal([types[1]!.id, types[0]!.id]);
 });
+
+it('renders at most 200 type rows and discloses the rest in a localized note', async () => {
+  const types = Array.from({ length: 230 }, (_, index) => ({ id: `t${index}`, label: `Type ${index}` }));
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]').length).to.equal(200);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal('Showing 200 of 230 graph items.');
+  el.types = types.slice(0, 2);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});

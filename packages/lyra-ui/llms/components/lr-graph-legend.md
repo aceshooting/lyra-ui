@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,7 +48,8 @@ accepted assignment and announcement.
 **Slots:** none.
 
 **CSS parts:** `base`, `item` (a `<button>`, or a plain `<div>` while `without-interaction` is set), `swatch`,
-`label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
+`label`, `count`, `live-region` (the visually hidden filter-toggle announcement), `limit` (a localized
+note when more than the first 200 valid types are supplied; only those 200 render as rows).
 
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,

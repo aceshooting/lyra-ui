@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Es werden nur die ersten {count} Zeilen angezeigt.',
   },
   tableAdditionalColumns: 'Zusätzliche Spalten',
-  treeLimit: 'Es werden nur die ersten {count} Elemente angezeigt.',
   treeDefaultLabel: 'Baum',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'um {value} gestiegen',

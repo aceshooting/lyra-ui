@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Köade promptar',
   promptQueueEmpty: 'Inga promptar i kö',
   promptQueueInputLimit: 'Vissa köade promptar eller bilagor utelämnades eftersom indatagränsen nåddes.',
-  promptQueueAttachmentLimit: 'Visar {shown} av {total} bevarade bilagor.',
   promptQueueSendNow: 'Skicka nu',
   selectionToolbarLabel: 'Åtgärder för markering',
   selectionAsk: 'Fråga',

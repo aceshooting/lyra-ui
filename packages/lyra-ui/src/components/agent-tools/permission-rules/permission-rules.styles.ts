@@ -80,8 +80,15 @@ export const styles = css`
     ${focusRing}
   }
 
-  [part='decision'][aria-readonly='true'] {
-    cursor: default;
+  [part='decision'][data-readonly] {
+    display: inline-block;
+    min-inline-size: 0;
+    padding-block: var(--lr-space-2xs);
+    padding-inline: 0;
+    border: none;
+    background: none;
+    min-block-size: 0;
+    font-weight: var(--lr-font-weight-semibold);
   }
 
   [part='decision']:disabled {

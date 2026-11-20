@@ -64,8 +64,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
   }
-  [part='empty'] {
+  [part='empty'],
+  [part='limit'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
+  }
+  [part='limit'] {
+    margin: var(--lr-space-xs) 0 0;
   }
 `;

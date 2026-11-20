@@ -115,7 +115,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts fil-kju',
   promptQueueEmpty: 'L-ebda prompt fil-kju',
   promptQueueInputLimit: 'Xi prompts jew annessi fil-kju tħallew barra għax intlaħaq limitu tal-input.',
-  promptQueueAttachmentLimit: 'Qed jintwerew {shown} minn {total} annessi miżmuma.',
   promptQueueSendNow: 'Ibgħat issa',
   selectionToolbarLabel: 'Azzjonijiet tal-għażla',
   selectionAsk: 'Staqsi',

@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Упити у реду чекања',
   promptQueueEmpty: 'Нема упита у реду чекања',
   promptQueueInputLimit: 'Неки упити или прилози у реду чекања су изостављени јер је достигнуто ограничење уноса.',
-  promptQueueAttachmentLimit: 'Приказано задржаних прилога: {shown} од {total}.',
   promptQueueSendNow: 'Пошаљи одмах',
   selectionToolbarLabel: 'Радње са избором',
   selectionAsk: 'Питај',

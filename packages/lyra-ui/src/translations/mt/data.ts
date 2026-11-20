@@ -230,7 +230,6 @@ const strings: LyraLocaleStrings = {
     other: 'Qed jintwerew biss l-ewwel {count} ringieli.',
   },
   tableAdditionalColumns: 'Kolonni addizzjonali',
-  treeLimit: 'Qed jintwerew biss l-ewwel {count} elementi.',
   treeDefaultLabel: 'Siġra',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'żdied {value}',

@@ -1156,7 +1156,8 @@ function rasterPointIcon(host: Element, icon: CanonicalPointIcon, color: string)
   try {
     const canvas = host.ownerDocument.createElement('canvas');
     canvas.width = canvas.height = POINT_ICON_RASTER_SIZE;
-    const context = canvas.getContext('2d');
+    // Read back as ImageData right after painting, so keep the surface CPU-backed.
+    const context = canvas.getContext('2d', { willReadFrequently: true });
     const Path = host.ownerDocument.defaultView?.Path2D;
     if (!context || !Path) return undefined;
     const [x, y, width, height] = icon.viewBox;

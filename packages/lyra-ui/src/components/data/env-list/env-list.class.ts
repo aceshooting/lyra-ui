@@ -22,6 +22,8 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_D
 
 const MASK = '•'.repeat(8);
 const MAX_ENV_ENTRIES = 10_000;
+/** Rows rendered at once; the remaining retained entries are counted in the limit notice. */
+const MAX_RENDERED_ENV_ENTRIES = 500;
 
 export interface EnvEntry {
   readonly name: string;
@@ -57,7 +59,8 @@ export interface LyraEnvListEventMap {
  * @csspart value - The value text itself; carries `data-masked`.
  * @csspart reveal-button - The per-row reveal/hide toggle, omitted while `without-reveal` is set.
  * @csspart copy-button - The per-row copy button, omitted while `without-copy-button` is set.
- * @csspart limit - Localized notice shown when `entries` exceeds the 10,000-entry ceiling.
+ * @csspart limit - Localized notice shown when more entries exist than the first 500 rendered rows,
+ *   counting both retained entries past that render cap and input beyond the 10,000-entry ceiling.
  * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a revealed
  *   entry's reveal button, and the base its hover/press mixes from.
  * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a revealed
@@ -92,8 +95,8 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   private readonly entriesSnapshot = new SnapshotProperty<readonly EnvEntry[]>([], value => this.snapshotEntries(value));
   private omittedEntryCount = 0;
 
-  /** Clone-owned readonly name/value entries to render, in order, bounded to the first 10,000
-   * source entries. Malformed records, blank names, and later duplicate names are skipped; the
+  /** Clone-owned readonly name/value entries, in order, bounded to the first 10,000 source entries;
+   * the first 500 render as rows and a localized `limit` note counts the rest. Malformed records, blank names, and later duplicate names are skipped; the
    * first valid occurrence owns render, reveal, copy, and event identity. Reassign to update. */
   @property({ attribute: false })
   get entries(): readonly EnvEntry[] { return this.entriesSnapshot.read(); }
@@ -217,6 +220,17 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     return normalizeLabel(host) ?? (this.label === '' ? '' : normalizeLabel(this.label) ?? this.localize('envListLabel'));
   }
 
+  private renderLimit(): TemplateResult | typeof nothing {
+    const shown = Math.min(this.entries.length, MAX_RENDERED_ENV_ENTRIES);
+    const omitted = this.entries.length - shown + this.omittedEntryCount;
+    return omitted > 0
+      ? html`<p part="limit" role="note">${this.localize('envListLimit', undefined, {
+          count: this.formatLocaleNumber(shown),
+          omitted: this.formatLocaleNumber(omitted),
+        })}</p>`
+      : nothing;
+  }
+
   override render(): TemplateResult {
     if (this.entries.length === 0) {
       return html`
@@ -227,7 +241,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     }
     return html`
       <dl part="base" aria-label=${this.accessibleLabel}>
-        ${this.entries.map((entry) => {
+        ${this.entries.slice(0, MAX_RENDERED_ENV_ENTRIES).map((entry) => {
           const secret = entry.secret ?? true;
           const isRevealed = this.revealed.get(entry.name) ?? false;
           const masked = secret && !isRevealed;
@@ -270,12 +284,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
           `;
         })}
       </dl>
-      ${this.omittedEntryCount > 0
-        ? html`<p part="limit" role="note">${this.localize('envListLimit', undefined, {
-            count: this.formatLocaleNumber(MAX_ENV_ENTRIES),
-            omitted: this.formatLocaleNumber(this.omittedEntryCount),
-          })}</p>`
-        : nothing}
+      ${this.renderLimit()}
     `;
   }
 }

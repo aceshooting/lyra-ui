@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Ajajoota eeggatan',
   promptQueueEmpty: 'Ajajni eeggataa hin jiru',
   promptQueueInputLimit: 'Ajajoonni tarree keessa jiran yookaan faayiloonni itti dabalaman tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
-  promptQueueAttachmentLimit: 'Faayiloota itti dabalaman kuufaman {total} keessaa {shown} agarsiifamaa jiru.',
   promptQueueSendNow: 'Amma ergi',
   selectionToolbarLabel: 'Gochaalee filannoo',
   selectionAsk: 'Gaafadhu',

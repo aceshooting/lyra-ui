@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'キュー内のプロンプト',
   promptQueueEmpty: 'キューにプロンプトがありません',
   promptQueueInputLimit: '入力上限に達したため、待機中のプロンプトまたは添付ファイルの一部が省略されました。',
-  promptQueueAttachmentLimit: '保持された{total}件の添付ファイルのうち、{shown}件を表示しています。',
   promptQueueSendNow: 'すぐに送信',
   selectionToolbarLabel: '選択範囲の操作',
   selectionAsk: '質問',

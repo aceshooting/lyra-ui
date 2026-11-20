@@ -372,7 +372,7 @@ describe('lr-embedding-explorer engine and columns', () => {
         if (!duringMount) {
           await waitUntil(() => el!.shadowRoot!.querySelectorAll('[part="row"]').length === 2);
           styleError = true;
-          el.label = 'Changed name';
+          el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
         }
         expect((await fallback).detail).to.deep.equal({ from: 'webgl', to: 'builtin', reason: 'error' });
         await el.updateComplete;
@@ -453,6 +453,9 @@ describe('lr-embedding-explorer engine and columns', () => {
     const count = styleCalls;
     wrapper.setAttribute('data-unrelated', '1');
     wrapper.title = 'Unrelated';
+    // A theme-attribute write that changes no resolved token re-resolves to the identical style.
+    wrapper.classList.add('hovered');
+    el.label = 'Renamed';
     await aTimeout(50);
     expect(styleCalls).to.equal(count);
     wrapper.style.setProperty('--lr-color-brand', 'rgb(7, 11, 13)');

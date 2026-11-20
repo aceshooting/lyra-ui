@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Àwọn prompt tó wà ní ìlà',
   promptQueueEmpty: 'Kò sí prompt tó wà ní ìlà',
   promptQueueInputLimit: 'A yọ àwọn prompt tó wà ní ìlà tàbí àwọn àfikún kan kúrò nítorí a ti dé ààlà ìwọlé.',
-  promptQueueAttachmentLimit: 'A ń fi {shown} nínú {total} àfikún tí a pa mọ́ hàn.',
   promptQueueSendNow: 'Fi ránṣẹ́ nísinsìnyí',
   selectionToolbarLabel: 'Àwọn ìṣe ìyàn',
   selectionAsk: 'Béèrè',

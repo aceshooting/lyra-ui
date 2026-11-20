@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Показани са само първите {count} реда.',
   },
   tableAdditionalColumns: 'Допълнителни колони',
-  treeLimit: 'Показани са само първите {count} елемента.',
   treeDefaultLabel: 'Дърво',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'увеличение с {value}',

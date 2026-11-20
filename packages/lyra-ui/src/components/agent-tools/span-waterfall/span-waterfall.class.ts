@@ -107,7 +107,7 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart bar - The status-toned bar; presentation only in provider mode. In legacy mode, the interactive, focusable bar (`role` via `<button>`), with the
  *   shared `--lr-icon-button-size` minimum target in both axes even when its duration would paint
  *   more narrowly.
- * @csspart meta - Secondary row info (status/duration), shown inline under 480px.
+ * @csspart meta - Secondary row info (status/duration), always rendered: beside the bar when wide, under it when narrow.
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.
  * @csspart empty - The empty-state message shown when `spans` is empty.
@@ -566,7 +566,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       this.updateSourceEffects();
       if (version !== this.sourceVersion || this.treeSource === undefined || !this.isConnected) return;
       this.observeAxis();
-      this.fitAxisLabels();
+      this.fitAxisLabelsWhenStale();
       return;
     }
     const version = this.sourceVersion;
@@ -589,12 +589,17 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.sortedCacheTruncated;
     this.observeAxis();
+    this.fitAxisLabelsWhenStale();
+  }
+
+  /** Axis labels depend only on the view window, the locale and the axis width (the observer covers
+   *  width), so unrelated updates skip the measuring pass. */
+  private fitAxisLabelsWhenStale(): void {
     const view = this.viewWindow();
     const axisSignature = `${view.start}|${view.end}|${this.effectiveLocale}`;
-    if (axisSignature !== this.axisSignature) {
-      this.axisSignature = axisSignature;
-      this.fitAxisLabels();
-    }
+    if (axisSignature === this.axisSignature) return;
+    this.axisSignature = axisSignature;
+    this.fitAxisLabels();
   }
 
   private observeAxis(): void {

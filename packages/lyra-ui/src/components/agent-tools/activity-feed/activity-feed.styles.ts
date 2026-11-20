@@ -118,6 +118,11 @@ export const styles = css`
     border-block-start: var(--lr-border-width-thin) solid
       var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
   }
+  /* The nested virtual list is the scroller and is sized to the same cap the body is, so the body's
+     own border would push it 1px past the body and add a second scroll region. */
+  [part="body"][data-virtualized] {
+    overflow-y: hidden;
+  }
   [part="body"]:focus-visible {
     ${focusRingInsetOffset}
   }
@@ -128,9 +133,10 @@ export const styles = css`
     --lr-virtual-list-row-link-color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));
     display: block;
     inline-size: 100%;
-    block-size: var(
-      --lr-activity-feed-max-height,
-      var(--_lr-activity-feed-max-height)
+    /* The body's border-box cap includes its divider, so the list takes the cap less that border. */
+    block-size: calc(
+      var(--lr-activity-feed-max-height, var(--_lr-activity-feed-max-height)) -
+        var(--lr-border-width-thin)
     );
   }
   /* Every entry rule below is paired with an lr-virtual-list::part(x) twin because entries render

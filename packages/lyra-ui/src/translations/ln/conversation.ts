@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Ba prompt na molongo',
   promptQueueEmpty: 'Prompt ezali na molongo te',
   promptQueueInputLimit: 'Balongoli ndambo ya ba prompt na molongo ya kozela to ba fisyé ekangami mpo motango ya kokɔtisa ekómi na ndelo.',
-  promptQueueAttachmentLimit: 'Bazali kolakisa {shown} kati na ba fisyé {total} oyo ekangami mpe ebatelami.',
   promptQueueSendNow: 'Tinda sikoyo',
   selectionToolbarLabel: 'Ba action ya poná',
   selectionAsk: 'Tuna',

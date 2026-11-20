@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'صرف پہلاں {count} قطاراں وکھائیاں جاندیاں نیں۔',
   },
   tableAdditionalColumns: 'ہور کالم',
-  treeLimit: 'صرف پہلاں {count} چیزاں وکھائیاں جاندیاں نیں۔',
   treeDefaultLabel: 'درخت',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ودھیا',

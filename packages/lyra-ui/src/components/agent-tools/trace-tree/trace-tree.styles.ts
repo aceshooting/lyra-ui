@@ -1,7 +1,7 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { mediumContainerQuery, tightContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -360,7 +360,7 @@ export const styles = css`
         var(--lr-size-3-5rem);
     }
   }
-  @container (max-inline-size: 359.98px) {
+  @container ${tightContainerQuery} {
     [part='bar-track'],
     [part='header'] .col-bar {
       display: none;

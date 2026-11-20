@@ -27,11 +27,14 @@ import { RovingListController } from '../../../internal/roving-list-controller.j
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
+/** Metric cards rendered at once; the `metrics-limit` note discloses the rest. */
+const MAX_RENDERED_METRICS = 100;
+
 export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
 export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
 
@@ -57,7 +60,8 @@ function ownMetricValue(run: AgentEvaluationDashboardRun, metricId: string): num
  * @csspart base - The root dashboard wrapper.
  * @csspart heading - The visible heading.
  * @csspart metrics - The metric-card grid.
- * @csspart metric - One metric card.
+ * @csspart metric - One metric card. At most the first 100 metrics render as cards, plus the active one.
+ * @csspart metrics-limit - Visible notice when more metrics exist than the rendered cards.
  * @csspart chart - The trend chart.
  * @csspart metric-unavailable - The notice when a non-empty `metricId` matches no metric.
  * @csspart runs - The run history.
@@ -97,6 +101,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
+    treeLimit: LYRA_DEFAULT_treeLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -247,7 +252,10 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     }
     const runs = this.slicedFor.runs;
     this.projectedRunsTruncated = allRuns.length > runs.length;
-    const metrics = this.normalizedMetrics;
+    const allMetrics = this.normalizedMetrics;
+    const metrics = allMetrics.length > MAX_RENDERED_METRICS ? allMetrics.slice(0, MAX_RENDERED_METRICS) : allMetrics;
+    // The selected metric keeps its pressed card even when it sits past the rendered cap.
+    if (active && !metrics.includes(active)) metrics.push(active);
     const level = resolveHeadingLevel(this.headingLevel, '2');
     return html`<section part="base" aria-label=${semanticLabel ?? nothing}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
@@ -263,6 +271,9 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
               @click=${() => this.emit('lr-metric-change-request', { metricId: metric.id })}
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
+        : nothing}
+      ${allMetrics.length > MAX_RENDERED_METRICS
+        ? html`<p part="metrics-limit" role="note">${this.localize('treeLimit', undefined, { count: this.formatLocaleNumber(MAX_RENDERED_METRICS) })}</p>`
         : nothing}
       ${this.metricId && active?.id !== this.metricId ? html`<p part="metric-unavailable" role="note">${this.localize('evaluationDashboardMetricUnavailable', undefined, { metric: this.metricId })}</p>` : nothing}
       ${!this.withoutChart && active && runs.length

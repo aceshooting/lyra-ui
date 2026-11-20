@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts en file d’attente',
   promptQueueEmpty: 'Aucun prompt en file d’attente',
   promptQueueInputLimit: 'La limite d’entrée a été atteinte. Éléments omis : prompts en attente ou pièces jointes.',
-  promptQueueAttachmentLimit: 'Affichage de {shown} pièces jointes sur {total} conservées.',
   promptQueueSendNow: 'Envoyer maintenant',
   selectionToolbarLabel: 'Actions de sélection',
   selectionAsk: 'Demander',

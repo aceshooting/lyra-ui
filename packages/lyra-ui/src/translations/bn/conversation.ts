@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'সারিতে থাকা প্রম্পট',
   promptQueueEmpty: 'সারিতে কোনো প্রম্পট নেই',
   promptQueueInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় কিছু উপাদান বাদ দেওয়া হয়েছে: সারিতে থাকা প্রম্পট বা সংযুক্তি।',
-  promptQueueAttachmentLimit: 'রাখা {total}টি সংযুক্তির মধ্যে {shown}টি দেখানো হচ্ছে।',
   promptQueueSendNow: 'এখনই পাঠান',
   selectionToolbarLabel: 'নির্বাচিত অংশের কাজ',
   selectionAsk: 'জিজ্ঞাসা করুন',

@@ -216,4 +216,17 @@ describe('lr-email-viewer empty bodies', () => {
       restore();
     }
   });
+  it('renders at most 200 attachment rows and discloses recipients past the position ceiling', async () => {
+    const attachments = Array.from({ length: 205 }, (_, index) => ({ filename: `a${index}.txt`, mimeType: 'text/plain', content: 'x' }));
+    const to = Array.from({ length: 10_004 }, (_, index) => ({ address: `r${index}@example.test` }));
+    const { el, restore } = await mountWith(parserReturning({ text: 'Body', to, attachments }), '[part="attachments"]');
+    try {
+      expect(el.shadowRoot!.querySelectorAll('[part="attachment-item"]').length).to.equal(200);
+      expect(el.shadowRoot!.querySelector('[part="attachments-limit"]')?.textContent?.trim())
+        .to.equal('Showing 200 of 205 retained attachments.');
+      expect(el.shadowRoot!.querySelector('[part="to"]')!.textContent!.trim().endsWith('+4')).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
 });

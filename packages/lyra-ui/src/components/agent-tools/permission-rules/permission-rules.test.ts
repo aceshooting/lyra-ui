@@ -1,4 +1,3 @@
-import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import '../../lr-permission-rules.js';
 import type { LyraPermissionRules, PermissionRule } from './permission-rules.class.js';
@@ -61,20 +60,14 @@ describe('lr-permission-rules', () => {
     expect(el.shadowRoot!.textContent).not.to.contain('Mutated outside the component');
   });
 
-  it('disables decisions when disabled, and keeps them focusable but inert when readonly', async () => {
+  it('disables decisions when disabled, and renders plain text instead of a select when readonly', async () => {
     const disabled = await fixture<LyraPermissionRules>(html`<lr-permission-rules disabled .rules=${rules}></lr-permission-rules>`);
     expect([...disabled.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="decision"]')].every((item) => item.disabled)).to.be.true;
     const readonly = await fixture<LyraPermissionRules>(html`<lr-permission-rules readonly .rules=${rules}></lr-permission-rules>`);
-    const readonlySelects = [...readonly.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="decision"]')];
-    expect(readonlySelects.every((item) => !item.disabled && item.getAttribute('aria-readonly') === 'true')).to.be.true;
-    await focusByKeyboard(readonlySelects[0]!);
-    expect(readonly.shadowRoot!.activeElement === readonlySelects[0], 'a readonly decision can take keyboard focus').to.be.true;
-    let changes = 0;
-    readonly.addEventListener('lr-permission-rule-change', () => changes++);
-    readonlySelects[0]!.value = 'allow';
-    readonlySelects[0]!.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(changes).to.equal(0);
-    expect(readonlySelects[0]!.value).to.equal('ask');
+    const decisions = [...readonly.shadowRoot!.querySelectorAll<HTMLElement>('[part="decision"]')];
+    expect(decisions.length).to.equal(rules.length);
+    expect(decisions.every((item) => item.localName !== 'select' && item.textContent!.trim() !== '')).to.be.true;
+    expect(readonly.shadowRoot!.querySelectorAll('select').length).to.equal(0);
   });
 
   it('isolates the scope as left-to-right text inside a right-to-left rules list', async () => {

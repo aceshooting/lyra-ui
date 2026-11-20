@@ -149,7 +149,9 @@ describe('embedding renderer callback ownership', () => {
         start(replacementRows);
         throw new Error('Retired peer callback failed');
       };
-      if (trigger === 'hover' || trigger === 'restore') engines[0]!.setState = retire;
+      // An unchanged style is not pushed again, so update and resize reach the peer through state and size.
+      if (trigger === 'hover' || trigger === 'restore' || trigger === 'update') engines[0]!.setState = retire;
+      else if (trigger === 'resize') engines[0]!.resize = retire;
       else engines[0]!.setStyle = retire;
       if (trigger === 'update') start();
       else if (trigger === 'resize') surface.style.width = '240px';

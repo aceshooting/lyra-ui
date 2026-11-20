@@ -71,6 +71,11 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     text-transform: uppercase;
   }
+  [part="attachments-limit"] {
+    margin: var(--lr-space-xs) 0 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
   [part="attachment-list"] {
     display: flex;
     flex-direction: column;

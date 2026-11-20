@@ -9,12 +9,12 @@ export const styles = css`
   [part~="source-row"] {
     display: grid; padding-inline: 0;
     grid-template-columns: var(--lr-icon-button-size)
-      max(0px, calc(var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width)) - var(--lr-icon-button-size) - var(--lr-space-xs))) 1fr;
+      max(0px, calc(var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width)) - var(--lr-icon-button-size) - var(--lr-space-xs))) 1fr var(--_lr-span-waterfall-meta-width);
   }
   [part~="source-label"], .source-span { display: contents; }
   .source-span [part="name"] { grid-column: 2; padding-inline-start: min(calc(var(--source-depth) * var(--lr-space-m)), var(--lr-size-3rem)); }
   .source-span [part="bar-track"] { grid-column: 3; min-inline-size: 0; }
-  .source-span [part="meta"] { grid-column: 2 / -1; }
+  .source-span [part="meta"] { grid-column: 4; }
   [part~="source-row"]:where([data-active]) {
     --_source-row-fill: var(--lr-span-waterfall-row-active-bg, var(--lr-color-brand-quiet));
   }
@@ -25,6 +25,7 @@ export const styles = css`
   :host {
     ${containerHost}
     --_lr-span-waterfall-name-width: var(--lr-size-8rem);
+    --_lr-span-waterfall-meta-width: var(--lr-size-8rem);
   }
 
   :host([frame='card']) :is([part='base'], .source-waterfall) {
@@ -48,6 +49,7 @@ export const styles = css`
       var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width)) +
         var(--lr-space-xs)
     );
+    margin-inline-end: calc(var(--_lr-span-waterfall-meta-width) + var(--lr-space-xs));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow: hidden;
   }
@@ -79,7 +81,7 @@ export const styles = css`
     display: grid;
     grid-template-columns:
       var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width))
-      1fr;
+      1fr var(--_lr-span-waterfall-meta-width);
     align-items: center;
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-2xs);
@@ -204,7 +206,10 @@ export const styles = css`
   }
 
   [part="meta"] {
-    display: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--lr-space-s);
+    min-inline-size: 0;
   }
 
   [part="status-text"] {
@@ -230,14 +235,10 @@ export const styles = css`
     [part~="source-row"] { grid-template-columns: var(--lr-icon-button-size) minmax(0, 1fr); }
     .source-span [part="bar-track"], .source-span [part="meta"] { grid-column: 1 / -1; }
     [part="axis"] {
-      margin-inline-start: 0;
+      margin-inline: 0;
     }
     [part="row"] {
       grid-template-columns: 1fr;
-    }
-    [part="meta"] {
-      display: flex;
-      gap: var(--lr-space-s);
     }
   }
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 27 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -189,7 +189,8 @@ highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`
 `node-path` anchor's trailing `'@attrName'` segment addresses that specific attribute — so a citation
 pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
 tree, rather than resolving indistinguishably from the bare element path),
-`attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
+`attribute-name`, `attribute-value` (`data-match`), `attribute-more` (a localized `+N` count when an
+element has more than the 256 attributes rendered on its row), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on

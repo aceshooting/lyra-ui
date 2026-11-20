@@ -1758,7 +1758,7 @@ Space).
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
-bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
+bar), `meta` (secondary row info; status text and duration show at every width, beside the bar when wide and under it when narrow), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
 The painted bar follows the visible span duration, with a one-border-width floor. Its transparent
 pointer target extends to the shared icon-button size inside the track (36px by default).
@@ -3860,6 +3860,8 @@ Supply runs newest-first: when the list exceeds that window, `[part="limit"]` ex
 displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
+At most the first 100 metrics render as cards (plus the active metric's card when it sits later);
+`[part="metrics-limit"]` then notes that only the first 100 are shown.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), and
 `lr-run-activate` (`{ runId, run }`).
@@ -3868,7 +3870,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `metric-unavailable`, `limit` (shown when run history exceeds
-`maxRenderedRuns`), `empty`.
+`maxRenderedRuns`), `metrics-limit` (shown when more than 100 metrics are supplied), `empty`.
 
 **Additional API surface:**
 
@@ -4159,8 +4161,8 @@ fired before it is applied — prevent it to keep the current state unchanged), 
 `lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
 updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
 current order; the listener may persist `detail.messages` and assign it back when ready. Once the
-move request is accepted, the general `lr-change-request` follows; only its acceptance updates the
-arrays and emits `lr-change`. Plus `focus` and
+move request is accepted, the general `lr-change-request` follows by design, so a single handler can
+validate every edit including reorders; only its acceptance updates the arrays and emits `lr-change`. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
@@ -5218,8 +5220,8 @@ and `decision: 'allow' | 'ask' | 'deny'`. The native select emits
 `lr-permission-rule-change` with `{ ruleId, decision }`; the component never evaluates policy or
 changes the supplied decision. Reassign a new `.rules` array after host updates. Blank identities
 are skipped, duplicate identities retain the first valid item, and at most 100 rows are mounted.
-`disabled` removes the decision selects from interaction; `readonly` keeps them focusable and
-announced as read-only, and refuses every change. A blank rule `label` names its select from the
+`disabled` removes the decision selects from interaction; `readonly` renders each decision as plain
+text (no select, so nothing reads as operable), and refuses every change. A blank rule `label` names its select from the
 `scope`. `label` names the visible group; host `aria-label` overrides the internal fieldset name.
 
 **CSS parts:**

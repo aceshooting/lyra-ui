@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'Awọn ori ila {count} akọkọ nikan ni o han.',
   },
   tableAdditionalColumns: 'Àwọn ọ̀wọ̀n àfikún',
-  treeLimit: 'Awọn nkan {count} akọkọ nikan ni o han.',
   treeDefaultLabel: 'Igi',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'ó pọ̀ sí i {value}',

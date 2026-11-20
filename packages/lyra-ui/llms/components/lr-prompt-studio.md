@@ -64,8 +64,8 @@ fired before it is applied — prevent it to keep the current state unchanged), 
 `lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
 updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
 current order; the listener may persist `detail.messages` and assign it back when ready. Once the
-move request is accepted, the general `lr-change-request` follows; only its acceptance updates the
-arrays and emits `lr-change`. Plus `focus` and
+move request is accepted, the general `lr-change-request` follows by design, so a single handler can
+validate every edit including reorders; only its acceptance updates the arrays and emits `lr-change`. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow

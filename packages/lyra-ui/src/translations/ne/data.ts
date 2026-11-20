@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'पहिलो {count} पङ्क्तिहरू मात्र देखाइएका छन्।',
   },
   tableAdditionalColumns: 'थप स्तम्भहरू',
-  treeLimit: 'पहिलो {count} वस्तुहरू मात्र देखाइएका छन्।',
   treeDefaultLabel: 'रूख',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ले बढ्यो',

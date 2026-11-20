@@ -3101,7 +3101,7 @@ layout tree, and the zone's script can load after first paint:
 
 ## `lr-file-input`
 
-Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions.
+Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions. At most the first 200 held files render as rows; `[part="file-more"]` gives the localized count of the rest, which stay in `files` and the form value.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -3322,7 +3322,7 @@ reset until `resetValidity()` or `setCustomValidity('')` clears it.
 **CSS parts:** `file-input` (the native dropzone button, visually behind but semantically beside
 the slotted content) and `form-control` (the complete form-control
 frame), `form-control-label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
-`input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+`input`, `file-list`, `file`, `file-more`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
 `rejection` (a **visible** region, rendered only while a rejection exists, listing each

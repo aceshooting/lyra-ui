@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'ਕਤਾਰ ਵਿੱਚ ਪ੍ਰੌੰਪਟ',
   promptQueueEmpty: 'ਕਤਾਰ ਵਿੱਚ ਕੋਈ ਪ੍ਰੌੰਪਟ ਨਹੀਂ',
   promptQueueInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕਤਾਰ ਵਿੱਚ ਪਏ ਕੁਝ ਪ੍ਰੌਂਪਟ ਜਾਂ ਅਟੈਚਮੈਂਟ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ।',
-  promptQueueAttachmentLimit: 'ਰੱਖੇ {total} ਅਟੈਚਮੈਂਟਾਂ ਵਿੱਚੋਂ {shown} ਦਿਖਾਏ ਜਾ ਰਹੇ ਹਨ।',
   promptQueueSendNow: 'ਹੁਣੇ ਭੇਜੋ',
   selectionToolbarLabel: 'ਚੋਣ ਦੀਆਂ ਕਾਰਵਾਈਆਂ',
   selectionAsk: 'ਪੁੱਛੋ',

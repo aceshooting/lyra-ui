@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Tarreewwan jalqabaa {count} qofa agarsiifamu.',
   },
   tableAdditionalColumns: 'Tarjaawwan dabalataa',
-  treeLimit: 'Wantoota jalqabaa {count} qofatu agarsiifama.',
   treeDefaultLabel: 'Muka',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} dabale',

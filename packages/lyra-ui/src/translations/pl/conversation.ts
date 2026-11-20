@@ -113,7 +113,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Polecenia w kolejce',
   promptQueueEmpty: 'Brak poleceń w kolejce',
   promptQueueInputLimit: 'Pominięto niektóre polecenia w kolejce lub załączniki, ponieważ osiągnięto limit danych wejściowych.',
-  promptQueueAttachmentLimit: 'Wyświetlono {shown} z {total} zachowanych załączników.',
   promptQueueSendNow: 'Wyślij teraz',
   selectionToolbarLabel: 'Działania dotyczące zaznaczenia',
   selectionAsk: 'Zapytaj',

@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Lời nhắc đang chờ',
   promptQueueEmpty: 'Không có lời nhắc nào đang chờ',
   promptQueueInputLimit: 'Một số lời nhắc trong hàng đợi hoặc tệp đính kèm đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
-  promptQueueAttachmentLimit: 'Đang hiển thị {shown} trong số {total} tệp đính kèm được giữ lại.',
   promptQueueSendNow: 'Gửi ngay',
   selectionToolbarLabel: 'Thao tác với phần chọn',
   selectionAsk: 'Hỏi',

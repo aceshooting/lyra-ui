@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Kuvatakse ainult esimesed {count} rida.',
   },
   tableAdditionalColumns: 'Lisaveerud',
-  treeLimit: 'Kuvatakse ainult esimesed {count} üksust.',
   treeDefaultLabel: 'Puu',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'kasvas {value}',

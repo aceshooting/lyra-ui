@@ -226,7 +226,6 @@ const strings: LyraLocaleStrings = {
     other: 'Prikazuje se samo prvih {count} redova.',
   },
   tableAdditionalColumns: 'Dodatne kolone',
-  treeLimit: 'Prikazuje se samo prvih {count} stavki.',
   treeDefaultLabel: 'Stablo',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'povećano za {value}',

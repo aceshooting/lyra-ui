@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,6 +40,8 @@ Supply runs newest-first: when the list exceeds that window, `[part="limit"]` ex
 displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
+At most the first 100 metrics render as cards (plus the active metric's card when it sits later);
+`[part="metrics-limit"]` then notes that only the first 100 are shown.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), and
 `lr-run-activate` (`{ runId, run }`).
@@ -48,7 +50,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `metric-unavailable`, `limit` (shown when run history exceeds
-`maxRenderedRuns`), `empty`.
+`maxRenderedRuns`), `metrics-limit` (shown when more than 100 metrics are supplied), `empty`.
 
 **Additional API surface:**
 

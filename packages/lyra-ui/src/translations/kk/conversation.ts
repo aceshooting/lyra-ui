@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Кезектегі промпттар',
   promptQueueEmpty: 'Кезекте промпттар жоқ',
   promptQueueInputLimit: 'Енгізу шегіне жеткендіктен, кейбір кезектегі промпттар немесе тіркемелер алынып тасталды.',
-  promptQueueAttachmentLimit: 'Сақталған {total} тіркеменің {shown} тіркемесі көрсетіліп тұр.',
   promptQueueSendNow: 'Қазір жіберу',
   selectionToolbarLabel: 'Таңдау әрекеттері',
   selectionAsk: 'Сұрау',

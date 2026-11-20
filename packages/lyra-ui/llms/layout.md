@@ -552,6 +552,8 @@ hit region expands independently; use `--divider-width` for the painted line and
 
 ## `lr-widget`
 
+Read `omittedViews` after assigning `views` for the number of input positions beyond the 256-position limit.
+
 The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
@@ -4915,6 +4917,8 @@ gets `role="listitem"` only when none is set.
 - `part="separator"` — Decorative separator shown before non-first items.
 
 ## `lr-dashboard-grid`
+
+Read `omittedCells` after assigning `layout` for the number of input positions beyond the 1,000-position limit.
 
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.

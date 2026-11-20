@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
   },
   tableAdditionalColumns: 'နောက်ထပ် ကော်လံများ',
-  treeLimit: 'ပထမအချက် {count} ခုကိုသာ ပြသထားသည်။',
   treeDefaultLabel: 'သစ်ပင်ပုံစံ',
   funnelComparisonShare: '{label} — {value}',
   funnelDropoffIncreased: '{value} တိုးလာသည်',

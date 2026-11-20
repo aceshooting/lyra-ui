@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'በወረፋ ላይ ያሉ ጥያቄዎች',
   promptQueueEmpty: 'በወረፋ ላይ ጥያቄ የለም',
   promptQueueInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ በወረፋ ያሉ ጥያቄዎች ወይም አባሪዎች ተወግደዋል።',
-  promptQueueAttachmentLimit: 'ከተቀመጡት {total} አባሪዎች {shown} እየታዩ ነው።',
   promptQueueSendNow: 'አሁን ላክ',
   selectionToolbarLabel: 'የምርጫ እርምጃዎች',
   selectionAsk: 'ጠይቅ',

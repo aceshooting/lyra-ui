@@ -21150,7 +21150,8 @@ allocations; the name track uses at most 40% of the available inline size.
 
 **Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots
 of at most the first 10,000 source entries; malformed records, blank names, and later duplicate
-names are skipped first-wins before render, reveal state, copy actions, and events; reassign after
+names are skipped first-wins before render, reveal state, copy actions, and events; the first 500
+render as rows and the localized `[part="limit"]` note counts every entry not shown; reassign after
 changes), `withoutReveal: boolean = false` (attribute `without-reveal`, reflected; omits every
 secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButton: boolean = false`
 (attribute `without-copy-button`, reflected; omits every entry's copy button), and
@@ -22837,6 +22838,8 @@ hit region expands independently; use `--divider-width` for the painted line and
 ---
 
 ## `lr-widget`
+
+Read `omittedViews` after assigning `views` for the number of input positions beyond the 256-position limit.
 
 The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
@@ -27200,6 +27203,8 @@ gets `role="listitem"` only when none is set.
 - `part="separator"` — Decorative separator shown before non-first items.
 
 ## `lr-dashboard-grid`
+
+Read `omittedCells` after assigning `layout` for the number of input positions beyond the 1,000-position limit.
 
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
@@ -37893,7 +37898,7 @@ layout tree, and the zone's script can load after first paint:
 
 ## `lr-file-input`
 
-Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions.
+Image files in the first 50 selected rows receive thumbnail previews. Later rows use the file icon and keep their name, size and actions. At most the first 200 held files render as rows; `[part="file-more"]` gives the localized count of the rest, which stay in `files` and the form value.
 
 The field label accepts `--lr-form-control-label-font-size`,
 `--lr-form-control-label-font-weight`, and `--lr-form-control-label-color`.
@@ -38114,7 +38119,7 @@ reset until `resetValidity()` or `setCustomValidity('')` clears it.
 **CSS parts:** `file-input` (the native dropzone button, visually behind but semantically beside
 the slotted content) and `form-control` (the complete form-control
 frame), `form-control-label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
-`input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+`input`, `file-list`, `file`, `file-more`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
 `rejection` (a **visible** region, rendered only while a rejection exists, listing each
@@ -44879,11 +44884,14 @@ passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
+**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to` (ends with a localized `+N`
+when recipients exceed the 10,000-position ceiling), `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
 `attachment-list`, `attachment-item`, `attachment-button` (an attachment's open button, inside its
 `attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
-`attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
+`attachment-size` (an attachment's formatted file size, inside `attachment-button`),
+`attachments-limit` (a localized note when more than the first 200 retained attachments exist; only
+those 200 render as rows), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
 show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
 `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
@@ -46343,7 +46351,8 @@ order is the caller's own reading order; the layer does not re-sort geometricall
 positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
-to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
+to be nonempty and the first item retained when IDs repeat; at most the first 10,000 items and, per
+item, the first 1,000 `rects` positions are read; `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), and `withoutInteraction: boolean = false` (attribute
 `without-interaction`, reflected) — turns off click/keyboard activation. A rectangle is eligible
 only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative; an item
@@ -46765,7 +46774,8 @@ highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`
 `node-path` anchor's trailing `'@attrName'` segment addresses that specific attribute — so a citation
 pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
 tree, rather than resolving indistinguishably from the bare element path),
-`attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
+`attribute-name`, `attribute-value` (`data-match`), `attribute-more` (a localized `+N` count when an
+element has more than the 256 attributes rendered on its row), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
@@ -55248,7 +55258,7 @@ Space).
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
-bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
+bar), `meta` (secondary row info; status text and duration show at every width, beside the bar when wide and under it when narrow), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
 The painted bar follows the visible span duration, with a one-border-width floor. Its transparent
 pointer target extends to the shared icon-button size inside the track (36px by default).
@@ -57347,6 +57357,8 @@ Supply runs newest-first: when the list exceeds that window, `[part="limit"]` ex
 displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
+At most the first 100 metrics render as cards (plus the active metric's card when it sits later);
+`[part="metrics-limit"]` then notes that only the first 100 are shown.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), and
 `lr-run-activate` (`{ runId, run }`).
@@ -57355,7 +57367,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `metric-unavailable`, `limit` (shown when run history exceeds
-`maxRenderedRuns`), `empty`.
+`maxRenderedRuns`), `metrics-limit` (shown when more than 100 metrics are supplied), `empty`.
 
 **Additional API surface:**
 
@@ -57645,8 +57657,8 @@ fired before it is applied — prevent it to keep the current state unchanged), 
 `lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
 updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
 current order; the listener may persist `detail.messages` and assign it back when ready. Once the
-move request is accepted, the general `lr-change-request` follows; only its acceptance updates the
-arrays and emits `lr-change`. Plus `focus` and
+move request is accepted, the general `lr-change-request` follows by design, so a single handler can
+validate every edit including reorders; only its acceptance updates the arrays and emits `lr-change`. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
@@ -58702,8 +58714,8 @@ and `decision: 'allow' | 'ask' | 'deny'`. The native select emits
 `lr-permission-rule-change` with `{ ruleId, decision }`; the component never evaluates policy or
 changes the supplied decision. Reassign a new `.rules` array after host updates. Blank identities
 are skipped, duplicate identities retain the first valid item, and at most 100 rows are mounted.
-`disabled` removes the decision selects from interaction; `readonly` keeps them focusable and
-announced as read-only, and refuses every change. A blank rule `label` names its select from the
+`disabled` removes the decision selects from interaction; `readonly` renders each decision as plain
+text (no select, so nothing reads as operable), and refuses every change. A blank rule `label` names its select from the
 `scope`. `label` names the visible group; host `aria-label` overrides the internal fieldset name.
 
 **CSS parts:**
@@ -59752,7 +59764,8 @@ accepted assignment and announcement.
 **Slots:** none.
 
 **CSS parts:** `base`, `item` (a `<button>`, or a plain `<div>` while `without-interaction` is set), `swatch`,
-`label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
+`label`, `count`, `live-region` (the visually hidden filter-toggle announcement), `limit` (a localized
+note when more than the first 200 valid types are supplied; only those 200 render as rows).
 
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
@@ -60112,7 +60125,8 @@ remain independently addressable).
 
 **CSS parts:** `base` (hosts the delegated roving-tabindex keydown handler), `node` (a `<button>`),
 `relation` (a `<button>`), `arrow` (`aria-hidden`, logical — mirrors under RTL), `empty` (shown when
-`path` is empty).
+`path` is empty), `limit` (a localized note when the path has more than 200 valid elements; only the
+first 200 render, navigate and emit events).
 
 **Themeable custom properties:** shared tokens only.
 

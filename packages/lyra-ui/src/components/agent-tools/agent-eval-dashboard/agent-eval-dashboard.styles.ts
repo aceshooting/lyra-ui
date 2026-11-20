@@ -57,6 +57,6 @@ export const styles = css`
   [part='run-label'] { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; }
   [part='run-meta'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); align-items: center; justify-content: flex-end; }
   [part='empty'] { color: var(--lr-color-text-quiet); }
-  [part='limit'], [part='metric-unavailable'] { margin: 0; color: var(--lr-color-text-quiet); }
+  [part='limit'], [part='metrics-limit'], [part='metric-unavailable'] { margin: 0; color: var(--lr-color-text-quiet); }
   @container ${compactContainerQuery} { [part='metrics'] { grid-template-columns: 1fr; } [part='run'] { grid-template-columns: 1fr; } [part='run-meta'] { justify-content: flex-start; } }
 `;

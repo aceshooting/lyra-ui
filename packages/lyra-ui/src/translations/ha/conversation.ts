@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Umarni masu jiran aiki',
   promptQueueEmpty: 'Babu umarni da ke jiran aiki',
   promptQueueInputLimit: 'An tsallake wasu saƙonnin umarni a jerin jira ko haɗe-haɗe saboda an kai iyakar shigarwa.',
-  promptQueueAttachmentLimit: 'Ana nuna {shown} daga cikin {total} haɗe-haɗen da aka riƙe.',
   promptQueueSendNow: 'Aika yanzu',
   selectionToolbarLabel: 'Ayyukan zaɓi',
   selectionAsk: 'Tambaya',

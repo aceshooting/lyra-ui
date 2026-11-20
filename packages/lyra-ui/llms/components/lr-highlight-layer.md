@@ -22,7 +22,8 @@ order is the caller's own reading order; the layer does not re-sort geometricall
 positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
-to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
+to be nonempty and the first item retained when IDs repeat; at most the first 10,000 items and, per
+item, the first 1,000 `rects` positions are read; `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), and `withoutInteraction: boolean = false` (attribute
 `without-interaction`, reflected) — turns off click/keyboard activation. A rectangle is eligible
 only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative; an item

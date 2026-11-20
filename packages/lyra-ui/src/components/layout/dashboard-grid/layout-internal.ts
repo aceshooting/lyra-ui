@@ -96,7 +96,8 @@ function snapshotDashboardWidget(
 
 /** Reads at most the admitted prefix and copies every dashboard-owned field once. */
 export function snapshotDashboardLayout(
-  input: unknown
+  input: unknown,
+  reportOmitted?: (count: number) => void
 ): readonly DashboardAuthoredCellSnapshot[] {
   if (!isArray(input)) return Object.freeze([]);
   const output: LyraDashboardCell[] = [];
@@ -109,6 +110,7 @@ export function snapshotDashboardLayout(
     finiteInteger(length, 0, 0, DASHBOARD_MAX_CELLS),
     DASHBOARD_MAX_CELLS
   );
+  reportOmitted?.(Math.max(0, Math.trunc(length) - count));
   for (let index = 0; index < count; index += 1) {
     const value = safeRead(input, index);
     if (

@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'په کتار کې غوښتنې',
   promptQueueEmpty: 'په کتار کې هېڅ غوښتنه نشته',
   promptQueueInputLimit: 'د ننوتلو حد ته د رسېدو له امله په کتار کې ځینې غوښتنې یا ضمیمې پرېښودل شوې دي.',
-  promptQueueAttachmentLimit: 'له ساتل شویو {total} ضمیمو څخه {shown} ښودل کېږي.',
   promptQueueSendNow: 'اوس لېږل',
   selectionToolbarLabel: 'د ټاکنې کړنې',
   selectionAsk: 'پوښتنه کول',

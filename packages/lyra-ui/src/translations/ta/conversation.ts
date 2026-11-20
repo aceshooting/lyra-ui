@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'வரிசையிலுள்ள கோரிக்கைகள்',
   promptQueueEmpty: 'வரிசையில் கோரிக்கைகள் இல்லை',
   promptQueueInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் வரிசையில் உள்ள சில கோரிக்கைகள் அல்லது இணைப்புகள் விடப்பட்டன.',
-  promptQueueAttachmentLimit: 'தக்கவைக்கப்பட்ட {total} இணைப்புகளில் {shown} காட்டப்படுகின்றன.',
   promptQueueSendNow: 'இப்போதே அனுப்பு',
   selectionToolbarLabel: 'தேர்வுச் செயல்கள்',
   selectionAsk: 'கேள்',

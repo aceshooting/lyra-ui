@@ -28,7 +28,7 @@ export function probePanoramaMedia(media: PanoramaMedia): void {
   const owner = 'ownerDocument' in media.element ? media.element.ownerDocument : globalThis.document;
   const canvas = owner.createElement('canvas'); canvas.width = 1; canvas.height = 1;
   try {
-    const context = canvas.getContext('2d'); if (!context) throw new Error('Panorama media validation is unavailable');
+    const context = canvas.getContext('2d', { willReadFrequently: true }); if (!context) throw new Error('Panorama media validation is unavailable');
     context.drawImage(media.element, 0, 0, 1, 1); context.getImageData(0, 0, 1, 1);
   } finally { canvas.width = 0; canvas.height = 0; }
 }

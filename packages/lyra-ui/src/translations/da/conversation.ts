@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts i kø',
   promptQueueEmpty: 'Ingen prompts i kø',
   promptQueueInputLimit: 'Nogle prompter i kø eller vedhæftede filer blev udeladt, fordi en grænse for input blev nået.',
-  promptQueueAttachmentLimit: 'Viser {shown} af {total} bevarede vedhæftede filer.',
   promptQueueSendNow: 'Send nu',
   selectionToolbarLabel: 'Handlinger for markering',
   selectionAsk: 'Spørg',

@@ -721,6 +721,19 @@ function bindWatcher(
 }
 
 /**
+ * The {@link ThemeWatcher} subscription without a controller host: watches `host` until the
+ * returned disposer runs. `onChange` runs at most once per microtask.
+ */
+export function watchThemeChanges(
+  host: Element,
+  onChange: () => void,
+  additionalMediaQueries: readonly string[] = [],
+): () => void {
+  const realm = host.ownerDocument.defaultView as BrowserRealm | null;
+  return realm ? bindWatcher(registryFor(realm), host, onChange, additionalMediaQueries) : () => {};
+}
+
+/**
  * Watches every platform signal that can change token values without a Lit property update:
  * theme attributes, stylesheet DOM/CSSOM/adoption changes, slot reassignment, and media-query
  * result changes. Canvas consumers opt in so DOM/SVG components keep relying on the CSS cascade
@@ -742,14 +755,7 @@ export class ThemeWatcher implements ReactiveController {
 
   hostConnected(): void {
     this.hostDisconnected();
-    const realm = this.host.ownerDocument.defaultView as BrowserRealm | null;
-    if (!realm) return;
-    this.unsubscribeRealm = bindWatcher(
-      registryFor(realm),
-      this.host,
-      () => this.onChange(),
-      this.additionalMediaQueries,
-    );
+    this.unsubscribeRealm = watchThemeChanges(this.host, () => this.onChange(), this.additionalMediaQueries);
   }
 
   hostDisconnected(): void {

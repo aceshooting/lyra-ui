@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Jonossa olevat kehotteet',
   promptQueueEmpty: 'Ei kehotteita jonossa',
   promptQueueInputLimit: 'Osa jonossa olevista kehotteista tai liitteistä jätettiin pois syöterajan täyttymisen vuoksi.',
-  promptQueueAttachmentLimit: 'Näytetään {shown} yhteensä {total} säilytetystä liitteestä.',
   promptQueueSendNow: 'Lähetä nyt',
   selectionToolbarLabel: 'Valinnan toiminnot',
   selectionAsk: 'Kysy',

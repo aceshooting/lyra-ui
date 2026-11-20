@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Endast de första {count} raderna visas.',
   },
   tableAdditionalColumns: 'Ytterligare kolumner',
-  treeLimit: 'Endast de första {count} objekten visas.',
   treeDefaultLabel: 'Träd',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'ökade {value}',

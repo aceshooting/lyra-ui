@@ -77,6 +77,8 @@ export {
 } from './file-intake.js';
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 const MAX_THUMBNAIL_ROWS = 50;
+/** Selected-file rows rendered at once; `[part="file-more"]` counts the held files past it. */
+const MAX_RENDERED_FILE_ROWS = 200;
 
 const INTERACTIVE_CONTENT_SELECTOR =
   'a[href], area[href], button, input, select, textarea, summary, ' +
@@ -183,7 +185,8 @@ export interface LyraFileInputEventMap {
  * in the accessibility tree as ordinary visible content; the interrupting announcement it used to
  * make as a shadow `role="alert"` now goes through the shared light-DOM assertive region instead.
  * @csspart file-list - The current selected-file list.
- * @csspart file - One selected-file row.
+ * @csspart file - One selected-file row. At most the first 200 held files render as rows.
+ * @csspart file-more - Localized count of held files past the first 200 rows, inside `file-list`.
  * @csspart file-thumbnail - One selected file's thumbnail/icon wrapper.
  * @csspart file-image - Image preview for an image in the first 50 selected file rows.
  * @csspart file-icon - Generic icon for a non-image file.
@@ -1191,7 +1194,12 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
           </div>
         </div>
         ${this._files.length
-          ? html`<div part="file-list">${this._files.map((file, index) => this.renderFile(file, index))}</div>`
+          ? html`<div part="file-list">${this._files.slice(0, MAX_RENDERED_FILE_ROWS).map((file, index) => this.renderFile(file, index))}${this._files.length > MAX_RENDERED_FILE_ROWS
+              ? html`<div part="file-more">${this.localize('fileInputRejectionsMore', undefined, {
+                  count: this.formatLocaleNumber(this._files.length - MAX_RENDERED_FILE_ROWS),
+                  pluralCount: this._files.length - MAX_RENDERED_FILE_ROWS,
+                })}</div>`
+              : nothing}</div>`
           : nothing}
         <div id="file-input-error" part="error" ?hidden=${!hasError}>
           <slot name="error">${renderedError}</slot>

@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Imiyalo esemgqeni',
   promptQueueEmpty: 'Ayikho imiyalo esemgqeni',
   promptQueueInputLimit: 'Eminye imiyalo esemgqeni noma okunamathiselwe kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
-  promptQueueAttachmentLimit: 'Kuboniswa {shown} kokunamathiselwe okungu-{total} okugcinwe.',
   promptQueueSendNow: 'Thumela manje',
   selectionToolbarLabel: 'Izenzo zokukhethiwe',
   selectionAsk: 'Buza',

@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'క్యూలోని ప్రాంప్ట్‌లు',
   promptQueueEmpty: 'క్యూలో ప్రాంప్ట్‌లు లేవు',
   promptQueueInputLimit: 'ఇన్‌పుట్ పరిమితి చేరుకోవడంతో క్యూలోని కొన్ని ప్రాంప్ట్‌లు లేదా జోడింపులు వదిలివేయబడ్డాయి.',
-  promptQueueAttachmentLimit: 'నిల్వ ఉంచిన {total} జోడింపుల్లో {shown} చూపబడుతున్నాయి.',
   promptQueueSendNow: 'ఇప్పుడే పంపండి',
   selectionToolbarLabel: 'ఎంపిక చర్యలు',
   selectionAsk: 'అడగండి',

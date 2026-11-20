@@ -23,7 +23,7 @@ import {
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphLegendLabel } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphLegendLabel } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -41,6 +41,9 @@ export interface LyraGraphLegendEventMap {
     LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
   >;
 }
+
+/** Type rows rendered at once; `[part="limit"]` discloses the rest. */
+const MAX_RENDERED_TYPES = 200;
 
 /**
  * `<lr-graph-legend>` — a node-type legend for a paired `lr-graph`: one swatch + label + count
@@ -69,6 +72,7 @@ export interface LyraGraphLegendEventMap {
  * @csspart label - The type's label text.
  * @csspart count - The optional per-type count.
  * @csspart live-region - The visually hidden filter-toggle announcement.
+ * @csspart limit - Localized note shown when more than the first 200 valid types are supplied.
  * @cssprop [--lr-graph-legend-hidden-color=var(--lr-color-text-quiet)] - Text color for a
  * filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token.
  * @cssprop [--lr-graph-legend-hidden-swatch-opacity=0.5] - Opacity of a filtered-out row's
@@ -81,6 +85,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     graphLegendLabel: LYRA_DEFAULT_graphLegendLabel,
     legendTypeHidden: LYRA_DEFAULT_legendTypeHidden,
     legendTypeShown: LYRA_DEFAULT_legendTypeShown,
@@ -183,6 +188,8 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     ).filter(
       (type) => typeof type?.label === 'string' && type.label.trim().length > 0
     );
+    const total = types.length;
+    if (total > MAX_RENDERED_TYPES) types.length = MAX_RENDERED_TYPES;
     const list = this.withoutInteraction && this.getAttribute('role') === 'list';
     const groupLabel = list ? null : retrievalSemanticLabel(
       this,
@@ -236,6 +243,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
             : html`<div part="item" role=${list ? 'listitem' : nothing} ?data-hidden=${!visible}>${content}</div>`;
         })}
       </div>
+      ${total > types.length
+        ? html`<p part="limit" role="note">${this.localize('graphDataListLimit', undefined, {
+            shown: this.formatLocaleNumber(types.length),
+            total: this.formatLocaleNumber(total),
+          })}</p>`
+        : nothing}
       <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
     `;
   }

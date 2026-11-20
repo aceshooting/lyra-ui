@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Faqat birinchi {count} ta qator ko\'rsatilgan.',
   },
   tableAdditionalColumns: 'Qoʻshimcha ustunlar',
-  treeLimit: 'Faqat birinchi {count} ta element koʻrsatiladi.',
   treeDefaultLabel: 'Daraxt',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ga oshdi',

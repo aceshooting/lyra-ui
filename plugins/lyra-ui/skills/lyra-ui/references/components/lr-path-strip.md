@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,7 +41,8 @@ remain independently addressable).
 
 **CSS parts:** `base` (hosts the delegated roving-tabindex keydown handler), `node` (a `<button>`),
 `relation` (a `<button>`), `arrow` (`aria-hidden`, logical — mirrors under RTL), `empty` (shown when
-`path` is empty).
+`path` is empty), `limit` (a localized note when the path has more than 200 valid elements; only the
+first 200 render, navigate and emit events).
 
 **Themeable custom properties:** shared tokens only.
 

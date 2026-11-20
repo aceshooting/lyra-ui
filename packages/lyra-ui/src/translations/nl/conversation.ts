@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts in wachtrij',
   promptQueueEmpty: 'Geen prompts in wachtrij',
   promptQueueInputLimit: 'Sommige prompts in de wachtrij of bijlagen zijn weggelaten omdat de invoerlimiet is bereikt.',
-  promptQueueAttachmentLimit: 'Toont {shown} van {total} bewaarde bijlagen.',
   promptQueueSendNow: 'Nu verzenden',
   selectionToolbarLabel: 'Selectieacties',
   selectionAsk: 'Vragen',

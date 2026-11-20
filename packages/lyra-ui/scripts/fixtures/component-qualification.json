@@ -9307,7 +9307,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart-3d/chart-3d-engine.ts",
-              "line": 128,
+              "line": 125,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20886,7 +20886,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts",
-              "line": 75,
+              "line": 77,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27489,7 +27489,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 242,
+              "line": 246,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

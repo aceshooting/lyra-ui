@@ -178,7 +178,7 @@ export const styles = css`
     inset-inline-end: var(--lr-space-s);
     font: inherit;
     font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-surface);
+    color: var(--lr-color-on-brand);
     background: var(--lr-color-brand);
     border: none;
     border-radius: var(--lr-radius-pill);

@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Safu mlalo {count} za kwanza pekee ndizo zinazoonyeshwa.',
   },
   tableAdditionalColumns: 'Safu wima za ziada',
-  treeLimit: 'Vipengee {count} vya kwanza pekee ndivyo vinavyoonyeshwa.',
   treeDefaultLabel: 'Mti',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'imeongezeka {value}',

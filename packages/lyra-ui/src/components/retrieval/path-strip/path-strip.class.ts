@@ -22,7 +22,7 @@ import {
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationForward, LYRA_DEFAULT_pathRelationReverse, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationForward, LYRA_DEFAULT_pathRelationReverse, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -39,6 +39,9 @@ export interface LyraPathStripEventMap {
     occurrenceIndex: number;
   }>;
 }
+
+/** Path elements rendered at once; `[part="limit"]` discloses the rest. */
+const MAX_RENDERED_PATH_ELEMENTS = 200;
 
 interface PathOccurrence {
   readonly element: LyraPathElement;
@@ -66,6 +69,7 @@ interface PathOccurrence {
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).
  * @csspart arrow - The `aria-hidden` directed-edge arrow glyph, logical (mirrors under RTL).
  * @csspart empty - The empty-state message, shown when `path` is empty.
+ * @csspart limit - Localized note shown when the path has more than the first 200 rendered elements.
  * @status stable
  * @since 4.0.0
  */
@@ -74,6 +78,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     noData: LYRA_DEFAULT_noData,
     pathNodeStatus: LYRA_DEFAULT_pathNodeStatus,
     pathRelationForward: LYRA_DEFAULT_pathRelationForward,
@@ -101,27 +106,28 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   private readonly announcementSink = new AnnouncementSinkController(this, { eager: ['polite'] });
   private pathOccurrenceSource?: readonly LyraPathElement[];
   private pathOccurrenceSnapshot: readonly PathOccurrence[] = [];
+  private pathOccurrenceTotal = 0;
 
   private get pathOccurrences(): readonly PathOccurrence[] {
     if (this.pathOccurrenceSource === this.path)
       return this.pathOccurrenceSnapshot;
     this.pathOccurrenceSource = this.path;
     const source = Array.isArray(this.path) ? this.path : [];
-    this.pathOccurrenceSnapshot = Object.freeze(
-      source.flatMap((element, occurrenceIndex): PathOccurrence[] => {
-        if (element?.kind === 'node') {
-          return isNonBlankIdentity(element.node?.id)
-            ? [{ element, occurrenceIndex }]
-            : [];
-        }
-        if (element?.kind === 'edge') {
-          return isNonBlankIdentity(element.relation)
-            ? [{ element, occurrenceIndex }]
-            : [];
-        }
-        return [];
-      })
-    );
+    const valid = source.flatMap((element, occurrenceIndex): PathOccurrence[] => {
+      if (element?.kind === 'node') {
+        return isNonBlankIdentity(element.node?.id)
+          ? [{ element, occurrenceIndex }]
+          : [];
+      }
+      if (element?.kind === 'edge') {
+        return isNonBlankIdentity(element.relation)
+          ? [{ element, occurrenceIndex }]
+          : [];
+      }
+      return [];
+    });
+    this.pathOccurrenceTotal = valid.length;
+    this.pathOccurrenceSnapshot = Object.freeze(valid.slice(0, MAX_RENDERED_PATH_ELEMENTS));
     return this.pathOccurrenceSnapshot;
   }
 
@@ -317,6 +323,12 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
               : this.renderEdge(element, i, activate);
           })}
         </lr-scroller>
+        ${this.pathOccurrenceTotal > path.length
+          ? html`<p part="limit" role="note">${this.localize('graphDataListLimit', undefined, {
+              shown: this.formatLocaleNumber(path.length),
+              total: this.formatLocaleNumber(this.pathOccurrenceTotal),
+            })}</p>`
+          : nothing}
         <div class="sr-only" aria-hidden="true">${this.liveText}</div>
       </div>
     `;

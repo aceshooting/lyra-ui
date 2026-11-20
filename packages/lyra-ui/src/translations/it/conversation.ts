@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompt in coda',
   promptQueueEmpty: 'Nessun prompt in coda',
   promptQueueInputLimit: 'È stato raggiunto un limite di input. Elementi omessi: prompt in coda o allegati.',
-  promptQueueAttachmentLimit: 'Sono visualizzati {shown} dei {total} allegati conservati.',
   promptQueueSendNow: 'Invia ora',
   selectionToolbarLabel: 'Azioni sulla selezione',
   selectionAsk: 'Chiedi',

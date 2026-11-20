@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'הנחיות בתור',
   promptQueueEmpty: 'אין הנחיות בתור',
   promptQueueInputLimit: 'חלק מהבקשות הממתינות בתור או הקבצים המצורפים הושמטו משום שהקלט הגיע למגבלה.',
-  promptQueueAttachmentLimit: 'מוצגים {shown} מתוך {total} קבצים מצורפים שנשמרו.',
   promptQueueSendNow: 'שלח עכשיו',
   selectionToolbarLabel: 'פעולות בחירה',
   selectionAsk: 'שאל',

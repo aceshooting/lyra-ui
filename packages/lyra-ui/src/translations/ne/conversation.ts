@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'कतारमा रहेका प्रॉम्प्टहरू',
   promptQueueEmpty: 'कतारमा कुनै प्रॉम्प्ट छैन',
   promptQueueInputLimit: 'इनपुट सीमा पुगेकाले लाममा रहेका केही प्रम्प्ट वा संलग्नकहरू छोडिएका छन्।',
-  promptQueueAttachmentLimit: 'राखिएका {total} संलग्नकमध्ये {shown} देखाइँदै छन्।',
   promptQueueSendNow: 'अहिले पठाउनुहोस्',
   selectionToolbarLabel: 'चयनका कार्यहरू',
   selectionAsk: 'सोध्नुहोस्',

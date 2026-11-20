@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'Naanị ahịrị {count} mbụ ka egosiri.',
   },
   tableAdditionalColumns: 'Kọlụm ndị ọzọ',
-  treeLimit: 'Naanị ihe {count} mbụ ka egosiri.',
   treeDefaultLabel: 'Osisi',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'abawanyela {value}',

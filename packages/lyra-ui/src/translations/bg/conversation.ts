@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Промптове в опашката',
   promptQueueEmpty: 'Няма промптове в опашката',
   promptQueueInputLimit: 'Някои промптове или прикачени файлове в опашката са пропуснати, защото е достигнато ограничение за входните данни.',
-  promptQueueAttachmentLimit: 'Показани са {shown} от {total} запазени прикачени файла.',
   promptQueueSendNow: 'Изпрати сега',
   selectionToolbarLabel: 'Действия с избраното',
   selectionAsk: 'Попитай',

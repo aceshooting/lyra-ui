@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'କେବଳ ପ୍ରଥମ {count} ଧାଡିଗୁଡ଼ିକ ଦେଖାଯାଏ |',
   },
   tableAdditionalColumns: 'ଅତିରିକ୍ତ ସ୍ତମ୍ଭ',
-  treeLimit: 'କେବଳ ପ୍ରଥମ {count} ଆଇଟମ୍ ଗୁଡିକ ପ୍ରଦର୍ଶିତ ହୋଇଛି |',
   treeDefaultLabel: 'ଟ୍ରି',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ବଢ଼ିଲା',

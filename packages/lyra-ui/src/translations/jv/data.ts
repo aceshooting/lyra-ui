@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'Mung baris {count} pisanan sing ditampilake.',
   },
   tableAdditionalColumns: 'Kolom tambahan',
-  treeLimit: 'Mung {count} item pisanan sing ditampilake.',
   treeDefaultLabel: 'Wit',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'mundhak {value}',

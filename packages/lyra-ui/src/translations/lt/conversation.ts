@@ -113,7 +113,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Eilėje esantys raginimai',
   promptQueueEmpty: 'Eilėje raginimų nėra',
   promptQueueInputLimit: 'Kai kurie eilėje esantys raginimai arba priedai praleisti, nes pasiekta įvesties riba.',
-  promptQueueAttachmentLimit: 'Rodoma išsaugotų priedų: {shown} iš {total}.',
   promptQueueSendNow: 'Siųsti dabar',
   selectionToolbarLabel: 'Žymėjimo veiksmai',
   selectionAsk: 'Klausti',

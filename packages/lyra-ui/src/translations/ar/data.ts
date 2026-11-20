@@ -232,7 +232,6 @@ const strings: LyraLocaleStrings = {
     other: 'يتم عرض أول {count} صف فقط.',
   },
   tableAdditionalColumns: 'أعمدة إضافية',
-  treeLimit: 'يتم عرض العناصر الـ {count} الأولى فقط.',
   treeDefaultLabel: 'شجرة',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'ارتفع {value}',

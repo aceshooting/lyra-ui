@@ -84,7 +84,7 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
     text-align: start;
-    padding: 0;
+    padding: 0 var(--lr-space-2xs);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='test-duration'] {

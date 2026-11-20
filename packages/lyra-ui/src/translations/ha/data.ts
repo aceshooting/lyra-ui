@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Layukan farko {count} ne kawai aka nuna.',
   },
   tableAdditionalColumns: 'Ƙarin ginshiƙai',
-  treeLimit: 'Abubuwan {count} na farko ne kawai ake nunawa.',
   treeDefaultLabel: 'Itace',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'ya ƙaru da {value}',

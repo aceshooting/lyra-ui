@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: '대기열에 있는 프롬프트',
   promptQueueEmpty: '대기 중인 프롬프트 없음',
   promptQueueInputLimit: '입력 한도에 도달하여 일부 대기 중인 프롬프트 또는 첨부 파일이 생략되었습니다.',
-  promptQueueAttachmentLimit: '유지된 첨부 파일 {total}개 중 {shown}개를 표시합니다.',
   promptQueueSendNow: '지금 보내기',
   selectionToolbarLabel: '선택 작업',
   selectionAsk: '질문하기',

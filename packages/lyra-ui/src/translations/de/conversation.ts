@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompts in der Warteschlange',
   promptQueueEmpty: 'Keine Prompts in der Warteschlange',
   promptQueueInputLimit: 'Einige Promptanfragen in der Warteschlange oder Anhänge wurden ausgelassen, weil eine Eingabegrenze erreicht wurde.',
-  promptQueueAttachmentLimit: '{shown} von {total} beibehaltenen Anhängen werden angezeigt.',
   promptQueueSendNow: 'Jetzt senden',
   selectionToolbarLabel: 'Aktionen für die Auswahl',
   selectionAsk: 'Fragen',

@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Pituduh ing antrian',
   promptQueueEmpty: 'Ora ana pituduh ing antrian',
   promptQueueInputLimit: 'Sawetara prompt ing antrian utawa lampiran ora dilebokake amarga wates input wis tekan.',
-  promptQueueAttachmentLimit: 'Nampilake {shown} saka {total} lampiran sing disimpen.',
   promptQueueSendNow: 'Kirim saiki',
   selectionToolbarLabel: 'Tumindak pilihan',
   selectionAsk: 'Takon',

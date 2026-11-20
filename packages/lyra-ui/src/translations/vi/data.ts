@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
   },
   tableAdditionalColumns: 'Cột bổ sung',
-  treeLimit: 'Chỉ có {count} mục đầu tiên được hiển thị.',
   treeDefaultLabel: 'Cây',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'tăng {value}',

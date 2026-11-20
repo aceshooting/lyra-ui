@@ -113,7 +113,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Запити в черзі',
   promptQueueEmpty: 'Запитів у черзі немає',
   promptQueueInputLimit: 'Деякі запити в черзі або вкладення пропущено через досягнення обмеження вхідних даних.',
-  promptQueueAttachmentLimit: 'Показано {shown} із {total} збережених вкладень.',
   promptQueueSendNow: 'Надіслати зараз',
   selectionToolbarLabel: 'Дії з вибраним',
   selectionAsk: 'Запитати',

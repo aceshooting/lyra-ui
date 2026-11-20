@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'صرف پہلی {count} قطاریں دکھائی گئی ہیں۔',
   },
   tableAdditionalColumns: 'اضافی کالم',
-  treeLimit: 'صرف پہلے {count} آئٹمز دکھائے گئے ہیں۔',
   treeDefaultLabel: 'درخت',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} بڑھا',

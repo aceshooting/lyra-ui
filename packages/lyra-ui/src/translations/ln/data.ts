@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Kaka milɔngɔ ya liboso {count} nde elakisami.',
   },
   tableAdditionalColumns: 'Ba colonne mosusu',
-  treeLimit: 'Kaka biloko ya liboso {count} nde elakisami.',
   treeDefaultLabel: 'Nzete',
   funnelComparisonShare: '{label} — {value}',
   funnelDropoffIncreased: 'emati {value}',

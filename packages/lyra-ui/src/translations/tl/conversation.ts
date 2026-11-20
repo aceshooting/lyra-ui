@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Mga nakapilang prompt',
   promptQueueEmpty: 'Walang nakapilang prompt',
   promptQueueInputLimit: 'May ilang prompt sa pila o attachment na hindi isinama dahil naabot ang limitasyon sa input.',
-  promptQueueAttachmentLimit: 'Ipinapakita ang {shown} sa {total} pinanatiling attachment.',
   promptQueueSendNow: 'Ipadala ngayon',
   selectionToolbarLabel: 'Mga aksyon sa pinili',
   selectionAsk: 'Magtanong',

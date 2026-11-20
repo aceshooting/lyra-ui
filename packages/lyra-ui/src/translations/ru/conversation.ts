@@ -113,7 +113,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Запросы в очереди',
   promptQueueEmpty: 'В очереди нет запросов',
   promptQueueInputLimit: 'Некоторые запросы в очереди или вложения были опущены из-за достижения ограничения на входные данные.',
-  promptQueueAttachmentLimit: 'Показано {shown} из {total} сохранённых вложений.',
   promptQueueSendNow: 'Отправить сейчас',
   selectionToolbarLabel: 'Действия с выделением',
   selectionAsk: 'Спросить',

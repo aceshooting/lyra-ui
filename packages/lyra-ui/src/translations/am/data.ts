@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'የመጀመሪያዎቹ {count} ረድፎች ብቻ ናቸው የሚታዩት።',
   },
   tableAdditionalColumns: 'ተጨማሪ አምዶች',
-  treeLimit: 'የመጀመሪያዎቹ {count} ንጥሎች ብቻ ናቸው የሚታዩት።',
   treeDefaultLabel: 'ዛፍ',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} ጨምሯል',

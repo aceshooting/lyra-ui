@@ -222,7 +222,6 @@ const strings: LyraLocaleStrings = {
     other: '最初の {count} 行のみが表示されます。',
   },
   tableAdditionalColumns: '追加の列',
-  treeLimit: '最初の {count} 項目のみが表示されます。',
   treeDefaultLabel: 'ツリー',
   funnelComparisonShare: '{label}：{value}',
   funnelDropoffIncreased: '{value} 増加',

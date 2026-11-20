@@ -91,7 +91,7 @@ export const styles = css`
     border: none;
     color: var(--lr-color-brand);
     cursor: pointer;
-    padding: var(--lr-space-xs) 0;
+    padding: var(--lr-space-xs) var(--lr-space-xs);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Pressed, here and on [part='file'] below, pushes the hovered tint a
@@ -122,7 +122,7 @@ export const styles = css`
     font-family: var(--lr-font-mono);
     text-align: start;
     cursor: pointer;
-    padding: var(--lr-space-2xs) 0;
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part='file-path'] {

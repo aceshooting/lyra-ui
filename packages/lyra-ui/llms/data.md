@@ -5021,7 +5021,8 @@ allocations; the name track uses at most 40% of the available inline size.
 
 **Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots
 of at most the first 10,000 source entries; malformed records, blank names, and later duplicate
-names are skipped first-wins before render, reveal state, copy actions, and events; reassign after
+names are skipped first-wins before render, reveal state, copy actions, and events; the first 500
+render as rows and the localized `[part="limit"]` note counts every entry not shown; reassign after
 changes), `withoutReveal: boolean = false` (attribute `without-reveal`, reflected; omits every
 secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButton: boolean = false`
 (attribute `without-copy-button`, reflected; omits every entry's copy button), and

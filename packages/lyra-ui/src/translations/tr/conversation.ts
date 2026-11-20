@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Sıraya alınan istemler',
   promptQueueEmpty: 'Sırada istem yok',
   promptQueueInputLimit: 'Girdi sınırına ulaşıldığı için sıradaki bazı istemler veya ekler atlandı.',
-  promptQueueAttachmentLimit: 'Saklanan {total} ekin {shown} tanesi gösteriliyor.',
   promptQueueSendNow: 'Şimdi gönder',
   selectionToolbarLabel: 'Seçim işlemleri',
   selectionAsk: 'Sor',

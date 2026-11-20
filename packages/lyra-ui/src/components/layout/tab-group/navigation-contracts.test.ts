@@ -5,6 +5,8 @@ import '../../lr-tab.js';
 import '../../lr-tab-panel.js';
 import '../../lr-segmented.js';
 import '../../lr-stepper.js';
+import '../../lr-widget.js';
+import '../../lr-dashboard-grid.js';
 import '../../lr-menubar.js';
 import '../../lr-menu-label.js';
 import '../../lr-control-group.js';
@@ -352,3 +354,16 @@ for (const [name, markup, owner, selector, property] of [
     }
   });
 }
+
+it('reports positions beyond the widget view and dashboard cell limits and clears loss on replacement', async () => {
+  const views = Array.from({ length: 258 }, (_, i) => ({ viewId: `v${i}`, label: String(i) }));
+  const cells = Array.from({ length: 1_002 }, (_, i) => ({ cellId: `c${i}`, x: 0, y: i, w: 1, h: 1 }));
+  const root = await fixture(html`<div><lr-widget .views=${views}></lr-widget><lr-dashboard-grid .layout=${cells}></lr-dashboard-grid></div>`);
+  const widget = root.querySelector('lr-widget')!;
+  const grid = root.querySelector('lr-dashboard-grid')!;
+  expect([widget.omittedViews, grid.omittedCells]).to.deep.equal([2, 2]);
+  expect([widget.views.length, grid.layout.length]).to.deep.equal([256, 1_000]);
+  widget.views = views.slice(0, 2);
+  grid.layout = cells.slice(0, 2);
+  expect([widget.omittedViews, grid.omittedCells]).to.deep.equal([0, 0]);
+});

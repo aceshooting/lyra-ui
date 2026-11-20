@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'முதல் {count} வரிசைகள் மட்டுமே காட்டப்பட்டுள்ளன.',
   },
   tableAdditionalColumns: 'கூடுதல் நெடுவரிசைகள்',
-  treeLimit: 'முதல் {count} உருப்படிகள் மட்டுமே காட்டப்படுகின்றன.',
   treeDefaultLabel: 'மரம்',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} அதிகரித்தது',

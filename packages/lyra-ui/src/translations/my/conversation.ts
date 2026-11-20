@@ -107,7 +107,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'တန်းစီထားသော prompt များ',
   promptQueueEmpty: 'တန်းစီထားသော prompt မရှိပါ',
   promptQueueInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် တန်းစီထားသော မေးမြန်းချက်များ သို့မဟုတ် ပူးတွဲဖိုင်များ အချို့ကို ချန်လှပ်ထားသည်။',
-  promptQueueAttachmentLimit: 'ထိန်းသိမ်းထားသော ပူးတွဲဖိုင် {total} ခုအနက် {shown} ခုကို ပြသနေသည်။',
   promptQueueSendNow: 'ယခုပို့ရန်',
   selectionToolbarLabel: 'ရွေးချယ်ထားသည့်အရာ လုပ်ဆောင်ချက်များ',
   selectionAsk: 'မေးရန်',

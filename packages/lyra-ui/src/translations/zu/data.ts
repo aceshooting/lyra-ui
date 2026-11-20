@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Kuboniswa imigqa yokuqala kuphela {count}.',
   },
   tableAdditionalColumns: 'Amakholomu engeziwe',
-  treeLimit: 'Kuboniswa kuphela izinto zokuqala ezingu-{count}.',
   treeDefaultLabel: 'Isihlahla',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'kukhuphuke ngo-{value}',

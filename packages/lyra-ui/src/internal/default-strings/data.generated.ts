@@ -216,7 +216,6 @@ export const LYRA_DEFAULT_timelineClusterCount: LyraMessage = 'Show timeline eve
 export const LYRA_DEFAULT_timelineItemVariantBrand: LyraMessage = 'Highlighted';
 export const LYRA_DEFAULT_timelineItemVariantWarning: LyraMessage = 'Warning';
 export const LYRA_DEFAULT_treeDefaultLabel: LyraMessage = 'Tree';
-export const LYRA_DEFAULT_treeLimit: LyraMessage = 'Only the first {count} items are shown.';
 export const LYRA_DEFAULT_trendOf: LyraMessage = 'Trend of {count} values, last {value}';
 export const LYRA_DEFAULT_trendUnchanged: LyraMessage = 'unchanged';
 export const LYRA_DEFAULT_wordCloud: LyraMessage = 'Word cloud of {count} {word}';

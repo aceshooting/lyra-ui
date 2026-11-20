@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Sorban álló promptok',
   promptQueueEmpty: 'Nincsenek sorban álló promptok',
   promptQueueInputLimit: 'A bemeneti korlát elérése miatt egyes várakozó promptok vagy mellékletek kimaradtak.',
-  promptQueueAttachmentLimit: 'A {total} megtartott mellékletből {shown} látható.',
   promptQueueSendNow: 'Küldés most',
   selectionToolbarLabel: 'Kijelölési műveletek',
   selectionAsk: 'Kérdezés',

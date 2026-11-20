@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Bare de første {count} radene vises.',
   },
   tableAdditionalColumns: 'Flere kolonner',
-  treeLimit: 'Bare de første {count} elementene vises.',
   treeDefaultLabel: 'Tre',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: 'økte med {value}',

@@ -37,7 +37,7 @@ import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_showMoreCollapsed } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -60,7 +60,7 @@ interface EmailHtml {
 type EmailFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[] }
+  | { kind: 'loaded'; email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[]; omittedRecipients?: number }
   | { kind: 'error'; message: () => string };
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
@@ -77,9 +77,13 @@ interface Address { name?: string; address?: string; group?: readonly Address[];
 const MAX_EMAIL_RECIPIENT_POSITIONS = 10_000;
 const MAX_EMAIL_RECIPIENT_DEPTH = 100;
 const MAX_EMAIL_ATTACHMENT_POSITIONS = 10_000;
+/** Attachment rows rendered at once; `[part="attachments-limit"]` discloses the rest. */
+const MAX_RENDERED_EMAIL_ATTACHMENTS = 200;
 
 interface RecipientProjectionBudget {
   positions: number;
+  /** Recipient-list positions dropped by the position ceiling. */
+  omitted: number;
   nodes: number;
   readonly seen: WeakSet<object>;
 }
@@ -89,6 +93,7 @@ interface NormalizedParsedEmail {
   readonly text?: string;
   readonly from?: Address;
   readonly to: readonly Address[];
+  readonly omittedRecipients: number;
   readonly subject?: string;
   readonly date?: string;
   readonly attachments: readonly ParsedEmailAttachment[];
@@ -127,7 +132,7 @@ function projectAddressList(
   budget: RecipientProjectionBudget,
   depth: number,
 ): Address[] {
-  if (!isRuntimeArray(value) || budget.positions >= MAX_EMAIL_RECIPIENT_POSITIONS) return [];
+  if (!isRuntimeArray(value)) return [];
   const length = getOwnDataDescriptor(value, 'length');
   if (
     length === MISSING_OWN_DATA_DESCRIPTOR
@@ -138,7 +143,8 @@ function projectAddressList(
   )
     return [];
   const addresses: Address[] = [];
-  const count = Math.min(length.value, MAX_EMAIL_RECIPIENT_POSITIONS - budget.positions);
+  const count = Math.min(length.value, Math.max(0, MAX_EMAIL_RECIPIENT_POSITIONS - budget.positions));
+  budget.omitted += length.value - count;
   for (let index = 0; index < count; index += 1) {
     budget.positions += 1;
     const descriptor = getOwnDataDescriptor(value, String(index));
@@ -226,7 +232,7 @@ function projectAttachments(value: unknown): readonly ParsedEmailAttachment[] {
  * independently recoverable so one malformed address or attachment cannot discard valid text. */
 function normalizeParsedEmail(value: unknown): NormalizedParsedEmail | null {
   if (!isSafeRecord(value)) return null;
-  const budget: RecipientProjectionBudget = { positions: 0, nodes: 0, seen: new WeakSet() };
+  const budget: RecipientProjectionBudget = { positions: 0, omitted: 0, nodes: 0, seen: new WeakSet() };
   const htmlValue = optionalOwnValue(value, 'html');
   const textValue = optionalOwnValue(value, 'text');
   const subjectValue = optionalOwnValue(value, 'subject');
@@ -242,6 +248,7 @@ function normalizeParsedEmail(value: unknown): NormalizedParsedEmail | null {
     ...(text === undefined ? {} : { text }),
     ...(from === undefined ? {} : { from }),
     to: Object.freeze(to),
+    omittedRecipients: budget.omitted,
     ...(subject === undefined ? {} : { subject }),
     ...(date === undefined ? {} : { date }),
     attachments: projectAttachments(optionalOwnValue(value, 'attachments')),
@@ -365,7 +372,8 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @csspart from-label - The localized sender label.
  * @csspart from - The sender address.
  * @csspart to-label - The localized recipient label.
- * @csspart to - The recipient addresses.
+ * @csspart to - The recipient addresses, followed by a localized `+N` count of any recipients past
+ *   the 10,000-position ceiling.
  * @csspart subject-label - The localized subject label.
  * @csspart subject - The message subject.
  * @csspart date-label - The localized date label.
@@ -380,6 +388,7 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @csspart attachment-button - An attachment's open button.
  * @csspart attachment-name - An attachment's filename, inside `attachment-button`.
  * @csspart attachment-size - An attachment's formatted file size, inside `attachment-button`.
+ * @csspart attachments-limit - Localized note when more than the first 200 retained attachments exist.
  * @csspart quoted - A folded quoted-text block (hidden until expanded).
  * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
@@ -421,7 +430,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
     emailViewerUnnamedAttachment: LYRA_DEFAULT_emailViewerUnnamedAttachment,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    promptQueueAttachmentLimit: LYRA_DEFAULT_promptQueueAttachmentLimit,
     scrollerLabel: LYRA_DEFAULT_scrollerLabel,
+    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -606,7 +617,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     token: ViewerSourceToken,
     PostalMime: PostalMimeApi,
     DOMPurify: EmailDeps['DOMPurify'],
-  ): Promise<{ email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[] } | null> {
+  ): Promise<{ email: ParsedEmail; htmlBody?: EmailHtml; fromAddress?: Address; toAddresses?: readonly Address[]; omittedRecipients?: number } | null> {
     const rawParsed = await PostalMime.parse(buffer);
     if (this.transport.isStale(token)) return null;
     const parsed = normalizeParsedEmail(rawParsed);
@@ -637,6 +648,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     return {
       ...(parsed.from === undefined ? {} : { fromAddress: parsed.from }),
       toAddresses: parsed.to,
+      omittedRecipients: parsed.omittedRecipients,
       htmlBody,
       email: {
         from: this.formatAddress(parsed.from),
@@ -678,10 +690,13 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       : getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
   }
 
-  private renderHeaders(email: ParsedEmail, fromAddress?: Address, toAddresses?: readonly Address[]): TemplateResult {
+  private renderHeaders(email: ParsedEmail, fromAddress?: Address, toAddresses?: readonly Address[], omittedRecipients = 0): TemplateResult {
+    const omitted = omittedRecipients > 0
+      ? ` ${this.localize('showMoreCollapsed', undefined, { count: this.formatLocaleNumber(omittedRecipients) })}`
+      : '';
     return html`<div part="headers">
       <span part="from-label">${this.localize('emailViewerFrom')}</span><span part="from">${bdi(fromAddress ? this.formatAddress(fromAddress) : email.from)}</span>
-      <span part="to-label">${this.localize('emailViewerTo')}</span><span part="to">${bdi(toAddresses ? this.formatAddresses(toAddresses) : email.to)}</span>
+      <span part="to-label">${this.localize('emailViewerTo')}</span><span part="to">${bdi(toAddresses ? this.formatAddresses(toAddresses) : email.to)}${omitted}</span>
       <span part="subject-label">${this.localize('emailViewerSubject')}</span><span part="subject">${bdi(email.subject || this.localize('emailViewerNoSubject'))}</span>
       <span part="date-label">${this.localize('emailViewerDate')}</span><span part="date">${bdi(this.formatDate(email.date))}</span>
     </div>`;
@@ -689,8 +704,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   private renderAttachments(attachments: ParsedEmailAttachment[]): TemplateResult | typeof nothing {
     if (!attachments.length) return nothing;
+    const shown = attachments.length > MAX_RENDERED_EMAIL_ATTACHMENTS ? attachments.slice(0, MAX_RENDERED_EMAIL_ATTACHMENTS) : attachments;
     return html`<div part="attachments"><span part="attachments-label">${this.localize('emailViewerAttachments')}</span><ul part="attachment-list">
-      ${attachments.map((attachment) => {
+      ${shown.map((attachment) => {
         const filename = attachment.filename || this.localize('emailViewerUnnamedAttachment');
         const size = formatFileSize(attachment.size, this.effectiveLocale);
         return html`<li part="attachment-item"><button
@@ -708,7 +724,12 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
           })}
         ><span part="attachment-name">${filename}</span> <span part="attachment-size">${size}</span></button></li>`;
       })}
-    </ul></div>`;
+    </ul>${shown.length < attachments.length
+      ? html`<p part="attachments-limit" role="note">${this.localize('promptQueueAttachmentLimit', undefined, {
+          shown: this.formatLocaleNumber(shown.length),
+          total: this.formatLocaleNumber(attachments.length),
+        })}</p>`
+      : nothing}</div>`;
   }
 
   private renderTextBody(text: string): TemplateResult {
@@ -761,8 +782,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': {
-        const { email, htmlBody, fromAddress, toAddresses } = this.fetchState;
-        return html`<div>${this.renderHeaders(email, fromAddress, toAddresses)}<div part="body">${htmlBody
+        const { email, htmlBody, fromAddress, toAddresses, omittedRecipients } = this.fetchState;
+        return html`<div>${this.renderHeaders(email, fromAddress, toAddresses, omittedRecipients)}<div part="body">${htmlBody
           ? html`<div part="body-html" @click=${this.onBodyClick}>${this.foldQuotes ? this.getFoldedHtml(htmlBody) : templateContent(htmlBody.template)}</div>`
           : email.bodyText?.trim()
             ? this.renderTextBody(email.bodyText)

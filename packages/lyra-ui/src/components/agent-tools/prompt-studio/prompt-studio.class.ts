@@ -98,7 +98,9 @@ const WORKSPACE_SIZE_NOTICE_THRESHOLD = 500;
  * @customElement lr-prompt-studio
  * @event lr-change-request - A cancelable proposal that messages or variables are about to change.
  *   Carries their complete next state. Prevent it to keep the current state unchanged, the same
- *   veto point `lr-message-reorder-request` already offers for reordering.
+ *   veto point `lr-message-reorder-request` already offers for reordering. It also governs an accepted
+ *   reorder: a move that passes `lr-message-reorder-request` still proposes its complete next state
+ *   here, so one handler can validate every edit.
  * @event lr-change - Noncancelable notification after the complete message/variable state is accepted.
  * @event lr-message-reorder-request - A cancelable request to reorder messages. Carries the
  *   proposed complete message order and the moved message's id and indexes. Prevent it to persist

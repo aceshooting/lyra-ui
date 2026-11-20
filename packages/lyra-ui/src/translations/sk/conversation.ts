@@ -113,7 +113,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompty v poradí',
   promptQueueEmpty: 'Žiadne prompty v poradí',
   promptQueueInputLimit: 'Niektoré prompty v poradí alebo prílohy boli vynechané, pretože sa dosiahol limit vstupu.',
-  promptQueueAttachmentLimit: 'Zobrazuje sa {shown} z {total} uchovaných príloh.',
   promptQueueSendNow: 'Odoslať teraz',
   selectionToolbarLabel: 'Akcie výberu',
   selectionAsk: 'Opýtať sa',

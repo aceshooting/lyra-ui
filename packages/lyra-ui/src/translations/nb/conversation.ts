@@ -109,7 +109,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Ledetekster i kø',
   promptQueueEmpty: 'Ingen ledetekster i kø',
   promptQueueInputLimit: 'Noen kølagte ledetekster eller vedlegg ble utelatt fordi en inndatagrense ble nådd.',
-  promptQueueAttachmentLimit: 'Viser {shown} av {total} beholdte vedlegg.',
   promptQueueSendNow: 'Send nå',
   selectionToolbarLabel: 'Handlinger for utvalg',
   selectionAsk: 'Spør',

@@ -224,7 +224,6 @@ const strings: LyraLocaleStrings = {
     other: 'Yalnızca ilk {count} satır gösterilmektedir.',
   },
   tableAdditionalColumns: 'Ek sütunlar',
-  treeLimit: 'Yalnızca ilk {count} öğe gösteriliyor.',
   treeDefaultLabel: 'Ağaç',
   funnelComparisonShare: '{label}: {value}',
   funnelDropoffIncreased: '{value} arttı',

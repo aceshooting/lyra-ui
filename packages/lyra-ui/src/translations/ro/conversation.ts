@@ -111,7 +111,6 @@ const strings: LyraLocaleStrings = {
   promptQueueLabel: 'Prompturi în așteptare',
   promptQueueEmpty: 'Niciun prompt în așteptare',
   promptQueueInputLimit: 'Unele prompturi din coadă sau atașamente au fost omise deoarece a fost atinsă limita de intrare.',
-  promptQueueAttachmentLimit: 'Se afișează {shown} din {total} atașamente păstrate.',
   promptQueueSendNow: 'Trimite acum',
   selectionToolbarLabel: 'Acțiuni pentru selecție',
   selectionAsk: 'Întreabă',
