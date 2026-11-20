@@ -41,14 +41,14 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
 import { isRepeatedActivationKey, isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
+import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableColumn, type LyraTableEventMap } from './table-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
-import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableColumn, type LyraTableEventMap } from './table-support.js';
-export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
 /** Bounded client projection used by a bare table. Pagination keeps every row reachable while
  * avoiding an unbounded row-by-column DOM allocation. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -297,17 +297,21 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
     dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
     dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
     details: LYRA_DEFAULT_details,
     loadMore: LYRA_DEFAULT_loadMore,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
     retry: LYRA_DEFAULT_retry,
+    select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
     tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,

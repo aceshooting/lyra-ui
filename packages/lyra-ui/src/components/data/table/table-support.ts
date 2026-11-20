@@ -224,7 +224,7 @@ export interface TableSortCommitDetail {
 /** One discriminated detail vocabulary shared across the sort request and commit phases. */
 export type TableSortDetail = TableSortRequestDetail | TableSortCommitDetail;
 
-export interface TableColumnCommon<T> {
+interface TableColumnCommon<T> {
   key: string;
   label: string;
   /** Accessible name override for this column's `<th role="columnheader">`, applied as its

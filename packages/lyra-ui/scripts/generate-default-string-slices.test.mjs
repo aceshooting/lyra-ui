@@ -67,6 +67,21 @@ const repositioned = rewriteClassSource(
 assert.match(repositioned, /  \}\n  protected static collectionSupport = true;/u);
 assert.doesNotMatch(repositioned, /  \}  protected static collectionSupport/u);
 
+// Authored code between the import markers would be dropped by the next rewrite, so it fails closed.
+const authoredInImportBlock = rewritten.replace(
+  '// GENERATED DEFAULT-STRING SLICE IMPORT: END',
+  "export type { SampleDetail } from './sample-support.js';\n// GENERATED DEFAULT-STRING SLICE IMPORT: END",
+);
+assert.throws(
+  () => rewriteClassSource(
+    authoredInImportBlock,
+    '/repo/src/components/forms/sample/sample.class.ts',
+    '/repo/src/internal/default-strings.generated.ts',
+    ['cancel', 'itemCount'],
+  ),
+  /authored code inside the generated default-string import block.*SampleDetail/u,
+);
+
 // Authored helpers and tests import fallback constants without a generated class block.
 const helperImportFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-helper-import-'));
 try {

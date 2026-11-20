@@ -748,6 +748,9 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
   return [...found].sort();
 }
 
+const GENERATED_IMPORT_LINE =
+  /^import (?:type \{ LyraLocaleStrings \}|\{ LYRA_DEFAULT_\w+(?:, LYRA_DEFAULT_\w+)* \}) from '[^']+';$/u;
+
 function withoutGeneratedBlocks(source) {
   const importPattern = new RegExp(
     `\\n?${IMPORT_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?` +
@@ -761,7 +764,22 @@ function withoutGeneratedBlocks(source) {
   );
   // A class block at the opening brace owns its separator; a displaced block after an authored
   // member must leave one newline or removing it joins that member to the next one.
-  const withoutImports = source.replace(importPattern, '');
+  // The import block is replaced wholesale, so an authored import or re-export placed between its
+  // markers would vanish on the next run; refuse it instead of dropping it.
+  const withoutImports = source.replace(importPattern, (block) => {
+    const authored = block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && line !== IMPORT_START && line !== IMPORT_END)
+      .find((line) => !GENERATED_IMPORT_LINE.test(line));
+    if (authored !== undefined) {
+      throw new Error(
+        `authored code inside the generated default-string import block would be discarded; ` +
+          `move it above "${IMPORT_START}": ${authored}`,
+      );
+    }
+    return '';
+  });
   return withoutImports.replace(classPattern, (_block, offset) => {
     const previous = withoutImports[offset - 1];
     return previous === '{' || previous === '\n' || previous === undefined ? '' : '\n';
