@@ -2,9 +2,8 @@ import { resolveListMove } from '../../../internal/list-navigation.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTaskSourceSummary } from '../../../data-sources.js';
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
-import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader } from '../../../internal/hierarchy-summary-source.js';
-import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
+import type { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
+import { HierarchySourceRuntimeGate, type HierarchySourceRuntime } from '../../../internal/lazy-hierarchy-source.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -336,14 +335,17 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private readonly sourceSummaries = new WeakMap<object, Readonly<LyraTaskSourceSummary> & { readonly current: () => boolean }>();
   private sourceAnnouncement?: string;
   private provider?: HierarchySourceController<TaskItem>;
-  private get sourceControl(): HierarchySourceController<TaskItem> {
-    return this.provider ??= new HierarchySourceController(this, {
+  // Source mode loads its provider controller, view and virtualized list on first use.
+  private readonly sourceRuntime = new HierarchySourceRuntimeGate(this, () => import('../../lr-virtual-list.js'));
+  private get sourceControl(): HierarchySourceController<TaskItem> | undefined {
+    const runtime = this.sourceRuntime.runtime;
+    return runtime && (this.provider ??= new runtime.controller.HierarchySourceController(this, {
       normalize: (value, key) => this.normalizeSourceTask(value, key),
       payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
         unitsOf: item => item.id.length + item.label.length + (item.detail?.length ?? 0) },
       onChange: () => { const old = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', old); },
       accepted: () => {},
-    });
+    }));
   }
   /** Immutable provider preorder; defined sources win over items, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
@@ -358,24 +360,39 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.sourceVersion++;
     this.clearPendingReorder();
     this.previousStatusById.clear();
-    this.sourceWrapper = value === undefined ? undefined : this.wrapSource(value);
+    this.sourceWrapper = undefined;
     this.syncSource(true);
     this.requestUpdate('treeSource', previous);
   }
 
   /** Reveal and focus a full-source key; false when absent, disabled or superseded. */
   revealSourceKey(key: string): Promise<boolean> {
-    return this.treeSource === undefined ? Promise.resolve(false) : this.sourceControl.reveal(key);
+    const source = this._treeSource;
+    if (source === undefined) return Promise.resolve(false);
+    return this.sourceControl?.reveal(key) ?? this.sourceRuntime.ensure(() => this._treeSource === source)
+      .then(() => (this._treeSource === source ? this.sourceControl?.reveal(key) : undefined) ?? false);
+  }
+
+  protected override getUpdateComplete(): Promise<boolean> {
+    return this.sourceRuntime.settled(() => super.getUpdateComplete());
   }
 
   private syncSource(force = false): void {
+    const source = this._treeSource;
+    const runtime = this.sourceRuntime.runtime;
+    if (source !== undefined && !runtime) {
+      this.sourceRuntime.request(() => this._treeSource !== undefined);
+      return;
+    }
+    if (source !== undefined && runtime) this.sourceWrapper ??= this.wrapSource(runtime, source);
     const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
     control?.update(this.sourceWrapper, this.effectiveLocale, force,
       SOURCE_QUERY);
   }
 
-  private wrapSource(source: TaskListSource): LyraHierarchySource<TaskItem, LyraHierarchyQuery> {
-    return createHierarchySummarySource(this, source, {
+  private wrapSource(runtime: HierarchySourceRuntime, source: TaskListSource): LyraHierarchySource<TaskItem, LyraHierarchyQuery> {
+    const { hierarchyField } = runtime.controller;
+    return runtime.summary.createHierarchySummarySource(this, source, {
       captureBinding: () => {
         const version = this.sourceVersion;
         return () => this._treeSource === source && this.sourceVersion === version;
@@ -423,7 +440,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private normalizeSourceTask(value: unknown, key: string): TaskItem {
     const source = this.treeSource;
     const version = this.sourceVersion;
-    const control = this.sourceControl;
+    const control = this.sourceControl!;
+    const { controller: { hierarchyKey, hierarchyText }, summary: { hierarchySourceFieldReader, captureHierarchyRowAuthority } } = this.sourceRuntime.runtime!;
     const projection = control.projection;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
     const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, control,
@@ -474,7 +492,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private sourceSummary(): string {
-    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    const control = this.sourceControl;
+    const summary = control && this.sourceRuntime.runtime!.summary.hierarchySourceSummary(control.projection, this.effectiveLocale);
     return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
@@ -482,7 +501,10 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
+    const control = this.sourceControl;
+    if (!control) return;
+    const { captureHierarchySourceEffects, applyHierarchySourceEffects } = this.sourceRuntime.runtime!.summary;
+    const snapshot = captureHierarchySourceEffects(this, control,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
     const status = applyHierarchySourceEffects(snapshot, {
       errorText: () => this.localize('treeSourceError'),
@@ -907,19 +929,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
           ${header}
         </div>
         <div part="body" id=${this.bodyId} role=${sourceMode ? nothing : 'list'} aria-label=${ariaLabel} ?hidden=${this.collapsed}>
-          ${sourceMode ? hierarchySourceView(this.sourceControl, {
-            label: ariaLabel, rtl: this.effectiveDirection === 'rtl', multiple: false,
-            loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
-            retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
-            summary: this.sourceSummary(), name: () => '', select: () => {},
-            content: item => html`<span class="source-task" data-status=${item.status}>
-              <span part="status-icon" aria-hidden="true">${STATUS_ICON[item.status]()}</span>
-              <span class="sr-only">${this.localize(STATUS_LABEL_KEY[item.status])}</span>
-              <span part="item-label">${item.label}</span>
-              ${item.detail ? html`<span part="item-detail">${item.detail}</span>` : nothing}
-              <slot name=${`detail-${item.id}`}></slot>
-            </span>`,
-          }) : canReorder
+          ${sourceMode ? this.renderSource(ariaLabel) : canReorder
             ? repeat(
                 renderedItems,
                 (item) => item.id,
@@ -935,6 +945,23 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         <lr-live-region></lr-live-region>
       </div>
     `;
+  }
+
+  private renderSource(ariaLabel: string): TemplateResult | typeof nothing {
+    const control = this.sourceControl;
+    return control ? this.sourceRuntime.runtime!.view.hierarchySourceView(control, {
+        label: ariaLabel, rtl: this.effectiveDirection === 'rtl', multiple: false,
+        loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
+        retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
+        summary: this.sourceSummary(), name: () => '', select: () => {},
+        content: item => html`<span class="source-task" data-status=${item.status}>
+          <span part="status-icon" aria-hidden="true">${STATUS_ICON[item.status]()}</span>
+          <span class="sr-only">${this.localize(STATUS_LABEL_KEY[item.status])}</span>
+          <span part="item-label">${item.label}</span>
+          ${item.detail ? html`<span part="item-detail">${item.detail}</span>` : nothing}
+          <slot name=${`detail-${item.id}`}></slot>
+        </span>`,
+      }) : nothing;
   }
 }
 

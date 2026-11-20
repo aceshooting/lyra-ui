@@ -84,7 +84,7 @@ function stagedAssembler(root) {
   const [builder] = stageScripts({ from: ownPackage, to: packageDir, files: ['scripts/build.mjs'] });
   stageScripts({
     from: join(ownPackage, '..', 'lyra-ui'), to: join(root, 'packages', 'lyra-ui'),
-    files: ['scripts/translations-companion.mjs'],
+    files: ['scripts/translations-companion.mjs', 'src/internal/locale-english-defaults.generated.ts'],
   });
   return { packageDir, builder, catalogs: join(root, 'packages', 'lyra-ui', 'dist', 'translations') };
 }
@@ -200,4 +200,63 @@ test('packs repeated catalog keys while preserving registration arguments and th
     const { output, original } = await assemble(properties);
     assert.equal(output, original);
   }
+});
+
+test('omits only the listed English-default messages and fails when the list and catalogs disagree', context => {
+  const runtime = 'import{registerLyraLocale}from"../../internal/localization-runtime.js";';
+  const catalog = runtime + `const strings={keep:"Garder",same:"Same",tick:\`T\`,'quoted':"Q",plural:{one:"un",other:"x{y}"},tail:'T'};registerLyraLocale("fr",strings);`;
+  const { source, target } = assemblyFixture(context, { 'fr/forms.js': catalog, 'fr/data.js': 'export {};\n', 'de/forms.js': catalog });
+  const englishDefaults = join(source, '..', 'english.ts');
+  writeFileSync(englishDefaults, "export const LOCALE_ENGLISH_DEFAULT_KEYS = {\n  'fr': 'same tick quoted plural tail',\n};\n");
+  buildTranslations({ source, target, englishDefaults });
+  const output = readFileSync(join(target, 'fr/forms.js'), 'utf8');
+  assert.match(output, /const strings=\{keep:"Garder"\};registerLyraLocale\("fr",strings\);$/u);
+  assert.match(readFileSync(join(target, 'de/forms.js'), 'utf8'), /same:"Same"/u);
+  writeFileSync(englishDefaults, "export const LOCALE_ENGLISH_DEFAULT_KEYS = {\n  'fr': 'same absent',\n};\n");
+  assert.throws(() => buildTranslations({ source, target, englishDefaults }), /fr: the published catalogs do not carry exactly/u);
+  for (const broken of ['const strings={a:1};', 'const strings={a:`${x}`};', 'const strings={a:"open', 'const strings={a:{one:"x"', 'const strings={a b};']) {
+    writeFileSync(join(source, 'fr/forms.js'), broken);
+    writeFileSync(englishDefaults, "export const LOCALE_ENGLISH_DEFAULT_KEYS = {\n  'fr': 'a',\n};\n");
+    assert.throws(() => buildTranslations({ source, target, englishDefaults }), /catalog module/u, broken);
+  }
+});
+
+// Resolves every built-in message for every shipped locale (and a regional variant of each) through
+// lyra-ui's real runtime, once with lyra-ui's complete compiled catalogs and once with the assembled
+// ones, and prints the results as JSON.
+const RESOLVE_ALL = `
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const [catalogs, dist] = process.argv.slice(1);
+const runtime = await import(pathToFileURL(join(dist, 'internal', 'localization-runtime.js')));
+const { LYRA_DEFAULT_STRINGS: defaults } = await import(pathToFileURL(join(dist, 'localization.js')));
+const tags = readdirSync(catalogs).filter(name => name.endsWith('.js')).map(name => name.slice(0, -3));
+for (const tag of tags) await import(pathToFileURL(join(catalogs, tag + '.js')));
+const requests = [...new Set(tags.flatMap(tag => [tag, tag + '-ZZ', tag.split('-')[0]]))].sort();
+const result = {};
+for (const locale of requests) {
+  const host = { parentElement: null, ownerDocument: null, getAttribute: name => (name === 'lang' ? locale : null), getRootNode() { return this; } };
+  result[locale] = Object.keys(defaults).map(key => [undefined, { count: 1 }, { count: 5 }]
+    .map(values => runtime.resolveLyraString(host, key, undefined, undefined, values, defaults)).join('\\u0000'));
+}
+process.stdout.write(JSON.stringify(result));
+`;
+
+test('assembled catalogs resolve every message exactly as the complete catalogs do', context => {
+  const lyraDist = join(ownPackage, '..', 'lyra-ui', 'dist');
+  assert.ok(existsSync(join(lyraDist, 'translations')), 'build lyra-ui first: pnpm --filter @aceshooting/lyra-ui build');
+  // Inside node_modules so the assembled catalogs resolve the workspace lyra-ui, outside the
+  // package's own source scan.
+  const target = mkdtempSync(join(ownPackage, 'node_modules', '.equivalence-'));
+  context.after(() => rmSync(target, { recursive: true, force: true }));
+  buildTranslations({ target });
+  const resolveAll = catalogs => JSON.parse(execFileSync(process.execPath,
+    ['--input-type=module', '-e', RESOLVE_ALL, catalogs, lyraDist], { encoding: 'utf8', maxBuffer: 1 << 30 }));
+  const complete = resolveAll(join(lyraDist, 'translations'));
+  const assembled = resolveAll(target);
+  assert.deepEqual(Object.keys(assembled), Object.keys(complete));
+  const differing = Object.keys(complete).filter(locale => JSON.stringify(complete[locale]) !== JSON.stringify(assembled[locale]));
+  assert.deepEqual(differing, []);
+  assert.ok(Object.keys(complete).length > 80);
 });

@@ -106,8 +106,6 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   // Shared constructor check and import warning for the chart loaders; it installs nothing and has
   // no consumer API, so it stays internal.
   'src/components/charts/chart/chart-peer.ts',
-  // Condition-builder's registration entry supplies this private editor-loading callback.
-  'src/components/data/condition-builder/condition-builder-editor-loader.ts',
   // Already reachable without a dedicated route: each viewer's registration module (which already
   // has its own package export via the component inventory, and is re-exported again by the
   // `./components/viewers` family barrel) does `export * from './<name>-loader.js'` wholesale, so

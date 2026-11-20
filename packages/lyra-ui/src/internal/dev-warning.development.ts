@@ -1,3 +1,5 @@
+import { LOCALE_ENGLISH_DEFAULT_KEYS } from './locale-english-defaults.generated.js';
+
 type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
 
 /**
@@ -34,17 +36,32 @@ export function devWarnOnce(key: string, message: string): void {
   console.warn(message);
 }
 
+const englishDefaultKeys = new Map<string, ReadonlySet<string>>();
+
+/** Whether a published catalog on `lower`'s truncation chain omits `key` as its English default. */
+function omitsEnglishDefault(lower: string, key: string): boolean {
+  for (let tag = lower; tag; tag = tag.slice(0, Math.max(0, tag.lastIndexOf('-')))) {
+    const list = LOCALE_ENGLISH_DEFAULT_KEYS[tag];
+    if (list === undefined) continue;
+    let keys = englishDefaultKeys.get(tag);
+    if (!keys) englishDefaultKeys.set(tag, keys = new Set(list.split(' ')));
+    if (keys.has(key)) return true;
+  }
+  return false;
+}
+
 /**
  * Dev-mode-only, once per (locale, key): reports that a non-English locale has no registered catalog
  * message for `key`, so resolution falls through to the English default (or the bare key). English
- * itself resolves through its defaults, so an `en`/`en-*` locale never warns. The message and its
+ * itself resolves through its defaults, so an `en`/`en-*` locale never warns, and neither does a
+ * message a published catalog omits because it equals the English default. The message and its
  * construction live only in this development entry; production bundles carry a no-op.
  */
 export function warnLocaleFallback(locale: string, key: string): void {
   const warnings = litDevWarnings();
   if (!warnings) return;
   const lower = locale.toLowerCase();
-  if (lower === 'en' || lower.startsWith('en-')) return;
+  if (lower === 'en' || lower.startsWith('en-') || omitsEnglishDefault(lower, key)) return;
   const warningKey = `lyra-locale-fallback:${locale}:${key}`;
   if (warnings.has(warningKey)) return;
   warnings.add(warningKey);

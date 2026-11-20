@@ -490,6 +490,22 @@ describe('resolveLyraString dev-mode locale-fallback warning', () => {
     expect(messages[0]).to.contain('x-split-key');
   });
 
+  it('stays quiet for a message a published catalog omits as its English default, including from a regional child', async () => {
+    const development = (await import('./dev-warning.development.js')) as Record<string, unknown>;
+    const developmentWarn = development['warnLocaleFallback'] as (locale: string, key: string) => void;
+    const { LOCALE_ENGLISH_DEFAULT_KEYS } = await import('./locale-english-defaults.generated.js');
+    const omitted = LOCALE_ENGLISH_DEFAULT_KEYS['fr']!.split(' ');
+    expect(omitted.length).to.be.greaterThan(0);
+    const messages = warningsWhile(true, () => {
+      developmentWarn('fr', omitted[0]!);
+      developmentWarn('fr-CA', omitted[0]!);
+      developmentWarn('FR-be', omitted.at(-1)!);
+      developmentWarn('fr', 'x-omitted-elsewhere-key');
+    });
+    expect(messages).to.have.length(1);
+    expect(messages[0]).to.contain('x-omitted-elsewhere-key');
+  });
+
   it('never warns once an override, fallback, or registered message already resolved the key', () => {
     const registeredHost = localeHost('x-locale-fallback-warn-registered');
     registerLyraLocale('x-locale-fallback-warn-registered', { cancel: 'Annuler' });

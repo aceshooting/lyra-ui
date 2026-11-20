@@ -33,6 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ENGLISH_SOURCE_PARENT, readPortugueseRegionalOverrides, readTranslationCatalogModule } from './check-translations.mjs';
 import { catalogEntries, translationFamilyIndex } from './generate-default-string-slices.mjs';
+import { englishDefaultLocaleKeys, englishDefaultsModuleSource } from './locale-english-defaults.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -218,6 +219,17 @@ export async function generateTranslationSlices({
   const writes = [];
   const results = [];
   const keepByLocaleDir = new Map();
+
+  const standaloneKeys = new Set([...standaloneFamilies.values()].flatMap((keys) => [...keys]));
+  const englishDefaults = englishDefaultLocaleKeys(
+    new Map([...catalogs].filter(([tag]) => tag !== ENGLISH_SOURCE_PARENT)),
+    new Map([...english].filter(([key]) => !standaloneKeys.has(key))),
+  );
+  writes.push({
+    file: path.join(packageDir, 'src/internal/locale-english-defaults.generated.ts'),
+    kind: 'english-defaults',
+    source: englishDefaultsModuleSource(englishDefaults),
+  });
 
   for (const name of localeFiles) {
     const tag = name.slice(0, -'.ts'.length);

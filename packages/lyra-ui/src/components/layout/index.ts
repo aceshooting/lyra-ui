@@ -15,7 +15,19 @@ export * from './details/accordion.js';
 export * from './details/details.js';
 export * from './dock-panel/dock-panel.js';
 export * from './drilldown-panel/drilldown-panel.js';
-export * from './filter-bar/filter-bar.js';
+// The family barrel registers every control a filter bar can render up front, instead of the
+// default entry's first-use registration.
+export * from './filter-bar/filter-bar-register.js';
+import '../forms/select/select.js';
+import '../forms/combobox/combobox.js';
+import '../forms/combobox/option.js';
+import '../forms/date-picker/date-input.js';
+import '../forms/input/input.js';
+import '../overlays/overlay/dropdown.js';
+import '../overlays/spinner/spinner.js';
+import '../overlays/chip/chip.js';
+import '../overlays/chip/chip-group.js';
+import '../forms/button/button.js';
 export * from './menu/dropdown-item.js';
 export * from './menu/menu-item.js';
 export * from './menu/menu-label.js';

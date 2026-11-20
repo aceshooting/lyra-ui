@@ -1660,7 +1660,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider timeline:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
 Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
-`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource, LyraSpan } from
@@ -1810,7 +1810,7 @@ through visible tasks and subtasks. Ctrl/Cmd with Up or Down requests a sibling 
 
 **Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
-falling back to the array. Only `undefined` restores current legacy items.
+falling back to the array. Only `undefined` restores current legacy items. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-task-list.js";
@@ -2165,7 +2165,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
-legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
+legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource } from

@@ -4911,7 +4911,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 
 `components/conversation/prompt-input/prompt-input-register.js` registers the composer, attachments
 and mention popover. Import model-select, voice-picker, source-picker and prompt-queue entries when
-their corresponding data can be supplied. The default entry registers all children.
+their corresponding data can be supplied. The default entry registers those four the first time
+`modelCatalog`, `voiceCatalog`, `sources` or `queue` renders them; `updateComplete` waits for that
+registration.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`

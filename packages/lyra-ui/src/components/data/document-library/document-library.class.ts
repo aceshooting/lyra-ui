@@ -1,4 +1,5 @@
 import { compareNullable } from '../../../internal/sort-compare.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { createInputMemo } from '../../../internal/input-memo.js';
 import type { LyraPageResult, LyraSourceRecord, LyraCursorNavigationState } from '../../../data-sources.js';
 import { SourceCursorController } from '../../../internal/source-cursor-controller.js';
@@ -844,8 +845,17 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   private sourceAnnouncementInitialized = false;
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('document-library', this.renderRoot) ?? this.childRegistration;
     if (this.sourceAnnouncementInitialized && !this.providerMode && this.documentsTruncated > 0 &&
       (changed.has('documents') || changed.has('maxDocuments'))) {
       this.announcements.announcePolite(this.localize('documentLibraryOmitted', undefined, { count: this.documentsTruncated }));

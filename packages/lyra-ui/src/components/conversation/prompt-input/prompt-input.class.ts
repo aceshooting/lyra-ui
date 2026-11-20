@@ -1,3 +1,4 @@
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -514,8 +515,17 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     }
   };
 
+  private childRegistration?: Promise<unknown>;
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
+  }
+
   protected override updated(_changed: PropertyValues): void {
     super.updated(_changed);
+    this.childRegistration = loadLazyChildren('prompt-input', this.renderRoot) ?? this.childRegistration;
     this.syncInputLimitAnnouncement();
     const popover = this.suggestionPopover;
     if (popover && this.suggestionAnchor) {

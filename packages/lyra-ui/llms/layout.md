@@ -5096,16 +5096,17 @@ chip-only definition requires neither options nor an adapter — a stable filter
 the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
 guarded where it is used rather than rejected outright.
 
-**Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
-eagerly imports every composed control this bar could possibly render — `<lr-select>`,
-`<lr-combobox>`, `<lr-dropdown>` + `<lr-dropdown-item>` (the `'checkbox-menu'` branch),
-`<lr-date-input>`, `<lr-input>`, `<lr-chip>`/`<lr-chip-group>` (the active-filter row), and
-`<lr-button>`/`<lr-spinner>` (the reset action and the loading status) — because `filters` is a
-runtime value it cannot inspect ahead of time. A bar that only ever declares `'select'`/`'text'`
-filters still pays for `<lr-combobox>` and `<lr-date-input>` through that entry: a measured ~69.5 kB
-gzip more than importing only what it uses. A consumer who knows their own filter `type`s ahead of
-time can import `components/layout/filter-bar/filter-bar-register.js` instead, which registers
-`<lr-filter-bar>` and nothing else, then import each composed control's own registration entry for
+**Registration.** `components/layout/filter-bar/filter-bar.js` (the default entry, also
+`components/lr-filter-bar.js`) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
+and each filter type's control — `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
+`<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` — plus
+`<lr-spinner>` (the `loading` status) the first time a bar renders it, so a bar that only declares
+`'select'`/`'text'` filters never loads `<lr-combobox>` or `<lr-date-input>`. The control upgrades
+in place once its module resolves, and `updateComplete` waits for every registration the render
+started. The `components/layout` family barrel registers all of them up front. A consumer that
+needs every control defined synchronously, or wants no deferred imports in its graph, can import
+`components/layout/filter-bar/filter-bar-register.js` instead, which registers `<lr-filter-bar>`
+and nothing else, then import each composed control's own registration entry for
 the filter `type`s actually declared:
 
 | Filter `type` | Registration entry |

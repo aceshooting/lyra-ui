@@ -5,6 +5,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  omitCatalogMessages,
+  parseEnglishDefaultsModule,
   relativeSpecifiersOutsideCatalog,
   retargetCatalogImports,
 } from '../../lyra-ui/scripts/translations-companion.mjs';
@@ -12,6 +14,7 @@ import {
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultSource = join(packageDir, '..', 'lyra-ui', 'dist', 'translations');
 const defaultTarget = join(packageDir, 'dist');
+const defaultEnglishDefaults = join(packageDir, '..', 'lyra-ui', 'src', 'internal', 'locale-english-defaults.generated.ts');
 
 function catalogFiles(directory, prefix = '') {
   const files = [];
@@ -72,19 +75,37 @@ function compactCatalog(source) {
     ? source.slice(0, start) + expression + source.slice(end) : source;
 }
 
-export function buildTranslations({ source = defaultSource, target = defaultTarget } = {}) {
+// A message equal to the English default is omitted where the runtime falls straight back to that
+// default (lyra-ui's scripts/locale-english-defaults.mjs decides which); every listed message must
+// be found in its locale's catalogs, so the list and the published catalogs cannot drift apart.
+export function buildTranslations({ source = defaultSource, target = defaultTarget, englishDefaults = defaultEnglishDefaults } = {}) {
   if (!existsSync(source)) {
     throw new Error('packages/lyra-ui/dist/translations is missing; run `pnpm --filter @aceshooting/lyra-ui build` first.');
   }
+  const omitted = parseEnglishDefaultsModule(readFileSync(englishDefaults, 'utf8'));
   rmSync(target, { recursive: true, force: true });
   const files = catalogFiles(source);
   if (files.length === 0) throw new Error('lyra-ui emitted no locale catalogs.');
+  const removedByLocale = new Map();
   for (const file of files) {
-    const output = retargetCatalogImports(readFileSync(join(source, file), 'utf8'));
+    const locale = file.includes('/') ? file.slice(0, file.indexOf('/')).toLowerCase() : '';
+    const trimmed = omitCatalogMessages(retargetCatalogImports(readFileSync(join(source, file), 'utf8')),
+      omitted.get(locale) ?? new Set());
+    const output = trimmed.source;
     const stray = relativeSpecifiersOutsideCatalog(output, file);
     if (stray.length > 0) throw new Error(`${file} imports outside the catalog tree: ${stray.join(', ')}`);
+    if (trimmed.catalog) {
+      const removed = removedByLocale.get(locale) ?? [];
+      removed.push(...trimmed.removed);
+      removedByLocale.set(locale, removed);
+    }
     mkdirSync(dirname(join(target, file)), { recursive: true });
     writeFileSync(join(target, file), compactCatalog(output));
+  }
+  for (const [locale, removed] of removedByLocale) {
+    const expected = omitted.get(locale);
+    if (expected && removed.length !== expected.size)
+      throw new Error(`${locale}: the published catalogs do not carry exactly the listed English-default messages`);
   }
   writeFileSync(join(target, 'side-effect-only.d.ts'), 'export {};\n');
   return files.length;

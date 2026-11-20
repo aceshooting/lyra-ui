@@ -5051,7 +5051,9 @@ library-wide brand tokens.
 
 Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
-collection stays reachable through pagination without mounting an unbounded grid.
+collection stays reachable through pagination without mounting an unbounded grid. The default
+entry registers the tag facet's `<lr-combobox>` the first time a document carries a tag;
+`updateComplete` waits for that registration.
 
 With both `dataSource` and `cursorSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
 note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted

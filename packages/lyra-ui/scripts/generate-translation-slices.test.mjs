@@ -3,6 +3,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { generateTranslationSlices, translationSliceFailures } from './generate-translation-slices.mjs';
+import { englishDefaultLocaleKeys, englishDefaultsModuleSource } from './locale-english-defaults.mjs';
+import { parseEnglishDefaultsModule } from './translations-companion.mjs';
 
 // Six-key fixture: two keys exclusive to `forms`, two exclusive to `layout`, two ('collapse',
 // 'open') reachable from BOTH -- the shape that must route to the `shared` slice instead of being
@@ -75,17 +77,17 @@ try {
   // the generator itself reports every slice + the aggregate as pending (not yet written), which is
   // the same signal a `--write`-less CI run would surface as a stale-slices failure.
   const before = await generateTranslationSlices({ packageDir: fixture, write: false, exclusions: {} });
-  assert.equal(before.changedFileCount, 4, 'forms + layout + shared slices + rewritten aggregate = 4 pending files');
+  assert.equal(before.changedFileCount, 5, 'forms + layout + shared slices + rewritten aggregate + English-default list = 5 pending files');
   assert.deepEqual(
     translationSliceFailures(before, { write: false }),
-    ['Translation slices are stale (4 file(s) to write, 0 to remove); rerun with --write.'],
+    ['Translation slices are stale (5 file(s) to write, 0 to remove); rerun with --write.'],
   );
   const xxUntouched = await readFile(path.join(fixture, 'src', 'translations', 'xx.ts'), 'utf8');
   assert.match(xxUntouched, /XX forms only/, 'a dry run (write: false) must not touch any file');
 
   // GREEN: --write actually produces the sliced shape.
   const result = await generateTranslationSlices({ packageDir: fixture, write: true, exclusions: {} });
-  assert.equal(result.changedFileCount, 4);
+  assert.equal(result.changedFileCount, 5);
   assert.deepEqual(
     result.results.map((r) => r.tag),
     ['xx'],
@@ -258,4 +260,25 @@ try {
     'regional overrides survive a base edit');
 } finally {
   await rm(portugueseFixture, { recursive: true, force: true });
+}
+
+// English-identical messages are listed only for a locale whose lookup falls straight back to
+// English: no parent, and no other standalone catalog sharing its base language.
+{
+  const english = new Map([['open', "'Open'"], ['count', "{ one: '{count} item', other: '{count} items' }"], ['close', "'Close'"]]);
+  const catalog = (entries, parent = null) => ({ parent, entries: new Map(entries) });
+  const same = [['open', '"Open"'], ['count', "{ other: '{count} items', one: '{count} item' }"], ['close', "'Fermer'"]];
+  const listed = englishDefaultLocaleKeys(new Map([
+    ['fr', catalog(same)],
+    ['fr-CA', catalog([['open', "'Open'"]], 'fr')],
+    ['pt-BR', catalog(same)],
+    ['pt-PT', catalog(same)],
+    ['sr', catalog(same)],
+    ['sr-Latn', catalog(same)],
+    ['de', catalog([['open', "'Öffnen'"]])],
+  ]), english);
+  assert.deepEqual([...listed], [['fr', ['open', 'count']]]);
+  const source = englishDefaultsModuleSource(new Map([['zh-HK', ['open', 'count']], ['fr', ['open']]]));
+  assert.deepEqual([...parseEnglishDefaultsModule(source)].map(([tag, keys]) => [tag, [...keys]]),
+    [['zh-hk', ['open', 'count']], ['fr', ['open']]]);
 }

@@ -56,9 +56,31 @@ export class HierarchySourceRuntimeGate {
     private readonly registerElements: () => Promise<unknown>,
   ) {}
 
+  private loading?: Promise<unknown>;
+
   /** The runtime once any request has loaded it. */
   get runtime(): HierarchySourceRuntime | undefined {
     return this.loaded;
+  }
+
+  /** Starts one load for a host whose source mode needs the runtime; a settled load clears itself. */
+  request(bound: () => boolean): void {
+    if (this.loaded || this.loading) return;
+    const load = this.ensure(bound);
+    this.loading = load;
+    void load.finally(() => {
+      if (this.loading === load) this.loading = undefined;
+    });
+  }
+
+  /** `complete` (the host's own update completion), repeated until no requested load is pending. */
+  async settled(complete: () => Promise<boolean>): Promise<boolean> {
+    let done = await complete();
+    while (this.loading) {
+      await this.loading;
+      done = await complete();
+    }
+    return done;
   }
 
   /** Resolves the runtime while `bound()` holds, e.g. before a pending reveal or the first source render. */

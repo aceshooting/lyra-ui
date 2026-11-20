@@ -19,9 +19,8 @@ import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '.
 import { projectLyraSpans } from '../trace-tree/span-projection.js';
 import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader, revealActiveHierarchyKey } from '../../../internal/hierarchy-summary-source.js';
-import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
+import type { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
+import { HierarchySourceRuntimeGate, type HierarchySourceRuntime } from '../../../internal/lazy-hierarchy-source.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -188,8 +187,11 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private sourceAnnouncement?: string;
   private sourceReveal?: readonly [number, string];
   private provider?: HierarchySourceController<LyraSpan>;
-  private get sourceControl(): HierarchySourceController<LyraSpan> {
-    return this.provider ??= new HierarchySourceController(this, {
+  // Source mode loads its provider controller, view and virtualized list on first use.
+  private readonly sourceRuntime = new HierarchySourceRuntimeGate(this, () => import('../../lr-virtual-list.js'));
+  private get sourceControl(): HierarchySourceController<LyraSpan> | undefined {
+    const runtime = this.sourceRuntime.runtime;
+    return runtime && (this.provider ??= new runtime.controller.HierarchySourceController(this, {
       normalize: (value, key) => this.normalizeSourceSpan(value, key),
       payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
         unitsOf: span => span.id.length + span.name.length },
@@ -197,7 +199,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       accepted: (action) => {
         if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
       },
-    });
+    }));
   }
   /** Immutable provider preorder; defined sources win over spans, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
@@ -211,29 +213,43 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this._treeSource = value;
     this.sourceVersion++;
     this.sourceReveal = undefined;
-    this.sourceWrapper = value === undefined ? undefined : this.wrapSource(value);
+    this.sourceWrapper = undefined;
     this.syncSource(true);
     this.requestUpdate('treeSource', previous);
   }
 
   /** Reveal and focus a full-source key; false when absent, disabled or superseded. */
   revealSourceKey(key: string): Promise<boolean> {
-    return this.treeSource === undefined ? Promise.resolve(false) : this.sourceControl.reveal(key);
+    const source = this._treeSource;
+    if (source === undefined) return Promise.resolve(false);
+    return this.sourceControl?.reveal(key) ?? this.sourceRuntime.ensure(() => this._treeSource === source)
+      .then(() => (this._treeSource === source ? this.sourceControl?.reveal(key) : undefined) ?? false);
+  }
+
+  protected override getUpdateComplete(): Promise<boolean> {
+    return this.sourceRuntime.settled(() => super.getUpdateComplete());
   }
 
   private syncSource(force = false): void {
+    const source = this._treeSource;
+    const runtime = this.sourceRuntime.runtime;
+    if (source !== undefined && !runtime) {
+      this.sourceRuntime.request(() => this._treeSource !== undefined);
+      return;
+    }
+    if (source !== undefined && runtime) this.sourceWrapper ??= this.wrapSource(runtime, source);
     const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
     control?.update(this.sourceWrapper, this.effectiveLocale, force,
       SOURCE_QUERY);
   }
 
-  private wrapSource(source: TraceTreeSource): LyraHierarchySource<LyraSpan, LyraHierarchyQuery> {
-    return createHierarchySummarySource(this, source, {
+  private wrapSource(runtime: HierarchySourceRuntime, source: TraceTreeSource): LyraHierarchySource<LyraSpan, LyraHierarchyQuery> {
+    return runtime.summary.createHierarchySummarySource(this, source, {
       captureBinding: () => {
         const version = this.sourceVersion;
         return () => this._treeSource === source && this.sourceVersion === version;
       },
-      summary: traceSourceSummary,
+      summary: runtime.summary.traceSourceSummary,
       accepted: (rows, summary, current) => this.sourceSummaries.set(rows, Object.freeze({ ...summary, current })),
       changedMessage: 'Trace source changed',
       rangeChangedMessage: 'Trace range changed',
@@ -244,7 +260,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private normalizeSourceSpan(value: unknown, key: string): LyraSpan {
     const source = this.treeSource;
     const version = this.sourceVersion;
-    const control = this.sourceControl;
+    const control = this.sourceControl!;
+    const { controller: { hierarchyKey, hierarchyText }, summary: { hierarchySourceFieldReader, captureHierarchyRowAuthority } } = this.sourceRuntime.runtime!;
     const projection = control.projection;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
     const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, control,
@@ -272,7 +289,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private sourceSummary(): string {
-    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    const control = this.sourceControl;
+    const summary = control && this.sourceRuntime.runtime!.summary.hierarchySourceSummary(control.projection, this.effectiveLocale);
     return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
@@ -280,7 +298,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
+    const control = this.sourceControl;
+    if (!control) return;
+    const { captureHierarchySourceEffects, applyHierarchySourceEffects, revealActiveHierarchyKey } = this.sourceRuntime.runtime!.summary;
+    const snapshot = captureHierarchySourceEffects(this, control,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
     if (!snapshot.current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
@@ -297,7 +318,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }, this.sourceAnnouncement);
     if (status === undefined) return;
     this.sourceAnnouncement = status;
-    this.sourceReveal = revealActiveHierarchyKey(this.sourceControl, snapshot, () => this.activeSpanId, this.sourceReveal);
+    this.sourceReveal = revealActiveHierarchyKey(control, snapshot, () => this.activeSpanId, this.sourceReveal);
   }
 
 
@@ -723,17 +744,19 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     </span>`;
   }
 
-  override render(): TemplateResult {
+  override render(): TemplateResult | typeof nothing {
     if (this.treeSource !== undefined) {
+      const control = this.sourceControl;
+      if (!control) return nothing;
       const view = this.viewWindow();
       return html`<div class="source-waterfall">
-        ${!this.withoutAxis && this.sourceControl.projection?.rows.count ? this.renderAxis(view) : nothing}
-        ${hierarchySourceView(this.sourceControl, {
+        ${!this.withoutAxis && control.projection?.rows.count ? this.renderAxis(view) : nothing}
+        ${this.sourceRuntime.runtime!.view.hierarchySourceView(control, {
           label: hostAriaLabel(this) ?? this.label ?? this.localize('spanWaterfall'), rtl: this.effectiveDirection === 'rtl', multiple: false,
           loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
           retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
           summary: this.sourceSummary(), content: span => this.renderSourceSpan(span, view), name: span => this.sourceSpanLabel(span),
-          select: row => { void this.sourceControl.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
+          select: row => { void control.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
         })}
       </div>`;
     }

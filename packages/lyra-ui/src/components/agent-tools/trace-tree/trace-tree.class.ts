@@ -18,9 +18,8 @@ import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '.
 import { projectLyraSpans } from './span-projection.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader, revealActiveHierarchyKey } from '../../../internal/hierarchy-summary-source.js';
-import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
+import type { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
+import { HierarchySourceRuntimeGate, type HierarchySourceRuntime } from '../../../internal/lazy-hierarchy-source.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -232,8 +231,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   private sourceReveal?: readonly [number, string];
   private wasSource = false;
   private provider?: HierarchySourceController<LyraSpan>;
-  private get sourceControl(): HierarchySourceController<LyraSpan> {
-    return this.provider ??= new HierarchySourceController(this, {
+  // Source mode loads its provider controller, view and virtualized list on first use.
+  private readonly sourceRuntime = new HierarchySourceRuntimeGate(this, () => import('../../lr-virtual-list.js'));
+  private get sourceControl(): HierarchySourceController<LyraSpan> | undefined {
+    const runtime = this.sourceRuntime.runtime;
+    return runtime && (this.provider ??= new runtime.controller.HierarchySourceController(this, {
       normalize: (value, key) => this.normalizeSourceSpan(value, key),
       payload: { maxUnits: 2_000_000, maxRowUnits: 65_536,
         unitsOf: span => span.id.length + span.name.length + span.detail!.length + span.costText!.length },
@@ -242,7 +244,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         if (action.type === 'toggle') this.emit('lr-span-toggle', { spanId: action.key, expanded: action.expanded });
         else if (action.type === 'select') this.emit('lr-span-select', { spanId: action.key });
       },
-    });
+    }));
   }
   /** Immutable provider preorder; defined sources win over spans, even when invalid.
    * Four 100-row pages and one focused row are retained; at most 301 rows mount.
@@ -256,29 +258,43 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     this._treeSource = value;
     this.sourceVersion++;
     this.sourceReveal = undefined;
-    this.sourceWrapper = value === undefined ? undefined : this.wrapSource(value);
+    this.sourceWrapper = undefined;
     this.syncSource(true);
     this.requestUpdate('treeSource', previous);
   }
 
   /** Reveal and focus a full-source key; false when absent, disabled or superseded. */
   revealSourceKey(key: string): Promise<boolean> {
-    return this.treeSource === undefined ? Promise.resolve(false) : this.sourceControl.reveal(key);
+    const source = this._treeSource;
+    if (source === undefined) return Promise.resolve(false);
+    return this.sourceControl?.reveal(key) ?? this.sourceRuntime.ensure(() => this._treeSource === source)
+      .then(() => (this._treeSource === source ? this.sourceControl?.reveal(key) : undefined) ?? false);
+  }
+
+  protected override getUpdateComplete(): Promise<boolean> {
+    return this.sourceRuntime.settled(() => super.getUpdateComplete());
   }
 
   private syncSource(force = false): void {
+    const source = this._treeSource;
+    const runtime = this.sourceRuntime.runtime;
+    if (source !== undefined && !runtime) {
+      this.sourceRuntime.request(() => this._treeSource !== undefined);
+      return;
+    }
+    if (source !== undefined && runtime) this.sourceWrapper ??= this.wrapSource(runtime, source);
     const control = this.sourceWrapper === undefined ? this.provider : this.sourceControl;
     control?.update(this.sourceWrapper, this.effectiveLocale, force,
       { search: '', hiddenKinds: this.hiddenKinds ?? [] });
   }
 
-  private wrapSource(source: TraceTreeSource): LyraHierarchySource<LyraSpan, LyraHierarchyQuery> {
-    return createHierarchySummarySource(this, source, {
+  private wrapSource(runtime: HierarchySourceRuntime, source: TraceTreeSource): LyraHierarchySource<LyraSpan, LyraHierarchyQuery> {
+    return runtime.summary.createHierarchySummarySource(this, source, {
       captureBinding: () => {
         const version = this.sourceVersion;
         return () => this._treeSource === source && this.sourceVersion === version;
       },
-      summary: traceSourceSummary,
+      summary: runtime.summary.traceSourceSummary,
       accepted: (rows, summary, current) => this.sourceSummaries.set(rows, Object.freeze({ ...summary, current })),
       changedMessage: 'Trace source changed',
       rangeChangedMessage: 'Trace range changed',
@@ -287,9 +303,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private normalizeSourceSpan(value: unknown, key: string): LyraSpan {
-    const source = this.treeSource, version = this.sourceVersion, projection = this.sourceControl.projection;
+    const control = this.sourceControl!;
+    const { controller: { hierarchyKey, hierarchyText }, summary: { hierarchySourceFieldReader, captureHierarchyRowAuthority } } = this.sourceRuntime.runtime!;
+    const source = this.treeSource, version = this.sourceVersion, projection = control.projection;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
-    const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, this.sourceControl,
+    const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, control,
       () => this.treeSource === source && this.sourceVersion === version, accepted?.current), 'Trace source changed');
     const id = hierarchyKey(field('id'));
     if (id !== key) throw new TypeError('Trace key mismatch');
@@ -327,7 +345,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private sourceSummary(): string {
-    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    const control = this.sourceControl;
+    const summary = control && this.sourceRuntime.runtime!.summary.hierarchySourceSummary(control.projection, this.effectiveLocale);
     return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
@@ -335,7 +354,10 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
+    const control = this.sourceControl;
+    if (!control) return;
+    const { captureHierarchySourceEffects, applyHierarchySourceEffects, revealActiveHierarchyKey } = this.sourceRuntime.runtime!.summary;
+    const snapshot = captureHierarchySourceEffects(this, control,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
     if (!snapshot.current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
@@ -352,7 +374,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }, this.sourceAnnouncement);
     if (status === undefined) return;
     this.sourceAnnouncement = status;
-    this.sourceReveal = revealActiveHierarchyKey(this.sourceControl, snapshot, () => this.activeSpanId, this.sourceReveal);
+    this.sourceReveal = revealActiveHierarchyKey(control, snapshot, () => this.activeSpanId, this.sourceReveal);
   }
 
   private sourceSpanLabel(span: LyraSpan): string {
@@ -371,7 +393,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private renderSourceSpan(span: LyraSpan): TemplateResult {
-    const projection = this.sourceControl.projection;
+    const projection = this.provider?.projection;
     const summary = projection && this.sourceSummaries.get(projection.rows);
     if (!summary) return html``;
     const extent = summary.endMs - summary.startMs || 1;
@@ -910,13 +932,15 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     `;
   }
 
-  override render(): TemplateResult {
-    if (this.treeSource !== undefined) return hierarchySourceView(this.sourceControl, {
+  override render(): TemplateResult | typeof nothing {
+    const control = this.treeSource === undefined ? undefined : this.sourceControl;
+    if (this.treeSource !== undefined && !control) return nothing;
+    if (control) return this.sourceRuntime.runtime!.view.hierarchySourceView(control, {
       label: hostAriaLabel(this) ?? this.label ?? this.localize('traceTree'), rtl: this.effectiveDirection === 'rtl', multiple: false,
       loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
       summary: this.sourceSummary(), content: span => this.renderSourceSpan(span), name: span => this.sourceSpanLabel(span),
-      select: row => { void this.sourceControl.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
+      select: row => { void control.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
     });
     const hierarchy = this.hierarchy();
     this.renderedProjectionTruncated = hierarchy.truncated || !!publicCollectionTruncation(this, 'spans');

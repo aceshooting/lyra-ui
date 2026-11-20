@@ -9,13 +9,17 @@
 export * from './prompt-input.class.js';
 import '../../media/attachment-chip/attachment-chip.js';
 import '../../media/attachment-trigger/attachment-trigger.js';
-import '../../retrieval/source-picker/source-picker.js';
 import '../../utility/mention-popover/mention-popover.js';
 import '../chat-composer/chat-composer.js';
-import '../model-select/model-select.js';
-import '../prompt-queue/prompt-queue.js';
-import '../voice-picker/voice-picker.js';
 import { defineElement } from '../../../internal/prefix.js';
+import { defineLazyChildren } from '../../../internal/lazy-children.js';
 import { LyraPromptInput } from './prompt-input.class.js';
 
+// The model, voice and source pickers and the queue register the first time their data is set.
+defineLazyChildren('prompt-input', {
+  'model-select': () => import('../model-select/model-select.js'),
+  'voice-picker': () => import('../voice-picker/voice-picker.js'),
+  'source-picker': () => import('../../retrieval/source-picker/source-picker.js'),
+  'prompt-queue': () => import('../prompt-queue/prompt-queue.js'),
+});
 defineElement('prompt-input', LyraPromptInput);

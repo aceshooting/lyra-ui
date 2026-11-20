@@ -1,15 +1,13 @@
 // Lean registration entry for `<lr-filter-bar>`: it registers the tag and nothing else.
 //
-// `./filter-bar.js` (the default entry) additionally imports every composed control this
-// component could possibly render -- `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
-// `<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>`,
-// `<lr-chip>`/`<lr-chip-group>` (the active-filter row) and `<lr-button>`/`<lr-spinner>` (the
-// reset action and the loading status) -- because `filters` is a runtime value this component
-// cannot inspect ahead of time. A bar that only ever declares `'select'`/`'text'` filters still
-// pays for `<lr-combobox>` and `<lr-date-input>` through that entry, a measured ~+69.5 kB gzip for
-// a consumer who never renders either.
+// `./filter-bar.js` (the default entry) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>`
+// up front and each filter type's control -- `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
+// `<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` -- plus
+// `<lr-spinner>` (the `loading` status) the first time a bar renders it, because `filters` is a
+// runtime value this component cannot inspect ahead of time.
 //
-// This entry is the explicit opt-out. Import it INSTEAD of `./filter-bar.js`, then import each
+// This entry registers nothing on demand. Import it INSTEAD of `./filter-bar.js` when every control
+// must be defined synchronously (or a bundler must not see the deferred imports), then import each
 // composed control's own registration entry for the filter `type`s actually declared:
 //
 //   import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar-register.js';

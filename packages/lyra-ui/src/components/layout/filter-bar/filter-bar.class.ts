@@ -1,5 +1,6 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
 import type { LyraInputType } from '../../forms/input/input.class.js';
@@ -40,9 +41,8 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/sh
 // `filter-bar-register.ts` (the lean registration entry -- see its own header comment) actually
 // lean: registering only `<lr-filter-bar>` and leaving every composed control's own registration
 // to whichever entry, default or per-control, the consumer separately imports. `filter-bar.ts`
-// (the default entry) keeps importing every composed control's own registration module directly,
-// so an existing `import '@aceshooting/lyra-ui/components/lr-filter-bar.js'`
-// keeps registering everything it always has.
+// (the default entry) registers the button and chips up front and each filter type's control the
+// first time a bar renders it; `updateComplete` waits for those registrations.
 
 /** Which existing Lyra input family renders a given filter -- this component composes these,
  *  it never invents a new filter-input type of its own. `'date'` and `'date-range'` both map
@@ -1870,8 +1870,11 @@ export class LyraFilterBar<
       this.resetDisabled;
   }
 
+  private childRegistration?: Promise<unknown>;
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren('filter-bar', this.renderRoot) ?? this.childRegistration;
     this.syncTextControls();
     if (this.resetLostFocus) {
       const reset = this.renderRoot.querySelector<HTMLElementTagNameMap['lr-button']>('[part="reset-button"]');
@@ -1893,6 +1896,12 @@ export class LyraFilterBar<
         }));
       }
     }
+  }
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    await this.childRegistration;
+    return complete;
   }
 
   /** Optional decorative leading visual, rendered into a composed control's own leading slot as
