@@ -71,6 +71,10 @@ it("resolves sizing and virtualization styles through the adopted owner window",
   ];
   const element = await dataGrid();
   const frame = document.createElement("iframe");
+  // Narrower than the two 7rem minimum tracks: the CSS-resolved tracks then clamp to the same
+  // 7rem the pre-measurement estimate uses, so the pin offset reads one value whether or not
+  // the post-render track measurement has landed yet.
+  frame.style.width = "120px";
   document.body.append(frame);
   const frameDocument = frame.contentDocument;
   const frameWindow = frame.contentWindow;

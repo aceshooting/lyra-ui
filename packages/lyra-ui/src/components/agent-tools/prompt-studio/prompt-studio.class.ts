@@ -199,7 +199,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
    *  `''`, is rendered verbatim. */
   @property() heading?: string;
   /** Semantic level of the visible toolbar heading. Use `none` to keep the visual heading text
-   *  without exposing it to heading navigation. Invalid untyped values use level 3. */
+   *  without exposing it to heading navigation. Invalid untyped values resolve to the default `none`. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
   /** Marks a prompt run as in progress and disables the run action. Reflects to the `running` attribute. */
   @property({ type: Boolean, reflect: true }) running = false;

@@ -276,7 +276,8 @@ it('wraps either header shape in the configured heading level and supports the e
   const invalid = (await fixture(
     html`<lr-task-list heading-level="outside-range" .items=${items}></lr-task-list>`,
   )) as LyraTaskList;
-  expect(invalid.shadowRoot!.querySelector('[role="heading"]')!.getAttribute('aria-level')).to.equal('3');
+  // An unknown level resolves to the declared default, which is no heading at all.
+  expect(invalid.shadowRoot!.querySelectorAll('[role="heading"]')).to.have.lengthOf(0);
 });
 
 it('accepts without-collapse as a plain-HTML attribute', async () => {

@@ -131,7 +131,7 @@ export function catalogPickerStyles(
     }
     :where([part='trigger']):active:where(:not(:disabled)) {
       background: var(${hook}trigger-active-bg,
-        ${activeFill('var(${hook}trigger-hover-bg, var(--lr-color-brand-quiet))')});
+        ${activeFill(`var(--lr-${component}-trigger-hover-bg, var(--lr-color-brand-quiet))`)});
     }
     :host([open]) [part='trigger'] {
       border-color: var(${hook}open-border-color, var(--lr-color-brand));
@@ -234,7 +234,7 @@ export function catalogPickerStyles(
       background: var(${hook}option-active-bg, var(--lr-color-brand-quiet));
     }
     [part='option']:where(:not([aria-disabled='true'])):active {
-      background: ${activeFill('var(${hook}option-active-bg, var(--lr-color-brand-quiet))')};
+      background: ${activeFill(`var(--lr-${component}-option-active-bg, var(--lr-color-brand-quiet))`)};
     }
     [part='option'][aria-disabled='true'] {
       cursor: default;

@@ -151,7 +151,9 @@ it("turns the focused textarea border brand when the hook is unset, like every s
     el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
   textarea.focus();
   expect(getComputedStyle(textarea).borderTopColor).to.equal(resolvedColorToken(el.shadowRoot!, "--lr-color-brand"));
-  expect(getComputedStyle(textarea).outlineStyle, "no extra outline ring").to.equal("none");
+  // The outline is transparent until forced colours paint it, so no extra ring shows here.
+  const { outlineStyle, outlineColor } = getComputedStyle(textarea);
+  expect(outlineStyle === "none" || outlineColor === "rgba(0, 0, 0, 0)", "no visible outline ring").to.equal(true);
 });
 
 it("themes the textarea focus border through a component hook", async () => {

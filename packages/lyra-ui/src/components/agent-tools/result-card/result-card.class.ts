@@ -65,7 +65,7 @@ export class LyraResultCard extends LyraElement {
   @property() heading = '';
 
   /** Semantic level of `[part="heading"]`. The default `none` keeps it a plain label; `1`–`6` also
-   *  exposes it to heading navigation at that level. Invalid untyped values use level 3. */
+   *  exposes it to heading navigation at that level. Invalid untyped values resolve to the default `none`. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
 
   /**

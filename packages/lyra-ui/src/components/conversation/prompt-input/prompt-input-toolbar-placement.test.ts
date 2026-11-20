@@ -52,8 +52,15 @@ describe('prompt input toolbar placement forwarding', () => {
     await settle(el);
     const toolbar = composerPart(composerOf(el), 'toolbar');
     const options = el.querySelector('[slot="toolbar"]')!;
-    const gapAt = (edge: 'left' | 'right') =>
-      Math.abs(toolbar.getBoundingClientRect()[edge] - options.getBoundingClientRect()[edge]);
+    // The toolbar's padding is focus-ring room, so slotted controls align to its content box.
+    const gapAt = (edge: 'left' | 'right') => {
+      const style = getComputedStyle(toolbar);
+      const rect = toolbar.getBoundingClientRect();
+      const contentEdge = edge === 'left'
+        ? rect.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth)
+        : rect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+      return Math.abs(contentEdge - options.getBoundingClientRect()[edge]);
+    };
 
     expect(el.toolbarAlign).to.equal('end');
     expect(gapAt('right')).to.be.at.most(1);

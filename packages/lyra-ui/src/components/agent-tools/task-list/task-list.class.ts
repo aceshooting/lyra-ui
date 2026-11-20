@@ -536,7 +536,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   @property() heading?: string;
 
   /** Semantic level of the visible header. Use `none` to keep the visual header without exposing
-   *  it to heading navigation. Invalid untyped values use level 3. */
+   *  it to heading navigation. Invalid untyped values resolve to that default `none`. */
   @property({ attribute: 'heading-level', reflect: true })
   headingLevel: LyraHeadingLevel = 'none';
 

@@ -1306,9 +1306,17 @@ function resolveInShadow(
   el: HTMLElement,
   property: string,
   value: string,
-  readProperty = property
+  readProperty = property,
+  scope?: Element
 ): string {
   const probe = document.createElement("span");
+  // A state rule paints from the part's private custom properties, so carry the part's values over.
+  if (scope) {
+    const computedScope = getComputedStyle(scope);
+    for (const name of value.match(/--_lr-[\w-]+/g) ?? []) {
+      probe.style.setProperty(name, computedScope.getPropertyValue(name));
+    }
+  }
   probe.style.setProperty(property, value);
   el.shadowRoot!.appendChild(probe);
   const computed = getComputedStyle(probe).getPropertyValue(readProperty);
@@ -1317,7 +1325,7 @@ function resolveInShadow(
 }
 
 /** The computed background `selector`'s own rule paints, resolved in the component's shadow scope. */
-function renderedRuleBackground(el: HTMLElement, selector: string): string {
+function renderedRuleBackground(el: HTMLElement, selector: string, scope: Element): string {
   const normalize = (text: string) => text.replace(/"/g, "'");
   let declared = "";
   for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
@@ -1333,7 +1341,7 @@ function renderedRuleBackground(el: HTMLElement, selector: string): string {
       }
     }
   }
-  return resolveInShadow(el, "background", declared, "background-color");
+  return resolveInShadow(el, "background", declared, "background-color", scope);
 }
 
 /** The computed filter `selector`'s own rule applies, resolved the same way. `none` means none. */
@@ -1372,13 +1380,16 @@ it("escalates the submit button from resting to hover to pressed with the shared
     "var(--lr-color-brand)",
     "background-color"
   );
+  const submit = el.shadowRoot!.querySelector('[part="submit-button"]')!;
   const hovered = renderedRuleBackground(
     el,
-    ":where([part='submit-button']):hover:where(:not(:disabled))"
+    ":where([part='submit-button']):hover:where(:not(:disabled))",
+    submit
   );
   const pressed = renderedRuleBackground(
     el,
-    ":where([part='submit-button']):active:where(:not(:disabled))"
+    ":where([part='submit-button']):active:where(:not(:disabled))",
+    submit
   );
 
   // Each step actually moves. The middle assertion is the one that matters most: an :active rule

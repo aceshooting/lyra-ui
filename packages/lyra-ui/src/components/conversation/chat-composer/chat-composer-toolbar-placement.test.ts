@@ -8,6 +8,16 @@ function part(el: LyraChatComposer, name: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;
 }
 
+/** The toolbar's content box: its padding is focus-ring room, so slotted controls align to this edge. */
+function contentBox(region: HTMLElement): { left: number; right: number } {
+  const rect = region.getBoundingClientRect();
+  const style = getComputedStyle(region);
+  return {
+    left: rect.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth),
+    right: rect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+  };
+}
+
 async function settle(el: LyraChatComposer): Promise<void> {
   await el.updateComplete;
   await nextFrame();
@@ -45,7 +55,7 @@ describe('chat composer toolbar placement', () => {
       const model = el.querySelector<HTMLButtonElement>('[slot="toolbar"]')!;
       const toolbar = part(el, 'toolbar');
       const offset = () => {
-        const region = toolbar.getBoundingClientRect();
+        const region = contentBox(toolbar);
         const control = model.getBoundingClientRect();
         return direction === 'rtl' ? region.right - control.right : control.left - region.left;
       };
@@ -57,7 +67,7 @@ describe('chat composer toolbar placement', () => {
       await settle(el);
       expect(el.getAttribute('toolbar-align')).to.equal('end');
       expect(offset()).to.be.greaterThan(100);
-      const region = toolbar.getBoundingClientRect();
+      const region = contentBox(toolbar);
       const control = model.getBoundingClientRect();
       expect(Math.abs(direction === 'rtl' ? control.left - region.left : region.right - control.right))
         .to.be.at.most(1);
@@ -174,7 +184,8 @@ describe('chat composer toolbar placement', () => {
       const toolbarPart = part(el, 'toolbar');
       expect(toolbarPart.scrollWidth).to.be.greaterThan(toolbarPart.clientWidth);
       const model = el.querySelector('select')!.getBoundingClientRect();
-      expect(Math.abs(direction === 'rtl' ? toolbar.right - model.right : model.left - toolbar.left))
+      const toolbarContent = contentBox(toolbarPart);
+      expect(Math.abs(direction === 'rtl' ? toolbarContent.right - model.right : model.left - toolbarContent.left))
         .to.be.at.most(1);
       expect(toolbar.left).to.be.at.least(row.left - 1);
       expect(toolbar.right).to.be.at.most(row.right + 1);

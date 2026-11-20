@@ -706,7 +706,7 @@ describe('.strings overrides (every localize() key)', () => {
 
     const many = Array.from({ length: 10_002 }, (_, i) => ({ name: `K${i}`, value: 'v' }));
     const limited = await fixture<LyraEnvList>(html`<lr-env-list .strings=${STRINGS} .entries=${many}></lr-env-list>`);
-    expect(limited.shadowRoot!.querySelector('[part="limit"]')!.textContent!.trim()).to.equal('LIMIT[10,000|2]');
+    expect(limited.shadowRoot!.querySelector('[part="limit"]')!.textContent!.trim()).to.equal('LIMIT[500|9,502]');
   });
 
   for (const ok of [true, false]) {

@@ -132,7 +132,7 @@ export class LyraFlowNode extends LyraElement {
   @property() heading = '';
   /** Semantic level of the visible `heading`. `none` (the default) keeps it plain text, as cards
    *  inside a canvas usually are; `1`-`6` expose it as a heading at that level, for a standalone
-   *  card in a document outline. Invalid untyped values use level 3. */
+   *  card in a document outline. Invalid untyped values resolve to the default `none`. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
   private _status: LyraToolStatus | null = null;
   /** Canonical tool lifecycle status. Invalid runtime/attribute values normalize to null. */

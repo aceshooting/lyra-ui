@@ -1712,9 +1712,8 @@ describe('.strings overrides (every localize() key)', () => {
   // `.strings` override. Markers are distinctive (not the production English) so a dropped
   // override fails.
   const strings = {
-    wordCloud: 'CLOUD-MARKER {count} {word}',
-    wordCloudWord: 'WORD-MARKER',
-    wordCloudWords: 'WORDS-MARKER',
+    wordCloud: { one: 'CLOUD-MARKER {count} WORD-MARKER', other: 'CLOUD-MARKER {count} WORDS-MARKER' },
+    wordCloudWordLimit: { one: 'LIMIT-MARKER {start}-{end}/{total} WORD-MARKER', other: 'LIMIT-MARKER {start}-{end}/{total} WORDS-MARKER' },
     wordCloudLegend: 'LEGEND-MARKER',
     wordCloudWordAnnouncement: 'ANNOUNCE-MARKER {text} {weight}',
     paginationSummary: 'PAGE-MARKER {start}-{end}/{total} {itemLabel}',
@@ -1743,7 +1742,7 @@ describe('.strings overrides (every localize() key)', () => {
       el = await fixture<LyraWordCloud>(html`<lr-word-cloud .strings=${strings} .words=${[{ text: '   ', weight: 1 }]}></lr-word-cloud>`);
     });
     expect(text(el, '[part="empty"]')).to.equal('EMPTY-MARKER');
-    expect(text(el, '[part="limit"]')).to.equal('PAGE-MARKER 0-0/1 WORDS-MARKER');
+    expect(text(el, '[part="limit"]')).to.equal('LIMIT-MARKER 0-0/1 WORD-MARKER');
   });
 
   it('routes the prepared summary and the prepared-unavailable error to the DOM', async () => {

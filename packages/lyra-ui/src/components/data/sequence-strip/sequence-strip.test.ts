@@ -1733,6 +1733,8 @@ describe('.strings overrides (every localize() key)', () => {
     sequenceStripUnnamedCategory: 'UNNAMED-MARKER',
     sequenceStripCategoryCount: 'COUNT-MARKER {label}={count}',
     sequenceStripBucketSummary: 'BUCKETS-MARKER {items}/{ranges}',
+    sequenceStripItemCount: { one: 'ITEM-COUNT-MARKER {count}', other: 'ITEMS-COUNT-MARKER {count}' },
+    sequenceStripRangeCount: { one: 'RANGE-COUNT-MARKER {count}', other: 'RANGES-COUNT-MARKER {count}' },
     sequenceStripBucketLabel: 'BUCKET-MARKER {label} {start}-{end}',
     sequenceStripCellKeyboardHelp: 'CELL-HELP-MARKER',
     sequenceStripSourceKeyboardHelp: 'SOURCE-HELP-MARKER',
@@ -1756,8 +1758,8 @@ describe('.strings overrides (every localize() key)', () => {
     const items = Array.from({ length: 250 }, (_, index): SequenceStripItem => ({ id: `i${index}`, categoryId: 'x', marker: index === 0 }));
     const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip marker-label="M" .strings=${strings} .items=${items}></lr-sequence-strip>`);
     const label = attr(el, '[part="base"]', 'aria-label');
-    for (const clause of ['COUNT-MARKER UNNAMED-MARKER=250', 'COUNT-MARKER M=1', 'BUCKETS-MARKER 250/']) expect(label).to.contain(clause);
-    expect(text(el, '[part="bucket-summary"]')).to.match(/^BUCKETS-MARKER 250\/\d+$/);
+    for (const clause of ['COUNT-MARKER UNNAMED-MARKER=250', 'COUNT-MARKER M=1', 'BUCKETS-MARKER ITEMS-COUNT-MARKER 250/RANGES-COUNT-MARKER ']) expect(label).to.contain(clause);
+    expect(text(el, '[part="bucket-summary"]')).to.match(/^BUCKETS-MARKER ITEMS-COUNT-MARKER 250\/RANGES-COUNT-MARKER \d+$/);
     const cellLabels = [...root(el).querySelectorAll('[part="cell"]')].map((cell) => cell.getAttribute('aria-label') ?? '');
     expect(cellLabels.some((name) => /^BUCKET-MARKER UNNAMED-MARKER \d+-\d+$/.test(name))).to.equal(true);
     expect(text(el, '#sequence-strip-help')).to.equal('CELL-HELP-MARKER');

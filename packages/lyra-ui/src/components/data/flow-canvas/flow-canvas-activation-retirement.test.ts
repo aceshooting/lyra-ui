@@ -41,7 +41,9 @@ for (const kind of ['node', 'edge'] as const) {
     const activations: string[] = [];
     const selections: Selection[] = [];
     const originalId = kind === 'node' ? 'a' : 'a-b';
-    const freshId = kind === 'node' ? 'd' : 'c-d';
+    // The fresh activation targets an item outside the replacement selection: re-activating the
+    // sole selected item is documented to emit no selection change.
+    const freshId = kind === 'node' ? 'd' : 'd-e';
     const replacementSelection: Selection = kind === 'node'
       ? { selectedNodeIds: ['c'], selectedEdgeIds: [] }
       : { selectedNodeIds: [], selectedEdgeIds: ['c-d'] };
@@ -49,8 +51,12 @@ for (const kind of ['node', 'edge'] as const) {
       element.nodes = [
         { id: 'c', accessibleLabel: 'First replacement node', position: { x: 20, y: 20 } },
         { id: 'd', accessibleLabel: 'Second replacement node', position: { x: 220, y: 20 } },
+        { id: 'e', accessibleLabel: 'Third replacement node', position: { x: 220, y: 180 } },
       ];
-      element.edges = [{ id: 'c-d', source: 'c', target: 'd', label: 'Replacement connection' }];
+      element.edges = [
+        { id: 'c-d', source: 'c', target: 'd', label: 'Replacement connection' },
+        { id: 'd-e', source: 'd', target: 'e', label: 'Second replacement connection' },
+      ];
       element.selectedNodeIds = replacementSelection.selectedNodeIds;
       element.selectedEdgeIds = replacementSelection.selectedEdgeIds;
     };
@@ -65,8 +71,8 @@ for (const kind of ['node', 'edge'] as const) {
 
     activate(element, kind, originalId);
     expect(activations).to.deep.equal([originalId]);
-    expect(element.nodes.map(node => node.id)).to.deep.equal(['c', 'd']);
-    expect(element.edges.map(edge => edge.id)).to.deep.equal(['c-d']);
+    expect(element.nodes.map(node => node.id)).to.deep.equal(['c', 'd', 'e']);
+    expect(element.edges.map(edge => edge.id)).to.deep.equal(['c-d', 'd-e']);
     expect(element.selectedNodeIds, 'the retired activation does not clear the replacement node selection')
       .to.deep.equal(replacementSelection.selectedNodeIds);
     expect(element.selectedEdgeIds, 'the retired activation does not clear the replacement edge selection')
@@ -90,7 +96,7 @@ for (const kind of ['node', 'edge'] as const) {
     expect(activations).to.deep.equal([originalId, freshId]);
     const freshSelection: Selection = kind === 'node'
       ? { selectedNodeIds: ['d'], selectedEdgeIds: [] }
-      : { selectedNodeIds: [], selectedEdgeIds: ['c-d'] };
+      : { selectedNodeIds: [], selectedEdgeIds: ['d-e'] };
     expect(selections).to.deep.equal([freshSelection]);
     expect(element.selectedNodeIds).to.deep.equal(freshSelection.selectedNodeIds);
     expect(element.selectedEdgeIds).to.deep.equal(freshSelection.selectedEdgeIds);

@@ -4986,8 +4986,12 @@ describe('.strings overrides (every localize() key)', () => {
           search: 'SEARCH-MARKER',
           graphSourceTotals: 'TOTALS {nodes}/{edges}',
           graphSourceCoverageComplete: 'COMPLETE {nodes}/{edges}',
-          graphSourceCoverageAggregate: 'AGGREGATE {shownNodes}/{nodes} {shownEdges}/{edges}',
-          graphSourceCoverageNeighborhood: 'NEIGHBORHOOD {shownNodes}/{nodes} {shownEdges}/{edges}',
+          graphSourceCoverageAggregate: 'AGGREGATE {nodes} {edges}',
+          graphSourceCoverageNeighborhood: 'NEIGHBORHOOD {nodes} {edges}',
+          graphSourceNodeCount: { one: '{count} NODE-ONE', other: '{count} NODE-MANY' },
+          graphSourceEdgeCount: { one: '{count} EDGE-ONE', other: '{count} EDGE-MANY' },
+          graphSourceShownNodes: { one: '{shown}/{count} NODE-ONE', other: '{shown}/{count} NODE-MANY' },
+          graphSourceShownEdges: { one: '{shown}/{count} EDGE-ONE', other: '{shown}/{count} EDGE-MANY' },
           graphSourceIncidentEdges: 'INCIDENT {label}',
           graphSourceAllRecords: 'ALL-MARKER',
           graphSourceDirection: 'DIRECTION-MARKER',
@@ -5011,8 +5015,8 @@ describe('.strings overrides (every localize() key)', () => {
     `)) as LyraFlowCanvas;
     const navigator = () => text(el, '[part="source-navigator"]');
     const status = () => text(el, '[part="source-navigator"] [part="source-status"]');
-    await waitUntil(() => status() === 'TOTALS 3/1', 'graphSourceTotals');
-    await waitUntil(() => text(el, '[part="source-coverage"]') === 'COMPLETE 3/1', 'graphSourceCoverageComplete');
+    await waitUntil(() => status() === 'TOTALS 3 NODE-MANY/1 EDGE-ONE', 'graphSourceTotals');
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'COMPLETE 3 NODE-MANY/1 EDGE-ONE', 'graphSourceCoverageComplete');
     expect(attr(el, '[part="source-navigator"]', 'aria-label')).to.equal('RECORDS-MARKER');
     for (const marker of ['RECORDS-MARKER', 'NODES-MARKER', 'EDGES-MARKER', 'SEARCH-MARKER', 'PREVIOUS-MARKER', 'NEXT-MARKER', 'PAGE-MARKER']) {
       expect(navigator(), marker).to.include(marker);
@@ -5022,10 +5026,10 @@ describe('.strings overrides (every localize() key)', () => {
 
     coverage = 'aggregate';
     el.setViewport({ x: 10, y: 0, zoom: 1 });
-    await waitUntil(() => text(el, '[part="source-coverage"]') === 'AGGREGATE 3/3 0/1', 'graphSourceCoverageAggregate');
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'AGGREGATE 3/3 NODE-MANY 0/1 EDGE-ONE', 'graphSourceCoverageAggregate');
     coverage = 'neighborhood';
     el.setViewport({ x: 20, y: 0, zoom: 1 });
-    await waitUntil(() => text(el, '[part="source-coverage"]') === 'NEIGHBORHOOD 3/3 0/1', 'graphSourceCoverageNeighborhood');
+    await waitUntil(() => text(el, '[part="source-coverage"]') === 'NEIGHBORHOOD 3/3 NODE-MANY 0/1 EDGE-ONE', 'graphSourceCoverageNeighborhood');
 
     const incident = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="source-record"] button')]
       .find((button) => button.textContent?.trim() === 'INCIDENT NODE<n0>')!;
@@ -5055,8 +5059,8 @@ describe('.strings overrides (every localize() key)', () => {
     source.records.query = query;
     held.forEach((resolve) => resolve());
     // An explicit refresh resets the source query, so the released page reports the totals again.
-    await waitUntil(() => status() === 'TOTALS 3/1', 'held page resolves')
-      .catch(() => expect(status(), 'held page resolves').to.equal('TOTALS 3/1'));
+    await waitUntil(() => status() === 'TOTALS 3 NODE-MANY/1 EDGE-ONE', 'held page resolves')
+      .catch(() => expect(status(), 'held page resolves').to.equal('TOTALS 3 NODE-MANY/1 EDGE-ONE'));
 
     source.records.query = async () => { throw new Error('records unavailable'); };
     el.requestUpdate();
@@ -5065,7 +5069,7 @@ describe('.strings overrides (every localize() key)', () => {
     source.records.query = query;
     source.records.locate = async () => null;
     el.requestUpdate();
-    await waitUntil(() => status() === 'TOTALS 3/1', 'records recover');
+    await waitUntil(() => status() === 'TOTALS 3 NODE-MANY/1 EDGE-ONE', 'records recover');
     expect(await el.revealSourceKey('node:9')).to.equal(false);
     await el.updateComplete;
     expect(status()).to.equal('MISSING-MARKER');
