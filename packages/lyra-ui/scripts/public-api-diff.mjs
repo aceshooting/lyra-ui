@@ -144,7 +144,7 @@ function expandTypeReferences(typeTextValue, snapshot) {
         continue;
       }
       // A name the text binds itself (`infer X`, `X extends ...`, `<X>(...)`) is a type parameter.
-      const escaped = name.replace(/\$/g, '\\$');
+      const escaped = name.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
       const bound = new RegExp(`\\binfer\\s+${escaped}\\b|\\b${escaped}\\s+extends\\b|<[^<>]*\\b${escaped}\\b[^<>]*>\\s*\\(`).test(text);
       if (/^\s*\??:/.test(rest) || /^\s*[(<]/.test(rest) || bound || name.length < 2) {
         output += name;
@@ -169,7 +169,7 @@ function expandTypeReferences(typeTextValue, snapshot) {
   };
   // `(readonly['a','b'])[number]` is the element union a `typeof TUPLE[number]` alias names.
   const tupleElements = (text) => text.replace(
-    /\(\s*(?:\(\s*)?(?:readonly\s*)?\[((?:\s*'[^'\\]*'\s*,?)+)\](?:\s*\))?\s*\)\s*\[number\]/g,
+    /\(\s*(?:\(\s*)?(?:readonly\s*)?\[\s*('[^'\\]*'(?:\s*,\s*'[^'\\]*')*)\s*,?\s*\](?:\s*\))?\s*\)\s*\[number\]/g,
     (_, elements) => `(${elements.split(',').map((element) => element.trim()).filter(Boolean).join('|')})`,
   );
   let value = normalizeType(typeTextValue);
