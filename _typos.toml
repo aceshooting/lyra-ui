@@ -145,6 +145,7 @@ Horizontale = "Horizontale"
 elementy = "elementy"
 ein = "ein"                      # German article in the date-input localization fixture
 ist = "ist"                      # German word, and the id of the Istanbul catalog entry
+Sie = "Sie"                      # German formal pronoun in the validation-message localization fixture
 
 # Partial words typed as search input, escape-sequence text and short variable names.
 hel = "hel"

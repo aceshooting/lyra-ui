@@ -1,7 +1,7 @@
 import type { ReactiveControllerHost } from 'lit';
 import { SeparatorDragController } from './separator-drag.js';
 
-export const RANGE_PAGE_STEP_MULTIPLIER = 10;
+const RANGE_PAGE_STEP_MULTIPLIER = 10;
 
 export interface RangeDragState<Handle> {
   handle: Handle;

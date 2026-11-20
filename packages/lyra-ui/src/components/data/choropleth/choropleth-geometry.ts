@@ -1,7 +1,7 @@
 import { isPlainDataRecord, readOwnArrayLength, requireOwnDataValue } from '../../../internal/data-descriptors.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 
-export type ChoroplethPoint = readonly [number, number];
+type ChoroplethPoint = readonly [number, number];
 export type ChoroplethPolygon = readonly (readonly ChoroplethPoint[])[];
 export interface ChoroplethRegion {
   readonly id: string;

@@ -14,7 +14,7 @@ export interface ListMoveOptions {
 }
 
 /** Whether a keydown belongs to an input method composition (or carries the legacy 229 marker). */
-export function isComposingKey(event: KeyboardEvent): boolean {
+function isComposingKey(event: KeyboardEvent): boolean {
   return event.isComposing || event.keyCode === 229;
 }
 

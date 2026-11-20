@@ -594,7 +594,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * they still fit; the row's accessible name always carries the exact figure.
    */
   private renderMetricCells(span: LyraSpan, durationLabel: string): TemplateResult {
-    const cell = (part: string, text: string): TemplateResult =>
+    const cell = (part: 'duration' | 'tokens-in' | 'tokens-out' | 'cost', text: string): TemplateResult =>
       html`<span part=${part} title=${text || nothing}>${text}</span>`;
     const tokens = (value: number | undefined): string =>
       this.validTokenMetric(value) ? this.formatTokenCount(finiteCount(value)) : '';

@@ -31,7 +31,7 @@ export function labelWithVisibleText(visible: string, context?: string): string 
 }
 
 /** Default ceiling, in characters, for caller data quoted inside an accessible name. */
-export const MAX_ACCESSIBLE_CONTEXT_LENGTH = 80;
+const MAX_ACCESSIBLE_CONTEXT_LENGTH = 80;
 
 /** Caller text as bounded accessible-name context: whitespace collapsed and, past `max`
  *  characters, cut on a code-point boundary with an ellipsis, so a long item never makes each
