@@ -13,52 +13,45 @@ import { nextWriteMetadata } from './generate-component-metadata.mjs';
 import {
   deriveTagAliases,
   generateTagAliases,
-  renderTagAlias,
+  registersTag,
 } from './generate-tag-aliases.mjs';
 
 const inventory = {
   schemaVersion: 1,
   components: [
-    {
-      tag: 'lr-table',
-      registrationModule: 'src/components/data/table/table.ts',
-    },
-    {
-      tag: 'lr-input',
-      registrationModule: 'src/components/forms/input/input.ts',
-    },
+    { tag: 'lr-table', registrationModule: 'src/components/lr-table.ts' },
+    { tag: 'lr-input', registrationModule: 'src/components/lr-input.ts' },
   ],
 };
 
-test('derives sorted tag-shaped aliases that re-export registration entries', () => {
-  const aliases = deriveTagAliases(inventory);
-  assert.deepEqual(aliases, [
+const registration = (tag, className) =>
+  `export * from './fixture/${tag}.class.js';\n` +
+  `import { ${className} } from './fixture/${tag}.class.js';\n` +
+  "import { defineElement } from '../internal/prefix.js';\n" +
+  `defineElement('${tag.slice(3)}', ${className});\n`;
+
+test('derives sorted tag-shaped registration entries', () => {
+  assert.deepEqual(deriveTagAliases(inventory), [
     {
       tag: 'lr-input',
-      registrationModule: 'src/components/forms/input/input.ts',
-      specifier: './forms/input/input.js',
+      registrationModule: 'src/components/lr-input.ts',
       sourceFile: 'src/components/lr-input.ts',
       exportPath: './components/lr-input.js',
       distFile: 'dist/components/lr-input.js',
     },
     {
       tag: 'lr-table',
-      registrationModule: 'src/components/data/table/table.ts',
-      specifier: './data/table/table.js',
+      registrationModule: 'src/components/lr-table.ts',
       sourceFile: 'src/components/lr-table.ts',
       exportPath: './components/lr-table.js',
       distFile: 'dist/components/lr-table.js',
     },
   ]);
-  assert.equal(
-    renderTagAlias(aliases[0]),
-    '// GENERATED FILE — stable tag-shaped component entry point.\n' +
-      '// Run `node scripts/generate-tag-aliases.mjs` to refresh.\n' +
-      "export * from './forms/input/input.js';\n",
-  );
+  assert.equal(registersTag(registration('lr-input', 'LyraInput'), 'lr-input'), true);
+  assert.equal(registersTag(registration('lr-input', 'LyraInput'), 'lr-input-group'), false);
 });
 
-test('rejects duplicate tags and registration paths outside the component tree', () => {
+test('rejects duplicate tags and registration modules other than the tag-shaped entry', () => {
   assert.throws(
     () => deriveTagAliases({ ...inventory, components: [...inventory.components, inventory.components[0]] }),
     /duplicate tag lr-table/,
@@ -66,13 +59,13 @@ test('rejects duplicate tags and registration paths outside the component tree',
   assert.throws(
     () => deriveTagAliases({
       schemaVersion: 1,
-      components: [{ tag: 'lr-bad', registrationModule: 'src/internal/bad.ts' }],
+      components: [{ tag: 'lr-table', registrationModule: 'src/components/data/table/table.ts' }],
     }),
-    /lr-bad: invalid registrationModule/,
+    /lr-table: invalid registrationModule \(expected src\/components\/lr-table\.ts\)/,
   );
 });
 
-test('write and check modes detect missing, changed, and generator-owned stale aliases', (context) => {
+test('reports missing, non-registering and orphaned entries without writing', (context) => {
   const packageDir = mkdtempSync(path.join(tmpdir(), 'lyra-tag-aliases-'));
   context.after(() => rmSync(packageDir, { recursive: true, force: true }));
   mkdirSync(path.join(packageDir, 'scripts', 'fixtures'), { recursive: true });
@@ -82,22 +75,22 @@ test('write and check modes detect missing, changed, and generator-owned stale a
     JSON.stringify(inventory),
   );
 
-  assert.deepEqual(
-    generateTagAliases({ packageDir, check: true }).stale,
-    ['src/components/lr-input.ts', 'src/components/lr-table.ts'],
-  );
-  assert.equal(generateTagAliases({ packageDir }).stale.length, 2);
-  assert.deepEqual(generateTagAliases({ packageDir, check: true }).stale, []);
+  assert.deepEqual(generateTagAliases({ packageDir }).stale, ['src/components/lr-input.ts', 'src/components/lr-table.ts']);
+  assert.deepEqual(readdirSync(path.join(packageDir, 'src', 'components')), [], 'verification never authors entries');
 
   const inputFile = path.join(packageDir, 'src', 'components', 'lr-input.ts');
-  writeFileSync(inputFile, `${readFileSync(inputFile, 'utf8')}// drift\n`);
-  assert.deepEqual(generateTagAliases({ packageDir, check: true }).stale, ['src/components/lr-input.ts']);
+  writeFileSync(inputFile, registration('lr-input', 'LyraInput'));
+  writeFileSync(path.join(packageDir, 'src', 'components', 'lr-table.ts'), registration('lr-table', 'LyraTable'));
+  assert.deepEqual(generateTagAliases({ packageDir }).stale, []);
 
-  const staleFile = path.join(packageDir, 'src', 'components', 'lr-old.ts');
-  writeFileSync(staleFile, '// GENERATED FILE — stable tag-shaped component entry point.\n');
-  generateTagAliases({ packageDir });
-  assert.equal(readFileSync(inputFile, 'utf8'), renderTagAlias(deriveTagAliases(inventory)[0]));
-  assert.throws(() => readFileSync(staleFile, 'utf8'), /ENOENT/);
+  writeFileSync(inputFile, "export * from './fixture/lr-input.class.js';\n");
+  assert.deepEqual(generateTagAliases({ packageDir }).stale, ['src/components/lr-input.ts']);
+  writeFileSync(inputFile, registration('lr-input', 'LyraInput'));
+
+  const orphan = path.join(packageDir, 'src', 'components', 'lr-old.ts');
+  writeFileSync(orphan, registration('lr-old', 'LyraOld'));
+  assert.deepEqual(generateTagAliases({ packageDir }).stale, ['src/components/lr-old.ts']);
+  assert.equal(readFileSync(orphan, 'utf8'), registration('lr-old', 'LyraOld'), 'an orphan is reported, never deleted');
 });
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -110,25 +103,24 @@ const regenerationSequences = [
 ];
 
 for (const [label, steps] of regenerationSequences) {
-  test(`${label} records the final manifest hash with added and removed tag aliases`, (context) => {
+  test(`${label} records the final manifest hash with tag-shaped registration entries`, (context) => {
     const packageDir = mkdtempSync(path.join(tmpdir(), 'lyra-manifest-alias-order-'));
     context.after(() => rmSync(packageDir, { recursive: true, force: true }));
     const componentDir = path.join(packageDir, 'src/components');
     const inventoryFile = path.join(packageDir, 'scripts/fixtures/component-inventory.json');
     mkdirSync(path.dirname(inventoryFile), { recursive: true });
     mkdirSync(path.join(componentDir, 'utility/widget'), { recursive: true });
-    writeFileSync(path.join(componentDir, 'utility/widget/widget.ts'),
-      "export class LyraWidget extends HTMLElement {}\ncustomElements.define('lr-widget', LyraWidget);\n");
-
-    // The checkout has a removed tag's generated alias, while the newly authored tag has none.
-    const previousInventory = { schemaVersion: 1, components: [
-      { tag: 'lr-removed', registrationModule: 'src/components/utility/removed/removed.ts' },
-    ] };
+    writeFileSync(path.join(componentDir, 'utility/widget/widget.class.ts'),
+      'export class LyraWidget extends HTMLElement {}\n');
+    // The tag-shaped entry is the authored registration module; the inventory names it.
+    writeFileSync(path.join(componentDir, 'lr-widget.ts'),
+      "export * from './utility/widget/widget.class.js';\nimport { LyraWidget } from './utility/widget/widget.class.js';\n" +
+      "import { defineElement } from '../internal/prefix.js';\ndefineElement('widget', LyraWidget);\n");
+    const previousInventory = { schemaVersion: 1, components: [] };
     const currentInventory = { schemaVersion: 1, components: [
-      { tag: 'lr-widget', registrationModule: 'src/components/utility/widget/widget.ts' },
+      { tag: 'lr-widget', registrationModule: 'src/components/lr-widget.ts' },
     ] };
     writeFileSync(inventoryFile, JSON.stringify(previousInventory));
-    generateTagAliases({ packageDir });
 
     const version = '1.0.0';
     const renderManifest = manifest => `${JSON.stringify(manifest)}\n`;
@@ -163,10 +155,10 @@ for (const [label, steps] of regenerationSequences) {
     let metadataWrites = 0;
     for (const step of steps) {
       if (step === 'component-inventory') writeFileSync(inventoryFile, JSON.stringify(currentInventory));
-      if (step === 'tag-aliases') generateTagAliases({ packageDir });
+      if (step === 'tag-aliases') assert.deepEqual(generateTagAliases({ packageDir }).stale, [], 'entries verify against the refreshed inventory');
       if (step === 'registrations') {
         assert.equal(metadataWrites, 1, 'package exports consume the refreshed metadata aggregate');
-        assert.deepEqual(generateTagAliases({ packageDir }).stale, [], 'full registration generation sees already-current aliases');
+        assert.deepEqual(generateTagAliases({ packageDir }).stale, [], 'full registration generation sees complete entries');
       }
       if (step === 'component-metadata' || step === 'component-metadata:history') {
         metadata = nextWriteMetadata(metadata, {
@@ -186,19 +178,18 @@ for (const [label, steps] of regenerationSequences) {
       }
     }
 
-    assert.equal(manifestWrites, 3, 'bootstrap, alias-inclusive, and final annotated analysis each run once');
+    assert.equal(manifestWrites, 3, 'bootstrap, inventory-refreshed, and final annotated analysis each run once');
     assert.equal(metadataWrites, 1, 'metadata records the complete input without repeated reconciliation');
     assert.deepEqual(writtenManifest, analyze(), 'a check after regeneration must see exactly the final written manifest');
     assert.equal(metadata.history.current.manifestSha256, sha256(renderManifest(writtenManifest)),
-      'metadata predicts the exact final bytes, including the trailing newline and alias modules');
+      'metadata predicts the exact final bytes, including the trailing newline and entry modules');
     assert.deepEqual({ releases: metadata.history.releases, taggedCurrent: metadata.history.taggedCurrent }, immutableHistory);
-    assert.deepEqual(generateTagAliases({ packageDir, check: true }).stale, []);
+    assert.deepEqual(generateTagAliases({ packageDir }).stale, []);
     const modules = new Map(writtenManifest.modules.map(module => [module.path, module]));
-    assert.equal(modules.has('src/components/lr-removed.ts'), false, 'removed generated aliases leave the manifest');
-    assert.ok(modules.has('src/components/lr-widget.ts'), 'new generated aliases enter the manifest');
-    assert.deepEqual(modules.get('src/components/lr-widget.ts').exports, [{
+    assert.ok(modules.has('src/components/lr-widget.ts'), 'the tag-shaped entry is a manifest module');
+    assert.deepEqual(modules.get('src/components/lr-widget.ts').exports?.[0], {
       kind: 'js', name: '*',
-      declaration: { name: '*', module: 'src/components/utility/widget/widget.js' },
-    }], 'the stable alias retains its public registration re-export');
+      declaration: { name: '*', module: 'src/components/utility/widget/widget.class.js' },
+    }, 'the tag-shaped entry re-exports its class module');
   });
 }

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './zoomable-frame.js';
-import type { LyraZoomableFrameLoading } from './zoomable-frame.js';
+import '../../lr-zoomable-frame.js';
+import type { LyraZoomableFrameLoading } from '../../lr-zoomable-frame.js';
 
 const LAZY_LOADING: LyraZoomableFrameLoading = 'lazy';
 

@@ -2,9 +2,9 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraSourceRecord, LyraGraphSceneRequest } from '../../../data-sources.js';
-import type { LyraGraphNode, LyraGraphEdge } from './graph.js';
+import type { LyraGraphNode, LyraGraphEdge } from '../../lr-graph.js';
 
 const spatialNodes = [
   { id: 'near', label: 'Near', position: { x: 0, y: 0, z: 80 } },

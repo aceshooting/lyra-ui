@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './voice-picker.js';
-import type { LyraVoicePicker } from './voice-picker.js';
+import '../../lr-voice-picker.js';
+import type { LyraVoicePicker } from '../../lr-voice-picker.js';
 
 for (const closedMode of [false, true]) {
   for (const attribute of ['label', 'hint', 'error-text'] as const) {

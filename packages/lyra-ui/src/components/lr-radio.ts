@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/radio/radio.js';
+export * from './forms/radio/radio.class.js';
+import { LyraRadio } from './forms/radio/radio.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('radio', LyraRadio);

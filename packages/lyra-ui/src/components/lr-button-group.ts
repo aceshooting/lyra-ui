@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/button-group/button-group.js';
+export * from './layout/button-group/button-group.class.js';
+import { LyraButtonGroup } from './layout/button-group/button-group.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('button-group', LyraButtonGroup);

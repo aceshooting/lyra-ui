@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './date-picker.js';
+import '../../lr-date-picker.js';
 import type { LyraDatePicker } from './date-picker.class.js';
 
 describe('readonly date-picker period navigation', () => {

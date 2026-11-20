@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import type { HeatmapSelectedCell, LyraHeatmap } from './heatmap.js';
-import './heatmap.js';
+import type { HeatmapSelectedCell, LyraHeatmap } from '../../lr-heatmap.js';
+import '../../lr-heatmap.js';
 
 type Selection = { selectedCells: readonly HeatmapSelectedCell[]; source: string };
 

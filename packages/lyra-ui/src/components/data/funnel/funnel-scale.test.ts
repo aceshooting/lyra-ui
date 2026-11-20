@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './funnel.js';
-import type { LyraFunnel } from './funnel.js';
+import '../../lr-funnel.js';
+import type { LyraFunnel } from '../../lr-funnel.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 import { aggregateMillionObservations } from '../../../../test/aggregate-observations.js';
 

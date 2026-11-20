@@ -1,15 +1,15 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './layout/details/accordion-item.js';
-import './media/file-input/file-input.js';
-import './media/qr-code/qr-code.js';
-import './data/sparkline/sparkline.js';
-import './media/video-playlist/video-playlist.js';
-import './utility/known-date/known-date.js';
-import './utility/icon/icon.js';
-import './layout/app-rail/app-rail-item.js';
-import './layout/widget/widget.js';
-import './data/flow-node/flow-node.js';
-import './agent-tools/tool-call-chip/tool-call-chip.js';
+import './lr-accordion-item.js';
+import './lr-file-input.js';
+import './lr-qr-code.js';
+import './lr-sparkline.js';
+import './lr-video-playlist.js';
+import './lr-known-date.js';
+import './lr-icon.js';
+import './lr-app-rail-item.js';
+import './lr-widget.js';
+import './lr-flow-node.js';
+import './lr-tool-call-chip.js';
 import type { LyraElement } from '../internal/lyra-element.js';
 
 interface MigrationFixture {

@@ -5,8 +5,8 @@ import { sendKeys } from "@web/test-runner-commands";
 import { LitElement, type PropertyValues } from "lit";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { tag } from "../../../internal/prefix.js";
-import "./dashboard-grid.js";
-import type { LyraDashboardGrid } from "./dashboard-grid.js";
+import "../../lr-dashboard-grid.js";
+import type { LyraDashboardGrid } from "../../lr-dashboard-grid.js";
 import type { LyraDashboardCell } from "./layout.js";
 import { styles } from "./dashboard-grid.styles.js";
 import {

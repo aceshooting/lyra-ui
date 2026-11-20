@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraCommandPalette } from './command-palette.class.js';
-import './command-palette.js';
+import '../../lr-command-palette.js';
 
 it('fails closed when a revoked public command collection is read and recovers on reassignment', async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;

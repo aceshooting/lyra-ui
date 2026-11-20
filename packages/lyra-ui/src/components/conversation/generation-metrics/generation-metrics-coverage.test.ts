@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './generation-metrics.js';
-import type { LyraGenerationMetrics } from './generation-metrics.js';
+import '../../lr-generation-metrics.js';
+import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
 
 function elapsedSeconds(el: LyraGenerationMetrics): number {
   const text = el.shadowRoot!.querySelector('[part="elapsed"]')!.textContent!.trim();

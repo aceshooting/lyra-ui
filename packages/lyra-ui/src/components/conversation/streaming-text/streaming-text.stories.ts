@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './streaming-text.js';
-import '../markdown/markdown.js';
-import type { LyraStreamingText } from './streaming-text.js';
+import '../../lr-streaming-text.js';
+import '../../lr-markdown.js';
+import type { LyraStreamingText } from '../../lr-streaming-text.js';
 
 const meta: Meta = {
   title: 'StreamingText',

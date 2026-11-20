@@ -137,10 +137,10 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
 const MAX_RENDERED_EXAMPLES = 500;
 
 const loadExpandedModules = (): Promise<unknown> => Promise.all([
-  import('../../conversation/markdown/markdown.js'),
-  import('../../conversation/code-block/code-block.js'),
-  import('../../retrieval/grounding-summary/grounding-summary.js'),
-  import('../tool-timeline/tool-timeline.js'),
+  import('../../lr-markdown.js'),
+  import('../../lr-code-block.js'),
+  import('../../lr-grounding-summary.js'),
+  import('../../lr-tool-timeline.js'),
 ]);
 const exampleId = (example: EvalExampleResult): unknown => example.id;
 

@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './context-menu.js';
-import '../overlay/dropdown.js';
-import '../../layout/menu/menu-item.js';
+import '../../lr-context-menu.js';
+import '../../lr-dropdown.js';
+import '../../lr-menu-item.js';
 import type { LyraContextMenu } from './context-menu.class.js';
 
 it('closes a point-anchored menu when its connected anchor moves before viewport resize', async () => {

@@ -1,11 +1,11 @@
 import { html } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "../../forms/input/input.js";
+import "../../lr-input.js";
 import { tag } from "../../../internal/prefix.js";
-import "./widget-renderer.js";
+import "../../lr-widget-renderer.js";
 import { createWidgetDocument, type LyraWidgetNode, type LyraWidgetDocument } from "./resolve.js";
 import { createWidgetTypeRegistry } from "./registry.js";
-import type { LyraWidgetRenderer } from "./widget-renderer.js";
+import type { LyraWidgetRenderer } from "../../lr-widget-renderer.js";
 
 const meta: Meta = {
   title: "Widget Renderer",

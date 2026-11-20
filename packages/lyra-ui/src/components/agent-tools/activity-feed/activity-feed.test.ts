@@ -2,8 +2,8 @@ import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './activity-feed.js';
-import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
+import '../../lr-activity-feed.js';
+import type { LyraActivityFeed, ActivityEntry } from '../../lr-activity-feed.js';
 
 function makeEntries(count: number): ActivityEntry[] {
   return Array.from({ length: count }, (_, i) => ({

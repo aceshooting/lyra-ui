@@ -1,3 +1,9 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/timeline/timeline-item.js';
+export * from './data/timeline/timeline-item.class.js';
+import { LyraTimelineItem } from './data/timeline/timeline-item.class.js';
+import { defineElement } from '../internal/prefix.js';
+// Registers <lr-relative-time>, rendered internally as the default timestamp fallback -- see the
+// class doc's "Timestamp rendering" note. Kept out of timeline-item.class.ts so that module stays
+// side-effect free per AGENTS.md's tree-shaking rule; mirrors <lr-chat-message>'s identical
+// dependency-registration split (chat-message.ts imports live-region.js the same way).
+import './lr-relative-time.js';
+defineElement('timeline-item', LyraTimelineItem);

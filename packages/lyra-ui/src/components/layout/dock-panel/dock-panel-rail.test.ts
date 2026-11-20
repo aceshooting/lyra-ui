@@ -1,8 +1,8 @@
 import { elementUpdated, expect, fixture, html } from '@open-wc/testing';
-import './dock-panel.js';
-import '../../forms/icon-button/icon-button.js';
+import '../../lr-dock-panel.js';
+import '../../lr-icon-button.js';
 import { sendKeys } from '@web/test-runner-commands';
-import type { LyraDockPanel, LyraDockPanelCollapseChangeDetail, LyraDockPanelEdge } from './dock-panel.js';
+import type { LyraDockPanel, LyraDockPanelCollapseChangeDetail, LyraDockPanelEdge } from '../../lr-dock-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

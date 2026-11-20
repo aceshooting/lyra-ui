@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/forms/checkbox-group/checkbox-group.js';
-import '../components/forms/switch/switch.js';
-import '../components/forms/toggle/toggle.js';
-import '../components/forms/toggle-group/toggle-group.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-checkbox-group.js';
+import '../components/lr-switch.js';
+import '../components/lr-toggle.js';
+import '../components/lr-toggle-group.js';
 
 const options = [
   ['checkbox', html`<lr-checkbox>Choice</lr-checkbox>`],

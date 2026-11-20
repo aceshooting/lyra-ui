@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraXmlViewer } from './xml-viewer.class.js';
-import './xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 it('yields before remote XML parsing while preserving synchronous inline assignment', async () => {
   const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);

@@ -2,8 +2,8 @@ import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './stack-trace.js';
-import type { LyraStackTrace } from './stack-trace.js';
+import '../../lr-stack-trace.js';
+import type { LyraStackTrace } from '../../lr-stack-trace.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 async function settleClipboard(el: LyraStackTrace): Promise<void> {

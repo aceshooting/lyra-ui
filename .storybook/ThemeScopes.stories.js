@@ -2,9 +2,9 @@ import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import '../packages/lyra-ui/src/theme.css';
 import { adoptLyraTokens } from '../packages/lyra-ui/src/utilities/tokens.js';
-import '../packages/lyra-ui/src/components/layout/card/card.js';
-import '../packages/lyra-ui/src/components/forms/button/button.js';
-import '../packages/lyra-ui/src/components/overlays/badge/badge.js';
+import '../packages/lyra-ui/src/components/lr-card.js';
+import '../packages/lyra-ui/src/components/lr-button.js';
+import '../packages/lyra-ui/src/components/lr-badge.js';
 
 export default {
   title: 'Theming/Theme scopes',

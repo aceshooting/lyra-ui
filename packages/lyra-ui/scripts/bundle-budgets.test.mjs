@@ -258,64 +258,64 @@ function runtimePositionerImports(source) {
 }
 
 const deferredPositionerConsumers = {
-  'dist/components/agent-tools/tool-call-chip/tool-call-chip.js':
+  'dist/components/lr-tool-call-chip.js':
     'src/components/agent-tools/tool-call-chip/tool-call-chip.class.ts',
-  'dist/components/conversation/usage-badge/usage-badge.js':
+  'dist/components/lr-usage-badge.js':
     'src/components/conversation/usage-badge/usage-badge-overlay-runtime.ts',
-  'dist/components/forms/color-picker/color-picker.js':
+  'dist/components/lr-color-picker.js':
     'src/components/forms/color-picker/color-picker.class.ts',
-  'dist/components/forms/date-picker/date-input.js':
+  'dist/components/lr-date-input.js':
     'src/components/forms/date-picker/date-input.class.ts',
-  'dist/components/forms/input/time-input.js':
+  'dist/components/lr-time-input.js':
     'src/components/forms/input/time-input.class.ts',
-  'dist/components/forms/locale-picker/locale-picker.js':
+  'dist/components/lr-locale-picker.js':
     'src/components/forms/locale-picker/locale-picker.class.ts',
-  'dist/components/forms/select/select.js':
+  'dist/components/lr-select.js':
     'src/components/forms/select/select.class.ts',
-  'dist/components/layout/app-rail/app-rail-item.js':
+  'dist/components/lr-app-rail-item.js':
     'src/components/layout/app-rail/app-rail-item.class.ts',
-  'dist/components/layout/menu/menu.js':
+  'dist/components/lr-menu.js':
     'src/components/layout/menu/menu.class.ts',
-  'dist/components/overlays/overlay/tooltip.js':
+  'dist/components/lr-tooltip.js':
     'src/components/overlays/overlay/tooltip.class.ts',
-  'dist/components/overlays/popup/popup.js':
+  'dist/components/lr-popup.js':
     'src/components/overlays/popup/popup.class.ts',
-  'dist/components/utility/export-button/export-button.js':
+  'dist/components/lr-export-button.js':
     'src/components/utility/export-button/export-button.class.ts',
-  'dist/components/utility/mention-popover/mention-popover.js':
+  'dist/components/lr-mention-popover.js':
     'src/components/utility/mention-popover/mention-popover.class.ts',
-  'dist/components/utility/tour/tour.js':
+  'dist/components/lr-tour.js':
     'src/components/utility/tour/tour.class.ts',
 };
 
 const deferredPositionerControllerConsumers = {
-  'dist/components/retrieval/citation-badge/citation-badge.js':
+  'dist/components/lr-citation-badge.js':
     'src/components/retrieval/citation-badge/citation-badge.class.ts',
-  'dist/components/retrieval/entity-chip/entity-chip.js':
+  'dist/components/lr-entity-chip.js':
     'src/components/retrieval/entity-chip/entity-chip.class.ts',
 };
 
 const deferredCatalogPickerConsumers = {
-  'dist/components/conversation/model-select/model-select.js':
+  'dist/components/lr-model-select.js':
     'src/components/conversation/model-select/model-select.class.ts',
-  'dist/components/conversation/voice-picker/voice-picker.js':
+  'dist/components/lr-voice-picker.js':
     'src/components/conversation/voice-picker/voice-picker.class.ts',
 };
 
 assert.equal(typeof budgets.$comment, 'string');
 assert.equal(typeof initialBudgets.$comment, 'string');
 assert.deepEqual(initialBudgets.$baseline, [
-  'dist/components/data/stat/stat.js',
-  'dist/components/overlays/callout/callout.js',
-  'dist/components/layout/card/card.js',
-  'dist/components/overlays/skeleton/skeleton.js',
-  'dist/components/utility/icon/icon.js',
+  'dist/components/lr-stat.js',
+  'dist/components/lr-callout.js',
+  'dist/components/lr-card.js',
+  'dist/components/lr-skeleton.js',
+  'dist/components/lr-icon.js',
 ]);
 assert.deepEqual(
   Object.keys(initialBudgets.$marginalGzipKb).sort(),
   [
-    'dist/components/forms/combobox/combobox.js',
-    'dist/components/overlays/overlay/popover.js',
+    'dist/components/lr-combobox.js',
+    'dist/components/lr-popover.js',
     ...Object.keys(deferredPositionerConsumers),
     ...Object.keys(deferredPositionerControllerConsumers),
     ...Object.keys(deferredCatalogPickerConsumers),
@@ -452,7 +452,7 @@ const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
 test('combobox minimum-query admission retains its reviewed initial-route ceiling', () => {
-  const entry = 'dist/components/forms/combobox/combobox.js';
+  const entry = 'dist/components/lr-combobox.js';
   const measurement = 42_692;
   const ceiling = budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry);
   assert.equal(ceiling, 42_752);
@@ -462,7 +462,7 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
 
 // Standalone button registration retains the shared-base canary at the next 64-byte boundary.
 test('standalone button retains its reviewed gzip measurement and tight canary', () => {
-  const entry = 'dist/components/forms/button/button.js';
+  const entry = 'dist/components/lr-button.js';
   const measurement = 37_422;
   const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
   assert.equal(budgets.$reviewedGzipBytes[entry], measurement);
@@ -479,21 +479,21 @@ assert.deepEqual(reviewedCeilingKeys, [
   'dist/components/agent-tools/index.js',
   'dist/components/charts/index.js',
   'dist/components/conversation/index.js',
-  'dist/components/data/flow-canvas/flow-canvas.js',
-  'dist/components/data/gauge/gauge.js',
   'dist/components/data/index.js',
-  'dist/components/forms/button/button.js',
-  'dist/components/forms/combobox/combobox.js',
   'dist/components/forms/index.js',
-  'dist/components/forms/select/select.js',
   'dist/components/layout/index.js',
+  'dist/components/lr-button.js',
+  'dist/components/lr-combobox.js',
+  'dist/components/lr-flow-canvas.js',
+  'dist/components/lr-gauge.js',
+  'dist/components/lr-pdf-viewer.js',
+  'dist/components/lr-popover.js',
+  'dist/components/lr-select.js',
   'dist/components/media/index.js',
   'dist/components/overlays/index.js',
-  'dist/components/overlays/overlay/popover.js',
   'dist/components/retrieval/index.js',
   'dist/components/utility/index.js',
   'dist/components/viewers/index.js',
-  'dist/components/viewers/pdf-viewer/pdf-viewer.js',
   'dist/hydration.js',
   'dist/localization.js',
   'dist/lyra.js',
@@ -621,7 +621,7 @@ assert.equal(
   'the lean route excludes all eight mapped widget-type class modules',
 );
 const toolParamFormLean =
-  exclusions['dist/components/agent-tools/tool-param-form/tool-param-form.js'];
+  exclusions['dist/components/lr-tool-param-form.js'];
 assert.ok(
   toolParamFormLean,
   'the granular tool-param-form registration needs an inventoried checkbox exclusion claim',
@@ -635,7 +635,7 @@ assert.deepEqual(
   'the real bundle graph must reject every checkbox module from the granular registration route',
 );
 const localePickerNonmodalOverlay =
-  exclusions['dist/components/forms/locale-picker/locale-picker.js'];
+  exclusions['dist/components/lr-locale-picker.js'];
 assert.deepEqual(
   localePickerNonmodalOverlay,
   {
@@ -649,7 +649,7 @@ assert.deepEqual(
   'the granular locale-picker route must retain the lean nonmodal overlay graph',
 );
 const exportButtonNonmodalOverlay =
-  exclusions['dist/components/utility/export-button/export-button.js'];
+  exclusions['dist/components/lr-export-button.js'];
 assert.deepEqual(
   exportButtonNonmodalOverlay,
   {
@@ -718,7 +718,7 @@ async function probeToolParamFormRegistrationGraph() {
       absWorkingDir: packageDir,
       bundle: true,
       entryPoints: [
-        'src/components/agent-tools/tool-param-form/tool-param-form.ts',
+        'src/components/lr-tool-param-form.ts',
       ],
       format: 'esm',
       logLevel: 'silent',
@@ -772,10 +772,10 @@ test('granular tool-param-form executes only its declared control registration g
     'the executed granular module graph must register the form, select, option and number-input controls',
   );
   for (const input of [
-    'src/components/agent-tools/tool-param-form/tool-param-form.ts',
-    'src/components/forms/combobox/option.ts',
-    'src/components/forms/select/select.ts',
-    'src/components/forms/input/number-input.ts',
+    'src/components/lr-tool-param-form.ts',
+    'src/components/lr-option.ts',
+    'src/components/lr-select.ts',
+    'src/components/lr-number-input.ts',
   ]) {
     assert.ok(
       toolParamRegistrationProbe.inputs.includes(input),

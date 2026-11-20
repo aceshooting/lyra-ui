@@ -36,7 +36,7 @@ export function loadLazyChildren(owner: string, root: ParentNode): Promise<unkno
     const attempt = Promise.resolve()
       .then(load)
       .then(() => Promise.all(Array.from(root.querySelectorAll(tag(name)),
-        (child) => (child as Element & { updateComplete?: Promise<unknown> }).updateComplete)))
+        (child) => Promise.resolve((child as Element & { updateComplete?: Promise<unknown> }).updateComplete))))
       .catch(() => {
         children.remaining.set(name, load);
       })

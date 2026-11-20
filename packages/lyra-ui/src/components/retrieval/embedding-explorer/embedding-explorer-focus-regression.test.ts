@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 
 for (const initiallySelected of ['', 'p1']) {
   it(`preserves focused identity when an off-sample selection is ${initiallySelected ? 'removed' : 'inserted'}`, async () => {

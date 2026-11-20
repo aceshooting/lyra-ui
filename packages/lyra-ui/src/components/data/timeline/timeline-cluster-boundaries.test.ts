@@ -1,9 +1,9 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './timeline.js';
-import './timeline-item.js';
-import type { LyraTimeline } from './timeline.js';
-import type { LyraTimelineItem } from './timeline-item.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
+import type { LyraTimeline } from '../../lr-timeline.js';
+import type { LyraTimelineItem } from '../../lr-timeline-item.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 for (const available of [false, true]) {

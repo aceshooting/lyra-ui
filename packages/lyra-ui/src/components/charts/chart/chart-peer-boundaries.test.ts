@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chart.js';
-import type { LyraChart } from './chart.js';
+import '../../lr-chart.js';
+import type { LyraChart } from '../../lr-chart.js';
 
 it('normalizes a non-array raw plugin value before handing configuration to the peer', async () => {
   const element = await fixture<LyraChart>(html`<lr-chart without-animation with-data-table

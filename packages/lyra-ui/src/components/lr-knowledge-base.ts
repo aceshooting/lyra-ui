@@ -1,3 +1,9 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/knowledge-base/knowledge-base.js';
+export * from './retrieval/knowledge-base/knowledge-base.class.js';
+import { LyraKnowledgeBase } from './retrieval/knowledge-base/knowledge-base.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-table.js';
+import './lr-badge.js';
+import './lr-stat.js';
+import './lr-dropdown.js';
+import './lr-button.js';
+defineElement('knowledge-base', LyraKnowledgeBase);

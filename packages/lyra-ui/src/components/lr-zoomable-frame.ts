@@ -1,3 +1,9 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/zoomable-frame/zoomable-frame.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraZoomableFrame } from './media/zoomable-frame/zoomable-frame.class.js';
+
+defineElement('zoomable-frame', LyraZoomableFrame);
+export { LyraZoomableFrame } from './media/zoomable-frame/zoomable-frame.class.js';
+export type {
+  LyraZoomableFrameEventMap,
+  LyraZoomableFrameLoading,
+} from './media/zoomable-frame/zoomable-frame.class.js';

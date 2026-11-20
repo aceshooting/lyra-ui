@@ -1,13 +1,13 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './alert.js';
-import '../callout/callout.js';
-import '../dialog/dialog.js';
-import '../drawer/drawer.js';
-import '../spinner/spinner.js';
-import '../chip/chip-group.js';
-import '../kbd/kbd.js';
-import '../empty/empty.js';
-import '../toast/toast-item.js';
+import '../../lr-alert.js';
+import '../../lr-callout.js';
+import '../../lr-dialog.js';
+import '../../lr-drawer.js';
+import '../../lr-spinner.js';
+import '../../lr-chip-group.js';
+import '../../lr-kbd.js';
+import '../../lr-empty.js';
+import '../../lr-toast-item.js';
 
 for (const name of ['alert', 'callout'] as const) {
   it(`uses the full message row of an iconless, non-closable ${name}`, async () => {

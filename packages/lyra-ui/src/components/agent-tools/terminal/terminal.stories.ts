@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './terminal.js';
+import '../../lr-terminal.js';
 import type { LyraTerminal } from './terminal.class.js';
 
 const meta: Meta = {

@@ -1,8 +1,8 @@
 import { accessibleName } from '../../../../test/accessible-name.js';
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
-import './lite-chart.js';
-import { LyraLiteChart } from './lite-chart.js';
+import '../../lr-lite-chart.js';
+import { LyraLiteChart } from '../../lr-lite-chart.js';
 import type { LyraChartFormatterContext } from './chart.class.js';
 import { styles } from './lite-chart.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

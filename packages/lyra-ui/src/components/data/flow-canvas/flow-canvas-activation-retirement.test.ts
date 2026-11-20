@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 
 type Selection = {
   readonly selectedNodeIds: readonly string[];

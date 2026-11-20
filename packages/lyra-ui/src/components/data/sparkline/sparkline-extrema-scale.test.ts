@@ -1,7 +1,7 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './sparkline.js';
-import type { LyraSparkline } from './sparkline.js';
+import '../../lr-sparkline.js';
+import type { LyraSparkline } from '../../lr-sparkline.js';
 
 it('retains a late extremum and endpoints with bounded million-value projection storage', async () => {
   const values = new Array<number>(1_000_000).fill(0); values[999_998] = 100;

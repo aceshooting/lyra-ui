@@ -4,7 +4,7 @@ import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scal
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './av-player.js';
+import '../../lr-av-player.js';
 import type { LyraAvPlayer } from './av-player.class.js';
 
 type WaveformPlayer = LyraAvPlayer & { waveform: LyraPreparedWaveform | null };

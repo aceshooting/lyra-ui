@@ -3,7 +3,7 @@ import type { TemplateResult } from 'lit';
 
 import { setForcedColors } from '../../test/wtr-media.js';
 
-import '../components/layout/card/card.js';
+import '../components/lr-card.js';
 
 // The documented consumer order: a layered reset (Tailwind's theme/base) sorts BEFORE Lyra's layers
 // and docs-authoring utilities after lr-utilities. WTR gives every test file a fresh page, so this

@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './change-review.js';
+import '../../lr-change-review.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import type { ChangeReviewFile, LyraChangeReview } from './change-review.class.js';

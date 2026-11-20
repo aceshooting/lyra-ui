@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './split-panel.js';
+import '../../lr-split-panel.js';
 
 const meta: Meta = {
   title: 'Layout/Split panel',

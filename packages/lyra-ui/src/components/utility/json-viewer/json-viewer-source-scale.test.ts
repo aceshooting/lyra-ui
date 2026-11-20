@@ -6,7 +6,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './json-viewer.js';
+import '../../lr-json-viewer.js';
 
 type Source = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 const strings = { jsonValue: 'JSON value', loading: 'Loading', treeSourceError: 'Unable to load tree data.', treeSourceSummary: '{visible} visible of {total} nodes.',

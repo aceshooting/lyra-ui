@@ -1,7 +1,7 @@
 import { html } from '@open-wc/testing';
 import { describeViewerResponseLifecycle } from '../../../../test/contracts/viewer-response-lifecycle.js';
 import { loadIcal } from './calendar-loader.js';
-import './calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
 
 describeViewerResponseLifecycle('lr-calendar-viewer', html`<lr-calendar-viewer></lr-calendar-viewer>`, {
   extension: 'ics', contentSelector: '[part="event-summary"]', preload: loadIcal,

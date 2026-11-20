@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/budget-meter/budget-meter.js';
+export * from './agent-tools/budget-meter/budget-meter.class.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraBudgetMeter } from './agent-tools/budget-meter/budget-meter.class.js';
+
+defineElement('budget-meter', LyraBudgetMeter);

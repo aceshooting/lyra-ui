@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './zoomable-frame.js';
-import type { LyraZoomableFrame } from './zoomable-frame.js';
+import '../../lr-zoomable-frame.js';
+import type { LyraZoomableFrame } from '../../lr-zoomable-frame.js';
 import * as classModule from './zoomable-frame.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';

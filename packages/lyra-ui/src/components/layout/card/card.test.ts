@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./card.js";
-import "../../forms/button/button.js";
-import type { LyraCard } from "./card.js";
+import "../../lr-card.js";
+import "../../lr-button.js";
+import type { LyraCard } from "../../lr-card.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

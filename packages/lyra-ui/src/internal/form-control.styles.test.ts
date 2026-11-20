@@ -1,21 +1,21 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import '../components/forms/input/input.js';
-import '../components/forms/input/number-input.js';
-import '../components/forms/input/time-input.js';
-import '../components/forms/color-picker/color-picker.js';
-import '../components/forms/radio/radio-group.js';
-import '../components/forms/select/select.js';
-import '../components/forms/code-editor/code-editor.js';
-import '../components/forms/emoji-picker/emoji-picker.js';
-import '../components/forms/otp-input/otp-input.js';
-import '../components/forms/checkbox-group/checkbox-group.js';
-import '../components/forms/token-input/token-input.js';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/forms/slider/slider.js';
-import '../components/forms/signature-pad/signature-pad.js';
-import '../components/media/file-input/file-input.js';
-import '../components/agent-tools/tool-param-form/tool-param-form.js';
-import '../components/utility/known-date/known-date.js';
+import '../components/lr-input.js';
+import '../components/lr-number-input.js';
+import '../components/lr-time-input.js';
+import '../components/lr-color-picker.js';
+import '../components/lr-radio-group.js';
+import '../components/lr-select.js';
+import '../components/lr-code-editor.js';
+import '../components/lr-emoji-picker.js';
+import '../components/lr-otp-input.js';
+import '../components/lr-checkbox-group.js';
+import '../components/lr-token-input.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-slider.js';
+import '../components/lr-signature-pad.js';
+import '../components/lr-file-input.js';
+import '../components/lr-tool-param-form.js';
+import '../components/lr-known-date.js';
 
 // The required marker is one shared sheet (form-control.styles.ts) consumed by every labelled
 // control, so it is asserted once, here, against the rendered ::after box -- never against

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraJsonViewer } from './json-viewer.class.js';
-import './json-viewer.js';
+import '../../lr-json-viewer.js';
 
 it('moves the search cursor without rebuilding a 1,000-value JSON tree', async () => {
   const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer .data=${Array.from({ length: 1000 }, (_, index) => `Match ${index}`)}></lr-json-viewer>`);

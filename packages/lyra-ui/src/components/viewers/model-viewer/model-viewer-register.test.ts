@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './model-viewer-register.js';
-import '../document-viewer/document-viewer.js';
+import '../../lr-document-viewer.js';
 import { adaptDocumentRenderer, createDocumentRendererAdapter, createDocumentRendererRegistry, findDocumentRenderer, loadDocumentRenderer, registerDocumentRenderer, snapshotLyraDocumentRendererPayload, type LyraDocumentRendererDefinition, type LyraModelDocumentRendererPayload } from '../document-viewer/registry.js';
 import type { LyraDocumentViewer } from '../document-viewer/document-viewer.class.js';
 import type { LyraModelViewer } from './model-viewer.class.js';

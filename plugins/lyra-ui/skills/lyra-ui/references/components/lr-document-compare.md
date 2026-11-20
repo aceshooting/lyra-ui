@@ -17,7 +17,9 @@
 ## `lr-document-compare`
 
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
-`lr-document-preview` for side-by-side rendered content.
+`lr-document-preview` for side-by-side rendered content. The default entry registers
+`lr-document-preview` the first time `view="side-by-side"` renders it;
+`updateComplete` waits for that registration and the child's first render.
 
 A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
 host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute

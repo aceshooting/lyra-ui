@@ -2,7 +2,7 @@ import { html } from 'lit';
 import { formatBytes } from '../../../utilities/format.js';
 import type { BudgetMeterValueFormatter } from './budget-meter.class.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './budget-meter.js';
+import '../../lr-budget-meter.js';
 
 const meta: Meta = {
   title: 'Agent Tools/Budget Meter',

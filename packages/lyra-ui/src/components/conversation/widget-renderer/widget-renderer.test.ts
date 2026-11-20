@@ -1,10 +1,10 @@
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
-import "../../forms/input/input.js";
-import "./widget-renderer.js";
+import "../../lr-input.js";
+import "../../lr-widget-renderer.js";
 import { createWidgetDocument, type LyraWidgetNode } from "./resolve.js";
 import { createWidgetTypeRegistry } from "./registry.js";
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
-import type { LyraWidgetRenderer } from "./widget-renderer.js";
+import type { LyraWidgetRenderer } from "../../lr-widget-renderer.js";
 
 async function captureWarnings(work: () => Promise<void>): Promise<string[]> {
   const originalWarn = console.warn;

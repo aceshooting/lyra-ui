@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './realtime-session.js';
-import type { LyraRealtimeSession } from './realtime-session.js';
+import '../../lr-realtime-session.js';
+import type { LyraRealtimeSession } from '../../lr-realtime-session.js';
 
 const meta: Meta = {
   title: 'Conversation/Realtime Session',

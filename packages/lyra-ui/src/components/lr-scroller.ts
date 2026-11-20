@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/scroller/scroller.js';
+export * from './layout/scroller/scroller.class.js';
+import { LyraScroller } from './layout/scroller/scroller.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('scroller', LyraScroller);

@@ -1,5 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
+import '../../lr-map.js';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import {
   ScriptedOverlayMap,
@@ -9,7 +9,7 @@ import {
   layerWithSuffix,
   COLLECTION,
 } from '../../../../test/map-scripted-engine.js';
-import type { LyraMap, LyraMapStyleSpecification } from './map.js';
+import type { LyraMap, LyraMapStyleSpecification } from '../../lr-map.js';
 
 const GLYPH_STYLE = { version: 8, sources: {}, layers: [], glyphs: 'https://example.test/fonts/{fontstack}/{range}.pbf' } satisfies LyraMapStyleSpecification;
 

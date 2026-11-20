@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './selection-toolbar.js';
+import '../../lr-selection-toolbar.js';
 import type { LyraSelectionToolbar } from './selection-toolbar.class.js';
 
 function key(target: EventTarget, name: string): boolean {

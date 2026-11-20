@@ -362,7 +362,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (this.graphSource !== undefined && this.centerKey !== null) {
-      paginationRegistration ??= import('../../data/pagination/pagination.js').catch(() => { paginationRegistration = undefined; });
+      paginationRegistration ??= import('../../lr-pagination.js').catch(() => { paginationRegistration = undefined; });
     }
     this.syncSource();
     if (this.graphSource !== undefined) {
@@ -408,7 +408,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     }
     // Registered on first need, so bundles whose lists stay short never load the virtualizer.
     if (this.sortedRowsCache.length > this.effectiveVirtualizeAt)
-      virtualListRegistration ??= import('../../layout/virtual-list/virtual-list.js').catch(
+      virtualListRegistration ??= import('../../lr-virtual-list.js').catch(
         () => (virtualListRegistration = undefined)
       );
   }

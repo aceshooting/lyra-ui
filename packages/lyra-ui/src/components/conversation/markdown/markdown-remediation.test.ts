@@ -1,8 +1,8 @@
 import { fixture, expect, waitUntil } from '@open-wc/testing';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
-import type { LyraMarkdownCore } from './markdown-core.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
+import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
 
 for (const tagName of ['lr-markdown', 'lr-markdown-core']) {
   for (const streaming of [false, true]) {

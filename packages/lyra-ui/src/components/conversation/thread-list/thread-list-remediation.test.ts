@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
-import './thread-list.js';
-import type { LyraThreadList } from './thread-list.js';
+import '../../lr-thread-list.js';
+import type { LyraThreadList } from '../../lr-thread-list.js';
 
 it('treats an explicitly empty slot attribute as default thread content', async () => {
   const el = await fixture<LyraThreadList>(html`<lr-thread-list><lr-conversation-item slot="" label="Thread"></lr-conversation-item></lr-thread-list>`);

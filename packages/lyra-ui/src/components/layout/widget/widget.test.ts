@@ -8,9 +8,9 @@ import {
   html,
   waitUntil,
 } from "@open-wc/testing";
-import "./widget.js";
-import '../../forms/switch/switch.js';
-import type { LyraWidget } from "./widget.js";
+import "../../lr-widget.js";
+import '../../lr-switch.js';
+import type { LyraWidget } from "../../lr-widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -959,7 +959,7 @@ describe("views", () => {
       { viewId: " spaced " },
       hostile,
       { viewId: "valid", label: "Valid" },
-    ] as unknown as readonly import("./widget.js").LyraWidgetView[];
+    ] as unknown as readonly import("../../lr-widget.js").LyraWidgetView[];
     await el.updateComplete;
     const toggles = el.shadowRoot!.querySelectorAll('[part="view-toggle"]');
     expect(toggles.length).to.equal(1);

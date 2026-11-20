@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './video.js';
+import '../../lr-video.js';
 import type { LyraVideo } from './video.class.js';
 import { capture, center, changedPixels, loseContext, matches, nativeCanvas, redrawPanorama, nativePixels, nativeSample, seekNative, observeNativeDraws, requireWebgl2 } from '../../../../test/native-3d-ui.js';
 

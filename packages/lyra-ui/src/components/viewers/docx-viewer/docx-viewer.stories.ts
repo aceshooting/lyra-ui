@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './docx-viewer.js';
+import '../../lr-docx-viewer.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 

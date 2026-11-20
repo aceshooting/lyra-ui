@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';

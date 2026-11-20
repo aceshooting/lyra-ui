@@ -65,10 +65,9 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) limits the number of mounted
-tokens. Set `max-tokens-visible="200"` for a bounded window or `max-tokens-visible="0"` to keep
-mounting every token. Omitting or removing the attribute, or supplying a non-finite limit,
-currently uses the deprecated implicit unlimited default.
+`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) limits the number of mounted
+tokens. Omitting or removing the attribute, or supplying a non-finite limit, uses the 200-token
+window; set `max-tokens-visible="0"` to keep mounting every token.
 The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
 field. The `token-overflow` part shows how many tokens are outside the current window. The value
 array and form submission always include every token.

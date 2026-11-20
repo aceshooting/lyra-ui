@@ -1,7 +1,7 @@
 import { expect, fixture, oneEvent, waitUntil, aTimeout, html } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
 import { CopyFailure } from './copy-button.stories.js';
-import type { LyraCopyButton } from './copy-button.js';
+import type { LyraCopyButton } from '../../lr-copy-button.js';
 import { hoverUntilMatched, sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 
 /** Resolves once a native pointer command has actually been processed by the browser, so a

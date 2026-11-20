@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tab-group.js';
-import './tab.js';
-import './tab-panel.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab.js';
+import '../../lr-tab-panel.js';
 
 const meta: Meta = {
   title: 'Tabs/Tab panel',

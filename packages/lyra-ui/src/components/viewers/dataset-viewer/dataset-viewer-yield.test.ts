@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraDatasetViewer } from './dataset-viewer.class.js';
-import './dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
 
 it('yields between dataset admission and record parsing', async () => {
   const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);

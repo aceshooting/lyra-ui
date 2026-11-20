@@ -3,8 +3,8 @@ import { sceneArc, sceneMarker, sceneModel, scenePath } from '../../../../test/m
 import { deferred, renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { RenderPeer } from '../../../../test/map-scene-render-component-fixtures.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
-import type { LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 
 interface StateDetail { readonly revision: number; readonly state: string; readonly code?: string }
 interface LineFeature { readonly properties: { readonly id: string; readonly color: string; readonly width: number };

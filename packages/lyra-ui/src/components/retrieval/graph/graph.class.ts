@@ -3487,7 +3487,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (this.view === '2d' && this.layout === 'layered' && !this.loadFailed) void this.ensureLayered();
     super.willUpdate(changed);
     if (this.graphSource !== undefined) {
-      paginationRegistration ??= import('../../data/pagination/pagination.js').catch(() => { paginationRegistration = undefined; });
+      paginationRegistration ??= import('../../lr-pagination.js').catch(() => { paginationRegistration = undefined; });
     }
     if (changed.has('view') && this.isConnected) {
       if (this.view !== '2d') {

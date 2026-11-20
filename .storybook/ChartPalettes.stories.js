@@ -4,7 +4,7 @@ import '../packages/lyra-ui/src/theme.css';
 import { applyLyraStyleScope } from '../packages/lyra-ui/src/theme/theme.js';
 import { LYRA_CHART_PALETTES, getLyraChartPaletteTokens, getLyraChartSeriesCue } from '../packages/lyra-ui/src/theme/options/charts.js';
 import { sampleLyraChartScale } from '../packages/lyra-ui/src/theme/chart-palette.js';
-import '../packages/lyra-ui/src/components/charts/chart/lite-chart.js';
+import '../packages/lyra-ui/src/components/lr-lite-chart.js';
 
 export default {
   title: 'Theming/Chart palettes',

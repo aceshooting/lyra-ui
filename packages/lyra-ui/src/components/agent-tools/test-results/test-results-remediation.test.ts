@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './test-results.js';
+import '../../lr-test-results.js';
 import type { LyraTestResults, TestResultsSource } from './test-results.class.js';
 
 describe('lr-test-results remediation', () => {

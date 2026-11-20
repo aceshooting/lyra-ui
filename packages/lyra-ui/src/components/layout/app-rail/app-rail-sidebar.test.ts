@@ -7,17 +7,17 @@ import type { LyraAppRailItem } from './app-rail-item.class.js';
 import type { LyraCommandPalette } from '../command-palette/command-palette.class.js';
 import type { LyraPage } from '../page/page.class.js';
 import { detectPlatform } from '../../../internal/platform.js';
-import './app-rail.js';
-import './app-rail-item.js';
-import '../menubar/menubar.js';
+import '../../lr-app-rail.js';
+import '../../lr-app-rail-item.js';
+import '../../lr-menubar.js';
 import { toRgba } from '../../../../test/color-contrast.js';
-import '../app-rail-group/app-rail-group.js';
-import '../page/page.js';
-import '../command-palette/command-palette.js';
-import '../../forms/icon-button/icon-button.js';
-import '../../forms/input/input.js';
-import '../../utility/divider/divider.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-app-rail-group.js';
+import '../../lr-page.js';
+import '../../lr-command-palette.js';
+import '../../lr-icon-button.js';
+import '../../lr-input.js';
+import '../../lr-divider.js';
+import '../../lr-dialog.js';
 import type { LyraDialog } from '../../overlays/dialog/dialog.class.js';
 
 function press(key = 'b', init: KeyboardEventInit = {}, target: EventTarget = window): KeyboardEvent {

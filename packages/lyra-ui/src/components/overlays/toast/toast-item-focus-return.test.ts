@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './toast.js';
-import type { LyraToast } from './toast.js';
+import '../../lr-toast.js';
+import type { LyraToast } from '../../lr-toast.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function deepActive(): Element | null {

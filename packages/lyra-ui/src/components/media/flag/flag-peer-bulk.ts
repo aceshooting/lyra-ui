@@ -1,4 +1,4 @@
-import { loadBulkFlagUrl, setFlagUrlResolver, type LyraFlagUrlResolver } from './flag.js';
+import { loadBulkFlagUrl, setFlagUrlResolver, type LyraFlagUrlResolver } from '../../lr-flag.js';
 
 const peerResolver = loadBulkFlagUrl(() => import('@aceshooting/lyra-flags'));
 setFlagUrlResolver(peerResolver);

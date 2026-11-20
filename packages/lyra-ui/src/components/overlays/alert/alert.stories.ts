@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraAlert } from './alert.js';
-import './alert.js';
+import type { LyraAlert } from '../../lr-alert.js';
+import '../../lr-alert.js';
 
 const meta: Meta = {
   title: 'Feedback/Alert',

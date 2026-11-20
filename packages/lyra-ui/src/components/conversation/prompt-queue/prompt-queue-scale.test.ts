@@ -2,7 +2,7 @@ import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import { LyraPromptQueue, type PromptQueueItem, type PromptQueueChangeDetail } from './prompt-queue.js';
+import { LyraPromptQueue, type PromptQueueItem, type PromptQueueChangeDetail } from '../../lr-prompt-queue.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 expectDevWarning(collectionTruncationWarningKey('lr-prompt-queue', 'items'));

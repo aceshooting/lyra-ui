@@ -9,7 +9,7 @@ import type { LyraHierarchyRow } from '../../../data-sources.js';
 import type { LyraTaskList } from './task-list.class.js';
 import type { TaskItem } from './task-list.class.js';
 type TaskListSource = LyraHierarchySource<TaskItem, LyraHierarchyQuery, LyraTaskSourceSummary>;
-import './task-list.js';
+import '../../lr-task-list.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 

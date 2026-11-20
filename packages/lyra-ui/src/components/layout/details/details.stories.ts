@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './details.js';
-import '../../forms/checkbox/checkbox.js';
-import '../../overlays/badge/badge.js';
+import '../../lr-details.js';
+import '../../lr-checkbox.js';
+import '../../lr-badge.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'Disclosure/Details', component: 'lr-details', tags: ['autodocs'] };

@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import '../../data/flow-canvas/flow-canvas.js';
-import './node-palette.js';
-import type { LyraPaletteItem } from './node-palette.js';
-import type { FlowNode, LyraFlowCanvas } from '../../data/flow-canvas/flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-node-palette.js';
+import type { LyraPaletteItem } from '../../lr-node-palette.js';
+import type { FlowNode, LyraFlowCanvas } from '../../lr-flow-canvas.js';
 
 const items: LyraPaletteItem[] = [
   { type: 'http-request', label: 'HTTP Request', category: 'Data', description: 'Call an external API', keywords: ['fetch', 'api'] },

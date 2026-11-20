@@ -11,11 +11,11 @@ import {
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './menu.js';
-import './menu-item.js';
-import './menu-label.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-menu-label.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
 import type { ContainedMenuOwner } from './menu-shared.js';
 
 const basic = () => html`

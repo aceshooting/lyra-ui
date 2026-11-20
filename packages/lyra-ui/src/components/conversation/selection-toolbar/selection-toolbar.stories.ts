@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraSelectionToolbar, SelectionAction } from './selection-toolbar.class.js';
-import './selection-toolbar.js';
-import '../../forms/button/button.js';
+import '../../lr-selection-toolbar.js';
+import '../../lr-button.js';
 
 const meta: Meta = {
   title: 'Selection Toolbar',

@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './entity-chip.js';
-import type { LyraEntityChip } from './entity-chip.js';
+import '../../lr-entity-chip.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
 
 it('closes the keyboard-open preview when label update and last preview-node removal share one update', async () => {
   const el = (await fixture(html`

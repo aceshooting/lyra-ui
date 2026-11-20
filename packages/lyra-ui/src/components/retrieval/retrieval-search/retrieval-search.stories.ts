@@ -1,6 +1,6 @@
 import { html, nothing } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './retrieval-search.js';
+import '../../lr-retrieval-search.js';
 import type { RetrievalQuery } from '../../../ai/types.js';
 
 const meta: Meta = {

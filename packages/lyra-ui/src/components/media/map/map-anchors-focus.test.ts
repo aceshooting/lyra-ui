@@ -4,8 +4,8 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   addAnchor, AnchorMapEngine, base, content, deepActive, hidden, isPlaced, mountMap, placed, restoreMapEnvironment, stubMapEnvironment, zIndex,
 } from '../../../../test/map-anchors.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 
 function field(label: string, autofocus = false): HTMLInputElement {
   const input = document.createElement('input');

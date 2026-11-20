@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-param-form.js';
+import '../../lr-tool-param-form.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormProperty } from './tool-param-form.class.js';
 
 async function field(property: ToolParamFormProperty, value: unknown): Promise<LyraToolParamForm> {

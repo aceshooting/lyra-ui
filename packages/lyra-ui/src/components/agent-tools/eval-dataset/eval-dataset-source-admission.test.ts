@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraEvalDataset, EvalDatasetSource, EvalExample } from './eval-dataset.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 
 const example = (): EvalExample => ({ id: 'e0', input: 'Question', expectedOutput: 'Answer', tags: ['topic'] });
 const facets = { total: 1, values: [{ key: 'topic', label: 'Topic' }], unavailableSelected: [] };

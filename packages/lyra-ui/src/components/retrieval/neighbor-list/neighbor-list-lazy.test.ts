@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './neighbor-list.js';
-import type { LyraNeighborRow } from './neighbor-list.js';
+import '../../lr-neighbor-list.js';
+import type { LyraNeighborRow } from '../../lr-neighbor-list.js';
 
 const row = (index: number): LyraNeighborRow => ({
   relation: 'knows',

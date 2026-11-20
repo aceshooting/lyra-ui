@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 it('scrolls its owner Window to public list coordinates without scrolling the parent', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe title="List scroll realm" style="width:320px;height:200px"></iframe>`);

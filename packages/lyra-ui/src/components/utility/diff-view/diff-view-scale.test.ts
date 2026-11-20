@@ -1,7 +1,7 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
-import './diff-view.js';
+import '../../lr-diff-view.js';
 it('declines oversized diff highlighting before calling the tokenizer', () => {
   const el = document.createElement('lr-diff-view'); let calls = 0;
   const seam = el as unknown as { tokenizeLines(highlighter: unknown, text: string, language: string): string[] | null };

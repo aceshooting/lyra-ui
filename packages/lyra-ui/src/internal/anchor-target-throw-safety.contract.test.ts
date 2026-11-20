@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import '../components/viewers/xml-viewer/xml-viewer.js';
-import '../components/viewers/svg-viewer/svg-viewer.js';
-import type { LyraXmlViewer } from '../components/viewers/xml-viewer/xml-viewer.js';
-import type { LyraSvgViewer } from '../components/viewers/svg-viewer/svg-viewer.js';
+import '../components/lr-xml-viewer.js';
+import '../components/lr-svg-viewer.js';
+import type { LyraXmlViewer } from '../components/lr-xml-viewer.js';
+import type { LyraSvgViewer } from '../components/lr-svg-viewer.js';
 import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 import type { LyraAnchorTarget } from './anchor-target.js';
 

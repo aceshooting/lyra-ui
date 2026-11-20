@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './file-tree.js';
-import type { FileTreeNode, LyraFileTree } from './file-tree.js';
+import '../../lr-file-tree.js';
+import type { FileTreeNode, LyraFileTree } from '../../lr-file-tree.js';
 
 for (const field of ['name', 'kind', 'mimeType', 'gitStatus', 'additions', 'deletions', 'hasChildren', 'children']) {
   it(`admits the next valid same-path node after a rejected ${field} getter`, async () => {

@@ -7,7 +7,7 @@ export const HTML_VIEWER_TAG = tag('html-viewer');
 registerDocumentRenderer('text/html', {
   matches: (file: LyraDocumentFile) => /\.html?$/i.test(file.name),
   capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true },
-  load: () => import('./html-viewer.js').then(() => ({
+  load: () => import('../../lr-html-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-html-viewer
       src=${file.src}
       name=${file.name}

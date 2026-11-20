@@ -1,6 +1,6 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './permission-rules.js';
+import '../../lr-permission-rules.js';
 import type { LyraPermissionRules, PermissionRule } from './permission-rules.class.js';
 
 const rules: PermissionRule[] = [

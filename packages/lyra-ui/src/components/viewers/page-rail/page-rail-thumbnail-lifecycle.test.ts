@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './page-rail.js';
-import type { LyraPageRail, LyraPageViewerSnapshot, PageThumbnailRenderHandle, PageThumbnailSource } from './page-rail.js';
+import '../../lr-page-rail.js';
+import type { LyraPageRail, LyraPageViewerSnapshot, PageThumbnailRenderHandle, PageThumbnailSource } from '../../lr-page-rail.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 
 interface PendingThumbnail {

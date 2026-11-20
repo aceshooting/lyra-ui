@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { webgl2Available } from '../../../internal/engine-3d.js';
-import './model-viewer.js';
+import '../../lr-model-viewer.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
 
 // These cases drive the real companion engine, so they need a WebGL2 context. Engines without one

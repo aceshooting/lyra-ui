@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './document-preview.js';
-import type { LyraDocumentPreview } from './document-preview.js';
+import '../../lr-document-preview.js';
+import type { LyraDocumentPreview } from '../../lr-document-preview.js';
 
 function stubTextFetch(text: string): () => void {
   const original = window.fetch;

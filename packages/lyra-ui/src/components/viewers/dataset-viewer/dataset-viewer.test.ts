@@ -10,8 +10,8 @@ import {
   oneEvent,
   waitUntil,
 } from '@open-wc/testing';
-import './dataset-viewer.js';
-import type { LyraDatasetViewer } from './dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
+import type { LyraDatasetViewer } from '../../lr-dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { VIEWER_SEARCH_WORK_LIMIT } from '../viewer-search-limits.js';

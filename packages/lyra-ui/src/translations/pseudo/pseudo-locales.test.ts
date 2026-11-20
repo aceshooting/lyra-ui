@@ -5,8 +5,8 @@ import {
   getRegisteredLyraLocales,
   registerLyraLocale,
 } from '../../localization.js';
-import '../../components/data/sparkline/sparkline.js';
-import '../../components/utility/format/format-number.js';
+import '../../components/lr-sparkline.js';
+import '../../components/lr-format-number.js';
 import './en-XA.js';
 import './ar-XB.js';
 import type { LyraSparkline } from '../../components/data/sparkline/sparkline.class.js';

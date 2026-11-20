@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './page.js';
+import '../../lr-page.js';
 
 const meta: Meta = {
   title: 'Layout/Page',

@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { settlePointer } from '../../../../test/wtr-mouse.js';
-import './popover.js';
-import type { LyraPopover } from './popover.js';
+import '../../lr-popover.js';
+import type { LyraPopover } from '../../lr-popover.js';
 
 async function setup(topLayer = false) {
   const wrapper = await fixture<HTMLDivElement>(html`<div>

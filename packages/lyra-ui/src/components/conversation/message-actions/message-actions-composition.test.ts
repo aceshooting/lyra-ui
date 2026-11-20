@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './message-actions.js';
+import '../../lr-message-actions.js';
 import type { LyraMessageActions } from './message-actions.class.js';
 
 const ANCESTOR_TOKENS =

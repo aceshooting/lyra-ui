@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraMessageFeedback } from './message-feedback.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
-import './message-feedback.js';
+import '../../lr-message-feedback.js';
 
 for (const cause of ['disabled', 'pending', 'veto'] as const) {
   for (const selected of [false, true]) {

@@ -1,3 +1,8 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/currency-picker/currency-picker.js';
+export * from './forms/currency-picker/currency-picker.class.js';
+import { LyraCurrencyPicker } from './forms/currency-picker/currency-picker.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+import './lr-select.js';
+import './lr-option.js';
+
+defineElement('currency-picker', LyraCurrencyPicker);

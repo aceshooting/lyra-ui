@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
-import './graph-query-builder.js';
-import type { LyraGraphQueryBuilder, GraphQueryTypeOption } from './graph-query-builder.js';
+import '../../lr-graph-query-builder.js';
+import type { LyraGraphQueryBuilder, GraphQueryTypeOption } from '../../lr-graph-query-builder.js';
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 
 type TypeRendering = {

@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './document-library.js';
-import type { LibraryDocument, LyraDocumentLibrary } from './document-library.js';
-import type { LyraTable } from '../table/table.js';
+import '../../lr-document-library.js';
+import type { LibraryDocument, LyraDocumentLibrary } from '../../lr-document-library.js';
+import type { LyraTable } from '../../lr-table.js';
 
 const documents: LibraryDocument[] = [{ id: 'alpha', name: 'Alpha' }, { id: 'beta', name: 'Beta' }];
 function nameButtons(element: LyraDocumentLibrary): HTMLButtonElement[] {

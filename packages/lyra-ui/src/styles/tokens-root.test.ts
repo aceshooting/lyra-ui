@@ -3,7 +3,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../test/wtr-media.js';
 import { toRgba } from '../../test/color-contrast.js';
 
-import '../components/layout/card/card.js';
+import '../components/lr-card.js';
 import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 
 // Captured at module evaluation, i.e. BEFORE the `before()` hook links the stylesheet and before any

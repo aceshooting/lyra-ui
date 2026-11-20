@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './diff-view.js';
+import '../../lr-diff-view.js';
 
 const meta: Meta = {
   title: 'DiffView',

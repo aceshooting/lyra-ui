@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './animation.js';
+import '../../lr-animation.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 for (const reduced of [false, true]) {

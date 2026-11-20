@@ -1,10 +1,10 @@
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './usage-badge.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraUsageBadge } from './usage-badge.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../lr-usage-badge.js';
+import '../../lr-dialog.js';
+import type { LyraUsageBadge } from '../../lr-usage-badge.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 ignoreResizeObserverLoopErrors(
   'These deferred lifecycle controls finish dialog exits and reopen the same observed panel while releasing pending layout work.'

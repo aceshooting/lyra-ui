@@ -1,8 +1,8 @@
 import { expect, html, waitUntil } from '@open-wc/testing';
 import { headerFixture, pointOverSibling } from '../../../../test/top-layer-header.js';
-import '../../forms/button/button.js';
+import '../../lr-button.js';
 import type { LyraTooltip } from './tooltip.class.js';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 
 const NO_MOTION = '--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms';
 

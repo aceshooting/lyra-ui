@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('shares one dimming projection between node and edge bindings', async () => {
  const nodes=Array.from({length:1000},(_,i)=>({id:`n${i}`,label:`Node ${i}`}));

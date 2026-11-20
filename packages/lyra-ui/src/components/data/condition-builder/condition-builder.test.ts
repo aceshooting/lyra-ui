@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './condition-builder.js';
-import type { LyraConditionBuilder, ConditionBuilderField, ConditionBuilderValue } from './condition-builder.js';
+import '../../lr-condition-builder.js';
+import type { LyraConditionBuilder, ConditionBuilderField, ConditionBuilderValue } from '../../lr-condition-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';

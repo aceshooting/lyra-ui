@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraInspectionNode } from '../../../data-sources.js';
 import type { LyraJsonViewer } from './json-viewer.class.js';
-import './json-viewer.js';
+import '../../lr-json-viewer.js';
 
 type Source = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 

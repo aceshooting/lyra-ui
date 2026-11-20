@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { ifDefined } from 'lit/directives/if-defined.js';
-import './lite-chart.js';
-import type { LyraLiteChart } from './lite-chart.js';
+import '../../lr-lite-chart.js';
+import type { LyraLiteChart } from '../../lr-lite-chart.js';
 
 const LABELS = ['Mon', 'Tue'];
 const DATASETS = [{ label: 'North', data: [3, 5] }, { label: 'South', data: [4, 2] }];

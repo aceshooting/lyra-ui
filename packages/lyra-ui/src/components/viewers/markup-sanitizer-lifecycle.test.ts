@@ -4,8 +4,8 @@ import { expectDevWarning } from '../../../test/expected-dev-warnings.js';
 import { twoFrames } from '../../../test/frames.js';
 import type { LyraHtmlViewer } from './html-viewer/html-viewer.class.js';
 import type { LyraSvgViewer } from './svg-viewer/svg-viewer.class.js';
-import './html-viewer/html-viewer.js';
-import './svg-viewer/svg-viewer.js';
+import '../lr-html-viewer.js';
+import '../lr-svg-viewer.js';
 
 type MarkupKind = 'html' | 'svg';
 

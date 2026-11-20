@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
 import { McpAppSession } from './mcp-app-protocol.js';
 

@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './date-input.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-input.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 
 for (const failure of ['import', 'setup'] as const) {
   for (const opening of ['show', 'property', 'reconnect'] as const) {

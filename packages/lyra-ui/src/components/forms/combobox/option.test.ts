@@ -1,9 +1,9 @@
 import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './option.js';
-import './combobox.js';
-import '../select/select.js';
-import type { LyraOption } from './option.js';
+import '../../lr-option.js';
+import '../../lr-combobox.js';
+import '../../lr-select.js';
+import type { LyraOption } from '../../lr-option.js';
 import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,

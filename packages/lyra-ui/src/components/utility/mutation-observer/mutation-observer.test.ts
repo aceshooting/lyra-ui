@@ -1,6 +1,6 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './mutation-observer.js';
+import '../../lr-mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.

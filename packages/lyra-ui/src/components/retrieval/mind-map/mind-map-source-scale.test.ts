@@ -1,7 +1,7 @@
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './mind-map.js';
+import '../../lr-mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.class.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchyAction } from '../../../data-sources.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';

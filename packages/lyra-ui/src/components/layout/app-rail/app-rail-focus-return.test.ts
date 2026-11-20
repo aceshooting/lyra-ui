@@ -2,7 +2,7 @@ import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraAppRail, LyraAppRailToggleDetail } from './app-rail.class.js';
-import './app-rail.js';
+import '../../lr-app-rail.js';
 
 // Deterministic matchMedia stand-in, so the rail's mode never depends on the test viewport.
 let originalMatchMedia: typeof window.matchMedia;

@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './context-menu.js';
-import '../../layout/menu/menu-item.js';
+import '../../lr-context-menu.js';
+import '../../lr-menu-item.js';
 import type { LyraContextMenu } from './context-menu.class.js';
 
 it('keeps a context menu open when viewport scrolling leaves its fixed anchor in place', async () => {

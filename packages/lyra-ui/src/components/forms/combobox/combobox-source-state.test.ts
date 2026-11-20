@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './combobox.js';
-import type { LyraCombobox, ComboboxSource } from './combobox.js';
+import '../../lr-combobox.js';
+import type { LyraCombobox, ComboboxSource } from '../../lr-combobox.js';
 
 /** Every `source` below rejects or resolves deliberately; the component logs a console warning for
  *  a real rejection, which is noise here, not a failure. */

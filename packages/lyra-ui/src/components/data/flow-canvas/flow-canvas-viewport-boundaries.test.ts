@@ -2,8 +2,8 @@ import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, sendWheel, settlePointer } from '../../../../test/wtr-mouse.js';
-import { FLOW_PALETTE_MIME_TYPE, type LyraFlowCanvas } from './flow-canvas.js';
-import './flow-canvas.js';
+import { FLOW_PALETTE_MIME_TYPE, type LyraFlowCanvas } from '../../lr-flow-canvas.js';
+import '../../lr-flow-canvas.js';
 
 async function canvas(direction: 'ltr' | 'rtl' = 'ltr') {
   const wrapper = await fixture<HTMLDivElement>(html`<div dir=${direction}>

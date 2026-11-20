@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './table.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { installTableTestHooks, type Row, columns, editableColumns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 

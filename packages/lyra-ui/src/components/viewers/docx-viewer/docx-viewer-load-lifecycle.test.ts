@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { describeViewerResponseLifecycle } from '../../../../test/contracts/viewer-response-lifecycle.js';
 import { loadDocxDeps } from './docx-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
-import './docx-viewer.js';
+import '../../lr-docx-viewer.js';
 
 describeViewerResponseLifecycle('lr-docx-viewer', html`<lr-docx-viewer></lr-docx-viewer>`, {
   extension: 'docx', contentSelector: '[part="content"]', preload: loadDocxDeps,

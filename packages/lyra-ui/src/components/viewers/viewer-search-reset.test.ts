@@ -1,13 +1,13 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './archive-viewer/archive-viewer.js';
-import './csv-viewer/csv-viewer.js';
-import './dataset-viewer/dataset-viewer.js';
-import './ebook-viewer/ebook-viewer.js';
-import './notebook-viewer/notebook-viewer.js';
-import './pdf-viewer/pdf-viewer.js';
-import './pptx-viewer/pptx-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
-import './xml-viewer/xml-viewer.js';
+import '../lr-archive-viewer.js';
+import '../lr-csv-viewer.js';
+import '../lr-dataset-viewer.js';
+import '../lr-ebook-viewer.js';
+import '../lr-notebook-viewer.js';
+import '../lr-pdf-viewer.js';
+import '../lr-pptx-viewer.js';
+import '../lr-spreadsheet-viewer.js';
+import '../lr-xml-viewer.js';
 
 interface SearchResetViewer extends HTMLElement {
   updateComplete: Promise<boolean>;

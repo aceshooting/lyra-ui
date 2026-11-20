@@ -1,9 +1,9 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './popover.js';
-import './tooltip.js';
-import './dropdown.js';
-import type { LyraPopover } from './popover.js';
-import type { LyraTooltip } from './tooltip.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-dropdown.js';
+import type { LyraPopover } from '../../lr-popover.js';
+import type { LyraTooltip } from '../../lr-tooltip.js';
 
 type AnchoredOverlay = LyraPopover | LyraTooltip;
 

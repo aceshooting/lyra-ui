@@ -1,17 +1,16 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { activateOverlay } from '../../../internal/overlay-manager.js';
-import '../../forms/select/select.js';
-import type { LyraSelect } from '../../forms/select/select.js';
+import '../../lr-select.js';
+import type { LyraSelect } from '../../lr-select.js';
 import {
   addAnchor, base, captureCloses, closeButton, content, deepActive, hidden, isPlaced, mountMap, placed,
   restoreMapEnvironment, stubMapEnvironment, zIndex,
 } from '../../../../test/map-anchors.js';
-import type { LyraMap } from './map.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import type { LyraMap } from '../../lr-map.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 
 /** An anchor built in this file, so accessibility evidence names its own instance. */
 function anchorAt(map: LyraMap, lngLat: readonly [number, number], label: string): LyraMapAnchor {
@@ -35,7 +34,6 @@ function centreX(map: LyraMap, anchor: LyraMapAnchor): number {
   return rect.left + rect.width / 2 - containerLeft(map);
 }
 
-expectDeprecatedUsage('lr-map-anchor', 'event', 'lr-close-request');
 
 describe('lr-map-anchor placement, coexistence and close ownership', () => {
   beforeEach(() => { stubMapEnvironment(); });
@@ -62,7 +60,7 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     const panel = map.shadowRoot!.querySelector<HTMLElement>('[part="anchor"]')!;
     await waitUntil(() => !panel.hidden && panel.style.left !== '', 'slot anchor placed');
     const events: string[] = [];
-    for (const type of ['lr-close-request', 'lr-close']) map.addEventListener(type, () => { events.push(type); });
+    for (const type of ['lr-map-anchor-dismiss-request', 'lr-map-anchor-dismiss']) map.addEventListener(type, () => { events.push(type); });
     expect(map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length).to.equal(0);
     expect(getComputedStyle(panel).zIndex).to.equal('2');
     expect(panel.style.getPropertyValue('--_lr-map-anchor-rank')).to.equal('');
@@ -215,7 +213,7 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     const { map } = await mountMap();
     const anchor = addAnchor(map, { closable: true }), log = captureCloses(anchor);
     await placed(anchor);
-    anchor.addEventListener('lr-close-request', event => { event.preventDefault(); }, { once: true });
+    anchor.addEventListener('lr-map-anchor-dismiss-request', event => { event.preventDefault(); }, { once: true });
     await focusByKeyboard(closeButton(anchor)); await sendKeys({ press: 'Enter' }); await anchor.updateComplete;
     expect(log.order).to.deep.equal(['request:close-button']); expect(anchor.open).to.equal(true); expect(isPlaced(anchor)).to.equal(true);
     await sendKeys({ press: 'Enter' }); await anchor.updateComplete;
@@ -236,7 +234,7 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     expect(loose.close()).to.equal(true); expect(looseLog.order).to.deep.equal(['request:api', 'close:api']);
     engine.projected = undefined;
     const vetoed = addAnchor(map); await placed(vetoed);
-    vetoed.addEventListener('lr-close-request', event => { event.preventDefault(); });
+    vetoed.addEventListener('lr-map-anchor-dismiss-request', event => { event.preventDefault(); });
     expect(vetoed.close()).to.equal(false); expect(vetoed.open).to.equal(true); expect(isPlaced(vetoed)).to.equal(true);
   });
 
@@ -261,19 +259,19 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     const { map } = await mountMap();
     const moved = addAnchor(map, { closable: true }), log = captureCloses(moved);
     await placed(moved);
-    moved.addEventListener('lr-close-request', () => { moved.lngLat = [2, 2]; }, { once: true });
+    moved.addEventListener('lr-map-anchor-dismiss-request', () => { moved.lngLat = [2, 2]; }, { once: true });
     expect(moved.close()).to.equal(false); expect(log.closes.length).to.equal(0); expect(moved.open).to.equal(true);
     await placed(moved);
     const removed = addAnchor(map, { lngLat: [-4, 0] }), removedLog = captureCloses(removed);
     await placed(removed);
-    removed.addEventListener('lr-close-request', () => { removed.remove(); }, { once: true });
+    removed.addEventListener('lr-map-anchor-dismiss-request', () => { removed.remove(); }, { once: true });
     expect(removed.close()).to.equal(false); expect(removedLog.closes.length).to.equal(0); expect(removed.open).to.equal(true);
     const reattached = addAnchor(map, { closable: true }), reattachedLog = captureCloses(reattached);
     await placed(reattached);
-    reattached.addEventListener('lr-close-request', () => { reattached.remove(); map.append(reattached); }, { once: true });
+    reattached.addEventListener('lr-map-anchor-dismiss-request', () => { reattached.remove(); map.append(reattached); }, { once: true });
     expect(reattached.close()).to.equal(false); expect(reattachedLog.closes.length).to.equal(0);
     expect(reattached.open).to.equal(true); await placed(reattached);
-    moved.addEventListener('lr-close', () => { moved.open = true; }, { once: true });
+    moved.addEventListener('lr-map-anchor-dismiss', () => { moved.open = true; }, { once: true });
     expect(moved.close()).to.equal(true); expect(moved.open).to.equal(true);
     await placed(moved); expect(log.order).to.deep.equal(['request:api', 'request:api', 'close:api']);
   });

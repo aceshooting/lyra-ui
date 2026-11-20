@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './context-meter.js';
-import type { LyraContextMeter, LyraContextMeterSegmentActivateDetail } from './context-meter.js';
+import '../../lr-context-meter.js';
+import type { LyraContextMeter, LyraContextMeterSegmentActivateDetail } from '../../lr-context-meter.js';
 
 const REQUEST = 'lr-segment-activate-request';
 const ALIAS = 'lr-segment-activate';

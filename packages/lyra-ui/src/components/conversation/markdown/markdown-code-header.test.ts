@@ -7,9 +7,9 @@ import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js
 import '../../../translations/fr/conversation.js';
 import '../../../translations/fr/shared.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 describe('code-block header', () => {
   for (const name of ['lr-markdown', 'lr-markdown-core'] as const) {

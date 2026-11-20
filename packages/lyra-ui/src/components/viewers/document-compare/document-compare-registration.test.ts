@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-compare.js';
+import '../../lr-document-compare.js';
 import type { LyraDocumentCompare } from './document-compare.class.js';
 
 it('registers the side-by-side previews only when that view first renders', async () => {

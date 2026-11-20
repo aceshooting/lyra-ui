@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './video.js';
+import '../../lr-video.js';
 
 const VIDEO_SRC = '/fixtures/sample-video.mp4';
 const POSTER =

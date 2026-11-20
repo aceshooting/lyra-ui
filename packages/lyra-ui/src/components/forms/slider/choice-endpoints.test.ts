@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import './slider.js';
-import '../checkbox/checkbox.js';
-import '../switch/switch.js';
+import '../../lr-slider.js';
+import '../../lr-checkbox.js';
+import '../../lr-switch.js';
 
 for (const direction of ['ltr', 'rtl']) {
   for (const value of [0, 100]) {

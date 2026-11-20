@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chart.js';
-import './box-plot.js';
-import type { LyraChart } from './chart.js';
-import type { LyraBoxPlot } from './box-plot.js';
+import '../../lr-chart.js';
+import '../../lr-box-plot.js';
+import type { LyraChart } from '../../lr-chart.js';
+import type { LyraBoxPlot } from '../../lr-box-plot.js';
 import { preloadCharts } from './chart-preload.js';
 
 /** The part of the live Chart.js instance this test reads; Chart.js documents it. */

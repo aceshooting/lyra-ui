@@ -2,7 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { expect, fixture, html } from '@open-wc/testing';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import type { LyraFunnel, LyraFunnelStage } from './funnel.class.js';
-import './funnel.js';
+import '../../lr-funnel.js';
 
 const SIGNUP_FUNNEL: LyraFunnelStage[] = [
   { label: 'Visited', value: 12_000 },

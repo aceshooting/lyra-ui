@@ -4,8 +4,8 @@ import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './chunk-inspector.js';
-import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
+import '../../lr-chunk-inspector.js';
+import type { LyraChunkInspector, LyraChunk } from '../../lr-chunk-inspector.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 // Registers the real 'ar' catalog so the ar-EG/ar-u-nu-arab locale tests below -- which exercise

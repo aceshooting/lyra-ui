@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './transcript-feed.js';
+import '../../lr-transcript-feed.js';
 import type { LyraTranscriptFeed } from './transcript-feed.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

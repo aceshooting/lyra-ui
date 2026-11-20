@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../test/color-contrast.js';
-import '../components/forms/button/button.js';
+import '../components/lr-button.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 
 const composite = (paint: string, backdrop: string): string => {

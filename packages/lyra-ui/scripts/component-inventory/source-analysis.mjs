@@ -57,8 +57,8 @@ export function runtimeModuleSpecifiers(source, file = 'component.ts') {
 const CAPABILITY_GATES = [
   {
     modules: [
-      'src/components/utility/icon/icon.ts',
-      'src/components/forms/icon-button/icon-button.ts',
+      'src/components/lr-icon.ts',
+      'src/components/lr-icon-button.ts',
     ],
     tags: ['icon-button', 'icon'],
     attributes: ['src', 'library'],
@@ -94,8 +94,16 @@ function rootAuthorSettablePropertyNames(component, rootFile) {
       .map(({ name }) => name)
   );
   if (names.size > 0) return names;
-  const classFile = rootFile.replace(/\.ts$/, '.class.ts');
-  if (!fs.existsSync(classFile)) return names;
+  // The tag-shaped registration entry re-exports its class module; read the members from there.
+  const classModule = component.classModule
+    ? path.join(packageDir, component.classModule)
+    : (() => {
+      if (!fs.existsSync(rootFile)) return null;
+      const specifier = /^export \* from '(\.\/[^']+\.class)\.js';$/m.exec(fs.readFileSync(rootFile, 'utf8'))?.[1];
+      return specifier ? path.join(path.dirname(rootFile), `${specifier}.ts`) : null;
+    })();
+  const classFile = classModule;
+  if (!classFile || !fs.existsSync(classFile)) return names;
   const program = parseOptionalPeerProgram(fs.readFileSync(classFile, 'utf8'), classFile);
   visitNodes(program, (node) => {
     const hasPublicPropertyDecorator = (node.decorators ?? []).some(({ expression }) => {
@@ -470,7 +478,8 @@ export function lyraComponents(manifest, existing, packageJson) {
 
   return normalized.map((entry) => {
     const classModule = entry.module;
-    const registrationModule = classModule.replace(/\.class\.ts$/, '.ts');
+    // Each tag registers from its tag-shaped entry, independent of the family/folder layout.
+    const registrationModule = `src/components/${entry.tag}.ts`;
     const previous = existingByTag.get(entry.tag);
     const predecessorTag = rootRegistrationPredecessorTag(entry.tag);
     const previousRootRegistration =

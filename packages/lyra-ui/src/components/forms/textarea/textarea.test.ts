@@ -2,8 +2,8 @@ import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifec
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import { fixture, expect, html, oneEvent, waitUntil, nextFrame } from "@open-wc/testing";
-import "./textarea.js";
-import type { LyraTextarea } from "./textarea.js";
+import "../../lr-textarea.js";
+import type { LyraTextarea } from "../../lr-textarea.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";

@@ -2,9 +2,9 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
-import './dialog.js';
-import '../drawer/drawer.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import '../../lr-drawer.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 async function click(target: HTMLElement): Promise<void> {
   const rect = target.getBoundingClientRect();

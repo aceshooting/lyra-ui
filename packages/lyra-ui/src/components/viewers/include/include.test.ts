@@ -1,8 +1,8 @@
 import { twoFrames } from '../../../../test/frames.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './include.js';
-import type { LyraInclude } from './include.js';
+import '../../lr-include.js';
+import type { LyraInclude } from '../../lr-include.js';
 import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';

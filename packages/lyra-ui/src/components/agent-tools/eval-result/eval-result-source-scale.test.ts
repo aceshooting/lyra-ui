@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './eval-result.js';
+import '../../lr-eval-result.js';
 import type { EvalResultSource, EvalRunResult, LyraEvalResult } from './eval-result.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraRubricForm } from '../../forms/rubric-form/rubric-form.class.js';

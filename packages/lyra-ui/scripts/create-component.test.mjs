@@ -221,7 +221,6 @@ test('creates a complete populated component scaffold and runs focused three-eng
   const componentDir = result.componentDirectory;
   const expectedFiles = [
     'status-panel.class.ts',
-    'status-panel.ts',
     'status-panel.styles.ts',
     'status-panel.test.ts',
     'status-panel.stories.ts',
@@ -232,8 +231,10 @@ test('creates a complete populated component scaffold and runs focused three-eng
   assert.match(classSource, /export class LyraStatusPanel extends LyraElement/);
   assert.match(classSource, /@customElement lr-status-panel/);
   assert.match(classSource, /part="base"/);
-  const registrationSource = readFileSync(join(componentDir, 'status-panel.ts'), 'utf8');
+  assert.equal(existsSync(join(componentDir, 'status-panel.ts')), false, 'registration lives in the tag-shaped entry');
+  const registrationSource = readFileSync(join(packageDir, 'src/components/lr-status-panel.ts'), 'utf8');
   assert.match(registrationSource, /defineElement\('status-panel', LyraStatusPanel\)/);
+  assert.match(registrationSource, /from '\.\/utility\/status-panel\/status-panel\.class\.js'/);
 
   const testSource = readFileSync(join(componentDir, 'status-panel.test.ts'), 'utf8');
   assert.match(testSource, /Populated Status Panel content/);
@@ -245,7 +246,7 @@ test('creates a complete populated component scaffold and runs focused three-eng
 
   assert.match(
     readFileSync(join(packageDir, 'src/components/utility/index.ts'), 'utf8'),
-    /\.\/status-panel\/status-panel\.js/,
+    /'\.\.\/lr-status-panel\.js'/,
   );
   const docs = readFileSync(join(packageDir, 'llms/utility.md'), 'utf8');
   assert.match(docs, /## `lr-status-panel`/);
@@ -398,7 +399,7 @@ test('scaffold refreshes its manifest after generating the new tag alias', async
     },
   });
   assert.equal(manifestAfterAliases, true);
-  assert.match(readFileSync(aliasFile, 'utf8'), /export \* from '\.\/utility\/status-panel\/status-panel\.js'/u);
+  assert.match(readFileSync(aliasFile, 'utf8'), /export \* from '\.\/utility\/status-panel\/status-panel\.class\.js'/u);
 });
 
 test('detects directory, inventory, catalog, barrel, docs, and manifest collisions', async (t) => {
@@ -432,7 +433,7 @@ test('detects directory, inventory, catalog, barrel, docs, and manifest collisio
       mutate(packageDir) {
         writeFileSync(
           join(packageDir, 'src/components/utility/index.ts'),
-          "export * from './status-panel/status-panel.js';\n",
+          "export * from '../lr-status-panel.js';\n",
         );
       },
     },

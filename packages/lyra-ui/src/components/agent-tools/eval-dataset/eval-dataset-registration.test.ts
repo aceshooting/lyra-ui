@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 import type { LyraEvalDataset } from './eval-dataset.class.js';
 
 it('registers the search field only when the dataset first becomes searchable', async () => {

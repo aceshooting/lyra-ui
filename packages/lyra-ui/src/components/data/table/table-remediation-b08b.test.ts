@@ -3,8 +3,8 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedColorToken } from '../../../../test/color-contrast.js';
-import './table.js';
-import type { LyraTable } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable } from '../../lr-table.js';
 import { installTableTestHooks, type Row, columns, editableColumns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 

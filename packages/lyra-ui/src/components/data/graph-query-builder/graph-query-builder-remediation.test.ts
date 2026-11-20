@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './graph-query-builder.js';
-import type { GraphQuery, LyraGraphQueryBuilder } from './graph-query-builder.js';
+import '../../lr-graph-query-builder.js';
+import type { GraphQuery, LyraGraphQueryBuilder } from '../../lr-graph-query-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';

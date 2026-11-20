@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './neighbor-list.js';
+import '../../lr-neighbor-list.js';
 import type { LyraNeighborList } from './neighbor-list.class.js';
 import type { GraphSource } from '../graph/graph.class.js';
 

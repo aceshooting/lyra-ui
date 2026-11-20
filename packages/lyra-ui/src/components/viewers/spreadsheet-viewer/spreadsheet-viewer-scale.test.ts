@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.class.js';
-import './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 type ViewerSeam = {
   fetchState: unknown;

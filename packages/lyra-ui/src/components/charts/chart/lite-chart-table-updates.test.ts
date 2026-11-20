@@ -2,7 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { LyraLiteChart, type LyraLiteChartTableCellFormatter } from './lite-chart.js';
+import { LyraLiteChart, type LyraLiteChartTableCellFormatter } from '../../lr-lite-chart.js';
 
 expectLocaleFallback('de-DE', ['chart', 'chartCategory', 'chartData', 'chartSeriesLabel', 'liteChartBarLabel', 'liteChartMarkSummary']);
 

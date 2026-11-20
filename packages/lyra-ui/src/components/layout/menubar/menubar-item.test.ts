@@ -2,7 +2,7 @@ import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
-import './menubar.js';
+import '../../lr-menubar.js';
 
 describe('lr-menubar-item', () => {
   it('is accessible as an open menu title and a plain action in the owning menubar', async () => {

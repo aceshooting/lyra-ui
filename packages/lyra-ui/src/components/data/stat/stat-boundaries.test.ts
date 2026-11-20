@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './stat.js';
-import type { LyraStat } from './stat.js';
+import '../../lr-stat.js';
+import type { LyraStat } from '../../lr-stat.js';
 
 it('normalizes incomplete breakdown records without coercing values or discarding later rows', async () => {
   const element = await fixture<LyraStat>(html`<lr-stat label="Totals"></lr-stat>`);

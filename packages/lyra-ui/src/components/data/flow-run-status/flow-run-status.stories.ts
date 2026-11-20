@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import '../flow-canvas/flow-canvas.js';
-import '../flow-minimap/flow-minimap.js';
-import './flow-run-status.js';
-import type { FlowNode, FlowEdge, FlowRunDecorations } from '../flow-canvas/flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-minimap.js';
+import '../../lr-flow-run-status.js';
+import type { FlowNode, FlowEdge, FlowRunDecorations } from '../../lr-flow-canvas.js';
 
 const nodes: FlowNode[] = [
   { id: 'fetch', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },

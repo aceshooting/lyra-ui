@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { SIGNATURE_PAD_MAX_POINTS, SIGNATURE_PAD_MAX_STROKES, type LyraSignaturePad } from './signature-pad.class.js';
-import './signature-pad.js';
+import '../../lr-signature-pad.js';
 
 function surfaceOf(el: LyraSignaturePad): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part="surface"]')!;

@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/typing-indicator/typing-indicator.js';
+export * from './conversation/typing-indicator/typing-indicator.class.js';
+import { LyraTypingIndicator } from './conversation/typing-indicator/typing-indicator.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('typing-indicator', LyraTypingIndicator);

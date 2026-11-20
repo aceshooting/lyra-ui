@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 
 it('keeps the accessible data table current when a pie chart replaces its categories and values', async () => {

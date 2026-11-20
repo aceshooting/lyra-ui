@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './permission-grant.js';
+import '../../lr-permission-grant.js';
 import type { LyraPermissionGrant } from './permission-grant.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

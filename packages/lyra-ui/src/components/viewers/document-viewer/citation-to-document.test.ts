@@ -1,10 +1,10 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import '../../retrieval/citation-badge/citation-badge.js';
-import '../pdf-viewer/pdf-viewer.js';
-import './document-viewer.js';
+import '../../lr-citation-badge.js';
+import '../../lr-pdf-viewer.js';
+import '../../lr-document-viewer.js';
 import type { LyraCitationBadge, CitationActivateDetail } from '../../retrieval/citation-badge/citation-badge.class.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
-import type { LyraPdfViewer } from '../pdf-viewer/pdf-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
+import type { LyraPdfViewer } from '../../lr-pdf-viewer.js';
 
 function fakePage() {
   return {

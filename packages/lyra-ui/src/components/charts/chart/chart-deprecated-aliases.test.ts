@@ -2,22 +2,22 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
-import './chart.js';
-import './bar-chart.js';
-import './bubble-chart.js';
-import './doughnut-chart.js';
-import './histogram.js';
-import './line-chart.js';
-import './pie-chart.js';
-import './polar-area-chart.js';
-import './radar-chart.js';
-import './scatter-chart.js';
-import './box-plot.js';
-import './lite-chart.js';
-import type { LyraChart } from './chart.js';
-import type { LyraHistogram } from './histogram.js';
-import type { LyraBoxPlot } from './box-plot.js';
-import type { LyraLiteChart } from './lite-chart.js';
+import '../../lr-chart.js';
+import '../../lr-bar-chart.js';
+import '../../lr-bubble-chart.js';
+import '../../lr-doughnut-chart.js';
+import '../../lr-histogram.js';
+import '../../lr-line-chart.js';
+import '../../lr-pie-chart.js';
+import '../../lr-polar-area-chart.js';
+import '../../lr-radar-chart.js';
+import '../../lr-scatter-chart.js';
+import '../../lr-box-plot.js';
+import '../../lr-lite-chart.js';
+import type { LyraChart } from '../../lr-chart.js';
+import type { LyraHistogram } from '../../lr-histogram.js';
+import type { LyraBoxPlot } from '../../lr-box-plot.js';
+import type { LyraLiteChart } from '../../lr-lite-chart.js';
 
 const chartTags = [
   'lr-chart', 'lr-bar-chart', 'lr-bubble-chart', 'lr-doughnut-chart', 'lr-histogram',

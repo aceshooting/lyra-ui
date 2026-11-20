@@ -2,7 +2,7 @@ import { html } from '@open-wc/testing';
 import * as XLSX from 'xlsx';
 import { describeViewerResponseLifecycle } from '../../../../test/contracts/viewer-response-lifecycle.js';
 import { loadSheetJsCached } from './spreadsheet-loader.js';
-import './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 describeViewerResponseLifecycle('lr-spreadsheet-viewer', html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`, {
   extension: 'xlsx', contentSelector: '[role="columnheader"]', preload: loadSheetJsCached,

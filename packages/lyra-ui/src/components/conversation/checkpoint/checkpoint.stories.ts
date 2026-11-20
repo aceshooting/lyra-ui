@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './checkpoint.js';
+import '../../lr-checkpoint.js';
 
 const meta: Meta = {
   title: 'Checkpoint',

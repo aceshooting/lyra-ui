@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './date-input.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-input.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 import '../../../translations/de/forms.js';
 import '../../../translations/de/shared.js';
 

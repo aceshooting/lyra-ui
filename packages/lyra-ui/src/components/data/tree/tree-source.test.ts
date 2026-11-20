@@ -1,9 +1,9 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './tree.js';
+import '../../lr-tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.class.js';
-import type { LyraTreeItem } from './tree-item.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import type { LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 
 function source(count = 1_000_000): LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery> {

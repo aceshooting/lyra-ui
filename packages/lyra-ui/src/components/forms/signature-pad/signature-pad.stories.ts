@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { SignatureStroke } from './signature-pad.class.js';
-import './signature-pad.js';
+import '../../lr-signature-pad.js';
 
 const meta: Meta = {
   title: 'Forms & Inputs/Signature Pad',

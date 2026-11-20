@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-call-chip.js';
-import type { LyraToolCallChip } from './tool-call-chip.js';
+import '../../lr-tool-call-chip.js';
+import type { LyraToolCallChip } from '../../lr-tool-call-chip.js';
 // A sibling batch component that already exists on disk — used here purely
 // to demonstrate the intended integration: this chip fires an event, the
 // consumer decides what (if anything) opens in response.
-import '../tool-result-dialog/tool-result-dialog.js';
-import type { LyraToolResultDialog } from '../tool-result-dialog/tool-result-dialog.js';
+import '../../lr-tool-result-dialog.js';
+import type { LyraToolResultDialog } from '../../lr-tool-result-dialog.js';
 
 const meta: Meta = {
   title: 'ToolCallChip',

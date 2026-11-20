@@ -356,7 +356,7 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
     runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
-    ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26'],
+    ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26', 'lyra-v31'],
     'the packaged CLI must carry every reviewed rename profile, projected from the authored ledger',
   );
   assert.throws(
@@ -1896,7 +1896,7 @@ test('the checked-in inventory rewrites free-tier icon imports from both ecosyst
   assert.equal(
     waResult.content,
     [
-      "import '@aceshooting/lyra-ui/components/utility/icon/icon.js';",
+      "import '@aceshooting/lyra-ui/components/lr-icon.js';",
       '<lr-icon></lr-icon>',
       '',
     ].join('\n'),
@@ -1918,7 +1918,7 @@ test('the checked-in inventory rewrites free-tier icon imports from both ecosyst
   assert.equal(
     slResult.content,
     [
-      "import '@aceshooting/lyra-ui/components/utility/icon/icon.js';",
+      "import '@aceshooting/lyra-ui/components/lr-icon.js';",
       '<lr-icon></lr-icon>',
       '',
     ].join('\n'),
@@ -1943,7 +1943,7 @@ test('the checked-in inventory rewrites the free-tier icon-button deep import wi
   assert.equal(
     result.content,
     [
-      "import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';",
+      "import '@aceshooting/lyra-ui/components/lr-icon-button.js';",
       '<lr-icon-button></lr-icon-button>',
       '',
     ].join('\n'),
@@ -2043,7 +2043,7 @@ test('the checked-in inventory rewrites the Pro-tier date-picker deep import wit
   assert.equal(
     result.content,
     [
-      "import '@aceshooting/lyra-ui/components/forms/date-picker/date-picker.js';",
+      "import '@aceshooting/lyra-ui/components/lr-date-picker.js';",
       '<lr-date-picker></lr-date-picker>',
       '',
     ].join('\n'),
@@ -2063,7 +2063,7 @@ test('the checked-in inventory rewrites free-tier QR code imports from both ecos
   assert.equal(
     slResult.content,
     [
-      "import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';",
+      "import '@aceshooting/lyra-ui/components/lr-qr-code.js';",
       '<lr-qr-code background="white" fill="black"></lr-qr-code>',
       '',
     ].join('\n'),
@@ -2082,7 +2082,7 @@ test('the checked-in inventory rewrites free-tier QR code imports from both ecos
   assert.equal(
     waResult.content,
     [
-      "import '@aceshooting/lyra-ui/components/media/qr-code/qr-code.js';",
+      "import '@aceshooting/lyra-ui/components/lr-qr-code.js';",
       '<lr-qr-code></lr-qr-code>',
       '',
     ].join('\n'),
@@ -2341,7 +2341,7 @@ test('the checked-in inventory rewrites a Pro chart deep import with its granula
   assert.equal(
     result.content,
     [
-      "import '@aceshooting/lyra-ui/components/charts/chart/line-chart.js';",
+      "import '@aceshooting/lyra-ui/components/lr-line-chart.js';",
       '<lr-line-chart></lr-line-chart>',
       '',
     ].join('\n'),
@@ -2374,7 +2374,7 @@ test('the checked-in inventory grants a Pro chart target its granular registrati
       fs.readFileSync(source, 'utf8'),
       [
         "import '@aceshooting/lyra-ui/all.js';",
-        "import '@aceshooting/lyra-ui/components/charts/chart/bar-chart.js';",
+        "import '@aceshooting/lyra-ui/components/lr-bar-chart.js';",
         "document.body.innerHTML = '<lr-icon></lr-icon><lr-bar-chart></lr-bar-chart>';",
         '',
       ].join('\n'),
@@ -2403,7 +2403,7 @@ test('the retired lyra-v7 profile is rejected', () => {
 test('the default migration mode never scans or warns about existing lr-* markup', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [
-    "import '@aceshooting/lyra-ui/components/overlays/popup/popup.js';",
+    "import '@aceshooting/lyra-ui/components/lr-popup.js';",
     '<lr-popup></lr-popup>',
     '<lr-popover></lr-popover>',
     '<lr-tooltip></lr-tooltip>',

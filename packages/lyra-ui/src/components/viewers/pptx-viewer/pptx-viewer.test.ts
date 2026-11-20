@@ -8,8 +8,8 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { LitElement, render, type PropertyValues } from "lit";
-import "./pptx-viewer.js";
-import type { LyraPptxViewer } from "./pptx-viewer.js";
+import "../../lr-pptx-viewer.js";
+import type { LyraPptxViewer } from "../../lr-pptx-viewer.js";
 import type {
   PptxRendererModule,
   PptxTextSearchResult,

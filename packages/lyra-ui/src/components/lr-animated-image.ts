@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/animated-image/animated-image.js';
+export * from './media/animated-image/animated-image.class.js';
+import { LyraAnimatedImage } from './media/animated-image/animated-image.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('animated-image', LyraAnimatedImage);

@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/pagination/pagination.js';
+export * from './data/pagination/pagination.class.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraPagination } from './data/pagination/pagination.class.js';
+
+defineElement('pagination', LyraPagination);
+

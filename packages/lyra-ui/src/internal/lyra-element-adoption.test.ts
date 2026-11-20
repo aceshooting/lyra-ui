@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { css, html } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { defineElement, tag } from './prefix.js';
-import '../components/layout/virtual-list/virtual-list.js';
+import '../components/lr-virtual-list.js';
 import type { LyraVirtualList } from '../components/layout/virtual-list/virtual-list.class.js';
 
 class AdoptionStyled extends LyraElement {

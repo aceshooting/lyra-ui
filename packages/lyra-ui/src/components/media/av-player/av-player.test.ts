@@ -1,7 +1,7 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './av-player.js';
-import '../../layout/virtual-list/virtual-list.js';
-import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
+import '../../lr-av-player.js';
+import '../../lr-virtual-list.js';
+import type { LyraAvPlayer, LyraAvCue } from '../../lr-av-player.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';

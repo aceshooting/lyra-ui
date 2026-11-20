@@ -2,7 +2,7 @@ import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@op
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 import { admitMapAnchorOptions } from './map-anchor-options.js';
 
 class InputMap extends ControlMapEngine {}

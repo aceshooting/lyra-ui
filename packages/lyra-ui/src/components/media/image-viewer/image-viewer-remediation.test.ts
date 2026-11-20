@@ -2,8 +2,8 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './image-viewer.js';
-import { LyraImageViewer } from './image-viewer.js';
+import '../../lr-image-viewer.js';
+import { LyraImageViewer } from '../../lr-image-viewer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const imageSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

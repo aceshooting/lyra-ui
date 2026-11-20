@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './flow-canvas.js';
-import '../flow-controls/flow-controls.js';
-import '../flow-minimap/flow-minimap.js';
-import type { FlowNode, FlowEdge, LyraFlowCanvas } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-controls.js';
+import '../../lr-flow-minimap.js';
+import type { FlowNode, FlowEdge, LyraFlowCanvas } from '../../lr-flow-canvas.js';
 
 const nodes: readonly FlowNode[] = [
   { id: 'fetch', type: 'source', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },

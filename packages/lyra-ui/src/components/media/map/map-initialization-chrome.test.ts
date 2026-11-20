@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { ControlMapEngine, FakeMapControl, FakeGeolocateControl, FakeAttributionControl } from '../../../../test/map-control-engine.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { loadMapControlRuntime } from './map-feature-loader.js';
 import { MapControlsLifecycle } from './map-controls-lifecycle.js';
 void LyraMap;

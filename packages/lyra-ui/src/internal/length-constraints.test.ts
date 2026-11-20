@@ -1,10 +1,10 @@
 import { expect, fixture } from '@open-wc/testing';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from './length-constraints.js';
-import '../components/forms/input/input.js';
-import '../components/forms/textarea/textarea.js';
-import '../components/forms/code-editor/code-editor.js';
-import '../components/conversation/chat-composer/chat-composer.js';
-import '../components/conversation/prompt-input/prompt-input.js';
+import '../components/lr-input.js';
+import '../components/lr-textarea.js';
+import '../components/lr-code-editor.js';
+import '../components/lr-chat-composer.js';
+import '../components/lr-prompt-input.js';
 
 it('reports no violation when neither limit is set, however long the value', () => {
   const long = 'x'.repeat(5000);

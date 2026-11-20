@@ -1,7 +1,7 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import { sinkTexts } from '../../../../test/announcements.js';
-import './chart.js';
-import './box-plot.js';
+import '../../lr-chart.js';
+import '../../lr-box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './locale-picker.js';
-import type { LyraLocalePicker } from './locale-picker.js';
+import '../../lr-locale-picker.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 
 // withoutFlags defaults to false, so opening the listbox below renders a `<lr-flag>` per locale row

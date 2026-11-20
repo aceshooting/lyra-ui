@@ -6,9 +6,9 @@ import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-
 import { loadShikiHighlighter, loadShikiLanguage } from './code-loader.js';
 import { __resetShikiCoreEngineForTesting, __setShikiHighlighterCoreLoaderForTesting, ensureShikiLanguageLoaded,
   loadShikiHighlighterCore, setShikiCoreEngine, type ShikiHighlighter } from './shiki-types.js';
-import './code-block.js';
-import './code-block-core.js';
-import type { LyraCodeBlock } from './code-block.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
+import type { LyraCodeBlock } from '../../lr-code-block.js';
 
 const mock: ShikiHighlighter = {
   codeToHtml: () => '<pre class="shiki"></pre>',

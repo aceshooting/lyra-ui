@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './flag.js';
-import type { LyraFlag } from './flag.js';
+import '../../lr-flag.js';
+import type { LyraFlag } from '../../lr-flag.js';
 import { setFlagUrlResolver } from './flag-url-resolver.js';
 import { localeNativeName } from './language-map.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';

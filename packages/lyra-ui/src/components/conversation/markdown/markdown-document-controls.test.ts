@@ -1,9 +1,9 @@
 import { expect, fixture, oneEvent, waitUntil } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 for (const name of ['lr-markdown', 'lr-markdown-core']) {
   it(`${name} reads the resolved syntax palette on its first render`, async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { SpatialScene } from './graph-spatial.js';
 import type { GraphBuiltin3dFrame } from './graph-builtin-3d-engine.js';

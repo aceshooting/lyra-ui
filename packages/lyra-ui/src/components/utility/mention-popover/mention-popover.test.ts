@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import './mention-popover.js';
-import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
+import '../../lr-mention-popover.js';
+import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from '../../lr-mention-popover.js';
 import { styles } from './mention-popover.styles.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

@@ -3,7 +3,7 @@ import { render } from 'lit';
 import './archive-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
-import type { LyraArchiveViewer } from './archive-viewer.js';
+import type { LyraArchiveViewer } from '../../lr-archive-viewer.js';
 
 const zip: LyraDocumentFile = { name: 'archive.zip', mimeType: 'application/zip', src: 'https://example.test/archive.zip' };
 describe('archive registry', () => {

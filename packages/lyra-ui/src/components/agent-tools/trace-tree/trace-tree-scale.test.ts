@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './trace-tree.js';
-import type { LyraTraceTree } from './trace-tree.js';
+import '../../lr-trace-tree.js';
+import type { LyraTraceTree } from '../../lr-trace-tree.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

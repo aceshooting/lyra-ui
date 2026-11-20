@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraCombobox } from './combobox.js';
-import { LyraSelect } from '../select/select.js';
-import './option.js';
+import { LyraCombobox } from '../../lr-combobox.js';
+import { LyraSelect } from '../../lr-select.js';
+import '../../lr-option.js';
 import '../../../translations/ja/forms.js';
 import '../../../translations/ja/shared.js';
 

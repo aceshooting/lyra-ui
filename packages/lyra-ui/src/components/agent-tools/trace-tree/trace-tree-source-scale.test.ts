@@ -6,7 +6,7 @@ import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTraceSourceSummary } from '../../../data-sources.js';
 import type { LyraTraceTree } from './trace-tree.class.js';
 import type { LyraSpan } from './span.js';
-import './trace-tree.js';
+import '../../lr-trace-tree.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 

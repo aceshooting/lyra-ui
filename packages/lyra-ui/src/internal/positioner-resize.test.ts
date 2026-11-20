@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys, setViewport } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
-import '../components/overlays/overlay/popover.js';
-import '../components/forms/swatch-picker/swatch-picker.js';
+import '../components/lr-popover.js';
+import '../components/lr-swatch-picker.js';
 import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
 import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.class.js';
 import { place } from './positioner.js';

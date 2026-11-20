@@ -3,7 +3,7 @@ import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
 import type { LyraResponsivePanel } from './responsive-panel.class.js';
-import './responsive-panel.js';
+import '../../lr-responsive-panel.js';
 
 async function clickAndCheckFocus(button: HTMLButtonElement): Promise<void> {
   let clicks = 0;

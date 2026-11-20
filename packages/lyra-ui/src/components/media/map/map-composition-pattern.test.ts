@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { composeMapModules, createMapModule, createMapModuleDemo, createMapModulePublisher, MAP_MODULE_ORDER } from '../../../../test/map-module-composition.js';
 import type { MapModules } from '../../../../test/map-module-composition.js';
-import type { LyraMapOverlays } from './map.js';
+import type { LyraMapOverlays } from '../../lr-map.js';
 
 describe('application map module composition example', () => {
   it('orders eight modules explicitly and preserves descriptors and large data by identity', () => {

@@ -2,9 +2,9 @@ import { twoFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
-import './svg-viewer.js';
+import '../../lr-svg-viewer.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraSvgViewer } from './svg-viewer.js';
+import type { LyraSvgViewer } from '../../lr-svg-viewer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 

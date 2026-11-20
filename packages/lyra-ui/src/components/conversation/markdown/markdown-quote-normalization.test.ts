@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
   it(`${tag} resolves normalized quotes before and after inline formatting changes`, async () => {

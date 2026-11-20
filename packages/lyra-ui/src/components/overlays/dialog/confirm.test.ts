@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { confirm, type ConfirmOptions } from './confirm.js';
 import { registerLyraLocale, setLyraLocale } from '../../../internal/localization.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './dialog.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 function getMountedDialog(): LyraDialog {
   const dialog = [...document.querySelectorAll<LyraDialog>('lr-dialog')].at(-1);

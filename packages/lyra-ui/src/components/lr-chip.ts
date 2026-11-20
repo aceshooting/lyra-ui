@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/chip/chip.js';
+export * from './overlays/chip/chip.class.js';
+import { LyraChip } from './overlays/chip/chip.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('chip', LyraChip);

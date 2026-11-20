@@ -1,11 +1,11 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
-import './dialog.js';
-import '../overlay/tooltip.js';
-import '../overlay/popover.js';
-import '../drawer/drawer.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import '../../lr-tooltip.js';
+import '../../lr-popover.js';
+import '../../lr-drawer.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

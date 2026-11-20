@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { registerLyraLocale } from '../../../internal/localization-runtime.js';
 import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraPreparedSeriesData, LyraSeriesSample } from '../../../utilities/data-preparation.js';
 

@@ -1,9 +1,9 @@
 import { expect, fixture } from '@open-wc/testing';
 import { normalizeCatalog, withSyntheticCatalogValue } from './catalog-picker.js';
-import '../components/conversation/model-select/model-select.js';
-import '../components/conversation/voice-picker/voice-picker.js';
-import type { LyraModelSelect } from '../components/conversation/model-select/model-select.js';
-import type { LyraVoicePicker } from '../components/conversation/voice-picker/voice-picker.js';
+import '../components/lr-model-select.js';
+import '../components/lr-voice-picker.js';
+import type { LyraModelSelect } from '../components/lr-model-select.js';
+import type { LyraVoicePicker } from '../components/lr-voice-picker.js';
 
 type CatalogPickerElement = LyraModelSelect | LyraVoicePicker;
 

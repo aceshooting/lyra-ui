@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './emoji-picker.js';
-import type { EmojiPickerGroup, LyraEmojiPicker } from './emoji-picker.js';
+import '../../lr-emoji-picker.js';
+import type { EmojiPickerGroup, LyraEmojiPicker } from '../../lr-emoji-picker.js';
 
 const groups: EmojiPickerGroup[] = [{
   key: 'faces',

@@ -1,7 +1,7 @@
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './schema-viewer.js';
-import type { JsonSchemaNode, LyraJsonSchemaViewer } from './schema-viewer.js';
+import '../../lr-json-schema-viewer.js';
+import type { JsonSchemaNode, LyraJsonSchemaViewer } from '../../lr-json-schema-viewer.js';
 
 const keys = Array.from({ length: 100 }, (_, index) => `membership-${index}`);
 const properties = Object.fromEntries(keys.map((key) => [key, { type: 'string' }]));

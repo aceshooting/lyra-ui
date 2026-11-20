@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './community-card.js';
-import type { LyraCommunityCard } from './community-card.js';
+import '../../lr-community-card.js';
+import type { LyraCommunityCard } from '../../lr-community-card.js';
 
 const member = (id: string) => ({ id, label: `${id} member` });
 

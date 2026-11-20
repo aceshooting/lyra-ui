@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 
 describe('2D graph screen positions', () => {
   it('tracks the rendered SVG node through public zoom and focus changes', async () => {

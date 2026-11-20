@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraChart } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 const buttons = (chart: LyraChart): HTMLButtonElement[] => [...chart.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="legend-item"]')];
 async function mount(mode: 'datum' | 'dataset'): Promise<LyraChart> {

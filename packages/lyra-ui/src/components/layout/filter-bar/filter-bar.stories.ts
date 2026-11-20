@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './filter-bar.js';
-import '../../forms/checkbox/checkbox.js';
-import '../../forms/time-range/time-range.js';
+import '../../lr-filter-bar.js';
+import '../../lr-checkbox.js';
+import '../../lr-time-range.js';
 import type { ComboboxSource } from '../../forms/combobox/combobox.class.js';
 import type {
   LyraFilterBar,
   LyraFilterBarCustomControlAdapter,
   LyraFilterBarFilterDefinition,
-} from './filter-bar.js';
+} from '../../lr-filter-bar.js';
 
 const meta: Meta = {
   title: 'FilterBar',

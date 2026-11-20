@@ -5,10 +5,10 @@ import { applyLyraStyleScope } from '../packages/lyra-ui/src/theme/theme.js';
 import { LYRA_SHAPE_PRESETS } from '../packages/lyra-ui/src/theme/options/shape.js';
 import { LYRA_TYPOGRAPHY_PRESETS } from '../packages/lyra-ui/src/theme/options/typography.js';
 import { LYRA_ELEVATION_PRESETS } from '../packages/lyra-ui/src/theme/options/elevation.js';
-import '../packages/lyra-ui/src/components/forms/button/button.js';
-import '../packages/lyra-ui/src/components/forms/textarea/textarea.js';
-import '../packages/lyra-ui/src/components/layout/card/card.js';
-import '../packages/lyra-ui/src/components/overlays/dialog/dialog.js';
+import '../packages/lyra-ui/src/components/lr-button.js';
+import '../packages/lyra-ui/src/components/lr-textarea.js';
+import '../packages/lyra-ui/src/components/lr-card.js';
+import '../packages/lyra-ui/src/components/lr-dialog.js';
 
 export default {
   title: 'Theming/Optional design presets',

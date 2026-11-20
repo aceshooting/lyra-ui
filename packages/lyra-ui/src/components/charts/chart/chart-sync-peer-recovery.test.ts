@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chart.js';
-import './lite-chart.js';
+import '../../lr-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 

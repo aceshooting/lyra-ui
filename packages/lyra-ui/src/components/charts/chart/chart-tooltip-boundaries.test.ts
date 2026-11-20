@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
 import type { LyraChart, LyraChartFormatterContext } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 for (const horizontal of [false, true]) {
   it(`preserves numeric tooltip groups without assigning a series to unresolved ${horizontal ? 'horizontal' : 'vertical'} peer hits`, async () => {

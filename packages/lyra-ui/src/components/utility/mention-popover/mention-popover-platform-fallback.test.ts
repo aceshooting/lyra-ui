@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './mention-popover.js';
+import '../../lr-mention-popover.js';
 import type { LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.class.js';
 
 interface NativeFeature {

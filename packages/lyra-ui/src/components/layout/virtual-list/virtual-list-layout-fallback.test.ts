@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.class.js';
 
 it('aligns a distant row through a padded content-box scroller inside a scaled wrapper', async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './graph-legend.js';
-import type { LyraGraphLegend } from './graph-legend.js';
+import '../../lr-graph-legend.js';
+import type { LyraGraphLegend } from '../../lr-graph-legend.js';
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 
 

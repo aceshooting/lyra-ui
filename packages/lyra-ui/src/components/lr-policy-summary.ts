@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/policy-summary/policy-summary.js';
+export * from './agent-tools/policy-summary/policy-summary.class.js';
+import { LyraPolicySummary } from './agent-tools/policy-summary/policy-summary.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-badge.js';
+import './lr-details.js';
+import './lr-empty.js';
+defineElement('policy-summary', LyraPolicySummary);

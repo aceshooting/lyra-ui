@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 const data = {
   kind: 'matrix' as const,

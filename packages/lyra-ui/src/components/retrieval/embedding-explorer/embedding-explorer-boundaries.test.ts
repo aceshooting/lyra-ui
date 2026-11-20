@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { EmbeddingPoint, LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 
 const points: EmbeddingPoint[] = [

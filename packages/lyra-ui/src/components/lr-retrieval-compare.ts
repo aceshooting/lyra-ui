@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/retrieval-compare/retrieval-compare.js';
+export * from './retrieval/retrieval-compare/retrieval-compare.class.js';
+import { LyraRetrievalCompare } from './retrieval/retrieval-compare/retrieval-compare.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-empty.js';
+
+defineElement('retrieval-compare', LyraRetrievalCompare);
+

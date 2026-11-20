@@ -66,15 +66,13 @@ export interface LyraEntityDossierConfidence {
 export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
-    Omit<LyraProvenancePanelEventMap, 'lr-entity-select' | 'lr-toggle' | 'lr-retrieval-disclosure-change'>,
+    Omit<LyraProvenancePanelEventMap, 'lr-entity-select' | 'lr-retrieval-disclosure-change'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
   /** Forwarded from the dossier's tab strip for the outgoing tab. */
   'lr-tab-hide': LyraTabGroupEventMap['lr-tab-hide'];
-  /** @deprecated Use `lr-retrieval-disclosure-change` and read `origin` and `kind`. */
-  'lr-toggle': LyraProvenancePanelEventMap['lr-toggle'];
   'lr-retrieval-disclosure-change': CustomEvent<LyraEntityDossierDisclosureDetail>;
 }
 
@@ -117,8 +115,6 @@ export type LyraEntityDossierDisclosureDetail =
  *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
- * @event lr-toggle - Deprecated. Use `lr-retrieval-disclosure-change`.
- *   Legacy detail is `{ section, expanded, itemId? }`.
  * @event lr-retrieval-disclosure-change - A section or chunk disclosure changed. Detail
  *   includes `kind`, `section`, `expanded`, `origin` and, for a chunk, `chunkId`.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
@@ -232,11 +228,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     if (event.composedPath()[0] !== event.currentTarget) return;
     event.stopPropagation();
     const { expanded, itemId } = event.detail;
-    this.emit('lr-toggle', {
-      section: 'chunks',
-      expanded,
-      itemId,
-    });
     this.emit('lr-retrieval-disclosure-change', {
       origin: 'supporting', kind: 'chunk', section: 'chunks', chunkId: itemId, expanded,
     });

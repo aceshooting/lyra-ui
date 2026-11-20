@@ -1,3 +1,10 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/retrieval-search/retrieval-search.js';
+export * from './retrieval/retrieval-search/retrieval-search.class.js';
+import { LyraRetrievalSearch } from './retrieval/retrieval-search/retrieval-search.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-input.js';
+import './lr-segmented.js';
+import './lr-chip.js';
+import './lr-chip-group.js';
+import './lr-spinner.js';
+import './lr-empty.js';
+defineElement('retrieval-search', LyraRetrievalSearch);

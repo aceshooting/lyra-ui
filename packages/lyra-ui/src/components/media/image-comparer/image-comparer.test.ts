@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './image-comparer.js';
-import type { LyraImageComparer } from './image-comparer.js';
+import '../../lr-image-comparer.js';
+import type { LyraImageComparer } from '../../lr-image-comparer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

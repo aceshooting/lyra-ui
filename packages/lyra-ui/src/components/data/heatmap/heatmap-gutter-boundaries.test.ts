@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 /** The painted canvas width of a one-day calendar whose weekday gutter is pinned to `weekdayLabelWidth`. */
 async function canvasWidth(weekdayLabelWidth?: unknown): Promise<number> {

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './time-input.js';
+import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
 // `lr-time-input`'s picker popup defaults to `position: fixed`, so a bare `overflow: auto`

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraPromptQueue } from './prompt-queue.class.js';
-import './prompt-queue.js';
+import '../../lr-prompt-queue.js';
 
 for (const action of ['up', 'down', 'send'] as const) {
   it(`suppresses ${action} when the queue is disabled during click capture and recovers`, async () => {

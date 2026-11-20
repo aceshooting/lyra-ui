@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './tool-approval-dialog/tool-approval-dialog.js';
-import './tool-select-dialog/tool-select-dialog.js';
-import './tool-result-dialog/tool-result-dialog.js';
-import type { LyraToolApprovalDialog } from './tool-approval-dialog/tool-approval-dialog.js';
-import type { LyraToolSelectDialog } from './tool-select-dialog/tool-select-dialog.js';
-import type { LyraToolResultDialog } from './tool-result-dialog/tool-result-dialog.js';
+import '../lr-tool-approval-dialog.js';
+import '../lr-tool-select-dialog.js';
+import '../lr-tool-result-dialog.js';
+import type { LyraToolApprovalDialog } from '../lr-tool-approval-dialog.js';
+import type { LyraToolSelectDialog } from '../lr-tool-select-dialog.js';
+import type { LyraToolResultDialog } from '../lr-tool-result-dialog.js';
 
 type ToolDialog = LyraToolApprovalDialog | LyraToolSelectDialog | LyraToolResultDialog;
 

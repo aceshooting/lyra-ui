@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './sequence-playback.js';
+import '../../lr-sequence-playback.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('keeps an unavailable play button at rest under hover and press, retaining enabled feedback', async () => {

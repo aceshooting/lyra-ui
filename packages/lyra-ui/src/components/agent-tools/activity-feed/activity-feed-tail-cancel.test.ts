@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './activity-feed.js';
-import type { LyraActivityFeed } from './activity-feed.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-activity-feed.js';
+import type { LyraActivityFeed } from '../../lr-activity-feed.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 
 describe('activity feed tail following', () => {
   it('exposes a warning-specific styling part on a populated warning entry', async () => {

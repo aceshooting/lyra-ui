@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './video.js';
+import '../../lr-video.js';
 import type { LyraVideo } from './video.class.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { panoramaLoader, panoramaEnvironment } from '../image-viewer/image-viewer-panorama.js';

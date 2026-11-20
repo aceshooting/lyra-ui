@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './poll-status.js';
-import type { LyraPollStatus } from './poll-status.js';
+import '../../lr-poll-status.js';
+import type { LyraPollStatus } from '../../lr-poll-status.js';
 
 const meta: Meta = {
   title: 'PollStatus',

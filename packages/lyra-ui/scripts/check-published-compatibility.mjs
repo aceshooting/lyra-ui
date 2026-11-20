@@ -95,6 +95,11 @@ export function readCurrentCompatibilityContextSync(packageDir = join(dirname(fi
   // carry a compact snapshot of the published release's policy and surface for the removed names.
   const leanPath = join(packageDir, 'scripts/fixtures/compatibility-history/retirements-30.0.0.json');
   const lean = existsSync(leanPath) ? JSON.parse(readFileSync(leanPath, 'utf8')) : null;
+  // A published name removed outright in a later major, without a deprecation release, records only
+  // its successor so that older retirements naming it still resolve to a current member.
+  const directPath = join(packageDir, 'scripts/fixtures/compatibility-history/successors-32.0.0.json');
+  const direct = existsSync(directPath) ? JSON.parse(readFileSync(directPath, 'utf8')) : null;
+  if (direct && (direct.schemaVersion !== 1 || !Array.isArray(direct.successors))) throw new Error('Unsupported direct successor list');
   // A pending major changeset is the release being prepared: its removals are checked against that
   // version before the bump stamps package.json.
   const changesetDir = join(packageDir, '../../.changeset');
@@ -104,7 +109,7 @@ export function readCurrentCompatibilityContextSync(packageDir = join(dirname(fi
       /^---\n[\s\S]*?['"]@aceshooting\/lyra-ui['"]:\s*major\b[\s\S]*?\n---/u.test(readFileSync(join(changesetDir, file), 'utf8')));
     if (pendingMajor) releaseVersion = `${Number(packageJson.version.split('.')[0]) + 1}.0.0`;
   }
-  return assembleCompatibilityContext({ packageVersion: packageJson.version, releaseVersion, successors: lean?.successors ?? [], currentInventory: inventory,
+  return assembleCompatibilityContext({ packageVersion: packageJson.version, releaseVersion, successors: [...(lean?.successors ?? []), ...(direct?.successors ?? [])], currentInventory: inventory,
     currentExportDeprecations: metadata.exportDeprecations, currentExportSurface,
     componentRegistrationRoutes,
     captures: [...verified.captures.map(entry => entry.facts), ...(lean ? [lean.capture] : [])],

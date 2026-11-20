@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './provenance-panel.js';
+import '../../lr-provenance-panel.js';
 import type { LyraProvenance, LyraProvenancePanelEventMap } from './provenance-panel.class.js';
 
 const meta: Meta = {

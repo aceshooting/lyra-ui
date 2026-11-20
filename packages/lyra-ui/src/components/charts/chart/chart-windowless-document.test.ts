@@ -3,9 +3,9 @@ import { Chart } from 'chart.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import './chart.js';
-import './box-plot.js';
-import './lite-chart.js';
+import '../../lr-chart.js';
+import '../../lr-box-plot.js';
+import '../../lr-lite-chart.js';
 
 for (const tag of ['lr-chart', 'lr-box-plot', 'lr-lite-chart'] as const) for (const initiallyWindowless of [false, true]) {
   it(`${tag} preserves data when ${initiallyWindowless ? 'first connected' : 'adopted'} into a windowless document and renders after returning`, async () => {

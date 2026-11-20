@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './document-compare.js';
-import type { LyraDocumentCompare } from './document-compare.js';
+import '../../lr-document-compare.js';
+import type { LyraDocumentCompare } from '../../lr-document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 void LyraGraph;
 
 it('does not instantiate spatial machinery for the default 2D view', async () => {

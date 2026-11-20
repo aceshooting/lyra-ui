@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraTaskSourceSummary } from '../../../data-sources.js';
 import type { LyraTaskList, TaskItem } from './task-list.class.js';
-import './task-list.js';
+import '../../lr-task-list.js';
 
 type TaskListSource = LyraHierarchySource<TaskItem, LyraHierarchyQuery, LyraTaskSourceSummary>;
 type TaskList = LyraTaskList & { treeSource: TaskListSource | undefined };

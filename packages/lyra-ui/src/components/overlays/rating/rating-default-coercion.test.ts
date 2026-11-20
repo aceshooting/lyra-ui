@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './rating.js';
+import '../../lr-rating.js';
 import type { LyraRating } from './rating.class.js';
 
 describe('lr-rating default-value coercion', () => {

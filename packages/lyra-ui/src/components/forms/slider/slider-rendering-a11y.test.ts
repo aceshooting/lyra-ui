@@ -2,8 +2,8 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, elementUpdated, waitUntil } from "@open-wc/testing";
-import "./slider.js";
-import type { LyraSlider } from "./slider.js";
+import "../../lr-slider.js";
+import type { LyraSlider } from "../../lr-slider.js";
 import { styles } from "./slider.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";

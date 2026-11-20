@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './context-menu.js';
-import '../../layout/menu/menu-item.js';
-import '../../layout/menu/dropdown-item.js';
-import '../overlay/dropdown.js';
+import '../../lr-context-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-dropdown.js';
 import type { LyraContextMenu, LyraContextMenuShowDetail } from './context-menu.class.js';
 import type { LyraDropdown } from '../overlay/dropdown.class.js';
 

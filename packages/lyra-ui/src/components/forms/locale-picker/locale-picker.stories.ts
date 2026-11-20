@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraLocalePicker } from './locale-picker.js';
-import './locale-picker.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
+import '../../lr-locale-picker.js';
 import { loadLyraLocale } from '../../../locale-loader.js';
 // lr-locale-picker composes lr-flag, whose country/language resolution is inert until the optional
 // peer entry is registered. Without this the docs page rendered flag-less rows and (since 11.0.0)

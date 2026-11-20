@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-timeline.js';
-import type { LyraToolTimeline } from './tool-timeline.js';
+import '../../lr-tool-timeline.js';
+import type { LyraToolTimeline } from '../../lr-tool-timeline.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './tooltip.js';
-import type { LyraTooltip } from './tooltip.js';
+import '../../lr-tooltip.js';
+import type { LyraTooltip } from '../../lr-tooltip.js';
 
 for (const failure of ['import', 'setup'] as const) {
   for (const veto of [false, true]) {

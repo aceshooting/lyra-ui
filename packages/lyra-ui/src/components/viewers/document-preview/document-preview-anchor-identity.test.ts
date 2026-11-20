@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from './document-preview.class.js';
-import './document-preview.js';
+import '../../lr-document-preview.js';
 
 const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 

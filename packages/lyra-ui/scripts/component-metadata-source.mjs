@@ -65,23 +65,23 @@ export function readComponentMetadataSources(packageDir = defaultPackageDir) {
   const families = familyNames.map(family => read(`${directory}/families/${family}.json`));
   families.forEach((value, index) => invariant(value.family === familyNames[index], `${familyNames[index]}: family file owner differs`));
   // A secondary tag may share an existing component directory. Before its first manifest, derive
-  // only a missing owner from its exact class/registration pair and explicit custom-element tag.
+  // only a missing owner from its exact class module, its tag-shaped registration entry (which must
+  // import that class module) and the explicit custom-element tag.
   // The generated inventory remains authoritative once that tag has been enrolled.
   for (const entry of families) {
     for (const tag of Object.values(entry.assignments ?? {}).flat()) {
       if (typeof tag !== 'string' || Object.hasOwn(familyByTag, tag) || !/^lr-[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(tag)) continue;
       const owners = [];
       for (const [name, family] of Object.entries(catalog.directories ?? {})) {
-        const stem = `src/components/${family}/${name}/${tag.slice(3)}`;
-        const classFile = `${stem}.class.ts`;
-        const registrationFile = `${stem}.ts`;
+        const classFile = `src/components/${family}/${name}/${tag.slice(3)}.class.ts`;
+        const registrationFile = `src/components/${tag}.ts`;
         if (!fs.existsSync(path.join(packageDir, classFile)) || !fs.existsSync(path.join(packageDir, registrationFile))) continue;
         const source = readSnapshot(packageDir, classFile);
         const registration = readSnapshot(packageDir, registrationFile);
         if (!source.original.split('\n').some(line => line.trim() === `* @customElement ${tag}`)) continue;
         const className = source.original.match(/^export class ([A-Za-z_$][\w$]*)\b/m)?.[1];
         const registrationLines = registration.original.split('\n').map(line => line.trim());
-        if (!className || !registrationLines.includes(`import { ${className} } from './${tag.slice(3)}.class.js';`) ||
+        if (!className || !registrationLines.includes(`import { ${className} } from './${family}/${name}/${tag.slice(3)}.class.js';`) ||
           !registrationLines.includes(`defineElement('${tag.slice(3)}', ${className});`)) continue;
         snapshots.push(source, registration);
         owners.push(family);

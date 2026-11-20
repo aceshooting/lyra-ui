@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { toRgba } from '../../test/color-contrast.js';
-import '../components/layout/card/card.js';
+import '../components/lr-card.js';
 import type { LyraCard } from '../components/layout/card/card.class.js';
 
 let previousSheets: CSSStyleSheet[];

@@ -4,8 +4,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { LyraResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
-import './archive-viewer.js';
-import type { LyraArchiveViewer } from './archive-viewer.js';
+import '../../lr-archive-viewer.js';
+import type { LyraArchiveViewer } from '../../lr-archive-viewer.js';
 import type JSZipType from 'jszip';
 import { assembleZip, zipEntry } from './fixtures/zip-builder.js';
 

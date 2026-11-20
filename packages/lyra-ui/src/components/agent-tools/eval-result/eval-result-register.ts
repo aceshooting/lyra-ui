@@ -4,6 +4,6 @@
 export * from './eval-result.class.js';
 import { LyraEvalResult } from './eval-result.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../data/table/table.js';
+import '../../lr-table.js';
 
 defineElement('eval-result', LyraEvalResult);

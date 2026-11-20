@@ -1,8 +1,8 @@
 import type { Meta, StoryContext, StoryObj } from '@storybook/web-components-vite';
 import { html, type TemplateResult } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './context-menu.js';
-import '../../layout/menu/menu-label.js';
+import '../../lr-context-menu.js';
+import '../../lr-menu-label.js';
 import type { LyraContextMenu, LyraContextMenuShowDetail } from './context-menu.class.js';
 
 const meta: Meta = {

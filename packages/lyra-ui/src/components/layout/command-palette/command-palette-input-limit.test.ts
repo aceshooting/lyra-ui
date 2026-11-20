@@ -3,7 +3,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { publicCollectionTruncation, collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { LyraCommandPalette } from './command-palette.class.js';
-import './command-palette.js';
+import '../../lr-command-palette.js';
 
 expectDevWarning(collectionTruncationWarningKey('lr-command-palette', 'commands'));
 const source = (): LyraCommandPalette['commands'] => Array.from({ length: 10001 }, (_, index) => ({ commandId: `c${index}`, label: `Command ${index}` }));

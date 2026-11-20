@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './rubric-form.js';
-import type { LyraRubricForm, RubricKey } from './rubric-form.js';
-import type { LyraCheckbox } from '../checkbox/checkbox.js';
-import type { LyraCheckboxGroup } from '../checkbox-group/checkbox-group.js';
+import '../../lr-rubric-form.js';
+import type { LyraRubricForm, RubricKey } from '../../lr-rubric-form.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
+import type { LyraCheckboxGroup } from '../../lr-checkbox-group.js';
 import '../../../translations/fr/forms.js';
 import '../../../translations/fr/shared.js';
 

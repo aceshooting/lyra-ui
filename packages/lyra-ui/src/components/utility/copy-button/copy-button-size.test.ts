@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraSize } from '../../../internal/variants.js';
-import type { LyraCopyButton } from './copy-button.js';
-import './copy-button.js';
+import type { LyraCopyButton } from '../../lr-copy-button.js';
+import '../../lr-copy-button.js';
 
 function trigger(el: LyraCopyButton): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;

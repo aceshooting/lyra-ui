@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import type { LyraCsvViewer } from './csv-viewer.class.js';
-import './csv-viewer.js';
+import '../../lr-csv-viewer.js';
 
 for (const transition of ['replace', 'clear', 'detach'] as const) {
   it(`discards obsolete parse diagnostics after ${transition} in a search-result callback`, async () => {

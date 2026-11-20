@@ -75,13 +75,15 @@ function siblingFixture(t) {
   }
   change(root, 'families/utility.json', value => { value.assignments['new-component-experimental'].push('lr-fixture-sibling'); });
   const stem = 'src/components/utility/icon/fixture-sibling';
-  const writePair = (relative = stem) => {
+  const entry = 'src/components/lr-fixture-sibling.ts';
+  const classImport = directory => `import { LyraFixtureSibling } from './${directory}/fixture-sibling.class.js';\n`;
+  const writePair = (relative = stem, directories = ['utility/icon']) => {
     fs.mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
     fs.writeFileSync(path.join(root, `${relative}.class.ts`), '/**\n * @customElement lr-fixture-sibling\n */\nexport class LyraFixtureSibling {}\n');
-    fs.writeFileSync(path.join(root, `${relative}.ts`), "import { LyraFixtureSibling } from './fixture-sibling.class.js';\nimport { defineElement } from '../../../internal/prefix.js';\ndefineElement('fixture-sibling', LyraFixtureSibling);\n");
+    fs.writeFileSync(path.join(root, entry), `${directories.map(classImport).join('')}import { defineElement } from '../internal/prefix.js';\ndefineElement('fixture-sibling', LyraFixtureSibling);\n`);
   };
   writePair();
-  return { root, stem, writePair };
+  return { root, stem, entry, writePair };
 }
 
 test('bootstraps a sibling tag from its exact source pair without a new directory entry', t => {
@@ -91,20 +93,21 @@ test('bootstraps a sibling tag from its exact source pair without a new director
   assert.ok(assembleComponentMetadata(sources).assignments['new-component-experimental'].includes('lr-fixture-sibling'));
   assert.equal(read(path.join(root, 'scripts/component-families.json')).directories['fixture-sibling'], undefined);
   assert.equal(sources.snapshots.filter(entry => entry.file.includes('fixture-sibling.')).length, 2);
+  assert.ok(sources.snapshots.some(entry => entry.file.endsWith('lr-fixture-sibling.ts')), 'the tag-shaped registration entry is snapshotted');
 });
 
 for (const [name, mutate, pattern] of [
   ['absent class', ({ root, stem }) => fs.unlinkSync(path.join(root, `${stem}.class.ts`)), /expected family undefined/],
-  ['absent registration', ({ root, stem }) => fs.unlinkSync(path.join(root, `${stem}.ts`)), /expected family undefined/],
+  ['absent registration', ({ root, entry }) => fs.unlinkSync(path.join(root, entry)), /expected family undefined/],
   ['mismatched tag marker', ({ root, stem }) => fs.writeFileSync(path.join(root, `${stem}.class.ts`), '/**\n * @customElement lr-other\n */\nexport class LyraFixtureSibling {}\n'), /expected family undefined/],
-  ['mismatched registration', ({ root, stem }) => fs.writeFileSync(path.join(root, `${stem}.ts`), "defineElement('other', LyraFixtureSibling);\n"), /expected family undefined/],
+  ['mismatched registration', ({ root, entry }) => fs.writeFileSync(path.join(root, entry), "defineElement('other', LyraFixtureSibling);\n"), /expected family undefined/],
   ['conflicting inventory owner', ({ root }) => {
     const file = path.join(root, 'scripts/fixtures/component-inventory.json');
     const inventory = read(file);
     inventory.components.push({ tag: 'lr-fixture-sibling', family: 'media' });
     fs.writeFileSync(file, render(inventory));
   }, /expected family media, found utility/],
-  ['ambiguous source pairs', ({ writePair }) => writePair('src/components/utility/divider/fixture-sibling'), /ambiguous source family owner/],
+  ['ambiguous source pairs', ({ writePair }) => writePair('src/components/utility/divider/fixture-sibling', ['utility/icon', 'utility/divider']), /ambiguous source family owner/],
   ['cross-family assignment', ({ root }) => {
     change(root, 'families/utility.json', value => { value.assignments['new-component-experimental'] = value.assignments['new-component-experimental'].filter(tag => tag !== 'lr-fixture-sibling'); });
     change(root, 'families/media.json', value => { value.assignments['new-component-experimental'].push('lr-fixture-sibling'); });

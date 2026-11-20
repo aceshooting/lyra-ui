@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './markdown.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 const meta: Meta = {
   title: 'Markdown',

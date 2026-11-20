@@ -4,8 +4,8 @@ import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './voice-picker.js';
-import type { LyraVoicePicker } from './voice-picker.js';
+import '../../lr-voice-picker.js';
+import type { LyraVoicePicker } from '../../lr-voice-picker.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 

@@ -1,9 +1,9 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './tab-group.js';
-import './tab.js';
-import './tab-panel.js';
-import type { LyraTabGroup } from './tab-group.js';
-import type { LyraTab } from './tab.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab.js';
+import '../../lr-tab-panel.js';
+import type { LyraTabGroup } from '../../lr-tab-group.js';
+import type { LyraTab } from '../../lr-tab.js';
 
 const group = (activation: 'auto' | 'manual' = 'auto') => html`
   <lr-tab-group activation=${activation}>

@@ -1,12 +1,12 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './graph-query-builder.js';
+import '../../lr-graph-query-builder.js';
 import type {
   LyraGraphQueryBuilder,
   GraphQuery,
   GraphQueryTypeOption,
   GraphQuerySavedItem,
-} from './graph-query-builder.js';
+} from '../../lr-graph-query-builder.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const RELATIONSHIP_OPTIONS: GraphQueryTypeOption[] = [

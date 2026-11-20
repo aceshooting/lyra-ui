@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 import { type Person, columns, rows, dataGrid, access, header, dataCells } from '../../../../test/data-grid.js';

@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/model-select/model-select.js';
+export * from './conversation/model-select/model-select.class.js';
+import { LyraModelSelect } from './conversation/model-select/model-select.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('model-select', LyraModelSelect);

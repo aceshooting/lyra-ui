@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './page-rail.js';
-import type { LyraPageRail } from './page-rail.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-page-rail.js';
+import type { LyraPageRail } from '../../lr-page-rail.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 function key(el: LyraPageRail, init: KeyboardEventInit): KeyboardEvent {

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { SpatialSourceController } from './spatial-source-controller.js';
-import '../components/retrieval/embedding-explorer/embedding-explorer.js';
+import '../components/lr-embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from '../components/retrieval/embedding-explorer/embedding-explorer.class.js';
 import type { LyraSpatialChartSource, LyraSpatialChartPoint } from '../utilities/data-spatial.js';
 

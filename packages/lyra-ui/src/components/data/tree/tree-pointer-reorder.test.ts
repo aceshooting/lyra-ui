@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './tree.js';
-import type { LyraTree, LyraTreePointerReorderDetail } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreePointerReorderDetail } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 const data = [
   { id: 'a', label: 'Alpha' },

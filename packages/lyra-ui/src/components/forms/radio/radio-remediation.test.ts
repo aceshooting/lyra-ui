@@ -1,13 +1,13 @@
 import { aTimeout, expect, fixture, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraRadio } from './radio.js';
-import type { LyraRadioGroup } from './radio-group.js';
-import type { LyraSwitch } from '../switch/switch.js';
-import './radio.js';
-import './radio-button.js';
-import './radio-group.js';
-import '../switch/switch.js';
+import type { LyraRadio } from '../../lr-radio.js';
+import type { LyraRadioGroup } from '../../lr-radio-group.js';
+import type { LyraSwitch } from '../../lr-switch.js';
+import '../../lr-radio.js';
+import '../../lr-radio-button.js';
+import '../../lr-radio-group.js';
+import '../../lr-switch.js';
 
 type Control = LyraRadio | LyraRadioGroup | LyraSwitch;
 const settle = async (el: Control) => { await el.updateComplete; await aTimeout(0); await el.updateComplete; };

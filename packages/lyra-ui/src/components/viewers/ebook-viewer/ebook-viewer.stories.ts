@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './ebook-viewer.js';
+import '../../lr-ebook-viewer.js';
 import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
 
 const meta: Meta = { title: 'Viewers/Ebook viewer', component: 'lr-ebook-viewer', tags: ['autodocs'] };

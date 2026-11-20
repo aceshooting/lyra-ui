@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './image-viewer.js';
+import '../../lr-image-viewer.js';
 import type { LyraImageViewer } from './image-viewer.class.js';
 import { capture, center, clickCenter, loseContext, matches, nativeCanvas, redrawPanorama, panoramaAtlas, requireWebgl2 } from '../../../../test/native-3d-ui.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';

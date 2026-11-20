@@ -29,7 +29,7 @@ import {
   DEFAULT_WIDGET_TYPE_REGISTRY as defaultWidgetRegistryFromRegistration,
   isWidgetTypeRegistry as isWidgetTypeRegistryFromRegistration,
   LyraWidgetRenderer as LyraWidgetRendererFromRegistration,
-} from "../src/components/conversation/widget-renderer/widget-renderer.js";
+} from "../src/components/lr-widget-renderer.js";
 import type {
   LyraWidgetBinding as RegistrationWidgetBinding,
   LyraWidgetDocument as RegistrationWidgetDocument,
@@ -39,7 +39,7 @@ import type {
   LyraWidgetRendererEventMap as RegistrationWidgetRendererEventMap,
   LyraWidgetTypeDefinition as RegistrationWidgetTypeDefinition,
   LyraWidgetTypeRegistry as RegistrationWidgetTypeRegistry,
-} from "../src/components/conversation/widget-renderer/widget-renderer.js";
+} from "../src/components/lr-widget-renderer.js";
 import { LyraThreadList as LyraThreadListFromClass } from "../src/components/conversation/thread-list/thread-list.class.js";
 import type {
   LyraChatThread,
@@ -49,7 +49,7 @@ import type {
   ThreadListGrouping,
   ThreadRowAction,
 } from "../src/components/conversation/thread-list/thread-list.class.js";
-import { LyraThreadList as LyraThreadListFromRegistration } from "../src/components/conversation/thread-list/thread-list.js";
+import { LyraThreadList as LyraThreadListFromRegistration } from "../src/components/lr-thread-list.js";
 import type {
   LyraChatThread as RegistrationChatThread,
   LyraThreadListEventMap as RegistrationThreadListEventMap,
@@ -57,7 +57,7 @@ import type {
   ThreadGroupContext as RegistrationThreadGroupContext,
   ThreadListGrouping as RegistrationThreadListGrouping,
   ThreadRowAction as RegistrationThreadRowAction,
-} from "../src/components/conversation/thread-list/thread-list.js";
+} from "../src/components/lr-thread-list.js";
 import * as StableThreadList from "../src/components/lr-thread-list.js";
 import * as StableWidgetRenderer from "../src/components/lr-widget-renderer.js";
 import * as ConversationFamily from "../src/components/conversation/index.js";
@@ -241,21 +241,21 @@ import type { WidgetPropType as RemovedWidgetPropType } from "../src/components/
 // @ts-expect-error WidgetInteraction was replaced by LyraWidgetInteraction.
 import type { WidgetInteraction as RemovedWidgetInteraction } from "../src/components/conversation/widget-renderer/registry.js";
 // @ts-expect-error ChatThread was removed from the normal thread-list registration entry.
-import type { ChatThread as RemovedRegistrationChatThread } from "../src/components/conversation/thread-list/thread-list.js";
+import type { ChatThread as RemovedRegistrationChatThread } from "../src/components/lr-thread-list.js";
 // @ts-expect-error WidgetNode was removed from the normal widget-renderer registration entry.
-import type { WidgetNode as RemovedRegistrationWidgetNode } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetNode as RemovedRegistrationWidgetNode } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetBinding was removed from the normal widget-renderer registration entry.
-import type { WidgetBinding as RemovedRegistrationWidgetBinding } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetBinding as RemovedRegistrationWidgetBinding } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetDocument was removed from the normal widget-renderer registration entry.
-import type { WidgetDocument as RemovedRegistrationWidgetDocument } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetDocument as RemovedRegistrationWidgetDocument } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetPropType was removed from the normal widget-renderer registration entry.
-import type { WidgetPropType as RemovedRegistrationWidgetPropType } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetPropType as RemovedRegistrationWidgetPropType } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetInteraction was removed from the normal widget-renderer registration entry.
-import type { WidgetInteraction as RemovedRegistrationWidgetInteraction } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetInteraction as RemovedRegistrationWidgetInteraction } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetTypeDefinition was removed from the normal widget-renderer registration entry.
-import type { WidgetTypeDefinition as RemovedRegistrationWidgetTypeDefinition } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetTypeDefinition as RemovedRegistrationWidgetTypeDefinition } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error WidgetTypeRegistry was removed from the normal widget-renderer registration entry.
-import type { WidgetTypeRegistry as RemovedRegistrationWidgetTypeRegistry } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { WidgetTypeRegistry as RemovedRegistrationWidgetTypeRegistry } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolver context is unavailable from the stable normal entry.
 type RemovedStableResolveContext = StableWidgetRenderer.ResolveContext;
 // @ts-expect-error resolved nodes are unavailable from the stable normal entry.
@@ -357,25 +357,25 @@ import { WIDGET_MAX_PROPS_PER_NODE as RemovedWidgetMaxPropsPerNode } from "../sr
 // @ts-expect-error resolver limits are intentionally private and non-configurable.
 import { WIDGET_MAX_WARNINGS as RemovedWidgetMaxWarnings } from "../src/components/conversation/widget-renderer/resolve.js";
 // @ts-expect-error resolver context is available only from the explicit resolver expert route.
-import type { ResolveContext as RemovedRegistrationResolveContext } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { ResolveContext as RemovedRegistrationResolveContext } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolved nodes are available only from the explicit resolver expert route.
-import type { ResolvedNode as RemovedRegistrationResolvedNode } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { ResolvedNode as RemovedRegistrationResolvedNode } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolved text is available only from the explicit resolver expert route.
-import type { ResolvedText as RemovedRegistrationResolvedText } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { ResolvedText as RemovedRegistrationResolvedText } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolved elements are available only from the explicit resolver expert route.
-import type { ResolvedElement as RemovedRegistrationResolvedElement } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import type { ResolvedElement as RemovedRegistrationResolvedElement } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error tree resolution is available only from the explicit resolver expert route.
-import { resolveTree as RemovedRegistrationResolveTree } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { resolveTree as RemovedRegistrationResolveTree } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error pointer reading is private to the resolver implementation.
-import { readWidgetPointer as RemovedRegistrationReadWidgetPointer } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { readWidgetPointer as RemovedRegistrationReadWidgetPointer } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolver limits are private to the resolver implementation.
-import { WIDGET_MAX_DEPTH as RemovedRegistrationWidgetMaxDepth } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { WIDGET_MAX_DEPTH as RemovedRegistrationWidgetMaxDepth } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolver limits are private to the resolver implementation.
-import { WIDGET_MAX_NODES as RemovedRegistrationWidgetMaxNodes } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { WIDGET_MAX_NODES as RemovedRegistrationWidgetMaxNodes } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolver limits are private to the resolver implementation.
-import { WIDGET_MAX_PROPS_PER_NODE as RemovedRegistrationWidgetMaxPropsPerNode } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { WIDGET_MAX_PROPS_PER_NODE as RemovedRegistrationWidgetMaxPropsPerNode } from "../src/components/lr-widget-renderer.js";
 // @ts-expect-error resolver limits are private to the resolver implementation.
-import { WIDGET_MAX_WARNINGS as RemovedRegistrationWidgetMaxWarnings } from "../src/components/conversation/widget-renderer/widget-renderer.js";
+import { WIDGET_MAX_WARNINGS as RemovedRegistrationWidgetMaxWarnings } from "../src/components/lr-widget-renderer.js";
 
 // Mutable process-wide registry APIs were removed from every normal public route.
 // @ts-expect-error use createWidgetTypeRegistry() instead.

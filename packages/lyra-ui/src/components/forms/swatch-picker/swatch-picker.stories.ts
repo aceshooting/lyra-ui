@@ -10,11 +10,11 @@ import {
   gemstoneGlyph,
   gemstoneSelectedGlyphStyles,
 } from '../../../theme/gemstones.js';
-import type { LyraSwatchPicker } from './swatch-picker.js';
+import type { LyraSwatchPicker } from '../../lr-swatch-picker.js';
 import type { LyraSizeStep } from '../../../internal/variants.js';
-import './swatch-picker.js';
-import '../icon-button/icon-button.js';
-import '../../overlays/overlay/popover.js';
+import '../../lr-swatch-picker.js';
+import '../../lr-icon-button.js';
+import '../../lr-popover.js';
 
 const accents = () => [
   { value: 'blue', color: 'var(--lr-color-brand)', label: 'Blue' },

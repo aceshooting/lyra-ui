@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './knowledge-base-admin.js';
+import '../../lr-knowledge-base-admin.js';
 import type { LyraKnowledgeBaseAdmin } from './knowledge-base-admin.class.js';
 it('discloses original collection loss and clears it after replacement', async () => {
   expectDevWarning(collectionTruncationWarningKey('lr-knowledge-base-admin', 'sources'));

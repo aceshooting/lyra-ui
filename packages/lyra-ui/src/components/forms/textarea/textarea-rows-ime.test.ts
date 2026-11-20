@@ -1,6 +1,6 @@
 import { expect, fixture, html, aTimeout } from '@open-wc/testing';
-import './textarea.js';
-import '../input/input.js';
+import '../../lr-textarea.js';
+import '../../lr-input.js';
 import type { LyraTextarea } from './textarea.class.js';
 import type { LyraInput } from '../input/input.class.js';
 

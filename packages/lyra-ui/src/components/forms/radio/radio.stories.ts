@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './radio.js';
-import './radio-group.js';
+import '../../lr-radio.js';
+import '../../lr-radio-group.js';
 const meta: Meta = { title: 'Form/Radio', component: 'lr-radio', tags: ['autodocs'] };
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-radio value="json">JSON</lr-radio>` };

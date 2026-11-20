@@ -5,9 +5,9 @@ import type { LyraSpan } from './span.js';
 import type { LyraSpanWaterfall } from '../span-waterfall/span-waterfall.class.js';
 import type { LyraTaskList, TaskItem, TaskListSource } from '../task-list/task-list.class.js';
 import { __resetHierarchySourceRuntimeForTesting } from '../../../internal/lazy-hierarchy-source.js';
-import './trace-tree.js';
-import '../span-waterfall/span-waterfall.js';
-import '../task-list/task-list.js';
+import '../../lr-trace-tree.js';
+import '../../lr-span-waterfall.js';
+import '../../lr-task-list.js';
 
 const span: LyraSpan = { id: 'work', name: 'Generate answer', kind: 'tool', status: 'success', startMs: 100, endMs: 125 };
 const spanRow: LyraHierarchyRow<LyraSpan> = { key: 'work', value: span, parentKey: null, level: 1, position: 1, setSize: 1, childCount: 0, expanded: false, selected: false };

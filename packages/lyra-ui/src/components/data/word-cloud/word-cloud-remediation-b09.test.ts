@@ -1,7 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './word-cloud.js';
-import type { LyraWordCloud } from './word-cloud.js';
+import '../../lr-word-cloud.js';
+import type { LyraWordCloud } from '../../lr-word-cloud.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const words = [{ text: 'alpha', weight: 3 }, { text: 'beta', weight: 2 }, { text: 'gamma', weight: 1 }];

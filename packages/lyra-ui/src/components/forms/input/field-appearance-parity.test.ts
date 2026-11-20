@@ -1,11 +1,11 @@
 import { expect, fixture } from '@open-wc/testing';
 import { unsafeStatic, html as staticHtml } from 'lit/static-html.js';
-import './input.js';
-import './time-input.js';
-import '../textarea/textarea.js';
-import '../date-picker/date-input.js';
-import '../phone-input/phone-input.js';
-import '../otp-input/otp-input.js';
+import '../../lr-input.js';
+import '../../lr-time-input.js';
+import '../../lr-textarea.js';
+import '../../lr-date-input.js';
+import '../../lr-phone-input.js';
+import '../../lr-otp-input.js';
 
 type Updating = HTMLElement & { updateComplete: Promise<unknown> };
 

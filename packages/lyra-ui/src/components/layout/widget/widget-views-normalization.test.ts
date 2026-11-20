@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './widget.js';
+import '../../lr-widget.js';
 import type { LyraWidget } from './widget.class.js';
 
 const toggles = (el: LyraWidget): string[] =>

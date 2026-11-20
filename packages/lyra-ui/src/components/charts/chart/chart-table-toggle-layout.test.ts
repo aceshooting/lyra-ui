@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './box-plot.js';
-import './chart.js';
-import './lite-chart.js';
+import '../../lr-box-plot.js';
+import '../../lr-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 

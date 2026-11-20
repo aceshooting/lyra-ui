@@ -1,6 +1,6 @@
 import { elementUpdated, expect, fixture } from '@open-wc/testing';
-import './dock-panel.js';
-import type { LyraDockPanel, LyraDockPanelResizeDetail } from './dock-panel.js';
+import '../../lr-dock-panel.js';
+import type { LyraDockPanel, LyraDockPanelResizeDetail } from '../../lr-dock-panel.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 async function dockedFixture(attrs = ''): Promise<LyraDockPanel> {

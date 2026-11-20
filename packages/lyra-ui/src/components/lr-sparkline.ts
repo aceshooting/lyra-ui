@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/sparkline/sparkline.js';
+export * from './data/sparkline/sparkline.class.js';
+import { LyraSparkline } from './data/sparkline/sparkline.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('sparkline', LyraSparkline);

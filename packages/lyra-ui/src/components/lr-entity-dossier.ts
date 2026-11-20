@@ -1,3 +1,13 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/entity-dossier/entity-dossier.js';
+export * from './retrieval/entity-dossier/entity-dossier.class.js';
+import { LyraEntityDossier } from './retrieval/entity-dossier/entity-dossier.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-entity-card.js';
+import './lr-neighbor-list.js';
+import './lr-chunk-inspector.js';
+import './lr-provenance-panel.js';
+import './lr-stat.js';
+import './lr-tab-group.js';
+import './lr-tab-panel.js';
+import './lr-tab.js';
+import './lr-empty.js';
+defineElement('entity-dossier', LyraEntityDossier);

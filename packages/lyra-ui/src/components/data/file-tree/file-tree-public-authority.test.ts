@@ -3,7 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraHierarchyQuery, LyraHierarchySource } from '../../../data-sources.js';
 import type { LyraTree } from '../tree/tree.class.js';
 import type { FileTreeNode, LyraFileTree } from './file-tree.class.js';
-import './file-tree.js';
+import '../../lr-file-tree.js';
 
 const nested: readonly FileTreeNode[] = [{ path: 'src', kind: 'directory', children: [
   { path: 'src/deep', kind: 'directory', children: [{ path: 'src/deep/file.ts', mimeType: 'text/typescript' }] },

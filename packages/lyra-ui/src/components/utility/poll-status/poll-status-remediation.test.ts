@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './poll-status.js';
-import type { LyraPollStatus } from './poll-status.js';
+import '../../lr-poll-status.js';
+import type { LyraPollStatus } from '../../lr-poll-status.js';
 
 for (const direction of ['ltr', 'rtl']) {
   for (const state of ['inactive', 'refreshing'] as const) {

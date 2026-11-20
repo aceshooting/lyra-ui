@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/ebook-viewer/ebook-viewer.js';
+export * from './viewers/ebook-viewer/ebook-viewer.class.js';
+import { LyraEbookViewer } from './viewers/ebook-viewer/ebook-viewer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './viewers/ebook-viewer/ebook-viewer-register.js'; // also lets <lr-document-viewer> open this kind
+
+defineElement('ebook-viewer', LyraEbookViewer);

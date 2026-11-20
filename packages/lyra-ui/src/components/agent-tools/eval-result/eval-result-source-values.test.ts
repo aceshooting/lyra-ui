@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { EvalResultSource, EvalRunResult, LyraEvalResult } from './eval-result.class.js';
-import './eval-result.js';
+import '../../lr-eval-result.js';
 
 const validRun = (): EvalRunResult => ({ id: 'current', label: 'Current run', model: 'Model A', promptVersion: 'v1', output: 'Accepted output', scores: {}, review: {} });
 const provider = (value: unknown, revision: number): EvalResultSource => ({

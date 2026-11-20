@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './calendar-viewer.js';
-import type { LyraCalendarViewer } from './calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
+import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
 
 const events = Array.from({ length: 12 }, (_, i) => ['BEGIN:VEVENT', `UID:e${i}@example.test`, 'DTSTAMP:20260701T090000Z', `DTSTART:202607${String(10 + i).padStart(2, '0')}T140000Z`, `SUMMARY:Event ${i}`, 'END:VEVENT'].join('\r\n'));
 const ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', ...events, 'END:VCALENDAR', ''].join('\r\n');

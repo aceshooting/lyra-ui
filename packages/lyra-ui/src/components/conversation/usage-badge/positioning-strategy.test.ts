@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './usage-badge.js';
-import type { LyraUsageBadge } from './usage-badge.js';
+import '../../lr-usage-badge.js';
+import type { LyraUsageBadge } from '../../lr-usage-badge.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

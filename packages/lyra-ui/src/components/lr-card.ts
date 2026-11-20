@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/card/card.js';
+export * from './layout/card/card.class.js';
+import { LyraCard } from './layout/card/card.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('card', LyraCard);

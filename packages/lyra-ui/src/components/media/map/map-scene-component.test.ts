@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { createMapSceneSessionFacade, mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { resolveSceneAttachment } from '../../../internal/map-scene-session-registry.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./checkbox.js";
-import type { LyraCheckbox } from "./checkbox.js";
+import "../../lr-checkbox.js";
+import type { LyraCheckbox } from "../../lr-checkbox.js";
 
 const meta: Meta = {
   title: "Checkbox",

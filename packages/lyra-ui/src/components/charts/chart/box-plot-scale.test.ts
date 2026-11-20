@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './box-plot.js';
+import '../../lr-box-plot.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import { preloadCharts } from './chart-preload.js';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';

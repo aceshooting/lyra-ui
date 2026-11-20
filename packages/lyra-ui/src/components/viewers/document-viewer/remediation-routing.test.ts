@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './document-viewer.js';
-import '../xml-viewer/xml-viewer.js';
+import '../../lr-document-viewer.js';
+import '../../lr-xml-viewer.js';
 import { createDocumentRendererRegistry, type LyraDocumentFile } from './registry.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
-import type { LyraXmlViewer } from '../xml-viewer/xml-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
+import type { LyraXmlViewer } from '../../lr-xml-viewer.js';
 
 const originalFetch = window.fetch;
 const requestedUrls: string[] = [];

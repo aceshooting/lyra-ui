@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './evaluation-run.js';
+import '../../lr-eval-run.js';
 import { LyraEvalRun, type EvalExampleResult } from './evaluation-run.class.js';
 import type { Citation } from '../../../ai/types.js';
 

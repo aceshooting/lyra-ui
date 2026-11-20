@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './toggle.js';
-import '../icon-button/icon-button.js';
-import '../../conversation/message-actions/message-actions.js';
-import '../../utility/copy-button/copy-button.js';
+import '../../lr-toggle.js';
+import '../../lr-icon-button.js';
+import '../../lr-message-actions.js';
+import '../../lr-copy-button.js';
 
 const meta: Meta = {
   title: 'Forms & Inputs/Toggle',

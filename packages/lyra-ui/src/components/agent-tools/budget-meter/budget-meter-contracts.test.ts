@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './budget-meter.js';
-import type { LyraBudgetMeter } from './budget-meter.js';
+import '../../lr-budget-meter.js';
+import type { LyraBudgetMeter } from '../../lr-budget-meter.js';
 
 it('keeps the fill and track visible under forced colors', async () => {
   try {

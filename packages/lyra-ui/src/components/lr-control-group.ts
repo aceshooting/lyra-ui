@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/control-group/control-group.js';
+export * from './layout/control-group/control-group.class.js';
+import { LyraControlGroup } from './layout/control-group/control-group.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('control-group', LyraControlGroup);

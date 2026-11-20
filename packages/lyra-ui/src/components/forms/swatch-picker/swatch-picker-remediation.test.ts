@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraSwatchPicker } from './swatch-picker.js';
-import './swatch-picker.js';
+import type { LyraSwatchPicker } from '../../lr-swatch-picker.js';
+import '../../lr-swatch-picker.js';
 
 const items = [{ value: 'a', color: 'var(--lr-color-brand)', label: 'Alpha' }, { value: 'b', color: 'var(--lr-color-success)', label: 'Beta' }];
 

@@ -6,9 +6,9 @@ import {
   aTimeout,
   waitUntil,
 } from "@open-wc/testing";
-import "./message-feedback.js";
+import "../../lr-message-feedback.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import type { LyraMessageFeedback } from "./message-feedback.js";
+import type { LyraMessageFeedback } from "../../lr-message-feedback.js";
 import type { LyraChip } from "../../overlays/chip/chip.class.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 

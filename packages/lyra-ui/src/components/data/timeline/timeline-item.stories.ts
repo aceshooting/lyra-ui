@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './timeline.js';
-import './timeline-item.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
 
 const meta: Meta = {
   title: 'Timeline/Item',

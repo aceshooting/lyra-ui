@@ -1,17 +1,17 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
-import "./details.js";
-import "./accordion.js";
-import "./accordion-item.js";
-import type { LyraDetails } from "./details.js";
-import type { LyraAccordion } from "./accordion.js";
-import type { LyraAccordionItem } from "./accordion-item.js";
+import "../../lr-details.js";
+import "../../lr-accordion.js";
+import "../../lr-accordion-item.js";
+import type { LyraDetails } from "../../lr-details.js";
+import type { LyraAccordion } from "../../lr-accordion.js";
+import type { LyraAccordionItem } from "../../lr-accordion-item.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
-import '../../forms/checkbox/checkbox.js';
-import '../../overlays/badge/badge.js';
-import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
+import '../../lr-checkbox.js';
+import '../../lr-badge.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
 
 function nativeDetailsOf(el: LyraDetails): HTMLDetailsElement {
   return el.shadowRoot!.querySelector<HTMLDetailsElement>('details:not([part])')!;

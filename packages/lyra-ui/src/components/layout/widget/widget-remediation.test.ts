@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './widget.js';
+import '../../lr-widget.js';
 import type { LyraWidget } from './widget.class.js';
 
 for (const attribute of ['label', 'sublabel'] as const) {

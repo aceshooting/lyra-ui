@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraChart } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 it('bounds deep raw options while preserving sibling axes and opaque plugin identity', async () => {
   let deep: Record<string, unknown> = { unsupportedDepth: true };

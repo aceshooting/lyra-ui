@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { snapshotFlowNodes } from './flow-model.js';
-import { LyraFlowCanvas, type FlowNode } from './flow-canvas.js';
+import { LyraFlowCanvas, type FlowNode } from '../../lr-flow-canvas.js';
 
 function fullBudget(): FlowNode[] {
   return Array.from({ length: 5 }, (_, index) => ({

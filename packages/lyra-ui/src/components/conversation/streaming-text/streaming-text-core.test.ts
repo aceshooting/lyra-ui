@@ -1,7 +1,7 @@
 import { assertStreamingTextWhitespace } from '../../../../test/contracts/streaming-text-whitespace.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './streaming-text-core.js';
-import type { LyraStreamingTextCore } from './streaming-text-core.js';
+import '../../lr-streaming-text-core.js';
+import type { LyraStreamingTextCore } from '../../lr-streaming-text-core.js';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 /** True once the browser has actually fetched a module whose URL ends with `suffix` -- the

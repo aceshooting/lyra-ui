@@ -67,7 +67,7 @@ describe('toast() failure containment and stacking', () => {
   });
 
   it('raises a toast above an already open lr-dialog so its action takes the pointer', async () => {
-    await import('../dialog/dialog.js');
+    await import('../../lr-dialog.js');
     const dialog = document.createElement('lr-dialog') as HTMLElement & { open: boolean; updateComplete: Promise<boolean> };
     dialog.setAttribute('label', 'Settings');
     dialog.open = true;
@@ -203,7 +203,7 @@ describe('toast() inside native modal dialogs', () => {
 
   it('keeps helper toasts interactive and announced inside mobile Page navigation', async () => {
     const native = modal();
-    await import('../../layout/page/page.js');
+    await import('../../lr-page.js');
     const page = document.createElement('lr-page');
     page.setAttribute('mobile-breakpoint', '10000px');
     page.style.inlineSize = '400px';
@@ -239,7 +239,7 @@ describe('toast() inside native modal dialogs', () => {
 
   it('keeps toasts outside an arbitrary shadow pane while sharing its floating modal focus loop', async () => {
     const native = modal();
-    await import('../../layout/multi-split/multi-split.js');
+    await import('../../lr-multi-split.js');
     if (!customElements.get('helper-shadow-pane')) {
       customElements.define('helper-shadow-pane', class extends HTMLElement {
         constructor() {

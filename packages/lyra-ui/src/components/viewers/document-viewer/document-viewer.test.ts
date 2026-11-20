@@ -1,14 +1,14 @@
 import { twoFrames } from '../../../../test/frames.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
-import "./document-viewer.js";
+import "../../lr-document-viewer.js";
 import {
   clearDocumentRenderers,
   registerDocumentRenderer,
   type LyraDocumentFile,
   type LyraAvDocumentRendererPayload,
 } from "./registry.js";
-import type { LyraDocumentViewer } from "./document-viewer.js";
+import type { LyraDocumentViewer } from "../../lr-document-viewer.js";
 import type { DialogCloseReason } from "../../overlays/dialog/dialog.class.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';

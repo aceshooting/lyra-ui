@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './word-cloud.js';
-import type { LyraWordCloud } from './word-cloud.js';
+import '../../lr-word-cloud.js';
+import type { LyraWordCloud } from '../../lr-word-cloud.js';
 import { prepareLyraWordCloud, type LyraPreparedWordCloud } from '../../../utilities/data-preparation.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';

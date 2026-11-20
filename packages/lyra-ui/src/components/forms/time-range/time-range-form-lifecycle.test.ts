@@ -2,8 +2,8 @@ import { stubTimeRangePointerGeometry } from '../../../../test/contracts/time-ra
 import { withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
-import "./time-range.js";
-import type { LyraTimeRange } from "./time-range.js";
+import "../../lr-time-range.js";
+import type { LyraTimeRange } from "../../lr-time-range.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;

@@ -1,7 +1,7 @@
 import { expect, fixtureCleanup } from '@open-wc/testing';
 import { loadMapHashRuntime } from '../src/components/media/map/map-feature-loader.js';
 import { installCameraPeerEnvironment, mountCameraPeerMap, reconnectCameraPeerMap } from './map-camera-peer.js';
-import '../src/components/media/map/map.js';
+import '../src/components/lr-map.js';
 
 /** Tests URL ownership across interrupted native camera reads, in a fresh history context per direction. */
 export function mapHashBoundaryTests(direction: 'read' | 'write'): void {

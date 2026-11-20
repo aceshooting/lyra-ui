@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './evaluation-run.js';
+import '../../lr-eval-run.js';
 import type { EvalExampleResult, EvalToolApprovalDetail } from './evaluation-run.class.js';
 
 const meta: Meta = {

@@ -1,12 +1,12 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './document-viewer.js';
-import '../email-viewer/email-viewer.js';
-import '../xml-viewer/xml-viewer.js';
-import '../notebook-viewer/notebook-viewer.js';
-import '../../media/image-viewer/image-viewer.js';
-import '../../media/av-player/av-player.js';
+import '../../lr-document-viewer.js';
+import '../../lr-email-viewer.js';
+import '../../lr-xml-viewer.js';
+import '../../lr-notebook-viewer.js';
+import '../../lr-image-viewer.js';
+import '../../lr-av-player.js';
 import { clearDocumentRenderers, findDocumentRenderer, type LyraDocumentFile } from './registry.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
 
 afterEach(() => {
   clearDocumentRenderers();

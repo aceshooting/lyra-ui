@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './sparkline.js';
-import type { LyraSparkline } from './sparkline.js';
+import '../../lr-sparkline.js';
+import type { LyraSparkline } from '../../lr-sparkline.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('reuses the 100000-point projection for an accessible-label change', async () => {

@@ -4,8 +4,8 @@ import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
   type AnnouncementPoliteness,
 } from '../../../internal/announcer.js';
-import './live-region.js';
-import type { LyraLiveRegion } from './live-region.js';
+import '../../lr-live-region.js';
+import type { LyraLiveRegion } from '../../lr-live-region.js';
 
 function regionEl(el: LyraLiveRegion): HTMLElement {
   return el.shadowRoot!.querySelector('[part="region"]') as HTMLElement;

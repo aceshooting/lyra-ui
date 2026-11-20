@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 function required<T>(value: T | null | undefined, context: string): T {
   if (value == null) throw new Error(`Missing ${context}`);

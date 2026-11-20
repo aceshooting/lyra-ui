@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import type { LyraDiffView } from './diff-view.js';
-import './diff-view.js';
+import type { LyraDiffView } from '../../lr-diff-view.js';
+import '../../lr-diff-view.js';
 
 function trackScrollWrites(body: HTMLElement): () => number {
   const offset = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop')!;

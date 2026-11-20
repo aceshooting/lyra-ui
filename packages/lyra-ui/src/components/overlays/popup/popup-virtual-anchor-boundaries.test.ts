@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraPopup } from './popup.class.js';
-import './popup.js';
+import '../../lr-popup.js';
 
 async function mount(): Promise<LyraPopup> {
   return fixture<LyraPopup>(html`<lr-popup strategy="fixed" placement="bottom"

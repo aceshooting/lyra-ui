@@ -1,8 +1,8 @@
 import { toRgba } from '../../../../test/color-contrast.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './media-card.js';
+import '../../lr-media-card.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import type { LyraMediaCard } from './media-card.js';
+import type { LyraMediaCard } from '../../lr-media-card.js';
 
 it('treats removed mime-type as absent without changing null readback and recovers auto detection', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-media-card']>(html`<lr-media-card src="about:blank" mime-type="image/png"></lr-media-card>`);

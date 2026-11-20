@@ -2,9 +2,9 @@ import { expect, fixture, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 async function clickWithoutNavigation(
   anchor: HTMLAnchorElement,

@@ -1,6 +1,6 @@
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
-import './chip.js';
-import type { LyraChip } from './chip.js';
+import '../../lr-chip.js';
+import type { LyraChip } from '../../lr-chip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 

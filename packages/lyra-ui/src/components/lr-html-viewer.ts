@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/html-viewer/html-viewer.js';
+export * from './viewers/html-viewer/html-viewer.class.js';
+import { LyraHtmlViewer } from './viewers/html-viewer/html-viewer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './viewers/html-viewer/html-viewer-register.js';
+
+defineElement('html-viewer', LyraHtmlViewer);

@@ -3,7 +3,7 @@ import { sendKeys, setViewport } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { getLyraLocale, setLyraLocale } from '../../../localization.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
-import './locale-picker.js';
+import '../../lr-locale-picker.js';
 import { applyLyraStyleScope } from '../../../theme/theme.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
 

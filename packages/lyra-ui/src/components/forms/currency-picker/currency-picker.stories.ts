@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './currency-picker.js';
-import '../button/button.js';
+import '../../lr-currency-picker.js';
+import '../../lr-button.js';
 
 const everydayCurrencies = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'CNY', 'INR', 'BRL', 'AED', 'SAR', 'LBP'];
 

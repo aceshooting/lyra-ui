@@ -1,10 +1,10 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './usage-badge.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraUsageBadge } from './usage-badge.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../lr-usage-badge.js';
+import '../../lr-dialog.js';
+import type { LyraUsageBadge } from '../../lr-usage-badge.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 async function frame(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

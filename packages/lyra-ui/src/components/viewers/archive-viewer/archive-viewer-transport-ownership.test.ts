@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import type { LyraArchiveViewer } from './archive-viewer.js';
-import './archive-viewer.js';
+import type { LyraArchiveViewer } from '../../lr-archive-viewer.js';
+import '../../lr-archive-viewer.js';
 import { assembleZip, zipEntry } from './fixtures/zip-builder.js';
 
 function deferred<T>() {

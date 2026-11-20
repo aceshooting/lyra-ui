@@ -2,8 +2,8 @@ import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../..
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./switch.js";
-import type { LyraSwitch } from "./switch.js";
+import "../../lr-switch.js";
+import type { LyraSwitch } from "../../lr-switch.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("contains long label and hint content at 320px in LTR and RTL", async () => {

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-result-dialog.js';
-import type { LyraToolResultDialog } from './tool-result-dialog.js';
-import '../../layout/tab-group/tab-group.js';
-import '../../layout/tab-group/tab-panel.js';
-import '../../layout/tab-group/tab.js';
-import '../../utility/json-viewer/json-viewer.js';
+import '../../lr-tool-result-dialog.js';
+import type { LyraToolResultDialog } from '../../lr-tool-result-dialog.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab-panel.js';
+import '../../lr-tab.js';
+import '../../lr-json-viewer.js';
 
 const meta: Meta = {
   title: 'ToolResultDialog',

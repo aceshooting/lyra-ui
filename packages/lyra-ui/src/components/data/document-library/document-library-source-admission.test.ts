@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraDocumentLibrary, DocumentLibrarySource, LibraryDocument } from './document-library.class.js';
 import type { LyraTable } from '../table/table.class.js';
-import './document-library.js';
+import '../../lr-document-library.js';
 import '../../../translations/ja.js';
 
 const documentRecord = (): LibraryDocument => ({ id: 'd0', name: 'Document', tags: ['topic'] });

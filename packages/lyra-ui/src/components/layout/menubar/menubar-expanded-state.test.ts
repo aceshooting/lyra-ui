@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraMenubarItem } from './menubar-item.class.js';
-import './menubar.js';
+import '../../lr-menubar.js';
 
 async function bar(): Promise<{ root: HTMLElement; file: LyraMenubarItem; edit: LyraMenubarItem; help: LyraMenubarItem }> {
   const root = await fixture<HTMLElement>(html`<div>

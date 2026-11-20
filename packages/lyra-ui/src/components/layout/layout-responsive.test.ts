@@ -1,14 +1,14 @@
 import { expect, fixture, html } from "@open-wc/testing";
-import "./breadcrumb/breadcrumb.js";
-import "./breadcrumb/breadcrumb-item.js";
-import "./details/details.js";
-import "./reorder-list/reorder-list.js";
-import "./reorder-list/reorder-item.js";
-import "./multi-split/multi-split.js";
-import type { LyraMultiSplit } from "./multi-split/multi-split.js";
+import "../lr-breadcrumb.js";
+import "../lr-breadcrumb-item.js";
+import "../lr-details.js";
+import "../lr-reorder-list.js";
+import "../lr-reorder-item.js";
+import "../lr-multi-split.js";
+import type { LyraMultiSplit } from "../lr-multi-split.js";
 import { nextFrame, waitUntil } from '@open-wc/testing';
-import './navigation-menu/navigation-menu.js';
-import type { LyraNavigationMenu } from './navigation-menu/navigation-menu.js';
+import '../lr-navigation-menu.js';
+import type { LyraNavigationMenu } from '../lr-navigation-menu.js';
 
 const LONG_LABEL = "unbroken".repeat(4_096);
 

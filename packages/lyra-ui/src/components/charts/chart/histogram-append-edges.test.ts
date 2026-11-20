@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import type { LyraHistogram } from './histogram.class.js';
-import './histogram.js';
+import '../../lr-histogram.js';
 
 /** An append source whose single read at `index` runs `onRead` first (a re-entrant caller). */
 function reentrant(length: number, index: number, onRead: () => void, throwAfterRead: boolean): readonly number[] {

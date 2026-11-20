@@ -1,11 +1,11 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './sequence-strip.js';
+import '../../lr-sequence-strip.js';
 import type {
   LyraSequenceStrip,
   SequenceStripCategory,
   SequenceStripItem,
-} from './sequence-strip.js';
+} from '../../lr-sequence-strip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

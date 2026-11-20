@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './responsive-panel.js';
-import type { LyraResponsivePanel } from './responsive-panel.js';
+import '../../lr-responsive-panel.js';
+import type { LyraResponsivePanel } from '../../lr-responsive-panel.js';
 
 describe('lr-responsive-panel heading fallback', () => {
   it('falls back to the localized panel name when the slotted heading is empty', async () => {

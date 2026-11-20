@@ -174,8 +174,8 @@ const memoryRemove: LyraMemoryPanelEventMap['lr-remove']['detail'] = {
   memoryId: 'memory-a',
   scope: 'long-term',
 };
-const memoryExpand: LyraMemoryPanelEventMap['lr-toggle']['detail'] = {
-  itemId: 'memory-a',
+const memoryExpand: LyraMemoryPanelEventMap['lr-retrieval-disclosure-change']['detail'] = {
+  kind: 'memory',
   memoryId: 'memory-a',
   scope: 'long-term',
   expanded: true,
@@ -207,8 +207,13 @@ const edgeActivation: LyraFlowCanvasEventMap['lr-edge-activate']['detail'] = {
   edgeId: 'edge-a',
   sourceNodeId: 'node-a',
   targetNodeId: 'node-b',
+};
+const legacyEdgeActivation: LyraFlowCanvasEventMap['lr-edge-activate']['detail'] = {
+  edgeId: 'edge-a',
+  sourceNodeId: 'node-a',
+  targetNodeId: 'node-b',
+  // @ts-expect-error edge activation names its endpoints sourceNodeId and targetNodeId only.
   source: 'node-a',
-  target: 'node-b',
 };
 
 const revealChange: LyraEnvListEventMap['lr-reveal-change']['detail'] = {
@@ -299,6 +304,7 @@ void legacyDocumentSelection;
 void nodeActivation;
 void legacyNodeActivation;
 void edgeActivation;
+void legacyEdgeActivation;
 void revealChange;
 void legacyRevealChange;
 void queryLoad;

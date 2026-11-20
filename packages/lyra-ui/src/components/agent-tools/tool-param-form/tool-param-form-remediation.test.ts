@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
-import './tool-param-form.js';
-import type { LyraToolParamForm } from './tool-param-form.js';
-import type { LyraSelect } from '../../forms/select/select.js';
+import '../../lr-tool-param-form.js';
+import type { LyraToolParamForm } from '../../lr-tool-param-form.js';
+import type { LyraSelect } from '../../lr-select.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 for (const key of ['enabled', '__proto__']) {

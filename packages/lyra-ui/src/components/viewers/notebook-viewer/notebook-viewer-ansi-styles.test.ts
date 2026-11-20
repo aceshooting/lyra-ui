@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraNotebookViewer } from './notebook-viewer.class.js';
-import './notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
 
 type Notebook = Exclude<LyraNotebookViewer['notebook'], string | undefined>;
 type Output = NonNullable<Notebook['cells'][number]['outputs']>[number];

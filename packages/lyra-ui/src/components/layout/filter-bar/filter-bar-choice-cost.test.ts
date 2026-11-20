@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
-import './filter-bar.js';
-import type { LyraFilterBar, LyraFilterBarCheckboxMenuDefinition, LyraFilterBarFieldValue, LyraFilterBarFilterDefinition } from './filter-bar.js';
+import '../../lr-filter-bar.js';
+import type { LyraFilterBar, LyraFilterBarCheckboxMenuDefinition, LyraFilterBarFieldValue, LyraFilterBarFilterDefinition } from '../../lr-filter-bar.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 

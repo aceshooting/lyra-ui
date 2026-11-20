@@ -2,7 +2,7 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { twoFrames } from '../../../../test/frames.js';
 import { installCameraPeerEnvironment } from '../../../../test/map-camera-peer.js';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class ReadRetirementMap extends ControlMapEngine {
   beforeBounds?: () => void;

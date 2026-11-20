@@ -1,5 +1,5 @@
 import { expect, fixture, nextFrame, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphColumns } from '../../../internal/typed-columns.js';
 
 function columns(id = 'column'): LyraGraphColumns {

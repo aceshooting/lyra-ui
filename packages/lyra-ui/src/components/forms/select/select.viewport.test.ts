@@ -1,8 +1,8 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './select.js';
-import '../combobox/option.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
 import type { LyraSelect } from './select.class.js';
 
 async function viewportField(fontSize: string, top: number, topLayer = false): Promise<{ frame: HTMLIFrameElement; select: LyraSelect }> {

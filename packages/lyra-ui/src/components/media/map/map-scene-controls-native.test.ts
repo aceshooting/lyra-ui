@@ -4,7 +4,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 function button(element: LyraMap, kind: string): HTMLButtonElement {

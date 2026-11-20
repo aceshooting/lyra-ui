@@ -2,8 +2,8 @@ import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifec
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
-import './stat.js';
-import type { LyraStat } from './stat.js';
+import '../../lr-stat.js';
+import type { LyraStat } from '../../lr-stat.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';

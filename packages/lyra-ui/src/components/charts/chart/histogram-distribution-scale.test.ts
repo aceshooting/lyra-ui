@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { prepareLyraHistogram, type LyraHistogramDistribution, type LyraPreparedCategoryData } from '../../../utilities/data-preparation.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './histogram.js';
-import './chart.js';
+import '../../lr-histogram.js';
+import '../../lr-chart.js';
 import type { LyraHistogram } from './histogram.class.js';
 import type { LyraChart } from './chart.class.js';
 

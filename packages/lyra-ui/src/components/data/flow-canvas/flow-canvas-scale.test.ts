@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './flow-canvas.js';
-import type { LyraFlowCanvas, FlowNode } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 interface Work {

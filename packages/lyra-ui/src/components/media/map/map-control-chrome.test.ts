@@ -3,7 +3,7 @@ import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { syncMapControlRows } from './map-control-chrome.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 class ChromeMap extends ControlMapEngine {

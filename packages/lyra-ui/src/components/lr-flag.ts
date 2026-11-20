@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/flag/flag.js';
+export * from './media/flag/flag.class.js';
+import { LyraFlag } from './media/flag/flag.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-skeleton.js';
+defineElement('flag', LyraFlag);

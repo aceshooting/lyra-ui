@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './graph-query-builder.js';
-import type { GraphQuery, GraphQuerySavedItem, GraphQueryTypeOption, LyraGraphQueryBuilder } from './graph-query-builder.js';
+import '../../lr-graph-query-builder.js';
+import type { GraphQuery, GraphQuerySavedItem, GraphQueryTypeOption, LyraGraphQueryBuilder } from '../../lr-graph-query-builder.js';
 
 const RELATIONSHIP_OPTIONS: GraphQueryTypeOption[] = [
   { value: 'works_for', label: 'Works for' },

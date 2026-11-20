@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-call-chip.js';
-import type { LyraToolCallChip } from './tool-call-chip.js';
+import '../../lr-tool-call-chip.js';
+import type { LyraToolCallChip } from '../../lr-tool-call-chip.js';
 
 describe('lr-tool-call-chip removed copy', () => {
   for (const attribute of ['category', 'summary'] as const) {

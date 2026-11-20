@@ -866,72 +866,85 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   // Questions with a supplied, supported schema load the parameter form on demand.
-  'src/components/agent-tools/agent-question/agent-question.class.ts -> src/components/agent-tools/tool-param-form/tool-param-form.ts',
+  'src/components/agent-tools/agent-question/agent-question.class.ts -> src/components/lr-tool-param-form.ts',
   // A connected confirmation bar loads argument disclosure and JSON rendering when it receives args.
-  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/layout/details/details.ts',
-  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-details.ts',
+  'src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-json-viewer.ts',
   // The expanded evaluation-run detail and the tool-timeline result view register on first use.
-  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/agent-tools/tool-timeline/tool-timeline.ts',
-  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/code-block/code-block.ts',
-  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/markdown/markdown.ts',
-  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/retrieval/grounding-summary/grounding-summary.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/lr-code-block.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/lr-grounding-summary.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/lr-markdown.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/lr-tool-timeline.ts',
+  // A source-backed waterfall loads its virtual list with the hierarchy source runtime.
+  'src/components/agent-tools/span-waterfall/span-waterfall.class.ts -> src/components/lr-virtual-list.ts',
+  // A source-backed task list loads its virtual list with the hierarchy source runtime.
+  'src/components/agent-tools/task-list/task-list.class.ts -> src/components/lr-virtual-list.ts',
   // The approval dialog registers when the first approval-gated entry arrives.
-  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.ts',
-  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
+  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/lr-tool-approval-dialog.ts',
+  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/lr-tool-result-view.ts',
+  // A source-backed trace tree loads its virtual list with the hierarchy source runtime.
+  'src/components/agent-tools/trace-tree/trace-tree.class.ts -> src/components/lr-virtual-list.ts',
   // Feedback reason choices load chips only when configured, including inside message actions.
-  'src/components/conversation/message-actions/message-actions.class.ts -> src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/overlays/chip/chip.ts',
-  'src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/overlays/chip/chip.ts',
+  'src/components/conversation/message-actions/message-actions.class.ts -> src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/lr-chip.ts',
+  'src/components/conversation/message-feedback/message-feedback.class.ts -> src/components/lr-chip.ts',
   // Message parts register non-text renderers only when a matching part or retry control appears.
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/thinking-panel/thinking-panel.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-call-block/tool-call-block.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-call-chip/tool-call-chip.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/conversation/widget-renderer/widget-renderer.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/forms/button/button.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/media/attachment-chip/attachment-chip.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/retrieval/citation-badge/citation-badge.ts',
-  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-attachment-chip.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-button.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-citation-badge.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-json-viewer.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-thinking-panel.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-tool-call-block.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-tool-call-chip.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-tool-result-view.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/lr-widget-renderer.ts',
   // An interrupted stream only loads the resume button when resume is enabled.
-  'src/components/conversation/stream-status/stream-status.class.ts -> src/components/forms/button/button.ts',
+  'src/components/conversation/stream-status/stream-status.class.ts -> src/components/lr-button.ts',
   // Thread lists load the pager in provider mode and the error view after a load fails.
-  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/data/pagination/pagination.ts',
-  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/overlays/empty/empty.ts',
+  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/lr-empty.ts',
+  'src/components/conversation/thread-list/thread-list.class.ts -> src/components/lr-pagination.ts',
   // Only grids opting into the columns menu load the dropdown, its items, and its trigger button.
-  'src/components/data/data-grid/data-grid.class.ts -> src/components/forms/button/button.ts',
-  'src/components/data/data-grid/data-grid.class.ts -> src/components/layout/menu/dropdown-item.ts',
-  'src/components/data/data-grid/data-grid.class.ts -> src/components/overlays/overlay/dropdown.ts',
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/lr-button.ts',
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/lr-dropdown-item.ts',
+  'src/components/data/data-grid/data-grid.class.ts -> src/components/lr-dropdown.ts',
   // The searchable catalog pickers load the filter combobox on first use.
   'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   'src/components/forms/currency-picker/currency-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
-  'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
+  'src/components/forms/phone-input/phone-input.class.ts -> src/components/lr-flag.ts',
+  // Rubric criteria register their controls the first time a criterion of that kind renders.
+  'src/components/forms/rubric-form/rubric-form.class.ts -> src/components/lr-checkbox-group.ts',
+  'src/components/forms/rubric-form/rubric-form.class.ts -> src/components/lr-checkbox.ts',
+  'src/components/forms/rubric-form/rubric-form.class.ts -> src/components/lr-option.ts',
+  'src/components/forms/rubric-form/rubric-form.class.ts -> src/components/lr-select.ts',
   'src/components/forms/time-zone-picker/time-zone-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   'src/components/forms/unit-picker/unit-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   // The drilldown panel registers each category's card when the category first renders.
-  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/retrieval/entity-card/entity-card.ts',
-  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/retrieval/source-card/source-card.ts',
-  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/viewers/document-preview/document-preview.ts',
+  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/lr-document-preview.ts',
+  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/lr-entity-card.ts',
+  'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/lr-source-card.ts',
   // `toast()` loads the toast stack on its first call.
-  'src/components/overlays/alert/alert.class.ts -> src/components/overlays/toast/toast.ts',
+  'src/components/overlays/alert/alert.class.ts -> src/components/lr-toast.ts',
   // Neighbor lists use the pager for centered sources and the virtualizer for long local lists.
-  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/data/pagination/pagination.ts',
-  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/lr-pagination.ts',
+  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/lr-virtual-list.ts',
   // Only source-backed graphs need a pager, including the graph rendered by the explorer.
-  'src/components/retrieval/graph/graph.class.ts -> src/components/data/pagination/pagination.ts',
+  'src/components/retrieval/graph/graph.class.ts -> src/components/lr-pagination.ts',
   // Explorer details load on selection, while the embedded graph pager follows source mode.
-  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/entity-card/entity-card.ts',
-  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/graph/graph.class.ts -> src/components/data/pagination/pagination.ts',
-  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/lr-entity-card.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/lr-neighbor-list.ts',
   // A supplied path enables the explorer's optional path strip; empty paths need no registration.
-  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/path-strip/path-strip.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/lr-path-strip.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/graph/graph.class.ts -> src/components/lr-pagination.ts',
   // The memory panel reaches these loaders through the confirmation bar's optional argument display.
-  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/layout/details/details.ts',
-  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-details.ts',
+  'src/components/retrieval/memory-panel/memory-panel.class.ts -> src/components/agent-tools/confirm-bar/confirm-bar.class.ts -> src/components/lr-json-viewer.ts',
   // Neighbor lists use the pager for centered sources and the virtualizer for long local lists.
-  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/data/pagination/pagination.ts',
-  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/lr-pagination.ts',
+  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/lr-virtual-list.ts',
+  // The retrieval trace reaches the waterfall source runtime through its embedded span waterfall.
+  'src/components/retrieval/retrieval-trace/retrieval-trace.class.ts -> src/components/agent-tools/span-waterfall/span-waterfall.class.ts -> src/components/lr-virtual-list.ts',
   // Both GeoJSON class entry points load the JSON viewer only when the optional map peer is absent.
-  'src/components/viewers/geojson-view/geojson-view.class.ts -> src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
-  'src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  'src/components/viewers/geojson-view/geojson-view.class.ts -> src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/lr-json-viewer.ts',
+  'src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/lr-json-viewer.ts',
 ];
 
 function preview(entries, limit = 12) {

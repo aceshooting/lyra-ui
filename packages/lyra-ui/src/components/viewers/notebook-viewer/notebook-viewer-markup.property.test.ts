@@ -1,8 +1,8 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import type { LyraNotebookViewer } from './notebook-viewer.js';
-import './notebook-viewer.js';
+import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
 
 it('matches native visible text across raw-text names, closing prefixes and quoted tag attributes', async () => {
   const element = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;

@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraSlider } from './slider.js';
-import './slider.js';
+import type { LyraSlider } from '../../lr-slider.js';
+import '../../lr-slider.js';
 
 const thumbs = (slider: LyraSlider) => [...slider.shadowRoot!.querySelectorAll<HTMLElement>('[part~="thumb"]')];
 async function settled(slider: LyraSlider): Promise<void> {

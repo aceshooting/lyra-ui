@@ -1,12 +1,12 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import './chip/chip.js';
-import './badge/tag.js';
-import './progress/progress-bar.js';
-import './progress/progress-ring.js';
-import './spinner/spinner.js';
-import '../layout/card/card.js';
-import '../layout/widget/widget.js';
+import '../lr-chip.js';
+import '../lr-tag.js';
+import '../lr-progress-bar.js';
+import '../lr-progress-ring.js';
+import '../lr-spinner.js';
+import '../lr-card.js';
+import '../lr-widget.js';
 
 // [tag, markup, private method every relevant observer batch ends up calling]
 const cases: Array<[string, string, string]> = [

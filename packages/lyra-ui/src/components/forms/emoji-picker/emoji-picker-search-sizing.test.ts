@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './emoji-picker.js';
-import type { LyraEmojiPicker } from './emoji-picker.js';
+import '../../lr-emoji-picker.js';
+import type { LyraEmojiPicker } from '../../lr-emoji-picker.js';
 
 
 function fieldGeometry(el: LyraEmojiPicker): Record<string, string> {

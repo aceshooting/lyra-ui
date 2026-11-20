@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { prepareLyraSeriesData, type LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './sparkline.js';
+import '../../lr-sparkline.js';
 import type { LyraSparkline } from './sparkline.class.js';
 
 type PreparedSparkline = LyraSparkline & { preparedData: LyraPreparedSeriesData | null };

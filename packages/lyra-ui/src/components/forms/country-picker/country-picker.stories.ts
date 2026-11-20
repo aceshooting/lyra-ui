@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './country-picker.js';
+import '../../lr-country-picker.js';
 
 const meta: Meta = { title: 'Forms/Country Picker', component: 'lr-country-picker' };
 export default meta;

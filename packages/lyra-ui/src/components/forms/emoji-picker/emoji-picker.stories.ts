@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './emoji-picker.js';
+import '../../lr-emoji-picker.js';
 import type { EmojiPickerGroup } from './emoji-picker.class.js';
 
 const meta: Meta = {

@@ -74,7 +74,7 @@ assert.deepEqual(
 const table = entries.find((entry) => entry.tag === 'lr-table');
 assert.ok(table, 'lr-table must have a registration-graph entry');
 assert.equal(table.entry, './components/lr-table.js');
-assert.equal(table.registrationModule, 'src/components/data/table/table.ts');
+assert.equal(table.registrationModule, 'src/components/lr-table.ts');
 assert.equal(table.distModule, table.entry, 'the stable tag-shaped route is canonical after nested registration retirement');
 assert.deepEqual(table.registers, ['lr-empty', 'lr-pagination', 'lr-skeleton', 'lr-spinner', 'lr-table']);
 

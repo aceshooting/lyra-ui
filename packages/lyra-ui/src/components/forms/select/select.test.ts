@@ -11,12 +11,12 @@ import {
 } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import type { PropertyValues } from "lit";
-import "./select.js";
-import "../combobox/option.js";
+import "../../lr-select.js";
+import "../../lr-option.js";
 // Registered so the `sync` vocabulary can be asserted against its sibling control directly,
 // rather than against a restatement of what that control is believed to accept.
-import type { LyraSelect } from "./select.js";
-import type { LyraOption } from "../combobox/option.js";
+import type { LyraSelect } from "../../lr-select.js";
+import type { LyraOption } from "../../lr-option.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   RESET_OPTION_SELECTED_FROM_OWNER,

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './menu-label.js';
-import './menu.js';
-import './menu-item.js';
+import '../../lr-menu-label.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 
 const meta: Meta = {
   title: 'Layout/Menu label',

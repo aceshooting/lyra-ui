@@ -1,5 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 import { loadBoxPlotAndRegister, loadBoxPlotPlugin } from './box-plot-loader.js';
 import { loadChartJs } from './chart-core-loader.js';

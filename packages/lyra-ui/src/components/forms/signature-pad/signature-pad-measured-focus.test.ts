@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraSignaturePad, SignatureStroke } from './signature-pad.class.js';
-import './signature-pad.js';
+import '../../lr-signature-pad.js';
 
 const LINE: SignatureStroke[] = [[[0.1, 0.5], [0.9, 0.5]]];
 

@@ -13,13 +13,13 @@ import {
 import { isEmptyFormValue } from '../utilities/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from './anchored-validity.js';
 import { tag } from './prefix.js';
-import { LyraTextarea } from '../components/forms/textarea/textarea.js';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/forms/select/select.js';
-import '../components/overlays/rating/rating.js';
-import type { LyraCheckbox } from '../components/forms/checkbox/checkbox.js';
-import type { LyraSelect } from '../components/forms/select/select.js';
-import type { LyraRating } from '../components/overlays/rating/rating.js';
+import { LyraTextarea } from '../components/lr-textarea.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-select.js';
+import '../components/lr-rating.js';
+import type { LyraCheckbox } from '../components/lr-checkbox.js';
+import type { LyraSelect } from '../components/lr-select.js';
+import type { LyraRating } from '../components/lr-rating.js';
 
 class Ctl extends FormAssociated(LyraElement) {
   override render() {

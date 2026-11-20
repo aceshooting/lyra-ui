@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './rubric-form.js';
+import '../../lr-rubric-form.js';
 import type { LyraRubricForm, RubricKey, RubricKeyOption } from './rubric-form.class.js';
 
 it('contains revoked schema arrays without disturbing other mounted forms', async () => {

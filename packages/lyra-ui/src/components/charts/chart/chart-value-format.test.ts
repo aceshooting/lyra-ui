@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './line-chart.js';
-import './bubble-chart.js';
+import '../../lr-line-chart.js';
+import '../../lr-bubble-chart.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './lite-chart.js';
-import './box-plot.js';
-import '../../data/sparkline/sparkline.js';
+import '../../lr-lite-chart.js';
+import '../../lr-box-plot.js';
+import '../../lr-sparkline.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';

@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './ingestion-queue.js';
-import type { LyraIngestionQueue } from './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
+import type { LyraIngestionQueue } from '../../lr-ingestion-queue.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

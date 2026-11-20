@@ -1,8 +1,8 @@
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import '../../forms/button/button.js';
-import './confirm-bar.js';
+import '../../lr-button.js';
+import '../../lr-confirm-bar.js';
 
 const meta: Meta = {
   title: 'ConfirmBar',

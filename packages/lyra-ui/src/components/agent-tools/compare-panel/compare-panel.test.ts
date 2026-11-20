@@ -1,7 +1,7 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil, nextFrame } from '@open-wc/testing';
-import './compare-panel.js';
-import type { LyraComparePanel } from './compare-panel.js';
+import '../../lr-compare-panel.js';
+import type { LyraComparePanel } from '../../lr-compare-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 

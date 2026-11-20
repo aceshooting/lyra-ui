@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./dashboard-grid.js";
+import "../../lr-dashboard-grid.js";
 import type {
   LyraDashboardCell,
   LyraDashboardGrid,
   LyraDashboardLayoutChangeDetail,
-} from './dashboard-grid.js';
+} from '../../lr-dashboard-grid.js';
 
 const layout: LyraDashboardCell[] = [
   {

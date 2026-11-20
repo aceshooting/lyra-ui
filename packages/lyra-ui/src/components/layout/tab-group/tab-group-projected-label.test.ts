@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './tab-group.js';
-import './tab.js';
-import './tab-panel.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab.js';
+import '../../lr-tab-panel.js';
 import type { LyraTabGroup } from './tab-group.class.js';
 import type { LyraTab } from './tab.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

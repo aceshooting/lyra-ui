@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './knowledge-base.js';
+import '../../lr-knowledge-base.js';
 import type { KnowledgeBaseSource, KnowledgeSource } from './knowledge-base.class.js';
 
 const meta: Meta = {

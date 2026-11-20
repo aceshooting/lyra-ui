@@ -259,7 +259,7 @@ sorted even when public inputs are invalid or reversed. Source snapshots additio
 accepted `source` descriptor above; their scene arrays do not imply full-source coverage.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
-sourceNodeId, targetNodeId, source, target }`, both endpoint-name pairs are supplied),
+sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`

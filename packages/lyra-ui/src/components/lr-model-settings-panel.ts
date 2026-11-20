@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/model-settings-panel/model-settings-panel.js';
+export * from './conversation/model-settings-panel/model-settings-panel.class.js';
+import { LyraModelSettingsPanel } from './conversation/model-settings-panel/model-settings-panel.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-model-select.js';
+import './lr-slider.js';
+defineElement('model-settings-panel', LyraModelSettingsPanel);

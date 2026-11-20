@@ -4,10 +4,10 @@ import type { MessagePart } from '../../../ai/types.js';
 import { createWidgetTypeRegistry } from '../widget-renderer/registry.js';
 import type { LyraWidgetRenderer } from '../widget-renderer/widget-renderer.class.js';
 import type { LyraMessageParts } from './message-parts.class.js';
-import '../../forms/input/input.js';
-import '../../forms/button/button.js';
+import '../../lr-input.js';
+import '../../lr-button.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
-import './message-parts.js';
+import '../../lr-message-parts.js';
 
 const widget = { id: 'control', type: 'field', props: { value: { $bind: '/name' } } };
 const registry = createWidgetTypeRegistry([['field', {

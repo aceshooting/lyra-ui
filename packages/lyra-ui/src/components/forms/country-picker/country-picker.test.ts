@@ -4,7 +4,7 @@ import type { LyraCountryPicker } from './country-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';
 import { COUNTRY_CODES } from '../../../countries.js';
-import './country-picker.js';
+import '../../lr-country-picker.js';
 
 describe('<lr-country-picker>', () => {
   it('registers the combobox only once searchable is first enabled', async () => {

@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { MessagePart } from '../../../ai/types.js';
 import type { LyraMessageParts } from './message-parts.class.js';
-import './message-parts.js';
+import '../../lr-message-parts.js';
 
 it('keeps unused renderers unloaded and loads only a newly encountered built-in part', async () => {
   const deferred = ['lr-thinking-panel', 'lr-tool-call-chip', 'lr-tool-call-block',

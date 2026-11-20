@@ -2,7 +2,7 @@ import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 
 type Selection = { readonly selectedNodeIds: readonly string[]; readonly selectedEdgeIds: readonly string[] };
 

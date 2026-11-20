@@ -4,7 +4,7 @@ import { createMapCameraSession, MapCameraSessionError, type MapCameraSession, t
 import * as root from './lyra.js';
 import { createSimulationClock, type ClockScheduler, type SimulationClock } from './simulation-clock.js';
 import type { LyraMap, LyraMapCameraInterruptDetail } from './components/media/map/map.class.js';
-import { LYRA_MAP_EMPTY_STYLE } from './components/media/map/map.js';
+import { LYRA_MAP_EMPTY_STYLE } from './components/lr-map.js';
 import { loadMapControlRuntime, loadMapOwnedFeatureRuntime } from './components/media/map/map-feature-loader.js';
 import { installCameraPeerEnvironment, mountCameraPeerMap, reconnectCameraPeerMap, type CameraPeer } from '../test/map-camera-peer.js';
 import { sceneMarker, scenePath } from '../test/map-scene-admission-fixtures.js';

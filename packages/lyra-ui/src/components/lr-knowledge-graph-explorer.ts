@@ -1,3 +1,10 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js';
+export * from './retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
+import { LyraKnowledgeGraphExplorer } from './retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-graph.js';
+import './lr-chip.js';
+import './lr-graph-legend.js';
+import './lr-popover.js';
+import './lr-input.js';
+import './lr-button.js';
+defineElement('knowledge-graph-explorer', LyraKnowledgeGraphExplorer);

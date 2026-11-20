@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './email-viewer.js';
-import type { LyraEmailViewer } from './email-viewer.js';
+import '../../lr-email-viewer.js';
+import type { LyraEmailViewer } from '../../lr-email-viewer.js';
 import { measureArrayProbeReads } from '../../../../test/array-probe-reads.js';
 
 it('folds many expanded quotes with linear membership work and retains quote order and localized toggles', async () => {

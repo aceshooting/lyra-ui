@@ -2,11 +2,11 @@ import { resolvedColorIn, resolvedInShadow } from '../../../../test/shadow-style
 import { measureListboxRow, settlePointerStyle as settle } from '../../../../test/row-style.js';
 import { fixture, expect, oneEvent, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './select.js';
-import '../combobox/option.js';
-import '../combobox/combobox.js';
-import type { LyraSelect } from './select.js';
-import type { LyraCombobox } from '../combobox/combobox.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
+import '../../lr-combobox.js';
+import type { LyraSelect } from '../../lr-select.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 import { styles } from './select.styles.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 

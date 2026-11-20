@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './retrieval-results.js';
-import type { LyraRetrievalResults } from './retrieval-results.js';
+import '../../lr-retrieval-results.js';
+import type { LyraRetrievalResults } from '../../lr-retrieval-results.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

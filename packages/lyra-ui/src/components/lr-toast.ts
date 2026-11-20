@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/toast/toast.js';
+export * from './overlays/toast/toast.class.js';
+import { LyraToast } from './overlays/toast/toast.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-toast-item.js';
+defineElement('toast', LyraToast);

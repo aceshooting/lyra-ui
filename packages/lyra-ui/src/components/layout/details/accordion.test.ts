@@ -1,10 +1,10 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './accordion.js';
-import './accordion-item.js';
-import './details.js';
-import type { LyraAccordion } from './accordion.js';
-import type { LyraAccordionItem } from './accordion-item.js';
-import type { LyraDetails } from './details.js';
+import '../../lr-accordion.js';
+import '../../lr-accordion-item.js';
+import '../../lr-details.js';
+import type { LyraAccordion } from '../../lr-accordion.js';
+import type { LyraAccordionItem } from '../../lr-accordion-item.js';
+import type { LyraDetails } from '../../lr-details.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const quickMotion = '--show-duration: 1ms; --hide-duration: 1ms;';

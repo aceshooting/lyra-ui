@@ -1,9 +1,9 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './page-rail.js';
-import '../pdf-viewer/pdf-viewer.js';
-import '../pptx-viewer/pptx-viewer.js';
-import '../../layout/multi-split/multi-split.js';
+import '../../lr-page-rail.js';
+import '../../lr-pdf-viewer.js';
+import '../../lr-pptx-viewer.js';
+import '../../lr-multi-split.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

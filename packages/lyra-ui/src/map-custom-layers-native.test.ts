@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './components/media/map/map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './components/lr-map.js';
 import type { LyraMapCustomLayer, LyraMapCustomLayerContext, LyraMapCustomLayerFrame, LyraMapCustomLayerStatus } from './map-custom-layers.js';
 import { addMapCustomLayer } from './map-custom-layers.js';
 

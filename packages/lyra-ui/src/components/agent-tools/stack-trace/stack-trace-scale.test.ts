@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { STACK_TRACE_LIMITS } from './stack-trace-parse.js';
-import './stack-trace.js';
+import '../../lr-stack-trace.js';
 
 it('bounds rendered frames for a ten-thousand-frame trace', async () => {
   const el = document.createElement('lr-stack-trace');

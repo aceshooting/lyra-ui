@@ -5,8 +5,8 @@ import {
   hitId,
   pointOverSibling,
 } from '../../../../test/top-layer-header.js';
-import './locale-picker.js';
-import type { LyraLocalePicker } from './locale-picker.js';
+import '../../lr-locale-picker.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
 
 const NO_MOTION = '--lr-transition-fast: 0ms';
 

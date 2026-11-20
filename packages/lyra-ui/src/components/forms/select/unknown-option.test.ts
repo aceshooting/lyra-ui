@@ -1,9 +1,9 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './select.js';
-import '../combobox/combobox.js';
-import type { LyraSelect } from './select.js';
-import type { LyraCombobox } from '../combobox/combobox.js';
+import '../../lr-select.js';
+import '../../lr-combobox.js';
+import type { LyraSelect } from '../../lr-select.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 import {
   captureDeprecationWarnings,
   expectDeprecatedUsage,

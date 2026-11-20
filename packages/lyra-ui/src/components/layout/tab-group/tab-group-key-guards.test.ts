@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraTabGroup } from './tab-group.class.js';
-import './tab-group.js';
-import './tab.js';
-import './tab-panel.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab.js';
+import '../../lr-tab-panel.js';
 
 const make = (activation: 'auto' | 'manual', closable = false): Promise<LyraTabGroup> =>
   fixture<LyraTabGroup>(html`<lr-tab-group activation=${activation}>

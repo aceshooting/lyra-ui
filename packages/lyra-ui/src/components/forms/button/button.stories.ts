@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./button.js";
+import "../../lr-button.js";
 import type { LyraButton } from "./button.class.js";
 
 const meta: Meta = {

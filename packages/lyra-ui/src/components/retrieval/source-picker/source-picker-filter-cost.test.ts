@@ -4,8 +4,8 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import '../../../translations/tr/retrieval.js';
 import '../../../translations/tr/shared.js';
 import '../../../translations/tr/media.js';
-import './source-picker.js';
-import type { LyraSourceEntry, LyraSourcePicker } from './source-picker.js';
+import '../../lr-source-picker.js';
+import type { LyraSourceEntry, LyraSourcePicker } from '../../lr-source-picker.js';
 
 it('resolves the search locale per pass while retaining Turkish matches, ancestors and match counts', async () => {
   const sources: LyraSourceEntry[] = [

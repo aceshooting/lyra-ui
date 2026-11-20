@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './dataset-viewer.js';
-import type { DatasetViewerSource } from './dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
+import type { DatasetViewerSource } from '../../lr-dataset-viewer.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/DatasetViewer',

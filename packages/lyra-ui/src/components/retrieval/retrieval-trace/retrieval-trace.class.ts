@@ -117,8 +117,6 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
 
 export interface LyraRetrievalTraceEventMap {
   'lr-stage-select': CustomEvent<{ stageId: string }>;
-  /** @deprecated Use `lr-retrieval-disclosure-change` and read `stageId` or `chunkId`. */
-  'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>;
   'lr-retrieval-disclosure-change': CustomEvent<LyraRetrievalTraceDisclosureDetail>;
   'lr-stage-chunk-action': CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
@@ -151,8 +149,6 @@ export type LyraRetrievalTraceChunkActionDetail =
  *
  * @customElement lr-retrieval-trace
  * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { stageId }`.
- * @event lr-toggle - Deprecated. Use `lr-retrieval-disclosure-change`.
- *   Legacy detail is `{ expanded, itemId, stageId? }`.
  * @event lr-retrieval-disclosure-change - A stage disclosure changed, including when timeline
  *   selection opens it, or an evidence chunk changed. Details include `kind`, `stageId`,
  *   `expanded`, and `chunkId` for a chunk.
@@ -307,7 +303,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     if (expanded) next.add(stageId);
     else next.delete(stageId);
     this.expandedStageIds = next;
-    this.emit('lr-toggle', { itemId: stageId, expanded });
     this.emit('lr-retrieval-disclosure-change', { kind: 'stage', stageId, expanded });
   }
 
@@ -356,7 +351,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             @lr-toggle=${(event: LyraChunkInspectorEventMap['lr-toggle']) => {
               if (event.composedPath()[0] !== event.currentTarget) return;
               event.stopPropagation();
-              this.emit('lr-toggle', { ...event.detail, stageId: stage.id });
               this.emit('lr-stage-chunk-action', {
                 stageId: stage.id,
                 action: 'expand',

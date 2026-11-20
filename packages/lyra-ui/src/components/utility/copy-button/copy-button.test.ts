@@ -1,8 +1,8 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './copy-button.js';
-import type { LyraCopyButton } from './copy-button.js';
+import '../../lr-copy-button.js';
+import type { LyraCopyButton } from '../../lr-copy-button.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';

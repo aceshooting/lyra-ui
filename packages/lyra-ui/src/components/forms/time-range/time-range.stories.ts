@@ -4,7 +4,7 @@ import type {
   LyraTimeRange,
   TimeRangePreset,
   TimeRangeValueFormatter,
-} from "./time-range.js";
+} from "../../lr-time-range.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const presets: TimeRangePreset[] = [

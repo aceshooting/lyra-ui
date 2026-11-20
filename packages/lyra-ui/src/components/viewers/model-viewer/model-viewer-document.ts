@@ -1,5 +1,5 @@
 import { html } from 'lit';
-import './model-viewer.js';
+import '../../lr-model-viewer.js';
 import { createDocumentRendererAdapter, type LyraAdaptedDocumentRendererDefinition } from '../../../internal/document-renderer-registry.js';
 
 export const modelDocumentRenderer: LyraAdaptedDocumentRendererDefinition = {

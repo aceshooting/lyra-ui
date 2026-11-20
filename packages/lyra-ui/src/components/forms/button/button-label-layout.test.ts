@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './button.js';
+import '../../lr-button.js';
 import type { LyraButton } from './button.class.js';
 import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from '../../../theme/gemstones.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

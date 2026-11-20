@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './progress-ring.js';
+import '../../lr-progress-ring.js';
 
 const meta: Meta = { title: 'Feedback/Progress ring', component: 'lr-progress-ring', tags: ['autodocs'] };
 export default meta;

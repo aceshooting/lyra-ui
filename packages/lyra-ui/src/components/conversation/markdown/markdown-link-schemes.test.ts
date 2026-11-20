@@ -1,6 +1,6 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import './markdown.js';
-import './markdown-core.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
 import { finishMarkdownHtml } from './markdown-shared.js';
 import { parseLinkSchemes } from '../../../internal/safe-url.js';
 

@@ -6,12 +6,12 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import "./dock-panel.js";
+import "../../lr-dock-panel.js";
 import type {
   LyraDockPanel,
   LyraDockPanelResizeDetail,
   LyraDockPanelCollapseChangeDetail,
-} from "./dock-panel.js";
+} from "../../lr-dock-panel.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';

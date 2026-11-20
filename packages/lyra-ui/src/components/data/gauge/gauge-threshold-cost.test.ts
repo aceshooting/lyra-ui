@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './gauge.js';
-import type { LyraGauge, LyraGaugeThreshold } from './gauge.js';
+import '../../lr-gauge.js';
+import type { LyraGauge, LyraGaugeThreshold } from '../../lr-gauge.js';
 
 it('selects the greatest eligible threshold with linear reads of unsorted boundaries', async () => {
   const gauge = await fixture<LyraGauge>(html`<lr-gauge value="1000" max="1000" label="Score"></lr-gauge>`);

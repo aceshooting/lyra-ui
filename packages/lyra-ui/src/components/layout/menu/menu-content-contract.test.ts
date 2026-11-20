@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './menu.js';
-import './menu-item.js';
-import './dropdown-item.js';
-import './menu-label.js';
-import '../../utility/divider/divider.js';
-import '../../overlays/overlay/dropdown.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-menu-label.js';
+import '../../lr-divider.js';
+import '../../lr-dropdown.js';
 import type { LyraMenu } from './menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 

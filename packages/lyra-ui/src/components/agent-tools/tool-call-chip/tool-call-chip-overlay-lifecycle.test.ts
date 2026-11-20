@@ -1,9 +1,9 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './tool-call-chip.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraToolCallChip } from './tool-call-chip.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../lr-tool-call-chip.js';
+import '../../lr-dialog.js';
+import type { LyraToolCallChip } from '../../lr-tool-call-chip.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 it('registers the open tooltip with the shared overlay stack', async () => {
   const el = (await fixture(

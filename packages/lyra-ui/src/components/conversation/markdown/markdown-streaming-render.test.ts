@@ -1,12 +1,12 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import type { MessagePart } from '../../../ai/types.js';
-import './markdown.js';
-import './markdown-core.js';
-import '../streaming-text/streaming-text.js';
-import '../streaming-text/streaming-text-core.js';
-import '../message-parts/message-parts.js';
-import { preloadMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import '../../lr-streaming-text.js';
+import '../../lr-streaming-text-core.js';
+import '../../lr-message-parts.js';
+import { preloadMarkdown } from '../../lr-markdown.js';
 
 type MarkdownHost = HTMLElement & {
   content: string;

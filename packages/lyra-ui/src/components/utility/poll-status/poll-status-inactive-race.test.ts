@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './poll-status.js';
-import type { LyraPollStatus } from './poll-status.js';
+import '../../lr-poll-status.js';
+import type { LyraPollStatus } from '../../lr-poll-status.js';
 
 describe('lr-poll-status inactive activation race', () => {
   it('ignores pause and refresh activations made before an inactive state re-renders the controls', async () => {

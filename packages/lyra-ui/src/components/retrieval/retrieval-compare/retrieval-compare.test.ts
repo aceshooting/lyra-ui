@@ -3,10 +3,10 @@ import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { RetrievalChunk } from '../../../ai/types.js';
-import './retrieval-compare.js';
+import '../../lr-retrieval-compare.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraRetrievalCompare, RetrievalComparisonSet } from './retrieval-compare.js';
+import type { LyraRetrievalCompare, RetrievalComparisonSet } from '../../lr-retrieval-compare.js';
 
 function chunk(id: string, score: number, rank?: number): RetrievalChunk {
   return {

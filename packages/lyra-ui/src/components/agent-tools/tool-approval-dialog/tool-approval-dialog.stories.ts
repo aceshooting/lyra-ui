@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-approval-dialog.js';
-import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
+import '../../lr-tool-approval-dialog.js';
+import type { LyraToolApprovalDialog } from '../../lr-tool-approval-dialog.js';
 
 const meta: Meta = {
   title: 'ToolApprovalDialog',

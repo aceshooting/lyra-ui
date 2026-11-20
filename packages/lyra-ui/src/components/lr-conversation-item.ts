@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/conversation-item/conversation-item.js';
+export * from './conversation/conversation-item/conversation-item.class.js';
+import { LyraConversationItem } from './conversation/conversation-item/conversation-item.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('conversation-item', LyraConversationItem);

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, type TemplateResult } from 'lit';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 const meta: Meta = {
   title: 'Layout/Navigation Menu',

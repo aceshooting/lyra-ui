@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './funnel.js';
+import '../../lr-funnel.js';
 
 const meta: Meta = {
   title: 'Data Display/Funnel',

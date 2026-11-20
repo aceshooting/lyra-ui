@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
+import '../../lr-map.js';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
-import type { LyraMap, LyraMapStyleSpecification } from './map.js';
+import type { LyraMap, LyraMapStyleSpecification } from '../../lr-map.js';
 import {
   emptyExtent,
   extendExtent,

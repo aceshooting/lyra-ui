@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
-import './model-viewer.js';
+import '../../lr-model-viewer.js';
 import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
 import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';

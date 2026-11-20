@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine, FakeGeolocateControl } from '../../../../test/map-control-engine.js';
-import './map.js';
+import '../../lr-map.js';
 import { LYRA_MAP_EMPTY_STYLE, LyraMapImageExportError, type LyraMap, type LyraMapInteractionDetail } from './map.class.js';
 
 /** A loaded vector basemap and controllable failures at the public renderer boundary. */

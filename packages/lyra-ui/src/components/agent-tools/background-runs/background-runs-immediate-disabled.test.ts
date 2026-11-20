@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraBackgroundRuns } from './background-runs.class.js';
-import './background-runs.js';
+import '../../lr-background-runs.js';
 
 for (const [part, eventName] of [['open', 'lr-run-activate'], ['cancel', 'lr-run-cancel']] as const) {
   it(`suppresses ${part} when the host disables runs during click capture and recovers`, async () => {

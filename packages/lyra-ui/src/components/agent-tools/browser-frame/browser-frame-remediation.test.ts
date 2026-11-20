@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sinkTexts } from '../../../../test/announcements.js';
-import './browser-frame.js';
-import type { LyraBrowserFrame } from './browser-frame.js';
+import '../../lr-browser-frame.js';
+import type { LyraBrowserFrame } from '../../lr-browser-frame.js';
 import { SLOT_PRESENCE_UNRESOLVED } from '../../../internal/lyra-element.js';
 
 const GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';

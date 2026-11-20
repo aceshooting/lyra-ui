@@ -1,8 +1,8 @@
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, elementUpdated } from "@open-wc/testing";
-import "./slider.js";
-import type { LyraSlider } from "./slider.js";
+import "../../lr-slider.js";
+import type { LyraSlider } from "../../lr-slider.js";
 import { expectDeprecatedUsage } from "../../../../test/expected-deprecations.js";
 import "../../../translations/ar/forms.js";
 

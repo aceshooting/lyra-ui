@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './result-card.js';
-import type { LyraResultCard } from './result-card.js';
+import '../../lr-result-card.js';
+import type { LyraResultCard } from '../../lr-result-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.

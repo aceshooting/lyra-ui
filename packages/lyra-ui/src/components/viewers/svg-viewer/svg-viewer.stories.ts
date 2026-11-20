@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './svg-viewer.js';
+import '../../lr-svg-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'DocumentViewer/SvgViewer', component: 'lr-svg-viewer', tags: ['autodocs'] };

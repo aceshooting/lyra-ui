@@ -4,32 +4,33 @@ import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './token-input.js';
-import type { LyraTokenInput } from './token-input.js';
+import '../../lr-token-input.js';
+import type { LyraTokenInput } from '../../lr-token-input.js';
 const tokens = Array.from({ length: 1000 }, (_, index) => `Token ${index}`);
 async function settle(el: LyraTokenInput) { await el.updateComplete; await nextFrame(); await el.updateComplete; }
-it('keeps 1,000 tokens mounted for the implicit or non-finite default and warns once', async () => {
+it('mounts a 200-token window for the omitted or non-finite default without warnings', async () => {
   const warnings = await captureDevWarnings(async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input .value=${tokens}></lr-token-input>`);
     const count = () => el.shadowRoot!.querySelectorAll('[part="token"]').length;
-    expect(count()).to.equal(1000);
-    el.setAttribute('max-tokens-visible', '200');
-    await settle(el);
+    expect(el.maxTokensVisible).to.equal(200);
     expect(count()).to.equal(200);
     expect(el.shadowRoot!.querySelector('[part="token-overflow"]')?.textContent).to.contain('800');
+    el.setAttribute('max-tokens-visible', '0');
+    await settle(el);
+    expect(count()).to.equal(1000);
     el.removeAttribute('max-tokens-visible');
     await settle(el);
-    expect(count()).to.equal(1000);
+    expect(count()).to.equal(200);
     el.maxTokensVisible = Number.NaN;
     await settle(el);
-    expect(el.maxTokensVisible).to.equal(0);
-    expect(count()).to.equal(1000);
+    expect(el.maxTokensVisible).to.equal(200);
+    expect(count()).to.equal(200);
+    expect(el.value.length).to.equal(1000);
   });
-  expect(warnings).to.have.length(1);
-  expect(warnings[0]).to.contain('max-tokens-visible');
+  expect(warnings).to.deep.equal([]);
 });
 
-it('keeps explicit zero unlimited and warning-free for attributes and properties', async () => {
+it('keeps explicit zero unlimited for attributes and properties', async () => {
   const warnings = await captureDevWarnings(async () => {
     for (const el of [
       await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="0" .value=${tokens}></lr-token-input>`),
@@ -39,18 +40,15 @@ it('keeps explicit zero unlimited and warning-free for attributes and properties
   expect(warnings).to.deep.equal([]);
 });
 
-it('warns after explicit unlimited changes to an omitted or non-finite limit', async () => {
+it('returns to the default window after explicit unlimited changes to an omitted or non-finite limit', async () => {
   for (const fallback of ['removed', 'non-finite']) {
-    const warnings = await captureDevWarnings(async () => {
-      const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="0" .value=${tokens}></lr-token-input>`);
-      if (fallback === 'removed') el.removeAttribute('max-tokens-visible');
-      else el.maxTokensVisible = Number.POSITIVE_INFINITY;
-      await settle(el);
-      expect(el.maxTokensVisible).to.equal(0);
-      expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).to.equal(1000);
-    });
-    expect(warnings).to.have.length(1);
-    expect(warnings[0]).to.contain('max-tokens-visible');
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="0" .value=${tokens}></lr-token-input>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).to.equal(1000);
+    if (fallback === 'removed') el.removeAttribute('max-tokens-visible');
+    else el.maxTokensVisible = Number.POSITIVE_INFINITY;
+    await settle(el);
+    expect(el.maxTokensVisible).to.equal(200);
+    expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).to.equal(200);
   }
 });
 

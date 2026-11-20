@@ -1,3 +1,9 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+export * from './retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js';
+import { LyraRagEvalDashboard } from './retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-lite-chart.js';
+import './lr-stat.js';
+import './lr-empty.js';
+
+defineElement('rag-eval-dashboard', LyraRagEvalDashboard);
+

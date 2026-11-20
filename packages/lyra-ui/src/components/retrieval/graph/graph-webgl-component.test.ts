@@ -5,7 +5,7 @@ import type { LyraGraphSource } from '../../../data-sources.js';
 import { projectSpatialPoint } from './graph-spatial.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
 import type { GraphEngineAdapterServices } from './graph-engine-adapter.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphCamera, LyraGraphEdge, LyraGraphNode } from './graph-model.js';
 void LyraGraph;
 

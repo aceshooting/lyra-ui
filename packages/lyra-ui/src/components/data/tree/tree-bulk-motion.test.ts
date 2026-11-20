@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { twoFrames } from '../../../../test/frames.js';
 
 it('reads computed animation style once per expanded branch', async () => {

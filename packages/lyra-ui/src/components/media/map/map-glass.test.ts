@@ -2,8 +2,8 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { toRgba, contrastRatio, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './map.js';
-import type { LyraMap } from './map.js';
+import '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 
 const composite = (paint: string, backdrop: string): string => {
   const foreground = toRgba(paint);

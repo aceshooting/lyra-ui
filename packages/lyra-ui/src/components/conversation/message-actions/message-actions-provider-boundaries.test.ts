@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './message-actions.js';
-import type { LyraMessageActions } from './message-actions.js';
+import '../../lr-message-actions.js';
+import type { LyraMessageActions } from '../../lr-message-actions.js';
 import type { LyraToolbarAction } from './toolbar-actions.js';
 
 async function toolbarWithProvider(actions: unknown): Promise<{ toolbar: LyraMessageActions; survivor: HTMLButtonElement }> {

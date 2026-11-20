@@ -3,8 +3,8 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { LyraBoxPlot } from './box-plot.js';
-import type { LyraChartFormatter } from './chart.js';
+import { LyraBoxPlot } from '../../lr-box-plot.js';
+import type { LyraChartFormatter } from '../../lr-chart.js';
 
 expectLocaleFallback('de-DE', ['boxPlot', 'boxPlotData', 'boxPlotMax', 'boxPlotMedian', 'boxPlotMin', 'boxPlotQ1', 'boxPlotQ3', 'boxPlotSeriesSummary', 'boxPlotSummaryWithData', 'chartCategory', 'chartPointLabel', 'chartSeriesLabel', 'chartSummarySeparator', 'chartTrendFlat', 'chartTrendIncreasing', 'loading']);
 

@@ -2,12 +2,12 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './context-meter.js';
+import '../../lr-context-meter.js';
 import type {
   ContextMeterSegment,
   LyraContextMeter,
   LyraContextMeterSegmentActivateDetail,
-} from './context-meter.js';
+} from '../../lr-context-meter.js';
 
 const SEGMENTS: ContextMeterSegment[] = [
   { label: 'Received', value: 2000, tone: 'neutral' },

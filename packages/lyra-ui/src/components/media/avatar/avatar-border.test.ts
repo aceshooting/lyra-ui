@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './avatar.js';
-import '../avatar-group/avatar-group.js';
-import type { LyraAvatar, LyraAvatarShape } from './avatar.js';
+import '../../lr-avatar.js';
+import '../../lr-avatar-group.js';
+import type { LyraAvatar, LyraAvatarShape } from '../../lr-avatar.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const IMAGE = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="2" height="2"%3E%3Crect width="2" height="2" fill="green"/%3E%3C/svg%3E';

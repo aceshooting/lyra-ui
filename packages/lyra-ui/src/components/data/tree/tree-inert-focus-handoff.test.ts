@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './tree.js';
+import '../../lr-tree.js';
 import type { LyraTree } from './tree.class.js';
 import type { LyraTreeItem } from './tree-item.class.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';

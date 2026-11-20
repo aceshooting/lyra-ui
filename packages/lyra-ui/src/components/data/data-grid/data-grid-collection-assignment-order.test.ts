@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { columns, dataCells, dataGrid, rows, type Person } from '../../../../test/data-grid.js';
-import { LyraDataGrid } from './data-grid.js';
+import { LyraDataGrid } from '../../lr-data-grid.js';
 
 describe('data-grid controlled collection assignment order', () => {
   const cases = [

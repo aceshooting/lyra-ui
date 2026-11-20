@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './chunk-inspector.js';
-import type { LyraChunk, LyraChunkInspector } from './chunk-inspector.js';
+import '../../lr-chunk-inspector.js';
+import type { LyraChunk, LyraChunkInspector } from '../../lr-chunk-inspector.js';
 
 const chunk = (id: string, score: number): LyraChunk => ({ id, text: `${id} text`, score, sourceId: 's', title: `${id} title` });
 

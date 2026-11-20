@@ -7,7 +7,7 @@ import {
 } from '../../../../test/top-layer-header.js';
 import type { LyraNavigationMenuItem } from '../navigation-menu-item/navigation-menu-item.class.js';
 import type { LyraNavigationMenu } from './navigation-menu.class.js';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 async function mount(topLayer: boolean) {
   const { wrapper, sibling } = await headerFixture(

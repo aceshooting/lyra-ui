@@ -2779,14 +2779,19 @@ rather than catalog *content*. Diff the result's length against
 `Object.keys(LYRA_DEFAULT_STRINGS).length` to measure a locale's own translation coverage without a
 silent English-fallback merge making a partial catalog look complete. A locale nothing ever
 registered — including `'en'` itself, unless it was explicitly passed to `registerLyraLocale()` —
-returns an empty snapshot.
+returns an empty snapshot. The `@aceshooting/lyra-translations` catalogs omit a message equal to
+the English default wherever the locale's lookup falls straight back to English (a locale with no
+parent that shares its base language with no other shipped catalog), so those keys are absent from
+the snapshot while resolving to the same English text. A `resolveLyraString()` call reaches that
+text only through its `defaults` argument, and an application-registered `en` catalog answers it.
 
 In development (Lit's own dev-mode signal; silent in production), resolving a message for a
 resolved locale other than English that has no override, no fallback, and no registered catalog
 entry for that key warns once per (locale, key) to `console.warn` before falling through to the
 English default — the same silent-fallback `resolveLyraString()`, `localize()`, and
 `resolveLyraScopedString()` all shared with no way to detect it before. It never fires for an
-English-resolved locale, since falling through to `defaults` is simply how English itself resolves.
+English-resolved locale, since falling through to `defaults` is simply how English itself resolves,
+nor for a message a published catalog omits because it equals the English default.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.

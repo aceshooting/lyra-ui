@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './provenance-panel.js';
-import type { LyraProvenancePanel } from './provenance-panel.js';
-import type { LyraEntityChip } from '../entity-chip/entity-chip.js';
-import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.js';
+import '../../lr-provenance-panel.js';
+import type { LyraProvenancePanel } from '../../lr-provenance-panel.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
+import type { LyraChunkInspector } from '../../lr-chunk-inspector.js';
 
 it('keeps valid later type metadata available after malformed rows', async () => {
   const el = await fixture<LyraProvenancePanel>(html`<lr-provenance-panel></lr-provenance-panel>`);

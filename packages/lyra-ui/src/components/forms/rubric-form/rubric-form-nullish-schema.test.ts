@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './rubric-form.js';
-import type { LyraRubricForm, RubricKey, RubricValue } from './rubric-form.js';
+import '../../lr-rubric-form.js';
+import type { LyraRubricForm, RubricKey, RubricValue } from '../../lr-rubric-form.js';
 
 describe('lr-rubric-form nullish values and option-less categories', () => {
   it('treats a nullish live value as an empty answer set', async () => {

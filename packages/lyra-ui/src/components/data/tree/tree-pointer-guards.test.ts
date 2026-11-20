@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tree.js';
-import './tree-item.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import '../../lr-tree-item.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 describe('lr-tree-item toggle pointer capture', () => {
   it('survives a pointer id that cannot be captured and releases the pressed state', async () => {

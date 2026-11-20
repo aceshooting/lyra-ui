@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './radio-button.js';
-import './radio.js';
-import './radio-group.js';
+import '../../lr-radio-button.js';
+import '../../lr-radio.js';
+import '../../lr-radio-group.js';
 import type { LyraRadioButton } from './radio-button.class.js';
 import type { LyraRadioGroup } from './radio-group.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';

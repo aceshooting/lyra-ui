@@ -1,9 +1,9 @@
 import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import './tool-result-dialog.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraToolResultDialog } from './tool-result-dialog.js';
+import '../../lr-tool-result-dialog.js';
+import '../../lr-dialog.js';
+import type { LyraToolResultDialog } from '../../lr-tool-result-dialog.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 

@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './audio-visualizer.js';
+import '../../lr-audio-visualizer.js';
 
 const meta: Meta = {
   title: 'Audio Visualizer',

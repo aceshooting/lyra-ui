@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/streaming-text/streaming-text-core.js';
+export * from './conversation/streaming-text/streaming-text-core.class.js';
+import { LyraStreamingTextCore } from './conversation/streaming-text/streaming-text-core.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-markdown-core.js';
+defineElement('streaming-text-core', LyraStreamingTextCore);

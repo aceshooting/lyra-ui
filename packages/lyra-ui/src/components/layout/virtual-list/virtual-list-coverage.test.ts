@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.class.js';
 
 const renderText = (item: unknown, index: number) => html`item ${item}#${index}`;

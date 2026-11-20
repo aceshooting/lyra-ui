@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './mutation-observer.js';
+import '../../lr-mutation-observer.js';
 
 const meta: Meta = { title: 'Utilities/Mutation Observer', component: 'lr-mutation-observer' };
 export default meta;

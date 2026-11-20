@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './research-progress.js';
+import '../../lr-research-progress.js';
 import type { ResearchStep } from './research-progress.class.js';
 
 const meta: Meta = {

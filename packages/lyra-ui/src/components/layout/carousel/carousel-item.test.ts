@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './carousel-item.js';
+import '../../lr-carousel-item.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
 
 describe('<lr-carousel-item>', () => {

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './media-card.js';
-import type { LyraMediaCardKind, LyraMediaCardOpenDetail } from './media-card.js';
+import '../../lr-media-card.js';
+import type { LyraMediaCardKind, LyraMediaCardOpenDetail } from '../../lr-media-card.js';
 // Side-effect import of an already-landed component, purely for the
 // "inside a rendered message" demo story below (this component isn't in
 // the barrel yet, so both are imported directly by relative path).
-import '../../conversation/chat-message/chat-message.js';
+import '../../lr-chat-message.js';
 
 const meta: Meta = {
   title: 'MediaCard',

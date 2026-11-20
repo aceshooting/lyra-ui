@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './av-player.js';
+import '../../lr-av-player.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 expectLocaleFallback('tr', ['avPlayerLabel', 'avPlayerPlaybackRate', 'avPlayerPosition', 'avPlayerRateOption',
   'avPlayerTimeline', 'avPlayerTranscript', 'loading', 'sourceSearchUnavailable']);

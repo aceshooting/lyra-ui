@@ -3,11 +3,11 @@
 // override to prove. The localization convention is therefore not applicable to this file.
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './toggle.js';
-import '../toggle-group/toggle-group.js';
-import '../icon-button/icon-button.js';
-import '../../utility/icon/icon.js';
-import '../../conversation/message-actions/message-actions.js';
+import '../../lr-toggle.js';
+import '../../lr-toggle-group.js';
+import '../../lr-icon-button.js';
+import '../../lr-icon.js';
+import '../../lr-message-actions.js';
 import type { LyraToggle, LyraToggleChangeDetail } from './toggle.class.js';
 import type { LyraToggleGroup } from '../toggle-group/toggle-group.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';

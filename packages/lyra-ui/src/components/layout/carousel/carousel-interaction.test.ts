@@ -2,9 +2,9 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './carousel.js';
-import './carousel-item.js';
-import type { LyraCarousel } from './carousel.js';
+import '../../lr-carousel.js';
+import '../../lr-carousel-item.js';
+import type { LyraCarousel } from '../../lr-carousel.js';
 
 const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 

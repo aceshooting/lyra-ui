@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraCsvViewer } from './csv-viewer.class.js';
-import './csv-viewer.js';
+import '../../lr-csv-viewer.js';
 
 type CsvSeam = { loadLibrary(): Promise<unknown>; fetchState: { kind: string } };
 

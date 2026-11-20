@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './resize-observer.js';
+import '../../lr-resize-observer.js';
 import type { LyraResizeObserver } from './resize-observer.class.js';
 
 function resizeEntry(target: Element): ResizeObserverEntry {

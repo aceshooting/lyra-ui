@@ -254,7 +254,7 @@ const composedEventMapTypes: [
   LyraEntityDossierEventMap['lr-entity-select'],
   LyraEntityDossierEventMap['lr-node-expand'],
   LyraEntityDossierEventMap['lr-chunk-open'],
-  LyraEntityDossierEventMap['lr-toggle'],
+  LyraEntityDossierEventMap['lr-retrieval-disclosure-change'],
   LyraEntityDossierEventMap['lr-tab-show'],
 ] | undefined = undefined;
 void composedEventMapTypes;

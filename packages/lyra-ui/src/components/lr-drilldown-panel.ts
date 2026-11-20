@@ -1,3 +1,11 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/drilldown-panel/drilldown-panel.js';
+export * from './layout/drilldown-panel/drilldown-panel.class.js';
+import { LyraDrilldownPanel } from './layout/drilldown-panel/drilldown-panel.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-breadcrumb.js';
+import './lr-breadcrumb-item.js';
+import './lr-tab-group.js';
+import './lr-tab.js';
+import './lr-tab-panel.js';
+import './lr-button.js';
+import './lr-empty.js';
+defineElement('drilldown-panel', LyraDrilldownPanel);

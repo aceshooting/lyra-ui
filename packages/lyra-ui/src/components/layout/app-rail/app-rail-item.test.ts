@@ -1,13 +1,13 @@
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
-import "./app-rail-item.js";
-import "./app-rail.js";
-import type { LyraAppRailItem } from "./app-rail-item.js";
+import "../../lr-app-rail-item.js";
+import "../../lr-app-rail.js";
+import type { LyraAppRailItem } from "../../lr-app-rail-item.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadowUnshrunk as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
-import type { LyraAppRail } from './app-rail.js';
+import type { LyraAppRail } from '../../lr-app-rail.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(

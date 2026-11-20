@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil, oneEvent, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './command-palette.js';
-import type { LyraCommandPalette, LyraCommand } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommandPalette, LyraCommand } from '../../lr-command-palette.js';
 
 describe('command palette native modal and result scrolling', () => {
   it('ignores revoked command records while retaining later selectable commands', async () => {

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { formatColor, parseColor } from './color-core.js';
-import type { LyraColorPicker } from './color-picker.js';
-import './color-picker.js';
+import type { LyraColorPicker } from '../../lr-color-picker.js';
+import '../../lr-color-picker.js';
 
 const largePercentage = `1${'0'.repeat(308)}%`;
 

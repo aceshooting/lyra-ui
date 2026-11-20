@@ -1,7 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './graph.js';
-import type { LyraGraph, LyraGraphEdge } from './graph.js';
+import '../../lr-graph.js';
+import type { LyraGraph, LyraGraphEdge } from '../../lr-graph.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraXmlViewer } from './xml-viewer.class.js';
-import './xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 it('moves the XML search cursor without rebuilding nodes or resolving highlights', async () => {
   const xml = `<root>${'<item>Match</item>'.repeat(1000)}</root>`;

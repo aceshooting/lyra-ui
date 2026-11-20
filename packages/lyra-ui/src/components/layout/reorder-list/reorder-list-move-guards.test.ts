@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './reorder-list.js';
-import './reorder-item.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
 import type { LyraReorderList } from './reorder-list.class.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 

@@ -479,7 +479,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     };
     // Dynamic so an alert that is never toasted does not ship the toast stack.
     if (this.ownerDocument.defaultView?.customElements.get(tag('toast'))) enqueue();
-    else void import('../toast/toast.js').then(enqueue, enqueue);
+    else void import('../../lr-toast.js').then(enqueue, enqueue);
 
     return completion;
   }

@@ -1,8 +1,8 @@
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import './chunk-inspector.js';
-import type { LyraChunkInspector } from './chunk-inspector.js';
+import '../../lr-chunk-inspector.js';
+import type { LyraChunkInspector } from '../../lr-chunk-inspector.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 
 const chunks = Array.from({ length: 100 }, (_, index) => ({

@@ -1,5 +1,5 @@
 import { fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../src/components/media/map/map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../src/components/lr-map.js';
 import * as loaders from '../src/components/media/map/map-feature-loader.js';
 import type { SceneRenderInput } from '../src/components/media/map/map-scene-render-contract.js';
 import { ScriptedOverlayMap } from './map-scripted-engine.js';

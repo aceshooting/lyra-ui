@@ -1,7 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './gauge.js';
-import type { LyraGauge } from './gauge.js';
+import '../../lr-gauge.js';
+import type { LyraGauge } from '../../lr-gauge.js';
 
 describe('gauge remediation', () => {
   it('ignores malformed thresholds instead of throwing', async () => {

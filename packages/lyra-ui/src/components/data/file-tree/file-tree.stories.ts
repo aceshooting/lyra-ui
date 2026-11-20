@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './file-tree.js';
+import '../../lr-file-tree.js';
 import type { FileTreeNode } from './file-tree.class.js';
 
 const meta: Meta = {

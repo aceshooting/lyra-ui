@@ -1,6 +1,6 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

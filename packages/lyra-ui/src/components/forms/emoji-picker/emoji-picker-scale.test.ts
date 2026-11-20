@@ -1,5 +1,5 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import { LyraEmojiPicker } from './emoji-picker.js';
+import { LyraEmojiPicker } from '../../lr-emoji-picker.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 const groups = [{key:'test',label:'Test',emojis:Array.from({length:1000}, (_, i) => ({emoji:'😀',name:`Smile ${i}`}))}];

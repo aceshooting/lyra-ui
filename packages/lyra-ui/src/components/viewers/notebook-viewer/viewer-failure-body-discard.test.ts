@@ -1,9 +1,9 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import { html, type TemplateResult } from 'lit';
-import '../email-viewer/email-viewer.js';
-import '../geojson-view/geojson-viewer.js';
-import '../include/include.js';
-import './notebook-viewer.js';
+import '../../lr-email-viewer.js';
+import '../../lr-geojson-viewer.js';
+import '../../lr-include.js';
+import '../../lr-notebook-viewer.js';
 
 const cases: readonly [string, TemplateResult][] = [
   ['lr-email-viewer', html`<lr-email-viewer src="https://example.test/failed.eml"></lr-email-viewer>`],

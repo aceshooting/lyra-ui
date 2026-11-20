@@ -2,7 +2,7 @@ import { expect, fixture, nextFrame, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphCamera, LyraGraphPosition } from './graph-model.js';
 void LyraGraph;
 

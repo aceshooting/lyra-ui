@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './prompt-studio.js';
-import type { LyraPromptStudio, PromptStudioMessage, PromptStudioVariable } from './prompt-studio.js';
+import '../../lr-prompt-studio.js';
+import type { LyraPromptStudio, PromptStudioMessage, PromptStudioVariable } from '../../lr-prompt-studio.js';
 
 const limitMessage = 'Aperçu indisponible : limite de développement atteinte.';
 const previewLimit = 1_048_576;

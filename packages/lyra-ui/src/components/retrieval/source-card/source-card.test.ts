@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './source-card.js';
-import { LyraSourceCard } from './source-card.js';
+import '../../lr-source-card.js';
+import { LyraSourceCard } from '../../lr-source-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {

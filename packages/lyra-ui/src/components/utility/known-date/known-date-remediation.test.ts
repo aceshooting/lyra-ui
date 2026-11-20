@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './known-date.js';
-import type { LyraKnownDate } from './known-date.js';
+import '../../lr-known-date.js';
+import type { LyraKnownDate } from '../../lr-known-date.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 function descriptionIds(owner: HTMLElement): string[] {

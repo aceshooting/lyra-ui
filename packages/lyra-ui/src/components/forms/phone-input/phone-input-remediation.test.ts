@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import type { LyraPhoneInput, LyraPhoneNumberAdapter } from './phone-input.js';
-import './phone-input.js';
+import type { LyraPhoneInput, LyraPhoneNumberAdapter } from '../../lr-phone-input.js';
+import '../../lr-phone-input.js';
 
 const adapter: LyraPhoneNumberAdapter = {
   countries: [{ code: 'LU', callingCode: '352' }, { code: 'FR', callingCode: '33' }],

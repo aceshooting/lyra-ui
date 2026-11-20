@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './task-list.js';
-import type { LyraTaskList } from './task-list.js';
+import '../../lr-task-list.js';
+import type { LyraTaskList } from '../../lr-task-list.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

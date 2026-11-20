@@ -6,8 +6,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { NetworkMonitoringShowcase } from './map.stories.js';
 import type { LyraMap } from './map.class.js';
 import type { LyraSequencePlayback } from '../sequence-playback/sequence-playback.class.js';
-import './map.js';
-import '../sequence-playback/sequence-playback.js';
+import '../../lr-map.js';
+import '../../lr-sequence-playback.js';
 
 // The story localizes its own copy only; composed controls keep their English defaults in Arabic.
 expectLocaleFallback('ar', ['mapScene', 'mapSceneShow', 'mapSceneHide', 'mapSceneUnavailable', 'mapScenePartial', 'loading',

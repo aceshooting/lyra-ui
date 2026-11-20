@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './attachment-chip.js';
+import '../../lr-attachment-chip.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import type { LyraAttachmentChip } from './attachment-chip.js';
+import type { LyraAttachmentChip } from '../../lr-attachment-chip.js';
 
 it('keeps a detached failure silent on immediate reconnect and announces later connected failures once', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-attachment-chip']>(html`<lr-attachment-chip status="uploading" .strings=${{ attachmentUploadFailed: 'Failed upload' }}></lr-attachment-chip>`);

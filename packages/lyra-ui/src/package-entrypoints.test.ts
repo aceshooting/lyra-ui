@@ -314,7 +314,7 @@ it('keeps canonical component routes and closes duplicate nested registration ro
     './dist/components/overlays/empty/empty.class.js',
   );
   expect(manifest.exports['./components/lr-empty.js']).to.deep.equal({
-    types: './dist/components/overlays/empty/empty.d.ts',
+    types: './dist/components/lr-empty.d.ts',
     default: './dist/components/lr-empty.js',
   });
   expect(manifest.exports['./components/overlays']).to.equal('./dist/components/overlays/index.js');

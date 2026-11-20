@@ -1,5 +1,5 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './chip.js';
+import '../../lr-chip.js';
 import type { LyraChip } from './chip.class.js';
 import type { PropertyValues } from 'lit';
 

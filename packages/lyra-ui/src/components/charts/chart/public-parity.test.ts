@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from "@open-wc/testing";
-import "./chart.js";
-import { LyraChart } from './chart.js';
+import "../../lr-chart.js";
+import { LyraChart } from '../../lr-chart.js';
 
 it("publishes the documented chart defaults and reflected negative controls", async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
@@ -134,7 +134,7 @@ it('has no redundant positive-polarity legend property — without-legend is the
 });
 
 it('does not re-export the internal lockChartType helper from the public chart.ts barrel', async () => {
-  const barrel = await import('./chart.js');
+  const barrel = await import('../../lr-chart.js');
   expect('lockChartType' in barrel).to.equal(false);
 });
 

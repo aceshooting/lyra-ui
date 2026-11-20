@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './message-feedback.js';
-import type { LyraMessageFeedback, MessageFeedbackSubmitDetail } from './message-feedback.js';
+import '../../lr-message-feedback.js';
+import type { LyraMessageFeedback, MessageFeedbackSubmitDetail } from '../../lr-message-feedback.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import { measureArrayProbeReads } from '../../../../test/array-probe-reads.js';
 

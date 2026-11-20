@@ -2,12 +2,12 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './timeline.js';
-import './timeline-item.js';
-import '../tree/tree.js';
-import '../tree/tree-item.js';
-import type { LyraTimelineItem } from './timeline-item.js';
-import type { LyraTreeItem } from '../tree/tree-item.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
+import '../../lr-tree.js';
+import '../../lr-tree-item.js';
+import type { LyraTimelineItem } from '../../lr-timeline-item.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 describe('forced colors', () => {
   afterEach(async () => {

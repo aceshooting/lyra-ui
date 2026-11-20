@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './table.js';
-import '../../forms/select/select.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import '../../lr-select.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { styles } from './table.styles.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';

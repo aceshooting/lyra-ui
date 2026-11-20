@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-call-block.js';
+import '../../lr-tool-call-block.js';
 import type { LyraToolCallBlock } from './tool-call-block.class.js';
 
 it('masks an argument branch when reading a provider record throws', async () => {

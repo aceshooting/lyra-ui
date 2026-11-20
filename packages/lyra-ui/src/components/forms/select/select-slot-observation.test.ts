@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './select.js';
-import type { LyraSelect } from './select.js';
+import '../../lr-select.js';
+import type { LyraSelect } from '../../lr-select.js';
 
 const unknownBadgeCount = (select: LyraSelect): number =>
   select.shadowRoot?.querySelectorAll('[part="unknown-value"]').length ?? 0;

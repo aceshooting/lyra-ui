@@ -1,10 +1,10 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './neighbor-list.js';
+import '../../lr-neighbor-list.js';
 // lr-neighbor-list registers its virtualizer lazily (see neighbor-list-lazy.test.ts); these cases need it now.
-import '../../layout/virtual-list/virtual-list.js';
-import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
+import '../../lr-virtual-list.js';
+import type { LyraNeighborList, LyraNeighborRow } from '../../lr-neighbor-list.js';
 import { hoverUntilMatched,  resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const rows: LyraNeighborRow[] = [

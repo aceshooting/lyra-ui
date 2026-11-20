@@ -1,11 +1,11 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../test/color-contrast.js';
-import '../components/overlays/dialog/dialog.js';
-import '../components/overlays/drawer/drawer.js';
-import '../components/media/lightbox/lightbox.js';
-import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
-import '../components/agent-tools/tool-result-dialog/tool-result-dialog.js';
-import '../components/agent-tools/tool-select-dialog/tool-select-dialog.js';
+import '../components/lr-dialog.js';
+import '../components/lr-drawer.js';
+import '../components/lr-lightbox.js';
+import '../components/lr-tool-approval-dialog.js';
+import '../components/lr-tool-result-dialog.js';
+import '../components/lr-tool-select-dialog.js';
 import type { LyraLightboxImage } from '../components/media/lightbox/lightbox.class.js';
 
 interface ModalHost extends HTMLElement {

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./document-viewer.js";
+import "../../lr-document-viewer.js";
 import { createDocumentRendererRegistry } from "./registry.js";
 import type { LyraDocumentRendererPayload } from "./registry.js";
-import "../pdf-viewer/pdf-viewer.js";
-import "../../media/av-player/av-player.js";
-import "../../retrieval/citation-badge/citation-badge.js";
+import "../../lr-pdf-viewer.js";
+import "../../lr-av-player.js";
+import "../../lr-citation-badge.js";
 import type { CitationActivateDetail } from "../../retrieval/citation-badge/citation-badge.class.js";
 import type { AnchorResultDetail } from "./anchors.js";
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';

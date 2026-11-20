@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-select-dialog.js';
-import type { LyraToolSelectDialog } from './tool-select-dialog.js';
+import '../../lr-tool-select-dialog.js';
+import type { LyraToolSelectDialog } from '../../lr-tool-select-dialog.js';
 
 
 function fieldGeometry(el: LyraToolSelectDialog): Record<string, string> {

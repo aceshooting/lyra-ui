@@ -2,8 +2,8 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './popover.js';
-import './tooltip.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
 import type { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 

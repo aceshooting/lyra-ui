@@ -2,7 +2,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './document-library.js';
+import '../../lr-document-library.js';
 import type { LyraDocumentLibrary, DocumentLibrarySource, LibraryDocument } from './document-library.class.js';
 import type { LyraTable } from '../table/table.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';

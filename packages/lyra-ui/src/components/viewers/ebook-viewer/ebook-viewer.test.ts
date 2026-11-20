@@ -9,9 +9,9 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import "./ebook-viewer.js";
+import "../../lr-ebook-viewer.js";
 import { __setEpubJsForTesting } from "./ebook-loader.js";
-import type { LyraEbookViewer } from "./ebook-viewer.js";
+import type { LyraEbookViewer } from "../../lr-ebook-viewer.js";
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
 import { MINIMAL_EPUB_BASE64 } from "./fixtures/minimal-epub-fixture.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";

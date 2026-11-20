@@ -3,7 +3,7 @@ import { nothing } from 'lit';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
 import type { LyraTooltip } from './tooltip.class.js';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 
 const CONTENT = 'Explain how this action updates the current document and which options apply to this selection.';
 const NO_MOTION = '--lr-transition-fast: 0ms; --lr-duration-fast: 0ms; --max-width: 320px';

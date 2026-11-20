@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraDocumentLibrary } from './document-library.js';
+import type { LyraDocumentLibrary } from '../../lr-document-library.js';
 import { tag } from '../../../internal/prefix.js';
-import type { LyraTable } from '../table/table.js';
-import './document-library.js';
+import type { LyraTable } from '../../lr-table.js';
+import '../../lr-document-library.js';
 
 for (const property of ['selectedDocumentIds', 'tagFilter'] as const) {
   for (const invalid of [null, 'one', {}]) {

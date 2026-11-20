@@ -1,8 +1,8 @@
 import { setEmailDeps } from './fixtures/email-deps.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './email-viewer.js';
-import type { LyraEmailViewer } from './email-viewer.js';
+import '../../lr-email-viewer.js';
+import type { LyraEmailViewer } from '../../lr-email-viewer.js';
 import { type EmailDeps } from './email-loader.js';
 
 expectDevWarning('lyra-dompurify-unavailable');

@@ -8,9 +8,9 @@ import { activateNonmodalOverlay, deepActiveElement } from '../../../internal/no
 import type { LyraMenubar } from './menubar.class.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
 import type { LyraMenuItem } from '../menu/menu-item.class.js';
-import './menubar.js';
-import '../menu/menu-label.js';
-import '../../overlays/kbd/kbd.js';
+import '../../lr-menubar.js';
+import '../../lr-menu-label.js';
+import '../../lr-kbd.js';
 
 function item(bar: Element, id: string): LyraMenubarItem {
   return bar.querySelector<LyraMenubarItem>(`#${id}`)!;

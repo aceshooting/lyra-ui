@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './menu.js';
-import './menu-item.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

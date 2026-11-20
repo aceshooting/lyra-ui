@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../test/wtr-focus.js';
 import { deepActiveElementIn } from './active-element.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../data-sources.js';
 import type { LyraTree, LyraTreeNodeData } from '../components/data/tree/tree.class.js';
-import '../components/data/tree/tree.js';
+import '../components/lr-tree.js';
 
 type Source = LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>;
 const row = (index: number): LyraHierarchyRow<LyraTreeNodeData> => ({ key: `n${index}`, value: { id: `n${index}`, label: `Node ${index}` },

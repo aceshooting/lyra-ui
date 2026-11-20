@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../test/wtr-mouse.js';
-import '../components/agent-tools/thinking-panel/thinking-panel.js';
-import '../components/agent-tools/task-list/task-list.js';
-import '../components/retrieval/source-list/source-list.js';
+import '../components/lr-thinking-panel.js';
+import '../components/lr-task-list.js';
+import '../components/lr-source-list.js';
 
 describe('disclosure header paint', () => {
   for (const kind of ['thinking', 'tasks', 'sources'] as const) {

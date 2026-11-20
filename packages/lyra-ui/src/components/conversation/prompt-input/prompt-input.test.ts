@@ -9,7 +9,7 @@ import type {
   PromptQueueItem,
 } from '../prompt-queue/prompt-queue.class.js';
 import { sendKeys } from '@web/test-runner-commands';
-import "./prompt-input.js";
+import "../../lr-prompt-input.js";
 import type {
   LyraPromptInput,
   LyraPromptInputAttachment,

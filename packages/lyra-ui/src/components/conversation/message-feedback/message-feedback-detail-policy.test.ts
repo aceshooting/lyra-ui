@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './message-feedback.js';
+import '../../lr-message-feedback.js';
 import type { LyraMessageFeedback, LyraMessageFeedbackEventMap, MessageFeedbackDetailConfiguration } from './message-feedback.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 

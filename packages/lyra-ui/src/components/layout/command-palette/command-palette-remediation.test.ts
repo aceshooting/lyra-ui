@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './command-palette.js';
-import type { LyraCommand, LyraCommandPalette } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommand, LyraCommandPalette } from '../../lr-command-palette.js';
 
 describe('optional command keywords', () => {
   for (const keywords of [42, null, 'alias', { 0: 'alias', length: 1 }, ['alias', 42, null, 'alternate']]) {

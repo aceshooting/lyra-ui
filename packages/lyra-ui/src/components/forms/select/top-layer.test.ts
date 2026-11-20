@@ -5,8 +5,8 @@ import {
   hitId,
   pointOverSibling,
 } from '../../../../test/top-layer-header.js';
-import './select.js';
-import type { LyraSelect } from './select.js';
+import '../../lr-select.js';
+import type { LyraSelect } from '../../lr-select.js';
 
 const NO_MOTION = '--lr-transition-fast: 0ms';
 

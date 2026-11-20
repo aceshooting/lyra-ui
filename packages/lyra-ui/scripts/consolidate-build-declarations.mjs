@@ -28,6 +28,9 @@ export function consolidateBuildDeclarations(packageDir) {
   for (const component of inventory.components) {
     const file = resolve(packageDir, `dist/components/${component.tag}.d.ts`);
     const target = resolve(packageDir, component.registrationModule.replace(/^src\//, 'dist/').replace(/\.ts$/, '.d.ts'));
+    // A tag-shaped entry that is itself the registration module has nothing to consolidate; only an
+    // entry that re-exports a separate registration module is redirected to that module.
+    if (target === file) continue;
     const route = pkg.exports[`./components/${component.tag}.js`];
     invariant(route?.types === `./${relative(packageDir, target).replaceAll('\\', '/')}` && route.default === `./dist/components/${component.tag}.js`, `stale alias export ${component.tag}`);
     invariant(existsSync(target), `missing registration declaration ${target}`);

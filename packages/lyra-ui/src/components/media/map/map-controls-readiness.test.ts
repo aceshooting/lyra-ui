@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 import { loadMapControlRuntime } from './map-feature-loader.js';
 import { MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapControlsReadiness } from './map-controls-readiness.js';

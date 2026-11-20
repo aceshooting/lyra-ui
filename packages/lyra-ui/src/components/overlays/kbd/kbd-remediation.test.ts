@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './kbd.js';
-import type { LyraKbd } from './kbd.js';
+import '../../lr-kbd.js';
+import type { LyraKbd } from '../../lr-kbd.js';
 import { shortcutTokenLabel } from './kbd.class.js';
 
 it('safely removes keys and restores later shortcut rendering', async () => {

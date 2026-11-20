@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/badge/tag.js';
+export { LyraTag } from './overlays/badge/tag.class.js';
+export type { LyraTagEventMap, TagVariant } from './overlays/badge/tag.class.js';
+import { LyraTag } from './overlays/badge/tag.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('tag', LyraTag);

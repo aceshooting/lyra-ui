@@ -4,8 +4,8 @@ import { collectionTruncationWarningKey } from '../../../internal/collection-sna
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './heatmap.js';
-import type { HeatmapSelectedCell, LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { HeatmapSelectedCell, LyraHeatmap } from '../../lr-heatmap.js';
 
 type SelectionDetail = { selectedCells: readonly HeatmapSelectedCell[]; source: string };
 const data = {

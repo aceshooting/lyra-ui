@@ -5,7 +5,7 @@ import type {
   DataGridColumn,
   DataGridRequest,
   LyraDataGrid,
-} from "./data-grid.js";
+} from "../../lr-data-grid.js";
 
 interface DemoRow {
   id: number;

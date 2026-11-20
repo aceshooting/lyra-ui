@@ -6,12 +6,12 @@ import { nothing } from "lit";
 import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
-import "./thread-list.js";
-import "../../overlays/chip/chip.js";
-import "../../layout/menu/menu.js";
-import "../../layout/menu/menu-item.js";
-import "../../overlays/overlay/dropdown.js";
-import type { LyraThreadList } from "./thread-list.js";
+import "../../lr-thread-list.js";
+import "../../lr-chip.js";
+import "../../lr-menu.js";
+import "../../lr-menu-item.js";
+import "../../lr-dropdown.js";
+import type { LyraThreadList } from "../../lr-thread-list.js";
 import type { LyraConversationItem } from "../conversation-item/conversation-item.class.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import type { LyraDropdown } from "../../overlays/overlay/dropdown.class.js";
@@ -4748,7 +4748,7 @@ describe("row-action overlays escape the virtual viewport", () => {
   });
 
   it("opens a context menu inside a virtual row at full size in LTR and RTL", async () => {
-    await import("../../overlays/context-menu/context-menu.js");
+    await import("../../lr-context-menu.js");
     for (const dir of ["ltr", "rtl"]) {
       const wrapper = await fixture<HTMLElement>(html`
         <div dir=${dir} style="block-size:100px; inline-size:320px; display:flex; flex-direction:column">

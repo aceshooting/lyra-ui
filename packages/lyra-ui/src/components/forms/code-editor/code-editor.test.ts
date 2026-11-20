@@ -2,8 +2,8 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
-import './code-editor.js';
-import type { LyraCodeEditor } from './code-editor.js';
+import '../../lr-code-editor.js';
+import type { LyraCodeEditor } from '../../lr-code-editor.js';
 import { styles } from './code-editor.styles.js';
 import {
   hoverUntilMatched,

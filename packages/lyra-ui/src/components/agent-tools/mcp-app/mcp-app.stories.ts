@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import type { LyraMcpApp, McpAppToolCallDetail, McpAppRequestDetail } from './mcp-app.class.js';
 
 const meta: Meta = {

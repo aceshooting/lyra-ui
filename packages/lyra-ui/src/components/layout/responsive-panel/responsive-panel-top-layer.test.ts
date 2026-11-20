@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { activateOverlay, deepActiveElement } from '../../../internal/overlay-manager.js';
-import './responsive-panel.js';
-import '../page/page.js';
+import '../../lr-responsive-panel.js';
+import '../../lr-page.js';
 
 for (const direction of ['ltr', 'rtl'] as const) {
   it(`keeps an aside overlay above the page sticky header in ${direction}`, async () => {

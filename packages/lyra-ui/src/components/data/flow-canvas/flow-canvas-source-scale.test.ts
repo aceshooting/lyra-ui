@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
 import type { FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-types.js';

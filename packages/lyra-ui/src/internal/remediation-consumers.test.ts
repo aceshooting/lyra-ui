@@ -1,19 +1,19 @@
-import '../components/conversation/model-select/model-select.js';
-import '../components/conversation/voice-picker/voice-picker.js';
-import type { LyraModelSelect } from '../components/conversation/model-select/model-select.js';
-import type { LyraVoicePicker } from '../components/conversation/voice-picker/voice-picker.js';
+import '../components/lr-model-select.js';
+import '../components/lr-voice-picker.js';
+import type { LyraModelSelect } from '../components/lr-model-select.js';
+import type { LyraVoicePicker } from '../components/lr-voice-picker.js';
 
 
 import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import type { LyraInput } from '../components/forms/input/input.js';
-import type { LyraTextarea } from '../components/forms/textarea/textarea.js';
-import type { LyraOtpInput } from '../components/forms/otp-input/otp-input.js';
-import '../components/forms/input/input.js';
-import '../components/forms/input/number-input.js';
-import '../components/forms/input/native-time-input.js';
-import '../components/forms/textarea/textarea.js';
-import '../components/forms/otp-input/otp-input.js';
+import type { LyraInput } from '../components/lr-input.js';
+import type { LyraTextarea } from '../components/lr-textarea.js';
+import type { LyraOtpInput } from '../components/lr-otp-input.js';
+import '../components/lr-input.js';
+import '../components/lr-number-input.js';
+import '../components/lr-native-time-input.js';
+import '../components/lr-textarea.js';
+import '../components/lr-otp-input.js';
 import { tag } from './prefix.js';
 import { FormAssociated } from './form-associated.js';
 import { LyraElement } from './lyra-element.js';

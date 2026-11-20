@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './message-feedback.js';
+import '../../lr-message-feedback.js';
 
 const meta: Meta = {
   title: 'MessageFeedback',

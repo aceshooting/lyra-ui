@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine, FakeAttributionControl, FakeMapControl } from '../../../../test/map-control-engine.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE, type LyraMapControls } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE, type LyraMapControls } from '../../lr-map.js';
 void LyraMap;
 
 /** Peer-shaped compact disclosure: the summary flips compact-show, then details toggles open. */

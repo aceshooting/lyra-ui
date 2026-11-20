@@ -7,7 +7,7 @@ export const DATASET_VIEWER_TAG = tag('dataset-viewer');
 registerDocumentRenderer('lyra:dataset', {
   matches: (file: LyraDocumentFile) => /\.(tsv|psv|dat)$/i.test(file.name),
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  load: () => import('./dataset-viewer.js').then(() => ({
+  load: () => import('../../lr-dataset-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-dataset-viewer
       src=${file.src}
       name=${file.name}

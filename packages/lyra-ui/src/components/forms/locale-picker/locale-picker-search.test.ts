@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { getLyraLocale, setLyraLocale } from '../../../localization.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
-import './locale-picker.js';
+import '../../lr-locale-picker.js';
 import '../../../translations/fr/forms.js';
 import '../../../translations/fr/shared.js';
 import '../../../translations/tr/forms.js';

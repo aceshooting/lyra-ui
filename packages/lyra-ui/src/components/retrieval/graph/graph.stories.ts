@@ -8,7 +8,7 @@ import type {
   LyraGraphNodeRenderer,
   LyraGraph,
   GraphSource,
-} from './graph.js';
+} from '../../lr-graph.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { TemplateResult } from 'lit';
 import { AsyncDirective } from 'lit/async-directive.js';

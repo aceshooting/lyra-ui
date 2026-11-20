@@ -2,9 +2,9 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { ComboboxSource, ComboboxSourceRow, LyraCombobox } from './combobox.js';
-import './combobox.js';
-import './option.js';
+import type { ComboboxSource, ComboboxSourceRow, LyraCombobox } from '../../lr-combobox.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
 
 type MinimumCombobox = LyraCombobox & { minQueryLength: number };
 const input = (el: LyraCombobox): HTMLInputElement =>

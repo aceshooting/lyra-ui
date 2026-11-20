@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './flag-peer.js';
-import '../../overlays/overlay/popover.js';
+import '../../lr-popover.js';
 import { languageToCountry, localeNativeName } from './language-map.js';
 
 const meta: Meta = {

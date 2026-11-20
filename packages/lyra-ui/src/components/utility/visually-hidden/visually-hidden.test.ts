@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './visually-hidden.js';
+import '../../lr-visually-hidden.js';
 
 type TestVisuallyHidden = HTMLElement & { updateComplete: Promise<unknown> };
 

@@ -1,7 +1,7 @@
 import { aTimeout, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
-import './qr-code.js';
-import { LyraQrCode, type LyraQrCodeErrorCorrection } from './qr-code.js';
+import '../../lr-qr-code.js';
+import { LyraQrCode, type LyraQrCodeErrorCorrection } from '../../lr-qr-code.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 

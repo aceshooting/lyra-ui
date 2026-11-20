@@ -184,8 +184,8 @@ breaks in each major since v22, with the matching `lyra-ui-migrate` profile; ful
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
-Use the stable tag alias `@aceshooting/lyra-ui/components/lr-<name>.js` to register one element;
-the alias stays valid if the component's internal family changes. Import
+Use the stable tag entry `@aceshooting/lyra-ui/components/lr-<name>.js` to register one element;
+the entry stays valid if the component's internal family changes. Import
 `@aceshooting/lyra-ui/components/<family>` to register a whole family at once.
 
 | Family | Highlights |

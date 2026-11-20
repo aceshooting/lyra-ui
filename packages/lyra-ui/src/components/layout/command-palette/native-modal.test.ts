@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
-import './command-palette.js';
-import type { LyraCommandPalette } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommandPalette } from '../../lr-command-palette.js';
 
 async function click(target: HTMLElement): Promise<void> {
   const rect = target.getBoundingClientRect();

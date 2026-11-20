@@ -377,99 +377,7 @@
       "lr-visually-hidden"
     ]
   },
-  "deprecations": [
-    {
-      "tag": "lr-calendar",
-      "kind": "event",
-      "name": "lr-view-change",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-month-change",
-        "usage": "@lr-month-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration."
-    },
-    {
-      "tag": "lr-entity-dossier",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-map-anchor",
-      "kind": "event",
-      "name": "lr-close",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-map-anchor-dismiss",
-        "usage": "@lr-map-anchor-dismiss"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The component-prefixed dismiss event carries the same frozen reason detail; the older name remains emitted during migration."
-    },
-    {
-      "tag": "lr-map-anchor",
-      "kind": "event",
-      "name": "lr-close-request",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-map-anchor-dismiss-request",
-        "usage": "@lr-map-anchor-dismiss-request"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The component-prefixed dismiss request carries the same cancelable reason detail; the older name remains emitted during migration."
-    },
-    {
-      "tag": "lr-memory-panel",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-provenance-panel",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-retrieval-trace",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    }
-  ],
+  "deprecations": [],
   "exportDeprecations": [],
   "history": {
     "source": "git-release-manifests",
@@ -37327,7 +37235,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "4a5d6638e5d2b2e4b078ce455f1525e2648d25962f18a7de8203b3b675c9b4f8",
+      "manifestSha256": "8d4820b51247ef669179f1442eab48e0ebfcb99bec5e91b17bcff317471ce45f",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

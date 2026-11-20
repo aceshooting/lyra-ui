@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './geojson-viewer.js';
+import '../../lr-geojson-viewer.js';
 import { LyraMap } from '../../media/map/map.class.js';
 import type { LyraGeoJsonViewer } from './geojson-viewer.class.js';
 import { Map as NativeMap, getWorkerUrl, setWorkerUrl } from 'maplibre-gl';

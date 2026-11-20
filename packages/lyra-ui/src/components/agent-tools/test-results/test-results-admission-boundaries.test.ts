@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './test-results.js';
+import '../../lr-test-results.js';
 import type { LyraTestResults, TestResultsSource } from './test-results.class.js';
 
 const currentSuites = () => [{ id: 'current-suite', name: 'Current suite', tests: [

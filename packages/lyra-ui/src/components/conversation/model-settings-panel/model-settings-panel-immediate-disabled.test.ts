@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraModelSettingsPanel } from './model-settings-panel.class.js';
-import './model-settings-panel.js';
+import '../../lr-model-settings-panel.js';
 
 for (const [control, detail, result] of [
   ['lr-model-select', { value: 'second', inCatalog: true }, { model: 'second', temperature: 1, inCatalog: true }],

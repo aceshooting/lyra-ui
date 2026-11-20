@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import type { LyraSwatchPicker } from './swatch-picker.js';
-import './swatch-picker.js';
+import type { LyraSwatchPicker } from '../../lr-swatch-picker.js';
+import '../../lr-swatch-picker.js';
 
 it('skips primitive swatch records and keeps the surviving option selectable by its value', async () => {
   const element = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker aria-label="Accent"></lr-swatch-picker>`);

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './dataset-viewer.js';
-import type { LyraDatasetViewer } from './dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
+import type { LyraDatasetViewer } from '../../lr-dataset-viewer.js';
 
 const source = `data:text/csv,${encodeURIComponent(['name,value', ...Array.from({ length: 80 }, (_, index) => `Row ${index},${index}`)].join('\n'))}`;
 

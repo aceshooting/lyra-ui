@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './chip.js';
-import type { LyraChip } from './chip.js';
+import '../../lr-chip.js';
+import type { LyraChip } from '../../lr-chip.js';
 
 /** Re-projects its light DOM into a removable chip living in its own shadow root, so the chip's
  *  label sources are slot-forwarded nodes that the chip itself does not contain. */

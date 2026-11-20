@@ -2,8 +2,8 @@ import { accessibleName } from '../../../../test/accessible-name.js';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import "./color-picker.js";
-import type { LyraColorPicker } from "./color-picker.js";
+import "../../lr-color-picker.js";
+import type { LyraColorPicker } from "../../lr-color-picker.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 interface WindowWithColorPickerConstructors extends Window {

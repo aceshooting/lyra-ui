@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './prompt-queue.js';
+import '../../lr-prompt-queue.js';
 import type { LyraPromptQueue, PromptQueueItem } from './prompt-queue.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

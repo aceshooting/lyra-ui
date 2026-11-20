@@ -1,7 +1,7 @@
 import { expect, oneEvent } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './streaming-text.js';
-import './streaming-text-core.js';
+import '../../lr-streaming-text.js';
+import '../../lr-streaming-text-core.js';
 for (const tag of ['lr-streaming-text', 'lr-streaming-text-core'] as const) {
   it(`${tag} appends a plain suffix without resetting retained ranges`, async () => {
     const el = document.createElement(tag); el.contentMode = 'plain'; el.coalesceMs = 0;

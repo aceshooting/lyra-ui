@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './flow-node.js';
-import type { LyraFlowNode } from './flow-node.js';
+import '../../lr-flow-node.js';
+import type { LyraFlowNode } from '../../lr-flow-node.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
@@ -773,10 +773,10 @@ describe('toolbar menu', () => {
     this.timeout(20_000);
     const { waitUntil } = await import('@open-wc/testing');
     const { hoverUntilMatched, sendMouse } = await import('../../../../test/wtr-mouse.js');
-    await import('../flow-canvas/flow-canvas.js');
-    await import('../../overlays/overlay/dropdown.js');
-    await import('../../layout/menu/menu.js');
-    await import('../../layout/menu/menu-item.js');
+    await import('../../lr-flow-canvas.js');
+    await import('../../lr-dropdown.js');
+    await import('../../lr-menu.js');
+    await import('../../lr-menu-item.js');
     // Bind the node data before the canvas connects: an authored `node-id` child that matches no
     // node yet is a (strict-console) dev warning.
     const canvas = (await fixture(html`

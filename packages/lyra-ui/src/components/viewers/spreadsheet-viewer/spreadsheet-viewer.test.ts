@@ -10,8 +10,8 @@ import {
 } from '@open-wc/testing';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
-import './spreadsheet-viewer.js';
-import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
+import type { LyraSpreadsheetViewer } from '../../lr-spreadsheet-viewer.js';
 import { assertScrollFrameFollowsAdoption, shrinkAnchorRetry } from '../../../../test/viewer-scroll-test-support.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 

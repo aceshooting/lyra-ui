@@ -1,9 +1,9 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
-import "./heatmap.js";
+import "../../lr-heatmap.js";
 import '../../../translations/de/data.js';
 import '../../../translations/fr/data.js';
-import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "./heatmap.js";
+import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "../../lr-heatmap.js";
 import {
   MAX_BUCKET_COUNT,
   MAX_ACCESSIBLE_HEATMAP_CELLS,
@@ -11,7 +11,7 @@ import {
   hexToRgb,
   normalizeBucketCount,
   resolveRgb,
-} from "./heatmap.js";
+} from "../../lr-heatmap.js";
 // Type-only (erased before the browser ever sees this file), so importing the package root here
 // costs the test bundle nothing while still proving the union is reachable from it -- see the
 // package-root re-export test at the end of the sticky-labels block.

@@ -11,10 +11,10 @@ import {
   oneEvent,
   waitUntil,
 } from '@open-wc/testing';
-import './csv-viewer.js';
+import '../../lr-csv-viewer.js';
 import '../../../translations/fr/viewers.js';
 import '../../../translations/fr/shared.js';
-import type { LyraCsvViewer } from './csv-viewer.js';
+import type { LyraCsvViewer } from '../../lr-csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.

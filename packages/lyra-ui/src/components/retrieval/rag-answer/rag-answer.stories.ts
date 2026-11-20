@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './rag-answer.js';
+import '../../lr-rag-answer.js';
 const meta: Meta = {
   title: 'RagAnswer',
   component: 'lr-rag-answer',

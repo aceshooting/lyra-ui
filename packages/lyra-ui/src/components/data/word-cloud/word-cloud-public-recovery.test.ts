@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraPreparedWordCloud } from '../../../utilities/data-preparation.js';
 import type { LyraWordCloud } from './word-cloud.class.js';
-import './word-cloud.js';
+import '../../lr-word-cloud.js';
 
 function summary(revision = 'initial'): LyraPreparedWordCloud {
   return { revision, counts: { sourceCount: 4, validCount: 3, invalidCount: 1 }, totalWeight: 14, retainedWeight: 12,

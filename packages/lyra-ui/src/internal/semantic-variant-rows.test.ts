@@ -1,6 +1,6 @@
 import { expect, fixture } from '@open-wc/testing';
-import '../components/overlays/badge/badge.js';
-import '../components/overlays/callout/callout.js';
+import '../components/lr-badge.js';
+import '../components/lr-callout.js';
 
 for (const tagName of ['lr-badge', 'lr-callout']) {
   for (const variant of ['success', 'warning', 'danger']) {

@@ -3,8 +3,8 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { WithCanvas } from './node-palette.stories.js';
-import type { LyraNodePalette } from './node-palette.js';
-import type { LyraFlowCanvas } from '../../data/flow-canvas/flow-canvas.js';
+import type { LyraNodePalette } from '../../lr-node-palette.js';
+import type { LyraFlowCanvas } from '../../lr-flow-canvas.js';
 
 it('the actual WithCanvas story commits repeated native placements to visible canvas nodes', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`<div>${WithCanvas.render!({}, {} as never)}</div>`);

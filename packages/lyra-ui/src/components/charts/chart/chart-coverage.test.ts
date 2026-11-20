@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
 import { sendMouse, resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraSpatialChartPoint, LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
 

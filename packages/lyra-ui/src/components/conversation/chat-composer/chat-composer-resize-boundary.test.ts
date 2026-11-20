@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './chat-composer.js';
-import type { LyraChatComposer } from './chat-composer.js';
+import '../../lr-chat-composer.js';
+import type { LyraChatComposer } from '../../lr-chat-composer.js';
 
 it('coalesces legacy resize notifications and ignores callbacks retained after disconnect', async () => {
   const OriginalObserver = window.ResizeObserver;

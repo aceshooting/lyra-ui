@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './locale-picker.js';
-import type { LyraLocalePicker, LyraLocaleChangeDetail } from './locale-picker.js';
+import '../../lr-locale-picker.js';
+import type { LyraLocalePicker, LyraLocaleChangeDetail } from '../../lr-locale-picker.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 
 // The shared Intl cache would answer a repeated tag from an earlier construction and hide a

@@ -1,21 +1,21 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LitElement } from 'lit';
 import { tag } from './prefix.js';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/forms/switch/switch.js';
-import '../components/forms/checkbox-group/checkbox-group.js';
-import '../components/forms/radio/radio-group.js';
-import '../components/forms/slider/slider.js';
-import '../components/forms/code-editor/code-editor.js';
-import '../components/forms/otp-input/otp-input.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/phone-input/phone-input.js';
-import '../components/forms/input/time-input.js';
-import '../components/forms/rubric-form/rubric-form.js';
-import '../components/data/graph-query-builder/graph-query-builder.js';
-import '../components/utility/known-date/known-date.js';
-import '../components/forms/select/select.js';
-import '../components/forms/combobox/combobox.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-switch.js';
+import '../components/lr-checkbox-group.js';
+import '../components/lr-radio-group.js';
+import '../components/lr-slider.js';
+import '../components/lr-code-editor.js';
+import '../components/lr-otp-input.js';
+import '../components/lr-date-input.js';
+import '../components/lr-phone-input.js';
+import '../components/lr-time-input.js';
+import '../components/lr-rubric-form.js';
+import '../components/lr-graph-query-builder.js';
+import '../components/lr-known-date.js';
+import '../components/lr-select.js';
+import '../components/lr-combobox.js';
 
 for (const name of ['checkbox', 'switch', 'checkbox-group', 'radio-group', 'slider', 'code-editor',
   'otp-input', 'date-input', 'phone-input', 'time-input', 'rubric-form', 'graph-query-builder', 'known-date']) {

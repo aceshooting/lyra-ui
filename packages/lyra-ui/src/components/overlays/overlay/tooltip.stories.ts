@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tooltip.js';
-import '../../forms/icon-button/icon-button.js';
-import '../../forms/button/button.js';
-import '../drawer/drawer.js';
-import type { LyraTooltip } from './tooltip.js';
+import '../../lr-tooltip.js';
+import '../../lr-icon-button.js';
+import '../../lr-button.js';
+import '../../lr-drawer.js';
+import type { LyraTooltip } from '../../lr-tooltip.js';
 
 const meta: Meta = {
   parameters: { docs: { description: { component: 'Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events. Removing content safely omits tooltip fallback text.' } } }, title: 'Overlay/Tooltip', component: 'lr-tooltip', tags: ['autodocs'] };

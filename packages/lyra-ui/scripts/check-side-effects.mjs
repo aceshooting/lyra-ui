@@ -1,5 +1,5 @@
 // Guards against the exact bug class that has hit this package twice: a new component ships with
-// a real `import './components/<name>/<name>.js'` registration side effect (its `defineElement()`
+// a real `import './components/lr-<tag>.js'` registration side effect (its `defineElement()`
 // call) but no matching `package.json#sideEffects` entry, so any consumer bundler that respects
 // `sideEffects` (production tree-shaking) can silently drop the registration. See
 // scripts/check-registration-architecture.mjs for the companion check that every `*.class.ts`
@@ -7,7 +7,7 @@
 // verifies the *registration* file for each of those class modules is actually declared as having
 // side effects, in both the published `./dist/...` form and the in-repo `./src/...` form.
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, discoverComponentSideEffectModules } from './generate-side-effects.mjs';
@@ -23,10 +23,26 @@ const allClassFiles = walk(componentsRoot)
   .filter((file) => file.endsWith('.class.ts'))
   .sort();
 // Shared implementation bases (for example Markdown's two-tag runtime base) are deliberately
-// class modules without a sibling registration entry. They are not components and must not be
-// forced into the inventory or package sideEffects list. Registered class modules retain the
-// invariant below: every one has an inventory entry and a side-effectful sibling registration.
-const classFiles = allClassFiles.filter((file) => existsSync(file.replace(/\.class\.ts$/, '.ts')));
+// class modules no tag-shaped registration entry re-exports. They are not components and must not
+// be forced into the inventory or package sideEffects list. Registered class modules retain the
+// invariant below: every one has an inventory entry and a side-effectful `lr-<tag>.ts` entry.
+/** The class module whose export the `lr-<tag>.ts` entry passes to `defineElement('<tag>', ...)`. */
+function definedClassModule(name, source) {
+  const localName = name.slice('lr-'.length, -'.ts'.length);
+  const defined = new RegExp(`\\bdefineElement\\(\\s*'${localName}'\\s*,\\s*([A-Za-z_$][\\w$]*)\\s*\\)`).exec(source)?.[1];
+  if (!defined) return null;
+  for (const match of source.matchAll(/^import\s*\{([^}]*)\}\s*from\s*'\.\/([^']+\.class)\.js';$/gm)) {
+    if (match[1].split(',').some((binding) => binding.trim() === defined)) return join(componentsRoot, `${match[2]}.ts`);
+  }
+  return null;
+}
+const registeredClassFiles = new Set(
+  readdirSync(componentsRoot)
+    .filter((name) => /^lr-[a-z0-9-]+\.ts$/.test(name))
+    .map((name) => definedClassModule(name, readFileSync(join(componentsRoot, name), 'utf8')))
+    .filter(Boolean),
+);
+const classFiles = allClassFiles.filter((file) => registeredClassFiles.has(file));
 assert.ok(classFiles.length >= 80, 'expected pure class modules for the component families');
 
 const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
@@ -65,7 +81,7 @@ if (pkg.sideEffects.some((entry, index) => entry !== derivedEntries[index])) {
   errors.push('package.json#sideEffects must match the deterministic generated order');
 }
 
-// Every inventory entry names the `<name>.ts` module that imports the class and calls
+// Every inventory entry names the `lr-<tag>.ts` module that imports the class and calls
 // `defineElement()` -- that module is the file with the actual registration side effect. (The
 // two known exceptions -- `archive-viewer-register.ts` and `ebook-viewer-register.ts`, which
 // register a document-viewer renderer rather than a custom element -- don't have inventory
@@ -78,7 +94,7 @@ for (const component of inventory.components) {
     source = readFileSync(registrationFile, 'utf8');
   } catch {
     errors.push(
-      `${relative(packageDir, classFile)}: expected a sibling registration file at ` +
+      `${relative(packageDir, classFile)}: expected a tag-shaped registration file at ` +
         `${relative(packageDir, registrationFile)} (none found)`,
     );
     continue;

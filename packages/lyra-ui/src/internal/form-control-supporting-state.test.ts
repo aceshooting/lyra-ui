@@ -33,7 +33,7 @@ describe('formControlSupportingState', () => {
 describe('FormControlController.reportValidity', () => {
   it('runs prepare after the constraint sync and reports the internals result', async () => {
     const { fixture, html } = await import('@open-wc/testing');
-    await import('../components/forms/slider/slider.js');
+    await import('../components/lr-slider.js');
     const slider = await fixture<HTMLElement & { setCustomValidity(m: string): void; reportValidity(): boolean }>(html`<lr-slider></lr-slider>`);
     expect(slider.reportValidity()).to.equal(true);
     slider.setCustomValidity('No');

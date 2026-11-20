@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './chip-group.js';
-import './chip.js';
+import '../../lr-chip-group.js';
+import '../../lr-chip.js';
 
 const meta: Meta = {
   parameters: { docs: { description: { component: 'Collapsed groups reapply max-visible when assigned children are replaced or reordered at the same count, preserving authored hidden/inert state and releasing departed visibility leases.' } } }, title: 'Data display/Chip group', component: 'lr-chip-group', tags: ['autodocs'] };

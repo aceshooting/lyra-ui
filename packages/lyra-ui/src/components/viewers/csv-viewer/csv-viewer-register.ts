@@ -9,7 +9,7 @@ export const CSV_VIEWER_TAG = tag('csv-viewer');
 registerDocumentRenderer('text/csv', {
   matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.csv'),
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  load: () => import('./csv-viewer.js').then(() => ({
+  load: () => import('../../lr-csv-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-csv-viewer
       src=${file.src}
       name=${file.name}

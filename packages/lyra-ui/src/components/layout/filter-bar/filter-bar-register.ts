@@ -1,12 +1,12 @@
 // Lean registration entry for `<lr-filter-bar>`: it registers the tag and nothing else.
 //
-// `./filter-bar.js` (the default entry) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>`
+// `lr-filter-bar.js` (the default entry) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>`
 // up front and each filter type's control -- `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
 // `<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` -- plus
 // `<lr-spinner>` (the `loading` status) the first time a bar renders it, because `filters` is a
 // runtime value this component cannot inspect ahead of time.
 //
-// This entry registers nothing on demand. Import it INSTEAD of `./filter-bar.js` when every control
+// This entry registers nothing on demand. Import it INSTEAD of `lr-filter-bar.js` when every control
 // must be defined synchronously (or a bundler must not see the deferred imports), then import each
 // composed control's own registration entry for the filter `type`s actually declared:
 //

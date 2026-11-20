@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/split-panel/split-panel.js';
+export * from './layout/split-panel/split-panel.class.js';
+import { LyraSplitPanel } from './layout/split-panel/split-panel.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('split-panel', LyraSplitPanel);

@@ -1,12 +1,12 @@
 import { expectLocaleFallback } from '../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './archive-viewer/archive-viewer.js';
-import './docx-viewer/docx-viewer.js';
-import './ebook-viewer/ebook-viewer.js';
-import './notebook-viewer/notebook-viewer.js';
-import './pdf-viewer/pdf-viewer.js';
-import './pptx-viewer/pptx-viewer.js';
-import './xml-viewer/xml-viewer.js';
+import '../lr-archive-viewer.js';
+import '../lr-docx-viewer.js';
+import '../lr-ebook-viewer.js';
+import '../lr-notebook-viewer.js';
+import '../lr-pdf-viewer.js';
+import '../lr-pptx-viewer.js';
+import '../lr-xml-viewer.js';
 import { VIEWER_SEARCH_QUERY_LIMIT } from './viewer-search-limits.js';
 
 interface LocaleSearchViewer extends HTMLElement {

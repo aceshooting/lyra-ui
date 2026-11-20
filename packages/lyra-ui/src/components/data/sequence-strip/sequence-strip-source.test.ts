@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './sequence-strip.js';
+import '../../lr-sequence-strip.js';
 import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { LyraSequenceStrip, SequenceStripItem } from './sequence-strip.class.js';

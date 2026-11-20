@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraTour } from './tour.class.js';
-import './tour.js';
+import '../../lr-tour.js';
 
 it('omits holes, accessor steps and empty selectors while retaining a detached usable step', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div><button id="tour-admission-target">Target</button><lr-tour></lr-tour></div>`);

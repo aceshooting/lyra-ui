@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './condition-builder.js';
-import type { LyraConditionBuilder } from './condition-builder.js';
+import '../../lr-condition-builder.js';
+import type { LyraConditionBuilder } from '../../lr-condition-builder.js';
 
 const fields = [{ name: 'name', type: 'string' as const }, { name: 'age', type: 'number' as const }];
 

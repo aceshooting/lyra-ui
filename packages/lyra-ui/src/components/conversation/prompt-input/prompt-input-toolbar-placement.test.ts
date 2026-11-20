@@ -1,5 +1,5 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 import type { LyraPromptInput } from './prompt-input.class.js';
 import type { LyraChatComposer } from '../chat-composer/chat-composer.class.js';
 

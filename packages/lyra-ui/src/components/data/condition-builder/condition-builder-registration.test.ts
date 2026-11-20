@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './condition-builder.js';
+import '../../lr-condition-builder.js';
 import type { LyraConditionBuilder } from './condition-builder.class.js';
 
 it('registers optional value editors only when a row needs them', async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { DataGridColumn, LyraDataGrid } from './data-grid.js';
-import './data-grid.js';
+import type { DataGridColumn, LyraDataGrid } from '../../lr-data-grid.js';
+import '../../lr-data-grid.js';
 
 type Row = { id: string; value: string };
 

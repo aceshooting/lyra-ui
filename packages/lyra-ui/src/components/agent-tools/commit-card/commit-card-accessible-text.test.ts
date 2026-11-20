@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
-import './commit-card.js';
-import type { LyraCommitCard } from './commit-card.js';
+import '../../lr-commit-card.js';
+import type { LyraCommitCard } from '../../lr-commit-card.js';
 
 it('exposes a localized diff summary as text without naming a generic span', async () => {
   const card = await fixture<LyraCommitCard>(html`<lr-commit-card

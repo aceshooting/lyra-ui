@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './combobox.js';
-import './option.js';
-import type { LyraCombobox } from './combobox.js';
-import type { LyraOption } from './option.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
+import type { LyraOption } from '../../lr-option.js';
 
 const settle = async (control: LyraCombobox): Promise<void> => {
   await aTimeout(0);

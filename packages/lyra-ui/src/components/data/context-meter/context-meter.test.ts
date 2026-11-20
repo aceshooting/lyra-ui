@@ -1,8 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './context-meter.js';
-import type { LyraContextMeter, ContextMeterSegment } from './context-meter.js';
+import '../../lr-context-meter.js';
+import type { LyraContextMeter, ContextMeterSegment } from '../../lr-context-meter.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SEGMENTS: ContextMeterSegment[] = [

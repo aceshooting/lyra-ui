@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './calendar.js';
+import '../../lr-calendar.js';
 import type { LyraCalendar } from './calendar.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

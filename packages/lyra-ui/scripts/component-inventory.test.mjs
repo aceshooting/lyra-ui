@@ -1707,12 +1707,12 @@ test('chart optional-peer attribution follows only reachable loader capabilities
     optionalPeersForComponent({ registrationModule }, packageJson);
 
   assert.deepEqual(
-    peersFor('src/components/charts/chart/box-plot.ts'),
+    peersFor('src/components/lr-box-plot.ts'),
     ['@sgratzl/chartjs-chart-boxplot', 'chart.js'],
     'box plots load Chart.js core and their box-plot controller, not unrelated chart features'
   );
   assert.deepEqual(
-    peersFor('src/components/charts/chart/chart.ts'),
+    peersFor('src/components/lr-chart.ts'),
     ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     'the configurable Chart.js wrapper retains its reachable feature peers'
   );
@@ -1724,17 +1724,17 @@ test('comment examples do not create optional-peer prerequisites', () => {
     optionalPeersForComponent({ registrationModule }, packageJson);
 
   assert.deepEqual(
-    peersFor('src/components/forms/phone-input/phone-input.ts'),
+    peersFor('src/components/lr-phone-input.ts'),
     [],
     'phone-input accepts a consumer-built adapter but imports no phone-number peer itself'
   );
   assert.deepEqual(
-    peersFor('src/components/media/flag/flag.ts'),
+    peersFor('src/components/lr-flag.ts'),
     [],
     'flag-peer entry points, not the base flag registration, import the flags package'
   );
   assert.deepEqual(
-    peersFor('src/components/forms/locale-picker/locale-picker.ts'),
+    peersFor('src/components/lr-locale-picker.ts'),
     [],
     'locale-picker remains usable without the separately registered flags package'
   );
@@ -1942,28 +1942,28 @@ test('composed registrations inherit optional peers only when the parent forward
   // the same sanitized-fetch path a direct `src` uses -- so they DO inherit the icon's peer.
   // Video also owns the optional panorama renderer, so its own 3D companion peer is listed too.
   assert.deepEqual(
-    peersFor('src/components/media/video/video.ts'),
+    peersFor('src/components/lr-video.ts'),
     ['@aceshooting/lyra-3d', 'dompurify'],
     'video forwards iconLibrary to every composed icon and therefore retains sanitizer capability'
   );
   assert.deepEqual(
-    peersFor('src/components/media/video-playlist/video-playlist.ts'),
+    peersFor('src/components/lr-video-playlist.ts'),
     ['dompurify'],
     'video-playlist forwards iconLibrary but never a projection, so its video cannot load the 3D renderer'
   );
   assert.ok(
     peersFor(
-      'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.ts'
+      'src/components/lr-knowledge-graph-explorer.ts'
     ).includes('@aceshooting/lyra-3d'),
     'the knowledge-graph explorer forwards its engine preference into the composed graph'
   );
   assert.deepEqual(
-    peersFor('src/components/layout/command-palette/command-palette.ts'),
+    peersFor('src/components/lr-command-palette.ts'),
     [],
     'a fixed built-in search glyph does not expose the icon remote-source capability'
   );
   assert.deepEqual(
-    peersFor('src/components/data/condition-builder/condition-builder.ts'),
+    peersFor('src/components/lr-condition-builder.ts'),
     [],
     'a fixed built-in remove glyph does not expose the icon-button remote-source capability'
   );

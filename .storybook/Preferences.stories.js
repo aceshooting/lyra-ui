@@ -5,10 +5,10 @@ import '../packages/lyra-ui/src/preferences.css';
 import '../packages/lyra-ui/src/looks/material.css';
 import '../packages/lyra-ui/src/looks/shadcn.css';
 import { applyLyraStyleScope } from '../packages/lyra-ui/src/theme/theme.js';
-import '../packages/lyra-ui/src/components/layout/card/card.js';
-import '../packages/lyra-ui/src/components/forms/input/input.js';
-import '../packages/lyra-ui/src/components/forms/button/button.js';
-import '../packages/lyra-ui/src/components/overlays/spinner/spinner.js';
+import '../packages/lyra-ui/src/components/lr-card.js';
+import '../packages/lyra-ui/src/components/lr-input.js';
+import '../packages/lyra-ui/src/components/lr-button.js';
+import '../packages/lyra-ui/src/components/lr-spinner.js';
 
 export default {
   title: 'Theming/Accessibility preferences',

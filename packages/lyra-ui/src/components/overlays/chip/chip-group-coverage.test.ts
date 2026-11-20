@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './chip-group.js';
-import './chip.js';
-import type { LyraChipGroup } from './chip-group.js';
+import '../../lr-chip-group.js';
+import '../../lr-chip.js';
+import type { LyraChipGroup } from '../../lr-chip-group.js';
 
 describe('lr-chip-group focus repair edge cases', () => {
   it('falls back to the group base when the only chip is hidden by the consumer while focused', async () => {

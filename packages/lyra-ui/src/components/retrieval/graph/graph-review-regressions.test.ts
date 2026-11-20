@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sinkTexts } from '../../../../test/announcements.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import { projectSpatialPoint } from './graph-spatial.js';
 void LyraGraph;
 

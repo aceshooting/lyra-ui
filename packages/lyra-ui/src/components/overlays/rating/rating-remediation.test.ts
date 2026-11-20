@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './rating.js';
-import type { LyraRating } from './rating.js';
+import '../../lr-rating.js';
+import type { LyraRating } from '../../lr-rating.js';
 
 for (const custom of [false, true]) {
   it(`keeps readonly validity and aria-invalid synchronized${custom ? ' with a custom error' : ''}`, async () => {

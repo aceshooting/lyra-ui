@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraHierarchyQuery, LyraHierarchySource } from '../../../data-sources.js';
 import type { FileTreeNode, LyraFileTree } from './file-tree.class.js';
-import './file-tree.js';
+import '../../lr-file-tree.js';
 
 function provider(value: FileTreeNode): LyraHierarchySource<FileTreeNode, LyraHierarchyQuery> {
   return { revision: 1, async project(request) {

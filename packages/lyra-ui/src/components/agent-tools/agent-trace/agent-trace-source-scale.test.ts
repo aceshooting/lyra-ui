@@ -6,7 +6,7 @@ import type { LyraTraceTree } from '../trace-tree/trace-tree.class.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegend } from '../../retrieval/graph-legend/graph-legend.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './agent-trace.js';
+import '../../lr-agent-trace.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 expectDevWarning('virtual-list-scroll-scaling');

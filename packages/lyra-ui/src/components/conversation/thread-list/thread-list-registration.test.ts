@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { tag } from '../../../internal/prefix.js';
-import './thread-list.js';
+import '../../lr-thread-list.js';
 import type { LyraThreadList } from './thread-list.class.js';
 
 it('registers optional children only when their controls are rendered', async () => {

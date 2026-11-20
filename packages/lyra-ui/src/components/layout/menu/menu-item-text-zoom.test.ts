@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './menu.js';
+import '../../lr-menu.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import './menu-item.js';
-import './dropdown-item.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.class.js';
 
 describe('mounted menu text follows root text zoom after look changes', function () {

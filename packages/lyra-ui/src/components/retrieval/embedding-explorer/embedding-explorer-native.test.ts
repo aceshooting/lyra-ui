@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 import { capture, center, clickCenter, loseContext, matches, nativeCanvas, requireWebgl2 } from '../../../../test/native-3d-ui.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';

@@ -1,3 +1,8 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/trace-tree/trace-tree.js';
+export * from './agent-tools/trace-tree/trace-tree.class.js';
+export * from './agent-tools/trace-tree/span.js';
+import { LyraTraceTree } from './agent-tools/trace-tree/trace-tree.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-live-region.js';
+import './lr-empty.js';
+
+defineElement('trace-tree', LyraTraceTree);

@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './neighbor-list.js';
+import '../../lr-neighbor-list.js';
 import type { LyraNeighborRow } from './neighbor-list.class.js';
 
 const meta: Meta = {

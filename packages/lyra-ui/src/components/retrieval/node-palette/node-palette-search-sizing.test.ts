@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './node-palette.js';
-import type { LyraNodePalette } from './node-palette.js';
+import '../../lr-node-palette.js';
+import type { LyraNodePalette } from '../../lr-node-palette.js';
 
 
 function fieldGeometry(el: LyraNodePalette): Record<string, string> {

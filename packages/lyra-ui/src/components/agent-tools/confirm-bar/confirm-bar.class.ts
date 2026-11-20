@@ -380,7 +380,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     super.willUpdate(changed);
     if (this.args !== undefined && this.isConnected) {
       this.argsRegistration ??= Promise.all([
-        import('../../layout/details/details.js'), import('../../utility/json-viewer/json-viewer.js'),
+        import('../../lr-details.js'), import('../../lr-json-viewer.js'),
       ]).catch(() => { this.argsRegistration = undefined; });
     }
     if (!this.hasUpdated) {

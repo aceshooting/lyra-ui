@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraTabularReadRequest, LyraTabularSource, LyraTabularHit } from '../../data-sources.js';
-import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
-import './csv-viewer/csv-viewer.js';
+import type { LyraCsvViewer } from '../lr-csv-viewer.js';
+import '../lr-csv-viewer.js';
 
 function source(label: string): LyraTabularSource {
   return { revision: 1, rowCount: 3, columnCount: 2,

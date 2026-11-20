@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../data-sources.js';
 import type { LyraTree, LyraTreeNodeData } from '../components/data/tree/tree.class.js';
-import '../components/data/tree/tree.js';
+import '../components/lr-tree.js';
 
 type Source = LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>;
 function provider() {

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './responsive-panel.js';
-import '../page/page.js';
-import type { LyraResponsivePanel } from './responsive-panel.js';
+import '../../lr-responsive-panel.js';
+import '../../lr-page.js';
+import type { LyraResponsivePanel } from '../../lr-responsive-panel.js';
 
 const meta: Meta = {
   title: 'ResponsivePanel',

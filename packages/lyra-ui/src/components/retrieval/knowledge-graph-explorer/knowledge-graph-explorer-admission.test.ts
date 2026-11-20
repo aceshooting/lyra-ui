@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
-import { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 
 it('discloses outer graph admission loss before child projection discards its provenance', async () => {
   const properties = ['nodes', 'edges'] as const;

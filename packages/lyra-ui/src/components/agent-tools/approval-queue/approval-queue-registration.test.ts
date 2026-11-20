@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './approval-queue.js';
+import '../../lr-approval-queue.js';
 import type { LyraApprovalQueue } from './approval-queue.class.js';
 
 it('registers the approval dialog only when a request is first opened', async () => {

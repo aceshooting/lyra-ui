@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraNavigationMenu } from './navigation-menu.class.js';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 class ControlledResizeObserver implements ResizeObserver {
   readonly observedTargets = new Set<Element>();

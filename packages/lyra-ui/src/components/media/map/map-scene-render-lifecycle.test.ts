@@ -2,7 +2,7 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { mapSceneSessionAttachment } from '../../../internal/fixtures/map-scene-session.js';
 import { sceneMarker, sceneModel } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 
 describe('lr-map scene renderer lifetime', () => {
   let env: Awaited<ReturnType<typeof renderEnvironment>>;

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './responsive-panel.js';
-import type { LyraResponsivePanel } from './responsive-panel.js';
+import '../../lr-responsive-panel.js';
+import type { LyraResponsivePanel } from '../../lr-responsive-panel.js';
 
 describe('lr-responsive-panel interactions', () => {
   it('retints the docked panel through a public background token', async () => {

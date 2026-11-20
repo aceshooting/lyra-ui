@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './table.js';
-import type { LyraTable } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable } from '../../lr-table.js';
 import { installTableTestHooks } from '../../../../test/table.js';
 import '../../../translations/tr/data.js';
 import '../../../translations/tr/shared.js';

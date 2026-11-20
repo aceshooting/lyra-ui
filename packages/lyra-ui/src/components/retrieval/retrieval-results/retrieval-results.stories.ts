@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './retrieval-results.js';
+import '../../lr-retrieval-results.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

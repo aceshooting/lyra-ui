@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './combobox.js';
-import './option.js';
-import type { LyraCombobox } from './combobox.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 async function settle(el: LyraCombobox) { for (let i = 0; i < 3; i++) { await el.updateComplete; await nextFrame(); } }
 async function mount() {
   const el = await fixture<LyraCombobox>(html`<lr-combobox label="Choices" multiple></lr-combobox>`);

@@ -1,4 +1,4 @@
-import { LyraCurrencyPicker } from './currency-picker.js';
+import { LyraCurrencyPicker } from '../../lr-currency-picker.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { DEFAULT_CURRENCY_ENTRIES } from './currency-catalog.js';
 import { resolveCurrencyPresentation } from './currency-presentation.js';

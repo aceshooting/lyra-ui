@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { Chart } from 'chart.js';
 import type { LyraBoxPlot, LyraBoxPlotSeries } from './box-plot.class.js';
-import './box-plot.js';
+import '../../lr-box-plot.js';
 
 const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
 

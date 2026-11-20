@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './terminal.js';
+import '../../lr-terminal.js';
 import type { LyraTerminal } from './terminal.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

@@ -3,8 +3,8 @@ import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js'
 import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { resolvedColorToken } from '../../../../test/color-contrast.js';
-import './input.js';
-import '../button/button.js';
+import '../../lr-input.js';
+import '../../lr-button.js';
 import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 

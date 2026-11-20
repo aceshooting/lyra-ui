@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { LyraKnownDate } from './known-date.js';
+import { LyraKnownDate } from '../../lr-known-date.js';
 
 const meta: Meta = {
   title: 'Forms/KnownDate',

@@ -3,8 +3,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
 import { sendKeys } from '@web/test-runner-commands';
-import "./rubric-form.js";
-import type { LyraRubricForm, RubricKey } from "./rubric-form.js";
+import "../../lr-rubric-form.js";
+import type { LyraRubricForm, RubricKey } from "../../lr-rubric-form.js";
 import {
   hoverUntilMatched,
   resetMouse,

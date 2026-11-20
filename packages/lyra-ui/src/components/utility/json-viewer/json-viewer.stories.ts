@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './json-viewer.js';
+import '../../lr-json-viewer.js';
 import type { JsonViewerTreeSource } from './json-viewer.class.js';
-import type { LyraJsonViewer } from './json-viewer.js';
-import type { LyraClipboardWriteSuccess } from '../copy-button/copy-button.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
+import type { LyraClipboardWriteSuccess } from '../../lr-copy-button.js';
 
 const sample = {
   id: 'call_9f2e1',

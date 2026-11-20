@@ -14,7 +14,7 @@ import {
   resolveLyraLocale,
   resolveLyraString,
 } from './localization.js';
-import '../components/data/sparkline/sparkline.js';
+import '../components/lr-sparkline.js';
 import '../translations/ar.js';
 import '../translations/de.js';
 import '../translations/fa.js';
@@ -30,7 +30,7 @@ import '../translations/sr/shared.js';
 import '../translations/sr-Latn/shared.js';
 import '../translations/zh-CN.js';
 import '../translations/zh-TW.js';
-import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
+import type { LyraSparkline } from '../components/lr-sparkline.js';
 import type { LyraMessage, LyraMessageKey } from './localization-types.js';
 
 it('resolves registered locale messages and per-instance overrides', async () => {

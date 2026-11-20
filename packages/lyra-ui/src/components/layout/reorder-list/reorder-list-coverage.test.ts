@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import type { LyraReorderList } from './reorder-list.class.js';
-import './reorder-list.js';
-import './reorder-item.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
 
 it('preserves textarea Alt+ArrowDown behavior without requesting a row move', async () => {
   const list = (await fixture(html`<lr-reorder-list>

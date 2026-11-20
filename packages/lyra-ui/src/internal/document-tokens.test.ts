@@ -17,7 +17,7 @@ import { applyLyraStyleScope } from '../theme/theme.js';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../test/wtr-media.js';
 import { captureDevWarnings, expectDevWarning } from '../../test/expected-dev-warnings.js';
 import { toRgba } from '../../test/color-contrast.js';
-import '../components/layout/card/card.js';
+import '../components/lr-card.js';
 // Mode-attribute fixtures without theme.css exercise the missing-resolver diagnostic on purpose.
 expectDevWarning('lyra-style:resolver');
 

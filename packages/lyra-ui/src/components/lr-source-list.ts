@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/source-list/source-list.js';
+export * from './retrieval/source-list/source-list.class.js';
+import { LyraSourceList } from './retrieval/source-list/source-list.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('source-list', LyraSourceList);

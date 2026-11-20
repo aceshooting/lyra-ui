@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import { measurementAccess } from '../../../../test/data-grid.js';
 
 it('invalidates an offscreen measurement after a caller-owned row edit', async () => {

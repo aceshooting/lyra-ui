@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './page.js';
-import type { LyraPage } from './page.js';
+import '../../lr-page.js';
+import type { LyraPage } from '../../lr-page.js';
 
 const part = (el: LyraPage, name: string): HTMLElement =>
   el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;

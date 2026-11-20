@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './entity-dossier.js';
+import '../../lr-entity-dossier.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';

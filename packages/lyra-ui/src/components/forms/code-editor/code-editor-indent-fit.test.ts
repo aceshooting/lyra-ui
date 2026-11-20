@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './code-editor.js';
-import type { LyraCodeEditor } from './code-editor.js';
+import '../../lr-code-editor.js';
+import type { LyraCodeEditor } from '../../lr-code-editor.js';
 
 const textareaOf = (el: LyraCodeEditor): HTMLTextAreaElement => el.shadowRoot!.querySelector('textarea')!;
 

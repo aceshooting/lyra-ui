@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { EvalDatasetSource, EvalExample, LyraEvalDataset } from './eval-dataset.class.js';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 
 const rows = [{ key: 'example', order: 0, value: { id: 'example', input: 'Question', tags: ['topic'] } }];
 const available = { total: 1, values: [{ key: 'topic', label: 'Topic' }], unavailableSelected: [] };

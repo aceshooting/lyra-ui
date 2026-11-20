@@ -271,7 +271,7 @@ async function isolatedAppearance(withSheet: boolean) {
   script.type = 'module';
   script.textContent = `
     import * as theme from ${JSON.stringify(new URL('./theme.ts', import.meta.url).href)};
-    import ${JSON.stringify(new URL('../components/layout/app-rail/app-rail.ts', import.meta.url).href)};
+    import ${JSON.stringify(new URL('../components/lr-app-rail.ts', import.meta.url).href)};
     window.appearanceTheme = theme;
     window.frameElement.dispatchEvent(new Event('appearance-ready'));
   `;

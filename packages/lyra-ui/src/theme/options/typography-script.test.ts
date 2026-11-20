@@ -1,9 +1,9 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { applyLyraStyleScope, type LyraThemeTokens } from '../theme.js';
-import '../../components/layout/card/card.js';
-import '../../components/forms/textarea/textarea.js';
-import type { LyraCard } from '../../components/layout/card/card.js';
-import type { LyraTextarea } from '../../components/forms/textarea/textarea.js';
+import '../../components/lr-card.js';
+import '../../components/lr-textarea.js';
+import type { LyraCard } from '../../components/lr-card.js';
+import type { LyraTextarea } from '../../components/lr-textarea.js';
 
 describe('script typography and line breaking', function () {
   this.retries(0);

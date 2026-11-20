@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraTooltip } from './tooltip.class.js';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 
 interface Sample {
   position: string;

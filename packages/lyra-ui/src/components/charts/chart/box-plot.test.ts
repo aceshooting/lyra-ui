@@ -1,8 +1,8 @@
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
-import './box-plot.js';
-import type { LyraBoxPlot, LyraBoxPlotSummary } from './box-plot.js';
+import '../../lr-box-plot.js';
+import type { LyraBoxPlot, LyraBoxPlotSummary } from '../../lr-box-plot.js';
 import { loadBoxPlotAndRegister, LyraBoxPlot as LyraBoxPlotClass } from './box-plot.class.js';
 import type { ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';

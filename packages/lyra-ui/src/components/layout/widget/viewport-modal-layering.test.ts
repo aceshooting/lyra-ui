@@ -1,12 +1,12 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { observeOverlayStack } from '../../../internal/overlay-stack.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
-import type { LyraAppRail } from '../app-rail/app-rail.js';
-import type { LyraWidget } from './widget.js';
-import '../../overlays/dialog/dialog.js';
-import '../app-rail/app-rail.js';
-import './widget.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import type { LyraAppRail } from '../../lr-app-rail.js';
+import type { LyraWidget } from '../../lr-widget.js';
+import '../../lr-dialog.js';
+import '../../lr-app-rail.js';
+import '../../lr-widget.js';
 
 function topModalHost(): HTMLElement | undefined {
   let top: HTMLElement | undefined;

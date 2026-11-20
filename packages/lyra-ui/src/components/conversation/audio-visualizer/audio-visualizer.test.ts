@@ -1,7 +1,7 @@
 import { fixture, expect, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
-import './audio-visualizer.js';
-import type { LyraAudioVisualizer } from './audio-visualizer.js';
+import '../../lr-audio-visualizer.js';
+import type { LyraAudioVisualizer } from '../../lr-audio-visualizer.js';
 
 interface TestOwnedAnimationFrame {
   readonly pending: boolean;

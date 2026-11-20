@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/chat-message/chat-message.js';
+export * from './conversation/chat-message/chat-message.class.js';
+import { LyraChatMessage } from './conversation/chat-message/chat-message.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('chat-message', LyraChatMessage);

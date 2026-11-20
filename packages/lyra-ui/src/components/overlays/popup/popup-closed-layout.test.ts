@@ -1,5 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './popup.js';
+import '../../lr-popup.js';
 import type { LyraPopup } from './popup.class.js';
 
 const popupOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;

@@ -13,7 +13,7 @@ tag, attribute, property, event, slot and CSS custom-property completion for HTM
 | `web-types.json` | WebStorm / IntelliJ: found automatically once the package is installed |
 | `vscode-html-data.json` | VS Code `html.customData` |
 | `vscode-css-data.json` | VS Code `css.customData` |
-| `custom-elements.json` | Custom Elements Manifest tooling (Storybook, API docs, analyzers) |
+| `custom-elements.json` | Custom Elements Manifest tooling (Storybook, API docs, analyzers); an attribute whose description repeats its property's is stored once, on the property named by `fieldName` |
 
 ## Install
 

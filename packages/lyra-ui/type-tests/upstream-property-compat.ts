@@ -1,10 +1,10 @@
-import type { ButtonVariant, LyraButton } from '../src/components/forms/button/button.js';
-import type { LyraCombobox } from '../src/components/forms/combobox/combobox.js';
-import type { LyraInput } from '../src/components/forms/input/input.js';
-import type { LyraTextarea } from '../src/components/forms/textarea/textarea.js';
-import type { LyraDropdownItem } from '../src/components/layout/menu/dropdown-item.js';
-import type { LyraDialog } from '../src/components/overlays/dialog/dialog.js';
-import type { LyraDrawer } from '../src/components/overlays/drawer/drawer.js';
+import type { ButtonVariant, LyraButton } from '../src/components/lr-button.js';
+import type { LyraCombobox } from '../src/components/lr-combobox.js';
+import type { LyraInput } from '../src/components/lr-input.js';
+import type { LyraTextarea } from '../src/components/lr-textarea.js';
+import type { LyraDropdownItem } from '../src/components/lr-dropdown-item.js';
+import type { LyraDialog } from '../src/components/lr-dialog.js';
+import type { LyraDrawer } from '../src/components/lr-drawer.js';
 
 declare const button: LyraButton;
 const shoelaceButtonVariant: ButtonVariant = 'primary';

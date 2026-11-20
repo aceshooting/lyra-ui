@@ -153,7 +153,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
 
   protected override async scheduleUpdate(): Promise<void> {
     if (this.schema !== EMPTY_SCHEMA && this.supportedSchema && !customElements.get(tag('tool-param-form'))) {
-      await import('../tool-param-form/tool-param-form.js');
+      await import('../../lr-tool-param-form.js');
     }
     await super.scheduleUpdate();
   }

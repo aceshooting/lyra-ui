@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './time-input.js';
-import type { LyraTimeInput } from './time-input.js';
+import '../../lr-time-input.js';
+import type { LyraTimeInput } from '../../lr-time-input.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

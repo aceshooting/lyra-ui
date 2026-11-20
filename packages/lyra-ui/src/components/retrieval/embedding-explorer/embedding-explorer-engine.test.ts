@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil, aTimeout } from '@open-wc/t
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 import type { LyraPointColumns } from '../../../internal/typed-columns.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';

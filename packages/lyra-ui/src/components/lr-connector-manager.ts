@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/connector-manager/connector-manager.js';
+export * from './agent-tools/connector-manager/connector-manager.class.js';
+import './lr-button.js';
+import { LyraConnectorManager } from './agent-tools/connector-manager/connector-manager.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('connector-manager', LyraConnectorManager);

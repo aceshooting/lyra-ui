@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/spinner/spinner.js';
+export * from './overlays/spinner/spinner.class.js';
+import { LyraSpinner } from './overlays/spinner/spinner.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('spinner', LyraSpinner);

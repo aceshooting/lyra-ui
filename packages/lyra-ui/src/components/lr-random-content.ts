@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './utility/random-content/random-content.js';
+export * from './utility/random-content/random-content.class.js';
+import { LyraRandomContent } from './utility/random-content/random-content.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('random-content', LyraRandomContent);

@@ -4,8 +4,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LitElement, type PropertyValues } from 'lit';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './branch-picker.js';
-import type { LyraBranchPicker } from './branch-picker.js';
+import '../../lr-branch-picker.js';
+import type { LyraBranchPicker } from '../../lr-branch-picker.js';
 
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('ar-EG', [

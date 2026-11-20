@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './dialog.js';
+import '../../lr-dialog.js';
 import type { LyraDialog } from './dialog.class.js';
 
 function panelName(el: LyraDialog): string {

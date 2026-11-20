@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraButton } from './button.class.js';
-import './button.js';
+import '../../lr-button.js';
 
 describe('button custom validity assigned while validation is barred', () => {
   for (const mode of ['disabled', 'fieldset', 'loading', 'link'] as const) {

@@ -1,0 +1,150 @@
+{
+ "$comment": "Published, undeprecated member names removed outright in 32.0.0, with the member that replaces each. Retired names whose published replacement is one of these resolve through this list to a current member.",
+ "schemaVersion": 1,
+ "removedIn": "32.0.0",
+ "successors": [
+  {
+   "key": {
+    "tag": "lr-artifact-panel",
+    "kind": "event",
+    "name": "lr-view-change"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-artifact-view-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-artifact-panel",
+    "kind": "event",
+    "name": "lr-view-change-request"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-artifact-view-change-request"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-calendar",
+    "kind": "event",
+    "name": "lr-view-change"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-month-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-entity-dossier",
+    "kind": "event",
+    "name": "lr-toggle"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-retrieval-disclosure-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-graph",
+    "kind": "event",
+    "name": "lr-view-change"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-graph-view-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-knowledge-graph-explorer",
+    "kind": "event",
+    "name": "lr-view-change"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-graph-view-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-map-anchor",
+    "kind": "event",
+    "name": "lr-close"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-map-anchor-dismiss"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-map-anchor",
+    "kind": "event",
+    "name": "lr-close-request"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-map-anchor-dismiss-request"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-memory-panel",
+    "kind": "event",
+    "name": "lr-toggle"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-retrieval-disclosure-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-provenance-panel",
+    "kind": "event",
+    "name": "lr-toggle"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-retrieval-disclosure-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-retrieval-trace",
+    "kind": "event",
+    "name": "lr-toggle"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-retrieval-disclosure-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-widget",
+    "kind": "event",
+    "name": "lr-view-change"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-widget-view-change"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-widget",
+    "kind": "event",
+    "name": "lr-view-request"
+   },
+   "replacement": {
+    "kind": "event",
+    "name": "lr-widget-view-request"
+   }
+  }
+ ]
+}

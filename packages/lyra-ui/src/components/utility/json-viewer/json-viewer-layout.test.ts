@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import './json-viewer.js';
-import type { LyraJsonViewer } from './json-viewer.js';
+import '../../lr-json-viewer.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
 
 const data = { monthly_contribution_amount: 20000, status: 'approved', nested: { amount: 12.5 } };
 

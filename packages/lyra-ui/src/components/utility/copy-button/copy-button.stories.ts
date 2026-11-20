@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './copy-button.js';
-import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from './copy-button.js';
+import '../../lr-copy-button.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../lr-copy-button.js';
 
 const meta: Meta = {
   title: 'CopyButton',

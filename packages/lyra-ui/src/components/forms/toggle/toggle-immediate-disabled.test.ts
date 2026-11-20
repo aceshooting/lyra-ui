@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraToggle } from './toggle.class.js';
-import './toggle.js';
+import '../../lr-toggle.js';
 
 for (const pressed of [false, true]) {
   it(`keeps a ${pressed ? 'pressed' : 'released'} toggle unchanged when disabled during click capture`, async () => {

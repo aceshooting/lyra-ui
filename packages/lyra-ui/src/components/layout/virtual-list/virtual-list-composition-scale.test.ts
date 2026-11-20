@@ -3,7 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { setVirtualListCompositionProfile } from '../../../internal/virtual-list-composition.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.class.js';
 
 async function settle(el: LyraVirtualList) {

@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './tree-item.js';
-import './tree.js';
-import { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree-item.js';
+import '../../lr-tree.js';
+import { LyraTreeItem } from '../../lr-tree-item.js';
 import type { LyraTree } from './tree.class.js';
 import {
   configureTreeItemOwner,

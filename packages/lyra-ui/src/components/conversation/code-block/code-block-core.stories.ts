@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import jsonGrammar from "shiki/langs/json.mjs";
 import tsGrammar from "shiki/langs/typescript.mjs";
-import "./code-block-core.js";
+import "../../lr-code-block-core.js";
 
 const meta: Meta = {
   title: "CodeBlockCore",

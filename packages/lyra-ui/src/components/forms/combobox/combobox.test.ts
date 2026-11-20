@@ -2,17 +2,17 @@ import { measureListboxRow } from '../../../../test/row-style.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
-import "./combobox.js";
-import "./option.js";
-import "../input/input.js";
-import "../select/select.js";
-import "../button/button.js";
-import "../token-input/token-input.js";
-import "../color-picker/color-picker.js";
-import "../../layout/segmented/segmented.js";
-import type { ComboboxSourceRow, LyraCombobox } from "./combobox.js";
-import type { LyraOption } from "./option.js";
-import type { LyraColorPicker } from "../color-picker/color-picker.js";
+import "../../lr-combobox.js";
+import "../../lr-option.js";
+import "../../lr-input.js";
+import "../../lr-select.js";
+import "../../lr-button.js";
+import "../../lr-token-input.js";
+import "../../lr-color-picker.js";
+import "../../lr-segmented.js";
+import type { ComboboxSourceRow, LyraCombobox } from "../../lr-combobox.js";
+import type { LyraOption } from "../../lr-option.js";
+import type { LyraColorPicker } from "../../lr-color-picker.js";
 import { styles } from "./combobox.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { chooseOption } from "../../../testing/interaction-drivers.js";
@@ -2054,7 +2054,7 @@ it("recovers loading=false when source() throws synchronously instead of returni
       throw error;
     }) as unknown as (
       query: string
-    ) => Promise<import("./combobox.js").ComboboxSourceRow[]>;
+    ) => Promise<import("../../lr-combobox.js").ComboboxSourceRow[]>;
     el.open = true;
     await el.updateComplete;
     await settleComboboxSource(el);
@@ -2078,7 +2078,7 @@ it("fails closed with the source-error state when a resolved source result's row
         get rows(): never {
           throw new Error("hostile getter");
         },
-      }) as unknown as import("./combobox.js").ComboboxSourceResult;
+      }) as unknown as import("../../lr-combobox.js").ComboboxSourceResult;
     await el.updateComplete;
     await waitUntil(() => el.shadowRoot!.querySelector('.source-error') !== null, 'the hostile result fails closed');
     await el.updateComplete;
@@ -2096,8 +2096,8 @@ it("fails closed with the source-error state when a resolved source result's row
 });
 
 it("invalidates an in-flight request when source is replaced and clamps active state after shrink", async () => {
-  let resolveOld!: (rows: import("./combobox.js").ComboboxSourceRow[]) => void;
-  const oldRows = new Promise<import("./combobox.js").ComboboxSourceRow[]>(
+  let resolveOld!: (rows: import("../../lr-combobox.js").ComboboxSourceRow[]) => void;
+  const oldRows = new Promise<import("../../lr-combobox.js").ComboboxSourceRow[]>(
     (resolve) => {
       resolveOld = resolve;
     }

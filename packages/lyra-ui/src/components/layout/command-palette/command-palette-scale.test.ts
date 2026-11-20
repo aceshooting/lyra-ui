@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraCommandPalette } from './command-palette.js';
+import { LyraCommandPalette } from '../../lr-command-palette.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('coalesces 1,000 command registrations into one ownership update', async () => {
   const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);

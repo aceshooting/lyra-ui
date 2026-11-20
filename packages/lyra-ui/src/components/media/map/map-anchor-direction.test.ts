@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 it('settles an open closable anchor after inherited direction changes', async () => {
   const observer = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');

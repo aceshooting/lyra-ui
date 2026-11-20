@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './eval-result.js';
+import '../../lr-eval-result.js';
 import type { EvalResultSource, EvalRunResult, LyraEvalResult } from './eval-result.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';

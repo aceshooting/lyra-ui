@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import '../components/data/flow-node/flow-node.js';
-import '../components/data/flow-run-status/flow-run-status.js';
-import '../components/data/stat/stat.js';
+import '../components/lr-flow-node.js';
+import '../components/lr-flow-run-status.js';
+import '../components/lr-stat.js';
 
 /**
  * A `var(--lr-…)` naming a token that is never declared, with no fallback, is not a style that

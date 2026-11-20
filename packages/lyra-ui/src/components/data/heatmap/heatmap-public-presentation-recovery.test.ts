@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import type { LyraHeatmap } from './heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 import type { LyraHeatmapMatrixSource, LyraHeatmapTile } from './heatmap-matrix-source.js';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 
 const data = { kind: 'matrix' as const, rowLabels: ['Row'], colLabels: ['Alpha', 'Beta', 'Gamma', 'Delta'], values: [[1, 2, 3, 4]] };
 

@@ -1,9 +1,9 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import { setReducedMotion } from '../../../test/wtr-media.js';
 import { shrinkAnchorRetry } from '../../../test/viewer-scroll-test-support.js';
-import { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
-import { LyraDatasetViewer } from './dataset-viewer/dataset-viewer.js';
-import { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.js';
+import { LyraCsvViewer } from '../lr-csv-viewer.js';
+import { LyraDatasetViewer } from '../lr-dataset-viewer.js';
+import { LyraSpreadsheetViewer } from '../lr-spreadsheet-viewer.js';
 
 type Viewer = LyraCsvViewer | LyraDatasetViewer | LyraSpreadsheetViewer;
 const viewers = {

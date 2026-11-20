@@ -1,8 +1,8 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './path-strip.js';
-import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
+import '../../lr-path-strip.js';
+import type { LyraPathStrip, LyraPathElement } from '../../lr-path-strip.js';
 import { hoverUntilMatched,  resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 

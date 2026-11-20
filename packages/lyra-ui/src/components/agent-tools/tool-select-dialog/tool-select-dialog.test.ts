@@ -4,17 +4,17 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import './tool-select-dialog.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-tool-select-dialog.js';
+import '../../lr-dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type {
   LyraToolSelectDialog,
   ToolSelectDialogTool,
   ToolSelectionChangeDetail,
-} from './tool-select-dialog.js';
-import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
-import type { LyraSwitch } from '../../forms/switch/switch.js';
+} from '../../lr-tool-select-dialog.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
+import type { LyraSwitch } from '../../lr-switch.js';
 import {
   hoverUntilMatched,
   resetMouse,

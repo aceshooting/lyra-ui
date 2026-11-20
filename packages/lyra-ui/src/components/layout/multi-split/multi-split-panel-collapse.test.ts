@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './multi-split.js';
+import '../../lr-multi-split.js';
 import type {
   LyraMultiSplit,
   LyraMultiSplitPanelCollapseChangeDetail,

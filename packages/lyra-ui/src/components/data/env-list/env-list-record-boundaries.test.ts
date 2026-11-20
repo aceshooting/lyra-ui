@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraEnvList } from './env-list.js';
-import './env-list.js';
+import type { LyraEnvList } from '../../lr-env-list.js';
+import '../../lr-env-list.js';
 
 it('omits incomplete environment records without reserving their names or rendering their values', async () => {
   const element = await fixture<LyraEnvList>(html`<lr-env-list></lr-env-list>`);

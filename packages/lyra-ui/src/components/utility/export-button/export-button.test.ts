@@ -3,11 +3,11 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './export-button.js';
+import '../../lr-export-button.js';
 import type {
   LyraExportButton,
   LyraExportFormatDescriptor,
-} from './export-button.js';
+} from '../../lr-export-button.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
 

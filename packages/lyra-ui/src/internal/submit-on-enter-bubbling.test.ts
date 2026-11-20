@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { dispatchEnterKey, settleEnterSubmission } from '../../test/contracts/enter-submit.js';
-import '../components/forms/input/input.js';
-import '../components/forms/input/number-input.js';
-import '../components/forms/input/native-time-input.js';
+import '../components/lr-input.js';
+import '../components/lr-number-input.js';
+import '../components/lr-native-time-input.js';
 
 type InputHost = HTMLElement & { updateComplete: Promise<unknown> };
 

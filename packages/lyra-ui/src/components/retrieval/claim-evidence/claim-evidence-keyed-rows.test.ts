@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './claim-evidence.js';
+import '../../lr-claim-evidence.js';
 import type { GroundedClaim } from '../../../ai/types.js';
-import type { LyraClaimEvidence } from './claim-evidence.js';
+import type { LyraClaimEvidence } from '../../lr-claim-evidence.js';
 
 const claim = (id: string): GroundedClaim => ({ id, text: `${id} claim`, status: 'supported', citationIds: [] });
 

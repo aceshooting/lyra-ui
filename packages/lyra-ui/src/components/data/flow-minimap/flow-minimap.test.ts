@@ -1,9 +1,9 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import '../flow-canvas/flow-canvas.js';
-import './flow-minimap.js';
-import type { LyraFlowMinimap } from './flow-minimap.js';
-import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-minimap.js';
+import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 

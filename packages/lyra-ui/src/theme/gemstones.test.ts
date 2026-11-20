@@ -8,7 +8,7 @@ import { palette } from '../internal/tokens/palette.styles.js';
 import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from './gemstones.js';
 import { applyLyraPreferences } from './preferences.js';
 import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.class.js';
-import '../components/forms/swatch-picker/swatch-picker.js';
+import '../components/lr-swatch-picker.js';
 
 function renderGlyph(tpl: ReturnType<typeof gemstoneGlyph>): SVGElement {
   const container = document.createElement('div');

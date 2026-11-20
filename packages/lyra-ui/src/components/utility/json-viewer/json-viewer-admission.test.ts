@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './json-viewer.js';
-import type { LyraJsonViewer } from './json-viewer.js';
+import '../../lr-json-viewer.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
 
 let originalClipboard: PropertyDescriptor | undefined;
 beforeEach(() => {

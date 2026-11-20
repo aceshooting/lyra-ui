@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './permission-rules.js';
+import '../../lr-permission-rules.js';
 import type { PermissionRule } from './permission-rules.class.js';
 
 const meta: Meta = {

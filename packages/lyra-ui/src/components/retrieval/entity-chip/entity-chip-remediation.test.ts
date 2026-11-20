@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './entity-chip.js';
-import type { LyraEntityChip } from './entity-chip.js';
+import '../../lr-entity-chip.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
 
 for (const attribute of ['text', 'type'] as const) {
   it(`treats removed ${attribute} as absent while retaining null and allowing recovery`, async () => {

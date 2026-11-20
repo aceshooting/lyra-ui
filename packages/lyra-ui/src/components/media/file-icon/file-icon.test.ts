@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './file-icon.js';
-import type { LyraFileIcon } from './file-icon.js';
+import '../../lr-file-icon.js';
+import type { LyraFileIcon } from '../../lr-file-icon.js';
 import {
   createFileTypeMetadataRegistry,
   getFileTypeMetadata,

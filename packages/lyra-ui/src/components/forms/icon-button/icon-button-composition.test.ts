@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './icon-button.js';
+import '../../lr-icon-button.js';
 import type { LyraIconButton } from './icon-button.class.js';
 import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from '../../../theme/gemstones.js';
 

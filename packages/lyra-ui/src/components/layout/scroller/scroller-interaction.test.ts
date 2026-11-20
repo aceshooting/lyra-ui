@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './scroller.js';
+import '../../lr-scroller.js';
 import type { LyraScroller } from './scroller.class.js';
 
 async function strip(): Promise<{ el: LyraScroller; seen: string[] }> {

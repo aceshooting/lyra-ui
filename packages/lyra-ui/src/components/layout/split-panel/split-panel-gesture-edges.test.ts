@@ -1,6 +1,6 @@
 import { elementUpdated, expect, fixture, html } from '@open-wc/testing';
-import './split-panel.js';
-import type { LyraSplitPanel } from './split-panel.js';
+import '../../lr-split-panel.js';
+import type { LyraSplitPanel } from '../../lr-split-panel.js';
 
 function divider(element: LyraSplitPanel): HTMLElement {
   const handle = element.shadowRoot!.querySelector<HTMLElement>('[part~="divider"]')!;

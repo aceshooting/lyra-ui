@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import './data-grid.js';
+import '../../lr-data-grid.js';
 import type { DataGridColumn, DataGridFilterType } from './data-grid-types.js';
 import { aggregateValues, columnId, columnValue, filterRows, matchesFilter, pathValue, rowsAsDelimited, searchRows, sortRows } from './data-grid-processing.js';
 import { type Person, columns, rows } from '../../../../test/data-grid.js';

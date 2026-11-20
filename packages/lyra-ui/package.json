@@ -352,1247 +352,1247 @@
     "./components/layout/virtual-list/virtual-list.class.js": "./dist/components/layout/virtual-list/virtual-list.class.js",
     "./components/layout/widget/widget.class.js": "./dist/components/layout/widget/widget.class.js",
     "./components/lr-accordion-item.js": {
-      "types": "./dist/components/layout/details/accordion-item.d.ts",
+      "types": "./dist/components/lr-accordion-item.d.ts",
       "default": "./dist/components/lr-accordion-item.js"
     },
     "./components/lr-accordion.js": {
-      "types": "./dist/components/layout/details/accordion.d.ts",
+      "types": "./dist/components/lr-accordion.d.ts",
       "default": "./dist/components/lr-accordion.js"
     },
     "./components/lr-activity-feed.js": {
-      "types": "./dist/components/agent-tools/activity-feed/activity-feed.d.ts",
+      "types": "./dist/components/lr-activity-feed.d.ts",
       "default": "./dist/components/lr-activity-feed.js"
     },
     "./components/lr-agent-eval-dashboard.js": {
-      "types": "./dist/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.d.ts",
+      "types": "./dist/components/lr-agent-eval-dashboard.d.ts",
       "default": "./dist/components/lr-agent-eval-dashboard.js"
     },
     "./components/lr-agent-question.js": {
-      "types": "./dist/components/agent-tools/agent-question/agent-question.d.ts",
+      "types": "./dist/components/lr-agent-question.d.ts",
       "default": "./dist/components/lr-agent-question.js"
     },
     "./components/lr-agent-run.js": {
-      "types": "./dist/components/agent-tools/agent-run/agent-run.d.ts",
+      "types": "./dist/components/lr-agent-run.d.ts",
       "default": "./dist/components/lr-agent-run.js"
     },
     "./components/lr-agent-trace.js": {
-      "types": "./dist/components/agent-tools/agent-trace/agent-trace.d.ts",
+      "types": "./dist/components/lr-agent-trace.d.ts",
       "default": "./dist/components/lr-agent-trace.js"
     },
     "./components/lr-agent-workspace.js": {
-      "types": "./dist/components/conversation/agent-workspace/agent-workspace.d.ts",
+      "types": "./dist/components/lr-agent-workspace.d.ts",
       "default": "./dist/components/lr-agent-workspace.js"
     },
     "./components/lr-alert.js": {
-      "types": "./dist/components/overlays/alert/alert.d.ts",
+      "types": "./dist/components/lr-alert.d.ts",
       "default": "./dist/components/lr-alert.js"
     },
     "./components/lr-animated-image.js": {
-      "types": "./dist/components/media/animated-image/animated-image.d.ts",
+      "types": "./dist/components/lr-animated-image.d.ts",
       "default": "./dist/components/lr-animated-image.js"
     },
     "./components/lr-animation.js": {
-      "types": "./dist/components/media/animation/animation.d.ts",
+      "types": "./dist/components/lr-animation.d.ts",
       "default": "./dist/components/lr-animation.js"
     },
     "./components/lr-app-rail-group.js": {
-      "types": "./dist/components/layout/app-rail-group/app-rail-group.d.ts",
+      "types": "./dist/components/lr-app-rail-group.d.ts",
       "default": "./dist/components/lr-app-rail-group.js"
     },
     "./components/lr-app-rail-item.js": {
-      "types": "./dist/components/layout/app-rail/app-rail-item.d.ts",
+      "types": "./dist/components/lr-app-rail-item.d.ts",
       "default": "./dist/components/lr-app-rail-item.js"
     },
     "./components/lr-app-rail.js": {
-      "types": "./dist/components/layout/app-rail/app-rail.d.ts",
+      "types": "./dist/components/lr-app-rail.d.ts",
       "default": "./dist/components/lr-app-rail.js"
     },
     "./components/lr-approval-queue.js": {
-      "types": "./dist/components/agent-tools/approval-queue/approval-queue.d.ts",
+      "types": "./dist/components/lr-approval-queue.d.ts",
       "default": "./dist/components/lr-approval-queue.js"
     },
     "./components/lr-archive-viewer.js": {
-      "types": "./dist/components/viewers/archive-viewer/archive-viewer.d.ts",
+      "types": "./dist/components/lr-archive-viewer.d.ts",
       "default": "./dist/components/lr-archive-viewer.js"
     },
     "./components/lr-artifact-panel.js": {
-      "types": "./dist/components/agent-tools/artifact-panel/artifact-panel.d.ts",
+      "types": "./dist/components/lr-artifact-panel.d.ts",
       "default": "./dist/components/lr-artifact-panel.js"
     },
     "./components/lr-attachment-chip.js": {
-      "types": "./dist/components/media/attachment-chip/attachment-chip.d.ts",
+      "types": "./dist/components/lr-attachment-chip.d.ts",
       "default": "./dist/components/lr-attachment-chip.js"
     },
     "./components/lr-attachment-trigger.js": {
-      "types": "./dist/components/media/attachment-trigger/attachment-trigger.d.ts",
+      "types": "./dist/components/lr-attachment-trigger.d.ts",
       "default": "./dist/components/lr-attachment-trigger.js"
     },
     "./components/lr-audio-visualizer.js": {
-      "types": "./dist/components/conversation/audio-visualizer/audio-visualizer.d.ts",
+      "types": "./dist/components/lr-audio-visualizer.d.ts",
       "default": "./dist/components/lr-audio-visualizer.js"
     },
     "./components/lr-av-player.js": {
-      "types": "./dist/components/media/av-player/av-player.d.ts",
+      "types": "./dist/components/lr-av-player.d.ts",
       "default": "./dist/components/lr-av-player.js"
     },
     "./components/lr-avatar-group.js": {
-      "types": "./dist/components/media/avatar-group/avatar-group.d.ts",
+      "types": "./dist/components/lr-avatar-group.d.ts",
       "default": "./dist/components/lr-avatar-group.js"
     },
     "./components/lr-avatar.js": {
-      "types": "./dist/components/media/avatar/avatar.d.ts",
+      "types": "./dist/components/lr-avatar.d.ts",
       "default": "./dist/components/lr-avatar.js"
     },
     "./components/lr-background-runs.js": {
-      "types": "./dist/components/agent-tools/background-runs/background-runs.d.ts",
+      "types": "./dist/components/lr-background-runs.d.ts",
       "default": "./dist/components/lr-background-runs.js"
     },
     "./components/lr-badge.js": {
-      "types": "./dist/components/overlays/badge/badge.d.ts",
+      "types": "./dist/components/lr-badge.d.ts",
       "default": "./dist/components/lr-badge.js"
     },
     "./components/lr-bar-chart.js": {
-      "types": "./dist/components/charts/chart/bar-chart.d.ts",
+      "types": "./dist/components/lr-bar-chart.d.ts",
       "default": "./dist/components/lr-bar-chart.js"
     },
     "./components/lr-box-plot.js": {
-      "types": "./dist/components/charts/chart/box-plot.d.ts",
+      "types": "./dist/components/lr-box-plot.d.ts",
       "default": "./dist/components/lr-box-plot.js"
     },
     "./components/lr-branch-picker.js": {
-      "types": "./dist/components/conversation/branch-picker/branch-picker.d.ts",
+      "types": "./dist/components/lr-branch-picker.d.ts",
       "default": "./dist/components/lr-branch-picker.js"
     },
     "./components/lr-breadcrumb-item.js": {
-      "types": "./dist/components/layout/breadcrumb/breadcrumb-item.d.ts",
+      "types": "./dist/components/lr-breadcrumb-item.d.ts",
       "default": "./dist/components/lr-breadcrumb-item.js"
     },
     "./components/lr-breadcrumb.js": {
-      "types": "./dist/components/layout/breadcrumb/breadcrumb.d.ts",
+      "types": "./dist/components/lr-breadcrumb.d.ts",
       "default": "./dist/components/lr-breadcrumb.js"
     },
     "./components/lr-browser-frame.js": {
-      "types": "./dist/components/agent-tools/browser-frame/browser-frame.d.ts",
+      "types": "./dist/components/lr-browser-frame.d.ts",
       "default": "./dist/components/lr-browser-frame.js"
     },
     "./components/lr-bubble-chart.js": {
-      "types": "./dist/components/charts/chart/bubble-chart.d.ts",
+      "types": "./dist/components/lr-bubble-chart.d.ts",
       "default": "./dist/components/lr-bubble-chart.js"
     },
     "./components/lr-budget-meter.js": {
-      "types": "./dist/components/agent-tools/budget-meter/budget-meter.d.ts",
+      "types": "./dist/components/lr-budget-meter.d.ts",
       "default": "./dist/components/lr-budget-meter.js"
     },
     "./components/lr-button-group.js": {
-      "types": "./dist/components/layout/button-group/button-group.d.ts",
+      "types": "./dist/components/lr-button-group.d.ts",
       "default": "./dist/components/lr-button-group.js"
     },
     "./components/lr-button.js": {
-      "types": "./dist/components/forms/button/button.d.ts",
+      "types": "./dist/components/lr-button.d.ts",
       "default": "./dist/components/lr-button.js"
     },
     "./components/lr-calendar-viewer.js": {
-      "types": "./dist/components/viewers/calendar-viewer/calendar-viewer.d.ts",
+      "types": "./dist/components/lr-calendar-viewer.d.ts",
       "default": "./dist/components/lr-calendar-viewer.js"
     },
     "./components/lr-calendar.js": {
-      "types": "./dist/components/data/calendar/calendar.d.ts",
+      "types": "./dist/components/lr-calendar.d.ts",
       "default": "./dist/components/lr-calendar.js"
     },
     "./components/lr-callout.js": {
-      "types": "./dist/components/overlays/callout/callout.d.ts",
+      "types": "./dist/components/lr-callout.d.ts",
       "default": "./dist/components/lr-callout.js"
     },
     "./components/lr-card.js": {
-      "types": "./dist/components/layout/card/card.d.ts",
+      "types": "./dist/components/lr-card.d.ts",
       "default": "./dist/components/lr-card.js"
     },
     "./components/lr-carousel-item.js": {
-      "types": "./dist/components/layout/carousel/carousel-item.d.ts",
+      "types": "./dist/components/lr-carousel-item.d.ts",
       "default": "./dist/components/lr-carousel-item.js"
     },
     "./components/lr-carousel.js": {
-      "types": "./dist/components/layout/carousel/carousel.d.ts",
+      "types": "./dist/components/lr-carousel.d.ts",
       "default": "./dist/components/lr-carousel.js"
     },
     "./components/lr-change-review.js": {
-      "types": "./dist/components/agent-tools/change-review/change-review.d.ts",
+      "types": "./dist/components/lr-change-review.d.ts",
       "default": "./dist/components/lr-change-review.js"
     },
     "./components/lr-chart-3d.js": {
-      "types": "./dist/components/charts/chart-3d/chart-3d.d.ts",
+      "types": "./dist/components/lr-chart-3d.d.ts",
       "default": "./dist/components/lr-chart-3d.js"
     },
     "./components/lr-chart.js": {
-      "types": "./dist/components/charts/chart/chart.d.ts",
+      "types": "./dist/components/lr-chart.d.ts",
       "default": "./dist/components/lr-chart.js"
     },
     "./components/lr-chat-composer.js": {
-      "types": "./dist/components/conversation/chat-composer/chat-composer.d.ts",
+      "types": "./dist/components/lr-chat-composer.d.ts",
       "default": "./dist/components/lr-chat-composer.js"
     },
     "./components/lr-chat-message.js": {
-      "types": "./dist/components/conversation/chat-message/chat-message.d.ts",
+      "types": "./dist/components/lr-chat-message.d.ts",
       "default": "./dist/components/lr-chat-message.js"
     },
     "./components/lr-chat-viewport.js": {
-      "types": "./dist/components/conversation/chat-viewport/chat-viewport.d.ts",
+      "types": "./dist/components/lr-chat-viewport.d.ts",
       "default": "./dist/components/lr-chat-viewport.js"
     },
     "./components/lr-checkbox-group.js": {
-      "types": "./dist/components/forms/checkbox-group/checkbox-group.d.ts",
+      "types": "./dist/components/lr-checkbox-group.d.ts",
       "default": "./dist/components/lr-checkbox-group.js"
     },
     "./components/lr-checkbox.js": {
-      "types": "./dist/components/forms/checkbox/checkbox.d.ts",
+      "types": "./dist/components/lr-checkbox.d.ts",
       "default": "./dist/components/lr-checkbox.js"
     },
     "./components/lr-checkpoint.js": {
-      "types": "./dist/components/conversation/checkpoint/checkpoint.d.ts",
+      "types": "./dist/components/lr-checkpoint.d.ts",
       "default": "./dist/components/lr-checkpoint.js"
     },
     "./components/lr-chip-group.js": {
-      "types": "./dist/components/overlays/chip/chip-group.d.ts",
+      "types": "./dist/components/lr-chip-group.d.ts",
       "default": "./dist/components/lr-chip-group.js"
     },
     "./components/lr-chip.js": {
-      "types": "./dist/components/overlays/chip/chip.d.ts",
+      "types": "./dist/components/lr-chip.d.ts",
       "default": "./dist/components/lr-chip.js"
     },
     "./components/lr-chunk-inspector.js": {
-      "types": "./dist/components/retrieval/chunk-inspector/chunk-inspector.d.ts",
+      "types": "./dist/components/lr-chunk-inspector.d.ts",
       "default": "./dist/components/lr-chunk-inspector.js"
     },
     "./components/lr-citation-badge.js": {
-      "types": "./dist/components/retrieval/citation-badge/citation-badge.d.ts",
+      "types": "./dist/components/lr-citation-badge.d.ts",
       "default": "./dist/components/lr-citation-badge.js"
     },
     "./components/lr-claim-evidence.js": {
-      "types": "./dist/components/retrieval/claim-evidence/claim-evidence.d.ts",
+      "types": "./dist/components/lr-claim-evidence.d.ts",
       "default": "./dist/components/lr-claim-evidence.js"
     },
     "./components/lr-code-block-core.js": {
-      "types": "./dist/components/conversation/code-block/code-block-core.d.ts",
+      "types": "./dist/components/lr-code-block-core.d.ts",
       "default": "./dist/components/lr-code-block-core.js"
     },
     "./components/lr-code-block.js": {
-      "types": "./dist/components/conversation/code-block/code-block.d.ts",
+      "types": "./dist/components/lr-code-block.d.ts",
       "default": "./dist/components/lr-code-block.js"
     },
     "./components/lr-code-editor.js": {
-      "types": "./dist/components/forms/code-editor/code-editor.d.ts",
+      "types": "./dist/components/lr-code-editor.d.ts",
       "default": "./dist/components/lr-code-editor.js"
     },
     "./components/lr-color-picker.js": {
-      "types": "./dist/components/forms/color-picker/color-picker.d.ts",
+      "types": "./dist/components/lr-color-picker.d.ts",
       "default": "./dist/components/lr-color-picker.js"
     },
     "./components/lr-combobox.js": {
-      "types": "./dist/components/forms/combobox/combobox.d.ts",
+      "types": "./dist/components/lr-combobox.d.ts",
       "default": "./dist/components/lr-combobox.js"
     },
     "./components/lr-command-palette.js": {
-      "types": "./dist/components/layout/command-palette/command-palette.d.ts",
+      "types": "./dist/components/lr-command-palette.d.ts",
       "default": "./dist/components/lr-command-palette.js"
     },
     "./components/lr-commit-card.js": {
-      "types": "./dist/components/agent-tools/commit-card/commit-card.d.ts",
+      "types": "./dist/components/lr-commit-card.d.ts",
       "default": "./dist/components/lr-commit-card.js"
     },
     "./components/lr-community-card.js": {
-      "types": "./dist/components/retrieval/community-card/community-card.d.ts",
+      "types": "./dist/components/lr-community-card.d.ts",
       "default": "./dist/components/lr-community-card.js"
     },
     "./components/lr-compare-panel.js": {
-      "types": "./dist/components/agent-tools/compare-panel/compare-panel.d.ts",
+      "types": "./dist/components/lr-compare-panel.d.ts",
       "default": "./dist/components/lr-compare-panel.js"
     },
     "./components/lr-condition-builder.js": {
-      "types": "./dist/components/data/condition-builder/condition-builder.d.ts",
+      "types": "./dist/components/lr-condition-builder.d.ts",
       "default": "./dist/components/lr-condition-builder.js"
     },
     "./components/lr-confirm-bar.js": {
-      "types": "./dist/components/agent-tools/confirm-bar/confirm-bar.d.ts",
+      "types": "./dist/components/lr-confirm-bar.d.ts",
       "default": "./dist/components/lr-confirm-bar.js"
     },
     "./components/lr-connector-manager.js": {
-      "types": "./dist/components/agent-tools/connector-manager/connector-manager.d.ts",
+      "types": "./dist/components/lr-connector-manager.d.ts",
       "default": "./dist/components/lr-connector-manager.js"
     },
     "./components/lr-contact-viewer.js": {
-      "types": "./dist/components/viewers/contact-viewer/contact-viewer.d.ts",
+      "types": "./dist/components/lr-contact-viewer.d.ts",
       "default": "./dist/components/lr-contact-viewer.js"
     },
     "./components/lr-context-inspector.js": {
-      "types": "./dist/components/agent-tools/context-inspector/context-inspector.d.ts",
+      "types": "./dist/components/lr-context-inspector.d.ts",
       "default": "./dist/components/lr-context-inspector.js"
     },
     "./components/lr-context-menu.js": {
-      "types": "./dist/components/overlays/context-menu/context-menu.d.ts",
+      "types": "./dist/components/lr-context-menu.d.ts",
       "default": "./dist/components/lr-context-menu.js"
     },
     "./components/lr-context-meter.js": {
-      "types": "./dist/components/data/context-meter/context-meter.d.ts",
+      "types": "./dist/components/lr-context-meter.d.ts",
       "default": "./dist/components/lr-context-meter.js"
     },
     "./components/lr-control-group.js": {
-      "types": "./dist/components/layout/control-group/control-group.d.ts",
+      "types": "./dist/components/lr-control-group.d.ts",
       "default": "./dist/components/lr-control-group.js"
     },
     "./components/lr-conversation-item.js": {
-      "types": "./dist/components/conversation/conversation-item/conversation-item.d.ts",
+      "types": "./dist/components/lr-conversation-item.d.ts",
       "default": "./dist/components/lr-conversation-item.js"
     },
     "./components/lr-copy-button.js": {
-      "types": "./dist/components/utility/copy-button/copy-button.d.ts",
+      "types": "./dist/components/lr-copy-button.d.ts",
       "default": "./dist/components/lr-copy-button.js"
     },
     "./components/lr-country-picker.js": {
-      "types": "./dist/components/forms/country-picker/country-picker.d.ts",
+      "types": "./dist/components/lr-country-picker.d.ts",
       "default": "./dist/components/lr-country-picker.js"
     },
     "./components/lr-csv-viewer.js": {
-      "types": "./dist/components/viewers/csv-viewer/csv-viewer.d.ts",
+      "types": "./dist/components/lr-csv-viewer.d.ts",
       "default": "./dist/components/lr-csv-viewer.js"
     },
     "./components/lr-currency-picker.js": {
-      "types": "./dist/components/forms/currency-picker/currency-picker.d.ts",
+      "types": "./dist/components/lr-currency-picker.d.ts",
       "default": "./dist/components/lr-currency-picker.js"
     },
     "./components/lr-dashboard-grid.js": {
-      "types": "./dist/components/layout/dashboard-grid/dashboard-grid.d.ts",
+      "types": "./dist/components/lr-dashboard-grid.d.ts",
       "default": "./dist/components/lr-dashboard-grid.js"
     },
     "./components/lr-data-grid.js": {
-      "types": "./dist/components/data/data-grid/data-grid.d.ts",
+      "types": "./dist/components/lr-data-grid.d.ts",
       "default": "./dist/components/lr-data-grid.js"
     },
     "./components/lr-dataset-viewer.js": {
-      "types": "./dist/components/viewers/dataset-viewer/dataset-viewer.d.ts",
+      "types": "./dist/components/lr-dataset-viewer.d.ts",
       "default": "./dist/components/lr-dataset-viewer.js"
     },
     "./components/lr-date-input.js": {
-      "types": "./dist/components/forms/date-picker/date-input.d.ts",
+      "types": "./dist/components/lr-date-input.d.ts",
       "default": "./dist/components/lr-date-input.js"
     },
     "./components/lr-date-picker.js": {
-      "types": "./dist/components/forms/date-picker/date-picker.d.ts",
+      "types": "./dist/components/lr-date-picker.d.ts",
       "default": "./dist/components/lr-date-picker.js"
     },
     "./components/lr-details.js": {
-      "types": "./dist/components/layout/details/details.d.ts",
+      "types": "./dist/components/lr-details.d.ts",
       "default": "./dist/components/lr-details.js"
     },
     "./components/lr-dialog.js": {
-      "types": "./dist/components/overlays/dialog/dialog.d.ts",
+      "types": "./dist/components/lr-dialog.d.ts",
       "default": "./dist/components/lr-dialog.js"
     },
     "./components/lr-diff-view.js": {
-      "types": "./dist/components/utility/diff-view/diff-view.d.ts",
+      "types": "./dist/components/lr-diff-view.d.ts",
       "default": "./dist/components/lr-diff-view.js"
     },
     "./components/lr-divider.js": {
-      "types": "./dist/components/utility/divider/divider.d.ts",
+      "types": "./dist/components/lr-divider.d.ts",
       "default": "./dist/components/lr-divider.js"
     },
     "./components/lr-dock-panel.js": {
-      "types": "./dist/components/layout/dock-panel/dock-panel.d.ts",
+      "types": "./dist/components/lr-dock-panel.d.ts",
       "default": "./dist/components/lr-dock-panel.js"
     },
     "./components/lr-document-compare.js": {
-      "types": "./dist/components/viewers/document-compare/document-compare.d.ts",
+      "types": "./dist/components/lr-document-compare.d.ts",
       "default": "./dist/components/lr-document-compare.js"
     },
     "./components/lr-document-library.js": {
-      "types": "./dist/components/data/document-library/document-library.d.ts",
+      "types": "./dist/components/lr-document-library.d.ts",
       "default": "./dist/components/lr-document-library.js"
     },
     "./components/lr-document-preview.js": {
-      "types": "./dist/components/viewers/document-preview/document-preview.d.ts",
+      "types": "./dist/components/lr-document-preview.d.ts",
       "default": "./dist/components/lr-document-preview.js"
     },
     "./components/lr-document-viewer.js": {
-      "types": "./dist/components/viewers/document-viewer/document-viewer.d.ts",
+      "types": "./dist/components/lr-document-viewer.d.ts",
       "default": "./dist/components/lr-document-viewer.js"
     },
     "./components/lr-docx-viewer.js": {
-      "types": "./dist/components/viewers/docx-viewer/docx-viewer.d.ts",
+      "types": "./dist/components/lr-docx-viewer.d.ts",
       "default": "./dist/components/lr-docx-viewer.js"
     },
     "./components/lr-doughnut-chart.js": {
-      "types": "./dist/components/charts/chart/doughnut-chart.d.ts",
+      "types": "./dist/components/lr-doughnut-chart.d.ts",
       "default": "./dist/components/lr-doughnut-chart.js"
     },
     "./components/lr-drawer.js": {
-      "types": "./dist/components/overlays/drawer/drawer.d.ts",
+      "types": "./dist/components/lr-drawer.d.ts",
       "default": "./dist/components/lr-drawer.js"
     },
     "./components/lr-drilldown-panel.js": {
-      "types": "./dist/components/layout/drilldown-panel/drilldown-panel.d.ts",
+      "types": "./dist/components/lr-drilldown-panel.d.ts",
       "default": "./dist/components/lr-drilldown-panel.js"
     },
     "./components/lr-drop-zone.js": {
-      "types": "./dist/components/media/drop-zone/drop-zone.d.ts",
+      "types": "./dist/components/lr-drop-zone.d.ts",
       "default": "./dist/components/lr-drop-zone.js"
     },
     "./components/lr-dropdown-item.js": {
-      "types": "./dist/components/layout/menu/dropdown-item.d.ts",
+      "types": "./dist/components/lr-dropdown-item.d.ts",
       "default": "./dist/components/lr-dropdown-item.js"
     },
     "./components/lr-dropdown.js": {
-      "types": "./dist/components/overlays/overlay/dropdown.d.ts",
+      "types": "./dist/components/lr-dropdown.d.ts",
       "default": "./dist/components/lr-dropdown.js"
     },
     "./components/lr-ebook-viewer.js": {
-      "types": "./dist/components/viewers/ebook-viewer/ebook-viewer.d.ts",
+      "types": "./dist/components/lr-ebook-viewer.d.ts",
       "default": "./dist/components/lr-ebook-viewer.js"
     },
     "./components/lr-email-viewer.js": {
-      "types": "./dist/components/viewers/email-viewer/email-viewer.d.ts",
+      "types": "./dist/components/lr-email-viewer.d.ts",
       "default": "./dist/components/lr-email-viewer.js"
     },
     "./components/lr-embedding-explorer.js": {
-      "types": "./dist/components/retrieval/embedding-explorer/embedding-explorer.d.ts",
+      "types": "./dist/components/lr-embedding-explorer.d.ts",
       "default": "./dist/components/lr-embedding-explorer.js"
     },
     "./components/lr-emoji-picker.js": {
-      "types": "./dist/components/forms/emoji-picker/emoji-picker.d.ts",
+      "types": "./dist/components/lr-emoji-picker.d.ts",
       "default": "./dist/components/lr-emoji-picker.js"
     },
     "./components/lr-empty.js": {
-      "types": "./dist/components/overlays/empty/empty.d.ts",
+      "types": "./dist/components/lr-empty.d.ts",
       "default": "./dist/components/lr-empty.js"
     },
     "./components/lr-entity-card.js": {
-      "types": "./dist/components/retrieval/entity-card/entity-card.d.ts",
+      "types": "./dist/components/lr-entity-card.d.ts",
       "default": "./dist/components/lr-entity-card.js"
     },
     "./components/lr-entity-chip.js": {
-      "types": "./dist/components/retrieval/entity-chip/entity-chip.d.ts",
+      "types": "./dist/components/lr-entity-chip.d.ts",
       "default": "./dist/components/lr-entity-chip.js"
     },
     "./components/lr-entity-dossier.js": {
-      "types": "./dist/components/retrieval/entity-dossier/entity-dossier.d.ts",
+      "types": "./dist/components/lr-entity-dossier.d.ts",
       "default": "./dist/components/lr-entity-dossier.js"
     },
     "./components/lr-env-list.js": {
-      "types": "./dist/components/data/env-list/env-list.d.ts",
+      "types": "./dist/components/lr-env-list.d.ts",
       "default": "./dist/components/lr-env-list.js"
     },
     "./components/lr-eval-dataset.js": {
-      "types": "./dist/components/agent-tools/eval-dataset/eval-dataset.d.ts",
+      "types": "./dist/components/lr-eval-dataset.d.ts",
       "default": "./dist/components/lr-eval-dataset.js"
     },
     "./components/lr-eval-result.js": {
-      "types": "./dist/components/agent-tools/eval-result/eval-result.d.ts",
+      "types": "./dist/components/lr-eval-result.d.ts",
       "default": "./dist/components/lr-eval-result.js"
     },
     "./components/lr-eval-run.js": {
-      "types": "./dist/components/agent-tools/evaluation-run/evaluation-run.d.ts",
+      "types": "./dist/components/lr-eval-run.d.ts",
       "default": "./dist/components/lr-eval-run.js"
     },
     "./components/lr-export-button.js": {
-      "types": "./dist/components/utility/export-button/export-button.d.ts",
+      "types": "./dist/components/lr-export-button.d.ts",
       "default": "./dist/components/lr-export-button.js"
     },
     "./components/lr-file-icon.js": {
-      "types": "./dist/components/media/file-icon/file-icon.d.ts",
+      "types": "./dist/components/lr-file-icon.d.ts",
       "default": "./dist/components/lr-file-icon.js"
     },
     "./components/lr-file-input.js": {
-      "types": "./dist/components/media/file-input/file-input.d.ts",
+      "types": "./dist/components/lr-file-input.d.ts",
       "default": "./dist/components/lr-file-input.js"
     },
     "./components/lr-file-tree.js": {
-      "types": "./dist/components/data/file-tree/file-tree.d.ts",
+      "types": "./dist/components/lr-file-tree.d.ts",
       "default": "./dist/components/lr-file-tree.js"
     },
     "./components/lr-filter-bar.js": {
-      "types": "./dist/components/layout/filter-bar/filter-bar.d.ts",
+      "types": "./dist/components/lr-filter-bar.d.ts",
       "default": "./dist/components/lr-filter-bar.js"
     },
     "./components/lr-flag.js": {
-      "types": "./dist/components/media/flag/flag.d.ts",
+      "types": "./dist/components/lr-flag.d.ts",
       "default": "./dist/components/lr-flag.js"
     },
     "./components/lr-flow-canvas.js": {
-      "types": "./dist/components/data/flow-canvas/flow-canvas.d.ts",
+      "types": "./dist/components/lr-flow-canvas.d.ts",
       "default": "./dist/components/lr-flow-canvas.js"
     },
     "./components/lr-flow-controls.js": {
-      "types": "./dist/components/data/flow-controls/flow-controls.d.ts",
+      "types": "./dist/components/lr-flow-controls.d.ts",
       "default": "./dist/components/lr-flow-controls.js"
     },
     "./components/lr-flow-minimap.js": {
-      "types": "./dist/components/data/flow-minimap/flow-minimap.d.ts",
+      "types": "./dist/components/lr-flow-minimap.d.ts",
       "default": "./dist/components/lr-flow-minimap.js"
     },
     "./components/lr-flow-node.js": {
-      "types": "./dist/components/data/flow-node/flow-node.d.ts",
+      "types": "./dist/components/lr-flow-node.d.ts",
       "default": "./dist/components/lr-flow-node.js"
     },
     "./components/lr-flow-run-status.js": {
-      "types": "./dist/components/data/flow-run-status/flow-run-status.d.ts",
+      "types": "./dist/components/lr-flow-run-status.d.ts",
       "default": "./dist/components/lr-flow-run-status.js"
     },
     "./components/lr-format-bytes.js": {
-      "types": "./dist/components/utility/format/format-bytes.d.ts",
+      "types": "./dist/components/lr-format-bytes.d.ts",
       "default": "./dist/components/lr-format-bytes.js"
     },
     "./components/lr-format-date.js": {
-      "types": "./dist/components/utility/format/format-date.d.ts",
+      "types": "./dist/components/lr-format-date.d.ts",
       "default": "./dist/components/lr-format-date.js"
     },
     "./components/lr-format-number.js": {
-      "types": "./dist/components/utility/format/format-number.d.ts",
+      "types": "./dist/components/lr-format-number.d.ts",
       "default": "./dist/components/lr-format-number.js"
     },
     "./components/lr-funnel.js": {
-      "types": "./dist/components/data/funnel/funnel.d.ts",
+      "types": "./dist/components/lr-funnel.d.ts",
       "default": "./dist/components/lr-funnel.js"
     },
     "./components/lr-gauge.js": {
-      "types": "./dist/components/data/gauge/gauge.d.ts",
+      "types": "./dist/components/lr-gauge.d.ts",
       "default": "./dist/components/lr-gauge.js"
     },
     "./components/lr-generation-metrics.js": {
-      "types": "./dist/components/conversation/generation-metrics/generation-metrics.d.ts",
+      "types": "./dist/components/lr-generation-metrics.d.ts",
       "default": "./dist/components/lr-generation-metrics.js"
     },
     "./components/lr-geojson-viewer.js": {
-      "types": "./dist/components/viewers/geojson-view/geojson-viewer.d.ts",
+      "types": "./dist/components/lr-geojson-viewer.d.ts",
       "default": "./dist/components/lr-geojson-viewer.js"
     },
     "./components/lr-graph-legend.js": {
-      "types": "./dist/components/retrieval/graph-legend/graph-legend.d.ts",
+      "types": "./dist/components/lr-graph-legend.d.ts",
       "default": "./dist/components/lr-graph-legend.js"
     },
     "./components/lr-graph-query-builder.js": {
-      "types": "./dist/components/data/graph-query-builder/graph-query-builder.d.ts",
+      "types": "./dist/components/lr-graph-query-builder.d.ts",
       "default": "./dist/components/lr-graph-query-builder.js"
     },
     "./components/lr-graph.js": {
-      "types": "./dist/components/retrieval/graph/graph.d.ts",
+      "types": "./dist/components/lr-graph.d.ts",
       "default": "./dist/components/lr-graph.js"
     },
     "./components/lr-grounding-summary.js": {
-      "types": "./dist/components/retrieval/grounding-summary/grounding-summary.d.ts",
+      "types": "./dist/components/lr-grounding-summary.d.ts",
       "default": "./dist/components/lr-grounding-summary.js"
     },
     "./components/lr-handoff-divider.js": {
-      "types": "./dist/components/conversation/handoff-divider/handoff-divider.d.ts",
+      "types": "./dist/components/lr-handoff-divider.d.ts",
       "default": "./dist/components/lr-handoff-divider.js"
     },
     "./components/lr-heatmap.js": {
-      "types": "./dist/components/data/heatmap/heatmap.d.ts",
+      "types": "./dist/components/lr-heatmap.d.ts",
       "default": "./dist/components/lr-heatmap.js"
     },
     "./components/lr-highlight-layer.js": {
-      "types": "./dist/components/viewers/highlight-layer/highlight-layer.d.ts",
+      "types": "./dist/components/lr-highlight-layer.d.ts",
       "default": "./dist/components/lr-highlight-layer.js"
     },
     "./components/lr-histogram.js": {
-      "types": "./dist/components/charts/chart/histogram.d.ts",
+      "types": "./dist/components/lr-histogram.d.ts",
       "default": "./dist/components/lr-histogram.js"
     },
     "./components/lr-html-viewer.js": {
-      "types": "./dist/components/viewers/html-viewer/html-viewer.d.ts",
+      "types": "./dist/components/lr-html-viewer.d.ts",
       "default": "./dist/components/lr-html-viewer.js"
     },
     "./components/lr-icon-button.js": {
-      "types": "./dist/components/forms/icon-button/icon-button.d.ts",
+      "types": "./dist/components/lr-icon-button.d.ts",
       "default": "./dist/components/lr-icon-button.js"
     },
     "./components/lr-icon.js": {
-      "types": "./dist/components/utility/icon/icon.d.ts",
+      "types": "./dist/components/lr-icon.d.ts",
       "default": "./dist/components/lr-icon.js"
     },
     "./components/lr-image-comparer.js": {
-      "types": "./dist/components/media/image-comparer/image-comparer.d.ts",
+      "types": "./dist/components/lr-image-comparer.d.ts",
       "default": "./dist/components/lr-image-comparer.js"
     },
     "./components/lr-image-viewer.js": {
-      "types": "./dist/components/media/image-viewer/image-viewer.d.ts",
+      "types": "./dist/components/lr-image-viewer.d.ts",
       "default": "./dist/components/lr-image-viewer.js"
     },
     "./components/lr-include.js": {
-      "types": "./dist/components/viewers/include/include.d.ts",
+      "types": "./dist/components/lr-include.d.ts",
       "default": "./dist/components/lr-include.js"
     },
     "./components/lr-ingestion-queue.js": {
-      "types": "./dist/components/retrieval/ingestion-queue/ingestion-queue.d.ts",
+      "types": "./dist/components/lr-ingestion-queue.d.ts",
       "default": "./dist/components/lr-ingestion-queue.js"
     },
     "./components/lr-input.js": {
-      "types": "./dist/components/forms/input/input.d.ts",
+      "types": "./dist/components/lr-input.d.ts",
       "default": "./dist/components/lr-input.js"
     },
     "./components/lr-intersection-observer.js": {
-      "types": "./dist/components/utility/intersection-observer/intersection-observer.d.ts",
+      "types": "./dist/components/lr-intersection-observer.d.ts",
       "default": "./dist/components/lr-intersection-observer.js"
     },
     "./components/lr-json-schema-viewer.js": {
-      "types": "./dist/components/agent-tools/schema-viewer/schema-viewer.d.ts",
+      "types": "./dist/components/lr-json-schema-viewer.d.ts",
       "default": "./dist/components/lr-json-schema-viewer.js"
     },
     "./components/lr-json-viewer.js": {
-      "types": "./dist/components/utility/json-viewer/json-viewer.d.ts",
+      "types": "./dist/components/lr-json-viewer.d.ts",
       "default": "./dist/components/lr-json-viewer.js"
     },
     "./components/lr-kbd.js": {
-      "types": "./dist/components/overlays/kbd/kbd.d.ts",
+      "types": "./dist/components/lr-kbd.d.ts",
       "default": "./dist/components/lr-kbd.js"
     },
     "./components/lr-knowledge-base-admin.js": {
-      "types": "./dist/components/retrieval/knowledge-base-admin/knowledge-base-admin.d.ts",
+      "types": "./dist/components/lr-knowledge-base-admin.d.ts",
       "default": "./dist/components/lr-knowledge-base-admin.js"
     },
     "./components/lr-knowledge-base.js": {
-      "types": "./dist/components/retrieval/knowledge-base/knowledge-base.d.ts",
+      "types": "./dist/components/lr-knowledge-base.d.ts",
       "default": "./dist/components/lr-knowledge-base.js"
     },
     "./components/lr-knowledge-graph-explorer.js": {
-      "types": "./dist/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.d.ts",
+      "types": "./dist/components/lr-knowledge-graph-explorer.d.ts",
       "default": "./dist/components/lr-knowledge-graph-explorer.js"
     },
     "./components/lr-known-date.js": {
-      "types": "./dist/components/utility/known-date/known-date.d.ts",
+      "types": "./dist/components/lr-known-date.d.ts",
       "default": "./dist/components/lr-known-date.js"
     },
     "./components/lr-lightbox.js": {
-      "types": "./dist/components/media/lightbox/lightbox.d.ts",
+      "types": "./dist/components/lr-lightbox.d.ts",
       "default": "./dist/components/lr-lightbox.js"
     },
     "./components/lr-line-chart.js": {
-      "types": "./dist/components/charts/chart/line-chart.d.ts",
+      "types": "./dist/components/lr-line-chart.d.ts",
       "default": "./dist/components/lr-line-chart.js"
     },
     "./components/lr-lite-chart.js": {
-      "types": "./dist/components/charts/chart/lite-chart.d.ts",
+      "types": "./dist/components/lr-lite-chart.d.ts",
       "default": "./dist/components/lr-lite-chart.js"
     },
     "./components/lr-live-region.js": {
-      "types": "./dist/components/utility/live-region/live-region.d.ts",
+      "types": "./dist/components/lr-live-region.d.ts",
       "default": "./dist/components/lr-live-region.js"
     },
     "./components/lr-locale-picker.js": {
-      "types": "./dist/components/forms/locale-picker/locale-picker.d.ts",
+      "types": "./dist/components/lr-locale-picker.d.ts",
       "default": "./dist/components/lr-locale-picker.js"
     },
     "./components/lr-map-anchor.js": {
-      "types": "./dist/components/media/map/map-anchor.d.ts",
+      "types": "./dist/components/lr-map-anchor.d.ts",
       "default": "./dist/components/lr-map-anchor.js"
     },
     "./components/lr-map.js": {
-      "types": "./dist/components/media/map/map.d.ts",
+      "types": "./dist/components/lr-map.d.ts",
       "default": "./dist/components/lr-map.js"
     },
     "./components/lr-markdown-core.js": {
-      "types": "./dist/components/conversation/markdown/markdown-core.d.ts",
+      "types": "./dist/components/lr-markdown-core.d.ts",
       "default": "./dist/components/lr-markdown-core.js"
     },
     "./components/lr-markdown.js": {
-      "types": "./dist/components/conversation/markdown/markdown.d.ts",
+      "types": "./dist/components/lr-markdown.d.ts",
       "default": "./dist/components/lr-markdown.js"
     },
     "./components/lr-mcp-app.js": {
-      "types": "./dist/components/agent-tools/mcp-app/mcp-app.d.ts",
+      "types": "./dist/components/lr-mcp-app.d.ts",
       "default": "./dist/components/lr-mcp-app.js"
     },
     "./components/lr-media-card.js": {
-      "types": "./dist/components/media/media-card/media-card.d.ts",
+      "types": "./dist/components/lr-media-card.d.ts",
       "default": "./dist/components/lr-media-card.js"
     },
     "./components/lr-memory-panel.js": {
-      "types": "./dist/components/retrieval/memory-panel/memory-panel.d.ts",
+      "types": "./dist/components/lr-memory-panel.d.ts",
       "default": "./dist/components/lr-memory-panel.js"
     },
     "./components/lr-mention-popover.js": {
-      "types": "./dist/components/utility/mention-popover/mention-popover.d.ts",
+      "types": "./dist/components/lr-mention-popover.d.ts",
       "default": "./dist/components/lr-mention-popover.js"
     },
     "./components/lr-menu-item.js": {
-      "types": "./dist/components/layout/menu/menu-item.d.ts",
+      "types": "./dist/components/lr-menu-item.d.ts",
       "default": "./dist/components/lr-menu-item.js"
     },
     "./components/lr-menu-label.js": {
-      "types": "./dist/components/layout/menu/menu-label.d.ts",
+      "types": "./dist/components/lr-menu-label.d.ts",
       "default": "./dist/components/lr-menu-label.js"
     },
     "./components/lr-menu.js": {
-      "types": "./dist/components/layout/menu/menu.d.ts",
+      "types": "./dist/components/lr-menu.d.ts",
       "default": "./dist/components/lr-menu.js"
     },
     "./components/lr-menubar-item.js": {
-      "types": "./dist/components/layout/menubar/menubar-item.d.ts",
+      "types": "./dist/components/lr-menubar-item.d.ts",
       "default": "./dist/components/lr-menubar-item.js"
     },
     "./components/lr-menubar.js": {
-      "types": "./dist/components/layout/menubar/menubar.d.ts",
+      "types": "./dist/components/lr-menubar.d.ts",
       "default": "./dist/components/lr-menubar.js"
     },
     "./components/lr-message-actions.js": {
-      "types": "./dist/components/conversation/message-actions/message-actions.d.ts",
+      "types": "./dist/components/lr-message-actions.d.ts",
       "default": "./dist/components/lr-message-actions.js"
     },
     "./components/lr-message-feedback.js": {
-      "types": "./dist/components/conversation/message-feedback/message-feedback.d.ts",
+      "types": "./dist/components/lr-message-feedback.d.ts",
       "default": "./dist/components/lr-message-feedback.js"
     },
     "./components/lr-message-parts.js": {
-      "types": "./dist/components/conversation/message-parts/message-parts.d.ts",
+      "types": "./dist/components/lr-message-parts.d.ts",
       "default": "./dist/components/lr-message-parts.js"
     },
     "./components/lr-mind-map.js": {
-      "types": "./dist/components/retrieval/mind-map/mind-map.d.ts",
+      "types": "./dist/components/lr-mind-map.d.ts",
       "default": "./dist/components/lr-mind-map.js"
     },
     "./components/lr-model-select.js": {
-      "types": "./dist/components/conversation/model-select/model-select.d.ts",
+      "types": "./dist/components/lr-model-select.d.ts",
       "default": "./dist/components/lr-model-select.js"
     },
     "./components/lr-model-settings-panel.js": {
-      "types": "./dist/components/conversation/model-settings-panel/model-settings-panel.d.ts",
+      "types": "./dist/components/lr-model-settings-panel.d.ts",
       "default": "./dist/components/lr-model-settings-panel.js"
     },
     "./components/lr-model-viewer.js": {
-      "types": "./dist/components/viewers/model-viewer/model-viewer.d.ts",
+      "types": "./dist/components/lr-model-viewer.d.ts",
       "default": "./dist/components/lr-model-viewer.js"
     },
     "./components/lr-multi-split.js": {
-      "types": "./dist/components/layout/multi-split/multi-split.d.ts",
+      "types": "./dist/components/lr-multi-split.d.ts",
       "default": "./dist/components/lr-multi-split.js"
     },
     "./components/lr-mutation-observer.js": {
-      "types": "./dist/components/utility/mutation-observer/mutation-observer.d.ts",
+      "types": "./dist/components/lr-mutation-observer.d.ts",
       "default": "./dist/components/lr-mutation-observer.js"
     },
     "./components/lr-native-time-input.js": {
-      "types": "./dist/components/forms/input/native-time-input.d.ts",
+      "types": "./dist/components/lr-native-time-input.d.ts",
       "default": "./dist/components/lr-native-time-input.js"
     },
     "./components/lr-navigation-menu-item.js": {
-      "types": "./dist/components/layout/navigation-menu-item/navigation-menu-item.d.ts",
+      "types": "./dist/components/lr-navigation-menu-item.d.ts",
       "default": "./dist/components/lr-navigation-menu-item.js"
     },
     "./components/lr-navigation-menu.js": {
-      "types": "./dist/components/layout/navigation-menu/navigation-menu.d.ts",
+      "types": "./dist/components/lr-navigation-menu.d.ts",
       "default": "./dist/components/lr-navigation-menu.js"
     },
     "./components/lr-neighbor-list.js": {
-      "types": "./dist/components/retrieval/neighbor-list/neighbor-list.d.ts",
+      "types": "./dist/components/lr-neighbor-list.d.ts",
       "default": "./dist/components/lr-neighbor-list.js"
     },
     "./components/lr-node-palette.js": {
-      "types": "./dist/components/retrieval/node-palette/node-palette.d.ts",
+      "types": "./dist/components/lr-node-palette.d.ts",
       "default": "./dist/components/lr-node-palette.js"
     },
     "./components/lr-notebook-viewer.js": {
-      "types": "./dist/components/viewers/notebook-viewer/notebook-viewer.d.ts",
+      "types": "./dist/components/lr-notebook-viewer.d.ts",
       "default": "./dist/components/lr-notebook-viewer.js"
     },
     "./components/lr-number-input.js": {
-      "types": "./dist/components/forms/input/number-input.d.ts",
+      "types": "./dist/components/lr-number-input.d.ts",
       "default": "./dist/components/lr-number-input.js"
     },
     "./components/lr-option.js": {
-      "types": "./dist/components/forms/combobox/option.d.ts",
+      "types": "./dist/components/lr-option.d.ts",
       "default": "./dist/components/lr-option.js"
     },
     "./components/lr-otp-input.js": {
-      "types": "./dist/components/forms/otp-input/otp-input.d.ts",
+      "types": "./dist/components/lr-otp-input.d.ts",
       "default": "./dist/components/lr-otp-input.js"
     },
     "./components/lr-page-rail.js": {
-      "types": "./dist/components/viewers/page-rail/page-rail.d.ts",
+      "types": "./dist/components/lr-page-rail.d.ts",
       "default": "./dist/components/lr-page-rail.js"
     },
     "./components/lr-page.js": {
-      "types": "./dist/components/layout/page/page.d.ts",
+      "types": "./dist/components/lr-page.d.ts",
       "default": "./dist/components/lr-page.js"
     },
     "./components/lr-pagination.js": {
-      "types": "./dist/components/data/pagination/pagination.d.ts",
+      "types": "./dist/components/lr-pagination.d.ts",
       "default": "./dist/components/lr-pagination.js"
     },
     "./components/lr-pan-zoom.js": {
-      "types": "./dist/components/media/pan-zoom/pan-zoom.d.ts",
+      "types": "./dist/components/lr-pan-zoom.d.ts",
       "default": "./dist/components/lr-pan-zoom.js"
     },
     "./components/lr-path-strip.js": {
-      "types": "./dist/components/retrieval/path-strip/path-strip.d.ts",
+      "types": "./dist/components/lr-path-strip.d.ts",
       "default": "./dist/components/lr-path-strip.js"
     },
     "./components/lr-pdf-viewer.js": {
-      "types": "./dist/components/viewers/pdf-viewer/pdf-viewer.d.ts",
+      "types": "./dist/components/lr-pdf-viewer.d.ts",
       "default": "./dist/components/lr-pdf-viewer.js"
     },
     "./components/lr-permission-grant.js": {
-      "types": "./dist/components/agent-tools/permission-grant/permission-grant.d.ts",
+      "types": "./dist/components/lr-permission-grant.d.ts",
       "default": "./dist/components/lr-permission-grant.js"
     },
     "./components/lr-permission-rules.js": {
-      "types": "./dist/components/agent-tools/permission-rules/permission-rules.d.ts",
+      "types": "./dist/components/lr-permission-rules.d.ts",
       "default": "./dist/components/lr-permission-rules.js"
     },
     "./components/lr-phone-input.js": {
-      "types": "./dist/components/forms/phone-input/phone-input.d.ts",
+      "types": "./dist/components/lr-phone-input.d.ts",
       "default": "./dist/components/lr-phone-input.js"
     },
     "./components/lr-pie-chart.js": {
-      "types": "./dist/components/charts/chart/pie-chart.d.ts",
+      "types": "./dist/components/lr-pie-chart.d.ts",
       "default": "./dist/components/lr-pie-chart.js"
     },
     "./components/lr-polar-area-chart.js": {
-      "types": "./dist/components/charts/chart/polar-area-chart.d.ts",
+      "types": "./dist/components/lr-polar-area-chart.d.ts",
       "default": "./dist/components/lr-polar-area-chart.js"
     },
     "./components/lr-policy-summary.js": {
-      "types": "./dist/components/agent-tools/policy-summary/policy-summary.d.ts",
+      "types": "./dist/components/lr-policy-summary.d.ts",
       "default": "./dist/components/lr-policy-summary.js"
     },
     "./components/lr-poll-status.js": {
-      "types": "./dist/components/utility/poll-status/poll-status.d.ts",
+      "types": "./dist/components/lr-poll-status.d.ts",
       "default": "./dist/components/lr-poll-status.js"
     },
     "./components/lr-popover.js": {
-      "types": "./dist/components/overlays/overlay/popover.d.ts",
+      "types": "./dist/components/lr-popover.d.ts",
       "default": "./dist/components/lr-popover.js"
     },
     "./components/lr-popup.js": {
-      "types": "./dist/components/overlays/popup/popup.d.ts",
+      "types": "./dist/components/lr-popup.d.ts",
       "default": "./dist/components/lr-popup.js"
     },
     "./components/lr-pptx-viewer.js": {
-      "types": "./dist/components/viewers/pptx-viewer/pptx-viewer.d.ts",
+      "types": "./dist/components/lr-pptx-viewer.d.ts",
       "default": "./dist/components/lr-pptx-viewer.js"
     },
     "./components/lr-progress-bar.js": {
-      "types": "./dist/components/overlays/progress/progress-bar.d.ts",
+      "types": "./dist/components/lr-progress-bar.d.ts",
       "default": "./dist/components/lr-progress-bar.js"
     },
     "./components/lr-progress-ring.js": {
-      "types": "./dist/components/overlays/progress/progress-ring.d.ts",
+      "types": "./dist/components/lr-progress-ring.d.ts",
       "default": "./dist/components/lr-progress-ring.js"
     },
     "./components/lr-prompt-input.js": {
-      "types": "./dist/components/conversation/prompt-input/prompt-input.d.ts",
+      "types": "./dist/components/lr-prompt-input.d.ts",
       "default": "./dist/components/lr-prompt-input.js"
     },
     "./components/lr-prompt-queue.js": {
-      "types": "./dist/components/conversation/prompt-queue/prompt-queue.d.ts",
+      "types": "./dist/components/lr-prompt-queue.d.ts",
       "default": "./dist/components/lr-prompt-queue.js"
     },
     "./components/lr-prompt-studio.js": {
-      "types": "./dist/components/agent-tools/prompt-studio/prompt-studio.d.ts",
+      "types": "./dist/components/lr-prompt-studio.d.ts",
       "default": "./dist/components/lr-prompt-studio.js"
     },
     "./components/lr-provenance-panel.js": {
-      "types": "./dist/components/retrieval/provenance-panel/provenance-panel.d.ts",
+      "types": "./dist/components/lr-provenance-panel.d.ts",
       "default": "./dist/components/lr-provenance-panel.js"
     },
     "./components/lr-push-to-talk.js": {
-      "types": "./dist/components/conversation/push-to-talk/push-to-talk.d.ts",
+      "types": "./dist/components/lr-push-to-talk.d.ts",
       "default": "./dist/components/lr-push-to-talk.js"
     },
     "./components/lr-qr-code.js": {
-      "types": "./dist/components/media/qr-code/qr-code.d.ts",
+      "types": "./dist/components/lr-qr-code.d.ts",
       "default": "./dist/components/lr-qr-code.js"
     },
     "./components/lr-radar-chart.js": {
-      "types": "./dist/components/charts/chart/radar-chart.d.ts",
+      "types": "./dist/components/lr-radar-chart.d.ts",
       "default": "./dist/components/lr-radar-chart.js"
     },
     "./components/lr-radio-button.js": {
-      "types": "./dist/components/forms/radio/radio-button.d.ts",
+      "types": "./dist/components/lr-radio-button.d.ts",
       "default": "./dist/components/lr-radio-button.js"
     },
     "./components/lr-radio-group.js": {
-      "types": "./dist/components/forms/radio/radio-group.d.ts",
+      "types": "./dist/components/lr-radio-group.d.ts",
       "default": "./dist/components/lr-radio-group.js"
     },
     "./components/lr-radio.js": {
-      "types": "./dist/components/forms/radio/radio.d.ts",
+      "types": "./dist/components/lr-radio.d.ts",
       "default": "./dist/components/lr-radio.js"
     },
     "./components/lr-rag-answer.js": {
-      "types": "./dist/components/retrieval/rag-answer/rag-answer.d.ts",
+      "types": "./dist/components/lr-rag-answer.d.ts",
       "default": "./dist/components/lr-rag-answer.js"
     },
     "./components/lr-rag-eval-dashboard.js": {
-      "types": "./dist/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.d.ts",
+      "types": "./dist/components/lr-rag-eval-dashboard.d.ts",
       "default": "./dist/components/lr-rag-eval-dashboard.js"
     },
     "./components/lr-random-content.js": {
-      "types": "./dist/components/utility/random-content/random-content.d.ts",
+      "types": "./dist/components/lr-random-content.d.ts",
       "default": "./dist/components/lr-random-content.js"
     },
     "./components/lr-rating.js": {
-      "types": "./dist/components/overlays/rating/rating.d.ts",
+      "types": "./dist/components/lr-rating.d.ts",
       "default": "./dist/components/lr-rating.js"
     },
     "./components/lr-realtime-session.js": {
-      "types": "./dist/components/conversation/realtime-session/realtime-session.d.ts",
+      "types": "./dist/components/lr-realtime-session.d.ts",
       "default": "./dist/components/lr-realtime-session.js"
     },
     "./components/lr-relative-time.js": {
-      "types": "./dist/components/utility/format/relative-time.d.ts",
+      "types": "./dist/components/lr-relative-time.d.ts",
       "default": "./dist/components/lr-relative-time.js"
     },
     "./components/lr-reorder-item.js": {
-      "types": "./dist/components/layout/reorder-list/reorder-item.d.ts",
+      "types": "./dist/components/lr-reorder-item.d.ts",
       "default": "./dist/components/lr-reorder-item.js"
     },
     "./components/lr-reorder-list.js": {
-      "types": "./dist/components/layout/reorder-list/reorder-list.d.ts",
+      "types": "./dist/components/lr-reorder-list.d.ts",
       "default": "./dist/components/lr-reorder-list.js"
     },
     "./components/lr-research-progress.js": {
-      "types": "./dist/components/retrieval/research-progress/research-progress.d.ts",
+      "types": "./dist/components/lr-research-progress.d.ts",
       "default": "./dist/components/lr-research-progress.js"
     },
     "./components/lr-resize-observer.js": {
-      "types": "./dist/components/utility/resize-observer/resize-observer.d.ts",
+      "types": "./dist/components/lr-resize-observer.d.ts",
       "default": "./dist/components/lr-resize-observer.js"
     },
     "./components/lr-responsive-panel.js": {
-      "types": "./dist/components/layout/responsive-panel/responsive-panel.d.ts",
+      "types": "./dist/components/lr-responsive-panel.d.ts",
       "default": "./dist/components/lr-responsive-panel.js"
     },
     "./components/lr-result-card.js": {
-      "types": "./dist/components/agent-tools/result-card/result-card.d.ts",
+      "types": "./dist/components/lr-result-card.d.ts",
       "default": "./dist/components/lr-result-card.js"
     },
     "./components/lr-result-field.js": {
-      "types": "./dist/components/agent-tools/result-card/result-field.d.ts",
+      "types": "./dist/components/lr-result-field.d.ts",
       "default": "./dist/components/lr-result-field.js"
     },
     "./components/lr-retrieval-compare.js": {
-      "types": "./dist/components/retrieval/retrieval-compare/retrieval-compare.d.ts",
+      "types": "./dist/components/lr-retrieval-compare.d.ts",
       "default": "./dist/components/lr-retrieval-compare.js"
     },
     "./components/lr-retrieval-results.js": {
-      "types": "./dist/components/retrieval/retrieval-results/retrieval-results.d.ts",
+      "types": "./dist/components/lr-retrieval-results.d.ts",
       "default": "./dist/components/lr-retrieval-results.js"
     },
     "./components/lr-retrieval-search.js": {
-      "types": "./dist/components/retrieval/retrieval-search/retrieval-search.d.ts",
+      "types": "./dist/components/lr-retrieval-search.d.ts",
       "default": "./dist/components/lr-retrieval-search.js"
     },
     "./components/lr-retrieval-trace.js": {
-      "types": "./dist/components/retrieval/retrieval-trace/retrieval-trace.d.ts",
+      "types": "./dist/components/lr-retrieval-trace.d.ts",
       "default": "./dist/components/lr-retrieval-trace.js"
     },
     "./components/lr-rubric-form.js": {
-      "types": "./dist/components/forms/rubric-form/rubric-form.d.ts",
+      "types": "./dist/components/lr-rubric-form.d.ts",
       "default": "./dist/components/lr-rubric-form.js"
     },
     "./components/lr-scatter-chart.js": {
-      "types": "./dist/components/charts/chart/scatter-chart.d.ts",
+      "types": "./dist/components/lr-scatter-chart.d.ts",
       "default": "./dist/components/lr-scatter-chart.js"
     },
     "./components/lr-scroller.js": {
-      "types": "./dist/components/layout/scroller/scroller.d.ts",
+      "types": "./dist/components/lr-scroller.d.ts",
       "default": "./dist/components/lr-scroller.js"
     },
     "./components/lr-segmented.js": {
-      "types": "./dist/components/layout/segmented/segmented.d.ts",
+      "types": "./dist/components/lr-segmented.d.ts",
       "default": "./dist/components/lr-segmented.js"
     },
     "./components/lr-select.js": {
-      "types": "./dist/components/forms/select/select.d.ts",
+      "types": "./dist/components/lr-select.d.ts",
       "default": "./dist/components/lr-select.js"
     },
     "./components/lr-selection-toolbar.js": {
-      "types": "./dist/components/conversation/selection-toolbar/selection-toolbar.d.ts",
+      "types": "./dist/components/lr-selection-toolbar.d.ts",
       "default": "./dist/components/lr-selection-toolbar.js"
     },
     "./components/lr-sequence-playback.js": {
-      "types": "./dist/components/media/sequence-playback/sequence-playback.d.ts",
+      "types": "./dist/components/lr-sequence-playback.d.ts",
       "default": "./dist/components/lr-sequence-playback.js"
     },
     "./components/lr-sequence-strip.js": {
-      "types": "./dist/components/data/sequence-strip/sequence-strip.d.ts",
+      "types": "./dist/components/lr-sequence-strip.d.ts",
       "default": "./dist/components/lr-sequence-strip.js"
     },
     "./components/lr-signature-pad.js": {
-      "types": "./dist/components/forms/signature-pad/signature-pad.d.ts",
+      "types": "./dist/components/lr-signature-pad.d.ts",
       "default": "./dist/components/lr-signature-pad.js"
     },
     "./components/lr-skeleton.js": {
-      "types": "./dist/components/overlays/skeleton/skeleton.d.ts",
+      "types": "./dist/components/lr-skeleton.d.ts",
       "default": "./dist/components/lr-skeleton.js"
     },
     "./components/lr-slider.js": {
-      "types": "./dist/components/forms/slider/slider.d.ts",
+      "types": "./dist/components/lr-slider.d.ts",
       "default": "./dist/components/lr-slider.js"
     },
     "./components/lr-source-card.js": {
-      "types": "./dist/components/retrieval/source-card/source-card.d.ts",
+      "types": "./dist/components/lr-source-card.d.ts",
       "default": "./dist/components/lr-source-card.js"
     },
     "./components/lr-source-list.js": {
-      "types": "./dist/components/retrieval/source-list/source-list.d.ts",
+      "types": "./dist/components/lr-source-list.d.ts",
       "default": "./dist/components/lr-source-list.js"
     },
     "./components/lr-source-picker.js": {
-      "types": "./dist/components/retrieval/source-picker/source-picker.d.ts",
+      "types": "./dist/components/lr-source-picker.d.ts",
       "default": "./dist/components/lr-source-picker.js"
     },
     "./components/lr-span-waterfall.js": {
-      "types": "./dist/components/agent-tools/span-waterfall/span-waterfall.d.ts",
+      "types": "./dist/components/lr-span-waterfall.d.ts",
       "default": "./dist/components/lr-span-waterfall.js"
     },
     "./components/lr-sparkline.js": {
-      "types": "./dist/components/data/sparkline/sparkline.d.ts",
+      "types": "./dist/components/lr-sparkline.d.ts",
       "default": "./dist/components/lr-sparkline.js"
     },
     "./components/lr-spinner.js": {
-      "types": "./dist/components/overlays/spinner/spinner.d.ts",
+      "types": "./dist/components/lr-spinner.d.ts",
       "default": "./dist/components/lr-spinner.js"
     },
     "./components/lr-split-panel.js": {
-      "types": "./dist/components/layout/split-panel/split-panel.d.ts",
+      "types": "./dist/components/lr-split-panel.d.ts",
       "default": "./dist/components/lr-split-panel.js"
     },
     "./components/lr-spreadsheet-viewer.js": {
-      "types": "./dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.d.ts",
+      "types": "./dist/components/lr-spreadsheet-viewer.d.ts",
       "default": "./dist/components/lr-spreadsheet-viewer.js"
     },
     "./components/lr-stack-trace.js": {
-      "types": "./dist/components/agent-tools/stack-trace/stack-trace.d.ts",
+      "types": "./dist/components/lr-stack-trace.d.ts",
       "default": "./dist/components/lr-stack-trace.js"
     },
     "./components/lr-stat.js": {
-      "types": "./dist/components/data/stat/stat.d.ts",
+      "types": "./dist/components/lr-stat.d.ts",
       "default": "./dist/components/lr-stat.js"
     },
     "./components/lr-stepper.js": {
-      "types": "./dist/components/layout/stepper/stepper.d.ts",
+      "types": "./dist/components/lr-stepper.d.ts",
       "default": "./dist/components/lr-stepper.js"
     },
     "./components/lr-stream-status.js": {
-      "types": "./dist/components/conversation/stream-status/stream-status.d.ts",
+      "types": "./dist/components/lr-stream-status.d.ts",
       "default": "./dist/components/lr-stream-status.js"
     },
     "./components/lr-streaming-text-core.js": {
-      "types": "./dist/components/conversation/streaming-text/streaming-text-core.d.ts",
+      "types": "./dist/components/lr-streaming-text-core.d.ts",
       "default": "./dist/components/lr-streaming-text-core.js"
     },
     "./components/lr-streaming-text.js": {
-      "types": "./dist/components/conversation/streaming-text/streaming-text.d.ts",
+      "types": "./dist/components/lr-streaming-text.d.ts",
       "default": "./dist/components/lr-streaming-text.js"
     },
     "./components/lr-subagent-panel.js": {
-      "types": "./dist/components/agent-tools/subagent-panel/subagent-panel.d.ts",
+      "types": "./dist/components/lr-subagent-panel.d.ts",
       "default": "./dist/components/lr-subagent-panel.js"
     },
     "./components/lr-suggestion-chips.js": {
-      "types": "./dist/components/conversation/suggestion-chips/suggestion-chips.d.ts",
+      "types": "./dist/components/lr-suggestion-chips.d.ts",
       "default": "./dist/components/lr-suggestion-chips.js"
     },
     "./components/lr-svg-viewer.js": {
-      "types": "./dist/components/viewers/svg-viewer/svg-viewer.d.ts",
+      "types": "./dist/components/lr-svg-viewer.d.ts",
       "default": "./dist/components/lr-svg-viewer.js"
     },
     "./components/lr-swatch-picker.js": {
-      "types": "./dist/components/forms/swatch-picker/swatch-picker.d.ts",
+      "types": "./dist/components/lr-swatch-picker.d.ts",
       "default": "./dist/components/lr-swatch-picker.js"
     },
     "./components/lr-switch.js": {
-      "types": "./dist/components/forms/switch/switch.d.ts",
+      "types": "./dist/components/lr-switch.d.ts",
       "default": "./dist/components/lr-switch.js"
     },
     "./components/lr-tab-group.js": {
-      "types": "./dist/components/layout/tab-group/tab-group.d.ts",
+      "types": "./dist/components/lr-tab-group.d.ts",
       "default": "./dist/components/lr-tab-group.js"
     },
     "./components/lr-tab-panel.js": {
-      "types": "./dist/components/layout/tab-group/tab-panel.d.ts",
+      "types": "./dist/components/lr-tab-panel.d.ts",
       "default": "./dist/components/lr-tab-panel.js"
     },
     "./components/lr-tab.js": {
-      "types": "./dist/components/layout/tab-group/tab.d.ts",
+      "types": "./dist/components/lr-tab.d.ts",
       "default": "./dist/components/lr-tab.js"
     },
     "./components/lr-table.js": {
-      "types": "./dist/components/data/table/table.d.ts",
+      "types": "./dist/components/lr-table.d.ts",
       "default": "./dist/components/lr-table.js"
     },
     "./components/lr-tag.js": {
-      "types": "./dist/components/overlays/badge/tag.d.ts",
+      "types": "./dist/components/lr-tag.d.ts",
       "default": "./dist/components/lr-tag.js"
     },
     "./components/lr-task-list.js": {
-      "types": "./dist/components/agent-tools/task-list/task-list.d.ts",
+      "types": "./dist/components/lr-task-list.d.ts",
       "default": "./dist/components/lr-task-list.js"
     },
     "./components/lr-terminal.js": {
-      "types": "./dist/components/agent-tools/terminal/terminal.d.ts",
+      "types": "./dist/components/lr-terminal.d.ts",
       "default": "./dist/components/lr-terminal.js"
     },
     "./components/lr-test-results.js": {
-      "types": "./dist/components/agent-tools/test-results/test-results.d.ts",
+      "types": "./dist/components/lr-test-results.d.ts",
       "default": "./dist/components/lr-test-results.js"
     },
     "./components/lr-textarea.js": {
-      "types": "./dist/components/forms/textarea/textarea.d.ts",
+      "types": "./dist/components/lr-textarea.d.ts",
       "default": "./dist/components/lr-textarea.js"
     },
     "./components/lr-thinking-panel.js": {
-      "types": "./dist/components/agent-tools/thinking-panel/thinking-panel.d.ts",
+      "types": "./dist/components/lr-thinking-panel.d.ts",
       "default": "./dist/components/lr-thinking-panel.js"
     },
     "./components/lr-thread-list.js": {
-      "types": "./dist/components/conversation/thread-list/thread-list.d.ts",
+      "types": "./dist/components/lr-thread-list.d.ts",
       "default": "./dist/components/lr-thread-list.js"
     },
     "./components/lr-time-input.js": {
-      "types": "./dist/components/forms/input/time-input.d.ts",
+      "types": "./dist/components/lr-time-input.d.ts",
       "default": "./dist/components/lr-time-input.js"
     },
     "./components/lr-time-range.js": {
-      "types": "./dist/components/forms/time-range/time-range.d.ts",
+      "types": "./dist/components/lr-time-range.d.ts",
       "default": "./dist/components/lr-time-range.js"
     },
     "./components/lr-time-zone-picker.js": {
-      "types": "./dist/components/forms/time-zone-picker/time-zone-picker.d.ts",
+      "types": "./dist/components/lr-time-zone-picker.d.ts",
       "default": "./dist/components/lr-time-zone-picker.js"
     },
     "./components/lr-timeline-item.js": {
-      "types": "./dist/components/data/timeline/timeline-item.d.ts",
+      "types": "./dist/components/lr-timeline-item.d.ts",
       "default": "./dist/components/lr-timeline-item.js"
     },
     "./components/lr-timeline.js": {
-      "types": "./dist/components/data/timeline/timeline.d.ts",
+      "types": "./dist/components/lr-timeline.d.ts",
       "default": "./dist/components/lr-timeline.js"
     },
     "./components/lr-toast-item.js": {
-      "types": "./dist/components/overlays/toast/toast-item.d.ts",
+      "types": "./dist/components/lr-toast-item.d.ts",
       "default": "./dist/components/lr-toast-item.js"
     },
     "./components/lr-toast.js": {
-      "types": "./dist/components/overlays/toast/toast.d.ts",
+      "types": "./dist/components/lr-toast.d.ts",
       "default": "./dist/components/lr-toast.js"
     },
     "./components/lr-toggle-group.js": {
-      "types": "./dist/components/forms/toggle-group/toggle-group.d.ts",
+      "types": "./dist/components/lr-toggle-group.d.ts",
       "default": "./dist/components/lr-toggle-group.js"
     },
     "./components/lr-toggle.js": {
-      "types": "./dist/components/forms/toggle/toggle.d.ts",
+      "types": "./dist/components/lr-toggle.d.ts",
       "default": "./dist/components/lr-toggle.js"
     },
     "./components/lr-token-input.js": {
-      "types": "./dist/components/forms/token-input/token-input.d.ts",
+      "types": "./dist/components/lr-token-input.d.ts",
       "default": "./dist/components/lr-token-input.js"
     },
     "./components/lr-tool-approval-dialog.js": {
-      "types": "./dist/components/agent-tools/tool-approval-dialog/tool-approval-dialog.d.ts",
+      "types": "./dist/components/lr-tool-approval-dialog.d.ts",
       "default": "./dist/components/lr-tool-approval-dialog.js"
     },
     "./components/lr-tool-call-block.js": {
-      "types": "./dist/components/agent-tools/tool-call-block/tool-call-block.d.ts",
+      "types": "./dist/components/lr-tool-call-block.d.ts",
       "default": "./dist/components/lr-tool-call-block.js"
     },
     "./components/lr-tool-call-chip.js": {
-      "types": "./dist/components/agent-tools/tool-call-chip/tool-call-chip.d.ts",
+      "types": "./dist/components/lr-tool-call-chip.d.ts",
       "default": "./dist/components/lr-tool-call-chip.js"
     },
     "./components/lr-tool-param-form.js": {
-      "types": "./dist/components/agent-tools/tool-param-form/tool-param-form.d.ts",
+      "types": "./dist/components/lr-tool-param-form.d.ts",
       "default": "./dist/components/lr-tool-param-form.js"
     },
     "./components/lr-tool-result-dialog.js": {
-      "types": "./dist/components/agent-tools/tool-result-dialog/tool-result-dialog.d.ts",
+      "types": "./dist/components/lr-tool-result-dialog.d.ts",
       "default": "./dist/components/lr-tool-result-dialog.js"
     },
     "./components/lr-tool-result-view.js": {
-      "types": "./dist/components/agent-tools/tool-result-view/tool-result-view.d.ts",
+      "types": "./dist/components/lr-tool-result-view.d.ts",
       "default": "./dist/components/lr-tool-result-view.js"
     },
     "./components/lr-tool-select-dialog.js": {
-      "types": "./dist/components/agent-tools/tool-select-dialog/tool-select-dialog.d.ts",
+      "types": "./dist/components/lr-tool-select-dialog.d.ts",
       "default": "./dist/components/lr-tool-select-dialog.js"
     },
     "./components/lr-tool-timeline.js": {
-      "types": "./dist/components/agent-tools/tool-timeline/tool-timeline.d.ts",
+      "types": "./dist/components/lr-tool-timeline.d.ts",
       "default": "./dist/components/lr-tool-timeline.js"
     },
     "./components/lr-tooltip.js": {
-      "types": "./dist/components/overlays/overlay/tooltip.d.ts",
+      "types": "./dist/components/lr-tooltip.d.ts",
       "default": "./dist/components/lr-tooltip.js"
     },
     "./components/lr-tour.js": {
-      "types": "./dist/components/utility/tour/tour.d.ts",
+      "types": "./dist/components/lr-tour.d.ts",
       "default": "./dist/components/lr-tour.js"
     },
     "./components/lr-trace-tree.js": {
-      "types": "./dist/components/agent-tools/trace-tree/trace-tree.d.ts",
+      "types": "./dist/components/lr-trace-tree.d.ts",
       "default": "./dist/components/lr-trace-tree.js"
     },
     "./components/lr-transcript-feed.js": {
-      "types": "./dist/components/conversation/transcript-feed/transcript-feed.d.ts",
+      "types": "./dist/components/lr-transcript-feed.d.ts",
       "default": "./dist/components/lr-transcript-feed.js"
     },
     "./components/lr-tree-item.js": {
-      "types": "./dist/components/data/tree/tree-item.d.ts",
+      "types": "./dist/components/lr-tree-item.d.ts",
       "default": "./dist/components/lr-tree-item.js"
     },
     "./components/lr-tree.js": {
-      "types": "./dist/components/data/tree/tree.d.ts",
+      "types": "./dist/components/lr-tree.d.ts",
       "default": "./dist/components/lr-tree.js"
     },
     "./components/lr-typing-indicator.js": {
-      "types": "./dist/components/conversation/typing-indicator/typing-indicator.d.ts",
+      "types": "./dist/components/lr-typing-indicator.d.ts",
       "default": "./dist/components/lr-typing-indicator.js"
     },
     "./components/lr-unit-picker.js": {
-      "types": "./dist/components/forms/unit-picker/unit-picker.d.ts",
+      "types": "./dist/components/lr-unit-picker.d.ts",
       "default": "./dist/components/lr-unit-picker.js"
     },
     "./components/lr-usage-badge.js": {
-      "types": "./dist/components/conversation/usage-badge/usage-badge.d.ts",
+      "types": "./dist/components/lr-usage-badge.d.ts",
       "default": "./dist/components/lr-usage-badge.js"
     },
     "./components/lr-video-playlist.js": {
-      "types": "./dist/components/media/video-playlist/video-playlist.d.ts",
+      "types": "./dist/components/lr-video-playlist.d.ts",
       "default": "./dist/components/lr-video-playlist.js"
     },
     "./components/lr-video.js": {
-      "types": "./dist/components/media/video/video.d.ts",
+      "types": "./dist/components/lr-video.d.ts",
       "default": "./dist/components/lr-video.js"
     },
     "./components/lr-virtual-list.js": {
-      "types": "./dist/components/layout/virtual-list/virtual-list.d.ts",
+      "types": "./dist/components/lr-virtual-list.d.ts",
       "default": "./dist/components/lr-virtual-list.js"
     },
     "./components/lr-visually-hidden.js": {
-      "types": "./dist/components/utility/visually-hidden/visually-hidden.d.ts",
+      "types": "./dist/components/lr-visually-hidden.d.ts",
       "default": "./dist/components/lr-visually-hidden.js"
     },
     "./components/lr-voice-picker.js": {
-      "types": "./dist/components/conversation/voice-picker/voice-picker.d.ts",
+      "types": "./dist/components/lr-voice-picker.d.ts",
       "default": "./dist/components/lr-voice-picker.js"
     },
     "./components/lr-widget-renderer.js": {
-      "types": "./dist/components/conversation/widget-renderer/widget-renderer.d.ts",
+      "types": "./dist/components/lr-widget-renderer.d.ts",
       "default": "./dist/components/lr-widget-renderer.js"
     },
     "./components/lr-widget.js": {
-      "types": "./dist/components/layout/widget/widget.d.ts",
+      "types": "./dist/components/lr-widget.d.ts",
       "default": "./dist/components/lr-widget.js"
     },
     "./components/lr-word-cloud.js": {
-      "types": "./dist/components/data/word-cloud/word-cloud.d.ts",
+      "types": "./dist/components/lr-word-cloud.d.ts",
       "default": "./dist/components/lr-word-cloud.js"
     },
     "./components/lr-xml-viewer.js": {
-      "types": "./dist/components/viewers/xml-viewer/xml-viewer.d.ts",
+      "types": "./dist/components/lr-xml-viewer.d.ts",
       "default": "./dist/components/lr-xml-viewer.js"
     },
     "./components/lr-zoomable-frame.js": {
-      "types": "./dist/components/media/zoomable-frame/zoomable-frame.d.ts",
+      "types": "./dist/components/lr-zoomable-frame.d.ts",
       "default": "./dist/components/lr-zoomable-frame.js"
     },
     "./components/media": "./dist/components/media/index.js",
@@ -1892,362 +1892,51 @@
     "./dist/accents.css",
     "./dist/all.js",
     "./dist/autoloader-cdn.js",
-    "./dist/components/agent-tools/activity-feed/activity-feed.js",
-    "./dist/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js",
-    "./dist/components/agent-tools/agent-question/agent-question.js",
-    "./dist/components/agent-tools/agent-run/agent-run.js",
-    "./dist/components/agent-tools/agent-trace/agent-trace.js",
-    "./dist/components/agent-tools/approval-queue/approval-queue.js",
-    "./dist/components/agent-tools/artifact-panel/artifact-panel.js",
-    "./dist/components/agent-tools/background-runs/background-runs.js",
-    "./dist/components/agent-tools/browser-frame/browser-frame.js",
-    "./dist/components/agent-tools/budget-meter/budget-meter.js",
-    "./dist/components/agent-tools/change-review/change-review.js",
-    "./dist/components/agent-tools/commit-card/commit-card.js",
-    "./dist/components/agent-tools/compare-panel/compare-panel.js",
-    "./dist/components/agent-tools/confirm-bar/confirm-bar.js",
-    "./dist/components/agent-tools/connector-manager/connector-manager.js",
-    "./dist/components/agent-tools/context-inspector/context-inspector.js",
-    "./dist/components/agent-tools/eval-dataset/eval-dataset.js",
     "./dist/components/agent-tools/eval-result/eval-result-register.js",
-    "./dist/components/agent-tools/eval-result/eval-result.js",
-    "./dist/components/agent-tools/evaluation-run/evaluation-run.js",
     "./dist/components/agent-tools/index.js",
-    "./dist/components/agent-tools/mcp-app/mcp-app.js",
-    "./dist/components/agent-tools/permission-grant/permission-grant.js",
-    "./dist/components/agent-tools/permission-rules/permission-rules.js",
-    "./dist/components/agent-tools/policy-summary/policy-summary.js",
-    "./dist/components/agent-tools/prompt-studio/prompt-studio.js",
-    "./dist/components/agent-tools/result-card/result-card.js",
-    "./dist/components/agent-tools/result-card/result-field.js",
-    "./dist/components/agent-tools/schema-viewer/schema-viewer.js",
-    "./dist/components/agent-tools/span-waterfall/span-waterfall.js",
-    "./dist/components/agent-tools/stack-trace/stack-trace.js",
-    "./dist/components/agent-tools/subagent-panel/subagent-panel.js",
-    "./dist/components/agent-tools/task-list/task-list.js",
-    "./dist/components/agent-tools/terminal/terminal.js",
-    "./dist/components/agent-tools/test-results/test-results.js",
-    "./dist/components/agent-tools/thinking-panel/thinking-panel.js",
-    "./dist/components/agent-tools/tool-approval-dialog/tool-approval-dialog.js",
-    "./dist/components/agent-tools/tool-call-block/tool-call-block.js",
-    "./dist/components/agent-tools/tool-call-chip/tool-call-chip.js",
-    "./dist/components/agent-tools/tool-param-form/tool-param-form.js",
-    "./dist/components/agent-tools/tool-result-dialog/tool-result-dialog.js",
-    "./dist/components/agent-tools/tool-result-view/tool-result-view.js",
-    "./dist/components/agent-tools/tool-select-dialog/tool-select-dialog.js",
-    "./dist/components/agent-tools/tool-timeline/tool-timeline.js",
-    "./dist/components/agent-tools/trace-tree/trace-tree.js",
-    "./dist/components/charts/chart-3d/chart-3d.js",
-    "./dist/components/charts/chart/bar-chart.js",
-    "./dist/components/charts/chart/box-plot.js",
-    "./dist/components/charts/chart/bubble-chart.js",
-    "./dist/components/charts/chart/chart.js",
-    "./dist/components/charts/chart/doughnut-chart.js",
-    "./dist/components/charts/chart/histogram.js",
-    "./dist/components/charts/chart/line-chart.js",
-    "./dist/components/charts/chart/lite-chart.js",
-    "./dist/components/charts/chart/pie-chart.js",
-    "./dist/components/charts/chart/polar-area-chart.js",
-    "./dist/components/charts/chart/radar-chart.js",
-    "./dist/components/charts/chart/scatter-chart.js",
     "./dist/components/charts/index.js",
     "./dist/components/conversation/agent-workspace/agent-workspace-register.js",
-    "./dist/components/conversation/agent-workspace/agent-workspace.js",
-    "./dist/components/conversation/audio-visualizer/audio-visualizer.js",
-    "./dist/components/conversation/branch-picker/branch-picker.js",
-    "./dist/components/conversation/chat-composer/chat-composer.js",
-    "./dist/components/conversation/chat-message/chat-message.js",
-    "./dist/components/conversation/chat-viewport/chat-viewport.js",
-    "./dist/components/conversation/checkpoint/checkpoint.js",
-    "./dist/components/conversation/code-block/code-block-core.js",
-    "./dist/components/conversation/code-block/code-block.js",
-    "./dist/components/conversation/conversation-item/conversation-item.js",
-    "./dist/components/conversation/generation-metrics/generation-metrics.js",
-    "./dist/components/conversation/handoff-divider/handoff-divider.js",
     "./dist/components/conversation/index.js",
-    "./dist/components/conversation/markdown/markdown-core.js",
-    "./dist/components/conversation/markdown/markdown.js",
-    "./dist/components/conversation/message-actions/message-actions.js",
-    "./dist/components/conversation/message-feedback/message-feedback.js",
-    "./dist/components/conversation/message-parts/message-parts.js",
-    "./dist/components/conversation/model-select/model-select.js",
-    "./dist/components/conversation/model-settings-panel/model-settings-panel.js",
     "./dist/components/conversation/prompt-input/prompt-input-register.js",
-    "./dist/components/conversation/prompt-input/prompt-input.js",
-    "./dist/components/conversation/prompt-queue/prompt-queue.js",
-    "./dist/components/conversation/push-to-talk/push-to-talk.js",
-    "./dist/components/conversation/realtime-session/realtime-session.js",
-    "./dist/components/conversation/selection-toolbar/selection-toolbar.js",
-    "./dist/components/conversation/stream-status/stream-status.js",
-    "./dist/components/conversation/streaming-text/streaming-text-core.js",
-    "./dist/components/conversation/streaming-text/streaming-text.js",
-    "./dist/components/conversation/suggestion-chips/suggestion-chips.js",
-    "./dist/components/conversation/thread-list/thread-list.js",
-    "./dist/components/conversation/transcript-feed/transcript-feed.js",
-    "./dist/components/conversation/typing-indicator/typing-indicator.js",
-    "./dist/components/conversation/usage-badge/usage-badge.js",
-    "./dist/components/conversation/voice-picker/voice-picker.js",
-    "./dist/components/conversation/widget-renderer/widget-renderer.js",
-    "./dist/components/data/calendar/calendar.js",
     "./dist/components/data/condition-builder/condition-builder-register.js",
-    "./dist/components/data/condition-builder/condition-builder.js",
-    "./dist/components/data/context-meter/context-meter.js",
-    "./dist/components/data/data-grid/data-grid.js",
-    "./dist/components/data/document-library/document-library.js",
-    "./dist/components/data/env-list/env-list.js",
-    "./dist/components/data/file-tree/file-tree.js",
-    "./dist/components/data/flow-canvas/flow-canvas.js",
-    "./dist/components/data/flow-controls/flow-controls.js",
-    "./dist/components/data/flow-minimap/flow-minimap.js",
-    "./dist/components/data/flow-node/flow-node.js",
-    "./dist/components/data/flow-run-status/flow-run-status.js",
-    "./dist/components/data/funnel/funnel.js",
-    "./dist/components/data/gauge/gauge.js",
-    "./dist/components/data/graph-query-builder/graph-query-builder.js",
-    "./dist/components/data/heatmap/heatmap.js",
     "./dist/components/data/index.js",
-    "./dist/components/data/pagination/pagination.js",
-    "./dist/components/data/sequence-strip/sequence-strip.js",
-    "./dist/components/data/sparkline/sparkline.js",
-    "./dist/components/data/stat/stat.js",
-    "./dist/components/data/table/table.js",
-    "./dist/components/data/timeline/timeline-item.js",
-    "./dist/components/data/timeline/timeline.js",
-    "./dist/components/data/tree/tree-item.js",
-    "./dist/components/data/tree/tree.js",
-    "./dist/components/data/word-cloud/word-cloud.js",
-    "./dist/components/forms/button/button.js",
-    "./dist/components/forms/checkbox-group/checkbox-group.js",
-    "./dist/components/forms/checkbox/checkbox.js",
-    "./dist/components/forms/code-editor/code-editor.js",
-    "./dist/components/forms/color-picker/color-picker.js",
     "./dist/components/forms/combobox/combobox-catalog.js",
-    "./dist/components/forms/combobox/combobox.js",
-    "./dist/components/forms/combobox/option.js",
     "./dist/components/forms/country-picker/country-picker-register.js",
-    "./dist/components/forms/country-picker/country-picker.js",
     "./dist/components/forms/currency-picker/currency-picker-register.js",
-    "./dist/components/forms/currency-picker/currency-picker.js",
-    "./dist/components/forms/date-picker/date-input.js",
-    "./dist/components/forms/date-picker/date-picker.js",
-    "./dist/components/forms/emoji-picker/emoji-picker.js",
     "./dist/components/forms/icon-button/icon-button-register.js",
-    "./dist/components/forms/icon-button/icon-button.js",
     "./dist/components/forms/index.js",
     "./dist/components/forms/input/input-shared.js",
-    "./dist/components/forms/input/input.js",
-    "./dist/components/forms/input/native-time-input.js",
-    "./dist/components/forms/input/number-input.js",
-    "./dist/components/forms/input/time-input.js",
-    "./dist/components/forms/locale-picker/locale-picker.js",
-    "./dist/components/forms/otp-input/otp-input.js",
-    "./dist/components/forms/phone-input/phone-input.js",
-    "./dist/components/forms/radio/radio-button.js",
-    "./dist/components/forms/radio/radio-group.js",
-    "./dist/components/forms/radio/radio.js",
-    "./dist/components/forms/rubric-form/rubric-form.js",
-    "./dist/components/forms/select/select.js",
-    "./dist/components/forms/signature-pad/signature-pad.js",
-    "./dist/components/forms/slider/slider.js",
-    "./dist/components/forms/swatch-picker/swatch-picker.js",
-    "./dist/components/forms/switch/switch.js",
-    "./dist/components/forms/textarea/textarea.js",
-    "./dist/components/forms/time-range/time-range.js",
     "./dist/components/forms/time-zone-picker/time-zone-picker-register.js",
-    "./dist/components/forms/time-zone-picker/time-zone-picker.js",
-    "./dist/components/forms/toggle-group/toggle-group.js",
-    "./dist/components/forms/toggle/toggle.js",
-    "./dist/components/forms/token-input/token-input.js",
     "./dist/components/forms/unit-picker/unit-picker-register.js",
-    "./dist/components/forms/unit-picker/unit-picker.js",
-    "./dist/components/layout/app-rail-group/app-rail-group.js",
-    "./dist/components/layout/app-rail/app-rail-item.js",
-    "./dist/components/layout/app-rail/app-rail.js",
-    "./dist/components/layout/breadcrumb/breadcrumb-item.js",
-    "./dist/components/layout/breadcrumb/breadcrumb.js",
-    "./dist/components/layout/button-group/button-group.js",
-    "./dist/components/layout/card/card.js",
-    "./dist/components/layout/carousel/carousel-item.js",
-    "./dist/components/layout/carousel/carousel.js",
-    "./dist/components/layout/command-palette/command-palette.js",
-    "./dist/components/layout/control-group/control-group.js",
     "./dist/components/layout/dashboard-grid/dashboard-grid-register.js",
-    "./dist/components/layout/dashboard-grid/dashboard-grid.js",
-    "./dist/components/layout/details/accordion-item.js",
-    "./dist/components/layout/details/accordion.js",
-    "./dist/components/layout/details/details.js",
-    "./dist/components/layout/dock-panel/dock-panel.js",
-    "./dist/components/layout/drilldown-panel/drilldown-panel.js",
     "./dist/components/layout/filter-bar/filter-bar-register.js",
-    "./dist/components/layout/filter-bar/filter-bar.js",
     "./dist/components/layout/index.js",
-    "./dist/components/layout/menu/dropdown-item.js",
-    "./dist/components/layout/menu/menu-item.js",
-    "./dist/components/layout/menu/menu-label.js",
-    "./dist/components/layout/menu/menu.js",
-    "./dist/components/layout/menubar/menubar-item.js",
-    "./dist/components/layout/menubar/menubar.js",
-    "./dist/components/layout/multi-split/multi-split.js",
-    "./dist/components/layout/navigation-menu-item/navigation-menu-item.js",
-    "./dist/components/layout/navigation-menu/navigation-menu.js",
-    "./dist/components/layout/page/page.js",
-    "./dist/components/layout/reorder-list/reorder-item.js",
-    "./dist/components/layout/reorder-list/reorder-list.js",
-    "./dist/components/layout/responsive-panel/responsive-panel.js",
-    "./dist/components/layout/scroller/scroller.js",
-    "./dist/components/layout/segmented/segmented.js",
-    "./dist/components/layout/split-panel/split-panel.js",
-    "./dist/components/layout/stepper/stepper.js",
-    "./dist/components/layout/tab-group/tab-group.js",
-    "./dist/components/layout/tab-group/tab-panel.js",
-    "./dist/components/layout/tab-group/tab.js",
-    "./dist/components/layout/virtual-list/virtual-list.js",
-    "./dist/components/layout/widget/widget.js",
     "./dist/components/lr-*.js",
-    "./dist/components/media/animated-image/animated-image.js",
-    "./dist/components/media/animation/animation.js",
-    "./dist/components/media/attachment-chip/attachment-chip.js",
-    "./dist/components/media/attachment-trigger/attachment-trigger.js",
-    "./dist/components/media/av-player/av-player.js",
-    "./dist/components/media/avatar-group/avatar-group.js",
-    "./dist/components/media/avatar/avatar.js",
-    "./dist/components/media/drop-zone/drop-zone.js",
-    "./dist/components/media/file-icon/file-icon.js",
-    "./dist/components/media/file-input/file-input.js",
     "./dist/components/media/flag/flag-peer-bulk-standard.js",
     "./dist/components/media/flag/flag-peer-bulk.js",
     "./dist/components/media/flag/flag-peer.js",
-    "./dist/components/media/flag/flag.js",
-    "./dist/components/media/image-comparer/image-comparer.js",
-    "./dist/components/media/image-viewer/image-viewer.js",
     "./dist/components/media/index.js",
-    "./dist/components/media/lightbox/lightbox.js",
-    "./dist/components/media/map/map-anchor.js",
-    "./dist/components/media/map/map.js",
-    "./dist/components/media/media-card/media-card.js",
-    "./dist/components/media/pan-zoom/pan-zoom.js",
-    "./dist/components/media/qr-code/qr-code.js",
-    "./dist/components/media/sequence-playback/sequence-playback.js",
-    "./dist/components/media/video-playlist/video-playlist.js",
-    "./dist/components/media/video/video.js",
-    "./dist/components/media/zoomable-frame/zoomable-frame.js",
-    "./dist/components/overlays/alert/alert.js",
-    "./dist/components/overlays/badge/badge.js",
-    "./dist/components/overlays/badge/tag.js",
-    "./dist/components/overlays/callout/callout.js",
-    "./dist/components/overlays/chip/chip-group.js",
-    "./dist/components/overlays/chip/chip.js",
-    "./dist/components/overlays/context-menu/context-menu.js",
-    "./dist/components/overlays/dialog/dialog.js",
-    "./dist/components/overlays/drawer/drawer.js",
-    "./dist/components/overlays/empty/empty.js",
     "./dist/components/overlays/index.js",
-    "./dist/components/overlays/kbd/kbd.js",
-    "./dist/components/overlays/overlay/dropdown.js",
-    "./dist/components/overlays/overlay/popover.js",
-    "./dist/components/overlays/overlay/tooltip.js",
-    "./dist/components/overlays/popup/popup.js",
-    "./dist/components/overlays/progress/progress-bar.js",
-    "./dist/components/overlays/progress/progress-ring.js",
-    "./dist/components/overlays/rating/rating.js",
-    "./dist/components/overlays/skeleton/skeleton.js",
-    "./dist/components/overlays/spinner/spinner.js",
-    "./dist/components/overlays/toast/toast-item.js",
-    "./dist/components/overlays/toast/toast.js",
-    "./dist/components/retrieval/chunk-inspector/chunk-inspector.js",
-    "./dist/components/retrieval/citation-badge/citation-badge.js",
-    "./dist/components/retrieval/claim-evidence/claim-evidence.js",
-    "./dist/components/retrieval/community-card/community-card.js",
-    "./dist/components/retrieval/embedding-explorer/embedding-explorer.js",
-    "./dist/components/retrieval/entity-card/entity-card.js",
-    "./dist/components/retrieval/entity-chip/entity-chip.js",
-    "./dist/components/retrieval/entity-dossier/entity-dossier.js",
-    "./dist/components/retrieval/graph-legend/graph-legend.js",
-    "./dist/components/retrieval/graph/graph.js",
-    "./dist/components/retrieval/grounding-summary/grounding-summary.js",
     "./dist/components/retrieval/index.js",
-    "./dist/components/retrieval/ingestion-queue/ingestion-queue.js",
-    "./dist/components/retrieval/knowledge-base-admin/knowledge-base-admin.js",
-    "./dist/components/retrieval/knowledge-base/knowledge-base.js",
-    "./dist/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js",
-    "./dist/components/retrieval/memory-panel/memory-panel.js",
-    "./dist/components/retrieval/mind-map/mind-map.js",
-    "./dist/components/retrieval/neighbor-list/neighbor-list.js",
-    "./dist/components/retrieval/node-palette/node-palette.js",
-    "./dist/components/retrieval/path-strip/path-strip.js",
-    "./dist/components/retrieval/provenance-panel/provenance-panel.js",
-    "./dist/components/retrieval/rag-answer/rag-answer.js",
-    "./dist/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js",
-    "./dist/components/retrieval/research-progress/research-progress.js",
-    "./dist/components/retrieval/retrieval-compare/retrieval-compare.js",
-    "./dist/components/retrieval/retrieval-results/retrieval-results.js",
-    "./dist/components/retrieval/retrieval-search/retrieval-search.js",
-    "./dist/components/retrieval/retrieval-trace/retrieval-trace.js",
-    "./dist/components/retrieval/source-card/source-card.js",
-    "./dist/components/retrieval/source-list/source-list.js",
-    "./dist/components/retrieval/source-picker/source-picker.js",
-    "./dist/components/utility/copy-button/copy-button.js",
-    "./dist/components/utility/diff-view/diff-view.js",
-    "./dist/components/utility/divider/divider.js",
-    "./dist/components/utility/export-button/export-button.js",
-    "./dist/components/utility/format/format-bytes.js",
-    "./dist/components/utility/format/format-date.js",
-    "./dist/components/utility/format/format-number.js",
-    "./dist/components/utility/format/relative-time.js",
-    "./dist/components/utility/icon/icon.js",
     "./dist/components/utility/index.js",
-    "./dist/components/utility/intersection-observer/intersection-observer.js",
-    "./dist/components/utility/json-viewer/json-viewer.js",
-    "./dist/components/utility/known-date/known-date.js",
-    "./dist/components/utility/live-region/live-region.js",
-    "./dist/components/utility/mention-popover/mention-popover.js",
-    "./dist/components/utility/mutation-observer/mutation-observer.js",
-    "./dist/components/utility/poll-status/poll-status.js",
-    "./dist/components/utility/random-content/random-content.js",
-    "./dist/components/utility/resize-observer/resize-observer.js",
-    "./dist/components/utility/tour/tour.js",
-    "./dist/components/utility/visually-hidden/visually-hidden.js",
     "./dist/components/viewers/archive-viewer/archive-viewer-register.js",
-    "./dist/components/viewers/archive-viewer/archive-viewer.js",
     "./dist/components/viewers/calendar-viewer/calendar-viewer-register.js",
-    "./dist/components/viewers/calendar-viewer/calendar-viewer.js",
     "./dist/components/viewers/contact-viewer/contact-viewer-register.js",
-    "./dist/components/viewers/contact-viewer/contact-viewer.js",
     "./dist/components/viewers/csv-viewer/csv-viewer-register.js",
-    "./dist/components/viewers/csv-viewer/csv-viewer.js",
     "./dist/components/viewers/dataset-viewer/dataset-viewer-register.js",
-    "./dist/components/viewers/dataset-viewer/dataset-viewer.js",
-    "./dist/components/viewers/document-compare/document-compare.js",
-    "./dist/components/viewers/document-preview/document-preview.js",
     "./dist/components/viewers/document-viewer/document-viewer-kinds.js",
-    "./dist/components/viewers/document-viewer/document-viewer.js",
     "./dist/components/viewers/docx-viewer/docx-viewer-register.js",
-    "./dist/components/viewers/docx-viewer/docx-viewer.js",
     "./dist/components/viewers/ebook-viewer/ebook-viewer-register.js",
-    "./dist/components/viewers/ebook-viewer/ebook-viewer.js",
     "./dist/components/viewers/email-viewer/email-viewer-register.js",
-    "./dist/components/viewers/email-viewer/email-viewer.js",
-    "./dist/components/viewers/geojson-view/geojson-viewer.js",
-    "./dist/components/viewers/highlight-layer/highlight-layer.js",
     "./dist/components/viewers/html-viewer/html-viewer-register.js",
-    "./dist/components/viewers/html-viewer/html-viewer.js",
-    "./dist/components/viewers/include/include.js",
     "./dist/components/viewers/index.js",
     "./dist/components/viewers/model-viewer/model-viewer-register.js",
-    "./dist/components/viewers/model-viewer/model-viewer.js",
     "./dist/components/viewers/notebook-viewer/notebook-viewer-register.js",
-    "./dist/components/viewers/notebook-viewer/notebook-viewer.js",
-    "./dist/components/viewers/page-rail/page-rail.js",
     "./dist/components/viewers/pdf-viewer/pdf-viewer-register.js",
-    "./dist/components/viewers/pdf-viewer/pdf-viewer.js",
     "./dist/components/viewers/pptx-viewer/pptx-viewer-register.js",
-    "./dist/components/viewers/pptx-viewer/pptx-viewer.js",
     "./dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.js",
-    "./dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js",
     "./dist/components/viewers/svg-viewer/svg-viewer-register.js",
-    "./dist/components/viewers/svg-viewer/svg-viewer.js",
     "./dist/components/viewers/xml-viewer/xml-viewer-register.js",
-    "./dist/components/viewers/xml-viewer/xml-viewer.js",
     "./dist/density.css",
     "./dist/hydration.js",
     "./dist/looks/data.css",
@@ -2270,362 +1959,51 @@
     "./src/accents.css",
     "./src/all.ts",
     "./src/autoloader-cdn.ts",
-    "./src/components/agent-tools/activity-feed/activity-feed.ts",
-    "./src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.ts",
-    "./src/components/agent-tools/agent-question/agent-question.ts",
-    "./src/components/agent-tools/agent-run/agent-run.ts",
-    "./src/components/agent-tools/agent-trace/agent-trace.ts",
-    "./src/components/agent-tools/approval-queue/approval-queue.ts",
-    "./src/components/agent-tools/artifact-panel/artifact-panel.ts",
-    "./src/components/agent-tools/background-runs/background-runs.ts",
-    "./src/components/agent-tools/browser-frame/browser-frame.ts",
-    "./src/components/agent-tools/budget-meter/budget-meter.ts",
-    "./src/components/agent-tools/change-review/change-review.ts",
-    "./src/components/agent-tools/commit-card/commit-card.ts",
-    "./src/components/agent-tools/compare-panel/compare-panel.ts",
-    "./src/components/agent-tools/confirm-bar/confirm-bar.ts",
-    "./src/components/agent-tools/connector-manager/connector-manager.ts",
-    "./src/components/agent-tools/context-inspector/context-inspector.ts",
-    "./src/components/agent-tools/eval-dataset/eval-dataset.ts",
     "./src/components/agent-tools/eval-result/eval-result-register.ts",
-    "./src/components/agent-tools/eval-result/eval-result.ts",
-    "./src/components/agent-tools/evaluation-run/evaluation-run.ts",
     "./src/components/agent-tools/index.ts",
-    "./src/components/agent-tools/mcp-app/mcp-app.ts",
-    "./src/components/agent-tools/permission-grant/permission-grant.ts",
-    "./src/components/agent-tools/permission-rules/permission-rules.ts",
-    "./src/components/agent-tools/policy-summary/policy-summary.ts",
-    "./src/components/agent-tools/prompt-studio/prompt-studio.ts",
-    "./src/components/agent-tools/result-card/result-card.ts",
-    "./src/components/agent-tools/result-card/result-field.ts",
-    "./src/components/agent-tools/schema-viewer/schema-viewer.ts",
-    "./src/components/agent-tools/span-waterfall/span-waterfall.ts",
-    "./src/components/agent-tools/stack-trace/stack-trace.ts",
-    "./src/components/agent-tools/subagent-panel/subagent-panel.ts",
-    "./src/components/agent-tools/task-list/task-list.ts",
-    "./src/components/agent-tools/terminal/terminal.ts",
-    "./src/components/agent-tools/test-results/test-results.ts",
-    "./src/components/agent-tools/thinking-panel/thinking-panel.ts",
-    "./src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.ts",
-    "./src/components/agent-tools/tool-call-block/tool-call-block.ts",
-    "./src/components/agent-tools/tool-call-chip/tool-call-chip.ts",
-    "./src/components/agent-tools/tool-param-form/tool-param-form.ts",
-    "./src/components/agent-tools/tool-result-dialog/tool-result-dialog.ts",
-    "./src/components/agent-tools/tool-result-view/tool-result-view.ts",
-    "./src/components/agent-tools/tool-select-dialog/tool-select-dialog.ts",
-    "./src/components/agent-tools/tool-timeline/tool-timeline.ts",
-    "./src/components/agent-tools/trace-tree/trace-tree.ts",
-    "./src/components/charts/chart-3d/chart-3d.ts",
-    "./src/components/charts/chart/bar-chart.ts",
-    "./src/components/charts/chart/box-plot.ts",
-    "./src/components/charts/chart/bubble-chart.ts",
-    "./src/components/charts/chart/chart.ts",
-    "./src/components/charts/chart/doughnut-chart.ts",
-    "./src/components/charts/chart/histogram.ts",
-    "./src/components/charts/chart/line-chart.ts",
-    "./src/components/charts/chart/lite-chart.ts",
-    "./src/components/charts/chart/pie-chart.ts",
-    "./src/components/charts/chart/polar-area-chart.ts",
-    "./src/components/charts/chart/radar-chart.ts",
-    "./src/components/charts/chart/scatter-chart.ts",
     "./src/components/charts/index.ts",
     "./src/components/conversation/agent-workspace/agent-workspace-register.ts",
-    "./src/components/conversation/agent-workspace/agent-workspace.ts",
-    "./src/components/conversation/audio-visualizer/audio-visualizer.ts",
-    "./src/components/conversation/branch-picker/branch-picker.ts",
-    "./src/components/conversation/chat-composer/chat-composer.ts",
-    "./src/components/conversation/chat-message/chat-message.ts",
-    "./src/components/conversation/chat-viewport/chat-viewport.ts",
-    "./src/components/conversation/checkpoint/checkpoint.ts",
-    "./src/components/conversation/code-block/code-block-core.ts",
-    "./src/components/conversation/code-block/code-block.ts",
-    "./src/components/conversation/conversation-item/conversation-item.ts",
-    "./src/components/conversation/generation-metrics/generation-metrics.ts",
-    "./src/components/conversation/handoff-divider/handoff-divider.ts",
     "./src/components/conversation/index.ts",
-    "./src/components/conversation/markdown/markdown-core.ts",
-    "./src/components/conversation/markdown/markdown.ts",
-    "./src/components/conversation/message-actions/message-actions.ts",
-    "./src/components/conversation/message-feedback/message-feedback.ts",
-    "./src/components/conversation/message-parts/message-parts.ts",
-    "./src/components/conversation/model-select/model-select.ts",
-    "./src/components/conversation/model-settings-panel/model-settings-panel.ts",
     "./src/components/conversation/prompt-input/prompt-input-register.ts",
-    "./src/components/conversation/prompt-input/prompt-input.ts",
-    "./src/components/conversation/prompt-queue/prompt-queue.ts",
-    "./src/components/conversation/push-to-talk/push-to-talk.ts",
-    "./src/components/conversation/realtime-session/realtime-session.ts",
-    "./src/components/conversation/selection-toolbar/selection-toolbar.ts",
-    "./src/components/conversation/stream-status/stream-status.ts",
-    "./src/components/conversation/streaming-text/streaming-text-core.ts",
-    "./src/components/conversation/streaming-text/streaming-text.ts",
-    "./src/components/conversation/suggestion-chips/suggestion-chips.ts",
-    "./src/components/conversation/thread-list/thread-list.ts",
-    "./src/components/conversation/transcript-feed/transcript-feed.ts",
-    "./src/components/conversation/typing-indicator/typing-indicator.ts",
-    "./src/components/conversation/usage-badge/usage-badge.ts",
-    "./src/components/conversation/voice-picker/voice-picker.ts",
-    "./src/components/conversation/widget-renderer/widget-renderer.ts",
-    "./src/components/data/calendar/calendar.ts",
     "./src/components/data/condition-builder/condition-builder-register.ts",
-    "./src/components/data/condition-builder/condition-builder.ts",
-    "./src/components/data/context-meter/context-meter.ts",
-    "./src/components/data/data-grid/data-grid.ts",
-    "./src/components/data/document-library/document-library.ts",
-    "./src/components/data/env-list/env-list.ts",
-    "./src/components/data/file-tree/file-tree.ts",
-    "./src/components/data/flow-canvas/flow-canvas.ts",
-    "./src/components/data/flow-controls/flow-controls.ts",
-    "./src/components/data/flow-minimap/flow-minimap.ts",
-    "./src/components/data/flow-node/flow-node.ts",
-    "./src/components/data/flow-run-status/flow-run-status.ts",
-    "./src/components/data/funnel/funnel.ts",
-    "./src/components/data/gauge/gauge.ts",
-    "./src/components/data/graph-query-builder/graph-query-builder.ts",
-    "./src/components/data/heatmap/heatmap.ts",
     "./src/components/data/index.ts",
-    "./src/components/data/pagination/pagination.ts",
-    "./src/components/data/sequence-strip/sequence-strip.ts",
-    "./src/components/data/sparkline/sparkline.ts",
-    "./src/components/data/stat/stat.ts",
-    "./src/components/data/table/table.ts",
-    "./src/components/data/timeline/timeline-item.ts",
-    "./src/components/data/timeline/timeline.ts",
-    "./src/components/data/tree/tree-item.ts",
-    "./src/components/data/tree/tree.ts",
-    "./src/components/data/word-cloud/word-cloud.ts",
-    "./src/components/forms/button/button.ts",
-    "./src/components/forms/checkbox-group/checkbox-group.ts",
-    "./src/components/forms/checkbox/checkbox.ts",
-    "./src/components/forms/code-editor/code-editor.ts",
-    "./src/components/forms/color-picker/color-picker.ts",
     "./src/components/forms/combobox/combobox-catalog.ts",
-    "./src/components/forms/combobox/combobox.ts",
-    "./src/components/forms/combobox/option.ts",
     "./src/components/forms/country-picker/country-picker-register.ts",
-    "./src/components/forms/country-picker/country-picker.ts",
     "./src/components/forms/currency-picker/currency-picker-register.ts",
-    "./src/components/forms/currency-picker/currency-picker.ts",
-    "./src/components/forms/date-picker/date-input.ts",
-    "./src/components/forms/date-picker/date-picker.ts",
-    "./src/components/forms/emoji-picker/emoji-picker.ts",
     "./src/components/forms/icon-button/icon-button-register.ts",
-    "./src/components/forms/icon-button/icon-button.ts",
     "./src/components/forms/index.ts",
     "./src/components/forms/input/input-shared.ts",
-    "./src/components/forms/input/input.ts",
-    "./src/components/forms/input/native-time-input.ts",
-    "./src/components/forms/input/number-input.ts",
-    "./src/components/forms/input/time-input.ts",
-    "./src/components/forms/locale-picker/locale-picker.ts",
-    "./src/components/forms/otp-input/otp-input.ts",
-    "./src/components/forms/phone-input/phone-input.ts",
-    "./src/components/forms/radio/radio-button.ts",
-    "./src/components/forms/radio/radio-group.ts",
-    "./src/components/forms/radio/radio.ts",
-    "./src/components/forms/rubric-form/rubric-form.ts",
-    "./src/components/forms/select/select.ts",
-    "./src/components/forms/signature-pad/signature-pad.ts",
-    "./src/components/forms/slider/slider.ts",
-    "./src/components/forms/swatch-picker/swatch-picker.ts",
-    "./src/components/forms/switch/switch.ts",
-    "./src/components/forms/textarea/textarea.ts",
-    "./src/components/forms/time-range/time-range.ts",
     "./src/components/forms/time-zone-picker/time-zone-picker-register.ts",
-    "./src/components/forms/time-zone-picker/time-zone-picker.ts",
-    "./src/components/forms/toggle-group/toggle-group.ts",
-    "./src/components/forms/toggle/toggle.ts",
-    "./src/components/forms/token-input/token-input.ts",
     "./src/components/forms/unit-picker/unit-picker-register.ts",
-    "./src/components/forms/unit-picker/unit-picker.ts",
-    "./src/components/layout/app-rail-group/app-rail-group.ts",
-    "./src/components/layout/app-rail/app-rail-item.ts",
-    "./src/components/layout/app-rail/app-rail.ts",
-    "./src/components/layout/breadcrumb/breadcrumb-item.ts",
-    "./src/components/layout/breadcrumb/breadcrumb.ts",
-    "./src/components/layout/button-group/button-group.ts",
-    "./src/components/layout/card/card.ts",
-    "./src/components/layout/carousel/carousel-item.ts",
-    "./src/components/layout/carousel/carousel.ts",
-    "./src/components/layout/command-palette/command-palette.ts",
-    "./src/components/layout/control-group/control-group.ts",
     "./src/components/layout/dashboard-grid/dashboard-grid-register.ts",
-    "./src/components/layout/dashboard-grid/dashboard-grid.ts",
-    "./src/components/layout/details/accordion-item.ts",
-    "./src/components/layout/details/accordion.ts",
-    "./src/components/layout/details/details.ts",
-    "./src/components/layout/dock-panel/dock-panel.ts",
-    "./src/components/layout/drilldown-panel/drilldown-panel.ts",
     "./src/components/layout/filter-bar/filter-bar-register.ts",
-    "./src/components/layout/filter-bar/filter-bar.ts",
     "./src/components/layout/index.ts",
-    "./src/components/layout/menu/dropdown-item.ts",
-    "./src/components/layout/menu/menu-item.ts",
-    "./src/components/layout/menu/menu-label.ts",
-    "./src/components/layout/menu/menu.ts",
-    "./src/components/layout/menubar/menubar-item.ts",
-    "./src/components/layout/menubar/menubar.ts",
-    "./src/components/layout/multi-split/multi-split.ts",
-    "./src/components/layout/navigation-menu-item/navigation-menu-item.ts",
-    "./src/components/layout/navigation-menu/navigation-menu.ts",
-    "./src/components/layout/page/page.ts",
-    "./src/components/layout/reorder-list/reorder-item.ts",
-    "./src/components/layout/reorder-list/reorder-list.ts",
-    "./src/components/layout/responsive-panel/responsive-panel.ts",
-    "./src/components/layout/scroller/scroller.ts",
-    "./src/components/layout/segmented/segmented.ts",
-    "./src/components/layout/split-panel/split-panel.ts",
-    "./src/components/layout/stepper/stepper.ts",
-    "./src/components/layout/tab-group/tab-group.ts",
-    "./src/components/layout/tab-group/tab-panel.ts",
-    "./src/components/layout/tab-group/tab.ts",
-    "./src/components/layout/virtual-list/virtual-list.ts",
-    "./src/components/layout/widget/widget.ts",
     "./src/components/lr-*.ts",
-    "./src/components/media/animated-image/animated-image.ts",
-    "./src/components/media/animation/animation.ts",
-    "./src/components/media/attachment-chip/attachment-chip.ts",
-    "./src/components/media/attachment-trigger/attachment-trigger.ts",
-    "./src/components/media/av-player/av-player.ts",
-    "./src/components/media/avatar-group/avatar-group.ts",
-    "./src/components/media/avatar/avatar.ts",
-    "./src/components/media/drop-zone/drop-zone.ts",
-    "./src/components/media/file-icon/file-icon.ts",
-    "./src/components/media/file-input/file-input.ts",
     "./src/components/media/flag/flag-peer-bulk-standard.ts",
     "./src/components/media/flag/flag-peer-bulk.ts",
     "./src/components/media/flag/flag-peer.ts",
-    "./src/components/media/flag/flag.ts",
-    "./src/components/media/image-comparer/image-comparer.ts",
-    "./src/components/media/image-viewer/image-viewer.ts",
     "./src/components/media/index.ts",
-    "./src/components/media/lightbox/lightbox.ts",
-    "./src/components/media/map/map-anchor.ts",
-    "./src/components/media/map/map.ts",
-    "./src/components/media/media-card/media-card.ts",
-    "./src/components/media/pan-zoom/pan-zoom.ts",
-    "./src/components/media/qr-code/qr-code.ts",
-    "./src/components/media/sequence-playback/sequence-playback.ts",
-    "./src/components/media/video-playlist/video-playlist.ts",
-    "./src/components/media/video/video.ts",
-    "./src/components/media/zoomable-frame/zoomable-frame.ts",
-    "./src/components/overlays/alert/alert.ts",
-    "./src/components/overlays/badge/badge.ts",
-    "./src/components/overlays/badge/tag.ts",
-    "./src/components/overlays/callout/callout.ts",
-    "./src/components/overlays/chip/chip-group.ts",
-    "./src/components/overlays/chip/chip.ts",
-    "./src/components/overlays/context-menu/context-menu.ts",
-    "./src/components/overlays/dialog/dialog.ts",
-    "./src/components/overlays/drawer/drawer.ts",
-    "./src/components/overlays/empty/empty.ts",
     "./src/components/overlays/index.ts",
-    "./src/components/overlays/kbd/kbd.ts",
-    "./src/components/overlays/overlay/dropdown.ts",
-    "./src/components/overlays/overlay/popover.ts",
-    "./src/components/overlays/overlay/tooltip.ts",
-    "./src/components/overlays/popup/popup.ts",
-    "./src/components/overlays/progress/progress-bar.ts",
-    "./src/components/overlays/progress/progress-ring.ts",
-    "./src/components/overlays/rating/rating.ts",
-    "./src/components/overlays/skeleton/skeleton.ts",
-    "./src/components/overlays/spinner/spinner.ts",
-    "./src/components/overlays/toast/toast-item.ts",
-    "./src/components/overlays/toast/toast.ts",
-    "./src/components/retrieval/chunk-inspector/chunk-inspector.ts",
-    "./src/components/retrieval/citation-badge/citation-badge.ts",
-    "./src/components/retrieval/claim-evidence/claim-evidence.ts",
-    "./src/components/retrieval/community-card/community-card.ts",
-    "./src/components/retrieval/embedding-explorer/embedding-explorer.ts",
-    "./src/components/retrieval/entity-card/entity-card.ts",
-    "./src/components/retrieval/entity-chip/entity-chip.ts",
-    "./src/components/retrieval/entity-dossier/entity-dossier.ts",
-    "./src/components/retrieval/graph-legend/graph-legend.ts",
-    "./src/components/retrieval/graph/graph.ts",
-    "./src/components/retrieval/grounding-summary/grounding-summary.ts",
     "./src/components/retrieval/index.ts",
-    "./src/components/retrieval/ingestion-queue/ingestion-queue.ts",
-    "./src/components/retrieval/knowledge-base-admin/knowledge-base-admin.ts",
-    "./src/components/retrieval/knowledge-base/knowledge-base.ts",
-    "./src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.ts",
-    "./src/components/retrieval/memory-panel/memory-panel.ts",
-    "./src/components/retrieval/mind-map/mind-map.ts",
-    "./src/components/retrieval/neighbor-list/neighbor-list.ts",
-    "./src/components/retrieval/node-palette/node-palette.ts",
-    "./src/components/retrieval/path-strip/path-strip.ts",
-    "./src/components/retrieval/provenance-panel/provenance-panel.ts",
-    "./src/components/retrieval/rag-answer/rag-answer.ts",
-    "./src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.ts",
-    "./src/components/retrieval/research-progress/research-progress.ts",
-    "./src/components/retrieval/retrieval-compare/retrieval-compare.ts",
-    "./src/components/retrieval/retrieval-results/retrieval-results.ts",
-    "./src/components/retrieval/retrieval-search/retrieval-search.ts",
-    "./src/components/retrieval/retrieval-trace/retrieval-trace.ts",
-    "./src/components/retrieval/source-card/source-card.ts",
-    "./src/components/retrieval/source-list/source-list.ts",
-    "./src/components/retrieval/source-picker/source-picker.ts",
-    "./src/components/utility/copy-button/copy-button.ts",
-    "./src/components/utility/diff-view/diff-view.ts",
-    "./src/components/utility/divider/divider.ts",
-    "./src/components/utility/export-button/export-button.ts",
-    "./src/components/utility/format/format-bytes.ts",
-    "./src/components/utility/format/format-date.ts",
-    "./src/components/utility/format/format-number.ts",
-    "./src/components/utility/format/relative-time.ts",
-    "./src/components/utility/icon/icon.ts",
     "./src/components/utility/index.ts",
-    "./src/components/utility/intersection-observer/intersection-observer.ts",
-    "./src/components/utility/json-viewer/json-viewer.ts",
-    "./src/components/utility/known-date/known-date.ts",
-    "./src/components/utility/live-region/live-region.ts",
-    "./src/components/utility/mention-popover/mention-popover.ts",
-    "./src/components/utility/mutation-observer/mutation-observer.ts",
-    "./src/components/utility/poll-status/poll-status.ts",
-    "./src/components/utility/random-content/random-content.ts",
-    "./src/components/utility/resize-observer/resize-observer.ts",
-    "./src/components/utility/tour/tour.ts",
-    "./src/components/utility/visually-hidden/visually-hidden.ts",
     "./src/components/viewers/archive-viewer/archive-viewer-register.ts",
-    "./src/components/viewers/archive-viewer/archive-viewer.ts",
     "./src/components/viewers/calendar-viewer/calendar-viewer-register.ts",
-    "./src/components/viewers/calendar-viewer/calendar-viewer.ts",
     "./src/components/viewers/contact-viewer/contact-viewer-register.ts",
-    "./src/components/viewers/contact-viewer/contact-viewer.ts",
     "./src/components/viewers/csv-viewer/csv-viewer-register.ts",
-    "./src/components/viewers/csv-viewer/csv-viewer.ts",
     "./src/components/viewers/dataset-viewer/dataset-viewer-register.ts",
-    "./src/components/viewers/dataset-viewer/dataset-viewer.ts",
-    "./src/components/viewers/document-compare/document-compare.ts",
-    "./src/components/viewers/document-preview/document-preview.ts",
     "./src/components/viewers/document-viewer/document-viewer-kinds.ts",
-    "./src/components/viewers/document-viewer/document-viewer.ts",
     "./src/components/viewers/docx-viewer/docx-viewer-register.ts",
-    "./src/components/viewers/docx-viewer/docx-viewer.ts",
     "./src/components/viewers/ebook-viewer/ebook-viewer-register.ts",
-    "./src/components/viewers/ebook-viewer/ebook-viewer.ts",
     "./src/components/viewers/email-viewer/email-viewer-register.ts",
-    "./src/components/viewers/email-viewer/email-viewer.ts",
-    "./src/components/viewers/geojson-view/geojson-viewer.ts",
-    "./src/components/viewers/highlight-layer/highlight-layer.ts",
     "./src/components/viewers/html-viewer/html-viewer-register.ts",
-    "./src/components/viewers/html-viewer/html-viewer.ts",
-    "./src/components/viewers/include/include.ts",
     "./src/components/viewers/index.ts",
     "./src/components/viewers/model-viewer/model-viewer-register.ts",
-    "./src/components/viewers/model-viewer/model-viewer.ts",
     "./src/components/viewers/notebook-viewer/notebook-viewer-register.ts",
-    "./src/components/viewers/notebook-viewer/notebook-viewer.ts",
-    "./src/components/viewers/page-rail/page-rail.ts",
     "./src/components/viewers/pdf-viewer/pdf-viewer-register.ts",
-    "./src/components/viewers/pdf-viewer/pdf-viewer.ts",
     "./src/components/viewers/pptx-viewer/pptx-viewer-register.ts",
-    "./src/components/viewers/pptx-viewer/pptx-viewer.ts",
     "./src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.ts",
-    "./src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
     "./src/components/viewers/svg-viewer/svg-viewer-register.ts",
-    "./src/components/viewers/svg-viewer/svg-viewer.ts",
     "./src/components/viewers/xml-viewer/xml-viewer-register.ts",
-    "./src/components/viewers/xml-viewer/xml-viewer.ts",
     "./src/density.css",
     "./src/hydration.ts",
     "./src/looks/data.css",

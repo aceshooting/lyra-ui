@@ -2,10 +2,10 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './usage-badge.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraUsageBadge } from './usage-badge.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../lr-usage-badge.js';
+import '../../lr-dialog.js';
+import type { LyraUsageBadge } from '../../lr-usage-badge.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 describe('usage badge removal and overlay routing', () => {
   for (const [attribute, property, part] of [['cost-text', 'costText', 'cost'], ['summary', 'summary', 'summary']] as const) {

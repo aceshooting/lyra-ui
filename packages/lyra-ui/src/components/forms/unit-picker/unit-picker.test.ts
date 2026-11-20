@@ -5,7 +5,7 @@ import { sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraUnitPicker } from './unit-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import { UNIT_CODES } from '../../../units.js';
-import './unit-picker.js';
+import '../../lr-unit-picker.js';
 import '../../../translations/fr/forms.js';
 import '../../../translations/fr/shared.js';
 import '../../../translations/ja/forms.js';

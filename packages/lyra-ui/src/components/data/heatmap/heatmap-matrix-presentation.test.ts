@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap, LyraHeatmapMatrixGeometryChangeDetail } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap, LyraHeatmapMatrixGeometryChangeDetail } from '../../lr-heatmap.js';
 
 type Matrix = Extract<LyraHeatmap['data'], { kind: 'matrix' }>;
 const data: Matrix = {

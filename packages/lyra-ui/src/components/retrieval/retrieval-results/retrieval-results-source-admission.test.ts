@@ -3,7 +3,7 @@ import type { LyraRetrievalResults, RetrievalResultsSource } from './retrieval-r
 import type { RetrievalChunk } from '../../../ai/types.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraSourceGroup } from '../../../data-sources.js';
-import './retrieval-results.js';
+import '../../lr-retrieval-results.js';
 
 const chunk = (): RetrievalChunk => ({ id: 'c0', text: 'Relevant passage', score: 0.8, source: { id: 's', name: 'Source' } });
 async function ready(viewer: LyraRetrievalResults): Promise<LyraVirtualList> {

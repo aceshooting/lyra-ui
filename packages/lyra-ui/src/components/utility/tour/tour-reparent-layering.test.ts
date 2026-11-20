@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { observeOverlayStack } from '../../../internal/overlay-stack.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
-import type { LyraTour } from './tour.js';
-import '../../overlays/dialog/dialog.js';
-import './tour.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import type { LyraTour } from '../../lr-tour.js';
+import '../../lr-dialog.js';
+import '../../lr-tour.js';
 
 it('keeps a newer dialog above a reconnected modal tour', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>

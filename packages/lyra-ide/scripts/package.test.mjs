@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
-import { IDE_DATA_FILES, syncIdeData } from './sync.mjs';
+import { IDE_DATA_FILES, omitSharedAttributeDescriptions, syncIdeData } from './sync.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -114,4 +114,24 @@ test('the CLI exits non-zero with the reason when the editor data is stale', con
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /web-types\.json describes lyra-ui 26\.0\.0, but this package is 27\.0\.0/u);
   for (const file of IDE_DATA_FILES) assert.throws(() => readFileSync(join(ide, file)), { code: 'ENOENT' });
+});
+
+test('ships an attribute description once when it repeats its backing field', () => {
+  const shared = 'Visual treatment applied to the group and its direct items.';
+  const manifest = omitSharedAttributeDescriptions({
+    modules: [{ declarations: [{
+      members: [{ name: 'appearance', description: shared }, { name: 'mode', description: 'Mode.' }, { name: 'size', description: shared }],
+      attributes: [
+        { name: 'appearance', fieldName: 'appearance', description: shared },
+        { name: 'mode', fieldName: 'mode', description: 'Mode.' },
+        { name: 'sz', fieldName: 'size', description: `${shared} Differs.` },
+        { name: 'orphan', fieldName: 'missing', description: shared },
+      ],
+    }] }],
+  });
+  const [appearance, mode, size, orphan] = manifest.modules[0].declarations[0].attributes;
+  assert.equal(appearance.description, undefined, 'identical to the field: resolved through fieldName');
+  assert.equal(mode.description, 'Mode.', 'short text stays');
+  assert.equal(size.description, `${shared} Differs.`, 'different text stays');
+  assert.equal(orphan.description, shared, 'no backing member: stays');
 });

@@ -1,14 +1,14 @@
 import { expect, fixture } from '@open-wc/testing';
 import type { LyraElement } from '../../../internal/lyra-element.js';
-import './checkbox.js';
-import '../switch/switch.js';
-import '../radio/radio.js';
-import '../radio/radio-group.js';
-import '../slider/slider.js';
-import '../toggle-group/toggle-group.js';
-import '../toggle/toggle.js';
-import '../select/select.js';
-import '../combobox/combobox.js';
+import '../../lr-checkbox.js';
+import '../../lr-switch.js';
+import '../../lr-radio.js';
+import '../../lr-radio-group.js';
+import '../../lr-slider.js';
+import '../../lr-toggle-group.js';
+import '../../lr-toggle.js';
+import '../../lr-select.js';
+import '../../lr-combobox.js';
 
 for (const [name, role, key] of [
   ['checkbox', 'checkbox', ' '], ['switch', 'switch', 'ArrowRight'],

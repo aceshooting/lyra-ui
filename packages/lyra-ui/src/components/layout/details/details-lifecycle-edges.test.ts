@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './accordion.js';
-import './accordion-item.js';
-import './details.js';
+import '../../lr-accordion.js';
+import '../../lr-accordion-item.js';
+import '../../lr-details.js';
 import type { LyraAccordion } from './accordion.class.js';
 import type { LyraAccordionItem } from './accordion-item.class.js';
 import type { LyraDetails } from './details.class.js';

@@ -1,8 +1,8 @@
 import { expect } from '@open-wc/testing';
-import './menu.js';
-import './menu-item.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('folds a 1000-item typeahead corpus once while reading changed labels live', () => {

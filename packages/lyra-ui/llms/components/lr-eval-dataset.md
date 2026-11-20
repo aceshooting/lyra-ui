@@ -19,6 +19,8 @@
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
+The default entry registers the search field's `lr-input` the first time `searchable` is set;
+`updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
 

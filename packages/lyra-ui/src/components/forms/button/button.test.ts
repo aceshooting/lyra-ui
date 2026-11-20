@@ -1,6 +1,6 @@
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./button.js";
+import "../../lr-button.js";
 import type { LyraButton } from "./button.class.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
@@ -3207,7 +3207,7 @@ it('tracks a late external label\'s text and releases it after reassociation', a
 });
 
 it('retains generic label support when a full form control loads after the lean button entry', async () => {
-  await import('../input/input.js');
+  await import('../../lr-input.js');
   const container = (await fixture(html`
     <div>
       <label for="later-generic-control">Loaded later</label>

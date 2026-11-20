@@ -3,11 +3,11 @@ import { sendKeys } from '@web/test-runner-commands';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
-import './responsive-panel.js';
-import '../page/page.js';
-import '../widget/widget.js';
-import '../app-rail/app-rail.js';
-import '../multi-split/multi-split.js';
+import '../../lr-responsive-panel.js';
+import '../../lr-page.js';
+import '../../lr-widget.js';
+import '../../lr-app-rail.js';
+import '../../lr-multi-split.js';
 
 const layoutTags = ['lr-responsive-panel', 'lr-page', 'lr-widget', 'lr-app-rail', 'lr-multi-split'] as const;
 type LayoutTag = typeof layoutTags[number];

@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraTabGroup } from './tab-group.class.js';
-import './tab-group.js';
-import './tab.js';
-import './tab-panel.js';
-import '../segmented/segmented.js';
-import type { LyraSegmented } from '../segmented/segmented.js';
+import '../../lr-tab-group.js';
+import '../../lr-tab.js';
+import '../../lr-tab-panel.js';
+import '../../lr-segmented.js';
+import type { LyraSegmented } from '../../lr-segmented.js';
 
 const make = (): Promise<LyraTabGroup> =>
   fixture<LyraTabGroup>(html`<lr-tab-group>

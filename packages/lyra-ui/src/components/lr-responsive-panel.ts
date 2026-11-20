@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/responsive-panel/responsive-panel.js';
+export * from './layout/responsive-panel/responsive-panel.class.js';
+import { LyraResponsivePanel } from './layout/responsive-panel/responsive-panel.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('responsive-panel', LyraResponsivePanel);

@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './video.js';
-import '../video-playlist/video-playlist.js';
-import type { LyraVideo } from './video.js';
+import '../../lr-video.js';
+import '../../lr-video-playlist.js';
+import type { LyraVideo } from '../../lr-video.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

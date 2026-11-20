@@ -9,7 +9,7 @@ export const PPTX_VIEWER_TAG = tag('pptx-viewer');
 registerDocumentRenderer('application/vnd.openxmlformats-officedocument.presentationml.presentation', {
   matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.pptx'),
   capabilities: { anchors: ['text-quote', 'fragment', 'page'], search: true, textSelect: true },
-  load: () => import('./pptx-viewer.js').then(() => ({
+  load: () => import('../../lr-pptx-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-pptx-viewer
       src=${file.src}
       name=${file.name}

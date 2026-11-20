@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './multi-split.js';
+import '../../lr-multi-split.js';
 import type { LyraMultiSplit } from './multi-split.class.js';
 
 const SPLIT_STYLE = 'inline-size:720px;block-size:160px';

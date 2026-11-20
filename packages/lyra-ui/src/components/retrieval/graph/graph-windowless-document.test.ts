@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 
 for (const view of ['3d', 'list'] as const) for (const initiallyWindowless of [false, true]) {
   it(`retains ${view} graph data when ${initiallyWindowless ? 'first connected' : 'adopted'} into a windowless document`, async () => {

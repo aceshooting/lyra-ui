@@ -1,7 +1,7 @@
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-param-form.js';
-import type { LyraToolParamForm, FlatToolParamSchema } from './tool-param-form.js';
+import '../../lr-tool-param-form.js';
+import type { LyraToolParamForm, FlatToolParamSchema } from '../../lr-tool-param-form.js';
 
 const keys = Array.from({ length: 100 }, (_, index) => `membership-${index}`);
 const properties = Object.fromEntries(keys.map((key) => [key, { type: 'string' as const }]));

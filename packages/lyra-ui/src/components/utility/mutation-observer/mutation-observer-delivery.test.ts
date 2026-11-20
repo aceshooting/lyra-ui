@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './mutation-observer.js';
-import type { LyraMutationObserver } from './mutation-observer.js';
+import '../../lr-mutation-observer.js';
+import type { LyraMutationObserver } from '../../lr-mutation-observer.js';
 
 describe('mutation observer delivery boundaries', () => {
   it('drops an unreadable observer batch and resumes delivery with the original native records', async () => {

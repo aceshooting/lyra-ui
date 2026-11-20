@@ -2,12 +2,12 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { acquireAriaDescription } from './aria-controls.js';
 import { acquireNativeControlDescription } from './native-control-description.js';
 import type { LyraElement } from './lyra-element.js';
-import '../components/forms/button/button.js';
-import '../components/forms/combobox/combobox.js';
-import '../components/forms/select/select.js';
-import '../components/forms/color-picker/color-picker.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/locale-picker/locale-picker.js';
+import '../components/lr-button.js';
+import '../components/lr-combobox.js';
+import '../components/lr-select.js';
+import '../components/lr-color-picker.js';
+import '../components/lr-date-input.js';
+import '../components/lr-locale-picker.js';
 
 const entries = [
   ['lr-button', '[part~="button"]'],

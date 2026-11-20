@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './memory-panel.js';
-import type { LyraMemoryItem, LyraMemoryPanel } from './memory-panel.js';
+import '../../lr-memory-panel.js';
+import type { LyraMemoryItem, LyraMemoryPanel } from '../../lr-memory-panel.js';
 
 const item = (id: string): LyraMemoryItem => ({ id, text: `${id} memory` });
 

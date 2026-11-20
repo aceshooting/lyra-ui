@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraDetails } from './details.class.js';
-import './details.js';
+import '../../lr-details.js';
 
 it('ignores malformed fragment encoding and reveals a nested default-slot target', async () => {
   const originalUrl = window.location.href;

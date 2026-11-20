@@ -2,8 +2,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
-import './sequence-playback.js';
-import { LyraSequencePlayback } from './sequence-playback.js';
+import '../../lr-sequence-playback.js';
+import { LyraSequencePlayback } from '../../lr-sequence-playback.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

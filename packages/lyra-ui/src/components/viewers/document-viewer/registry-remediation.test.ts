@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-viewer.js';
+import '../../lr-document-viewer.js';
 import { createDocumentRendererRegistry, findDocumentRenderer, type LyraDocumentFile, type LyraDocumentRendererDefinition } from './registry.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
 import { AudioVideoPayload, RegisteredRenderer } from './document-viewer.stories.js';
 
 it('renders the existing public factory registry story', async () => {

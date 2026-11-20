@@ -1,8 +1,8 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './lightbox.js';
-import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from './lightbox.js';
+import '../../lr-lightbox.js';
+import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from '../../lr-lightbox.js';
 import type { LyraSourceRecord, LyraSourceRangeRequest } from '../../../data-sources.js';
 
 type Source = LyraLightboxSource;

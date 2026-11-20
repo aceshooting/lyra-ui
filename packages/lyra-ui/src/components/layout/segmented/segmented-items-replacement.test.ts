@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './segmented.js';
-import type { LyraSegmented, LyraSegmentedItem } from './segmented.js';
+import '../../lr-segmented.js';
+import type { LyraSegmented, LyraSegmentedItem } from '../../lr-segmented.js';
 
 const items = (): LyraSegmentedItem[] => [
   { value: 'day', label: 'Day' },

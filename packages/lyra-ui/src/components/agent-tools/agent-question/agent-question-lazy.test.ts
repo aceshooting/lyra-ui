@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './agent-question.js';
+import '../../lr-agent-question.js';
 import type { LyraAgentQuestion } from './agent-question.class.js';
 
 it('loads the form controls only when a question supplies a schema', async () => {

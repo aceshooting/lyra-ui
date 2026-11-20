@@ -1,5 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './flag.js';
+import '../../lr-flag.js';
 import { setFlagUrlResolver } from './flag-url-resolver.js';
 import type { LyraFlag } from './flag.class.js';
 

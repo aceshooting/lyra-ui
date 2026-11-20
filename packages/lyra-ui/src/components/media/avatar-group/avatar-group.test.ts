@@ -1,10 +1,10 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
-import './avatar-group.js';
+import '../../lr-avatar-group.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import '../avatar/avatar.js';
-import type { LyraAvatarGroup } from './avatar-group.js';
+import '../../lr-avatar.js';
+import type { LyraAvatarGroup } from '../../lr-avatar-group.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.

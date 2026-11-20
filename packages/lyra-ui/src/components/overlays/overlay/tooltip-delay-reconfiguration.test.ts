@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 import type { LyraTooltip } from './tooltip.class.js';
 
 it('replaces a pending hide delay without letting its obsolete timer close a still-visible tooltip', async () => {

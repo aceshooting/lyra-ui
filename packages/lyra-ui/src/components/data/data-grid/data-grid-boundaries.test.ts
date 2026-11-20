@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './data-grid.js';
-import type { DataGridColumn, LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { DataGridColumn, LyraDataGrid } from '../../lr-data-grid.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 

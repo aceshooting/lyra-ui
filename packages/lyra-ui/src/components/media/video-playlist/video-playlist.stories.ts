@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import type { LyraVideoPlaylistItem } from './video-playlist.js';
-import './video-playlist.js';
+import type { LyraVideoPlaylistItem } from '../../lr-video-playlist.js';
+import '../../lr-video-playlist.js';
 
 const VIDEO_SRC = '/fixtures/sample-video.mp4';
 const POSTER_BLUE =

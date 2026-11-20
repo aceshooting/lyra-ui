@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './menu.js';
-import './menu-item.js';
-import './menu-label.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-menu-label.js';
 import type { LyraMenuItem } from './menu-item.class.js';
 import type { LyraMenu } from './menu.class.js';
 

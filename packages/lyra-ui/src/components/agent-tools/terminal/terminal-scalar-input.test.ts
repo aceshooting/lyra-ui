@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraTerminal } from './terminal.js';
-import './terminal.js';
+import type { LyraTerminal } from '../../lr-terminal.js';
+import '../../lr-terminal.js';
 
 for (const value of [0, false, null]) {
   it(`coerces ${String(value)} when writing or replacing terminal text without losing the following write`, async () => {

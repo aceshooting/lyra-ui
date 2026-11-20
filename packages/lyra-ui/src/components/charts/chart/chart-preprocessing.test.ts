@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import './line-chart.js';
+import '../../lr-line-chart.js';
 import type { LyraChart, LyraChartSeries } from './chart.class.js';
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 

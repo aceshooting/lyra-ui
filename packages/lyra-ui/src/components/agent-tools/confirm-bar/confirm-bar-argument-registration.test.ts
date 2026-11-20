@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './confirm-bar.js';
+import '../../lr-confirm-bar.js';
 
 it('registers argument viewers when a connected bar first receives arguments', async () => {
   const bar = await fixture<HTMLElementTagNameMap['lr-confirm-bar']>(html`<lr-confirm-bar></lr-confirm-bar>`);

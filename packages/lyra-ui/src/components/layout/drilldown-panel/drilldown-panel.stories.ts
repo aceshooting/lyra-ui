@@ -1,6 +1,6 @@
 import { html } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./drilldown-panel.js";
+import "../../lr-drilldown-panel.js";
 import type {
   LyraDrilldownCategoryChangeDetail,
   LyraDrilldownEntity,

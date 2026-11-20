@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraCsvColumn } from '../../../lyra.js';
-import type { LyraExportFormatDescriptor, LyraExportButton } from './export-button.js';
+import type { LyraExportFormatDescriptor, LyraExportButton } from '../../lr-export-button.js';
 
 const rows = [
   { id: 'a', name: 'Alpha', score: 92 },

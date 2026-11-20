@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './permission-grant.js';
+import '../../lr-permission-grant.js';
 
 const meta: Meta = {
   title: 'AgentTools/PermissionGrant',

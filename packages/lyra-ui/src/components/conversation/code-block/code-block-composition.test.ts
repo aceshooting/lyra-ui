@@ -1,8 +1,8 @@
 import { defineCE, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './code-block.js';
-import './code-block-core.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
 import { LyraCodeBlock } from './code-block.class.js';
 
 const ANCESTOR_TOKENS =

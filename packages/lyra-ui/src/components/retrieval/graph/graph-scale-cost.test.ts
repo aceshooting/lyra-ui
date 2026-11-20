@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph, type LyraGraphEdge, type LyraGraphNode } from './graph.js';
+import { LyraGraph, type LyraGraphEdge, type LyraGraphNode } from '../../lr-graph.js';
 import { drawGraphScene, type CanvasScene } from './graph-canvas.js';
 
 const NODE_COUNT = 300;

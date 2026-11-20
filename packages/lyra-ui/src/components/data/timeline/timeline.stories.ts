@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
-import './timeline.js';
-import './timeline-item.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
 import type { LyraTimelineClusterActivateDetail } from './timeline.class.js';
 
 const meta: Meta = {

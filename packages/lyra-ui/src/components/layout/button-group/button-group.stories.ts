@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './button-group.js';
-import '../../forms/button/button.js';
+import '../../lr-button-group.js';
+import '../../lr-button.js';
 
 const meta: Meta = {
   title: 'Primitives/Button Group',

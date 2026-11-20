@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class ReadinessMap extends ControlMapEngine {
   static configure: ((peer: ReadinessMap) => void) | undefined;

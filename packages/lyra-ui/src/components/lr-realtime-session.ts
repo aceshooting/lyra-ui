@@ -1,3 +1,10 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/realtime-session/realtime-session.js';
+export * from './conversation/realtime-session/realtime-session.class.js';
+import { LyraRealtimeSession } from './conversation/realtime-session/realtime-session.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-audio-visualizer.js';
+import './lr-push-to-talk.js';
+import './lr-transcript-feed.js';
+import './lr-badge.js';
+
+defineElement('realtime-session', LyraRealtimeSession);
+

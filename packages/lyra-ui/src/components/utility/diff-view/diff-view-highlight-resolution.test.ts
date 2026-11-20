@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './diff-view.js';
-import type { LyraDiffView } from './diff-view.js';
+import '../../lr-diff-view.js';
+import type { LyraDiffView } from '../../lr-diff-view.js';
 
 const text = ['a', 'b', 'c', 'd'].join('\n');
 

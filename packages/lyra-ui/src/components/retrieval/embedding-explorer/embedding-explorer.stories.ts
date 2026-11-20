@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { EmbeddingPoint } from './embedding-explorer.class.js';
 
 const meta: Meta = {

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraNumberInput } from './number-input.class.js';
-import './number-input.js';
+import '../../lr-number-input.js';
 
 for (const cause of ['disabled', 'readonly'] as const) {
   for (const direction of ['up', 'down'] as const) {

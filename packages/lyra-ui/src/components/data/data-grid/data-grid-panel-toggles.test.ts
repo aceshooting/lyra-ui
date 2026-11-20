@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, header } from '../../../../test/data-grid.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

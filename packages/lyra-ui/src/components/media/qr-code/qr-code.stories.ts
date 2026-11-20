@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './qr-code.js';
-import { LyraQrCode } from './qr-code.js';
+import '../../lr-qr-code.js';
+import { LyraQrCode } from '../../lr-qr-code.js';
 
 const meta: Meta = {
   title: 'QR Code',

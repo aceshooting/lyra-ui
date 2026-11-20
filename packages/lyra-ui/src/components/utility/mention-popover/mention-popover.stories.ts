@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './mention-popover.js';
-import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
+import '../../lr-mention-popover.js';
+import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from '../../lr-mention-popover.js';
 
 const meta: Meta = {
   title: 'MentionPopover',

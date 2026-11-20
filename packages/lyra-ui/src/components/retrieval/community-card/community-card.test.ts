@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './community-card.js';
-import type { LyraCommunityCard, LyraCommunity } from './community-card.js';
-import type { LyraEntity } from '../entity-card/entity-card.js';
+import '../../lr-community-card.js';
+import type { LyraCommunityCard, LyraCommunity } from '../../lr-community-card.js';
+import type { LyraEntity } from '../../lr-entity-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,

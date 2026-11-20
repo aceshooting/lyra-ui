@@ -1,6 +1,6 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
-import './markdown.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 import type { KatexApi } from './katex-loader.js';
 
 it('passes explicit size and expansion limits when rendering math', async () => {

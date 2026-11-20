@@ -1,7 +1,7 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import type { LyraChart } from './chart.class.js';
 import type { LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 it('keeps a failed spatial import recoverable and waits for a cold exact-point reveal', async () => {
   const chart = document.createElement('lr-chart') as LyraChart;

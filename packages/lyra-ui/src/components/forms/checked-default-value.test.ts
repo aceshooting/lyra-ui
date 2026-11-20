@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './checkbox/checkbox.js';
-import './switch/switch.js';
-import './radio/radio.js';
-import './radio/radio-button.js';
+import '../lr-checkbox.js';
+import '../lr-switch.js';
+import '../lr-radio.js';
+import '../lr-radio-button.js';
 import type { LyraElement } from '../../internal/lyra-element.js';
 
 type CheckedControl = LyraElement & { checked: boolean; defaultChecked: boolean; value: string | null; defaultValue: string | null; name: string };

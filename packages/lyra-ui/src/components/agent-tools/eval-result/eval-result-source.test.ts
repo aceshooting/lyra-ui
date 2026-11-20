@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './eval-result.js';
+import '../../lr-eval-result.js';
 import '../../../translations/fr.js';
 import '../../../translations/de.js';
 import type { EvalResultSource, EvalRunResult, LyraEvalResult } from './eval-result.class.js';

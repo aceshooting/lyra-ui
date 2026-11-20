@@ -2,8 +2,8 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraTabularColumn, LyraTabularSource } from '../../data-sources.js';
 import type { LyraCsvViewer } from './csv-viewer/csv-viewer.class.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.class.js';
-import './csv-viewer/csv-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
+import '../lr-csv-viewer.js';
+import '../lr-spreadsheet-viewer.js';
 
 for (const kind of ['csv', 'workbook'] as const) {
   it(`rejects aggregate ${kind} column metadata before reading cells and recovers on provider replacement`, async () => {

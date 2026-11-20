@@ -1,7 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './highlight-layer.js';
-import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
+import '../../lr-highlight-layer.js';
+import type { LyraHighlightLayer, HighlightLayerItem } from '../../lr-highlight-layer.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

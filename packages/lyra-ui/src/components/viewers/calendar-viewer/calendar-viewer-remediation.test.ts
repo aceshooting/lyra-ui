@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './calendar-viewer.js';
-import type { LyraCalendarViewer } from './calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
+import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
 
 for (const year of ['0001', '0099', '0100']) {
   it(`loads ${year} all-day ICS through the real peer and preserves exclusive DTEND`, async () => {

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './stream-status.js';
-import type { LyraStreamStatus } from './stream-status.js';
+import '../../lr-stream-status.js';
+import type { LyraStreamStatus } from '../../lr-stream-status.js';
 
 const meta: Meta = {
   title: 'StreamStatus',

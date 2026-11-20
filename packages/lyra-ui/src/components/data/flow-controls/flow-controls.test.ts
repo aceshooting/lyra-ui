@@ -2,10 +2,10 @@ import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import '../flow-canvas/flow-canvas.js';
-import './flow-controls.js';
-import type { LyraFlowControls } from './flow-controls.js';
-import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-controls.js';
+import type { LyraFlowControls } from '../../lr-flow-controls.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
 
 const nodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }];
 

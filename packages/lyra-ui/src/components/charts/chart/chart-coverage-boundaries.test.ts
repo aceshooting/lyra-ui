@@ -6,7 +6,7 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import type { LyraPreparedSeriesData, LyraSeriesPointRef, LyraSeriesSample } from '../../../utilities/data-preparation.js';
 import type { LyraSpatialChartPoint, LyraSpatialChartSource, LyraSpatialQuery } from '../../../utilities/data-spatial.js';
 import type { LyraChart, LyraChartFormatterContext, LyraChartSeries } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 const bounds = { minX: 0, maxX: 12, minY: 0, maxY: 12 };
 const first: LyraSpatialChartPoint = { id: 'first', seriesId: 'a', sourceIndex: 1, x: 1, y: 2 };

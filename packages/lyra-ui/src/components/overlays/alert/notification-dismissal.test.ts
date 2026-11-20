@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './alert.js';
-import '../toast/toast-item.js';
+import '../../lr-alert.js';
+import '../../lr-toast-item.js';
 
 for (const component of ['alert', 'toast-item'] as const) {
   for (const reason of ['programmatic', 'close-button', 'timeout'] as const) {

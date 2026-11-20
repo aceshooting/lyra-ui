@@ -2,11 +2,11 @@ import { expectLabelInName, reviewComponentLabels } from '../../../../test/revie
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import "./conversation-item.js";
+import "../../lr-conversation-item.js";
 import type {
   LyraConversationItem,
   LyraConversationItemEventMap,
-} from "./conversation-item.js";
+} from "../../lr-conversation-item.js";
 import { alignmentKeyword } from "../../../../test/computed-alignment.js";
 
 type RenameEvent = LyraConversationItemEventMap["lr-rename"];
@@ -1670,10 +1670,10 @@ describe("menu-open state", () => {
     baseEl(el).part.contains("base-menu-open");
 
   before(async () => {
-    await import("../../overlays/overlay/dropdown.js");
-    await import("../../overlays/context-menu/context-menu.js");
-    await import("../../layout/menu/menu.js");
-    await import("../../layout/menu/menu-item.js");
+    await import("../../lr-dropdown.js");
+    await import("../../lr-context-menu.js");
+    await import("../../lr-menu.js");
+    await import("../../lr-menu-item.js");
   });
 
   async function itemWithDropdown(extra = ""): Promise<{

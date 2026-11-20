@@ -1,0 +1,74 @@
+[
+  {
+    "tag": "lr-calendar",
+    "from": "lr-view-change",
+    "to": "lr-month-change",
+    "input": "document.querySelector('lr-calendar').addEventListener('lr-view-change', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-calendar').addEventListener('lr-month-change', event => { void event.detail.viewDate; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-entity-dossier",
+    "from": "lr-toggle",
+    "to": "lr-retrieval-disclosure-change",
+    "input": "document.querySelector('lr-entity-dossier').addEventListener('lr-toggle', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-entity-dossier').addEventListener('lr-retrieval-disclosure-change', event => { void [event.detail.origin, event.detail.kind]; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-map-anchor",
+    "from": "lr-close",
+    "to": "lr-map-anchor-dismiss",
+    "input": "document.querySelector('lr-map-anchor').addEventListener('lr-close', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-map-anchor').addEventListener('lr-map-anchor-dismiss', event => { void event.detail.reason; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-map-anchor",
+    "from": "lr-close-request",
+    "to": "lr-map-anchor-dismiss-request",
+    "input": "document.querySelector('lr-map-anchor').addEventListener('lr-close-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-map-anchor').addEventListener('lr-map-anchor-dismiss-request', event => { void event.preventDefault(); });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-memory-panel",
+    "from": "lr-toggle",
+    "to": "lr-retrieval-disclosure-change",
+    "input": "document.querySelector('lr-memory-panel').addEventListener('lr-toggle', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-memory-panel').addEventListener('lr-retrieval-disclosure-change', event => { void [event.detail.memoryId, event.detail.scope, event.detail.kind]; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-provenance-panel",
+    "from": "lr-toggle",
+    "to": "lr-retrieval-disclosure-change",
+    "input": "document.querySelector('lr-provenance-panel').addEventListener('lr-toggle', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-provenance-panel').addEventListener('lr-retrieval-disclosure-change', event => { void [event.detail.kind, event.detail.section]; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-retrieval-trace",
+    "from": "lr-toggle",
+    "to": "lr-retrieval-disclosure-change",
+    "input": "document.querySelector('lr-retrieval-trace').addEventListener('lr-toggle', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-retrieval-trace').addEventListener('lr-retrieval-disclosure-change', event => { void [event.detail.kind, event.detail.stageId]; });",
+    "warning": "RETIRED_EVENT_REVIEW"
+  },
+  {
+    "tag": "lr-flow-canvas",
+    "from": "lr-edge-activate",
+    "to": "lr-edge-activate",
+    "input": "document.querySelector('lr-flow-canvas').addEventListener('lr-edge-activate', event => { void event.detail.source; });",
+    "resolved": "// lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:lr-edge-activate\ndocument.querySelector('lr-flow-canvas').addEventListener('lr-edge-activate', event => { void event.detail.sourceNodeId; });",
+    "warning": "DETAIL_SHAPE_REVIEW"
+  },
+  {
+    "tag": "lr-token-input",
+    "from": "maxTokensVisible",
+    "to": "maxTokensVisible",
+    "input": "document.querySelector('lr-token-input').maxTokensVisible = Number.NaN;",
+    "resolved": "// lyra-migrate-reviewed: PROPERTY_CHANGE_REVIEW:maxTokensVisible\ndocument.querySelector('lr-token-input').maxTokensVisible = 0;",
+    "warning": "PROPERTY_CHANGE_REVIEW"
+  }
+]

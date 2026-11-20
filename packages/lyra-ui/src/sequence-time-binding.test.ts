@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './components/media/sequence-playback/sequence-playback.js';
+import './components/lr-sequence-playback.js';
 import type { LyraSequencePlayback } from './components/media/sequence-playback/sequence-playback.class.js';
 import { createSimulationClock, SimulationClockError } from './simulation-clock.js';
 import { createTimeIndex } from './time-index.js';

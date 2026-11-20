@@ -1,8 +1,8 @@
 import { expect, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import { type Person, columns, dataGrid, rows } from '../../../../test/data-grid.js';
 
 describe('data-grid repeated control names and clipped focus rings', () => {

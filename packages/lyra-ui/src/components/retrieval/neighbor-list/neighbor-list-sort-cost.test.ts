@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './neighbor-list.js';
-import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
+import '../../lr-neighbor-list.js';
+import type { LyraNeighborList, LyraNeighborRow } from '../../lr-neighbor-list.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getCollator } from '../../../internal/intl-cache.js';
 

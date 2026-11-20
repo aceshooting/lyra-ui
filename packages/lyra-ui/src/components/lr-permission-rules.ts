@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/permission-rules/permission-rules.js';
+export * from './agent-tools/permission-rules/permission-rules.class.js';
+import { LyraPermissionRules } from './agent-tools/permission-rules/permission-rules.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('permission-rules', LyraPermissionRules);

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './change-review.js';
+import '../../lr-change-review.js';
 import type { ChangeReviewFile, LyraChangeReview } from './change-review.class.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sinkTexts } from '../../../../test/announcements.js';

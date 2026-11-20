@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './breadcrumb.js';
-import './breadcrumb-item.js';
-import type { LyraBreadcrumb } from './breadcrumb.js';
+import '../../lr-breadcrumb.js';
+import '../../lr-breadcrumb-item.js';
+import type { LyraBreadcrumb } from '../../lr-breadcrumb.js';
 
 const separatorTexts = (el: LyraBreadcrumb): string[][] =>
   [...el.querySelectorAll('lr-breadcrumb-item')].map((item) =>

@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './agent-question.js';
+import '../../lr-agent-question.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraAgentQuestion } from './agent-question.class.js';

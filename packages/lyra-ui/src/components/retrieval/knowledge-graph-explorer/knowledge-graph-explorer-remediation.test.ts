@@ -2,12 +2,12 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './knowledge-graph-explorer.js';
-import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
-import type { LyraGraph } from '../graph/graph.js';
-import type { LyraPathStrip } from '../path-strip/path-strip.js';
-import type { LyraPopover } from '../../overlays/overlay/popover.js';
-import type { LyraInput } from '../../forms/input/input.js';
+import '../../lr-knowledge-graph-explorer.js';
+import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
+import type { LyraGraph } from '../../lr-graph.js';
+import type { LyraPathStrip } from '../../lr-path-strip.js';
+import type { LyraPopover } from '../../lr-popover.js';
+import type { LyraInput } from '../../lr-input.js';
 import * as explorerStories from './knowledge-graph-explorer.stories.js';
 
 const nodes = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }];

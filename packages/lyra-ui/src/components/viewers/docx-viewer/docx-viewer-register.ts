@@ -9,7 +9,7 @@ export const DOCX_VIEWER_TAG = tag('docx-viewer');
 registerDocumentRenderer('application/vnd.openxmlformats-officedocument.wordprocessingml.document', {
   matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.docx'),
   capabilities: { anchors: ['fragment', 'text-quote'], search: true, textSelect: true },
-  load: () => import('./docx-viewer.js').then(() => ({
+  load: () => import('../../lr-docx-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-docx-viewer
       src=${file.src}
       name=${file.name}

@@ -2,7 +2,7 @@ import { expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { columns, rows, dataGrid } from '../../../../test/data-grid.js';
-import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
+import type { LyraDropdown } from '../../lr-dropdown.js';
 
 it('retains the valid unique prefix when an untyped key iterable fails mid-stream', async () => {
   const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selectable .columns=${columns} .data=${rows}></lr-data-grid>`);

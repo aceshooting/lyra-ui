@@ -1,7 +1,7 @@
 import { fixture, expect, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './skeleton.js';
-import type { LyraSkeleton, LyraSkeletonEffect } from './skeleton.js';
+import '../../lr-skeleton.js';
+import type { LyraSkeleton, LyraSkeletonEffect } from '../../lr-skeleton.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.

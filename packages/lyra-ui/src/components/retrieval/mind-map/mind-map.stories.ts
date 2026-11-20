@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './mind-map.js';
+import '../../lr-mind-map.js';
 import type { LyraTopic, MindMapSource } from './mind-map.class.js';
 
 const meta: Meta = {

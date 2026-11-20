@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 import type { LyraPromptInput } from './prompt-input.class.js';
 
 const meta: Meta = {

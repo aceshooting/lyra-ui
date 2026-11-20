@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './filter-bar.js';
+import '../../lr-filter-bar.js';
 import type { LyraFilterBar, LyraFilterBarFilterDefinition } from './filter-bar.class.js';
 
 const filters = [

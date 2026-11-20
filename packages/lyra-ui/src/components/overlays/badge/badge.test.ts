@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './badge.js';
-import './tag.js';
-import type { LyraBadge } from './badge.js';
+import '../../lr-badge.js';
+import '../../lr-tag.js';
+import type { LyraBadge } from '../../lr-badge.js';
 
 class BadgeStartTextForwarder extends HTMLElement {
   constructor() {

@@ -4,8 +4,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './source-picker.js';
-import type { LyraSourcePicker, LyraSourceEntry } from './source-picker.js';
+import '../../lr-source-picker.js';
+import type { LyraSourcePicker, LyraSourceEntry } from '../../lr-source-picker.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import {
   captureDeprecationWarnings,

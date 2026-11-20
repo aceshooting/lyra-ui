@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraCombobox } from './combobox.js';
-import './combobox.js';
-import './option.js';
-import '../select/select.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import '../../lr-select.js';
 
 for (const name of ['select', 'combobox'] as const) {
   it(`${name} updates projected rows when authored options become unavailable`, async () => {

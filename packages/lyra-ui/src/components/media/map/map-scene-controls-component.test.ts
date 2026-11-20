@@ -1,5 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature-loader.js';
 
 interface SceneProperties {

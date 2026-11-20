@@ -1,10 +1,10 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import '../callout/callout.js';
-import '../empty/empty.js';
-import '../../forms/icon-button/icon-button.js';
-import '../../forms/button/button.js';
-import './dropdown.js';
+import '../../lr-callout.js';
+import '../../lr-empty.js';
+import '../../lr-icon-button.js';
+import '../../lr-button.js';
+import '../../lr-dropdown.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 

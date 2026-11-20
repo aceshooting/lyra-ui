@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraSparkline } from './sparkline.class.js';
-import './sparkline.js';
+import '../../lr-sparkline.js';
 
 function path(element: LyraSparkline): string | null {
   return element.shadowRoot!.querySelector('[part="line"]')?.getAttribute('d') ?? null;

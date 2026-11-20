@@ -3,7 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { devWarnOnce, warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -21,10 +21,6 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.gen
 export interface LyraMapAnchorEventMap {
   'lr-map-anchor-dismiss-request': CustomEvent<LyraMapAnchorCloseDetail>;
   'lr-map-anchor-dismiss': CustomEvent<LyraMapAnchorCloseDetail>;
-  /** @deprecated Use lr-map-anchor-dismiss-request. */
-  'lr-close-request': CustomEvent<LyraMapAnchorCloseDetail>;
-  /** @deprecated Use lr-map-anchor-dismiss. */
-  'lr-close': CustomEvent<LyraMapAnchorCloseDetail>;
 }
 
 /** Why an open anchor is not placed: no map, another slot, or nested inside another anchor. */
@@ -69,15 +65,12 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  *   attribute permits placement again when the other placement conditions hold.
  * @slot - The anchored content, any light DOM. It is only rendered, never cloned or moved.
  * @slot close-icon - Replaces the glyph of the close button.
- * @event lr-map-anchor-dismiss-request - Cancelable proposal with the close reason before dismissing this child anchor.
- * @event lr-map-anchor-dismiss - Frozen close reason after dismissing this child anchor.
- * @event lr-close-request - Deprecated alias for lr-map-anchor-dismiss-request. **Cancelable.** Frozen `detail: { reason }` (`'api'`, `'close-button'`
- *   or `'escape'`) before a requested close. `preventDefault()` keeps the anchor open, and a
- *   listener that changes `open`, `lngLat` or the anchor's map abandons the close. An `open = false`
- *   assignment is a silent state write.
- * @event lr-close - Deprecated alias for lr-map-anchor-dismiss. Frozen `detail: { reason }` after an accepted close has set `open` to false. Not
- *   fired when the panel merely hides, or for removal or disconnect. Ancestors that handle only this
- *   anchor's dismissal check `event.target`.
+ * @event lr-map-anchor-dismiss-request - **Cancelable.** Frozen `detail: { reason }` (`'api'`,
+ *   `'close-button'` or `'escape'`) before a requested close. `preventDefault()` keeps the anchor
+ *   open, and a listener that changes `open`, `lngLat` or the anchor's map abandons the close. An
+ *   `open = false` assignment is a silent state write.
+ * @event lr-map-anchor-dismiss - Frozen `detail: { reason }` after an accepted close has set `open`
+ *   to false. Not fired when the panel merely hides, or for removal or disconnect.
  * @csspart base - The positioned panel surface. A `z-index` set on it replaces automatic ordering.
  * @csspart body - The scrolling content wrapper.
  * @csspart close-button - The localized icon close button of a `closable` anchor.
@@ -212,10 +205,6 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
     this.requestingClose = true;
     try {
       if (this.emit('lr-map-anchor-dismiss-request', detail, { cancelable: true }).defaultPrevented || !current()) return false;
-      if (this.emit('lr-close-request', detail, { cancelable: true }).defaultPrevented) {
-        warnDeprecatedUsage(this, 'event', 'lr-close-request', 'lr-map-anchor-dismiss-request');
-        return false;
-      }
     } finally {
       this.requestingClose = false;
     }
@@ -223,7 +212,6 @@ export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
     this.open = false;
     owner?.[MAP_ANCHOR_SEAM](this, 'retire');
     this.emit('lr-map-anchor-dismiss', detail);
-    this.emit('lr-close', detail);
     // A listener that reopened the anchor keeps focus where it is.
     if (!this.open) owner?.[MAP_ANCHOR_SEAM](this, 'repair', repair);
     return true;

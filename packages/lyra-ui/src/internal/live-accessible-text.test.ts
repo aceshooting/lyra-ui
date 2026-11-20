@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import '../components/overlays/chip/chip.js';
-import '../components/overlays/badge/tag.js';
-import '../components/layout/card/card.js';
-import '../components/layout/widget/widget.js';
-import '../components/overlays/progress/progress-bar.js';
-import '../components/overlays/progress/progress-ring.js';
+import '../components/lr-chip.js';
+import '../components/lr-tag.js';
+import '../components/lr-card.js';
+import '../components/lr-widget.js';
+import '../components/lr-progress-bar.js';
+import '../components/lr-progress-ring.js';
 
 const surfaces = [
   { tag: 'lr-chip', attribute: 'removable', selector: '[part~="remove-button"]' },

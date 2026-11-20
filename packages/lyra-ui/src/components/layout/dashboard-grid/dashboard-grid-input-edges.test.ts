@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './dashboard-grid.js';
-import type { LyraDashboardGrid } from './dashboard-grid.js';
+import '../../lr-dashboard-grid.js';
+import type { LyraDashboardGrid } from '../../lr-dashboard-grid.js';
 import type { LyraDashboardCell } from './layout.js';
 
 function cellsOf(el: LyraDashboardGrid): HTMLElement[] {

@@ -8,7 +8,7 @@ import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d
 import { chart3dEngineEnvironment, chart3dPointsLoader } from './chart-3d-engine.js';
 import type { Chart3dEngineData } from './chart-3d-data.js';
 import type { LyraChart3d, LyraChart3dColumns } from './chart-3d.class.js';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 
 const PICK = { shift: false, ctrl: false, double: false } as const;
 

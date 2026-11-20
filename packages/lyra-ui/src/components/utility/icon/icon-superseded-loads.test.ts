@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './icon.js';
-import type { LyraIcon } from './icon.js';
+import '../../lr-icon.js';
+import type { LyraIcon } from '../../lr-icon.js';
 import { __clearIconResourceCacheForTesting } from './icon-resource.js';
 
 const CIRCLE_SVG =

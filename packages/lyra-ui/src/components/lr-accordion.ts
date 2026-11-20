@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/details/accordion.js';
+export * from './layout/details/accordion.class.js';
+import { LyraAccordion } from './layout/details/accordion.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('accordion', LyraAccordion);

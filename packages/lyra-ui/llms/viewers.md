@@ -2810,7 +2810,7 @@ size of `[part="base"]`, matching every other viewer in this family. It is also 
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
 The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
-`components/viewers/geojson-view/geojson-viewer.js`). The former `components/lr-geojson-view.js`,
+`components/lr-geojson-viewer.js`). The former `components/lr-geojson-view.js`,
 `components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
 in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
 Remote resources are capped at 4 MiB (4,194,304 bytes) before JSON parsing; exceeding that bound

@@ -4,7 +4,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { publicCollectionTruncation, collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { tag } from '../../../internal/prefix.js';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 
 for (const property of ['modelCatalog', 'voiceCatalog', 'mentionItems', 'commandItems'] as const) {
   expectDevWarning(collectionTruncationWarningKey('lr-prompt-input', property));

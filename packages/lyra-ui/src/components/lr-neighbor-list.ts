@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/neighbor-list/neighbor-list.js';
+export * from './retrieval/neighbor-list/neighbor-list.class.js';
+import { LyraNeighborList } from './retrieval/neighbor-list/neighbor-list.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-empty.js';
+defineElement('neighbor-list', LyraNeighborList);

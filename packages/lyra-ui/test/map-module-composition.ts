@@ -1,4 +1,4 @@
-import type { LyraMapOverlays } from '../src/components/media/map/map.js';
+import type { LyraMapOverlays } from '../src/components/lr-map.js';
 
 /** Application example, shared by the composition story and its tests. */
 export const MAP_MODULE_ORDER = Object.freeze([

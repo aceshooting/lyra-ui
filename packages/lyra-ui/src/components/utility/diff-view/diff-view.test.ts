@@ -9,8 +9,8 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { render } from "lit";
-import "./diff-view.js";
-import type { LyraDiffView } from "./diff-view.js";
+import "../../lr-diff-view.js";
+import type { LyraDiffView } from "../../lr-diff-view.js";
 import type { LyraDiffOp } from "./diff-line-diff.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { resolveLyraLocale } from "../../../internal/localization-runtime.js";

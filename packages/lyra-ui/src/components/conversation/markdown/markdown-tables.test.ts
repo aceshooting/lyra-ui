@@ -2,9 +2,9 @@ import { fixture, html, expect, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 describe('GFM table wrapper', () => {
   for (const name of ['lr-markdown', 'lr-markdown-core'] as const) {
@@ -374,7 +374,7 @@ describe('GFM table wrapper: word integrity, margins and intrinsic size', () => 
   }
 
   it('keeps an lr-agent-workspace host at 390px when an assistant message holds a wide table', async () => {
-    await import('../agent-workspace/agent-workspace.js');
+    await import('../../lr-agent-workspace.js');
     const host = await fixture<HTMLElement>(html`<div style="inline-size: 390px"></div>`);
     const workspace = document.createElement('lr-agent-workspace');
     workspace.messages = [{ id: 'm1', role: 'assistant', text: WIDE }];

@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 type ExtentMap = LyraMap & { canvasTarget?: HTMLElement | 'viewport' };

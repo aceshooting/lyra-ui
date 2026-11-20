@@ -3,8 +3,8 @@ import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setVirtualListCompositionProfile } from '../../../internal/virtual-list-composition.js';
-import './virtual-list.js';
-import type { LyraVirtualList } from './virtual-list.js';
+import '../../lr-virtual-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 
 const numberKey = (item: unknown): number => item as number;
 const text = (item: unknown) => html`<div style="block-size:40px">${item}</div>`;

@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { contrastRatio, effectiveBackground } from '../../../../test/color-contrast.js';
-import './segmented.js';
-import type { LyraSegmented, LyraSegmentedItem } from './segmented.js';
+import '../../lr-segmented.js';
+import type { LyraSegmented, LyraSegmentedItem } from '../../lr-segmented.js';
 
 const items = (): LyraSegmentedItem[] => [
   { value: 'day', label: 'Day' },

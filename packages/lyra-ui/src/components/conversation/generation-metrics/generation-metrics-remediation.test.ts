@@ -1,8 +1,8 @@
 import { fixture, expect, aTimeout, waitUntil, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './generation-metrics.js';
+import '../../lr-generation-metrics.js';
 import { LiveDerivedThroughput } from './generation-metrics.stories.js';
-import type { LyraGenerationMetrics } from './generation-metrics.js';
+import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
 
 describe('generation metrics live example', () => {
   it('starts on mount, honors the first Stop, and restarts repeatedly without old timers', async function () {

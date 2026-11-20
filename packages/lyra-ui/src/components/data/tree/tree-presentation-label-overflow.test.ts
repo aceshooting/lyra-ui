@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { configureTreeItemOwner, treeItemOwnerContext } from './tree-owner-controller.js';
 
 it('truncates a long label instead of overflowing, and caps indentation at depth', async () => {

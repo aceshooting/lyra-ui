@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import './agent-run/agent-run.js';
-import './artifact-panel/artifact-panel.js';
+import '../lr-agent-run.js';
+import '../lr-artifact-panel.js';
 
 type Updating = HTMLElement & { updateComplete: Promise<boolean>; render: () => unknown } & Record<string, unknown>;
 

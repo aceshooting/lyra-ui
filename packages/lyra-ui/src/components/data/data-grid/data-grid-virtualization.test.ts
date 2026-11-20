@@ -1,8 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, sendWheel } from '../../../../test/wtr-mouse.js';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, measurementAccess, header, dataCells } from '../../../../test/data-grid.js';
 

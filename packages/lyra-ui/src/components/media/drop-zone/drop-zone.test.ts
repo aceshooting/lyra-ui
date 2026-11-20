@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './drop-zone.js';
-import '../file-input/file-input.js';
-import type { LyraFileInput } from '../file-input/file-input.js';
-import type { LyraDropZone, LyraDropZoneFilesDetail, LyraDropZoneFilesEvent } from './drop-zone.js';
+import '../../lr-drop-zone.js';
+import '../../lr-file-input.js';
+import type { LyraFileInput } from '../../lr-file-input.js';
+import type { LyraDropZone, LyraDropZoneFilesDetail, LyraDropZoneFilesEvent } from '../../lr-drop-zone.js';
 
 function makeFile(name: string, type = 'text/plain'): File {
   return new File(['x'], name, { type });

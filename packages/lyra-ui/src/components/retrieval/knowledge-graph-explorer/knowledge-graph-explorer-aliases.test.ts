@@ -1,7 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './knowledge-graph-explorer.js';
-import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
+import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 import type { LyraGraph, LyraGraphEdge, LyraGraphNode } from '../graph/graph.class.js';
 import { loadD3 } from '../graph/graph-loader.js';
 import {

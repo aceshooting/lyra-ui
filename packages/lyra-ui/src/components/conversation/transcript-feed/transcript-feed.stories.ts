@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './transcript-feed.js';
+import '../../lr-transcript-feed.js';
 import type { LyraTranscriptEntry, LyraTranscriptFeed } from './transcript-feed.class.js';
 
 const meta: Meta = {

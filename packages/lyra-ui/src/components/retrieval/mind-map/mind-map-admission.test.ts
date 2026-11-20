@@ -1,6 +1,6 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraMindMap, type LyraTopic } from './mind-map.js';
+import { LyraMindMap, type LyraTopic } from '../../lr-mind-map.js';
 import { createMindMapLayout } from './mind-map-layout.js';
 
 it('bounds source reads for a million logical roots without invoking topic accessors', () => {

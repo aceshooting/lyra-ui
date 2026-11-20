@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './schema-viewer.js';
-import type { JsonSchemaNode, LyraJsonSchemaViewer } from './schema-viewer.js';
+import '../../lr-json-schema-viewer.js';
+import type { JsonSchemaNode, LyraJsonSchemaViewer } from '../../lr-json-schema-viewer.js';
 
 it('retains a selected leaf through every composition and item kind after the ordinary render budget is spent', async () => {
   const leaf = { type: 'string', description: 'Selected tuple descendant' };

@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './result-field.js';
-import type { LyraResultField } from './result-field.js';
+import '../../lr-result-field.js';
+import type { LyraResultField } from '../../lr-result-field.js';
 
 it('localizes the label punctuation as a whole template', async () => {
   const el = (await fixture(html`

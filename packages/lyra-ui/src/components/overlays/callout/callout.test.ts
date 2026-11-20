@@ -3,8 +3,8 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './callout.js';
-import type { LyraCallout } from './callout.js';
+import '../../lr-callout.js';
+import type { LyraCallout } from '../../lr-callout.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.

@@ -5,8 +5,8 @@ import {
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
-import { CHAT_COMPOSER_STATUSES } from "./chat-composer.js";
-import type { LyraChatComposer } from "./chat-composer.js";
+import { CHAT_COMPOSER_STATUSES } from "../../lr-chat-composer.js";
+import type { LyraChatComposer } from "../../lr-chat-composer.js";
 
 function textareaOf(el: LyraChatComposer): HTMLTextAreaElement {
   return el.shadowRoot!.querySelector(

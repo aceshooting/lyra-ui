@@ -1,6 +1,6 @@
 import { expect, fixture } from '@open-wc/testing';
-import { LyraImageViewer } from '../components/media/image-viewer/image-viewer.js';
-import { LyraVideo } from '../components/media/video/video.js';
+import { LyraImageViewer } from '../components/lr-image-viewer.js';
+import { LyraVideo } from '../components/lr-video.js';
 import { PanoramaController, type LyraPanoramaCamera, type LyraPanoramaHotspot } from './media-panorama.js';
 void LyraImageViewer;
 void LyraVideo;

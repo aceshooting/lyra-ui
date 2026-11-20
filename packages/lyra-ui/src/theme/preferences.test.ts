@@ -5,8 +5,8 @@ import { tag } from '../internal/prefix.js';
 import { applyLyraPreferences, getLyraPreferences, lyraPreferenceAttributes, type LyraPreferences } from './preferences.js';
 import { applyLyraStyleScope } from './theme.js';
 import { setReducedMotion } from '../../test/wtr-media.js';
-import '../components/overlays/spinner/spinner.js';
-import '../components/media/animated-image/animated-image.js';
+import '../components/lr-spinner.js';
+import '../components/lr-animated-image.js';
 import type { LyraSpinner } from '../components/overlays/spinner/spinner.class.js';
 import type { LyraAnimatedImage } from '../components/media/animated-image/animated-image.class.js';
 

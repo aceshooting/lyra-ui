@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './csv-viewer.js';
-import '../dataset-viewer/dataset-viewer.js';
-import '../spreadsheet-viewer/spreadsheet-viewer.js';
+import '../../lr-csv-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 type InputViewer = HTMLElement & {
   updateComplete: Promise<boolean>;

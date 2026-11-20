@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraToolCallBlock } from './tool-call-block.class.js';
-import './tool-call-block.js';
+import '../../lr-tool-call-block.js';
 import { registerToolRenderer } from '../tool-result-view/registry.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';

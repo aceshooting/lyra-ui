@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './env-list.js';
-import type { LyraEnvList } from './env-list.js';
+import '../../lr-env-list.js';
+import type { LyraEnvList } from '../../lr-env-list.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const entries = [

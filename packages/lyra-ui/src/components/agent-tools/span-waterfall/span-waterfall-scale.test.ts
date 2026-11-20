@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './span-waterfall.js';
-import type { LyraSpanWaterfall } from './span-waterfall.js';
+import '../../lr-span-waterfall.js';
+import type { LyraSpanWaterfall } from '../../lr-span-waterfall.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

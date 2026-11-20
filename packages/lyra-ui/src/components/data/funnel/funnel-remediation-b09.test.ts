@@ -1,7 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './funnel.js';
-import type { LyraFunnel } from './funnel.js';
+import '../../lr-funnel.js';
+import type { LyraFunnel } from '../../lr-funnel.js';
 
 it('isolates stage numbers from an RTL host', async () => {
   const el = await fixture<LyraFunnel>(html`<lr-funnel dir="rtl" .stages=${[{ label: 'A', value: -5 }, { label: 'B', value: 3 }]}></lr-funnel>`);

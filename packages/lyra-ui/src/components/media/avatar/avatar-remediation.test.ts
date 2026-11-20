@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './avatar.js';
+import '../../lr-avatar.js';
 
 it('consumes a removed label as absent while retaining null readback and later fallback naming', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-avatar']>(html`<lr-avatar label="Ada Lovelace" initials="AL"></lr-avatar>`);

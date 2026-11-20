@@ -3,7 +3,7 @@ import type { LyraHierarchyRow } from '../../../data-sources.js';
 import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraSpanWaterfall } from './span-waterfall.class.js';
-import './span-waterfall.js';
+import '../../lr-span-waterfall.js';
 
 const span = (key: string, value: Partial<LyraSpan> & Record<string, unknown> = {}): LyraHierarchyRow<LyraSpan> => ({ key,
   value: { id: key, name: `Span ${key}`, kind: 'tool', status: 'success', startMs: 0, endMs: 5, ...value } as LyraSpan,

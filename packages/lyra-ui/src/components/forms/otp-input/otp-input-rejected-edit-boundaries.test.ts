@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './otp-input.js';
+import '../../lr-otp-input.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 function paste(input: HTMLInputElement, text: string): Event {

@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './stack-trace.js';
+import '../../lr-stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.class.js';
 
 const trace = [

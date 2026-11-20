@@ -2,8 +2,8 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { accessibleName } from '../../../../test/accessible-name.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './tooltip.js';
-import '../../forms/select/select.js';
+import '../../lr-tooltip.js';
+import '../../lr-select.js';
 
 /**
  * The description relationship is only exposed to assistive technology on the element that

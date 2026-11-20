@@ -13,8 +13,8 @@ import {
   subscribeLyraLocaleForHost,
 } from "./localization-runtime.js";
 import { LyraElement } from "./lyra-element.js";
-import "../components/data/sparkline/sparkline.js";
-import type { LyraSparkline } from "../components/data/sparkline/sparkline.js";
+import "../components/lr-sparkline.js";
+import type { LyraSparkline } from "../components/lr-sparkline.js";
 
 class LocalizationRenderProbe extends LyraElement {
   protected static override readonly defaultStrings = Object.freeze({

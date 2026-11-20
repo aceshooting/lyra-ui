@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './file-tree.js';
+import '../../lr-file-tree.js';
 import type { LyraFileTree, FileTreeNode } from './file-tree.class.js';
 import type { LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 

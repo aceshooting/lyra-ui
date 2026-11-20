@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import type { DataGridColumn, DataGridState } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, delay, header, dataCells } from '../../../../test/data-grid.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';

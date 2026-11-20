@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraMultiSplit } from './multi-split.class.js';
-import './multi-split.js';
+import '../../lr-multi-split.js';
 
 const invalidDefaults: ReadonlyArray<readonly [string, readonly (number | string)[]]> = [
   ['NaN mixed with a length', [Number.NaN, '200px']],

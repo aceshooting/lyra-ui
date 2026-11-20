@@ -1,7 +1,7 @@
 import { html } from '@open-wc/testing';
 import { describeViewerResponseLifecycle } from '../../../../test/contracts/viewer-response-lifecycle.js';
 import { assembleZip, zipEntry } from './fixtures/zip-builder.js';
-import './archive-viewer.js';
+import '../../lr-archive-viewer.js';
 
 describeViewerResponseLifecycle('lr-archive-viewer', html`<lr-archive-viewer></lr-archive-viewer>`, {
   extension: 'zip', contentSelector: '[part="entry-name"]',

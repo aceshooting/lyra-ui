@@ -7957,6 +7957,124 @@
       "rules": [
         "theme-scopes"
       ]
+    },
+    {
+      "origin": "lyra-v31",
+      "fromMajor": 31,
+      "toMajor": 32,
+      "aliasRemovalMajor": 33,
+      "renames": [],
+      "defaults": [],
+      "detailChanges": [
+        {
+          "tag": "lr-flow-canvas",
+          "event": "lr-edge-activate",
+          "summary": "The detail no longer carries source and target; read sourceNodeId and targetNodeId."
+        }
+      ],
+      "reviews": [],
+      "slotContent": [],
+      "moduleReviews": [],
+      "propertyChanges": [
+        {
+          "tag": "lr-token-input",
+          "property": "maxTokensVisible",
+          "summary": "An omitted or non-finite limit now mounts a 200-token window; set max-tokens-visible=\"0\" to keep mounting every token."
+        }
+      ],
+      "retiredEvents": [
+        {
+          "tag": "lr-artifact-panel",
+          "event": "lr-view-change",
+          "replacement": "lr-artifact-view-change",
+          "direct": true,
+          "summary": "The replacement carries the same detail."
+        },
+        {
+          "tag": "lr-artifact-panel",
+          "event": "lr-view-change-request",
+          "replacement": "lr-artifact-view-change-request",
+          "direct": true,
+          "summary": "The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener."
+        },
+        {
+          "tag": "lr-calendar",
+          "event": "lr-view-change",
+          "replacement": "lr-month-change",
+          "direct": true,
+          "summary": "The replacement carries the same detail. The calendar no longer dispatches the generic view event."
+        },
+        {
+          "tag": "lr-entity-dossier",
+          "event": "lr-toggle",
+          "replacement": "lr-retrieval-disclosure-change",
+          "direct": true,
+          "summary": "The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read origin, section and chunkId instead of itemId."
+        },
+        {
+          "tag": "lr-graph",
+          "event": "lr-view-change",
+          "replacement": "lr-graph-view-change",
+          "direct": true,
+          "summary": "The replacement carries the same detail."
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "event": "lr-view-change",
+          "replacement": "lr-graph-view-change",
+          "direct": true,
+          "summary": "The replacement carries the same detail."
+        },
+        {
+          "tag": "lr-map-anchor",
+          "event": "lr-close",
+          "replacement": "lr-map-anchor-dismiss",
+          "direct": true,
+          "summary": "The replacement carries the same detail. Ancestors no longer need an event.target check to tell an anchor from other closing components."
+        },
+        {
+          "tag": "lr-map-anchor",
+          "event": "lr-close-request",
+          "replacement": "lr-map-anchor-dismiss-request",
+          "direct": true,
+          "summary": "The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener."
+        },
+        {
+          "tag": "lr-memory-panel",
+          "event": "lr-toggle",
+          "replacement": "lr-retrieval-disclosure-change",
+          "direct": true,
+          "summary": "The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read memoryId, scope, section and chunkId instead of itemId."
+        },
+        {
+          "tag": "lr-provenance-panel",
+          "event": "lr-toggle",
+          "replacement": "lr-retrieval-disclosure-change",
+          "direct": true,
+          "summary": "The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read section and chunkId instead of itemId."
+        },
+        {
+          "tag": "lr-retrieval-trace",
+          "event": "lr-toggle",
+          "replacement": "lr-retrieval-disclosure-change",
+          "direct": true,
+          "summary": "The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read stageId and chunkId instead of itemId."
+        },
+        {
+          "tag": "lr-widget",
+          "event": "lr-view-change",
+          "replacement": "lr-widget-view-change",
+          "direct": true,
+          "summary": "The replacement carries the same detail."
+        },
+        {
+          "tag": "lr-widget",
+          "event": "lr-view-request",
+          "replacement": "lr-widget-view-request",
+          "direct": true,
+          "summary": "The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener."
+        }
+      ]
     }
   ]
 }

@@ -1,16 +1,16 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
-import '../components/overlays/overlay/popover.js';
-import '../components/overlays/overlay/dropdown.js';
-import '../components/overlays/overlay/tooltip.js';
-import '../components/overlays/popup/popup.js';
-import '../components/layout/menu/dropdown-item.js';
-import '../components/forms/select/select.js';
-import '../components/forms/combobox/combobox.js';
-import '../components/forms/combobox/option.js';
-import '../components/forms/color-picker/color-picker.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/input/time-input.js';
+import '../components/lr-popover.js';
+import '../components/lr-dropdown.js';
+import '../components/lr-tooltip.js';
+import '../components/lr-popup.js';
+import '../components/lr-dropdown-item.js';
+import '../components/lr-select.js';
+import '../components/lr-combobox.js';
+import '../components/lr-option.js';
+import '../components/lr-color-picker.js';
+import '../components/lr-date-input.js';
+import '../components/lr-time-input.js';
 
 /**
  * One adapter per anchored surface: the same contract -- promoted when trapped, hit-testable

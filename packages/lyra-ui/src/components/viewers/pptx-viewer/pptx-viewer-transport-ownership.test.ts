@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import type { LyraPptxViewer } from './pptx-viewer.js';
-import './pptx-viewer.js';
+import type { LyraPptxViewer } from '../../lr-pptx-viewer.js';
+import '../../lr-pptx-viewer.js';
 import type JSZipType from 'jszip';
 import type { PptxRendererModule, PptxViewerApi } from './pptx-loader.js';
 

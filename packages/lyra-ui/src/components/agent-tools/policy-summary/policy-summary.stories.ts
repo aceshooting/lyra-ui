@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './policy-summary.js';
+import '../../lr-policy-summary.js';
 import type { PolicyDecision } from './policy-summary.class.js';
 
 const meta: Meta = {

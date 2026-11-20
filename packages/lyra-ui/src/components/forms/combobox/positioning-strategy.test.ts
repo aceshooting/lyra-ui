@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './combobox.js';
-import type { LyraCombobox } from './combobox.js';
+import '../../lr-combobox.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

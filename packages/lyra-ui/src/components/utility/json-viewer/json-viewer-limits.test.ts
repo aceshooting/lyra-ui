@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraJsonViewer } from './json-viewer.class.js';
-import './json-viewer.js';
+import '../../lr-json-viewer.js';
 
 it('uses the default node budget when unset and admits a bounded raised budget', async () => {
   const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer expand-depth="0"></lr-json-viewer>`);

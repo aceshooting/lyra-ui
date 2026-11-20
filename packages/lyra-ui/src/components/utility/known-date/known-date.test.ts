@@ -2,10 +2,10 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import { render, type PropertyValues } from 'lit';
-import './known-date.js';
-import '../../forms/input/input.js';
-import '../../forms/button/button.js';
-import { LyraKnownDate, type LyraKnownDateParts } from './known-date.js';
+import '../../lr-known-date.js';
+import '../../lr-input.js';
+import '../../lr-button.js';
+import { LyraKnownDate, type LyraKnownDateParts } from '../../lr-known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

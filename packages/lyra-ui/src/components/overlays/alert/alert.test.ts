@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import type { LyraAlert } from './alert.js';
-import './alert.js';
+import type { LyraAlert } from '../../lr-alert.js';
+import '../../lr-alert.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { TOAST_REGION_ENQUEUE } from '../toast/toast-region-protocol.js';
@@ -41,7 +41,7 @@ it('is closed by default with the exact Shoelace-compatible property defaults', 
 });
 
 it('admits and reasserts unfocused toast alerts without traversing document focus targets', async () => {
-  await import('../toast/toast.js');
+  await import('../../lr-toast.js');
   const wrapper = await fixture<HTMLDivElement>(html`
     <div><button id="outside">Outside</button><lr-toast></lr-toast></div>
   `);

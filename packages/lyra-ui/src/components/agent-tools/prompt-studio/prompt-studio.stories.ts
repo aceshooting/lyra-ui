@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './prompt-studio.js';
-import type { LyraPromptStudio, PromptStudioMessageReorderDetail } from './prompt-studio.js';
+import '../../lr-prompt-studio.js';
+import type { LyraPromptStudio, PromptStudioMessageReorderDetail } from '../../lr-prompt-studio.js';
 
 const meta: Meta = {
   title: 'Agent Tools/Prompt Studio',

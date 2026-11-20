@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import tsGrammar from 'shiki/langs/typescript.mjs';
-import './markdown-core.js';
-import type { LyraMarkdownCore } from './markdown-core.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
 
 const meta: Meta = {
   title: 'MarkdownCore',

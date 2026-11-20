@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { tag } from '../../../internal/prefix.js';
-import { seriesPalette, type LyraChart, type LyraChartAnnotation, type LyraChartSeries } from './chart.js';
+import { seriesPalette, type LyraChart, type LyraChartAnnotation, type LyraChartSeries } from '../../lr-chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',

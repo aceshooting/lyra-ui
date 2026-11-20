@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './source-picker.js';
-import type { LyraSourcePicker } from './source-picker.js';
-import type { LyraInput } from '../../forms/input/input.js';
+import '../../lr-source-picker.js';
+import type { LyraSourcePicker } from '../../lr-source-picker.js';
+import type { LyraInput } from '../../lr-input.js';
 
 for (const focused of [false, true]) {
   it(`restores a visible tree entry when search is re-enabled (${focused ? 'focused' : 'outside focus'})`, async () => {

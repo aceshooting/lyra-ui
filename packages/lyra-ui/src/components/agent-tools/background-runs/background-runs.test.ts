@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './background-runs.js';
+import '../../lr-background-runs.js';
 import type { BackgroundRun, LyraBackgroundRuns } from './background-runs.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

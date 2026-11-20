@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraGraph } from '../graph/graph.class.js';
 import type { LyraGraphNodeRenderer } from '../graph/graph-node-renderer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.class.js';
-import './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
 
 describe('knowledge graph custom nodes and glow forwarding', () => {
   it('leaves custom nodes and glow unset by default', async () => {

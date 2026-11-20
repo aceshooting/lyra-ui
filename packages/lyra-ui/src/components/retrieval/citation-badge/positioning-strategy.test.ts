@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
-import './citation-badge.js';
-import type { LyraCitationBadge } from './citation-badge.js';
+import '../../lr-citation-badge.js';
+import type { LyraCitationBadge } from '../../lr-citation-badge.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

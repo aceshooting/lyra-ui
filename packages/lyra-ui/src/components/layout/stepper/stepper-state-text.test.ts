@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraStepper, LyraStepItem } from './stepper.class.js';
-import './stepper.js';
+import '../../lr-stepper.js';
 
 const steps = (): LyraStepItem[] => [
   { stepId: 'basics', label: 'Basics', state: 'completed' },

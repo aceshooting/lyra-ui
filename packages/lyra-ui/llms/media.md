@@ -2866,7 +2866,6 @@ with a development warning while it is open, and `focusContent()` returns `false
 
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
-- `lr-close-request` and `lr-close` are deprecated aliases. A veto through either request preserves the anchor.
 
 The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
 
@@ -2916,7 +2915,7 @@ function openDetails(details, lngLat, label) {
   anchor.closable = true;
   anchor.label = label;
   anchor.append(details); // your own live element
-  anchor.addEventListener('lr-close', () => anchor.remove(), { once: true });
+  anchor.addEventListener('lr-map-anchor-dismiss', () => anchor.remove(), { once: true });
   map.append(anchor);
   anchor.open = true;
   return anchor;
@@ -2928,7 +2927,7 @@ Declaratively, for example with Lit:
 ```js
 html`<lr-map .mapStyle=${style}>
   <lr-map-anchor slot="anchors" open closable label="Place details" .lngLat=${place.lngLat}
-    @lr-close=${() => { this.place = null; }}>
+    @lr-map-anchor-dismiss=${() => { this.place = null; }}>
     <place-card .place=${place}></place-card>
   </lr-map-anchor>
 </lr-map>`;
@@ -2943,8 +2942,8 @@ lr-map-anchor::part(body) { display: flex; flex-direction: column; overflow: hid
 .detail-card > .rows { min-block-size: 0; overflow: auto; }
 ```
 
-**Frameworks:** React 19, Svelte 5, Vue 3 and Lit set the properties and listen to `lr-close`
-directly. In Vue, bind the property-only members with `.prop` when the element may upgrade after
+**Frameworks:** React 19, Svelte 5, Vue 3 and Lit set the properties and listen to
+`lr-map-anchor-dismiss` directly. In Vue, bind the property-only members with `.prop` when the element may upgrade after
 the first render, as for every property-only Lyra member. Angular needs `CUSTOM_ELEMENTS_SCHEMA`;
 when a component host wraps the anchor, that host carries `slot="anchors"`, or the anchor sits in an
 `ng-container`.

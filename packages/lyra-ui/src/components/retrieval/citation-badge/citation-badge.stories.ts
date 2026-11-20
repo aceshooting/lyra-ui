@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './citation-badge.js';
+import '../../lr-citation-badge.js';
 
 const meta: Meta = {
   title: 'CitationBadge',

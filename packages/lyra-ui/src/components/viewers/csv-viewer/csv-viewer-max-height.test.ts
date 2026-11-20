@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './csv-viewer.js';
-import type { LyraCsvViewer } from './csv-viewer.js';
+import '../../lr-csv-viewer.js';
+import type { LyraCsvViewer } from '../../lr-csv-viewer.js';
 
 function csv(rowCount: number): string {
   return ['Name,Role', ...Array.from({ length: rowCount }, (_v, i) => `n${i},r${i}`)].join('\n');

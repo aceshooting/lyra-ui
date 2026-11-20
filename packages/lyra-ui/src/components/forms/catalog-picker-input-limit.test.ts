@@ -1,10 +1,10 @@
 import { expect, fixture } from '@open-wc/testing';
 import { AnnouncementSinkController } from '../../internal/announcer.js';
 import type { LyraCatalogPickerBase } from './catalog-picker-base.js';
-import './country-picker/country-picker.js';
-import './currency-picker/currency-picker.js';
-import './unit-picker/unit-picker.js';
-import './time-zone-picker/time-zone-picker.js';
+import '../lr-country-picker.js';
+import '../lr-currency-picker.js';
+import '../lr-unit-picker.js';
+import '../lr-time-zone-picker.js';
 
 for (const config of [
   { tag: 'lr-country-picker', property: 'countries', code: 'US' },

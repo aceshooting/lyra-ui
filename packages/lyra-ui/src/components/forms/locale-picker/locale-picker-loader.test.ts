@@ -2,7 +2,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './locale-picker.js';
+import '../../lr-locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
 import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
 import { getLyraLocale, setLyraLocale } from '../../../localization.js';

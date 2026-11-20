@@ -4,15 +4,15 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
-import './node-palette.js';
+import '../../lr-node-palette.js';
 import '../../../translations/tr/retrieval.js';
 import '../../../translations/tr/shared.js';
 import type {
   LyraNodePalette,
   LyraNodePaletteEventMap,
   LyraPaletteItem,
-} from './node-palette.js';
-import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
+} from '../../lr-node-palette.js';
+import { FLOW_PALETTE_MIME_TYPE } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 

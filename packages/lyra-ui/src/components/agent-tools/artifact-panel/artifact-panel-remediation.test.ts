@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './artifact-panel.js';
-import type { LyraArtifactPanel } from './artifact-panel.js';
+import '../../lr-artifact-panel.js';
+import type { LyraArtifactPanel } from '../../lr-artifact-panel.js';
 import { SLOT_PRESENCE_UNRESOLVED } from '../../../internal/lyra-element.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 

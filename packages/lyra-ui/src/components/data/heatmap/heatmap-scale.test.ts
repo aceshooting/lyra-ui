@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import type { LyraHeatmap } from './heatmap.class.js';
 import { buildCalendarGrid } from './calendar-grid.js';
 import { countCalls, recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';

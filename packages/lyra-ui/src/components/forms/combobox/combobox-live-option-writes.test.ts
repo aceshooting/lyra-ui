@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './combobox.js';
-import './option.js';
-import type { LyraCombobox } from './combobox.js';
-import type { LyraOption } from './option.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
+import type { LyraOption } from '../../lr-option.js';
 
 describe('lr-combobox live option writes', () => {
   it('lets a later parent value write supersede a queued option edit without user events', async () => {

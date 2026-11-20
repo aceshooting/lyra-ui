@@ -111,13 +111,13 @@ const inventory = {
       tag: 'lr-alpha',
       family: 'forms',
       classModule: 'src/components/forms/alpha/alpha.class.ts',
-      registrationModule: 'src/components/forms/alpha/alpha.ts',
+      registrationModule: 'src/components/lr-alpha.ts',
     },
     {
       tag: 'lr-beta',
       family: 'charts',
       classModule: 'src/components/charts/beta/beta.class.ts',
-      registrationModule: 'src/components/charts/beta/beta.ts',
+      registrationModule: 'src/components/lr-beta.ts',
     },
   ],
 };
@@ -542,16 +542,14 @@ assert.deepEqual(
   }
 }
 
-const historicalMetadata = JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-metadata.json'), 'utf8'));
 const historicalInventory = JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'));
-const historicalExports = deriveExplicitComponentExports(historicalInventory, { exportDeprecations: historicalMetadata.exportDeprecations });
-for (const entry of historicalMetadata.exportDeprecations) {
-  if (entry.kind !== 'entry-point' || !entry.name.startsWith('./components/')) continue;
-  assert.ok(historicalExports[entry.name], `historical component route must remain available: ${entry.name}`);
+const historicalExports = deriveExplicitComponentExports(historicalInventory);
+for (const component of historicalInventory.components) {
+  assert.ok(historicalExports[`./components/${component.tag}.js`], `tag-shaped registration route must be available: ${component.tag}`);
 }
 
-const derived = deriveExplicitComponentExports(inventory, { helperModules, exportDeprecations });
-assert.equal(derived['./components/charts/beta/beta.js'], undefined, 'new components must not gain a deprecated registration route');
+const derived = deriveExplicitComponentExports(inventory, { helperModules });
+assert.equal(derived['./components/charts/beta/beta.js'], undefined, 'components never gain a per-directory registration route');
 assert.equal(derived['./components/charts'], './dist/components/charts/index.js', 'registration-free family barrels remain public');
 assert.equal(derived['./components/charts/beta/beta.class.js'], './dist/components/charts/beta/beta.class.js');
 assert.deepEqual(Object.keys(derived), [...Object.keys(derived)].sort());
@@ -559,13 +557,10 @@ assert.equal(
   derived['./components/forms/alpha/alpha.class.js'],
   './dist/components/forms/alpha/alpha.class.js'
 );
-assert.equal(
-  derived['./components/forms/alpha/alpha.js'],
-  './dist/components/forms/alpha/alpha.js'
-);
+assert.equal(derived['./components/forms/alpha/alpha.js'], undefined);
 assert.deepEqual(
   derived['./components/lr-alpha.js'],
-  { types: './dist/components/forms/alpha/alpha.d.ts', default: './dist/components/lr-alpha.js' }
+  { types: './dist/components/lr-alpha.d.ts', default: './dist/components/lr-alpha.js' }
 );
 assert.equal(derived['./components/forms'], './dist/components/forms/index.js');
 assert.equal(
@@ -575,10 +570,9 @@ assert.equal(
 assert.equal(derived['./components/forms/alpha/alpha.styles.js'], undefined);
 
 const cleanedDerived = deriveExplicitComponentExports(inventory, { helperModules });
-assert.equal(
-  cleanedDerived['./components/forms/alpha/alpha.js'],
-  undefined,
-  'retired nested family registration routes must not be generated without an exact compatibility record'
+assert.throws(
+  () => deriveExplicitComponentExports({ schemaVersion: 1, components: [{ ...inventory.components[0], registrationModule: 'src/components/forms/alpha/alpha.ts' }] }, { helperModules }),
+  /lr-alpha: registrationModule must be its tag-shaped entry src\/components\/lr-alpha\.ts/,
 );
 assert.equal(
   cleanedDerived['./components/forms/alpha/alpha.class.js'],
@@ -587,7 +581,7 @@ assert.equal(
 );
 assert.deepEqual(
   cleanedDerived['./components/lr-alpha.js'],
-  { types: './dist/components/forms/alpha/alpha.d.ts', default: './dist/components/lr-alpha.js' },
+  { types: './dist/components/lr-alpha.d.ts', default: './dist/components/lr-alpha.js' },
   'tag-shaped registration routes remain canonical'
 );
 assert.equal(
@@ -658,7 +652,7 @@ assert.equal(closed['./utilities/*'], null);
 assert.equal(closed['./utilities'], './dist/utilities/index.js');
 assert.equal(closed['./utilities/defined.js'], './dist/utilities/defined.js');
 assert.equal(closed['./localization.js'], './dist/localization.js');
-assert.deepEqual(closed['./components/lr-beta.js'], { types: './dist/components/charts/beta/beta.d.ts', default: './dist/components/lr-beta.js' });
+assert.deepEqual(closed['./components/lr-beta.js'], { types: './dist/components/lr-beta.d.ts', default: './dist/components/lr-beta.js' });
 assert.deepEqual(
   closed['.'],
   { types: './dist/lyra.d.ts', default: './dist/lyra.js' },

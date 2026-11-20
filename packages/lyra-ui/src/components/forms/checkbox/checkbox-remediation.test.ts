@@ -1,6 +1,6 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
-import type { LyraCheckbox } from './checkbox.js';
-import './checkbox.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
+import '../../lr-checkbox.js';
 
 for (const attribute of ['error-text']) {
   it(`lr-checkbox safely removes ${attribute} with null readback and later recovery`, async () => {

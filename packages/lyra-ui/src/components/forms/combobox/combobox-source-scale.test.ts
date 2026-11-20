@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './combobox.js';
-import type { ComboboxSource, ComboboxSourceRow, LyraComboboxEventMap, LyraCombobox } from './combobox.js';
+import '../../lr-combobox.js';
+import type { ComboboxSource, ComboboxSourceRow, LyraComboboxEventMap, LyraCombobox } from '../../lr-combobox.js';
 
 it('selects first, middle and final identities from a million-record searchable backend with bounded responses', async () => {
   const count = 1_000_000;

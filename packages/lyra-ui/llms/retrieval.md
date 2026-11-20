@@ -4,7 +4,8 @@ Listen for `lr-entity-select` from community cards and relationship paths, and f
 `lr-selection-change` from retrieval results and the source picker. Dashboard events are
 `lr-metric-change-request`, `lr-slice-change-request` and `lr-run-activate`. Disclosure controls emit
 `lr-toggle` with `expanded` and, for an item, `itemId`; the older component-specific event names are
-no longer emitted. The `lyra-v25` migration profile reports detail or event-reach changes that
+no longer emitted. The composite panels (`lr-entity-dossier`, `lr-memory-panel`,
+`lr-provenance-panel`, `lr-retrieval-trace`) emit only `lr-retrieval-disclosure-change`. The `lyra-v25` migration profile reports detail or event-reach changes that
 cannot be rewritten mechanically.
 
 ## Breaking changes in 23.0.0
@@ -16,7 +17,7 @@ use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headi
 native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
-and `lr-toggle` for chunk and memory disclosures; the aliases removed in that release are no
+`lr-toggle` for chunk disclosures, and `lr-retrieval-disclosure-change` for memory disclosures; the aliases removed in that release are no
 longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
@@ -1493,8 +1494,8 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 - `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }` from the chunk inspector.
 - `lr-retrieval-disclosure-change` is a bubbling, composed notification with readonly
 `{ kind: 'section', section, expanded }` or `{ kind: 'chunk', section: 'chunks', chunkId, expanded }`.
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. Migrate from `lr-toggle`
-(`{ section, expanded, itemId? }`) by narrowing on `detail.kind`.
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel no longer
+dispatches `lr-toggle`; a former listener narrows on `detail.kind`.
 
 ```ts
 panel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
@@ -2068,7 +2069,7 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.
 - `lr-retrieval-disclosure-change` bubbles from the dossier with readonly `detail.origin`
 of `'supporting'` or `'provenance'`, plus `kind`, `section`, `expanded`, and `chunkId` for a chunk.
-Migrate from `lr-toggle` (`{ section, expanded, itemId? }`) by listening on the dossier and reading
+The dossier no longer dispatches `lr-toggle`; a former `lr-toggle` listener moves here and reads
 `origin` to identify the panel.
 
 ```ts
@@ -2954,8 +2955,8 @@ description. Scope exact-name queries to the memory row or match the full action
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
   `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
-  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
-  `memoryId` and `scope` for the owning row.
+  `kind` is `'chunk'`. The panel no longer dispatches `lr-toggle`; a
+  former listener narrows on `detail.kind` and reads `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
@@ -3421,8 +3422,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   `{ stageId, action: 'expand', chunkId, expanded }` for a disclosure.
 - `lr-retrieval-disclosure-change` bubbles from the trace with readonly `detail.kind`,
 `stageId` and `expanded`. It covers the evidence button, timeline selection that expands a stage,
-and disclosures of nested chunks, which also carry `chunkId`. Migrate from `lr-toggle`
-(`{ expanded, itemId, stageId? }`) by narrowing on `detail.kind`.
+and disclosures of nested chunks, which also carry `chunkId`. The trace no longer
+dispatches `lr-toggle`; a former listener narrows on `detail.kind`.
 
 ```ts
 trace.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {

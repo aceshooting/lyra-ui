@@ -9,7 +9,7 @@ export const PDF_VIEWER_TAG = tag('pdf-viewer');
 registerDocumentRenderer('application/pdf', {
   matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.pdf'),
   capabilities: { anchors: ['page', 'text-quote', 'region'], textSelect: true, search: true },
-  load: () => import('./pdf-viewer.js').then(() => ({
+  load: () => import('../../lr-pdf-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-pdf-viewer
       src=${file.src}
       name=${file.name}

@@ -1,12 +1,12 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './thread-list.js';
+import '../../lr-thread-list.js';
 import type { LyraChatThread, LyraThreadList } from './thread-list.class.js';
-import '../../layout/menu/menu.js';
-import '../../layout/menu/menu-item.js';
-import '../../overlays/overlay/dropdown.js';
-import '../../overlays/badge/badge.js';
-import type { MenuItemSelectDetail } from '../../layout/menu/menu.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown.js';
+import '../../lr-badge.js';
+import type { MenuItemSelectDetail } from '../../lr-menu.js';
 
 const meta: Meta = {
   title: 'ThreadList',

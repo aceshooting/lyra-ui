@@ -1,14 +1,14 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import '../approval-queue/approval-queue.js';
-import '../tool-approval-dialog/tool-approval-dialog.js';
-import '../tool-call-block/tool-call-block.js';
-import '../tool-call-chip/tool-call-chip.js';
-import '../tool-param-form/tool-param-form.js';
-import './tool-result-dialog.js';
-import '../tool-result-view/tool-result-view.js';
-import '../tool-select-dialog/tool-select-dialog.js';
-import '../tool-timeline/tool-timeline.js';
+import '../../lr-approval-queue.js';
+import '../../lr-tool-approval-dialog.js';
+import '../../lr-tool-call-block.js';
+import '../../lr-tool-call-chip.js';
+import '../../lr-tool-param-form.js';
+import '../../lr-tool-result-dialog.js';
+import '../../lr-tool-result-view.js';
+import '../../lr-tool-select-dialog.js';
+import '../../lr-tool-timeline.js';
 
 const part = (host: HTMLElement, name: string) =>
   host.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;

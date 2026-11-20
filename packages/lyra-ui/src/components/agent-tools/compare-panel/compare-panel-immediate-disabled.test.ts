@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraComparePanel } from './compare-panel.class.js';
-import './compare-panel.js';
+import '../../lr-compare-panel.js';
 
 for (const [index, choice] of ['a', 'b', 'tie', 'both-bad'].entries()) {
   it(`suppresses the ${choice} vote when disabled during click capture and recovers`, async () => {

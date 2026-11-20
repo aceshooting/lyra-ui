@@ -2,10 +2,10 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './select.js';
-import '../combobox/option.js';
-import type { LyraSelect } from './select.js';
-import type { LyraOption } from '../combobox/option.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
+import type { LyraSelect } from '../../lr-select.js';
+import type { LyraOption } from '../../lr-option.js';
 
 async function control(): Promise<LyraSelect> {
   return fixture<LyraSelect>(html`<lr-select label="Fruit" with-clear name="fruit" required>

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraSignaturePad } from './signature-pad.js';
-import './signature-pad.js';
+import type { LyraSignaturePad } from '../../lr-signature-pad.js';
+import '../../lr-signature-pad.js';
 
 const states = [
   ['null', () => null],

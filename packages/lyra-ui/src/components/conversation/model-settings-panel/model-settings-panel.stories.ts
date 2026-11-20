@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './model-settings-panel.js';
+import '../../lr-model-settings-panel.js';
 
 const meta: Meta = {
   title: 'ModelSettingsPanel',

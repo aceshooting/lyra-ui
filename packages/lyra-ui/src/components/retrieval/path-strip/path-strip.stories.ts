@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './path-strip.js';
+import '../../lr-path-strip.js';
 import type { LyraPathElement } from './path-strip.class.js';
 
 const meta: Meta = {

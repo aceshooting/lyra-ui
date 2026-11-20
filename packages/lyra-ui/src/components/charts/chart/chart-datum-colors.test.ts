@@ -1,13 +1,13 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import type { LyraChart, LyraChartSeries } from './chart.class.js';
-import './bar-chart.js';
-import './line-chart.js';
-import './pie-chart.js';
-import './doughnut-chart.js';
-import './scatter-chart.js';
-import './bubble-chart.js';
-import './radar-chart.js';
-import './polar-area-chart.js';
+import '../../lr-bar-chart.js';
+import '../../lr-line-chart.js';
+import '../../lr-pie-chart.js';
+import '../../lr-doughnut-chart.js';
+import '../../lr-scatter-chart.js';
+import '../../lr-bubble-chart.js';
+import '../../lr-radar-chart.js';
+import '../../lr-polar-area-chart.js';
 
 interface ColorRuntime {
   data: {

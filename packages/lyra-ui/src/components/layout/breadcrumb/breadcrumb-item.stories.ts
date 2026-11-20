@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './breadcrumb-item.js';
-import './breadcrumb.js';
+import '../../lr-breadcrumb-item.js';
+import '../../lr-breadcrumb.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
-import '../chip/chip.js';
-import '../../layout/page/page.js';
+import '../../lr-chip.js';
+import '../../lr-page.js';
 import type { LyraChip } from '../chip/chip.class.js';
 import type { LyraPage } from '../../layout/page/page.class.js';
 

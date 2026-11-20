@@ -1,7 +1,7 @@
 import { expect, nextFrame, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './markdown.js';
-import './markdown-core.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
 import type { LyraMarkdown } from './markdown.class.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
 // Resolve the core's module graph before timing authored grammar and DOM behavior.

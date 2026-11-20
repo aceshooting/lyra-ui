@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './stat.js';
-import type { LyraStat } from './stat.js';
+import '../../lr-stat.js';
+import type { LyraStat } from '../../lr-stat.js';
 
 for (const attribute of ['caption', 'sub'] as const) {
   it(`removes ${attribute} safely and keeps assigned content visible`, async () => {

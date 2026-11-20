@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './radio-button.js';
-import './radio-group.js';
+import '../../lr-radio-button.js';
+import '../../lr-radio-group.js';
 
 const meta: Meta = {
   title: 'Forms/Radio button',

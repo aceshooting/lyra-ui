@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import type { LyraMcpApp } from './mcp-app.class.js';
 
 describe('MCP app public port and resource boundaries', () => {

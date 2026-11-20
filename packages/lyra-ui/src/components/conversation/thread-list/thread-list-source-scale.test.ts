@@ -2,7 +2,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './thread-list.js';
+import '../../lr-thread-list.js';
 import type { LyraThreadList, ThreadListSource, LyraChatThread } from './thread-list.class.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';

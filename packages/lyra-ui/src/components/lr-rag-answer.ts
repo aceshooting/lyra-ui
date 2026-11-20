@@ -1,3 +1,15 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/rag-answer/rag-answer.js';
+export * from './retrieval/rag-answer/rag-answer.class.js';
+import './lr-markdown.js';
+import './lr-citation-badge.js';
+import './lr-source-list.js';
+import './lr-source-card.js';
+import './lr-spinner.js';
+import './lr-button.js';
+import { LyraRagAnswer } from './retrieval/rag-answer/rag-answer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import { defineLazyChildren } from '../internal/lazy-children.js';
+// The grounding summary registers the first time an answer carries an assessment.
+defineLazyChildren('rag-answer', {
+  'grounding-summary': () => import('./lr-grounding-summary.js'),
+});
+defineElement('rag-answer', LyraRagAnswer);

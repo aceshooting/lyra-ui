@@ -360,7 +360,7 @@ test('the checked-in ledger is valid and complete against the checked-in invento
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
-  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26']);
+  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26', 'lyra-v31']);
   assert.ok(!MIGRATION_ORIGINS.includes('lyra-v7') && MIGRATION_ORIGINS.includes('lyra-v21'));
   assert.deepEqual(validateRenameLedger(emptyRenameLedger(), { inventory: checkedInventory }), []);
 });
@@ -594,6 +594,7 @@ test('the migration-coverage gate adds completeness and the prefix polarity rule
     'lyra-v22': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
     'lyra-v25': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
     'lyra-v26': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
+    'lyra-v31': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
   });
   assertFinding(analyzeRenameLedger(emptyRenameLedger(), inventory).errors, /has no rename or review entry/);
   const undeclared = syntheticLedger();
@@ -2254,4 +2255,55 @@ test('reviewed v30 slot recipes preserve canonical-content precedence', () => {
     assert.deepEqual(resolved.changes, [], item.tag);
     assert.deepEqual(resolved.warnings, [], item.tag);
   }
+});
+
+test('lyra-v31 reports every name removed in 32.0.0 and accepts the resolved, type-checked fixtures', () => {
+  const cases = readJson(path.join(fixtureDir, 'v31-major-changes.json'));
+  const profile = readRenameLedger().profiles.find(entry => entry.origin === 'lyra-v31');
+  const direct = profile.retiredEvents.filter(entry => entry.direct);
+  assert.equal(direct.length, profile.retiredEvents.length, 'every 32.0.0 removal is a direct retirement');
+  for (const item of cases.filter(entry => entry.warning === 'RETIRED_EVENT_REVIEW')) {
+    assert.ok(direct.some(entry => entry.tag === item.tag && entry.event === item.from && entry.replacement === item.to), `${item.tag}/${item.from}`);
+  }
+  const typed = fs.readFileSync(path.join(packageDir, 'type-tests/migration-v31-major-changes.ts'), 'utf8');
+  assert.equal(typed.split('// Resolved Lyra 31 to Lyra 32 fixtures.\n')[1].trim(),
+    cases.map(item => item.resolved.replace("').", "')!.")).join('\n'));
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
+  });
+  for (const item of cases) {
+    const result = migrateText(item.input, current, { file: 'removed.ts', origin: 'lyra-v31' });
+    assert.equal(result.content, item.input, `${item.tag}/${item.from}`);
+    assert.deepEqual(result.changes, [], `${item.tag}/${item.from}`);
+    const site = result.warnings.find(entry => entry.warningCode === item.warning && entry.upstreamMember === item.from);
+    assert.ok(site, `${item.tag}/${item.from}: ${describeWarnings(result.warnings).join('; ')}`);
+    if (item.warning === 'RETIRED_EVENT_REVIEW') assert.equal(site.target, item.to, `${item.tag}/${item.from}`);
+    const resolved = migrateText(item.resolved, current, { file: 'resolved.ts', origin: 'lyra-v31' });
+    assert.deepEqual(resolved.changes, [], `${item.tag}/${item.from}`);
+    assert.deepEqual(describeWarnings(resolved.warnings), [], `${item.tag}/${item.from}`);
+  }
+  // Owner-bound template listeners of every direct retirement, including events whose owner
+  // renamed them, are reported with their replacement and never rewritten.
+  for (const entry of direct) {
+    const input = `<${entry.tag} @${entry.event}=\${handler}></${entry.tag}>`;
+    const result = migrateText(input, current, { file: 'retired.html', origin: 'lyra-v31' });
+    assert.equal(result.content, input, entry.tag);
+    assert.ok(result.warnings.some(site => site.warningCode === 'RETIRED_EVENT_REVIEW' && site.upstreamMember === entry.event && site.target === entry.replacement), `${entry.tag}/${entry.event}`);
+  }
+});
+
+test('direct retirements need no published policy record but never bypass one', () => {
+  const history = readJson(path.join(scriptDir, 'fixtures', 'retired-event-history.json'));
+  const current = readRenameLedger();
+  assert.deepEqual(analyzeRetiredEventHistory(current, history), []);
+  const undeclared = structuredClone(current);
+  const v31 = undeclared.profiles.find(entry => entry.origin === 'lyra-v31');
+  delete v31.retiredEvents[0].direct;
+  assertFinding(analyzeRetiredEventHistory(undeclared, history), /has no published policy evidence/);
+  const bypass = structuredClone(current);
+  bypass.profiles[0].retiredEvents[0].direct = true;
+  assertFinding(analyzeRetiredEventHistory(bypass, history), /has published policy evidence; it is not direct/);
+  const malformed = structuredClone(current);
+  malformed.profiles.find(entry => entry.origin === 'lyra-v31').retiredEvents[0].direct = false;
+  assertFinding(validateRenameLedgerShape(malformed), /direct must be true when present/);
 });

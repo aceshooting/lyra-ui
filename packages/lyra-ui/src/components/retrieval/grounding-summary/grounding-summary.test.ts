@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
-import "./grounding-summary.js";
-import type { LyraGroundingSummary } from "./grounding-summary.js";
+import "../../lr-grounding-summary.js";
+import type { LyraGroundingSummary } from "../../lr-grounding-summary.js";
 import type { Citation, GroundingAssessment } from "../../../ai/types.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {

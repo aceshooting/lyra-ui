@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './checkbox-group.js';
-import '../checkbox/checkbox.js';
-import type { LyraCheckboxGroup } from './checkbox-group.js';
-import type { LyraCheckbox } from '../checkbox/checkbox.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-checkbox.js';
+import type { LyraCheckboxGroup } from '../../lr-checkbox-group.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
 
 it('matches a reversed bulk selection with linear matching work and preserves form order', async () => {
   const values = Array.from({ length: 128 }, (_, index) => `selection-cost-${index}`);

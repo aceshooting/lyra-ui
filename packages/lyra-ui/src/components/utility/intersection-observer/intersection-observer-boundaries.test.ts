@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './intersection-observer.js';
+import '../../lr-intersection-observer.js';
 import type { LyraIntersectionObserver } from './intersection-observer.class.js';
 
 class BoundaryObserver implements IntersectionObserver {

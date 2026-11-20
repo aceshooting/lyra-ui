@@ -1,18 +1,18 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
-import './page-rail.js';
+import '../../lr-page-rail.js';
 import type {
   LyraPageRail,
   LyraPageViewerSnapshot,
   PageThumbnailSource,
-} from './page-rail.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+} from '../../lr-page-rail.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
-import '../pdf-viewer/pdf-viewer.js';
-import type { LyraPdfViewer } from '../pdf-viewer/pdf-viewer.js';
-import '../pptx-viewer/pptx-viewer.js';
-import type { LyraPptxViewer } from '../pptx-viewer/pptx-viewer.js';
+import '../../lr-pdf-viewer.js';
+import type { LyraPdfViewer } from '../../lr-pdf-viewer.js';
+import '../../lr-pptx-viewer.js';
+import type { LyraPptxViewer } from '../../lr-pptx-viewer.js';
 import type { PptxRendererModule, PptxViewerApi } from '../pptx-viewer/pptx-loader.js';
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {

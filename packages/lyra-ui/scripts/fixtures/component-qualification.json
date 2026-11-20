@@ -3119,6 +3119,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/approval-queue/approval-queue-decisions.test.ts",
+          "src/components/agent-tools/approval-queue/approval-queue-registration.test.ts",
           "src/components/agent-tools/approval-queue/approval-queue.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -3827,7 +3828,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 431,
+              "line": 441,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3868,6 +3869,7 @@
           "src/components/media/attachment-trigger/attachment-trigger-composition.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger-immediate-disabled.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger-partition-cost.test.ts",
+          "src/components/media/attachment-trigger/attachment-trigger-registration.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger-remediation.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger.test.ts"
         ],
@@ -5267,6 +5269,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -5589,6 +5592,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -6646,6 +6650,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -9039,6 +9044,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -9291,7 +9297,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart-3d/chart-3d-engine.ts",
-              "line": 132,
+              "line": 128,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18116,7 +18122,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-compare/document-compare.class.ts",
-              "line": 483,
+              "line": 494,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18154,6 +18160,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/document-compare/document-compare-b25.test.ts",
+          "src/components/viewers/document-compare/document-compare-registration.test.ts",
           "src/components/viewers/document-compare/document-compare.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18345,6 +18352,7 @@
           "src/components/data/document-library/document-library-cursor-source.test.ts",
           "src/components/data/document-library/document-library-cursor.property.test.ts",
           "src/components/data/document-library/document-library-record-projection.test.ts",
+          "src/components/data/document-library/document-library-registration.test.ts",
           "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library-scale.test.ts",
           "src/components/data/document-library/document-library-search-sizing.test.ts",
@@ -19187,6 +19195,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -20826,7 +20835,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts",
-              "line": 77,
+              "line": 75,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22126,6 +22135,7 @@
         "tests": [
           "src/components/agent-tools/eval-dataset/eval-dataset-facet-recovery.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-immediate-disabled.test.ts",
+          "src/components/agent-tools/eval-dataset/eval-dataset-registration.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-remediation.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-search-sizing.test.ts",
@@ -23480,6 +23490,7 @@
           "src/components/layout/filter-bar/filter-bar-choice-cost.test.ts",
           "src/components/layout/filter-bar/filter-bar-end-alignment.test.ts",
           "src/components/layout/filter-bar/filter-bar-panel-fixes.test.ts",
+          "src/components/layout/filter-bar/filter-bar-registration.test.ts",
           "src/components/layout/filter-bar/filter-bar-remediation.test.ts",
           "src/components/layout/filter-bar/filter-bar.test.ts"
         ],
@@ -27724,6 +27735,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -31295,6 +31307,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -31657,6 +31670,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -40341,7 +40355,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 1674,
+              "line": 1672,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41168,6 +41182,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -41464,6 +41479,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -43030,7 +43046,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 594,
+              "line": 604,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43073,6 +43089,7 @@
           "src/components/conversation/prompt-input/prompt-input-input-limit-scale.test.ts",
           "src/components/conversation/prompt-input/prompt-input-interaction.test.ts",
           "src/components/conversation/prompt-input/prompt-input-register.test.ts",
+          "src/components/conversation/prompt-input/prompt-input-registration.test.ts",
           "src/components/conversation/prompt-input/prompt-input-toolbar-placement.test.ts",
           "src/components/conversation/prompt-input/prompt-input.test.ts"
         ],
@@ -44250,6 +44267,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -45028,7 +45046,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/rag-answer/rag-answer.class.ts",
-              "line": 177,
+              "line": 178,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45067,6 +45085,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/rag-answer/rag-answer-registration.test.ts",
           "src/components/retrieval/rag-answer/rag-answer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48256,6 +48275,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/rubric-form/rubric-form-nullish-schema.test.ts",
+          "src/components/forms/rubric-form/rubric-form-registration.test.ts",
           "src/components/forms/rubric-form/rubric-form-remediation.test.ts",
           "src/components/forms/rubric-form/rubric-form-runtime-values.test.ts",
           "src/components/forms/rubric-form/rubric-form-schema-boundaries.test.ts",
@@ -48515,6 +48535,7 @@
           "src/components/charts/chart/chart-scale.test.ts",
           "src/components/charts/chart/chart-spatial-data.test.ts",
           "src/components/charts/chart/chart-spatial-loading.test.ts",
+          "src/components/charts/chart/chart-spatial-model.property.test.ts",
           "src/components/charts/chart/chart-spatial-peer-recovery.test.ts",
           "src/components/charts/chart/chart-spatial-source-scale.test.ts",
           "src/components/charts/chart/chart-sync-peer-recovery.test.ts",
@@ -60769,6 +60790,7 @@
         "tests": [
           "src/components/agent-tools/trace-tree/span-projection.property.test.ts",
           "src/components/agent-tools/trace-tree/span-scale.test.ts",
+          "src/components/agent-tools/trace-tree/trace-source-runtime-loading.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-remediation.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-scale.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-admission.test.ts",

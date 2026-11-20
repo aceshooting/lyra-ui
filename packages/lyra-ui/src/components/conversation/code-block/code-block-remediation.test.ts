@@ -1,9 +1,9 @@
 import { fixture, expect, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
-import './code-block.js';
-import './code-block-core.js';
-import type { LyraCodeBlock } from './code-block.js';
-import type { LyraCodeBlockCore } from './code-block-core.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
+import type { LyraCodeBlock } from '../../lr-code-block.js';
+import type { LyraCodeBlockCore } from '../../lr-code-block-core.js';
 // Registers the real 'ar' catalog so the "inherited locale changes" test below -- which exercises
 // digit-formatting reactivity, not string-catalog completeness -- resolves codeBlockLineLabel and
 // the other keys it incidentally touches instead of tripping the partial-catalog fallback warning.

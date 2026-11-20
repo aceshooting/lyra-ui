@@ -1,8 +1,8 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
-import './code-block.js';
-import './code-block-core.js';
-import type { LyraCodeBlock } from './code-block.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
+import type { LyraCodeBlock } from '../../lr-code-block.js';
 
 for (const name of ['lr-code-block', 'lr-code-block-core']) {
   for (const syntax of [false, true]) {

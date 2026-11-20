@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 import type { LyraEvalDataset, EvalDatasetSource, EvalExample } from './eval-dataset.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';

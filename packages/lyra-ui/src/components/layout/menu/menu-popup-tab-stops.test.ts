@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
-import './menu.js';
-import './menu-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 
 async function openSubmenu(extra = html``) {
   const wrapper = await fixture<HTMLDivElement>(html`<div>

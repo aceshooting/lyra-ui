@@ -1,10 +1,10 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
-import './file-tree.js';
-import type { LyraFileTree, FileTreeNode } from './file-tree.js';
-import type { LyraTree } from '../tree/tree.js';
-import type { LyraTreeItem } from '../tree/tree-item.js';
+import '../../lr-file-tree.js';
+import type { LyraFileTree, FileTreeNode } from '../../lr-file-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 

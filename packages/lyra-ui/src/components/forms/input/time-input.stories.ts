@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './time-input.js';
+import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
 const meta: Meta = {

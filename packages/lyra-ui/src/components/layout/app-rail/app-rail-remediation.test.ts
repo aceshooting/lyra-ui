@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './app-rail.js';
-import '../app-rail-group/app-rail-group.js';
-import type { LyraAppRail } from './app-rail.js';
+import '../../lr-app-rail.js';
+import '../../lr-app-rail-group.js';
+import type { LyraAppRail } from '../../lr-app-rail.js';
 
 for (const continuation of ['mobile', 'full', 'disconnected'] as const) {
   it(`restores a rail opened while detached and honors a ${continuation} continuation before the queued reveal`, async () => {

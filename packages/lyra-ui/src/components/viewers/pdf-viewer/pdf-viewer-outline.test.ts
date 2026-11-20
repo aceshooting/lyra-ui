@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraPdfViewer } from './pdf-viewer.class.js';
-import './pdf-viewer.js';
+import '../../lr-pdf-viewer.js';
 
 /** Two blank pages with real outline destinations and an exact cross-reference table. */
 function outlinedPdf(named: boolean, first = '0', second = '1'): string {

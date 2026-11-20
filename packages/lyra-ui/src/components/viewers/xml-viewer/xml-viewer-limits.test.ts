@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraXmlViewer } from './xml-viewer.class.js';
-import './xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 type Limits = { maxNodes: number; maxRows: number; maxBytes: number };
 it('defaults XML ceilings and applies reduced node and row limits', async () => {

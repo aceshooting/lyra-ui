@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './chat-composer.js';
-import type { LyraChatComposer } from './chat-composer.js';
+import '../../lr-chat-composer.js';
+import type { LyraChatComposer } from '../../lr-chat-composer.js';
 
 function part(el: LyraChatComposer, name: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;

@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { LyraMessageParts } from './message-parts.class.js';
-import './message-parts.js';
+import '../../lr-message-parts.js';
 
 it('replaces a failed lazy citation registration with a localized, settled fallback and permits a host renderer', async () => {
   const original = customElements.define;

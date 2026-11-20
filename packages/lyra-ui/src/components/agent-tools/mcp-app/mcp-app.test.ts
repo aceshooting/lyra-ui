@@ -1,6 +1,6 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 // Registers the real 'de' catalog so the lang="de-DE" host-context test below -- which exercises

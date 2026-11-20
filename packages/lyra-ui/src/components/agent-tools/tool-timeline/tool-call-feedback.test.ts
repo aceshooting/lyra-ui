@@ -1,12 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { sinkTexts } from '../../../../test/announcements.js';
-import '../permission-grant/permission-grant.js';
-import '../permission-rules/permission-rules.js';
-import '../connector-manager/connector-manager.js';
-import '../confirm-bar/confirm-bar.js';
-import '../tool-select-dialog/tool-select-dialog.js';
-import './tool-timeline.js';
+import '../../lr-permission-grant.js';
+import '../../lr-permission-rules.js';
+import '../../lr-connector-manager.js';
+import '../../lr-confirm-bar.js';
+import '../../lr-tool-select-dialog.js';
+import '../../lr-tool-timeline.js';
 
 const part = (host: HTMLElement, name: string) => host.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
 
@@ -75,7 +75,7 @@ for (const kind of ['result', 'approval'] as const) {
     let attempts = 0;
     loader.loadSurface = async () => {
       if (++attempts === 1) throw new Error('unavailable');
-      return kind === 'approval' ? import('../tool-approval-dialog/tool-approval-dialog.js') : import('../tool-result-view/tool-result-view.js');
+      return kind === 'approval' ? import('../../lr-tool-approval-dialog.js') : import('../../lr-tool-result-view.js');
     };
     if (kind === 'approval') host.strings = { toolTimelineLoadError: 'Approval unavailable' };
     host.entries = [{ id: 'a', name: 'Read', args: {}, status: 'pending', needsApproval: kind === 'approval' }];
@@ -107,7 +107,7 @@ it('registers approval on reconnect after receiving entries while detached', asy
   let loads = 0;
   (el as unknown as { loadSurface(kind: string): Promise<unknown> }).loadSurface = () => {
     loads++;
-    return import('../tool-approval-dialog/tool-approval-dialog.js');
+    return import('../../lr-tool-approval-dialog.js');
   };
   el.entries = [{ id: 'r', name: 'Read', status: 'pending', args: {}, needsApproval: true }];
   await el.updateComplete;

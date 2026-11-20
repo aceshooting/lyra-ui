@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LitElement, css, type TemplateResult } from 'lit';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './dock-panel.js';
-import type { LyraDockPanel } from './dock-panel.js';
+import '../../lr-dock-panel.js';
+import type { LyraDockPanel } from '../../lr-dock-panel.js';
 
 class DockShellHost extends LitElement {
   static override styles = css`:host { display: block; inline-size: 300px; block-size: 200px; }`;

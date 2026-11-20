@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
-import './chart.js';
-import type { LyraChart } from './chart.js';
+import '../../lr-chart.js';
+import type { LyraChart } from '../../lr-chart.js';
 import { FORCED_COLOR_ENCODINGS, forcedColorEncoding } from './chart-forced-colors.js';
 
 describe('chart forced-colors encodings', () => {

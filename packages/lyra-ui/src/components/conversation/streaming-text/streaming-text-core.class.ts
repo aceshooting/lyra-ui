@@ -31,7 +31,7 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * and the full forwarded Markdown configuration surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`,
  * `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`,
  * `maxHeight`) -- only which Markdown element Markdown mode composes differs: this variant
- * renders `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so this
+ * renders `<lr-markdown-core>` (`../../lr-markdown-core.js`) instead of `<lr-markdown>`, so this
  * component's own module never textually contains a reference to `<lr-markdown>`'s ~200-language
  * dynamic-import table. A fenced code block whose language isn't a key in `languages` always
  * renders the plain-text fallback here -- there is no default/full-table highlighter to fall back

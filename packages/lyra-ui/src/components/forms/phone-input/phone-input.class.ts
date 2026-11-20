@@ -226,7 +226,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
 
   private static readonly flagRegistration = /* @__PURE__ */ createOptionalPeerLoader({
-    load: async () => (await import('../../media/flag/flag.js')).LyraFlag,
+    load: async () => (await import('../../lr-flag.js')).LyraFlag,
     isCapability: (value): value is CustomElementConstructor => typeof value === 'function',
     warningKey: 'phone-input-flag-registration',
     warning: '<lr-phone-input> could not register its flag element.',

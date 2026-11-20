@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './kbd.js';
-import type { LyraKbd } from './kbd.js';
-import { shortcutTokenLabel, parseShortcut } from './kbd.js';
+import '../../lr-kbd.js';
+import type { LyraKbd } from '../../lr-kbd.js';
+import { shortcutTokenLabel, parseShortcut } from '../../lr-kbd.js';
 
 describe('shortcutTokenLabel (pure, parameterized on isMac)', () => {
   it('resolves "mod" to the Mac glyph on macOS and to "Ctrl" elsewhere', () => {

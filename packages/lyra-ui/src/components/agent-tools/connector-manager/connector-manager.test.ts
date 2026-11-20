@@ -1,5 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './connector-manager.js';
+import '../../lr-connector-manager.js';
 import type { AgentConnector, LyraConnectorManager } from './connector-manager.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';

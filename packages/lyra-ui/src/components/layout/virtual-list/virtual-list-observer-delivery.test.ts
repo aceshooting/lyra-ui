@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 class ControlledObserver implements ResizeObserver {
   readonly targets = new Set<Element>();

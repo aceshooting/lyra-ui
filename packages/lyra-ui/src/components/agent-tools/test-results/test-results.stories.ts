@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './test-results.js';
+import '../../lr-test-results.js';
 import { testResultDetailSlotName, type TestSuiteResult, type TestResultsSource, type TestStatus } from './test-results.class.js';
 
 const meta: Meta = {

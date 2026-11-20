@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, nextFrame } from '@open-wc/testing';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import { measurementAccess } from '../../../../test/data-grid.js';
 
 describe('data grid measured row shrink', () => {

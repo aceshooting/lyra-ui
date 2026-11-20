@@ -1,8 +1,8 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './icon.js';
-import { LyraIcon } from './icon.js';
+import '../../lr-icon.js';
+import { LyraIcon } from '../../lr-icon.js';
 import {
   getIconLibrary,
   registerIconLibrary,

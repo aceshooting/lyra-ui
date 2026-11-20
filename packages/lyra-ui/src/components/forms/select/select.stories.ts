@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraSelect } from './select.js';
+import type { LyraSelect } from '../../lr-select.js';
 import type { LyraAppearance, LyraSizeStep } from '../../../internal/variants.js';
 import type { LyraOption } from '../combobox/option.class.js';
 

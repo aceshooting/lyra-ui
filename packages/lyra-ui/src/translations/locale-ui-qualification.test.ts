@@ -5,9 +5,9 @@ import { getLyraLocale, getLyraLocaleDirection } from '../localization.js';
 import type { LyraInput } from '../components/forms/input/input.class.js';
 import type { LyraDateInput } from '../components/forms/date-picker/date-input.class.js';
 import type { LyraFormatNumber } from '../components/utility/format/format-number.class.js';
-import '../components/forms/input/input.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/utility/format/format-number.js';
+import '../components/lr-input.js';
+import '../components/lr-date-input.js';
+import '../components/lr-format-number.js';
 
 function numberText(locale: string, value: number): string {
   try {

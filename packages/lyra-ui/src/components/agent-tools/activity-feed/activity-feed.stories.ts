@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './activity-feed.js';
+import '../../lr-activity-feed.js';
 import type { ActivityEntry, LyraActivityFeed } from './activity-feed.class.js';
 
 const meta: Meta = {

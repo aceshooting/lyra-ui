@@ -1,6 +1,6 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import type { LyraMap } from './map.class.js';
-import './map.js';
+import '../../lr-map.js';
 
 const blankStyle = { version: 8 as const, sources: {}, layers: [] };
 

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraTimeRange } from './time-range.js';
-import './time-range.js';
+import type { LyraTimeRange } from '../../lr-time-range.js';
+import '../../lr-time-range.js';
 
 for (const entry of ['track', 'handle-start']) {
   for (const button of [1, 2]) {

@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/token-input/token-input.js';
+export * from './forms/token-input/token-input.class.js';
+import { LyraTokenInput } from './forms/token-input/token-input.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('token-input', LyraTokenInput);

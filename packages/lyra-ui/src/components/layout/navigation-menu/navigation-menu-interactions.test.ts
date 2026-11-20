@@ -8,7 +8,7 @@ import type {
   LyraNavigationMenuToggleDetail,
 } from '../navigation-menu-item/navigation-menu-item.class.js';
 import type { LyraNavigationMenu } from './navigation-menu.class.js';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 ignoreResizeObserverLoopErrors('collapse toggles host block size');
 

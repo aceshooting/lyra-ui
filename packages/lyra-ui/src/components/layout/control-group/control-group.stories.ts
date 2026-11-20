@@ -1,11 +1,11 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './control-group.js';
-import '../../forms/select/select.js';
-import '../segmented/segmented.js';
-import '../../forms/button/button.js';
-import '../../forms/input/input.js';
-import '../../forms/combobox/combobox.js';
+import '../../lr-control-group.js';
+import '../../lr-select.js';
+import '../../lr-segmented.js';
+import '../../lr-button.js';
+import '../../lr-input.js';
+import '../../lr-combobox.js';
 
 const meta: Meta = { title: 'Primitives/Control Group', component: 'lr-control-group' };
 export default meta;

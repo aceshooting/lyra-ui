@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './filter-bar.js';
-import '../../forms/button/button.js';
+import '../../lr-filter-bar.js';
+import '../../lr-button.js';
 import type { LyraFilterBar, LyraFilterBarFilterDefinition } from './filter-bar.class.js';
 
 const filters: LyraFilterBarFilterDefinition[] = [

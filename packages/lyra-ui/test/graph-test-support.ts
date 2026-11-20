@@ -7,13 +7,13 @@ import {
   oneEvent,
 } from '@open-wc/testing';
 import { select } from 'd3-selection';
-import '../src/components/retrieval/graph/graph.js';
+import '../src/components/lr-graph.js';
 import {
   LyraGraph as LyraGraphElement,
   type LyraGraphEdge,
   type LyraGraphNode,
   type LyraGraphNodeLabelsMode,
-} from '../src/components/retrieval/graph/graph.js';
+} from '../src/components/lr-graph.js';
 import type {
   D3SimulationLinkDatum,
   D3SimulationNodeDatum,

@@ -1,8 +1,8 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './breadcrumb-item.js';
-import './breadcrumb.js';
-import type { LyraBreadcrumbItem } from './breadcrumb-item.js';
+import '../../lr-breadcrumb-item.js';
+import '../../lr-breadcrumb.js';
+import type { LyraBreadcrumbItem } from '../../lr-breadcrumb-item.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders a link with design-token color and no default UA underline', async () => {

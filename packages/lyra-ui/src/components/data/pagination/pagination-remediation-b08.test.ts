@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './pagination.js';
-import type { LyraPagination } from './pagination.js';
+import '../../lr-pagination.js';
+import type { LyraPagination } from '../../lr-pagination.js';
 
 describe('pagination request revalidation and page field width', () => {
   it('drops the page change when a before-page-change listener disabled the control', async () => {

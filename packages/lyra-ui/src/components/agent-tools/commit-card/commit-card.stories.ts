@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './commit-card.js';
+import '../../lr-commit-card.js';
 import type { CommitFileChange } from './commit-card.class.js';
 
 const meta: Meta = {

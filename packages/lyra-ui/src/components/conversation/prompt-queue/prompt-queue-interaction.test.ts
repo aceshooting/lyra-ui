@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './prompt-queue.js';
+import '../../lr-prompt-queue.js';
 
 it('lets the enclosing layout theme its item surface', async () => {
   const el = await fixture(html`<lr-prompt-queue .items=${[{ id: 'x', value: 'Hello' }]}

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './image-comparer.js';
-import type { LyraImageComparer } from './image-comparer.js';
+import '../../lr-image-comparer.js';
+import type { LyraImageComparer } from '../../lr-image-comparer.js';
 
 const comparer = (style = ''): Promise<LyraImageComparer> =>
   fixture<LyraImageComparer>(html`<lr-image-comparer style=${style}><div slot="before">a</div><div slot="after">b</div></lr-image-comparer>`);

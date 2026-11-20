@@ -1,33 +1,33 @@
 import { benchmark } from '../test/scale-budgets.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './components/layout/virtual-list/virtual-list.js';
-import './components/charts/chart/lite-chart.js';
-import './components/data/heatmap/heatmap.js';
-import './components/data/table/table.js';
-import './components/retrieval/graph/graph.js';
-import './components/data/flow-canvas/flow-canvas.js';
-import './components/retrieval/mind-map/mind-map.js';
-import './components/viewers/notebook-viewer/notebook-viewer.js';
-import './components/viewers/dataset-viewer/dataset-viewer.js';
-import './components/viewers/csv-viewer/csv-viewer.js';
-import './components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';
+import './components/lr-virtual-list.js';
+import './components/lr-lite-chart.js';
+import './components/lr-heatmap.js';
+import './components/lr-table.js';
+import './components/lr-graph.js';
+import './components/lr-flow-canvas.js';
+import './components/lr-mind-map.js';
+import './components/lr-notebook-viewer.js';
+import './components/lr-dataset-viewer.js';
+import './components/lr-csv-viewer.js';
+import './components/lr-spreadsheet-viewer.js';
 import * as XLSX from 'xlsx';
-import type { LyraVirtualList } from './components/layout/virtual-list/virtual-list.js';
-import type { LyraLiteChart, LyraLiteChartSeries } from './components/charts/chart/lite-chart.js';
-import type { LyraHeatmap } from './components/data/heatmap/heatmap.js';
-import type { LyraTable, TableColumn } from './components/data/table/table.js';
-import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from './components/retrieval/graph/graph.js';
+import type { LyraVirtualList } from './components/lr-virtual-list.js';
+import type { LyraLiteChart, LyraLiteChartSeries } from './components/lr-lite-chart.js';
+import type { LyraHeatmap } from './components/lr-heatmap.js';
+import type { LyraTable, TableColumn } from './components/lr-table.js';
+import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from './components/lr-graph.js';
 import type {
   LyraFlowCanvas,
   FlowNode,
   FlowEdge,
   FlowRunDecoration,
-} from './components/data/flow-canvas/flow-canvas.js';
-import type { LyraMindMap, LyraTopic } from './components/retrieval/mind-map/mind-map.js';
-import type { LyraNotebookViewer } from './components/viewers/notebook-viewer/notebook-viewer.js';
-import type { LyraDatasetViewer } from './components/viewers/dataset-viewer/dataset-viewer.js';
-import type { LyraCsvViewer } from './components/viewers/csv-viewer/csv-viewer.js';
-import type { LyraSpreadsheetViewer } from './components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';
+} from './components/lr-flow-canvas.js';
+import type { LyraMindMap, LyraTopic } from './components/lr-mind-map.js';
+import type { LyraNotebookViewer } from './components/lr-notebook-viewer.js';
+import type { LyraDatasetViewer } from './components/lr-dataset-viewer.js';
+import type { LyraCsvViewer } from './components/lr-csv-viewer.js';
+import type { LyraSpreadsheetViewer } from './components/lr-spreadsheet-viewer.js';
 import type { LyraHighlight } from './components/viewers/document-viewer/anchors.js';
 
 /**

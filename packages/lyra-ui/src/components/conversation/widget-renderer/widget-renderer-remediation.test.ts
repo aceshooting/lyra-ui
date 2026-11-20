@@ -1,6 +1,6 @@
 import { fixture, expect, oneEvent } from '@open-wc/testing';
 import { MalformedTreeFailsClosed } from './widget-renderer.stories.js';
-import type { LyraWidgetRenderer } from './widget-renderer.js';
+import type { LyraWidgetRenderer } from '../../lr-widget-renderer.js';
 import { createWidgetDocument, resolveTree, type ResolveContext } from './resolve.js';
 import { createWidgetTypeRegistry } from './registry.js';
 

@@ -1,6 +1,6 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, waitUntil } from '@open-wc/testing';
-import './histogram.js';
+import '../../lr-histogram.js';
 
 it('reads only the retained newest finite tail of a million-sample append', () => {
   let reads = 0;

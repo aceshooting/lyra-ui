@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
-import type { LyraThreadList } from './thread-list.js';
-import './thread-list.js';
+import type { LyraThreadList } from '../../lr-thread-list.js';
+import '../../lr-thread-list.js';
 
 it('preserves an outside focus transfer before a pending virtual boundary navigation finishes', async () => {
   const threads = Array.from({ length: 60 }, (_, index) => ({

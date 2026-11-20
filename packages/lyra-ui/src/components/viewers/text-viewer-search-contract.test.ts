@@ -1,12 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './archive-viewer/archive-viewer.js';
-import './calendar-viewer/calendar-viewer.js';
-import './contact-viewer/contact-viewer.js';
-import './email-viewer/email-viewer.js';
-import './geojson-view/geojson-viewer.js';
-import './html-viewer/html-viewer.js';
-import './include/include.js';
-import './pptx-viewer/pptx-viewer.js';
+import '../lr-archive-viewer.js';
+import '../lr-calendar-viewer.js';
+import '../lr-contact-viewer.js';
+import '../lr-email-viewer.js';
+import '../lr-geojson-viewer.js';
+import '../lr-html-viewer.js';
+import '../lr-include.js';
+import '../lr-pptx-viewer.js';
 import type { LyraTextViewerTarget } from '../../internal/text-viewer-target.js';
 
 const TEXT_VIEWER_TAGS = [

@@ -1,11 +1,11 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LyraResourceLimitError } from '../../internal/resource-loader.js';
-import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
-import type { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.js';
-import type { LyraDatasetViewer } from './dataset-viewer/dataset-viewer.js';
-import './csv-viewer/csv-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
-import './dataset-viewer/dataset-viewer.js';
+import type { LyraCsvViewer } from '../lr-csv-viewer.js';
+import type { LyraSpreadsheetViewer } from '../lr-spreadsheet-viewer.js';
+import type { LyraDatasetViewer } from '../lr-dataset-viewer.js';
+import '../lr-csv-viewer.js';
+import '../lr-spreadsheet-viewer.js';
+import '../lr-dataset-viewer.js';
 
 for (const kind of ['csv', 'spreadsheet'] as const) {
   for (const [property, low, restored] of [['maxRows', 2, 3], ['maxColumns', 1, 2], ['maxBytes', 1, 64]] as const) {

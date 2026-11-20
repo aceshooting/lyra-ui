@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './callout.js';
+import '../../lr-callout.js';
 import type { LyraCallout } from './callout.class.js';
 
 const ANCESTOR_TOKENS =

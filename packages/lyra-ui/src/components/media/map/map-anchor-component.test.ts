@@ -6,8 +6,8 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { activateOverlay } from '../../../internal/overlay-manager.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
 import type { AnchoredSurfaceOptions, PlacementResult } from '../../../internal/positioner.js';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 import { ControlMapEngine as ControlMap, FakeGeolocateControl as Geolocate, FakeAttributionControl as Attribution } from '../../../../test/map-control-engine.js';
 

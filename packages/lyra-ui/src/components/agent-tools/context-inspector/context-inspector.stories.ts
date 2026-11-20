@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './context-inspector.js';
-import type { ContextInspectorSegment } from './context-inspector.js';
+import '../../lr-context-inspector.js';
+import type { ContextInspectorSegment } from '../../lr-context-inspector.js';
 
 const meta: Meta = {
   title: 'ContextInspector',

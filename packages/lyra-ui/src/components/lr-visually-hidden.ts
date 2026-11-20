@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './utility/visually-hidden/visually-hidden.js';
+export * from './utility/visually-hidden/visually-hidden.class.js';
+import { LyraVisuallyHidden } from './utility/visually-hidden/visually-hidden.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('visually-hidden', LyraVisuallyHidden);

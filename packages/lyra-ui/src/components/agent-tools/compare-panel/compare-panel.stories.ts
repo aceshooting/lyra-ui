@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { CompareVote } from './compare-panel.js';
+import type { CompareVote } from '../../lr-compare-panel.js';
 
 const meta: Meta = {
   title: 'Observability/Compare Panel',

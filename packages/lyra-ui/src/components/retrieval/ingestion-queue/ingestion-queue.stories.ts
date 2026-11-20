@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './ingestion-queue.js';
-import type { IngestionQueueItem } from './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
+import type { IngestionQueueItem } from '../../lr-ingestion-queue.js';
 
 const meta: Meta = {
   title: 'Ingestion Queue',

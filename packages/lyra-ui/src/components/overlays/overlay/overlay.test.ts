@@ -4,11 +4,11 @@ import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
-import './popover.js';
-import './tooltip.js';
-import './dropdown.js';
-import '../../forms/button/button.js';
-import '../../forms/icon-button/icon-button.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-dropdown.js';
+import '../../lr-button.js';
+import '../../lr-icon-button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
@@ -3343,7 +3343,7 @@ describe('top-layer escape specifics', () => {
   });
 
   it('rests an open submenu surface at transform: none', async () => {
-    await import('../../layout/menu/menu-item.js');
+    await import('../../lr-menu-item.js');
     const el = await fixture<LyraDropdown>(html`
       <lr-dropdown data-lr-theme-scope style="--lr-transition-fast: 0ms">
         <button slot="trigger">Actions</button>

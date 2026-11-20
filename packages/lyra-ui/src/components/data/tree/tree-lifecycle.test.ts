@@ -1,9 +1,9 @@
 import { expect, fixture, fixtureSync, html, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 // Hosts rarely await `<lr-tree>`'s `updateComplete`: a framework renders the tree, the user clicks
 // or presses keys, and the browser paints. Every case below therefore uses `fixtureSync()` and

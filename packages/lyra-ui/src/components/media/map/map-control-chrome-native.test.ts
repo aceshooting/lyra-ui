@@ -2,7 +2,7 @@ import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@ope
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 function part<T extends Element = HTMLElement>(element: LyraMap, name: string): T {

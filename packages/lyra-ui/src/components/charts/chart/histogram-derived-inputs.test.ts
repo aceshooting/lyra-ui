@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraHistogramDistribution } from '../../../utilities/data-preparation.js';
 import type { LyraHistogram } from './histogram.class.js';
-import './histogram.js';
+import '../../lr-histogram.js';
 
 const distribution: LyraHistogramDistribution = {
   revision: 'original', counts: { sourceCount: 5, validCount: 5, invalidCount: 0 },

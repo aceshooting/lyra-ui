@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './date-input.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-input.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 
 // `lr-date-input`'s calendar popup defaults to `position: fixed`, so a bare `overflow: auto`
 // ancestor does not by itself pick up the popup's stale layout box -- only an ancestor that also

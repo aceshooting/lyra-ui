@@ -2688,7 +2688,7 @@ Host `aria-labelledby` IDREFs are resolved onto the internal control through
 shadow root — an idref cannot cross that boundary, the reflected element reference can. Per ARIA it
 wins over `aria-label`/`label` and the localized fallback name.
 
-**Lean registration entry.** `components/forms/icon-button/icon-button.js` eagerly imports
+**Lean registration entry.** `components/lr-icon-button.js` eagerly imports
 `<lr-icon>` so an `icon`/`src` attribute paints synchronously. A consumer who only ever slots their
 own SVG can import `components/forms/icon-button/icon-button-register.js` instead, which registers
 `<lr-icon-button>` and nothing else — no `<lr-icon>` implementation in the entry chunk and no
@@ -6140,10 +6140,9 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) limits the number of mounted
-tokens. Set `max-tokens-visible="200"` for a bounded window or `max-tokens-visible="0"` to keep
-mounting every token. Omitting or removing the attribute, or supplying a non-finite limit,
-currently uses the deprecated implicit unlimited default.
+`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) limits the number of mounted
+tokens. Omitting or removing the attribute, or supplying a non-finite limit, uses the 200-token
+window; set `max-tokens-visible="0"` to keep mounting every token.
 The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
 field. The `token-overflow` part shows how many tokens are outside the current window. The value
 array and form submission always include every token.

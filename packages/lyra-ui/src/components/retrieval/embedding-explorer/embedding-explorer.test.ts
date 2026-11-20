@@ -2,7 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type {
   EmbeddingPoint,
   LyraEmbeddingExplorer,

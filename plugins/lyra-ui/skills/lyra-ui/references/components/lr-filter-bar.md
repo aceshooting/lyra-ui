@@ -26,33 +26,34 @@ chip-only definition requires neither options nor an adapter — a stable filter
 the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
 guarded where it is used rather than rejected outright.
 
-**Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
-eagerly imports every composed control this bar could possibly render — `<lr-select>`,
-`<lr-combobox>`, `<lr-dropdown>` + `<lr-dropdown-item>` (the `'checkbox-menu'` branch),
-`<lr-date-input>`, `<lr-input>`, `<lr-chip>`/`<lr-chip-group>` (the active-filter row), and
-`<lr-button>`/`<lr-spinner>` (the reset action and the loading status) — because `filters` is a
-runtime value it cannot inspect ahead of time. A bar that only ever declares `'select'`/`'text'`
-filters still pays for `<lr-combobox>` and `<lr-date-input>` through that entry: a measured ~69.5 kB
-gzip more than importing only what it uses. A consumer who knows their own filter `type`s ahead of
-time can import `components/layout/filter-bar/filter-bar-register.js` instead, which registers
-`<lr-filter-bar>` and nothing else, then import each composed control's own registration entry for
+**Registration.** `components/lr-filter-bar.js` (the default entry, also
+`components/lr-filter-bar.js`) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
+and each filter type's control — `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
+`<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` — plus
+`<lr-spinner>` (the `loading` status) the first time a bar renders it, so a bar that only declares
+`'select'`/`'text'` filters never loads `<lr-combobox>` or `<lr-date-input>`. The control upgrades
+in place once its module resolves, and `updateComplete` waits for every registration the render
+started. The `components/layout` family barrel registers all of them up front. A consumer that
+needs every control defined synchronously, or wants no deferred imports in its graph, can import
+`components/layout/filter-bar/filter-bar-register.js` instead, which registers `<lr-filter-bar>`
+and nothing else, then import each composed control's own registration entry for
 the filter `type`s actually declared:
 
 | Filter `type` | Registration entry |
 | --- | --- |
-| `'select'` | `components/forms/select/select.js` |
-| `'combobox'` | `components/forms/combobox/combobox.js` |
-| `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
-| `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
-| `'text'` | `components/forms/input/input.js` |
+| `'select'` | `components/lr-select.js` |
+| `'combobox'` | `components/lr-combobox.js` |
+| `'checkbox-menu'` | `components/lr-dropdown.js` **and** `components/lr-dropdown-item.js` |
+| `'date'` / `'date-range'` | `components/lr-date-input.js` |
+| `'text'` | `components/lr-input.js` |
 | `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
 whenever any filter has a value (further gated by `activeFiltersDisplay`, but never provably absent
-for a generic bar) — `components/forms/button/button.js` and `components/overlays/chip/chip.js` +
-`components/overlays/chip/chip-group.js`. `<lr-spinner>`
-(`components/overlays/spinner/spinner.js`) is the one built-in dependency the lean entry omits even
+for a generic bar) — `components/lr-button.js` and `components/lr-chip.js` +
+`components/lr-chip-group.js`. `<lr-spinner>`
+(`components/lr-spinner.js`) is the one built-in dependency the lean entry omits even
 though every bar could use it: `loading` is a plain boolean any consumer can leave unset entirely,
 unlike a filter `type`, which `filters` always names outright — import it too if the bar ever sets
 `loading`. A filter definition whose `type` has no matching import above renders no usable control

@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './bar-chart.js';
-import './box-plot.js';
+import '../../lr-bar-chart.js';
+import '../../lr-box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './popover.js';
-import './tooltip.js';
-import './dropdown.js';
-import '../../layout/menu/dropdown-item.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-dropdown.js';
+import '../../lr-dropdown-item.js';
 import type { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';

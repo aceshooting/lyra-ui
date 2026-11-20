@@ -1,10 +1,10 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './map.js';
+import '../../lr-map.js';
 import '../../../translations/de/shared.js';
 import '../../../translations/de/media.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 import type { LyraMapDrawingSnapshot, LyraMapDrawingVertexEndDetail, LyraMapInteractionDetail, LyraMapPointerDetail,
   LyraMapGeolocateDetail, LyraMapStyleSpecification } from './map.class.js';
 import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';

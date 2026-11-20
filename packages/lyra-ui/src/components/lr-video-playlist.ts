@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/video-playlist/video-playlist.js';
+export * from './media/video-playlist/video-playlist.class.js';
+import './lr-video.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraVideoPlaylist } from './media/video-playlist/video-playlist.class.js';
+
+defineElement('video-playlist', LyraVideoPlaylist);

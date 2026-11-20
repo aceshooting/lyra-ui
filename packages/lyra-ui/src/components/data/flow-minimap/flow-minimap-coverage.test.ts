@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './flow-minimap.js';
-import '../flow-canvas/flow-canvas.js';
-import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
-import type { LyraFlowMinimap } from './flow-minimap.js';
+import '../../lr-flow-minimap.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
+import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
 
 const nodes: FlowNode[] = [
   { id: 'a', position: { x: 0, y: 0 } },

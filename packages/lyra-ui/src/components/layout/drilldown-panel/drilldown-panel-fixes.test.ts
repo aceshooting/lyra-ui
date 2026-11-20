@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './drilldown-panel.js';
-import type { LyraDrilldownNode, LyraDrilldownPanel } from './drilldown-panel.js';
+import '../../lr-drilldown-panel.js';
+import type { LyraDrilldownNode, LyraDrilldownPanel } from '../../lr-drilldown-panel.js';
 
 const evidence = [{ evidenceId: 'e1', title: 'report.pdf', excerpt: 'Excerpt' }];
 const entities = [{ entityId: 'p1', label: 'Marie', type: 'person' }];

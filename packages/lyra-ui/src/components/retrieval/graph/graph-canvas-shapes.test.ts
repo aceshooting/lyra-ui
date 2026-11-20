@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { loadD3 } from './graph-loader.js';
 import type { LyraGraph } from './graph.class.js';
-import './graph.js';
+import '../../lr-graph.js';
 
 function redPixels(canvas: HTMLCanvasElement): { count: number; area: number } {
   const image = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);

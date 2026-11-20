@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
-import './filter-bar.js';
+import '../../lr-filter-bar.js';
 import type { LyraFilterBar, LyraFilterBarCustomControlContext, LyraFilterBarFilterDefinition, LyraFilterBarValue } from './filter-bar.class.js';
 
 for (const type of ['select', 'combobox'] as const) {

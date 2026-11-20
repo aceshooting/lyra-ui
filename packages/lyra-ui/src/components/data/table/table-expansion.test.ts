@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { nothing } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
-import './table.js';
-import type { LyraTable, LyraTableEventMap, TableColumn } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable, LyraTableEventMap, TableColumn } from '../../lr-table.js';
 
 interface Row {
   id: string;

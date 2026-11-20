@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './input.js';
+import '../../lr-input.js';
 import type { LyraInput } from './input.class.js';
 
 describe('lr-input native value views', () => {

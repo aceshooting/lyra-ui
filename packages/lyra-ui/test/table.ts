@@ -1,7 +1,7 @@
 import { html } from '@open-wc/testing';
-import '../src/components/data/table/table.js';
-import '../src/components/forms/select/select.js';
-import type { LyraTable, TableColumn } from '../src/components/data/table/table.js';
+import '../src/components/lr-table.js';
+import '../src/components/lr-select.js';
+import type { LyraTable, TableColumn } from '../src/components/lr-table.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../src/internal/announcer.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the

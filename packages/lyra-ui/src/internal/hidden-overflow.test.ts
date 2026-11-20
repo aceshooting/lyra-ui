@@ -3,21 +3,21 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
 import { srOnly } from './a11y.js';
 import { acquireAnnouncementSink } from './announcer.js';
-import '../components/utility/live-region/live-region.js';
-import '../components/utility/visually-hidden/visually-hidden.js';
-import '../components/utility/json-viewer/json-viewer.js';
-import '../components/agent-tools/terminal/terminal.js';
-import '../components/data/flow-run-status/flow-run-status.js';
-import '../components/data/context-meter/context-meter.js';
-import '../components/retrieval/ingestion-queue/ingestion-queue.js';
-import '../components/retrieval/node-palette/node-palette.js';
-import '../components/retrieval/graph-legend/graph-legend.js';
-import '../components/retrieval/graph/graph.js';
-import '../components/media/file-input/file-input.js';
-import '../components/conversation/typing-indicator/typing-indicator.js';
-import '../components/utility/copy-button/copy-button.js';
-import '../components/forms/textarea/textarea.js';
-import '../components/data/pagination/pagination.js';
+import '../components/lr-live-region.js';
+import '../components/lr-visually-hidden.js';
+import '../components/lr-json-viewer.js';
+import '../components/lr-terminal.js';
+import '../components/lr-flow-run-status.js';
+import '../components/lr-context-meter.js';
+import '../components/lr-ingestion-queue.js';
+import '../components/lr-node-palette.js';
+import '../components/lr-graph-legend.js';
+import '../components/lr-graph.js';
+import '../components/lr-file-input.js';
+import '../components/lr-typing-indicator.js';
+import '../components/lr-copy-button.js';
+import '../components/lr-textarea.js';
+import '../components/lr-pagination.js';
 
 const owners = [
   'lr-live-region', 'lr-visually-hidden', 'lr-json-viewer', 'lr-terminal',

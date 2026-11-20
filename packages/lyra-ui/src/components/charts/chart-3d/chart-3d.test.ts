@@ -7,7 +7,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraChart3d, LyraChart3dColumns, LyraChart3dSelectDetail } from './chart-3d.class.js';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 
 // The German fixtures intentionally render the English defaults without a registered catalog.
 expectLocaleFallback('de', [

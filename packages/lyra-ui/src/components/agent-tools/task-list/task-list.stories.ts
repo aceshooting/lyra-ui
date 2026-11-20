@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './task-list.js';
-import '../tool-call-chip/tool-call-chip.js';
+import '../../lr-task-list.js';
+import '../../lr-tool-call-chip.js';
 import type { TaskItem, TaskListSource } from './task-list.class.js';
 
 const meta: Meta = {

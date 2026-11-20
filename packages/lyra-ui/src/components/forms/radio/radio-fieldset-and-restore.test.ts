@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './radio-group.js';
-import './radio.js';
+import '../../lr-radio-group.js';
+import '../../lr-radio.js';
 import type { LyraRadioGroup } from './radio-group.class.js';
 import type { LyraRadio } from './radio.class.js';
 

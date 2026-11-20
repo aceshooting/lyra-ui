@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
-import './tree.js';
-import type { LyraTree } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { measureArrayProbeReads } from '../../../../test/array-probe-reads.js';
 

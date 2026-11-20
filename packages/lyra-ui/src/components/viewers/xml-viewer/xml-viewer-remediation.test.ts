@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './xml-viewer.js';
-import type { LyraXmlViewer } from './xml-viewer.js';
+import '../../lr-xml-viewer.js';
+import type { LyraXmlViewer } from '../../lr-xml-viewer.js';
 
 function node(viewer: LyraXmlViewer, tagName: string): HTMLElement | undefined {
   return [...viewer.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"]')]

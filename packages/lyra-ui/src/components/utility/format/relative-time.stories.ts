@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './relative-time.js';
+import '../../lr-relative-time.js';
 
 const meta: Meta = { title: 'Utilities/Relative time', component: 'lr-relative-time', tags: ['autodocs'] };
 export default meta;

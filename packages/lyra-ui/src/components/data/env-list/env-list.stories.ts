@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './env-list.js';
+import '../../lr-env-list.js';
 import type { EnvEntry } from './env-list.class.js';
 
 const meta: Meta = {

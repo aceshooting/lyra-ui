@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './csv-viewer/csv-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
-import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
+import '../lr-csv-viewer.js';
+import '../lr-spreadsheet-viewer.js';
+import type { LyraCsvViewer } from '../lr-csv-viewer.js';
 import type { LyraTabularSource } from '../../data-sources.js';
 const make = (_kind: 'csv', source: LyraTabularSource) => fixture<LyraCsvViewer>(html`<lr-csv-viewer style="width:400px" .dataSource=${source}></lr-csv-viewer>`);
 
@@ -145,7 +145,7 @@ it('replaces a compact tall source with a small wider source without stale range
 });
 
 it('switches a compact tall workbook sheet to a small wider sheet without stale range admission', async () => {
-  const viewer = await fixture<import('./spreadsheet-viewer/spreadsheet-viewer.js').LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer style="width:12800px;--lr-size-3rem:1px"
+  const viewer = await fixture<import('../lr-spreadsheet-viewer.js').LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer style="width:12800px;--lr-size-3rem:1px"
     .dataSource=${{ revision: 1, sheets: [{ key: 'tall', name: 'Tall', data: sizedSource(1000000, 3) }, { key: 'small', name: 'Small', data: sizedSource(10, 100) }] }}></lr-spreadsheet-viewer>`);
   await waitUntil(() => viewer.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot!.textContent?.includes('250:0') === true);
   const errors: unknown[] = [];

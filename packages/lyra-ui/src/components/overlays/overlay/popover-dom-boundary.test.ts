@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraPopover } from './popover.class.js';
-import './popover.js';
+import '../../lr-popover.js';
 
 async function setup(toggleCurrent = false) {
   const host = await fixture<HTMLDivElement>(html`<div>

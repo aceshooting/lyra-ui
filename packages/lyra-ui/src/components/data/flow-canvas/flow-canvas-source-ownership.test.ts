@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraGraphSource } from '../../../data-sources.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
 import type { FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-types.js';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 
 type Source = LyraGraphSource<FlowNode, FlowEdge>;
 function provider(first = 0): Source {

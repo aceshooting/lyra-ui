@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './subagent-panel.js';
-import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
+import '../../lr-subagent-panel.js';
+import type { LyraSubagentPanel, SubagentRun } from '../../lr-subagent-panel.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const RUNS = [

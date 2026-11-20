@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './stack-trace.js';
-import type { LyraStackTrace } from './stack-trace.js';
+import '../../lr-stack-trace.js';
+import type { LyraStackTrace } from '../../lr-stack-trace.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 describe('lr-stack-trace removed trace', () => {

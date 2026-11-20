@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 void LyraGraph;
 

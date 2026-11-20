@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './agent-run.js';
-import '../tool-call-chip/tool-call-chip.js';
-import '../../conversation/markdown/markdown.js';
+import '../../lr-agent-run.js';
+import '../../lr-tool-call-chip.js';
+import '../../lr-markdown.js';
 import type { AgentRun, AgentStep } from '../../../ai/types.js';
 
 const meta: Meta = {

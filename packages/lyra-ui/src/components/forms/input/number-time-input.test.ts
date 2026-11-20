@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import type { LyraNumberInput } from './number-input.class.js';
-import './number-input.js';
-import './native-time-input.js';
+import '../../lr-number-input.js';
+import '../../lr-native-time-input.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,

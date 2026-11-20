@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './gauge.js';
-import type { LyraGauge } from './gauge.js';
+import '../../lr-gauge.js';
+import type { LyraGauge } from '../../lr-gauge.js';
 
 for (const shape of ['radial', 'linear', 'ring'] as const) {
   it(`removes label safely from the ${shape} SVG and semantic owner with localized fallback`, async () => {

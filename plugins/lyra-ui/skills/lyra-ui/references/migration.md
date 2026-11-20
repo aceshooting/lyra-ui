@@ -1685,6 +1685,81 @@ It adds `data-lr-theme-scope` to elements whose inline style sets a token-layer 
 markers inside loops, and stylesheet rules that set an input or a shared output outside a theme scope
 (`THEME_SCOPE_*_REVIEW`, acknowledged like any other code).
 
+## Migrating from Lyra 31 to Lyra 32 (`--origin=lyra-v31`)
+
+Lyra 31 minor releases and Lyra 32 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Previous names still supported by the installed release are deprecated aliases.
+A removal floor is not an automatic removal date. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading, within Lyra 31 or to Lyra 32. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
+
+```bash
+npx lyra-ui-migrate --origin=lyra-v31 --diff src > lyra-v31.patch
+npx lyra-ui-migrate --origin=lyra-v31 --check --report=lyra-v31-migration.json src
+```
+
+`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite
+cannot change what the site reaches: attribute, property and slot bindings on the component in
+HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute
+selectors that name the component; and calls rooted at `querySelector('lr-…')`, `closest()` or
+`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no
+other component already dispatches the new name, and an unowned listener or any custom-property
+use only when, in addition, every component with the old name renamed it the same way and the
+scanned code never dispatches the old name itself. Everything else is reported with a location;
+the old name keeps working meanwhile.
+
+| Code | Reported when |
+|---|---|
+| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |
+| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |
+| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
+| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
+| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
+| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
+| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW`, `THEME_SCOPE_DOUBLE_LAYER_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand, or `tokens-root.css` imported next to `theme.css`, which already carries the layer. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
+| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
+
+After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
+`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before
+the element's opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile
+is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
+hydration compares template strings.
+
+| Component | Event | Detail change in Lyra 32 (reported, never rewritten) |
+|---|---|---|
+| `<lr-flow-canvas>` | `lr-edge-activate` | The detail no longer carries source and target; read sourceNodeId and targetNodeId. |
+
+The following aliases were still published in Lyra 31 and are removed in Lyra 32. They are
+reported without rewriting: move listeners and matching removals together, preserve unrelated
+events with the same name, and check nested event targets and existing canonical handlers.
+
+| Component | Removed event | Replacement | Migration review |
+|---|---|---|---|
+| `<lr-artifact-panel>` | `lr-view-change` | `lr-artifact-view-change` | The replacement carries the same detail. |
+| `<lr-artifact-panel>` | `lr-view-change-request` | `lr-artifact-view-change-request` | The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener. |
+| `<lr-calendar>` | `lr-view-change` | `lr-month-change` | The replacement carries the same detail. The calendar no longer dispatches the generic view event. |
+| `<lr-entity-dossier>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read origin, section and chunkId instead of itemId. |
+| `<lr-graph>` | `lr-view-change` | `lr-graph-view-change` | The replacement carries the same detail. |
+| `<lr-knowledge-graph-explorer>` | `lr-view-change` | `lr-graph-view-change` | The replacement carries the same detail. |
+| `<lr-map-anchor>` | `lr-close` | `lr-map-anchor-dismiss` | The replacement carries the same detail. Ancestors no longer need an event.target check to tell an anchor from other closing components. |
+| `<lr-map-anchor>` | `lr-close-request` | `lr-map-anchor-dismiss-request` | The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener. |
+| `<lr-memory-panel>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read memoryId, scope, section and chunkId instead of itemId. |
+| `<lr-provenance-panel>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read section and chunkId instead of itemId. |
+| `<lr-retrieval-trace>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read stageId and chunkId instead of itemId. |
+| `<lr-widget>` | `lr-view-change` | `lr-widget-view-change` | The replacement carries the same detail. |
+| `<lr-widget>` | `lr-view-request` | `lr-widget-view-request` | The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener. |
+
+| Component | Property | Semantic change in Lyra 32 (reported, never rewritten) |
+|---|---|---|
+| `<lr-token-input>` | `maxTokensVisible` | An omitted or non-finite limit now mounts a 200-token window; set max-tokens-visible="0" to keep mounting every token. |
+
 ## Upstream compatibility spellings
 
 The deprecated upstream compatibility spellings have retired; see the v29 to v30 migration guide for their replacements and review requirements.

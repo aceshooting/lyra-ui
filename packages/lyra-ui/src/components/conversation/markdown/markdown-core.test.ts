@@ -7,10 +7,10 @@ import {
   fixtureSync,
   aTimeout,
 } from "@open-wc/testing";
-import "./markdown-core.js";
-import "./markdown.js";
-import { preloadMarkdown as preloadMarkdownCore } from "./markdown-core.js";
-import type { LyraMarkdownCore, MarkdownHeadingItem } from "./markdown-core.js";
+import "../../lr-markdown-core.js";
+import "../../lr-markdown.js";
+import { preloadMarkdown as preloadMarkdownCore } from "../../lr-markdown-core.js";
+import type { LyraMarkdownCore, MarkdownHeadingItem } from "../../lr-markdown-core.js";
 import { LyraMarkdownCore as LyraMarkdownCoreClass } from "./markdown-core.class.js";
 import { loadMarkdownDeps } from "./markdown-loader.js";
 import { loadShikiHighlighterCore, type ShikiLanguageInput } from '../code-block/shiki-types.js';
@@ -2547,7 +2547,7 @@ describe('shiki engine seam public reachability', () => {
     // A consumer asked for a callable engine seam. Before this, the function was
     // only importable from the internal `shiki-types.js` support module, which has no
     // package.json#exports entry at all -- so no consumer-supported path could ever reach it.
-    const entry = (await import('./markdown-core.js')) as { setShikiCoreEngine?: unknown };
+    const entry = (await import('../../lr-markdown-core.js')) as { setShikiCoreEngine?: unknown };
     expect(typeof entry.setShikiCoreEngine).to.equal('function');
   });
 });

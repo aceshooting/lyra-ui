@@ -1,8 +1,8 @@
 import { expect } from '@open-wc/testing';
-import './line-chart.js';
-import './histogram.js';
-import './lite-chart.js';
-import './box-plot.js';
+import '../../lr-line-chart.js';
+import '../../lr-histogram.js';
+import '../../lr-lite-chart.js';
+import '../../lr-box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';

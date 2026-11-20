@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
 import type { LyraChart } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 function click(chart: Chart): void {
   chart.options.onClick?.call(chart, { type: 'click', x: 50, y: 50, native: new MouseEvent('click') }, [], chart);

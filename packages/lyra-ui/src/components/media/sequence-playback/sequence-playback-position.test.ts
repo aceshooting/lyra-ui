@@ -5,7 +5,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { createSimulationClock } from '../../../simulation-clock.js';
 import { createTimeIndex } from '../../../time-index.js';
 import { bindSequencePlayback } from '../../../sequence-time-binding.js';
-import './sequence-playback.js';
+import '../../lr-sequence-playback.js';
 import type { LyraSequencePlayback } from './sequence-playback.class.js';
 
 expectLocaleFallback('ar-EG', ['play', 'playbackPosition', 'playbackStepPosition']);

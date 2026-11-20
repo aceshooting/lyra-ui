@@ -8,9 +8,9 @@ import {
   html,
   waitUntil,
 } from "@open-wc/testing";
-import "./push-to-talk.js";
-import "../../utility/live-region/live-region.js";
-import type { LyraPushToTalk } from "./push-to-talk.js";
+import "../../lr-push-to-talk.js";
+import "../../lr-live-region.js";
+import type { LyraPushToTalk } from "../../lr-push-to-talk.js";
 import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
@@ -2922,7 +2922,7 @@ it('releases a captured hold on loss of capture and ignores the following pointe
 });
 
 it('supports click-only recording from the realtime session capture control', async () => {
-  await import('../realtime-session/realtime-session.js');
+  await import('../../lr-realtime-session.js');
   const restore = stubSuccessfulCapture();
   try {
     const session = await fixture<HTMLElementTagNameMap['lr-realtime-session']>(html`<lr-realtime-session state="connected"></lr-realtime-session>`);

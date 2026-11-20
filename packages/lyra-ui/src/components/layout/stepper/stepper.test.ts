@@ -9,8 +9,8 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
-import "./stepper.js";
-import type { LyraStepper } from "./stepper.js";
+import "../../lr-stepper.js";
+import type { LyraStepper } from "../../lr-stepper.js";
 import { styles } from "./stepper.styles.js";
 import {
   hoverUntilMatched,

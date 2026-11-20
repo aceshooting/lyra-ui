@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 import type { LyraPromptInput } from './prompt-input.class.js';
 
 const optional = ['lr-model-select', 'lr-voice-picker', 'lr-source-picker', 'lr-prompt-queue'];

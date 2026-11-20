@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { snapshotFlowNodes, snapshotFlowDecorations } from './flow-model.js';
-import { LyraFlowCanvas } from './flow-canvas.js';
+import { LyraFlowCanvas } from '../../lr-flow-canvas.js';
 
 it('bounds descriptor reads for a million-field logical metadata record', () => {
   let reads = 0;

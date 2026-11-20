@@ -1,9 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './context-inspector.js';
-import type { LyraContextInspector, ContextInspectorSegment } from './context-inspector.js';
-import type { LyraContextMeter } from '../../data/context-meter/context-meter.js';
-import type { LyraCopyButton } from '../../utility/copy-button/copy-button.js';
-import type { LyraExportButton } from '../../utility/export-button/export-button.js';
+import '../../lr-context-inspector.js';
+import type { LyraContextInspector, ContextInspectorSegment } from '../../lr-context-inspector.js';
+import type { LyraContextMeter } from '../../lr-context-meter.js';
+import type { LyraCopyButton } from '../../lr-copy-button.js';
+import type { LyraExportButton } from '../../lr-export-button.js';
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './funnel.js';
-import type { LyraFunnel } from './funnel.js';
+import '../../lr-funnel.js';
+import type { LyraFunnel } from '../../lr-funnel.js';
 
 for (const direction of ['ltr', 'rtl']) {
   it(`fills main and comparison tracks for finite division overflow in ${direction}`, async () => {

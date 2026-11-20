@@ -808,8 +808,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.sourceMode) this.pagerRegistration ??= import('../../data/pagination/pagination.js');
-    if (this.error || this.sourceFailed) this.emptyRegistration ??= import('../../overlays/empty/empty.js');
+    if (this.sourceMode) this.pagerRegistration ??= import('../../lr-pagination.js');
+    if (this.error || this.sourceFailed) this.emptyRegistration ??= import('../../lr-empty.js');
     this.syncInputLimitAnnouncement();
     const status = this.sourceMode && this.sourcePages.state.pending ? this.localize('loading')
       : this.sourceMode && this.sourceFailed ? this.localize('tableLoadFailed') : '';

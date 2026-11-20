@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
-import "./usage-badge.js";
-import type { LyraUsageBadge } from "./usage-badge.js";
+import "../../lr-usage-badge.js";
+import type { LyraUsageBadge } from "../../lr-usage-badge.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";

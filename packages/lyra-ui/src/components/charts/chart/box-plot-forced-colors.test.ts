@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
-import './box-plot.js';
-import type { LyraBoxPlot } from './box-plot.js';
+import '../../lr-box-plot.js';
+import type { LyraBoxPlot } from '../../lr-box-plot.js';
 
 function boxes(count: number) {
   return Array.from({ length: count }, (_, index) => ({

@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { Chart } from 'chart.js';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart, LyraChartDatumVisibilityChangeDetail as DatumVisibility } from './chart.class.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 

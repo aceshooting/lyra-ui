@@ -1,9 +1,9 @@
 import { expect, fixture, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 
 for (const name of ['lr-markdown', 'lr-markdown-core']) {
   it(`${name} restores text highlights after a move and after a detached update`, async () => {

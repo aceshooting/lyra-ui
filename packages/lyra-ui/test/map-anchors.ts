@@ -1,9 +1,9 @@
 import { fixture, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine, FakeAttributionControl, FakeGeolocateControl } from './map-control-engine.js';
-import '../src/components/media/map/map.js';
-import '../src/components/media/map/map-anchor.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../src/components/media/map/map.js';
-import type { LyraMapAnchor } from '../src/components/media/map/map-anchor.js';
+import '../src/components/lr-map.js';
+import '../src/components/lr-map-anchor.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../src/components/lr-map.js';
+import type { LyraMapAnchor } from '../src/components/lr-map-anchor.js';
 import type { LyraMapAnchorCloseDetail } from '../src/components/media/map/map-anchor-options.js';
 
 // Child-anchor suites drive lr-map through a scripted engine whose projection is per coordinate:
@@ -125,8 +125,8 @@ export interface CloseLog { readonly requests: unknown[]; readonly closes: unkno
 
 export function captureCloses(anchor: LyraMapAnchor): CloseLog {
   const log: CloseLog = { requests: [], closes: [], order: [] };
-  anchor.addEventListener('lr-close-request', event => { log.requests.push(event.detail); log.order.push(`request:${(event.detail as LyraMapAnchorCloseDetail).reason}`); });
-  anchor.addEventListener('lr-close', event => { log.closes.push(event.detail); log.order.push(`close:${(event.detail as LyraMapAnchorCloseDetail).reason}`); });
+  anchor.addEventListener('lr-map-anchor-dismiss-request', event => { log.requests.push(event.detail); log.order.push(`request:${(event.detail as LyraMapAnchorCloseDetail).reason}`); });
+  anchor.addEventListener('lr-map-anchor-dismiss', event => { log.closes.push(event.detail); log.order.push(`close:${(event.detail as LyraMapAnchorCloseDetail).reason}`); });
   return log;
 }
 

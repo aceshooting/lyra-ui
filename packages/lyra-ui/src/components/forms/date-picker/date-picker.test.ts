@@ -3,8 +3,8 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
-import "./date-picker.js";
-import type { LyraDatePicker } from "./date-picker.js";
+import "../../lr-date-picker.js";
+import type { LyraDatePicker } from "../../lr-date-picker.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 

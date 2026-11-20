@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/file-tree/file-tree.js';
+import './lr-virtual-list.js';
+export * from './data/file-tree/file-tree.class.js';
+import './lr-tree.js';
+import './lr-file-icon.js';
+import { LyraFileTree } from './data/file-tree/file-tree.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('file-tree', LyraFileTree);

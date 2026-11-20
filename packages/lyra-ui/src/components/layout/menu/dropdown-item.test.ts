@@ -3,12 +3,12 @@ import { accessibleName } from '../../../../test/accessible-name.js';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
-import './dropdown-item.js';
-import './menu.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import '../../overlays/overlay/dropdown.js';
+import '../../lr-dropdown.js';
 
 async function submenuParent(): Promise<LyraDropdownItem> {
   const wrapper = (await fixture(html`

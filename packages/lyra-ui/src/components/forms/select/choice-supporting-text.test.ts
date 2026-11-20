@@ -1,12 +1,12 @@
 import { expect, fixture } from '@open-wc/testing';
 import type { LyraElement } from '../../../internal/lyra-element.js';
-import './select.js';
-import '../combobox/combobox.js';
-import '../radio/radio-group.js';
-import '../checkbox/checkbox.js';
-import '../checkbox-group/checkbox-group.js';
-import '../switch/switch.js';
-import '../slider/slider.js';
+import '../../lr-select.js';
+import '../../lr-combobox.js';
+import '../../lr-radio-group.js';
+import '../../lr-checkbox.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-switch.js';
+import '../../lr-slider.js';
 
 for (const name of ['select', 'combobox', 'radio-group', 'checkbox', 'checkbox-group', 'switch', 'slider']) {
   it(`${name} presents its error before its hint on the role owner`, async () => {

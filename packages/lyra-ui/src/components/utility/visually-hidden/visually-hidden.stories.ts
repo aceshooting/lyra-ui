@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './visually-hidden.js';
+import '../../lr-visually-hidden.js';
 
 const meta: Meta = { title: 'Utility/Visually hidden', component: 'lr-visually-hidden', tags: ['autodocs'] };
 export default meta;

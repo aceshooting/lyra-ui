@@ -2,9 +2,9 @@ import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@ope
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
-import './map-anchor.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import '../../lr-map-anchor.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 void LyraMap;
 
 const localStyle = () => ({ ...LYRA_MAP_EMPTY_STYLE, layers: [{ id: 'plain-background', type: 'background', paint: { 'background-color': '#ffffff' } }] });
@@ -56,8 +56,8 @@ describe('lr-map-anchor with the real modular engine', function () {
     expect(map.jumpTo({ center: [6, 0] })).to.equal(true); await map.whenIdle();
     await waitUntil(() => Math.abs(panel(first).getBoundingClientRect().left - before.left) > 10, 'Anchor follows native projection');
     expect(first.focusContent()).to.equal(true); expect(document.activeElement === first.querySelector('button')).to.equal(true);
-    let closes = 0; first.addEventListener('lr-close', () => { closes += 1; });
-    const closed = oneEvent(first, 'lr-close'); await sendKeys({ press: 'Escape' });
+    let closes = 0; first.addEventListener('lr-map-anchor-dismiss', () => { closes += 1; });
+    const closed = oneEvent(first, 'lr-map-anchor-dismiss'); await sendKeys({ press: 'Escape' });
     expect((await closed).detail.reason).to.equal('escape'); await first.updateComplete;
     expect(panel(first).hidden).to.equal(true); expect(first.open).to.equal(false);
     expect(document.activeElement === outside).to.equal(true);

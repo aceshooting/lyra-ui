@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import { TREE_MAX_RENDER_DEPTH } from './tree-types.js';
 
 describe('tree upstream-compatible selection and lazy lifecycle', () => {

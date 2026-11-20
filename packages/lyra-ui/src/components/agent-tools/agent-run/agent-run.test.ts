@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './agent-run.js';
-import type { LyraAgentRun } from './agent-run.js';
-import type { LyraGenerationMetrics } from '../../conversation/generation-metrics/generation-metrics.js';
-import type { LyraTaskList } from '../task-list/task-list.js';
+import '../../lr-agent-run.js';
+import type { LyraAgentRun } from '../../lr-agent-run.js';
+import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
+import type { LyraTaskList } from '../../lr-task-list.js';
 import type { AgentRun, AgentStep, AgentStatusKind, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

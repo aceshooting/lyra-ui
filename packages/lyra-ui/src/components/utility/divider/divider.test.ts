@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { toRgba } from '../../../../test/color-contrast.js';
-import './divider.js';
-import type { LyraDivider } from './divider.js';
+import '../../lr-divider.js';
+import type { LyraDivider } from '../../lr-divider.js';
 
 // Note on the `LyraDividerOrientation` rename (was `DividerOrientation`): a wtr/esbuild-run
 // `it()` block cannot verify a type-only rename -- `import type` and type annotations are erased

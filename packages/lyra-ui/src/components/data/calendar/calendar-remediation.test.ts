@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './calendar.js';
-import type { LyraCalendar } from './calendar.js';
+import '../../lr-calendar.js';
+import type { LyraCalendar } from '../../lr-calendar.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 for (const year of ['0001', '0099', '0100']) {

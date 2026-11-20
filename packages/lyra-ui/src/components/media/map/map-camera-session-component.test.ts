@@ -3,7 +3,7 @@ import { mapCameraSessionAttachment, type MapCameraSessionCallbacks } from '../.
 import { admitMapViewpoint } from '../../../internal/map-camera-session-data.js';
 import { createMapCameraSessionController } from '../../../internal/map-camera-session-controller.js';
 import { createSimulationClock } from '../../../simulation-clock.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature-loader.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { CameraPeer } from '../../../../test/map-camera-peer.js';

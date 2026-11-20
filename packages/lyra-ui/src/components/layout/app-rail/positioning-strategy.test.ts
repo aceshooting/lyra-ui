@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './app-rail-item.js';
-import type { LyraAppRailItem } from './app-rail-item.js';
+import '../../lr-app-rail-item.js';
+import type { LyraAppRailItem } from '../../lr-app-rail-item.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

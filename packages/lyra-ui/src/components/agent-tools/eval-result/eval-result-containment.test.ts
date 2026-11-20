@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './eval-result.js';
+import '../../lr-eval-result.js';
 import type { LyraEvalResult } from './eval-result.class.js';
 
 describe('lr-eval-result child event containment', () => {

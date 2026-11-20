@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys, setViewport } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import '../dialog/dialog.js';
-import './dropdown.js';
-import '../../layout/filter-bar/filter-bar.js';
-import '../../layout/menu/dropdown-item.js';
+import '../../lr-dialog.js';
+import '../../lr-dropdown.js';
+import '../../lr-filter-bar.js';
+import '../../lr-dropdown-item.js';
 import type { LyraDialog } from '../dialog/dialog.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import type { LyraFilterBar, LyraFilterBarFilterDefinition } from '../../layout/filter-bar/filter-bar.class.js';

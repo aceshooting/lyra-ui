@@ -1,9 +1,9 @@
 import { assertStreamingTextWhitespace } from '../../../../test/contracts/streaming-text-whitespace.js';
 import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from "@open-wc/testing";
-import "./streaming-text.js";
-import "../markdown/markdown.js";
-import { looksLikeMarkdown } from "./streaming-text.js";
-import type { LyraStreamingText } from "./streaming-text.js";
+import "../../lr-streaming-text.js";
+import "../../lr-markdown.js";
+import { looksLikeMarkdown } from "../../lr-streaming-text.js";
+import type { LyraStreamingText } from "../../lr-streaming-text.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 

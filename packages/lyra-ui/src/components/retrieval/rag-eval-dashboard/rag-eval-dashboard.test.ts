@@ -1,10 +1,10 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './rag-eval-dashboard.js';
+import '../../lr-rag-eval-dashboard.js';
 import type {
   LyraRagEvalDashboard,
   LyraRagEvaluationMetric,
   LyraRagEvaluationRun,
-} from './rag-eval-dashboard.js';
+} from '../../lr-rag-eval-dashboard.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
-import '../components/agent-tools/tool-param-form/tool-param-form.js';
-import '../components/agent-tools/eval-dataset/eval-dataset.js';
-import '../components/utility/known-date/known-date.js';
+import '../components/lr-tool-param-form.js';
+import '../components/lr-eval-dataset.js';
+import '../components/lr-known-date.js';
 import type { LyraToolParamForm } from '../components/agent-tools/tool-param-form/tool-param-form.class.js';
 import type { LyraEvalDataset } from '../components/agent-tools/eval-dataset/eval-dataset.class.js';
 import type { LyraKnownDate } from '../components/utility/known-date/known-date.class.js';

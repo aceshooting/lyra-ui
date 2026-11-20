@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './table.js';
-import '../../forms/select/select.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import '../../lr-select.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the

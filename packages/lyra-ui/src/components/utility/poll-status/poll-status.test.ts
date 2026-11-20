@@ -2,9 +2,9 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './poll-status.js';
-import '../live-region/live-region.js';
-import type { LyraPollStatus } from './poll-status.js';
+import '../../lr-poll-status.js';
+import '../../lr-live-region.js';
+import type { LyraPollStatus } from '../../lr-poll-status.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 

@@ -3,8 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAppRail } from './app-rail.class.js';
-import './app-rail.js';
-import './app-rail-item.js';
+import '../../lr-app-rail.js';
+import '../../lr-app-rail-item.js';
 
 let originalMatchMedia: typeof window.matchMedia;
 

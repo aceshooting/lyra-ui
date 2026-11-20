@@ -2,8 +2,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';
-import './table.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 type Row = { id: string; name: string };

@@ -3,7 +3,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './realtime-session.js';
+import '../../lr-realtime-session.js';
 import type { LyraRealtimeSession } from './realtime-session.class.js';
 it('discloses original collection loss and clears it after replacement', async () => {
   expectDevWarning(collectionTruncationWarningKey('lr-realtime-session', 'entries'));

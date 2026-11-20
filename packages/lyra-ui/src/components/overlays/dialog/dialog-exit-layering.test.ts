@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { observeOverlayStack } from '../../../internal/overlay-stack.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
-import type { LyraDialog } from './dialog.js';
-import './dialog.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import '../../lr-dialog.js';
 
 it('keeps a closing dialog painted above a reconnected lower dialog until its exit settles', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>

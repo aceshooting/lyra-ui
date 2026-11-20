@@ -28,6 +28,7 @@ const LYRA_RENAME_PROFILES = Object.freeze([
   Object.freeze({ origin: 'lyra-v22', fromMajor: 22, toMajor: 23, aliasRemovalMajor: 24 }),
   Object.freeze({ origin: 'lyra-v25', fromMajor: 25, toMajor: 26, aliasRemovalMajor: 28 }),
   Object.freeze({ origin: 'lyra-v26', fromMajor: 26, toMajor: 27, aliasRemovalMajor: 29 }),
+  Object.freeze({ origin: 'lyra-v31', fromMajor: 31, toMajor: 32, aliasRemovalMajor: 33 }),
 ]);
 
 export const LYRA_RENAME_ORIGINS = Object.freeze(LYRA_RENAME_PROFILES.map((profile) => profile.origin));
@@ -387,9 +388,15 @@ function validateDetailFieldEntry(findings, label, entry, projected) {
   }
 }
 
+/**
+ * A retired event either follows a published deprecation (its policy record is checked against the
+ * released retirement history) or is `direct`: removed in the profile's target major without a
+ * published deprecation, which only a major release may do. Both are reported, never rewritten.
+ */
 function validateRetiredEventEntry(findings, label, entry, projected) {
-  const unknown = unknownKeys(entry, ['tag', 'event', 'replacement', 'summary', ...(projected ? ['since'] : [])]);
+  const unknown = unknownKeys(entry, ['tag', 'event', 'replacement', 'summary', 'direct', ...(projected ? ['since'] : [])]);
   if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
+  if (Object.hasOwn(entry, 'direct') && entry.direct !== true) findings.push(`${label}: direct must be true when present`);
   validateName(findings, label, 'event', 'event', entry.event);
   validateName(findings, label, 'event', 'replacement', entry.replacement);
   if (entry.event === entry.replacement) findings.push(`${label}: replacement must differ from the retired event`);
@@ -529,7 +536,7 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
   // A verified published capture can predate the v25 profile even when its package version is
   // 25.x. The captured source and packed projection are compared byte-for-byte by the reader.
   const historicalCount = !Number.isInteger(historicalReleaseMajor) || historicalReleaseMajor < 22 ? 0
-    : historicalReleaseMajor < 26 ? 2 : historicalReleaseMajor < 27 ? 3 : 0;
+    : historicalReleaseMajor < 26 ? 2 : historicalReleaseMajor < 27 ? 3 : historicalReleaseMajor < 32 ? 4 : 0;
   const expectedOrigins = historicalCount && JSON.stringify(origins) === JSON.stringify(LYRA_RENAME_ORIGINS.slice(0, historicalCount))
     ? LYRA_RENAME_ORIGINS.slice(0, historicalCount) : LYRA_RENAME_ORIGINS;
   if (JSON.stringify(origins) !== JSON.stringify(expectedOrigins)) {
@@ -692,6 +699,20 @@ function followReplacement(context, tag, replacement) {
   }
   return current;
 }
+/** Every step from a retired member's published replacement to the member that is current today. */
+function replacementChain(context, tag, replacement) {
+  const chain = [];
+  let current = replacement;
+  for (let hops = 0; hops < 9 && isPlainObject(current); hops++) {
+    chain.push(current);
+    const successor = (context?.successors ?? []).find((item) => item.key.tag === tag && item.key.kind === current.kind && item.key.name === current.name);
+    const historical = historicalMember(context, tag, current.kind, current.name);
+    const next = successor?.replacement ?? (historical?.state === 'retired' ? historical.policy?.replacement : null);
+    if (!isPlainObject(next) || ['host-css-property', 'component'].includes(next.kind)) break;
+    current = next;
+  }
+  return chain;
+}
 function historicalSourceComponent(context, tag, record = null) {
   const historical = record ?? historicalMember(context, tag, 'component', tag);
   if (historical?.state !== 'retired') return null;
@@ -852,17 +873,25 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       const to = surfaceEntry(targetOwner, entry.kind, entry.to);
       if (!from) findings.push(`${label}: the deprecated alias ${entry.from} is not on the public surface`);
       else if (!from.deprecated) findings.push(`${label}: the alias ${entry.from} is not marked deprecated in the manifest`);
-      if (!to) findings.push(`${label}: the canonical name ${entry.to} is not on the public surface`);
-      else if (to.deprecated && !(retired && hasCurrentSuccessor(targetOwner, entry.kind, entry.to))) {
+      const record = policyFor(component, compatibilityContext, entry.tag, entry.kind, entry.from);
+      // A retired alias's canonical name may itself have been removed by a later major. The rename
+      // stays valid when that name lies on the recorded successor chain and the chain ends at a
+      // current member, which the later profile reports.
+      const chain = retired && record ? replacementChain(compatibilityContext, entry.tag, record.replacement) : [];
+      const onChain = chain.some((step) => step.kind === entry.kind && step.name === entry.to);
+      const last = chain.at(-1);
+      const current = last ? surfaceEntry(targetOwner, last.kind, last.name) : null;
+      const supersededLater = !to && onChain && Boolean(current) && !current.deprecated;
+      if (!to && !supersededLater) findings.push(`${label}: the canonical name ${entry.to} is not on the public surface`);
+      else if (to?.deprecated && !(retired && hasCurrentSuccessor(targetOwner, entry.kind, entry.to))) {
         findings.push(`${label}: the canonical name ${entry.to} is itself deprecated`);
       }
-      const record = policyFor(component, compatibilityContext, entry.tag, entry.kind, entry.from);
       if (!record) {
         findings.push(`${label}: no deprecation record retires ${entry.from}`);
       } else {
         checkRecordWindow(label, record);
         const chained = followReplacement(compatibilityContext, entry.tag, record.replacement);
-        if (!replacementMatches(targetOwner, entry.kind, record, entry.to) && !(chained?.kind === entry.kind && chained.name === entry.to)) {
+        if (!replacementMatches(targetOwner, entry.kind, record, entry.to) && !(chained?.kind === entry.kind && chained.name === entry.to) && !onChain) {
           findings.push(`${label}: its deprecation record names a different replacement than ${entry.to}`);
         }
       }
@@ -1058,6 +1087,13 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
       const exposure = Object.fromEntries(EXPOSURE_KINDS.map((kind) => [kind, {}]));
       for (const [kind, names] of requiredExposure(profile)) {
         for (const name of [...names.keys()].sort(compareText)) exposure[kind][name] = [...new Set([...exposingTags(inventory, kind, name), ...(compatibilityContext?.exposure?.[kind]?.[name] ?? [])])].sort(compareText);
+      }
+      // A rename target a later major removed from its owner (the validator accepts it only on the
+      // recorded successor chain) still describes this profile's release, where the owner exposed
+      // it; the later profile reports the removal.
+      for (const entry of profile.renames) {
+        const exposed = exposure[entry.kind]?.[entry.to];
+        if (exposed && !exposed.includes(entry.tag)) exposure[entry.kind][entry.to] = [...exposed, entry.tag].sort(compareText);
       }
       const recordFor = (entry, kind, name) => policyFor(components.get(entry.tag), compatibilityContext, entry.tag, kind, name);
       return {

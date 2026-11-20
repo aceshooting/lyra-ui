@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './rag-eval-dashboard.js';
+import '../../lr-rag-eval-dashboard.js';
 import type { LyraRagEvalDashboard } from './rag-eval-dashboard.class.js';
 it('retains newest runs and reserves the selected facet within 500 controls', async () => {
   expectDevWarning(collectionTruncationWarningKey('lr-rag-eval-dashboard', 'runs'));

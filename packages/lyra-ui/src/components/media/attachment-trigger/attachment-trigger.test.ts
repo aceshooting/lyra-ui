@@ -1,12 +1,12 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import './attachment-trigger.js';
-import '../../layout/menu/menu.js';
-import '../../layout/menu/menu-item.js';
-import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from './attachment-trigger.js';
-import type { LyraMenu } from '../../layout/menu/menu.js';
-import type { LyraMenuItem } from '../../layout/menu/menu-item.js';
-import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
+import '../../lr-attachment-trigger.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from '../../lr-attachment-trigger.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import type { LyraDropdown } from '../../lr-dropdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 /** The single-capability control. `[part="trigger"]` is a composed `<lr-icon-button>` as of

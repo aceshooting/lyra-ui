@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './pdf-viewer.js';
+import '../../lr-pdf-viewer.js';
 import '../../../../../../.storybook/pdfjs-worker.js';
 
 const meta: Meta = {

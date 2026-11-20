@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraMindMap } from './mind-map.js';
+import { LyraMindMap } from '../../lr-mind-map.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('reuses normalized topics when recomputing geometry for 1,000 topics', async () => {
  const topics=Array.from({length:1000},(_,i)=>({id:`t${i}`,label:`Topic ${i}`}));

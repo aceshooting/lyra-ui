@@ -2,7 +2,7 @@ import { expect, fixture, waitUntil, nextFrame } from '@open-wc/testing';
 import { createEngine } from '@aceshooting/lyra-3d/graph';
 import type { Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import { admitGraphNodeRenderer, type LyraGraphNodeMesh } from './graph-node-renderer.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 void LyraGraph;

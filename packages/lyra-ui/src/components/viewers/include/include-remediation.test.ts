@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './include.js';
-import type { LyraInclude } from './include.js';
+import '../../lr-include.js';
+import type { LyraInclude } from '../../lr-include.js';
 import { __clearIncludeResourceCacheForTesting, acquireSanitizedIncludeResource, MAX_INCLUDE_BYTES } from './include-resource.js';
 
 function trackedResponse(text: string, init?: ResponseInit): { response: Response; state: { pulls: number; cancelled: boolean } } {

@@ -43,7 +43,7 @@ it("lists lr-table's known composed-child registrations", async () => {
   const table = graph.entries.find((entry) => entry.tag === 'lr-table');
   expect(table, 'registrations.json must have an entry for lr-table').to.not.equal(undefined);
   expect(table?.entry).to.equal('./components/lr-table.js');
-  expect(table?.registrationModule).to.equal('src/components/data/table/table.ts');
+  expect(table?.registrationModule).to.equal('src/components/lr-table.ts');
   // table.ts imports empty.js/pagination.js/spinner.js/skeleton.js -- their full registration
   // entries, not the side-effect-free *.class.js -- before defining lr-table itself.
   expect(table?.registers).to.deep.equal([

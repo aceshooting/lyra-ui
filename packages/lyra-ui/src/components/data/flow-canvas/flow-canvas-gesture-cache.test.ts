@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './flow-canvas.js';
-import type { LyraFlowCanvas } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas } from '../../lr-flow-canvas.js';
 
 for (const end of ['pointerup', 'pointercancel']) it(`restores the RTL edge-label mirror after ${end}`, async () => {
   const canvas = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas dir="rtl" orientation="horizontal" nodes-draggable style="width:600px;height:300px"

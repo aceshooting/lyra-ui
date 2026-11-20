@@ -82,7 +82,7 @@ pnpm lint           # -r; full contract-policy chain + every tsc contract
 pnpm lint:oxlint    # oxlint: type-aware over src, syntax-only over the .mjs tooling (also a contract-policy gate)
 pnpm check:architecture # dependency-cruiser layering rules (also a contract-policy gate)
 pnpm manifest       # custom-elements.json
-pnpm registrations  # all.ts imports, tag aliases, allowlist, sideEffects, subpath exports
+pnpm registrations  # verify lr-<tag>.ts entries; all.ts imports, allowlist, sideEffects, exports
 pnpm plugin:sync    # lyra-ui version -> agent manifests + Claude marketplace entry
 pnpm release:prepare # consume changesets, regenerate version-derived files; no commit/tag/push
 pnpm docs           # Storybook on localhost:6006
@@ -176,7 +176,8 @@ Full rules: **[docs/agents/coding-conventions.md](docs/agents/coding-conventions
 - Assert rendered CSS (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes
   follow `::part(x)`, so encode state in the part name; recursive self-rendering forwards every
   documented part via `exportparts`.
-- Class modules stay side-effect-free, registration entries side-effectful; `pnpm registrations`
+- Class modules stay side-effect-free; the one registration module per tag is
+  `src/components/lr-<tag>.ts`; `pnpm registrations`
   generates root imports, both `sideEffects` forms and subpath exports; named root exports stay
   hand-curated.
 - `FormAssociated` plus value adapters for value/default tracking; `FormControlController` for

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import { McpAppSession } from './mcp-app-protocol.js';
 import type { McpAppRequestDetail } from './mcp-app-protocol.js';
 import type { LyraMcpApp } from './mcp-app.class.js';

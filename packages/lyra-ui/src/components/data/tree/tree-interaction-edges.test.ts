@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 import type { LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 
 const data: LyraTreeNodeData[] = [

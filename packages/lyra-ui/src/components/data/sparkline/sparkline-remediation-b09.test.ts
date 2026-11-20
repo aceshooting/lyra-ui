@@ -1,7 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './sparkline.js';
-import type { LyraSparkline } from './sparkline.js';
+import '../../lr-sparkline.js';
+import type { LyraSparkline } from '../../lr-sparkline.js';
 
 it('skips line geometry in bar mode and reuses it across label updates', async () => {
   const el = await fixture<LyraSparkline>(html`<lr-sparkline mark="bar" .values=${[1, 5, 2]}></lr-sparkline>`);

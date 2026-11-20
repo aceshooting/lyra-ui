@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraSignaturePad } from './signature-pad.class.js';
-import './signature-pad.js';
+import '../../lr-signature-pad.js';
 
 const surface = (el: LyraSignaturePad): HTMLElement =>
   el.shadowRoot!.querySelector<HTMLElement>('[part~="surface"]')!;

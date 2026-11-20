@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap, type LyraMapGeoJsonDataLayer } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap, type LyraMapGeoJsonDataLayer } from '../../lr-map.js';
 
 class IconMap extends ControlMapEngine {
   updateImage(id: string, pixels: ImageData): void { this.images.set(id, pixels); }

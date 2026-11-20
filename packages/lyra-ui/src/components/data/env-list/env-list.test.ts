@@ -2,8 +2,8 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
-import './env-list.js';
-import type { LyraEnvList } from './env-list.js';
+import '../../lr-env-list.js';
+import type { LyraEnvList } from '../../lr-env-list.js';
 
 describe('lr-env-list', () => {
   it('defaults to without-reveal=false and without-copy-button=false', async () => {

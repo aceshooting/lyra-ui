@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/highlight-layer/highlight-layer.js';
+export * from './viewers/highlight-layer/highlight-layer.class.js';
+import { LyraHighlightLayer } from './viewers/highlight-layer/highlight-layer.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('highlight-layer', LyraHighlightLayer);

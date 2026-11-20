@@ -6,7 +6,7 @@ import {
   submitFormImplicitly,
   submitOnEnter,
 } from './submit-on-enter.js';
-import '../components/forms/button/button.js';
+import '../components/lr-button.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 
 const enterEvent = (init: KeyboardEventInit = {}): KeyboardEvent =>

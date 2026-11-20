@@ -1,5 +1,5 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import { LyraDataGrid } from './data-grid.js';
+import { LyraDataGrid } from '../../lr-data-grid.js';
 
 interface Row { id: number; name: string }
 class ControlledResizeObserver implements ResizeObserver {

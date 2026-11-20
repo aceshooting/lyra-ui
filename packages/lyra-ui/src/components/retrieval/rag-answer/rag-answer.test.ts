@@ -1,5 +1,5 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './rag-answer.js';
+import '../../lr-rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 import type { LyraSourceCard } from '../source-card/source-card.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';

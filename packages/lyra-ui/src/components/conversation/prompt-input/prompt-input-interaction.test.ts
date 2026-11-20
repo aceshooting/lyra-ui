@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 
 async function openSuggestions() {
   const el = await fixture<HTMLElementTagNameMap['lr-prompt-input']>(html`<lr-prompt-input

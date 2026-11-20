@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraCommandPalette } from './command-palette.class.js';
-import './command-palette.js';
+import '../../lr-command-palette.js';
 
 function recordLifecycle(el: LyraCommandPalette): string[] {
   const events: string[] = [];

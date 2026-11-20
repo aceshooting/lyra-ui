@@ -2,7 +2,7 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './textarea.js';
+import '../../lr-textarea.js';
 import type { LyraTextarea } from './textarea.class.js';
 
 it('announces only the latest character count after consecutive native keyboard edits', async () => {

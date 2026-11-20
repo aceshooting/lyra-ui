@@ -782,7 +782,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       : await loadMaplibre();
     if (this.transport.isStale(token)) return;
     if (!maplibre) {
-      await import('../../utility/json-viewer/json-viewer.js');
+      await import('../../lr-json-viewer.js');
       if (this.transport.isStale(token)) return;
     }
     this.loadState = {

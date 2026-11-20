@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraTimeZonePicker } from './time-zone-picker.js';
+import { LyraTimeZonePicker } from '../../lr-time-zone-picker.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('does not mount every cold catalog option', async () => {
   const el = await fixture<LyraTimeZonePicker>(html`<lr-time-zone-picker .timeZones=${Array.from({length:1000},(_,i)=>`Custom/Zone${i}`)}></lr-time-zone-picker>`);

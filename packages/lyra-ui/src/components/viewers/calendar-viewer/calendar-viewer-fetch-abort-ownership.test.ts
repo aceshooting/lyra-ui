@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraCalendarViewer } from './calendar-viewer.js';
-import './calendar-viewer.js';
+import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
 
 describe('lr-calendar-viewer request cancellation ownership', () => {
   it('reports an active fetch AbortError through localized error chrome and clears loading', async () => {

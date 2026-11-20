@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraChart3d, LyraChart3dColumns } from './chart-3d.class.js';
 import { normalizeChart3dCamera } from './chart-3d-data.js';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 
 function columns(count = 3): LyraChart3dColumns {
   return {

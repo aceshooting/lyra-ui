@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import tsGrammar from 'shiki/langs/typescript.mjs';
-import './streaming-text-core.js';
+import '../../lr-streaming-text-core.js';
 
 const meta: Meta = {
   title: 'StreamingTextCore',

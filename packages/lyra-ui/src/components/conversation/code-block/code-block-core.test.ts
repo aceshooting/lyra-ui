@@ -9,13 +9,13 @@ import {
   oneEvent,
 } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
-import "./code-block-core.js";
+import "../../lr-code-block-core.js";
 // Registers the shipped `ar` catalog slices the `lang="ar-EG"` gutter tests resolve against, so
 // they render real catalog text instead of tripping the dev-mode locale-fallback warning that
 // strict-console browser lanes treat as fatal.
 import "../../../translations/ar/conversation.js";
 import "../../../translations/ar/shared.js";
-import type { LyraCodeBlockCore } from "./code-block-core.js";
+import type { LyraCodeBlockCore } from "../../lr-code-block-core.js";
 import {
   loadShikiHighlighterCore,
   __setShikiHighlighterCoreLoaderForTesting,
@@ -1471,8 +1471,8 @@ describe("lean/full parity with <lr-code-block>", () => {
 });
 
 import { expect as cacheExpect, fixture as cacheFixture, html as cacheHtml, waitUntil as cacheWaitUntil } from '@open-wc/testing';
-import './code-block-core.js';
-import type { LyraCodeBlockCore as CacheCodeBlock } from './code-block-core.js';
+import '../../lr-code-block-core.js';
+import type { LyraCodeBlockCore as CacheCodeBlock } from '../../lr-code-block-core.js';
 import { loadShikiHighlighterCore as cacheLoad, resolvedShikiLanguages as cacheResolve, type ShikiLanguageInput as CacheLanguage, type ShikiHighlighterCore as CacheCore } from './shiki-types.js';
 
 let cacheGrammarSequence = 0;
@@ -1847,7 +1847,7 @@ describe('shiki engine seam public reachability', () => {
     // A consumer asked for a callable engine seam. Before this, the function was
     // only importable from the internal `shiki-types.js` support module, which has no
     // package.json#exports entry at all -- so no consumer-supported path could ever reach it.
-    const entry = (await import('./code-block-core.js')) as { setShikiCoreEngine?: unknown };
+    const entry = (await import('../../lr-code-block-core.js')) as { setShikiCoreEngine?: unknown };
     expect(typeof entry.setShikiCoreEngine).to.equal('function');
   });
 });

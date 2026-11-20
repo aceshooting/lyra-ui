@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraSplitPanel } from './split-panel.class.js';
-import './split-panel.js';
+import '../../lr-split-panel.js';
 
 afterEach(async () => { await resetMouse(); });
 

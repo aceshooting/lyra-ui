@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { LyraHeatmap } from './heatmap.class.js';

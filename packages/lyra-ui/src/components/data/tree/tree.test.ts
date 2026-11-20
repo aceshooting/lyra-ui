@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 expectDevWarning('lyra-tree-missing-accessible-name');
 

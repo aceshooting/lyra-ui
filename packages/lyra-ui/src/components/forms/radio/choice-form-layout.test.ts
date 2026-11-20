@@ -1,12 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './radio.js';
-import './radio-button.js';
-import './radio-group.js';
-import '../checkbox/checkbox.js';
-import '../checkbox-group/checkbox-group.js';
-import '../slider/slider.js';
-import '../toggle/toggle.js';
-import '../toggle-group/toggle-group.js';
+import '../../lr-radio.js';
+import '../../lr-radio-button.js';
+import '../../lr-radio-group.js';
+import '../../lr-checkbox.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-slider.js';
+import '../../lr-toggle.js';
+import '../../lr-toggle-group.js';
 
 for (const name of ['radio', 'checkbox']) {
   it(`${name} group omits an individually disabled checked choice from submission`, async () => {

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './popover.js';
-import '../../forms/button/button.js';
-import type { LyraPopover } from './popover.js';
+import '../../lr-popover.js';
+import '../../lr-button.js';
+import type { LyraPopover } from '../../lr-popover.js';
 
 const meta: Meta = {
   parameters: { docs: { description: { component: 'Open popovers, dropdowns and tooltips reposition when their effective host or inherited text direction changes, preserving open state and lifecycle events.' } } }, title: 'Overlay/Popover', component: 'lr-popover', tags: ['autodocs'] };

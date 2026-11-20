@@ -1,7 +1,7 @@
 import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './model-select.js';
-import type { LyraModelSelect } from './model-select.js';
+import '../../lr-model-select.js';
+import type { LyraModelSelect } from '../../lr-model-select.js';
 
 const CATALOG = ['gpt-4o', 'claude-opus'];
 

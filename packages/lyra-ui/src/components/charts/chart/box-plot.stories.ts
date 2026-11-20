@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraBoxPlotSeries } from './box-plot.js';
+import type { LyraBoxPlotSeries } from '../../lr-box-plot.js';
 
 const meta: Meta = {
   title: 'Charts/BoxPlot',

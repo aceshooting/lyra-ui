@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { toRgba } from '../../../../test/color-contrast.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './map.js';
-import type { LyraMap } from './map.js';
+import '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 
 // Layout coverage complements scripts/map-legend-compositor.mjs's real WebGL page pixels.
 // A computed gutter alone cannot detect a hole in the composited map canvas.

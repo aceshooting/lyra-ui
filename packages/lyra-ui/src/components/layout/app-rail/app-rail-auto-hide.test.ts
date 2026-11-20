@@ -4,8 +4,8 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraAppRail } from './app-rail.class.js';
-import './app-rail.js';
-import './app-rail-item.js';
+import '../../lr-app-rail.js';
+import '../../lr-app-rail-item.js';
 
 type Pointer = 'mouse' | 'touch' | 'pen';
 

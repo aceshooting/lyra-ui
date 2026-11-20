@@ -528,7 +528,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (this.detailReasons.length) this.chipRegistration ??= import('../../overlays/chip/chip.js');
+    if (this.detailReasons.length) this.chipRegistration ??= import('../../lr-chip.js');
     if (changed.has('disabled') || changed.has('pending')) {
       this.emit('lr-toolbar-actions-change');
     }

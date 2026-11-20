@@ -1,10 +1,10 @@
 import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './dropdown.js';
-import '../dialog/dialog.js';
-import '../../layout/menu/dropdown-item.js';
-import '../../layout/menu/menu.js';
+import '../../lr-dropdown.js';
+import '../../lr-dialog.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-menu.js';
 import { LyraDropdown } from './dropdown.class.js';
 import type { LyraDropdownItem } from '../../layout/menu/dropdown-item.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';

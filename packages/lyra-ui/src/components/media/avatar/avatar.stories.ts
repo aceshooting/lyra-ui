@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './avatar.js';
+import '../../lr-avatar.js';
 
 const IMAGE_SRC = '/fixtures/story-image.svg';
 

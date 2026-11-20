@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/skeleton/skeleton.js';
+export * from './overlays/skeleton/skeleton.class.js';
+import { LyraSkeleton } from './overlays/skeleton/skeleton.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('skeleton', LyraSkeleton);

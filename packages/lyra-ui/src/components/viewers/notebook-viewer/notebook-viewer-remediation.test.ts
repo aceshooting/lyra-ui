@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './notebook-viewer.js';
-import type { LyraNotebookViewer } from './notebook-viewer.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-notebook-viewer.js';
+import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 
 async function notebook() {

@@ -1,8 +1,8 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './reorder-item.js';
-import './reorder-list.js';
+import '../../lr-reorder-item.js';
+import '../../lr-reorder-list.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { registerLyraLocale } from '../../../internal/localization.js';

@@ -1,10 +1,10 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { getKatex } from './katex-loader.js';
-import { preloadMarkdown } from './markdown.js';
-import type { LyraMarkdown } from './markdown.js';
-import type { LyraMarkdownCore } from './markdown-core.js';
-import './markdown-core.js';
+import { preloadMarkdown } from '../../lr-markdown.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
+import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
+import '../../lr-markdown-core.js';
 import { LyraMarkdown as FullClass } from './markdown.class.js';
 import { LyraMarkdownCore as CoreClass } from './markdown-core.class.js';
 import { createMarkdownVariantContext } from './markdown-base.class.js';

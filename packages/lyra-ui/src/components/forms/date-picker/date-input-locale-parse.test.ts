@@ -2,8 +2,8 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './date-input.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-input.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 
 /** Every shipped catalog plus locales with spaced, suffixed or year-first numeric dates. */
 const LOCALES = [

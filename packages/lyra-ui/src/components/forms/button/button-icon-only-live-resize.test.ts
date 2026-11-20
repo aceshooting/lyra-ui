@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './button.js';
-import type { LyraButton } from './button.js';
+import '../../lr-button.js';
+import type { LyraButton } from '../../lr-button.js';
 
 const icon = html`<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><circle r="6" cx="8" cy="8" /></svg>`;
 

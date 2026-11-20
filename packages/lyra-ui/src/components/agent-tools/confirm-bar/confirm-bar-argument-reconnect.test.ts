@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './confirm-bar.js';
+import '../../lr-confirm-bar.js';
 
 it('upgrades argument viewers on reconnect after the arguments arrived while detached', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div><lr-confirm-bar></lr-confirm-bar></div>`);

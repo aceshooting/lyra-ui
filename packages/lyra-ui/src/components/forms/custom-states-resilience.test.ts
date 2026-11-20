@@ -1,9 +1,9 @@
 import { expect, fixture } from '@open-wc/testing';
-import './input/input.js';
-import './input/number-input.js';
-import './textarea/textarea.js';
-import './slider/slider.js';
-import './color-picker/color-picker.js';
+import '../lr-input.js';
+import '../lr-number-input.js';
+import '../lr-textarea.js';
+import '../lr-slider.js';
+import '../lr-color-picker.js';
 
 type Host = HTMLElement & { updateComplete: Promise<unknown>; checkValidity(): boolean; required?: boolean };
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './document-compare.js';
+import '../../lr-document-compare.js';
 
 const meta: Meta = {
   title: 'DocumentCompare',

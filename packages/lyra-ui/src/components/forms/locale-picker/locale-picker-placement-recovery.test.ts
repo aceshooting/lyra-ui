@@ -2,8 +2,8 @@ import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './locale-picker.js';
-import type { LyraLocalePicker } from './locale-picker.js';
+import '../../lr-locale-picker.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
 
 for (const failure of ['import', 'setup'] as const) {
   for (const opening of ['initial', 'property', 'keyboard', 'reconnect'] as const) {

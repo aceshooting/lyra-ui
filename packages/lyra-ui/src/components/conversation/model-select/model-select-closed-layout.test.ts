@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './model-select.js';
-import type { LyraModelSelect } from './model-select.js';
+import '../../lr-model-select.js';
+import type { LyraModelSelect } from '../../lr-model-select.js';
 
 const CATALOG = ['gpt-4o'];
 

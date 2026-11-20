@@ -2835,14 +2835,19 @@ rather than catalog *content*. Diff the result's length against
 `Object.keys(LYRA_DEFAULT_STRINGS).length` to measure a locale's own translation coverage without a
 silent English-fallback merge making a partial catalog look complete. A locale nothing ever
 registered — including `'en'` itself, unless it was explicitly passed to `registerLyraLocale()` —
-returns an empty snapshot.
+returns an empty snapshot. The `@aceshooting/lyra-translations` catalogs omit a message equal to
+the English default wherever the locale's lookup falls straight back to English (a locale with no
+parent that shares its base language with no other shipped catalog), so those keys are absent from
+the snapshot while resolving to the same English text. A `resolveLyraString()` call reaches that
+text only through its `defaults` argument, and an application-registered `en` catalog answers it.
 
 In development (Lit's own dev-mode signal; silent in production), resolving a message for a
 resolved locale other than English that has no override, no fallback, and no registered catalog
 entry for that key warns once per (locale, key) to `console.warn` before falling through to the
 English default — the same silent-fallback `resolveLyraString()`, `localize()`, and
 `resolveLyraScopedString()` all shared with no way to detect it before. It never fires for an
-English-resolved locale, since falling through to `defaults` is simply how English itself resolves.
+English-resolved locale, since falling through to `defaults` is simply how English itself resolves,
+nor for a message a published catalog omits because it equals the English default.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
@@ -10221,7 +10226,7 @@ Host `aria-labelledby` IDREFs are resolved onto the internal control through
 shadow root — an idref cannot cross that boundary, the reflected element reference can. Per ARIA it
 wins over `aria-label`/`label` and the localized fallback name.
 
-**Lean registration entry.** `components/forms/icon-button/icon-button.js` eagerly imports
+**Lean registration entry.** `components/lr-icon-button.js` eagerly imports
 `<lr-icon>` so an `icon`/`src` attribute paints synchronously. A consumer who only ever slots their
 own SVG can import `components/forms/icon-button/icon-button-register.js` instead, which registers
 `<lr-icon-button>` and nothing else — no `<lr-icon>` implementation in the entry chunk and no
@@ -13673,10 +13678,9 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
-`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) limits the number of mounted
-tokens. Set `max-tokens-visible="200"` for a bounded window or `max-tokens-visible="0"` to keep
-mounting every token. Omitting or removing the attribute, or supplying a non-finite limit,
-currently uses the deprecated implicit unlimited default.
+`maxTokensVisible: number = 200` (attribute `max-tokens-visible`) limits the number of mounted
+tokens. Omitting or removing the attribute, or supplying a non-finite limit, uses the 200-token
+window; set `max-tokens-visible="0"` to keep mounting every token.
 The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
 field. The `token-overflow` part shows how many tokens are outside the current window. The value
 array and form submission always include every token.
@@ -14534,7 +14538,9 @@ A configurable annotation rubric (LangSmith annotation-queue style): score, cate
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
 `<lr-slider>`; `category` renders `<lr-select>` or `<lr-checkbox-group>` (`multiple`); `comment`
-renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: aggregate label, hint,
+renders `<lr-textarea>`. Importing the element registers the score and comment controls; the
+select and checkbox controls register when a category key first renders, and `updateComplete`
+waits for them, so a score-and-comment rubric never downloads them. The `base` part is an accessible `role="group"`: aggregate label, hint,
 and error chrome is linked to that same-shadow role. A host `aria-label` wins by attribute presence
 (including an explicitly empty value), while each key retains its field-level name.
 Both score branches format visible numeric labels with the effective locale (including non-Latin
@@ -19986,7 +19992,7 @@ sorted even when public inputs are invalid or reversed. Source snapshots additio
 accepted `source` descriptor above; their scene arrays do not imply full-source coverage.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
-sourceNodeId, targetNodeId, source, target }`, both endpoint-name pairs are supplied),
+sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
@@ -20746,8 +20752,6 @@ the day), Home/End to the month's first/last day; stepping past the rendered gri
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
 `lr-month-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
-`lr-view-change` is deprecated and still fires with the same detail. Use `lr-month-change` for
-calendar-specific listeners.
 
 **Slots:** none.
 
@@ -21094,7 +21098,9 @@ library-wide brand tokens.
 
 Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
-collection stays reachable through pagination without mounting an unbounded grid.
+collection stays reachable through pagination without mounting an unbounded grid. The default
+entry registers the tag facet's `<lr-combobox>` the first time a document carries a tag;
+`updateComplete` waits for that registration.
 
 With both `dataSource` and `cursorSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
 note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted
@@ -27287,33 +27293,34 @@ chip-only definition requires neither options nor an adapter — a stable filter
 the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
 guarded where it is used rather than rejected outright.
 
-**Lean registration entry.** `components/layout/filter-bar/filter-bar.js` (the default entry)
-eagerly imports every composed control this bar could possibly render — `<lr-select>`,
-`<lr-combobox>`, `<lr-dropdown>` + `<lr-dropdown-item>` (the `'checkbox-menu'` branch),
-`<lr-date-input>`, `<lr-input>`, `<lr-chip>`/`<lr-chip-group>` (the active-filter row), and
-`<lr-button>`/`<lr-spinner>` (the reset action and the loading status) — because `filters` is a
-runtime value it cannot inspect ahead of time. A bar that only ever declares `'select'`/`'text'`
-filters still pays for `<lr-combobox>` and `<lr-date-input>` through that entry: a measured ~69.5 kB
-gzip more than importing only what it uses. A consumer who knows their own filter `type`s ahead of
-time can import `components/layout/filter-bar/filter-bar-register.js` instead, which registers
-`<lr-filter-bar>` and nothing else, then import each composed control's own registration entry for
+**Registration.** `components/lr-filter-bar.js` (the default entry, also
+`components/lr-filter-bar.js`) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
+and each filter type's control — `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
+`<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` — plus
+`<lr-spinner>` (the `loading` status) the first time a bar renders it, so a bar that only declares
+`'select'`/`'text'` filters never loads `<lr-combobox>` or `<lr-date-input>`. The control upgrades
+in place once its module resolves, and `updateComplete` waits for every registration the render
+started. The `components/layout` family barrel registers all of them up front. A consumer that
+needs every control defined synchronously, or wants no deferred imports in its graph, can import
+`components/layout/filter-bar/filter-bar-register.js` instead, which registers `<lr-filter-bar>`
+and nothing else, then import each composed control's own registration entry for
 the filter `type`s actually declared:
 
 | Filter `type` | Registration entry |
 | --- | --- |
-| `'select'` | `components/forms/select/select.js` |
-| `'combobox'` | `components/forms/combobox/combobox.js` |
-| `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
-| `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
-| `'text'` | `components/forms/input/input.js` |
+| `'select'` | `components/lr-select.js` |
+| `'combobox'` | `components/lr-combobox.js` |
+| `'checkbox-menu'` | `components/lr-dropdown.js` **and** `components/lr-dropdown-item.js` |
+| `'date'` / `'date-range'` | `components/lr-date-input.js` |
+| `'text'` | `components/lr-input.js` |
 | `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
 whenever any filter has a value (further gated by `activeFiltersDisplay`, but never provably absent
-for a generic bar) — `components/forms/button/button.js` and `components/overlays/chip/chip.js` +
-`components/overlays/chip/chip-group.js`. `<lr-spinner>`
-(`components/overlays/spinner/spinner.js`) is the one built-in dependency the lean entry omits even
+for a generic bar) — `components/lr-button.js` and `components/lr-chip.js` +
+`components/lr-chip-group.js`. `<lr-spinner>`
+(`components/lr-spinner.js`) is the one built-in dependency the lean entry omits even
 though every bar could use it: `loading` is a plain boolean any consumer can leave unset entirely,
 unlike a filter `type`, which `filters` always names outright — import it too if the bar ever sets
 `loading`. A filter definition whose `type` has no matching import above renders no usable control
@@ -35230,7 +35237,11 @@ resource ownership when they are not the empty defaults; an `imageProvider` func
 resource ownership too. Image preparation and basemap override ownership load only for
 non-empty `images` and `styleOverrides`; `anchorLngLat` loads
 anchor placement; the first native control (default attribution included) loads control
-ownership; and the first `setFeatureState()`/`removeFeatureState()` loads feature state. Each
+ownership; and the first `setFeatureState()`/`removeFeatureState()` loads feature state. A
+non-empty `dataLayers` or a `choropleth` record loads the data-layer projection runtime: until it
+arrives the map holds construction (or, on a live map, holds the generated-layer and resource
+reconciliation), and the choropleth's derived legend, its data extent and `fitToData` see no rows.
+`updateComplete`, `whenStyleReady()` and `whenIdle()` wait for it. Each
 runtime is imported once per page and every element shares it. `whenStyleReady()` and
 `whenIdle()` wait for a resource-ownership load and for any drawing, URL or feature-state load in
 progress, so awaiting them is the deterministic way to wait; anchor placement, export and controls
@@ -37568,7 +37579,6 @@ with a development warning while it is open, and `focusContent()` returns `false
 
 - `lr-map-anchor-dismiss-request` fires before dismissal. Calling `preventDefault()` keeps the anchor open.
 - `lr-map-anchor-dismiss` fires after an accepted dismissal sets `open = false`. A listener can reopen or remove the anchor. Hiding, disconnecting or assigning `open = false` is silent.
-- `lr-close-request` and `lr-close` are deprecated aliases. A veto through either request preserves the anchor.
 
 The events bubble across shadow boundaries with frozen `LyraMapAnchorCloseDetail`. The reason is `api`, `close-button` or `escape`. For an anchor in the map’s `anchor` slot, listen for `lr-map-anchor-close` on the map.
 
@@ -37618,7 +37628,7 @@ function openDetails(details, lngLat, label) {
   anchor.closable = true;
   anchor.label = label;
   anchor.append(details); // your own live element
-  anchor.addEventListener('lr-close', () => anchor.remove(), { once: true });
+  anchor.addEventListener('lr-map-anchor-dismiss', () => anchor.remove(), { once: true });
   map.append(anchor);
   anchor.open = true;
   return anchor;
@@ -37630,7 +37640,7 @@ Declaratively, for example with Lit:
 ```js
 html`<lr-map .mapStyle=${style}>
   <lr-map-anchor slot="anchors" open closable label="Place details" .lngLat=${place.lngLat}
-    @lr-close=${() => { this.place = null; }}>
+    @lr-map-anchor-dismiss=${() => { this.place = null; }}>
     <place-card .place=${place}></place-card>
   </lr-map-anchor>
 </lr-map>`;
@@ -37645,8 +37655,8 @@ lr-map-anchor::part(body) { display: flex; flex-direction: column; overflow: hid
 .detail-card > .rows { min-block-size: 0; overflow: auto; }
 ```
 
-**Frameworks:** React 19, Svelte 5, Vue 3 and Lit set the properties and listen to `lr-close`
-directly. In Vue, bind the property-only members with `.prop` when the element may upgrade after
+**Frameworks:** React 19, Svelte 5, Vue 3 and Lit set the properties and listen to
+`lr-map-anchor-dismiss` directly. In Vue, bind the property-only members with `.prop` when the element may upgrade after
 the first render, as for every property-only Lyra member. Angular needs `CUSTOM_ELEMENTS_SCHEMA`;
 when a component host wraps the anchor, that host carries `slot="anchors"`, or the anchor sits in an
 `ng-container`.
@@ -38849,7 +38859,8 @@ own `start` slot, which this drops straight into, though it has no code dependen
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
 anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each
-capability as a row.
+capability as a row. The default entry registers `lr-dropdown` and `lr-menu-item` the first time a
+trigger offers more than one capability; `updateComplete` waits for that registration and the child's first render.
 
 **Properties:**
 
@@ -46737,7 +46748,9 @@ until it can be rendered.
 ## `lr-document-compare`
 
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
-`lr-document-preview` for side-by-side rendered content.
+`lr-document-preview` for side-by-side rendered content. The default entry registers
+`lr-document-preview` the first time `view="side-by-side"` renders it;
+`updateComplete` waits for that registration and the child's first render.
 
 A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
 host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
@@ -46920,7 +46933,7 @@ size of `[part="base"]`, matching every other viewer in this family. It is also 
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
 The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
-`components/viewers/geojson-view/geojson-viewer.js`). The former `components/lr-geojson-view.js`,
+`components/lr-geojson-viewer.js`). The former `components/lr-geojson-view.js`,
 `components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
 in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
 Remote resources are capped at 4 MiB (4,194,304 bytes) before JSON parsing; exceeding that bound
@@ -52595,7 +52608,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 
 `components/conversation/prompt-input/prompt-input-register.js` registers the composer, attachments
 and mention popover. Import model-select, voice-picker, source-picker and prompt-queue entries when
-their corresponding data can be supplied. The default entry registers all children.
+their corresponding data can be supplied. The default entry registers those four the first time
+`modelCatalog`, `voiceCatalog`, `sources` or `queue` renders them; `updateComplete` waits for that
+registration.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`
@@ -55027,7 +55042,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider timeline:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
 Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
-`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource, LyraSpan } from
@@ -55177,7 +55192,7 @@ through visible tasks and subtasks. Ctrl/Cmd with Up or Down requests a sibling 
 
 **Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
-falling back to the array. Only `undefined` restores current legacy items.
+falling back to the array. Only `undefined` restores current legacy items. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-task-list.js";
@@ -55532,7 +55547,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
-legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
+legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource } from
@@ -56676,6 +56691,8 @@ shown when `segments` exceeds the 500-row render ceiling).
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
+The default entry registers the search field's `lr-input` the first time `searchable` is set;
+`updateComplete` waits for that registration and the child's first render.
 With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
 
@@ -57231,7 +57248,9 @@ The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to
 
 `disabled` prevents review actions. `lr-approval-open` and `lr-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
 
-Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
+Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`,
+which the default entry registers the first time a request opens;
+`updateComplete` waits for that registration and the child's first render.
 The host executes tools and persists decisions. The queue reports the outcome through
 `lr-approval-close` and contains the nested dialog’s `lr-decision-settled` event.
 
@@ -58827,7 +58846,8 @@ Listen for `lr-entity-select` from community cards and relationship paths, and f
 `lr-selection-change` from retrieval results and the source picker. Dashboard events are
 `lr-metric-change-request`, `lr-slice-change-request` and `lr-run-activate`. Disclosure controls emit
 `lr-toggle` with `expanded` and, for an item, `itemId`; the older component-specific event names are
-no longer emitted. The `lyra-v25` migration profile reports detail or event-reach changes that
+no longer emitted. The composite panels (`lr-entity-dossier`, `lr-memory-panel`,
+`lr-provenance-panel`, `lr-retrieval-trace`) emit only `lr-retrieval-disclosure-change`. The `lyra-v25` migration profile reports detail or event-reach changes that
 cannot be rewritten mechanically.
 
 ## Breaking changes in 23.0.0
@@ -58839,7 +58859,7 @@ use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headi
 native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
-and `lr-toggle` for chunk and memory disclosures; the aliases removed in that release are no
+`lr-toggle` for chunk disclosures, and `lr-retrieval-disclosure-change` for memory disclosures; the aliases removed in that release are no
 longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
@@ -60316,8 +60336,8 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 - `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }` from the chunk inspector.
 - `lr-retrieval-disclosure-change` is a bubbling, composed notification with readonly
 `{ kind: 'section', section, expanded }` or `{ kind: 'chunk', section: 'chunks', chunkId, expanded }`.
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. Migrate from `lr-toggle`
-(`{ section, expanded, itemId? }`) by narrowing on `detail.kind`.
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel no longer
+dispatches `lr-toggle`; a former listener narrows on `detail.kind`.
 
 ```ts
 panel.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
@@ -60891,7 +60911,7 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.
 - `lr-retrieval-disclosure-change` bubbles from the dossier with readonly `detail.origin`
 of `'supporting'` or `'provenance'`, plus `kind`, `section`, `expanded`, and `chunkId` for a chunk.
-Migrate from `lr-toggle` (`{ section, expanded, itemId? }`) by listening on the dossier and reading
+The dossier no longer dispatches `lr-toggle`; a former `lr-toggle` listener moves here and reads
 `origin` to identify the panel.
 
 ```ts
@@ -61777,8 +61797,8 @@ description. Scope exact-name queries to the memory row or match the full action
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
   `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
-  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
-  `memoryId` and `scope` for the owning row.
+  `kind` is `'chunk'`. The panel no longer dispatches `lr-toggle`; a
+  former listener narrows on `detail.kind` and reads `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
@@ -62244,8 +62264,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   `{ stageId, action: 'expand', chunkId, expanded }` for a disclosure.
 - `lr-retrieval-disclosure-change` bubbles from the trace with readonly `detail.kind`,
 `stageId` and `expanded`. It covers the evidence button, timeline selection that expands a stage,
-and disclosures of nested chunks, which also carry `chunkId`. Migrate from `lr-toggle`
-(`{ expanded, itemId, stageId? }`) by narrowing on `detail.kind`.
+and disclosures of nested chunks, which also carry `chunkId`. The trace no longer
+dispatches `lr-toggle`; a former listener narrows on `detail.kind`.
 
 ```ts
 trace.addEventListener('lr-retrieval-disclosure-change', ({ detail }) => {
@@ -62288,7 +62308,8 @@ The `empty` CSS part exposes the empty-state container.
 
 Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
 assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
-or source fetching.
+or source fetching. The default entry registers `lr-grounding-summary` the first time an
+`assessment` is set; `updateComplete` waits for that registration and the child's first render.
 
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`

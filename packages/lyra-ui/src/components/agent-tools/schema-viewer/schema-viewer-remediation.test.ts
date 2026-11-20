@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './schema-viewer.js';
-import type { JsonSchemaNode, LyraJsonSchemaViewer } from './schema-viewer.js';
+import '../../lr-json-schema-viewer.js';
+import type { JsonSchemaNode, LyraJsonSchemaViewer } from '../../lr-json-schema-viewer.js';
 
 describe('lr-json-schema-viewer remediation', () => {
   it('paints the selected trigger and keeps its hover and press distinct', async () => {

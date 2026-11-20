@@ -14,7 +14,7 @@ const matches = (file: LyraDocumentFile): boolean => /\.xlsx?$/i.test(file.name)
 const renderer: LazyDocumentRendererDefinition = {
   matches,
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  load: () => import('./spreadsheet-viewer.js').then(() => ({
+  load: () => import('../../lr-spreadsheet-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-spreadsheet-viewer
       src=${file.src}
       name=${file.name}

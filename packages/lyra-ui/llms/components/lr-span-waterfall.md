@@ -36,7 +36,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider timeline:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
 Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
-`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource, LyraSpan } from

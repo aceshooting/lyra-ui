@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './chunk-inspector.js';
+import '../../lr-chunk-inspector.js';
 import type { LyraChunk } from './chunk-inspector.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

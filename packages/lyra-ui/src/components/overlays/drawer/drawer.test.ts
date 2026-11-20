@@ -1,8 +1,8 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
-import "./drawer.js";
-import type { LyraDrawer } from "./drawer.js";
+import "../../lr-drawer.js";
+import type { LyraDrawer } from "../../lr-drawer.js";
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
 import { toRgba } from '../../../../test/color-contrast.js';

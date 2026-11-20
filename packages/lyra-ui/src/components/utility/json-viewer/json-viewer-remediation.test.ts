@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './json-viewer.js';
-import type { LyraJsonViewer } from './json-viewer.js';
+import '../../lr-json-viewer.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
 
 it('renders safely after query removal, preserves null and empty readback, and accepts a later query', async () => {
   const viewer = await fixture<LyraJsonViewer>(html`<lr-json-viewer .data=${['needle', 'other']} query="needle"></lr-json-viewer>`);

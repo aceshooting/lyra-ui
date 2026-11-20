@@ -2,11 +2,11 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./file-input.js";
+import "../../lr-file-input.js";
 import {
   DEFAULT_MAX_FILE_SIZE_BYTES,
   LyraFileInput,
-} from "./file-input.js";
+} from "../../lr-file-input.js";
 import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";

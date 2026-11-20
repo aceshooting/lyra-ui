@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../components/layout/segmented/segmented.js';
-import '../components/layout/tab-group/tab-group.js';
-import '../components/layout/stepper/stepper.js';
-import '../components/layout/virtual-list/virtual-list.js';
-import '../components/data/timeline/timeline.js';
+import '../components/lr-segmented.js';
+import '../components/lr-tab-group.js';
+import '../components/lr-stepper.js';
+import '../components/lr-virtual-list.js';
+import '../components/lr-timeline.js';
 
 interface ResizeRecord {
   observed: Element[];

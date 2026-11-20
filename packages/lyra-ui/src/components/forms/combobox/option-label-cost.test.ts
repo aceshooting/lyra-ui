@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './option.js';
-import './combobox.js';
-import '../select/select.js';
+import '../../lr-option.js';
+import '../../lr-combobox.js';
+import '../../lr-select.js';
 import type { LyraOption } from './option.class.js';
 import type { LyraCombobox } from './combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';

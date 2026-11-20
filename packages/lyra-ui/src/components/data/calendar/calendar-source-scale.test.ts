@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './calendar.js';
-import '../table/table.js';
+import '../../lr-calendar.js';
+import '../../lr-table.js';
 import type { CalendarEvent, LyraCalendar } from './calendar.class.js';
 import type { LyraTable, TableColumn } from '../table/table.class.js';
 import type { LyraPagination } from '../pagination/pagination.class.js';
@@ -63,7 +63,7 @@ it('queries bounded calendar months and activates first, middle and final millio
     maxDomNodes = Math.max(maxDomNodes, renderedNodeCount(el));
   };
   let latestLoad = Promise.resolve();
-  el.addEventListener('lr-view-change', event => { latestLoad = loadMonth(event.detail.viewDate); });
+  el.addEventListener('lr-month-change', event => { latestLoad = loadMonth(event.detail.viewDate); });
   const select = async (index: number) => {
     const row = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="event"]')].find(button => button.textContent?.trim() === `Event ${index}`);
     if (!row) throw new Error(`Missing mounted event ${index}`);

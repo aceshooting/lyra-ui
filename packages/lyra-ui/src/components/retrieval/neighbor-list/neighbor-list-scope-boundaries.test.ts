@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { GraphSource } from '../graph/graph.class.js';
 import type { LyraNeighborList } from './neighbor-list.class.js';
-import './neighbor-list.js';
+import '../../lr-neighbor-list.js';
 
 type Query = Parameters<GraphSource['records']['query']>[0];
 function provider() {

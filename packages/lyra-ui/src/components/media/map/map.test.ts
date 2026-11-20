@@ -9,14 +9,14 @@ import {
 } from '@open-wc/testing';
 import { render, type PropertyValues } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
-import './map.js';
+import '../../lr-map.js';
 import {
   LyraMap as LyraMapElement,
   type LyraMapBounds,
   type LyraMapInstance,
   type LyraMapMarker,
   type LyraMapMarkerActivationDetail,
-  type LyraMapStyleSpecification } from './map.js';
+  type LyraMapStyleSpecification } from '../../lr-map.js';
 import { buildGeoJsonPropertyDiff } from './map.class.js';
 import { loadMaplibre } from './map-loader.js';
 import { loadMapDataLayerRuntime } from './map-feature-loader.js';
@@ -3326,7 +3326,7 @@ describe('dataLayers', () => {
         },
       ],
     },
-  } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
+  } as unknown as import('../../lr-map.js').LyraMapGeoJsonDataLayer;
 
   it('defaults to an empty array with zero behavior change', async () => {
     const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
@@ -4689,7 +4689,7 @@ function choropleth(sourceId: string, stops: [number, string][]) {
         },
       ],
     },
-  } as unknown as import('./map.js').LyraMapChoroplethLayer;
+  } as unknown as import('../../lr-map.js').LyraMapChoroplethLayer;
 }
 
 describe('continuous choropleth legend', () => {
@@ -5027,7 +5027,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
         },
       ],
     },
-  } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
+  } as unknown as import('../../lr-map.js').LyraMapGeoJsonDataLayer;
 
   async function readyMap(): Promise<LyraMap> {
     const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;

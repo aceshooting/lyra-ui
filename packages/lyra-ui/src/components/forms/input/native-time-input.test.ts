@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './native-time-input.js';
+import '../../lr-native-time-input.js';
 import { LyraNativeTimeInput } from './native-time-input.class.js';
 
 const nativeInput = (el: LyraNativeTimeInput): HTMLInputElement => el.shadowRoot!.querySelector('input')!;

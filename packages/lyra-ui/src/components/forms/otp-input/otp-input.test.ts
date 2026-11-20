@@ -2,9 +2,9 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { settleEnterSubmission } from '../../../../test/contracts/enter-submit.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './otp-input.js';
-import '../input/input.js';
-import '../button/button.js';
+import '../../lr-otp-input.js';
+import '../../lr-input.js';
+import '../../lr-button.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 const controlOf = (el: Element): HTMLInputElement =>

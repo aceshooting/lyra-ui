@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './source-card.js';
+import '../../lr-source-card.js';
 
 const meta: Meta = {
   title: 'SourceCard',

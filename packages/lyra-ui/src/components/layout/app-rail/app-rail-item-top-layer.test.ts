@@ -1,7 +1,7 @@
 import { expect, html, waitUntil } from '@open-wc/testing';
 import { headerFixture, pointOverSibling } from '../../../../test/top-layer-header.js';
 import type { LyraAppRailItem } from './app-rail-item.class.js';
-import './app-rail.js';
+import '../../lr-app-rail.js';
 
 async function mount(topLayer: boolean) {
   const { wrapper, sibling } = await headerFixture(

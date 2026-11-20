@@ -5,12 +5,12 @@ import {
   getAnimationNames,
   getEasingNames,
   type LyraAnimation,
-} from "./animation.js";
+} from "../../lr-animation.js";
 import {
   setAnimation,
   setDefaultAnimation,
 } from "../../../utilities/animation-registry.js";
-import "./animation.js";
+import "../../lr-animation.js";
 
 /** Stubs `window.matchMedia('(prefers-reduced-motion: reduce)')` with a
  *  controllable fake `MediaQueryList` so reduced-motion arbitration is

@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraTimeZonePicker } from './time-zone-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import { getTimeZoneCodes } from '../../../time-zones.js';
-import './time-zone-picker.js';
+import '../../lr-time-zone-picker.js';
 
 describe('<lr-time-zone-picker>', () => {
   it('includes UTC and runtime IANA zones without choosing a zone automatically', async () => {

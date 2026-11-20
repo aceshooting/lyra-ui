@@ -1,11 +1,11 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './tool-param-form.js';
+import '../../lr-tool-param-form.js';
 import type {
   LyraToolParamForm,
   FlatToolParamSchema,
   ToolParamFormProperty,
   ToolParamFormValue,
-} from './tool-param-form.js';
+} from '../../lr-tool-param-form.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';

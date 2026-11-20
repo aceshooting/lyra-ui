@@ -9,11 +9,11 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
-import "./command-palette.js";
-import "../../overlays/dialog/dialog.js";
-import type { LyraDialog } from "../../overlays/dialog/dialog.js";
+import "../../lr-command-palette.js";
+import "../../lr-dialog.js";
+import type { LyraDialog } from "../../lr-dialog.js";
 import { expectFocusReturnsToReshownOpener } from "../../../../test/hidden-opener.js";
-import type { LyraCommandPalette } from "./command-palette.js";
+import type { LyraCommandPalette } from "../../lr-command-palette.js";
 import { styles } from "./command-palette.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
@@ -44,7 +44,7 @@ it('rejects accessor-backed commands without invoking them while retaining sourc
   const command = { commandId: 'safe', label: 'Safe command', onSelect: () => undefined };
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   el.commands = [
-    accessorBacked as unknown as import('./command-palette.js').LyraCommand,
+    accessorBacked as unknown as import('../../lr-command-palette.js').LyraCommand,
     command,
   ];
   el.openPalette();

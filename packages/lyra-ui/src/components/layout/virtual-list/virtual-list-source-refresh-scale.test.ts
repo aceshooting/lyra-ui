@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import type { LyraVirtualList } from './virtual-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './button-group.js';
-import '../../forms/button/button.js';
+import '../../lr-button-group.js';
+import '../../lr-button.js';
 import type { LyraButtonGroup } from './button-group.class.js';
 
 describe('<lr-button-group>', () => {

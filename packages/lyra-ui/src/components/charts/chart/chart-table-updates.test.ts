@@ -2,7 +2,7 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { LyraChart, type LyraChartFormatter } from './chart.js';
+import { LyraChart, type LyraChartFormatter } from '../../lr-chart.js';
 
 async function tableChart(formatter?: LyraChartFormatter): Promise<LyraChart> {
   const chart = await fixture<LyraChart>(html`<lr-chart

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from "@open-wc/testing";
-import "./scroller.js";
+import "../../lr-scroller.js";
 import type { LyraScroller } from "./scroller.class.js";
 import {
   hoverUntilMatched,

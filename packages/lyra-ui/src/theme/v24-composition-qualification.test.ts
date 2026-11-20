@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import '../components/forms/button/button.js';
-import '../components/layout/card/card.js';
+import '../components/lr-button.js';
+import '../components/lr-card.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 import { applyLyraStyleScope, createLyraThemeBootstrap, lyraStyleAttributes, parseLyraStyleRecord } from './theme.js';
 import { resolveLyraChartPalette } from './chart-palette.js';

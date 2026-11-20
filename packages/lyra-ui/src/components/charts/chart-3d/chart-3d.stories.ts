@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 import type { LyraChart3dColumns } from './chart-3d.class.js';
 
 const meta: Meta = {

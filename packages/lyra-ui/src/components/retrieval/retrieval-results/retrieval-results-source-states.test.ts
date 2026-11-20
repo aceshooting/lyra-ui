@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './retrieval-results.js';
+import '../../lr-retrieval-results.js';
 import type { LyraRetrievalResults, RetrievalResultsSource } from './retrieval-results.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import type { RetrievalChunk } from '../../../ai/types.js';

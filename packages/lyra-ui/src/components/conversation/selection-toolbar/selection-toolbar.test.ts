@@ -7,7 +7,7 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import "./selection-toolbar.js";
+import "../../lr-selection-toolbar.js";
 import type {
   LyraSelectionToolbar,
   SelectionActionDetail,

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './app-rail.js';
-import type { LyraAppRail } from './app-rail.js';
+import '../../lr-app-rail.js';
+import type { LyraAppRail } from '../../lr-app-rail.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('reuses a hotkey parse across 1000 keyboard eligibility checks', async()=>{

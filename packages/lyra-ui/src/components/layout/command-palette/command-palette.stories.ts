@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import './command-palette.js'; import type { LyraCommand, LyraCommandPalette } from './command-palette.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import '../../lr-command-palette.js'; import type { LyraCommand, LyraCommandPalette } from '../../lr-command-palette.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 const meta: Meta = {
   title: 'Command Palette',

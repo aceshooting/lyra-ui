@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './message-feedback.js';
-import type { LyraMessageFeedback } from './message-feedback.js';
+import '../../lr-message-feedback.js';
+import type { LyraMessageFeedback } from '../../lr-message-feedback.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 

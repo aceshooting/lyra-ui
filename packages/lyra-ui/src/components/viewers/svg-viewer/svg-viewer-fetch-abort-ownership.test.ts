@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraSvgViewer } from './svg-viewer.js';
-import './svg-viewer.js';
+import type { LyraSvgViewer } from '../../lr-svg-viewer.js';
+import '../../lr-svg-viewer.js';
 
 describe('lr-svg-viewer request cancellation ownership', () => {
   it('reports an active fetch AbortError through localized error chrome and clears loading', async () => {

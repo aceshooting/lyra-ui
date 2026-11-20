@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './dashboard-grid.js';
-import type { LyraDashboardGrid } from './dashboard-grid.js';
+import '../../lr-dashboard-grid.js';
+import type { LyraDashboardGrid } from '../../lr-dashboard-grid.js';
 import type { LyraDashboardCell } from './layout.js';
 
 const twoCells = (): LyraDashboardCell[] => [

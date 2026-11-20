@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./chat-message.js";
-import '../../utility/copy-button/copy-button.js';
+import "../../lr-chat-message.js";
+import '../../lr-copy-button.js';
 
 const storyLocale = (): string => document.documentElement.lang || navigator.language;
 

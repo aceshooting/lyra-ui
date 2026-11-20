@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraAppRail } from './app-rail.class.js';
-import './app-rail.js';
+import '../../lr-app-rail.js';
 
 function mobile(rail: LyraAppRail, matches = true): void {
   (rail as unknown as { onMobileChange(event: { matches: boolean }): void }).onMobileChange({ matches });

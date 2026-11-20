@@ -8,9 +8,9 @@
 // warning store first.
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './toggle-group.js';
-import '../toggle/toggle.js';
-import '../../overlays/overlay/tooltip.js';
+import '../../lr-toggle-group.js';
+import '../../lr-toggle.js';
+import '../../lr-tooltip.js';
 import type { LyraToggleGroup, LyraToggleGroupToggleRequestDetail } from './toggle-group.class.js';
 import type { LyraToggle } from '../toggle/toggle.class.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';

@@ -3,9 +3,9 @@
 export * from './prompt-input.class.js';
 import { LyraPromptInput } from './prompt-input.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../media/attachment-chip/attachment-chip.js';
-import '../../media/attachment-trigger/attachment-trigger.js';
-import '../../utility/mention-popover/mention-popover.js';
-import '../chat-composer/chat-composer.js';
+import '../../lr-attachment-chip.js';
+import '../../lr-attachment-trigger.js';
+import '../../lr-mention-popover.js';
+import '../../lr-chat-composer.js';
 
 defineElement('prompt-input', LyraPromptInput);

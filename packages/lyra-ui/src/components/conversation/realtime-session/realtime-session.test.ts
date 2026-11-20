@@ -2,9 +2,9 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
-import type { LyraPushToTalk } from '../push-to-talk/push-to-talk.js';
-import './realtime-session.js';
-import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
+import type { LyraPushToTalk } from '../../lr-push-to-talk.js';
+import '../../lr-realtime-session.js';
+import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from '../../lr-realtime-session.js';
 
 async function settleTranscript(el: LyraRealtimeSession): Promise<void> {
   const feed = el.shadowRoot!.querySelector('lr-transcript-feed')!;

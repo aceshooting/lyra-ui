@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './zoomable-frame.js';
-import type { LyraZoomableFrame } from './zoomable-frame.js';
+import '../../lr-zoomable-frame.js';
+import type { LyraZoomableFrame } from '../../lr-zoomable-frame.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('titles the iframe from the property or the host aria-label', async () => {

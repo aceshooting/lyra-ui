@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './time-input.js';
-import './number-input.js';
-import '../time-range/time-range.js';
-import '../otp-input/otp-input.js';
-import '../token-input/token-input.js';
+import '../../lr-time-input.js';
+import '../../lr-number-input.js';
+import '../../lr-time-range.js';
+import '../../lr-otp-input.js';
+import '../../lr-token-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 import type { LyraTimeRange } from '../time-range/time-range.class.js';
 import type { LyraOtpInput } from '../otp-input/otp-input.class.js';

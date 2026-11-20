@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/menu/dropdown-item.js';
+export * from './layout/menu/dropdown-item.class.js';
+import { LyraDropdownItem } from './layout/menu/dropdown-item.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-menu.js';
+defineElement('dropdown-item', LyraDropdownItem);

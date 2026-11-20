@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './country-picker/country-picker.js';
-import './time-zone-picker/time-zone-picker.js';
-import './unit-picker/unit-picker.js';
+import '../lr-country-picker.js';
+import '../lr-time-zone-picker.js';
+import '../lr-unit-picker.js';
 import type { LyraCountryPicker } from './country-picker/country-picker.class.js';
 import type { LyraTimeZonePicker } from './time-zone-picker/time-zone-picker.class.js';
 import type { LyraUnitPicker } from './unit-picker/unit-picker.class.js';

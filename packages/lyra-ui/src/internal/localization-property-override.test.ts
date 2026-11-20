@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraInput } from '../components/forms/input/input.class.js';
 import { loadLyraLocale } from '../locale-loader.js';
 import { resolveLyraLocale } from '../localization.js';
-import '../components/forms/input/input.js';
+import '../components/lr-input.js';
 
 it('uses a property locale override immediately and returns to inherited locale when cleared', async () => {
   await loadLyraLocale('zu');

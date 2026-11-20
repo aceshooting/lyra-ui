@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraFormatDate } from './format-date.js';
-import { LyraRelativeTime } from './relative-time.js';
+import { LyraFormatDate } from '../../lr-format-date.js';
+import { LyraRelativeTime } from '../../lr-relative-time.js';
 
 it('renders the authored fallback for an invalid native Date and recovers without calling subclass hooks', async () => {
   let calls = 0;

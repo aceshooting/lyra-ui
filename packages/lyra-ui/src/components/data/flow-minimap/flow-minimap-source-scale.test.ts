@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './flow-minimap.js';
-import type { LyraFlowMinimap } from './flow-minimap.js';
+import '../../lr-flow-minimap.js';
+import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
 import type { LyraGraphOverview, LyraSourceBounds } from '../../../data-sources.js';
 

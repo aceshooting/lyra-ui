@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './time-input.js';
+import '../../lr-time-input.js';
 import '../../../translations/ar/shared.js';
 import '../../../translations/ar/forms.js';
 import type { LyraTimeInput } from './time-input.class.js';

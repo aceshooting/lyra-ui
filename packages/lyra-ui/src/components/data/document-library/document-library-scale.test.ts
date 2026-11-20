@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { registerLyraLocale } from '../../../internal/localization-runtime.js';
-import './document-library.js';
-import type { LyraDocumentLibrary, LibraryDocument } from './document-library.js';
-import type { LyraTable } from '../table/table.js';
+import '../../lr-document-library.js';
+import type { LyraDocumentLibrary, LibraryDocument } from '../../lr-document-library.js';
+import type { LyraTable } from '../../lr-table.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('reuses sorting and table rows across selection and loading at n=10000', async function () {

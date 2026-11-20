@@ -1,9 +1,9 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import './tool-approval-dialog.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-tool-approval-dialog.js';
+import '../../lr-dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
-import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
-import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
+import type { LyraToolApprovalDialog } from '../../lr-tool-approval-dialog.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

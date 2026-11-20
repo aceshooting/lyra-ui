@@ -1,6 +1,6 @@
 import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './geojson-viewer.js';
+import '../../lr-geojson-viewer.js';
 // Registers the shipped `ar` catalog slices the `lang="ar"` feature-count test resolves against,
 // so it renders real catalog text instead of tripping the dev-mode locale-fallback warning that
 // strict-console browser lanes treat as fatal.

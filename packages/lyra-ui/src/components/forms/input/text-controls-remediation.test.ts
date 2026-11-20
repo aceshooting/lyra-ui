@@ -1,17 +1,17 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './input.js';
-import './number-input.js';
-import './time-input.js';
-import './native-time-input.js';
-import '../code-editor/code-editor.js';
-import '../otp-input/otp-input.js';
-import '../phone-input/phone-input.js';
-import '../signature-pad/signature-pad.js';
-import '../textarea/textarea.js';
-import '../time-range/time-range.js';
-import '../token-input/token-input.js';
+import '../../lr-input.js';
+import '../../lr-number-input.js';
+import '../../lr-time-input.js';
+import '../../lr-native-time-input.js';
+import '../../lr-code-editor.js';
+import '../../lr-otp-input.js';
+import '../../lr-phone-input.js';
+import '../../lr-signature-pad.js';
+import '../../lr-textarea.js';
+import '../../lr-time-range.js';
+import '../../lr-token-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 import type { LyraTokenInput } from '../token-input/token-input.class.js';
 

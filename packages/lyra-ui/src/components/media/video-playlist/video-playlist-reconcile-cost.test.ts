@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { measureElementArrayLookups } from '../../../../test/element-array-lookup-cost.js';
-import './video-playlist.js';
+import '../../lr-video-playlist.js';
 import type { LyraVideoPlaylist } from './video-playlist.class.js';
 import type { LyraVideo } from '../video/video.class.js';
 

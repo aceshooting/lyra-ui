@@ -4,7 +4,7 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.class.js';
-import './mention-popover.js';
+import '../../lr-mention-popover.js';
 
 afterEach(async () => { await resetMouse(); });
 

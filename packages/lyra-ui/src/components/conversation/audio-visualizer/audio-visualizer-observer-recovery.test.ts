@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraAudioVisualizer } from './audio-visualizer.class.js';
-import './audio-visualizer.js';
+import '../../lr-audio-visualizer.js';
 
 async function paintedCanvas(el: LyraAudioVisualizer): Promise<HTMLCanvasElement> {
   const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;

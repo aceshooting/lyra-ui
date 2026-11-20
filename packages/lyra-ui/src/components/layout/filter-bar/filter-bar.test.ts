@@ -1,13 +1,13 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, nextFrame, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
-import "./filter-bar.js";
-import "../../forms/checkbox/checkbox.js";
-import "../../forms/time-range/time-range.js";
+import "../../lr-filter-bar.js";
+import "../../lr-checkbox.js";
+import "../../lr-time-range.js";
 import type {
   LyraFilterBar,
   LyraFilterBarFilterDefinition,
   LyraFilterBarInputDetail,
-} from "./filter-bar.js";
+} from "../../lr-filter-bar.js";
 
 const basicFilters: LyraFilterBarFilterDefinition[] = [
   {

@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mcp-app.js';
+import '../../lr-mcp-app.js';
 import type { LyraMcpApp, McpAppRequestDetail } from './mcp-app.class.js';
 
 interface SdkReport { stage: string; value: unknown }

@@ -1,24 +1,24 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { ReactiveElement } from 'lit';
-import '../chunk-inspector/chunk-inspector.js';
-import '../claim-evidence/claim-evidence.js';
-import '../community-card/community-card.js';
-import '../entity-card/entity-card.js';
-import '../entity-dossier/entity-dossier.js';
-import '../graph/graph.js';
-import '../graph-legend/graph-legend.js';
-import '../grounding-summary/grounding-summary.js';
-import '../knowledge-base/knowledge-base.js';
-import '../knowledge-base-admin/knowledge-base-admin.js';
-import '../knowledge-graph-explorer/knowledge-graph-explorer.js';
-import '../memory-panel/memory-panel.js';
-import '../provenance-panel/provenance-panel.js';
-import '../rag-answer/rag-answer.js';
-import '../rag-eval-dashboard/rag-eval-dashboard.js';
-import '../retrieval-results/retrieval-results.js';
-import '../source-card/source-card.js';
-import '../source-list/source-list.js';
-import '../source-picker/source-picker.js';
+import '../../lr-chunk-inspector.js';
+import '../../lr-claim-evidence.js';
+import '../../lr-community-card.js';
+import '../../lr-entity-card.js';
+import '../../lr-entity-dossier.js';
+import '../../lr-graph.js';
+import '../../lr-graph-legend.js';
+import '../../lr-grounding-summary.js';
+import '../../lr-knowledge-base.js';
+import '../../lr-knowledge-base-admin.js';
+import '../../lr-knowledge-graph-explorer.js';
+import '../../lr-memory-panel.js';
+import '../../lr-provenance-panel.js';
+import '../../lr-rag-answer.js';
+import '../../lr-rag-eval-dashboard.js';
+import '../../lr-retrieval-results.js';
+import '../../lr-source-card.js';
+import '../../lr-source-list.js';
+import '../../lr-source-picker.js';
 
 describe('retrieval canonical public properties', () => {
   it('lr-chunk-inspector exposes size without reactive compact', () => {

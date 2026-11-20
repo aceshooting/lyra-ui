@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './artifact-panel.js';
+import '../../lr-artifact-panel.js';
 import type { ArtifactVersion } from './artifact-panel.class.js';
 
 const meta: Meta = {

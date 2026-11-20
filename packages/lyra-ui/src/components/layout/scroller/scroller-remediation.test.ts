@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './scroller.js';
+import '../../lr-scroller.js';
 import type { LyraScroller } from './scroller.class.js';
 
 describe('scroller controls at an edge', () => {

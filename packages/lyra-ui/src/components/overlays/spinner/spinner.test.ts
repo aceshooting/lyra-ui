@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './spinner.js';
-import type { LyraSpinner, LyraSpinnerLabelPlacement } from './spinner.js';
+import '../../lr-spinner.js';
+import type { LyraSpinner, LyraSpinnerLabelPlacement } from '../../lr-spinner.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 class SpinnerLabelForwardWrapper extends HTMLElement {

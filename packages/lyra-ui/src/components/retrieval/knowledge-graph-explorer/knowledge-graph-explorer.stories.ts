@@ -1,6 +1,6 @@
 import { html } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./knowledge-graph-explorer.js";
+import "../../lr-knowledge-graph-explorer.js";
 import type { LyraGraphEdge, LyraGraphNode } from "../graph/graph.class.js";
 import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 

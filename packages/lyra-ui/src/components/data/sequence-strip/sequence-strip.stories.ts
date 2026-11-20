@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './sequence-strip.js';
+import '../../lr-sequence-strip.js';
 import type { SequenceStripCategory, SequenceStripItem } from './sequence-strip.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

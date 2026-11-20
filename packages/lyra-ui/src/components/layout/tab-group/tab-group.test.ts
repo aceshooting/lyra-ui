@@ -11,12 +11,12 @@ import {
   aTimeout,
   waitUntil,
 } from "@open-wc/testing";
-import "./tab-group.js";
-import "./tab.js";
-import "./tab-panel.js";
-import type { LyraTabGroup } from "./tab-group.js";
-import type { LyraTab } from "./tab.js";
-import type { LyraTabPanel } from "./tab-panel.js";
+import "../../lr-tab-group.js";
+import "../../lr-tab.js";
+import "../../lr-tab-panel.js";
+import type { LyraTabGroup } from "../../lr-tab-group.js";
+import type { LyraTab } from "../../lr-tab.js";
+import type { LyraTabPanel } from "../../lr-tab-panel.js";
 import {
   hoverUntilMatched,
   resetMouse,

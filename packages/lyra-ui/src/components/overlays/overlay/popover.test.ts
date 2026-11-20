@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './popover.js';
-import '../../forms/button/button.js';
+import '../../lr-popover.js';
+import '../../lr-button.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraPopover } from './popover.class.js';
 import {

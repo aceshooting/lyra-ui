@@ -694,7 +694,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private pathReady = false;
   private optionalFailed = false;
   private async loadOptionalPath(): Promise<void> {
-    await import('../path-strip/path-strip.js');
+    await import('../../lr-path-strip.js');
   }
   private ensureOptionalChildren(): void {
     const path = this.path.length > 0;
@@ -709,8 +709,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (this.hasUpdated) this.announcements.announcePolite(this.localize('loading'));
     const pending = Promise.all([
       path && !this.pathReady && this.loadOptionalPath(),
-      details && !this.detailsReady && import('../entity-card/entity-card.js'),
-      details && !this.detailsReady && import('../neighbor-list/neighbor-list.js'),
+      details && !this.detailsReady && import('../../lr-entity-card.js'),
+      details && !this.detailsReady && import('../../lr-neighbor-list.js'),
     ])
       .then(() => {
         if (!this.isConnected || generation !== this.optionalGeneration) return;

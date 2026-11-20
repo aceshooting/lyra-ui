@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './time-input.js';
+import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
 function expectClosed(picker: LyraTimeInput): void {

@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/document-preview/document-preview.js';
+export * from './viewers/document-preview/document-preview.class.js';
+import { LyraDocumentPreview } from './viewers/document-preview/document-preview.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-pan-zoom.js';
+defineElement('document-preview', LyraDocumentPreview);

@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './test-results.js';
+import '../../lr-test-results.js';
 import { type LyraTestResults, type TestResultsSource, type TestStatus, testResultDetailSlotName } from './test-results.class.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 

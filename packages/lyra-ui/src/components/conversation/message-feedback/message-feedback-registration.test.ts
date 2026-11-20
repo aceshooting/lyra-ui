@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { tag } from '../../../internal/prefix.js';
-import './message-feedback.js';
+import '../../lr-message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.class.js';
 
 it('registers optional children only when their controls are rendered', async () => {

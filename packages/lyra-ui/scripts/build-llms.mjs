@@ -143,14 +143,14 @@ export function readTagFacts(manifest) {
         continue;
       }
       if (!m) continue;
-      // `foo.class.ts` declares the class; `foo.ts` next to it is the side-effect entry that
+      // `foo.class.ts` declares the class; `components/lr-<tag>.ts` is the side-effect entry that
       // registers the tag — that is what a consumer imports.
-      const entry = mod.path.replace(/\.class\.ts$/, '.ts').replace(/^src\//, '').replace(/\.ts$/, '.js');
       tags.set(decl.tagName, {
         tag: decl.tagName,
         family: m[1],
         className: decl.name,
-        importPath: `@aceshooting/lyra-ui/${entry}`,
+        importPath: `@aceshooting/lyra-ui/components/${decl.tagName}.js`,
+        classImportPath: `@aceshooting/lyra-ui/${mod.path.replace(/^src\//, '').replace(/\.ts$/, '.js')}`,
         modulePath: mod.path,
         purpose: summarize(decl.description ?? decl.summary ?? ''),
         status: decl.status,
@@ -505,7 +505,7 @@ export function buildPeers(tagFacts) {
   // cannot become peer requirements, and capability-gated composed children follow the same rule.
   const peersForTag = (facts) =>
     optionalPeersForComponent(
-      { registrationModule: facts.modulePath.replace(/\.class\.ts$/, '.ts') },
+      { registrationModule: `src/components/${facts.tag}.ts`, classModule: facts.modulePath },
       pkg,
     ).filter((peer) => componentPeers.includes(peer));
 

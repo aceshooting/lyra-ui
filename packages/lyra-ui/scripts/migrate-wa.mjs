@@ -514,7 +514,9 @@ listeners of events whose detail changed. --origin=lyra-v22 reports deprecated t
 stylesheets, window events and root attributes; review their replacement semantics explicitly.
 --origin=lyra-v25 migrates names that change from Lyra 25 to Lyra 26 and reports the rest.
 --origin=lyra-v26 moves the package specifiers and root-barrel types that Lyra 27 relocated,
-reports removed localization keys, and runs the theme-scopes rule. Lyra profiles never rewrite
+reports removed localization keys, and runs the theme-scopes rule. --origin=lyra-v31 reports
+listeners of events removed in Lyra 32, detail and default changes, with each replacement. Lyra
+profiles never rewrite
 tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
 
   --dry-run, -n        report changes without writing source files
@@ -525,6 +527,7 @@ tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
   --origin=lyra-v25    migrate names that change from Lyra 25 to Lyra 26
   --origin=lyra-v26    move specifiers and types relocated in Lyra 27, report removed locale keys
                        and apply --rule=theme-scopes
+  --origin=lyra-v31    report events, details and defaults that change from Lyra 31 to Lyra 32
   --rule=theme-scopes  Lyra 27: mark elements whose inline style sets a token-layer input with
                        data-lr-theme-scope; report dynamic inputs, markers in loops, and CSS that
                        sets inputs or shared outputs outside a theme scope (runs without --origin)

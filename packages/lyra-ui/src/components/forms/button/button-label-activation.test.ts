@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './button.js';
+import '../../lr-button.js';
 import type { LyraButton } from './button.class.js';
 
 const settle = async () => {

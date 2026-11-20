@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/calendar/calendar.js';
+export * from './data/calendar/calendar.class.js';
+import { LyraCalendar } from './data/calendar/calendar.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('calendar', LyraCalendar);

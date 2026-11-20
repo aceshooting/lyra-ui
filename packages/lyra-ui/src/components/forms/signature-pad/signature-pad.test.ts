@@ -8,7 +8,7 @@ import {
   type LyraSignaturePad,
   type SignatureStroke,
 } from './signature-pad.class.js';
-import './signature-pad.js';
+import '../../lr-signature-pad.js';
 
 const LINE: SignatureStroke[] = [[[0.1, 0.5], [0.9, 0.5]]];
 const INSTRUCTIONS =

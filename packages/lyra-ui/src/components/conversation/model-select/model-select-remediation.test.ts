@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './model-select.js';
-import type { LyraModelSelect } from './model-select.js';
+import '../../lr-model-select.js';
+import type { LyraModelSelect } from '../../lr-model-select.js';
 
 for (const closedMode of [false, true]) {
   for (const attribute of ['label', 'hint', 'error-text'] as const) {

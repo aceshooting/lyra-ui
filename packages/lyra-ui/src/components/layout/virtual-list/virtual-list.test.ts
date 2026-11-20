@@ -8,14 +8,14 @@ import {
   aTimeout,
   waitUntil,
 } from "@open-wc/testing";
-import "./virtual-list.js";
+import "../../lr-virtual-list.js";
 import {
   MAX_OVERSCAN_ROWS,
   VIRTUAL_LIST_ROW_ATTRIBUTE,
   VIRTUAL_LIST_STICKY_ATTRIBUTE,
   type LyraVirtualList,
   type LyraVirtualListIndexedSource,
-} from "./virtual-list.js";
+} from "../../lr-virtual-list.js";
 import { styles } from "./virtual-list.styles.js";
 import {
   hoverUntilMatched,
@@ -5508,7 +5508,7 @@ describe("row overlays and the top layer", () => {
   }
 
   async function resolvedRowStrategy(style: string, partOverride = false): Promise<string> {
-    await import("../../overlays/overlay/dropdown.js");
+    await import("../../lr-dropdown.js");
     const { el } = await mount(style, (value: unknown) => html`<lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms"
       ><button slot="trigger" type="button">${value}</button><span>Menu</span></lr-dropdown
     >`);
@@ -5550,7 +5550,7 @@ describe("row overlays and the top layer", () => {
   });
 
   it("lets a default-absolute tooltip in the last visible row escape the list", async () => {
-    await import("../../overlays/overlay/tooltip.js");
+    await import("../../lr-tooltip.js");
     const { el } = await mount("", (value: unknown) => html`<button type="button" id=${`b-${String(value).replace(" ", "")}`}>${value}</button
       ><lr-tooltip data-lr-theme-scope for=${`b-${String(value).replace(" ", "")}`} placement="bottom" style="--lr-transition-fast:0ms">Tip for ${value}</lr-tooltip>`);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

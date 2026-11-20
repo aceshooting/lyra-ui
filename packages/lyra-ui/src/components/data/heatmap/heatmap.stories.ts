@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { CalendarDay } from './calendar-grid.js';
-import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from './heatmap.js';
+import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from '../../lr-heatmap.js';
 
 const meta: Meta = {
   title: 'Heatmap',
@@ -606,7 +606,7 @@ export const WeeklyAvailability: Story = {
           values: Array.from({ length: 7 }, () => Array(24).fill(1)),
         }}
         .selectedCells=${[{ row: 0, col: 9 }, { row: 0, col: 10 }]}
-        @lr-selection-change=${(event: CustomEvent<import('./heatmap.js').HeatmapSelectionChangeDetail>) => {
+        @lr-selection-change=${(event: CustomEvent<import('../../lr-heatmap.js').HeatmapSelectionChangeDetail>) => {
           (event.currentTarget as LyraHeatmap).selectedCells = event.detail.selectedCells;
         }}
       ></lr-heatmap>

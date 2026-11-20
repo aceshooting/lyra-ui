@@ -3,9 +3,9 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraReorderList } from './reorder-list.class.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
-import './reorder-list.js';
-import './reorder-item.js';
-import '../../forms/input/input.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
+import '../../lr-input.js';
 
 for (const [name, control] of [
   ['link', html`<a data-control href="#">Link</a>`],

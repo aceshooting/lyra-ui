@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-// Import the side-effect-free class module rather than the `./heatmap.js` registration entry: this
+// Import the side-effect-free class module rather than the `lr-heatmap.js` registration entry: this
 // file must reach `resolveRgb()` without anything else in the page having touched a canvas first
 // (see the comment on the single test below).
 import { resolveRgb } from './heatmap.class.js';

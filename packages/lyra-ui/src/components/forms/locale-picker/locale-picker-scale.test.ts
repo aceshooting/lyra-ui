@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraLocalePicker } from './locale-picker.js';
+import { LyraLocalePicker } from '../../lr-locale-picker.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('keeps closed catalog rows unrendered', async () => {

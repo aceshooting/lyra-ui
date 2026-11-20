@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
-import './pdf-viewer.js';
-import type { LyraPdfViewer } from './pdf-viewer.js';
+import '../../lr-pdf-viewer.js';
+import type { LyraPdfViewer } from '../../lr-pdf-viewer.js';
 
 it('keeps loaded toolbar zoom text accessible without a generic-span label', async () => {
   const viewer = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer

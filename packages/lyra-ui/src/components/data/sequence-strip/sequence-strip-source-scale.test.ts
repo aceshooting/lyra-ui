@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './sequence-strip.js';
+import '../../lr-sequence-strip.js';
 import type { LyraSequenceStrip, SequenceStripItem } from './sequence-strip.class.js';
 import type { LyraSequenceSource } from './sequence-strip-source.js';
 

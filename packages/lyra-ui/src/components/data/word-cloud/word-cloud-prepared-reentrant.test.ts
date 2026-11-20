@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './word-cloud.js';
+import '../../lr-word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.class.js';
 import type { LyraPreparedWordCloud } from '../../../utilities/data-preparation.js';
 

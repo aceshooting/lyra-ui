@@ -1,7 +1,7 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './embedding-explorer.js';
-import type { EmbeddingPoint, LyraEmbeddingExplorer } from './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
+import type { EmbeddingPoint, LyraEmbeddingExplorer } from '../../lr-embedding-explorer.js';
 
 it('atomically replaces a large sample with the first valid winner of every sampled id', async function () {
   this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.

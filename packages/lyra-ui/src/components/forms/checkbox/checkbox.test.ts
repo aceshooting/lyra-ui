@@ -4,8 +4,8 @@ import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-foc
 import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./checkbox.js";
-import type { LyraCheckbox } from "./checkbox.js";
+import "../../lr-checkbox.js";
+import type { LyraCheckbox } from "../../lr-checkbox.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("emits one cancelable lr-invalid alias when a validity check fails", async () => {

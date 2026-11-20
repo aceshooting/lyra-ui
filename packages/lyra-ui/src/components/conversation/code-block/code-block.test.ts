@@ -11,13 +11,13 @@ import {
   aTimeout,
 } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
-import "./code-block.js";
+import "../../lr-code-block.js";
 // Registers the shipped `ar` catalog slices the `lang="ar-EG"` gutter tests resolve against, so
 // they render real catalog text instead of tripping the dev-mode locale-fallback warning that
 // strict-console browser lanes treat as fatal.
 import "../../../translations/ar/conversation.js";
 import "../../../translations/ar/shared.js";
-import type { LyraCodeBlock } from "./code-block.js";
+import type { LyraCodeBlock } from "../../lr-code-block.js";
 import type { ShikiHighlighter, ShikiHighlighterCore } from "./code-loader.js";
 import { __setShikiHighlighterCoreLoaderForTesting } from "./shiki-types.js";
 import { styles } from "./code-block.styles.js";

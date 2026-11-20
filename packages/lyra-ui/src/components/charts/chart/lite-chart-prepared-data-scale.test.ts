@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 import { prepareLyraSeriesData, prepareLyraCategoryData, type LyraPreparedSeriesData, type LyraPreparedCategoryData } from '../../../utilities/data-preparation.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 
 type PreparedLite = LyraLiteChart & {

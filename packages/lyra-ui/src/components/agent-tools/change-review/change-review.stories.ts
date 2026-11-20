@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './change-review.js';
+import '../../lr-change-review.js';
 import type { ChangeReviewFile, LyraChangeReview } from './change-review.class.js';
 const meta: Meta = { title: 'ChangeReview', component: 'lr-change-review', tags: ['autodocs'] };
 export default meta;

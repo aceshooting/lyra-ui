@@ -2,7 +2,7 @@
 // constant, so this case cannot share a page with any file that imports the toggle eagerly. Only
 // the group's own registration entry is imported statically; it must not register `lr-toggle`.
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './toggle-group.js';
+import '../../lr-toggle-group.js';
 import type { LyraToggleGroup } from './toggle-group.class.js';
 import type { LyraToggle } from '../toggle/toggle.class.js';
 
@@ -21,7 +21,7 @@ describe('<lr-toggle-group> with a late lr-toggle definition', () => {
     const toggles = [...group.querySelectorAll('lr-toggle')] as LyraToggle[];
     expect(toggles.every((toggle) => control(toggle) === null), 'nothing rendered before definition').to.equal(true);
 
-    await import('../toggle/toggle.js');
+    await import('../../lr-toggle.js');
     await customElements.whenDefined('lr-toggle');
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));

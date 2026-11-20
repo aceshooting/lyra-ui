@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import type { LyraAttachmentTrigger } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraPromptInput } from './prompt-input.class.js';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 
 async function attachmentButton(host: LyraPromptInput): Promise<HTMLButtonElement> {
   const trigger = host.shadowRoot!.querySelector<LyraAttachmentTrigger>('lr-attachment-trigger')!;

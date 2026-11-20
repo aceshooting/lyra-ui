@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mention-popover.js';
-import type { LyraMentionPopover } from './mention-popover.js';
+import '../../lr-mention-popover.js';
+import type { LyraMentionPopover } from '../../lr-mention-popover.js';
 
 async function popover() {
   const root = await fixture<HTMLDivElement>(html`<div><input aria-label="Message"><lr-mention-popover></lr-mention-popover></div>`);

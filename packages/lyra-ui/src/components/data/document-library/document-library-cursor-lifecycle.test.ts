@@ -3,7 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { DocumentLibraryCursorSource, DocumentLibrarySource, LibraryDocument, LyraDocumentLibrary } from './document-library.class.js';
 import type { LyraCursorResult } from '../../../data-sources.js';
 import type { LyraTable } from '../table/table.class.js';
-import './document-library.js';
+import '../../lr-document-library.js';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

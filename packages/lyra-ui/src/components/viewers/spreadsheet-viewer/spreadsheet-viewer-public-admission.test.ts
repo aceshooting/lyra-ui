@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
+import type { LyraSpreadsheetViewer } from '../../lr-spreadsheet-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
-import './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 const validWorkbook = () => ({ sheets: [{ name: 'Data', rows: [['Name', 'Count'], ['Ada', 2], ['Grace', 3]] }] });
 

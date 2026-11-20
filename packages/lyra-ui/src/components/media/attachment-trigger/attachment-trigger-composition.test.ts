@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './attachment-trigger.js';
+import '../../lr-attachment-trigger.js';
 import type { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 

@@ -1,6 +1,6 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './reorder-item.js';
+import '../../lr-reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 

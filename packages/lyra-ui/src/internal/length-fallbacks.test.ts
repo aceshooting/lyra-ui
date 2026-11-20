@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import '../components/data/data-grid/data-grid.js';
-import '../components/data/table/table.js';
-import type { LyraDataGrid } from '../components/data/data-grid/data-grid.js';
-import type { LyraTable } from '../components/data/table/table.js';
+import '../components/lr-data-grid.js';
+import '../components/lr-table.js';
+import type { LyraDataGrid } from '../components/lr-data-grid.js';
+import type { LyraTable } from '../components/lr-table.js';
 
 it('keeps data-grid default row floors and pinned edge arithmetic valid when optional length inputs are absent', async () => {
   const host = await fixture<LyraDataGrid>(html`<lr-data-grid label="Rows" .columns=${[{ field: 'value', label: 'Value', pinned: 'right' }]} .data=${[{ value: 'One' }]}></lr-data-grid>`);

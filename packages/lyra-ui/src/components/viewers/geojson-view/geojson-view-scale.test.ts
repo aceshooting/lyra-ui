@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './geojson-viewer.js';
+import '../../lr-geojson-viewer.js';
 import type { LyraGeoJsonViewer } from './geojson-viewer.class.js';
 import type { LyraMap } from '../../media/map/map.class.js';
 const data = { type: 'FeatureCollection', features: Array.from({ length: 1000 }, (_, id) => ({ type: 'Feature', id, geometry: { type: 'Point', coordinates: [0, 0] }, properties: {} })) };

@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/file-icon/file-icon.js';
+export * from './media/file-icon/file-icon.class.js';
+export * from './media/file-icon/file-type-metadata.js';
+import { LyraFileIcon } from './media/file-icon/file-icon.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('file-icon', LyraFileIcon);

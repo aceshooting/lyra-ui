@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './lite-chart.js';
-import type { LyraLiteChart } from './lite-chart.js';
+import '../../lr-lite-chart.js';
+import type { LyraLiteChart } from '../../lr-lite-chart.js';
 import {
   automaticCategoryLabelIndexes,
   categoryLabelGrowth,

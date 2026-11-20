@@ -2,7 +2,7 @@
 
 # `lr-gen-view`
 
-- **Import** `import '@aceshooting/lyra-ui/components/lr-gen-view.js';` (stable tag alias; registers the tag)
+- **Import** `import '@aceshooting/lyra-gen/gen-view.js';` (registers the tag; ships in `@aceshooting/lyra-gen`)
 - **Class** `LyraGenViewElement`, also available unregistered from `@aceshooting/lyra-gen/gen-view.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `0.1.0` — see the maturity and deprecation policy in `llms/shared.md`

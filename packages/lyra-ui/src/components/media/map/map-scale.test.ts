@@ -22,7 +22,7 @@ it('reuses admitted polygon geometry projections across property-only collection
 });
 
 import { fixture, html, nextFrame } from '@open-wc/testing';
-import './map.js';
+import '../../lr-map.js';
 import type { LyraMap } from './map.class.js';
 async function mountMap() {
   const wrapper = await fixture<HTMLElement>(html`<div></div>`);

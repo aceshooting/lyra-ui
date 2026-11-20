@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './tooltip.js';
-import type { LyraTooltip } from './tooltip.js';
+import '../../lr-tooltip.js';
+import type { LyraTooltip } from '../../lr-tooltip.js';
 
 for (const failure of ['import', 'setup'] as const) {
   it('returns focus from interactive tooltip content after replacement positioning ' + failure + ' fails', async () => {

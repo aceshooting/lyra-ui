@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./code-block.js";
-import "../../forms/button/button.js";
+import "../../lr-code-block.js";
+import "../../lr-button.js";
 
 const meta: Meta = {
   title: "CodeBlock",

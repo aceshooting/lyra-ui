@@ -1,11 +1,11 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './app-rail-group.js';
-import '../app-rail/app-rail-item.js';
-import '../app-rail/app-rail.js';
-import type { LyraAppRail } from '../app-rail/app-rail.js';
-import type { LyraAppRailItem } from '../app-rail/app-rail-item.js';
+import '../../lr-app-rail-group.js';
+import '../../lr-app-rail-item.js';
+import '../../lr-app-rail.js';
+import type { LyraAppRail } from '../../lr-app-rail.js';
+import type { LyraAppRailItem } from '../../lr-app-rail-item.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAppRailGroup } from './app-rail-group.class.js';
 import {

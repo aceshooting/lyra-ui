@@ -1,12 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './popover.js';
-import './dropdown.js';
-import './tooltip.js';
-import type { LyraPopover } from './popover.js';
-import type { LyraDropdown } from './dropdown.js';
-import type { LyraTooltip } from './tooltip.js';
+import '../../lr-popover.js';
+import '../../lr-dropdown.js';
+import '../../lr-tooltip.js';
+import type { LyraPopover } from '../../lr-popover.js';
+import type { LyraDropdown } from '../../lr-dropdown.js';
+import type { LyraTooltip } from '../../lr-tooltip.js';
 
 /** Every surface below writes `position` on its own popup through the shared positioner, so the
  *  RENDERED value -- never the stylesheet text -- is what these assertions read. */
@@ -546,7 +546,7 @@ describe('top-layer on lr-dropdown', () => {
   });
 
   it('keeps a submenu of the promoted menu above the sibling surface', async () => {
-    await import('../../layout/menu/menu-item.js');
+    await import('../../lr-menu-item.js');
     const wrapper = await fixture<HTMLElement>(html`<div>
       <div style=${HEADER_STYLE}>
         <lr-dropdown top-layer data-lr-theme-scope style=${NO_MOTION}>

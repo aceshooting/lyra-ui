@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { HeatmapSelectionChangeDetail, LyraHeatmap } from './heatmap.class.js';

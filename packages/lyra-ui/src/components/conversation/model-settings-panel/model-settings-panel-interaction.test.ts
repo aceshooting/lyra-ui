@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './model-settings-panel.js';
+import '../../lr-model-settings-panel.js';
 
 it('lets the enclosing layout theme its base surface', async () => {
   const el = await fixture(html`<lr-model-settings-panel

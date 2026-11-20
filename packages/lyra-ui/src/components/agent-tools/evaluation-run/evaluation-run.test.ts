@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './evaluation-run.js';
-import type { LyraEvalRun, EvalExampleResult } from './evaluation-run.js';
+import '../../lr-eval-run.js';
+import type { LyraEvalRun, EvalExampleResult } from '../../lr-eval-run.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraToolTimeline, ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';

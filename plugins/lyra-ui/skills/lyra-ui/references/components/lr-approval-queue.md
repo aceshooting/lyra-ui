@@ -20,7 +20,9 @@ The title defaults to heading level 2. Set `heading-level` to 1–6 or `none` to
 
 `disabled` prevents review actions. `lr-approval-open` and `lr-approval-close` identify the invocation. Decision request listeners can call `detail.waitUntil(promise)` during dispatch to defer settlement. A close event from content inside the review dialog leaves the review open.
 
-Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
+Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`,
+which the default entry registers the first time a request opens;
+`updateComplete` waits for that registration and the child's first render.
 The host executes tools and persists decisions. The queue reports the outcome through
 `lr-approval-close` and contains the nested dialog’s `lr-decision-settled` event.
 

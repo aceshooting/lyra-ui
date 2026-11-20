@@ -2,8 +2,8 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './terminal.js';
-import type { LyraTerminal } from './terminal.js';
+import '../../lr-terminal.js';
+import type { LyraTerminal } from '../../lr-terminal.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 

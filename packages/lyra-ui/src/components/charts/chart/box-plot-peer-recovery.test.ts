@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
-import type { LyraBoxPlot } from './box-plot.js';
-import './box-plot.js';
+import type { LyraBoxPlot } from '../../lr-box-plot.js';
+import '../../lr-box-plot.js';
 
 const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
 const runtime = (element: LyraBoxPlot): Chart | undefined => (element as unknown as { chart?: Chart }).chart;

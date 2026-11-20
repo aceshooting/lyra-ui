@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './compare-panel.js';
-import type { LyraComparePanel } from './compare-panel.js';
+import '../../lr-compare-panel.js';
+import type { LyraComparePanel } from '../../lr-compare-panel.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 async function paint(): Promise<void> {

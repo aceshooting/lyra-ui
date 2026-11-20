@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './export-button.js';
-import type { LyraExportButton } from './export-button.js';
+import '../../lr-export-button.js';
+import type { LyraExportButton } from '../../lr-export-button.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

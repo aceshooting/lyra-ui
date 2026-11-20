@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './toggle-group.js';
-import '../toggle/toggle.js';
+import '../../lr-toggle-group.js';
+import '../../lr-toggle.js';
 import type { LyraToggleGroup } from './toggle-group.class.js';
 import type { LyraToggle } from '../toggle/toggle.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

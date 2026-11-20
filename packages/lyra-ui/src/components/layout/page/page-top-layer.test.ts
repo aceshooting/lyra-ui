@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
-import './page.js';
+import '../../lr-page.js';
 
 it('keeps mobile navigation above fixed headers and outside transformed ancestor bounds', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>

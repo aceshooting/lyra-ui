@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './code-block.js';
+import '../../lr-code-block.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraCodeBlock } from './code-block.js';
+import type { LyraCodeBlock } from '../../lr-code-block.js';
 
 it('uses the latest controlled code for gutter navigation before its next render', async () => {
   const el = await fixture<LyraCodeBlock>(html`<lr-code-block .code=${'first\nsecond'} line-numbers activatable-lines></lr-code-block>`);

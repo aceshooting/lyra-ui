@@ -1,10 +1,10 @@
-import type { LyraCheckboxGroupToggleRequestDetail } from './checkbox-group.js';
+import type { LyraCheckboxGroupToggleRequestDetail } from '../../lr-checkbox-group.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './checkbox-group.js';
-import '../checkbox/checkbox.js';
-import type { LyraCheckboxGroup } from './checkbox-group.js';
-import type { LyraCheckbox } from '../checkbox/checkbox.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-checkbox.js';
+import type { LyraCheckboxGroup } from '../../lr-checkbox-group.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
 import { styles } from './checkbox-group.styles.js';
 import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
 

@@ -1,5 +1,5 @@
 import { expect, fixtureCleanup, nextFrame, waitUntil } from '@open-wc/testing';
-import './map.js';
+import '../../lr-map.js';
 import { loadMapControl } from './map-loader.js';
 import {
   ScriptedOverlayMap,

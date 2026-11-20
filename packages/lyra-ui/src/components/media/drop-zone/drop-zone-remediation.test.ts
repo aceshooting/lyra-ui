@@ -1,9 +1,9 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './drop-zone.js';
-import '../file-input/file-input.js';
+import '../../lr-drop-zone.js';
+import '../../lr-file-input.js';
 import { sinkTexts } from '../../../../test/announcements.js';
-import type { LyraDropZone } from './drop-zone.js';
+import type { LyraDropZone } from '../../lr-drop-zone.js';
 
 it('announces a second identical drop outcome again', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple><p>Drop here</p></lr-drop-zone>`);

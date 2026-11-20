@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-result-view.js';
+import '../../lr-tool-result-view.js';
 import { registerToolRenderer } from './registry.js';
 import type { ToolRendererRegistry } from './registry.js';
 

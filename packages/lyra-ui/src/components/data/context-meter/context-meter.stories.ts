@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './context-meter.js';
-import type { LyraContextMeter, ContextMeterSegment } from './context-meter.js';
+import '../../lr-context-meter.js';
+import type { LyraContextMeter, ContextMeterSegment } from '../../lr-context-meter.js';
 
 const meta: Meta = {
   title: 'ContextMeter',

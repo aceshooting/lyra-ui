@@ -4,8 +4,8 @@ import type { Meta, StoryObj } from '@storybook/web-components';
 import type { AgentRun, ChatMessage } from '../../../ai/types.js';
 import type { ToolTimelineApprovalDetail, ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraAgentWorkspace } from './agent-workspace.class.js';
-import './agent-workspace.js';
-import '../../forms/button/button.js';
+import '../../lr-agent-workspace.js';
+import '../../lr-button.js';
 
 const messages: ChatMessage[] = [
   { id: 'm-1', role: 'user', text: 'What changed in the latest release?' },

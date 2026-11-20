@@ -1,7 +1,7 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './graph.js';
-import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from './graph.js';
+import '../../lr-graph.js';
+import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from '../../lr-graph.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraSourceRecord } from '../../../data-sources.js';
 import { focusGraphSourceComposition, resolveGraphSourceComposition, setGraphSourceComposition } from './graph-source-composition.js';
 

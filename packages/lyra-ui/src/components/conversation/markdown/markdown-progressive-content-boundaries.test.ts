@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { preloadMarkdown, type LyraMarkdown } from './markdown.js';
-import type { LyraMarkdownCore } from './markdown-core.js';
-import './markdown-core.js';
+import { preloadMarkdown, type LyraMarkdown } from '../../lr-markdown.js';
+import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
+import '../../lr-markdown-core.js';
 
 type MarkdownElement = LyraMarkdown | LyraMarkdownCore;
 type MarkdownTag = 'lr-markdown' | 'lr-markdown-core';

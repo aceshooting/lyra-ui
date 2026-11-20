@@ -48,7 +48,7 @@ export {
  * an occasional one-time mode flip if Markdown syntax only appears partway
  * through a stream. Explicit `"plain"` and `"markdown"` modes always win
  * over the heuristic. Rendering itself is never reimplemented here:
- * Markdown mode composes `<lr-markdown>` (`../markdown/markdown.js`)
+ * Markdown mode composes `<lr-markdown>` (`../../lr-markdown.js`)
  * directly, forwarding this component's own `streaming` through as that
  * component's own forward-compatible `streaming` hint prop, and this
  * component's own `languages` through verbatim; plain-text mode

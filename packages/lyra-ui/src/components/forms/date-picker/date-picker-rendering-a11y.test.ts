@@ -1,8 +1,8 @@
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
-import "./date-picker.js";
-import type { LyraDatePicker } from "./date-picker.js";
+import "../../lr-date-picker.js";
+import type { LyraDatePicker } from "../../lr-date-picker.js";
 import { styles } from "./date-picker.styles.js";
 import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from "./calendar-core.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";

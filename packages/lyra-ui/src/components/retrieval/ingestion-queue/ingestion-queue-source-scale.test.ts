@@ -4,7 +4,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { sinkTexts } from '../../../../test/announcements.js';
-import './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
 import type { LyraIngestionQueue, IngestionQueueSource, IngestionQueueItem } from './ingestion-queue.class.js';
 import type { LyraPagination } from '../../data/pagination/pagination.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';

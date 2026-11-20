@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraAnimation } from './animation.class.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
-import './animation.js';
+import '../../lr-animation.js';
 
 const meta: Meta = {
   title: 'Animation',

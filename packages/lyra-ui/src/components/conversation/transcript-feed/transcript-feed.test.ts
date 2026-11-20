@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './transcript-feed.js';
-import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
+import '../../lr-transcript-feed.js';
+import type { LyraTranscriptFeed, LyraTranscriptEntry } from '../../lr-transcript-feed.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 

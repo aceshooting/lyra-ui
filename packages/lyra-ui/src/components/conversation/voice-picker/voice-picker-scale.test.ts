@@ -4,7 +4,7 @@ import { registerLyraLocale, resolveLyraString } from '../../../localization.js'
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraVoicePicker } from './voice-picker.js';
+import { LyraVoicePicker } from '../../lr-voice-picker.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('keeps closed catalog rows unrendered', async () => {

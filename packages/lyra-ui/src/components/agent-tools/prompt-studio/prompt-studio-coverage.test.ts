@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './prompt-studio.js';
-import type { LyraPromptStudio } from './prompt-studio.js';
+import '../../lr-prompt-studio.js';
+import type { LyraPromptStudio } from '../../lr-prompt-studio.js';
 
 it('renders each supported native toolbar heading level', async () => {
   const studio = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Prompt studio"></lr-prompt-studio>`);

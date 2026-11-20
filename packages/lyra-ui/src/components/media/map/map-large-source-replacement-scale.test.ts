@@ -1,6 +1,6 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect } from '@open-wc/testing';
-import './map.js';
+import '../../lr-map.js';
 import { projectAdmittedGeoJson } from './map-geojson-diff.js';
 
 for (const count of [1, 1_000_000]) {

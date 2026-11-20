@@ -72,7 +72,7 @@ Two silent-failure checks worth knowing:
   that component's own registration entry (static, re-export and lazy `import()` alike). The
   class/registration split that makes the package tree-shakeable otherwise lets a class render a
   child nobody registers, an inert element under granular imports that any all-registrations barrel
-  hides. Fix with an `import '<dep>/<dep>.js'` in the _registration entry_, never a side effect in a
+  hides. Fix with an `import './lr-<dep>.js'` in the _registration entry_, never a side effect in a
   class module. A genuine cycle-bound pair is suppressed there with
   `policy-allow(component-dependency: lr-menu): <reason>`; the reason is mandatory and a suppression
   that silences nothing is itself reported.
@@ -94,7 +94,7 @@ produce:
 ## `pnpm regen`: the single regeneration command
 
 `contract-policy` pairs a committed artifact with a freshness gate many times over (manifest,
-framework types, events, testing event registry, component metadata and inventory, tag aliases,
+framework types, events, testing event registry, component metadata and inventory, tag entries,
 registration artifacts, autoloader manifest, default-string and translation slices, palettes, design
 tokens, reservation styles...). **`pnpm run regen`** (`packages/lyra-ui/package.json#scripts.regen`)
 chains every generator's own named script in dependency order; read that script for the order, and

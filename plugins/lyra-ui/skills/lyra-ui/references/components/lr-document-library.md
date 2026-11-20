@@ -18,7 +18,9 @@
 
 Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
-collection stays reachable through pagination without mounting an unbounded grid.
+collection stays reachable through pagination without mounting an unbounded grid. The default
+entry registers the tag facet's `<lr-combobox>` the first time a document carries a tag;
+`updateComplete` waits for that registration.
 
 With both `dataSource` and `cursorSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
 note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted
@@ -65,7 +67,8 @@ the nested table.
 
 The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
-readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+readonly sortDir: 'asc' | 'desc';
+readonly filter: ((document: LibraryDocument, query: string) => boolean) | undefined }`.
 The component's `filter` property uses this same callback contract.
 
 Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.

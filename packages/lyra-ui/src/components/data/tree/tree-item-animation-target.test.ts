@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './tree-item.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree-item.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 it('ignores bubbled animationend from a nested child and settles on its own children animation', async () => {
   const el = await fixture<LyraTreeItem>(html`

@@ -1,8 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './format-number.js';
-import './format-date.js';
-import './format-bytes.js';
-import './relative-time.js';
+import '../../lr-format-number.js';
+import '../../lr-format-date.js';
+import '../../lr-format-bytes.js';
+import '../../lr-relative-time.js';
 import type { LyraFormatBytes } from './format-bytes.class.js';
 import type { LyraFormatDate } from './format-date.class.js';
 import type { LyraFormatNumber } from './format-number.class.js';

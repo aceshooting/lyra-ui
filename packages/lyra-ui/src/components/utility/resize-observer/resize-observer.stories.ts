@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './resize-observer.js';
+import '../../lr-resize-observer.js';
 
 const meta: Meta = { title: 'Utilities/Resize Observer', component: 'lr-resize-observer' };
 export default meta;

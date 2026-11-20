@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 
 const examples: EvalExample[] = [{ id: 'a', input: 'First', tags: ['topic'] }, { id: 'b', input: 'Second', tags: ['other'] }];
 async function setup() {

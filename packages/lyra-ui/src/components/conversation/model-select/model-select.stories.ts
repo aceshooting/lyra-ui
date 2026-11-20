@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './model-select.js';
-import type { LyraCatalog, LyraModelCatalogEntry, LyraModelSelect } from './model-select.js';
+import '../../lr-model-select.js';
+import type { LyraCatalog, LyraModelCatalogEntry, LyraModelSelect } from '../../lr-model-select.js';
 
 const meta: Meta = {
   title: 'ModelSelect',

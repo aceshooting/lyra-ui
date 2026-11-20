@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraExportButton, LyraExportFormatOption } from './export-button.class.js';
-import './export-button.js';
+import '../../lr-export-button.js';
 
 afterEach(async () => { await resetMouse(); });
 

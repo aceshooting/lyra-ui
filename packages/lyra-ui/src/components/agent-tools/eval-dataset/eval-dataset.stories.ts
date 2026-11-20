@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './eval-dataset.js';
+import '../../lr-eval-dataset.js';
 import type { EvalExample } from './eval-dataset.class.js';
 
 const meta: Meta = {

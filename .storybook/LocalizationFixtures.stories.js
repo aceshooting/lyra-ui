@@ -3,10 +3,10 @@ import '../packages/lyra-ui/src/density.css';
 import '../packages/lyra-ui/src/translations/pseudo/en-XA.js';
 import '../packages/lyra-ui/src/translations/pseudo/ar-XB.js';
 import { resolveLyraString } from '../packages/lyra-ui/src/localization.js';
-import '../packages/lyra-ui/src/components/forms/input/input.js';
-import '../packages/lyra-ui/src/components/forms/textarea/textarea.js';
-import '../packages/lyra-ui/src/components/forms/button/button.js';
-import '../packages/lyra-ui/src/components/forms/locale-picker/locale-picker.js';
+import '../packages/lyra-ui/src/components/lr-input.js';
+import '../packages/lyra-ui/src/components/lr-textarea.js';
+import '../packages/lyra-ui/src/components/lr-button.js';
+import '../packages/lyra-ui/src/components/lr-locale-picker.js';
 
 export default {
   title: 'Localization/Pseudo locales',

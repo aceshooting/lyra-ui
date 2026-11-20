@@ -4,7 +4,7 @@ import type {
   LyraHierarchyProjection, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchySource, LyraSourceSearchResult,
 } from '../data-sources.js';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
-import '../components/layout/virtual-list/virtual-list.js';
+import '../components/lr-virtual-list.js';
 import type { LyraVirtualList } from '../components/layout/virtual-list/virtual-list.class.js';
 import { HierarchySourceController, hierarchyField, hierarchyText } from './hierarchy-source-controller.js';
 

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-call-block.js';
+import '../../lr-tool-call-block.js';
 
 const meta: Meta = {
   title: 'Agent Tools & Observability/Tool Call Block',

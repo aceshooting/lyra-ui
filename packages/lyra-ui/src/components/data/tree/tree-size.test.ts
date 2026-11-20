@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import type { LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 import type { LyraSize } from '../../../internal/variants.js';
-import '../../forms/icon-button/icon-button.js';
+import '../../lr-icon-button.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
-import './tree.js';
+import '../../lr-tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.class.js';
 import type { LyraTreeItem } from './tree-item.class.js';
 

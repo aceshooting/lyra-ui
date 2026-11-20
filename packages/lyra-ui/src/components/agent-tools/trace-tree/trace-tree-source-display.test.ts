@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraHierarchyRow } from '../../../data-sources.js';
 import type { LyraTraceTree, TraceTreeSource } from './trace-tree.class.js';
 import type { LyraSpan } from './span.js';
-import './trace-tree.js';
+import '../../lr-trace-tree.js';
 
 const span: LyraSpan = { id: 'work', name: 'Generate answer', detail: 'User-visible explanation', kind: 'tool', status: 'success', startMs: 100, endMs: 125 };
 function provider(values: readonly LyraSpan[], revision = 1) {

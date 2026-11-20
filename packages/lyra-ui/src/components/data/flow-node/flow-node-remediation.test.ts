@@ -1,8 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './flow-node.js';
-import type { LyraFlowNode } from './flow-node.js';
+import '../../lr-flow-node.js';
+import type { LyraFlowNode } from '../../lr-flow-node.js';
 
 describe('lr-flow-node progress', () => {
   afterEach(async () => {

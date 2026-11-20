@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { prepareLyraSeriesData, type LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 import type { LyraSpatialChartPoint, LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
 import type { LyraChart, LyraChartFormatterContext, LyraChartPlugin } from './chart.class.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 type PreparedChart = LyraChart & { preparedData: LyraPreparedSeriesData | LyraSpatialChartSource | null };
 

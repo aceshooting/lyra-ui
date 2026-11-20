@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { observeOverlayStack } from '../../../internal/overlay-stack.js';
-import type { LyraDialog } from './dialog.js';
-import './dialog.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import '../../lr-dialog.js';
 
 it('keeps a newer dialog painted above an older open dialog after a DOM move', async () => {
   const wrapper = await fixture<HTMLElement>(html`

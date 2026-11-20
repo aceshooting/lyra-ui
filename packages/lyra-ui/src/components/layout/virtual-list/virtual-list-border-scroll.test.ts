@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 const ROW_HEIGHT = 40;
 const TARGET_INDEX = 100;

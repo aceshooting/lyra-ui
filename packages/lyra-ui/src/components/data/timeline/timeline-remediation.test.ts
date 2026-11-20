@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './timeline.js';
-import './timeline-item.js';
-import type { LyraTimeline } from './timeline.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
+import type { LyraTimeline } from '../../lr-timeline.js';
 
 for (const collision of ['overlap', 'stack'] as const) {
   for (const direction of ['ltr', 'rtl']) {

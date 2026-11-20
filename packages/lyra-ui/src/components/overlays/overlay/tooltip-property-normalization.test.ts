@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './tooltip.js';
-import './popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-popover.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraPopover } from './popover.class.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';

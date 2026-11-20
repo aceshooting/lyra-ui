@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './result-card.js';
-import './result-field.js';
-import type { LyraResultCard } from './result-card.js';
-import type { LyraResultField } from './result-field.js';
+import '../../lr-result-card.js';
+import '../../lr-result-field.js';
+import type { LyraResultCard } from '../../lr-result-card.js';
+import type { LyraResultField } from '../../lr-result-field.js';
 
 describe('result components removed labels', () => {
   it('hides a removed heading while preserving actions and later updates', async () => {

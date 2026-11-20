@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './mutation-observer.js';
-import type { LyraMutationObserver } from './mutation-observer.js';
+import '../../lr-mutation-observer.js';
+import type { LyraMutationObserver } from '../../lr-mutation-observer.js';
 
 it('re-arms observation when an observer implementation cannot drain pending records', async () => {
   const NativeObserver = window.MutationObserver;

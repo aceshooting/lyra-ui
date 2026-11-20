@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './grounding-summary.js';
+import '../../lr-grounding-summary.js';
 import type { LyraGroundingSummary } from './grounding-summary.class.js';
 import type { LyraClaimEvidence } from '../claim-evidence/claim-evidence.class.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';

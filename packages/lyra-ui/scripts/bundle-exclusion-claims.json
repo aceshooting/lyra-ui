@@ -7,13 +7,13 @@
       "components/utility/diff-view/diff-view.class.js"
     ]
   },
-  "dist/components/agent-tools/tool-param-form/tool-param-form.js": {
+  "dist/components/lr-tool-param-form.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "components/forms/checkbox/"
     ]
   },
-  "dist/components/conversation/code-block/code-block-core.js": {
+  "dist/components/lr-code-block-core.js": {
     "includedOptionalPeers": [
       "shiki"
     ],
@@ -41,7 +41,7 @@
       "components/conversation/prompt-queue/prompt-queue.class.js"
     ]
   },
-  "dist/components/conversation/markdown/markdown-core.js": {
+  "dist/components/lr-markdown-core.js": {
     "includedOptionalPeers": [
       "shiki"
     ],
@@ -97,7 +97,7 @@
       "components/forms/combobox/option.class.js"
     ]
   },
-  "dist/components/forms/locale-picker/locale-picker.js": {
+  "dist/components/lr-locale-picker.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/overlay-manager.js",
@@ -112,7 +112,7 @@
       "components/conversation/widget-renderer/widget-renderer.class.js"
     ]
   },
-  "dist/components/utility/export-button/export-button.js": {
+  "dist/components/lr-export-button.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/overlay-manager.js",
@@ -133,55 +133,55 @@
       "theme/looks/"
     ]
   },
-  "dist/components/media/av-player/av-player.js": {
+  "dist/components/lr-av-player.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/media/image-viewer/image-viewer.js": {
+  "dist/components/lr-image-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/conversation/code-block/code-block.js": {
+  "dist/components/lr-code-block.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/utility/diff-view/diff-view.js": {
+  "dist/components/lr-diff-view.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/viewers/csv-viewer/csv-viewer.js": {
+  "dist/components/lr-csv-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/viewers/dataset-viewer/dataset-viewer.js": {
+  "dist/components/lr-dataset-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js": {
+  "dist/components/lr-spreadsheet-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/viewers/svg-viewer/svg-viewer.js": {
+  "dist/components/lr-svg-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"
     ]
   },
-  "dist/components/viewers/xml-viewer/xml-viewer.js": {
+  "dist/components/lr-xml-viewer.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/text-quote.js"

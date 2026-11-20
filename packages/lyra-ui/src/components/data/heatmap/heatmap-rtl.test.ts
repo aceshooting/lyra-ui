@@ -1,6 +1,6 @@
 import { fixture, expect, html } from "@open-wc/testing";
-import "./heatmap.js";
-import type { LyraHeatmap } from "./heatmap.js";
+import "../../lr-heatmap.js";
+import type { LyraHeatmap } from "../../lr-heatmap.js";
 
 it("mirrors the low-to-high legend ramp in RTL", async () => {
   const wrapper = await fixture(html`

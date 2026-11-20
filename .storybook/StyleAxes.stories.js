@@ -9,11 +9,11 @@ import '../packages/lyra-ui/src/density.css';
 import '../packages/lyra-ui/src/accents.css';
 import '../packages/lyra-ui/src/surfaces/glass.css';
 import { applyLyraStyleScope } from '../packages/lyra-ui/src/theme/theme.js';
-import '../packages/lyra-ui/src/components/forms/button/button.js';
-import '../packages/lyra-ui/src/components/forms/input/input.js';
-import '../packages/lyra-ui/src/components/layout/card/card.js';
-import '../packages/lyra-ui/src/components/layout/menu/menu.js';
-import '../packages/lyra-ui/src/components/layout/menu/menu-item.js';
+import '../packages/lyra-ui/src/components/lr-button.js';
+import '../packages/lyra-ui/src/components/lr-input.js';
+import '../packages/lyra-ui/src/components/lr-card.js';
+import '../packages/lyra-ui/src/components/lr-menu.js';
+import '../packages/lyra-ui/src/components/lr-menu-item.js';
 
 export default {
   title: 'Theming/Composable styles',

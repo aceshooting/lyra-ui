@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 
 const labels = Array.from({ length: 7 }, (_, index) => `Source ${index}`);
 

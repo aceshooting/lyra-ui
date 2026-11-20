@@ -1049,9 +1049,9 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     for (const key of this._keys) {
       if (key.type !== 'category') continue;
       if (key.multiple) {
-        this.multipleCategoryControls ??= Promise.all([import('../checkbox/checkbox.js'), import('../checkbox-group/checkbox-group.js')]);
+        this.multipleCategoryControls ??= Promise.all([import('../../lr-checkbox.js'), import('../../lr-checkbox-group.js')]);
       } else {
-        this.singleCategoryControls ??= Promise.all([import('../select/select.js'), import('../../lr-option.js')]);
+        this.singleCategoryControls ??= Promise.all([import('../../lr-select.js'), import('../../lr-option.js')]);
       }
     }
   }

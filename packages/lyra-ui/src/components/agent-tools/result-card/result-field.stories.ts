@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './result-field.js';
+import '../../lr-result-field.js';
 
 const meta: Meta = { title: 'ResultCard/Result field', component: 'lr-result-field', tags: ['autodocs'] };
 export default meta;

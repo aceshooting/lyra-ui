@@ -305,6 +305,4 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
    *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
 }

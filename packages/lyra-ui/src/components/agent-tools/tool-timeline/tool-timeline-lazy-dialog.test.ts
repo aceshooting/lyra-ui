@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tool-timeline.js';
-import type { LyraToolTimeline } from './tool-timeline.js';
+import '../../lr-tool-timeline.js';
+import type { LyraToolTimeline } from '../../lr-tool-timeline.js';
 
 describe('lr-tool-timeline approval dialog registration', () => {
   it('registers lr-tool-approval-dialog only once an entry needs approval', async () => {

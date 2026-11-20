@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './retrieval-trace.js';
-import type { LyraRetrievalTrace, RetrievalStage } from './retrieval-trace.js';
+import '../../lr-retrieval-trace.js';
+import type { LyraRetrievalTrace, RetrievalStage } from '../../lr-retrieval-trace.js';
 
 const stage = (id: string): RetrievalStage => ({ id, kind: 'retrieve', startMs: 0, endMs: 10, status: 'success', evidence: { text: `${id} evidence` } });
 

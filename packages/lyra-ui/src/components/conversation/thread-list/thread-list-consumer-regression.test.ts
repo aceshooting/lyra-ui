@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
 import { twoFrames } from '../../../../test/frames.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
-import type { LyraChatThread, LyraThreadList } from './thread-list.js';
-import './thread-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
+import type { LyraChatThread, LyraThreadList } from '../../lr-thread-list.js';
+import '../../lr-thread-list.js';
 
 function virtualList(host: LyraThreadList): LyraVirtualList {
   return host.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;

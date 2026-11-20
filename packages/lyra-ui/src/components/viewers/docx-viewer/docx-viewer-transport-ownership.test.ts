@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import type { LyraDocxViewer } from './docx-viewer.js';
-import './docx-viewer.js';
+import type { LyraDocxViewer } from '../../lr-docx-viewer.js';
+import '../../lr-docx-viewer.js';
 import type JSZipType from 'jszip';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
 

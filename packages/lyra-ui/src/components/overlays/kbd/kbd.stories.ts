@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './kbd.js';
+import '../../lr-kbd.js';
 
 const meta: Meta = {
   title: 'Kbd',

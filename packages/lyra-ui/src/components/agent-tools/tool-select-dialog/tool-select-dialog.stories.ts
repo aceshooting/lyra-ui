@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-select-dialog.js';
+import '../../lr-tool-select-dialog.js';
 import type {
   LyraToolSelectDialog,
   ToolSelectDialogTool,
   ToolSelectionChangeDetail,
-} from './tool-select-dialog.js';
+} from '../../lr-tool-select-dialog.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

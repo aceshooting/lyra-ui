@@ -1,13 +1,13 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import '../../overlays/overlay/dropdown.js';
-import '../../layout/menu/menu.js';
-import '../../layout/menu/menu-item.js';
-import './message-actions.js';
-import '../message-feedback/message-feedback.js';
-import type { LyraMessageActions } from './message-actions.js';
-import type { LyraMessageFeedback } from '../message-feedback/message-feedback.js';
+import '../../lr-dropdown.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-message-actions.js';
+import '../../lr-message-feedback.js';
+import type { LyraMessageActions } from '../../lr-message-actions.js';
+import type { LyraMessageFeedback } from '../../lr-message-feedback.js';
 
 describe('slotted feedback editor navigation', () => {
   for (const dir of ['ltr', 'rtl']) {

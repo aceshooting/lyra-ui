@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { loadIcal, type IcalTimeApi } from './calendar-loader.js';
 import type { LyraCalendarViewer } from './calendar-viewer.class.js';
-import './calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
 
 const calendar = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:valid',
   'DTSTART;VALUE=DATE:20260102', 'SUMMARY:Recovered event', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');

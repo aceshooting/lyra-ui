@@ -1,11 +1,11 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
-import './flag.js';
+import '../../lr-flag.js';
 import './flag-peer.js';
-import { loadFlagUrl, loadBulkFlagUrl, setFlagUrlResolver } from './flag.js';
+import { loadFlagUrl, loadBulkFlagUrl, setFlagUrlResolver } from '../../lr-flag.js';
 import { registerLyraFlagPeer } from './flag-peer.js';
-import type { LyraFlag } from './flag.js';
+import type { LyraFlag } from '../../lr-flag.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 

@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraCountryPicker } from './country-picker.js';
+import { LyraCountryPicker } from '../../lr-country-picker.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('does not mount every cold catalog option', async () => {
   const el = await fixture<LyraCountryPicker>(html`<lr-country-picker .countries=${Array.from({length:512},(_,i)=>String.fromCharCode(65+Math.floor(i/26),65+i%26))}></lr-country-picker>`);

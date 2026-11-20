@@ -1,8 +1,8 @@
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './chat-viewport.js';
-import '../../layout/virtual-list/virtual-list.js';
+import '../../lr-chat-viewport.js';
+import '../../lr-virtual-list.js';
 import type { LyraChatViewport } from './chat-viewport.class.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 

@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 
 it('shows full spatial density and reveals an omitted exact point without changing selection', async () => {

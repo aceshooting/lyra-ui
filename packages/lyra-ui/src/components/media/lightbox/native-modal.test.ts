@@ -3,8 +3,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
-import './lightbox.js';
-import type { LyraLightbox } from './lightbox.js';
+import '../../lr-lightbox.js';
+import type { LyraLightbox } from '../../lr-lightbox.js';
 
 async function click(target: HTMLElement): Promise<void> {
   const rect = target.getBoundingClientRect();

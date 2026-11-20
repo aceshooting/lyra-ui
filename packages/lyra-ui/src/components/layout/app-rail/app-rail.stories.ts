@@ -1,12 +1,12 @@
 import { ref } from 'lit/directives/ref.js';
-import '../page/page.js';
-import '../../utility/divider/divider.js';
+import '../../lr-page.js';
+import '../../lr-divider.js';
 import type { LyraPage } from '../page/page.class.js';
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./app-rail.js";
-import "../app-rail-group/app-rail-group.js";
-import type { LyraAppRail, LyraAppRailToggleDetail } from "./app-rail.js";
+import "../../lr-app-rail.js";
+import "../../lr-app-rail-group.js";
+import type { LyraAppRail, LyraAppRailToggleDetail } from "../../lr-app-rail.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const meta: Meta = {

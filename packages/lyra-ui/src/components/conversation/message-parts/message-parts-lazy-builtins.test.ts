@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { MessagePart } from '../../../ai/types.js';
 import type { LyraMessageParts } from './message-parts.class.js';
-import './message-parts.js';
+import '../../lr-message-parts.js';
 
 // Keep this file isolated from child registration imports.
 it('loads newly encountered tool, attachment, JSON and retry renderers while retaining ordered content', async () => {

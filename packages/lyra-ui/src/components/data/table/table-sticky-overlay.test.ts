@@ -1,8 +1,8 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { render, type TemplateResult } from 'lit';
-import './table.js';
-import '../../overlays/overlay/dropdown.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import '../../lr-dropdown.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { installTableTestHooks } from '../../../../test/table.js';
 installTableTestHooks();

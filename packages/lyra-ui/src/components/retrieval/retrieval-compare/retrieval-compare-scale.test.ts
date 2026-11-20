@@ -2,7 +2,7 @@ import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraRetrievalCompare, type RetrievalComparisonSet } from './retrieval-compare.js';
+import { LyraRetrievalCompare, type RetrievalComparisonSet } from '../../lr-retrieval-compare.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 expectDevWarning(collectionTruncationWarningKey('lr-retrieval-compare', 'sets'));

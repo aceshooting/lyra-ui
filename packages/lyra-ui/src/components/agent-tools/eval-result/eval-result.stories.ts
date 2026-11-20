@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { EvalResultSource, EvalRunResult } from './eval-result.js';
+import type { EvalResultSource, EvalRunResult } from '../../lr-eval-result.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 

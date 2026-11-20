@@ -4,8 +4,8 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './memory-panel.js';
-import type { LyraMemoryPanel, LyraMemoryItem } from './memory-panel.js';
+import '../../lr-memory-panel.js';
+import type { LyraMemoryPanel, LyraMemoryItem } from '../../lr-memory-panel.js';
 import type { LyraConfirmBar } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import {
   composedContains,
@@ -338,7 +338,7 @@ describe('lr-memory-panel', () => {
     expect(body.querySelector('lr-provenance-panel') === null).to.equal(true);
   });
 
-  it('toggling the expand-toggle emits lr-toggle, unhides the body, and reveals a populated lr-provenance-panel', async () => {
+  it('toggling the expand-toggle emits lr-retrieval-disclosure-change, unhides the body, and reveals a populated lr-provenance-panel', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"]'
@@ -347,15 +347,15 @@ describe('lr-memory-panel', () => {
       '[part="expand-toggle"]'
     ) as HTMLButtonElement;
 
-    const listener = oneEvent(el, 'lr-toggle');
+    const listener = oneEvent(el, 'lr-retrieval-disclosure-change');
     const toggles: unknown[] = [];
-    el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
+    el.addEventListener('lr-retrieval-disclosure-change', (event) => toggles.push((event as CustomEvent).detail));
     toggle.click();
     const event = await listener;
     expect(event.detail.memoryId).to.equal('l1');
     expect(event.detail.scope).to.equal('long-term');
     expect(event.detail.expanded).to.equal(true);
-    expect(toggles).to.deep.equal([{ itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
+    expect(toggles).to.deep.equal([{ kind: 'memory', memoryId: 'l1', scope: 'long-term', expanded: true }]);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     const body = withProvenance.querySelector(
@@ -380,11 +380,11 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 
-    const listener = oneEvent(el, 'lr-toggle');
+    const listener = oneEvent(el, 'lr-retrieval-disclosure-change');
     toggle.click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
-      itemId: 'l1',
+      kind: 'memory',
       memoryId: 'l1',
       scope: 'long-term',
       expanded: false,
@@ -695,7 +695,7 @@ describe('lr-memory-panel', () => {
     expect(section.querySelectorAll('lr-confirm-bar').length).to.equal(0);
   });
 
-  it('re-emits one contextual lr-toggle from a nested provenance panel', async () => {
+  it('re-emits one contextual disclosure change from a nested provenance panel', async () => {
     const el = await populated();
     (
       el.shadowRoot!.querySelector(
@@ -703,7 +703,7 @@ describe('lr-memory-panel', () => {
       ) as HTMLButtonElement
     ).click();
     await el.updateComplete;
-    const listener = oneEvent(el, 'lr-toggle');
+    const listener = oneEvent(el, 'lr-retrieval-disclosure-change');
     (
       el
         .shadowRoot!.querySelector('lr-provenance-panel')!
@@ -711,7 +711,7 @@ describe('lr-memory-panel', () => {
     ).click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
-      section: 'entities', expanded: false, memoryId: 'l1', scope: 'long-term',
+      kind: 'section', section: 'entities', expanded: false, memoryId: 'l1', scope: 'long-term',
     });
   });
 
@@ -1898,13 +1898,13 @@ describe('lr-memory-panel render cap', () => {
 });
 
 describe('lr-memory-panel disclosure events', () => {
-  it('fires only lr-toggle, never the removed lr-memory-toggle, lr-chunk-toggle or lr-expand', async () => {
+  it('fires only lr-retrieval-disclosure-change, never the removed lr-toggle, lr-memory-toggle, lr-chunk-toggle or lr-expand', async () => {
     const el = await populated();
     const toggle = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"] [part="expand-toggle"]'
     ) as HTMLButtonElement;
     const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
-    for (const type of ['lr-toggle', 'lr-memory-toggle', 'lr-chunk-toggle', 'lr-expand']) {
+    for (const type of ['lr-retrieval-disclosure-change', 'lr-toggle', 'lr-memory-toggle', 'lr-chunk-toggle', 'lr-expand']) {
       el.addEventListener(type, (event) => {
         const custom = event as CustomEvent;
         seen.push({ type, detail: { ...custom.detail }, cancelable: custom.cancelable });
@@ -1912,8 +1912,8 @@ describe('lr-memory-panel disclosure events', () => {
     }
     toggle.click();
     await el.updateComplete;
-    const detail = { itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
-    expect(seen).to.deep.equal([{ type: 'lr-toggle', detail, cancelable: false }]);
+    const detail = { kind: 'memory', memoryId: 'l1', scope: 'long-term', expanded: true };
+    expect(seen).to.deep.equal([{ type: 'lr-retrieval-disclosure-change', detail, cancelable: false }]);
   });
 });
 

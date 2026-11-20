@@ -4,7 +4,7 @@ import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './test-results.js';
+import '../../lr-test-results.js';
 import { LyraTestResults, type TestResultsSource } from './test-results.class.js';
 
 describe('test-results provider pages', () => {

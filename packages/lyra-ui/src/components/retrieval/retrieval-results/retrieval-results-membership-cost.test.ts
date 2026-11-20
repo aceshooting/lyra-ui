@@ -1,8 +1,8 @@
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import './retrieval-results.js';
-import type { LyraRetrievalResults } from './retrieval-results.js';
+import '../../lr-retrieval-results.js';
+import type { LyraRetrievalResults } from '../../lr-retrieval-results.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.class.js';
 

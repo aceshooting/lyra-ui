@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraEmbeddingExplorer } from './embedding-explorer.js';
+import { LyraEmbeddingExplorer } from '../../lr-embedding-explorer.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 const points = (n: number) => Array.from({length:n}, (_, i) => ({id:`p${i}`,x:i,y:i%17}));
 it('raises the render sample while preserving the default and disclosure', async () => {

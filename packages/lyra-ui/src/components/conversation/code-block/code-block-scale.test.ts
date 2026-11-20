@@ -9,8 +9,8 @@ import 'shiki/themes/github-light.mjs';
 import 'shiki/themes/github-dark.mjs';
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import { loadShikiHighlighterCore, resolvedShikiLanguages } from './shiki-types.js';
-import './code-block.js';
-import './code-block-core.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
 
 const concreteLanguages = { json: jsonGrammar };
 let requestedGrammarCalls = 0;

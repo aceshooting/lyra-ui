@@ -297,17 +297,14 @@ export function findUnclassifiedHelperModules(
 
 export function deriveExplicitComponentExports(
   inventory,
-  { packageDir, helperModules = CURATED_COMPONENT_HELPER_MODULES, exportDeprecations = [] } = {},
+  { packageDir, helperModules = CURATED_COMPONENT_HELPER_MODULES } = {},
 ) {
   invariant(inventory?.schemaVersion === 1, 'schemaVersion must be 1');
   invariant(Array.isArray(inventory.components), 'components must be an array');
   invariant(Array.isArray(helperModules), 'helperModules must be an array');
 
-  // Only historical duplicate routes receive compatibility exports. Newly introduced components
-  // expose their stable tag registration and class module without creating a new deprecated route.
-  const compatibilityRoutes = new Set(
-    exportDeprecations.filter((entry) => entry.kind === 'entry-point').map((entry) => entry.name),
-  );
+  // Each component exposes its side-effect-free class module and its tag-shaped registration
+  // entry, which is the only registration module a tag has.
   const routes = new Map();
   const families = new Set();
   const tags = new Set();
@@ -325,24 +322,21 @@ export function deriveExplicitComponentExports(
     );
     families.add(component.family);
 
-    for (const [kind, sourceModule] of [
-      ['class', component.classModule],
-      ['registration', component.registrationModule],
-    ]) {
-      const [exportPath, target] = exportedModule(sourceModule);
-      assertSourceExists(packageDir, sourceModule);
-      if (kind === 'class' || compatibilityRoutes.has(exportPath)) {
-        addRoute(routes, exportPath, target, `${component.tag} ${kind} module`);
-      }
-    }
+    const [classExport, classTarget] = exportedModule(component.classModule);
+    assertSourceExists(packageDir, component.classModule);
+    addRoute(routes, classExport, classTarget, `${component.tag} class module`);
 
-    const aliasModule = `src/components/${component.tag}.ts`;
-    assertSourceExists(packageDir, aliasModule);
-    const [aliasExport, aliasTarget] = exportedModule(aliasModule);
-    addRoute(routes, aliasExport, {
-      types: `./${component.registrationModule.replace(/^src\//, 'dist/').replace(/\.ts$/, '.d.ts')}`,
-      default: aliasTarget,
-    }, `${component.tag} stable alias`);
+    const entryModule = `src/components/${component.tag}.ts`;
+    invariant(
+      component.registrationModule === entryModule,
+      `${component.tag}: registrationModule must be its tag-shaped entry ${entryModule}`,
+    );
+    assertSourceExists(packageDir, entryModule);
+    const [entryExport, entryTarget] = exportedModule(entryModule);
+    addRoute(routes, entryExport, {
+      types: `./${entryModule.replace(/^src\//, 'dist/').replace(/\.ts$/, '.d.ts')}`,
+      default: entryTarget,
+    }, `${component.tag} registration entry`);
   }
 
   for (const family of families) {
@@ -553,10 +547,7 @@ function expectedPackage(packageDir) {
   const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
   const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
-  const metadata = JSON.parse(readFileSync(join(packageDir, 'scripts', 'fixtures', 'component-metadata.json'), 'utf8'));
-  const componentExports = deriveExplicitComponentExports(inventory, {
-    packageDir, exportDeprecations: metadata.exportDeprecations,
-  });
+  const componentExports = deriveExplicitComponentExports(inventory, { packageDir });
   const utilityExports = deriveExplicitUtilityExports({ packageDir });
   const admissionExports = Object.fromEntries(CURATED_ADMISSION_MODULES.map(({ source, route }) => {
     assertSourceExists(packageDir, source);

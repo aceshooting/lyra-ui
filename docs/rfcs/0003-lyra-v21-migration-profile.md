@@ -62,6 +62,13 @@ land with that minor.
   `@aceshooting/lyra-translations/`, the four editor-data files to `@aceshooting/lyra-ide/`, five
   removed localization keys, and the rule. The rule is the same implementation that
   `lyra-ui-migrate --rule=theme-scopes` runs on its own, so there is one code path.
+- **`lyra-v31` (32.0.0).** 32.0.0 removes every remaining deprecation, including names whose
+  deprecation never shipped in a release. Such an event is a `retiredEvents` entry with
+  `direct: true`: it is reported with its replacement like any retired event, and the coverage
+  gate accepts it without a published policy record but rejects `direct` on a name that has one.
+  The profile also carries a `detailChanges` entry for `lr-flow-canvas`'s `lr-edge-activate` and a
+  `propertyChanges` entry for `lr-token-input`'s `maxTokensVisible` default. Its
+  `aliasRemovalMajor` is 33 because no deprecation record remains to pair with it.
 - **Gates.** `validateRenameLedgerShape()` checks both lists (also in the packaged projection);
   `check-migration-coverage.mjs` checks each `globals` entry against the real surface (old subpath
   gone from `package.json#exports`, replacement exported by the target package, old root export

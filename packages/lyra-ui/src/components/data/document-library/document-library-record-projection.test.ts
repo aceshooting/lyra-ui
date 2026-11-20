@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-library.js';
-import type { LibraryDocument, LyraDocumentLibrary } from './document-library.js';
+import '../../lr-document-library.js';
+import type { LibraryDocument, LyraDocumentLibrary } from '../../lr-document-library.js';
 
 describe('lr-document-library record projection', () => {
   it('keeps a record only when every present field has its documented type', async () => {

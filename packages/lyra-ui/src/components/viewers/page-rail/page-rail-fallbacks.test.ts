@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './page-rail.js';
-import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
+import '../../lr-page-rail.js';
+import type { LyraPageRail, PageThumbnailSource } from '../../lr-page-rail.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function rows(el: LyraPageRail): HTMLElement[] {

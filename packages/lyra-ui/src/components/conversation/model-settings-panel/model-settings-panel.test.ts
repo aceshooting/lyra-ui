@@ -1,10 +1,10 @@
 import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
-import './model-settings-panel.js';
-import type { LyraModelSettingsPanel, ModelSettingsChangeDetail } from './model-settings-panel.js';
-import type { LyraModelSelect } from '../model-select/model-select.js';
-import type { LyraSlider } from '../../forms/slider/slider.js';
+import '../../lr-model-settings-panel.js';
+import type { LyraModelSettingsPanel, ModelSettingsChangeDetail } from '../../lr-model-settings-panel.js';
+import type { LyraModelSelect } from '../../lr-model-select.js';
+import type { LyraSlider } from '../../lr-slider.js';
 
 const CATALOG = ['llama3.1', 'mistral', 'qwen2.5-coder'];
 

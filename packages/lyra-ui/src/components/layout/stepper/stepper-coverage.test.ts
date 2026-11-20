@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraStepper } from './stepper.class.js';
-import './stepper.js';
+import '../../lr-stepper.js';
 
 const validSteps = [
   { stepId: 'review', label: 'Review', state: 'current' as const },

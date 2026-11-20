@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
-import { LyraChart } from './chart.js';
+import { LyraChart } from '../../lr-chart.js';
 
 it('commits hidden streamed table rows to the DOM when held idle work flushes', async () => {
   const chart = await fixture<LyraChart>(html`<lr-chart without-animation without-legend

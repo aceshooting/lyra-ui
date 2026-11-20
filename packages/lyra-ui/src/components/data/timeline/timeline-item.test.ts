@@ -1,7 +1,7 @@
 import { fixture, fixtureSync, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './timeline-item.js';
-import type { LyraTimelineItem } from './timeline-item.js';
-import type { LyraRelativeTime } from '../../utility/format/relative-time.js';
+import '../../lr-timeline-item.js';
+import type { LyraTimelineItem } from '../../lr-timeline-item.js';
+import type { LyraRelativeTime } from '../../lr-relative-time.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 /**

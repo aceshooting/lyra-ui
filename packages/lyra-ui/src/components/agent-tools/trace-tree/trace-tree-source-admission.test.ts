@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
-import '../task-list/task-list.js';
-import '../span-waterfall/span-waterfall.js';
-import './trace-tree.js';
+import '../../lr-task-list.js';
+import '../../lr-span-waterfall.js';
+import '../../lr-trace-tree.js';
 
 it('keeps array-mode task and span updates out of the provider controller', async () => {
   const original = HierarchySourceController.prototype.update;

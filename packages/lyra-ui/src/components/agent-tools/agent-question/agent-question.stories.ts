@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './agent-question.js';
+import '../../lr-agent-question.js';
 const meta: Meta = { title: 'AgentQuestion', component: 'lr-agent-question', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;

@@ -5096,7 +5096,7 @@ chip-only definition requires neither options nor an adapter — a stable filter
 the whole schema, since a malformed `formatValue`/`isEmpty` still has a correct fallback and so is
 guarded where it is used rather than rejected outright.
 
-**Registration.** `components/layout/filter-bar/filter-bar.js` (the default entry, also
+**Registration.** `components/lr-filter-bar.js` (the default entry, also
 `components/lr-filter-bar.js`) registers `<lr-button>` and `<lr-chip>`/`<lr-chip-group>` up front
 and each filter type's control — `<lr-select>`, `<lr-combobox>`, `<lr-dropdown>` +
 `<lr-dropdown-item>` (the `'checkbox-menu'` branch), `<lr-date-input>`, `<lr-input>` — plus
@@ -5111,19 +5111,19 @@ the filter `type`s actually declared:
 
 | Filter `type` | Registration entry |
 | --- | --- |
-| `'select'` | `components/forms/select/select.js` |
-| `'combobox'` | `components/forms/combobox/combobox.js` |
-| `'checkbox-menu'` | `components/overlays/overlay/dropdown.js` **and** `components/layout/menu/dropdown-item.js` |
-| `'date'` / `'date-range'` | `components/forms/date-picker/date-input.js` |
-| `'text'` | `components/forms/input/input.js` |
+| `'select'` | `components/lr-select.js` |
+| `'combobox'` | `components/lr-combobox.js` |
+| `'checkbox-menu'` | `components/lr-dropdown.js` **and** `components/lr-dropdown-item.js` |
+| `'date'` / `'date-range'` | `components/lr-date-input.js` |
+| `'text'` | `components/lr-input.js` |
 | `'chip'` | none — renders no control |
 
 Two more are unconditional regardless of which filter `type`s are declared: `<lr-button>` renders
 the reset action on every bar, and `<lr-chip>`/`<lr-chip-group>` render the active-filter row
 whenever any filter has a value (further gated by `activeFiltersDisplay`, but never provably absent
-for a generic bar) — `components/forms/button/button.js` and `components/overlays/chip/chip.js` +
-`components/overlays/chip/chip-group.js`. `<lr-spinner>`
-(`components/overlays/spinner/spinner.js`) is the one built-in dependency the lean entry omits even
+for a generic bar) — `components/lr-button.js` and `components/lr-chip.js` +
+`components/lr-chip-group.js`. `<lr-spinner>`
+(`components/lr-spinner.js`) is the one built-in dependency the lean entry omits even
 though every bar could use it: `loading` is a plain boolean any consumer can leave unset entirely,
 unlike a filter `type`, which `filters` always names outright — import it too if the bar ever sets
 `loading`. A filter definition whose `type` has no matching import above renders no usable control

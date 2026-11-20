@@ -14,8 +14,8 @@ import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-m
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import "./json-viewer.js";
-import type { LyraJsonViewer } from "./json-viewer.js";
+import "../../lr-json-viewer.js";
+import type { LyraJsonViewer } from "../../lr-json-viewer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 // Registers the real 'ar' catalog so the lang="ar"/"ar-EG" tests below -- which exercise

@@ -2,11 +2,11 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
-import './responsive-panel.js';
-import '../app-rail/app-rail.js';
-import '../page/page.js';
-import '../widget/widget.js';
-import '../multi-split/multi-split.js';
+import '../../lr-responsive-panel.js';
+import '../../lr-app-rail.js';
+import '../../lr-page.js';
+import '../../lr-widget.js';
+import '../../lr-multi-split.js';
 
 async function click(target: HTMLElement): Promise<void> {
   const rect = target.getBoundingClientRect();

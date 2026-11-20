@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './avatar.js';
-import type { LyraAvatar } from './avatar.js';
+import '../../lr-avatar.js';
+import type { LyraAvatar } from '../../lr-avatar.js';
 
 it('exposes the mapped image and label defaults and the --size hook', async () => {
   const el = (await fixture(html`

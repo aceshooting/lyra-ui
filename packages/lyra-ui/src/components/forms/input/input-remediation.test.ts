@@ -1,11 +1,11 @@
 import { aTimeout, expect, fixture } from '@open-wc/testing';
-import type { LyraInput } from './input.js';
-import type { LyraTimeInput } from './time-input.js';
-import './input.js';
-import './number-input.js';
-import './native-time-input.js';
-import './time-input.js';
-import '../textarea/textarea.js';
+import type { LyraInput } from '../../lr-input.js';
+import type { LyraTimeInput } from '../../lr-time-input.js';
+import '../../lr-input.js';
+import '../../lr-number-input.js';
+import '../../lr-native-time-input.js';
+import '../../lr-time-input.js';
+import '../../lr-textarea.js';
 
 for (const tag of ['lr-input', 'lr-number-input', 'lr-native-time-input', 'lr-time-input']) {
   for (const attribute of tag === 'lr-time-input' ? ['label', 'hint'] : ['label', 'hint', 'help-text', 'error-text']) {

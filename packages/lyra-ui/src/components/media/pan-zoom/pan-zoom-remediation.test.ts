@@ -2,8 +2,8 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './pan-zoom.js';
-import type { LyraPanZoom } from './pan-zoom.js';
+import '../../lr-pan-zoom.js';
+import type { LyraPanZoom } from '../../lr-pan-zoom.js';
 
 it('names the viewport from the property or the host aria-label', async () => {
   const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom .strings=${{ zoomableFrameLabel: 'Viewport' }}></lr-pan-zoom>`);

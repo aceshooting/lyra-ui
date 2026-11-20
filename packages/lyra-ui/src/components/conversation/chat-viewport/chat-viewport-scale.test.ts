@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './chat-viewport.js';
+import '../../lr-chat-viewport.js';
 import type { LyraChatViewport } from './chat-viewport.class.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

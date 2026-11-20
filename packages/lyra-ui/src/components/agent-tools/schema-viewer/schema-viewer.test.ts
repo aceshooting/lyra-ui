@@ -1,11 +1,11 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './schema-viewer.js';
+import '../../lr-json-schema-viewer.js';
 import type {
   JsonSchemaNode,
   LyraJsonSchemaViewer,
   SchemaValidationIssue,
-} from './schema-viewer.js';
+} from '../../lr-json-schema-viewer.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';

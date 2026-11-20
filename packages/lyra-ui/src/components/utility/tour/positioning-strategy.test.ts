@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './tour.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
-import type { LyraTour } from './tour.js';
+import '../../lr-tour.js';
+import '../../lr-dialog.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import type { LyraTour } from '../../lr-tour.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

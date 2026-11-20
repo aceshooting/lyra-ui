@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './thinking-panel.js';
-import type { LyraThinkingPanel } from './thinking-panel.js';
+import '../../lr-thinking-panel.js';
+import type { LyraThinkingPanel } from '../../lr-thinking-panel.js';
 
 it('does not expand when a toggle-request listener removes the panel', async () => {
   const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel></lr-thinking-panel>`);

@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './otp-input.js';
-import '../button/button.js';
+import '../../lr-otp-input.js';
+import '../../lr-button.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 for (const state of ['own disabled', 'fieldset disabled', 'readonly'] as const) {

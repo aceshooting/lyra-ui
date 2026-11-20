@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './stat.js';
-import type { LyraStat } from './stat.js';
+import '../../lr-stat.js';
+import type { LyraStat } from '../../lr-stat.js';
 
 async function expectValidNames(stat: LyraStat): Promise<void> {
   await expect(stat).to.be.accessible();

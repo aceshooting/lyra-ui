@@ -3,7 +3,6 @@ import { formControlSupportingState, renderFormControlHintError } from '../../..
 import { AutocorrectState, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -58,8 +57,8 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_next, LYRA_DEFAULT_previous, L
 
 installFormControlLabelSupport();
 
-/** @deprecated The implicit unlimited window will default to 200. Explicit zero stays unlimited. */
-const IMPLICIT_TOKEN_LIMIT = 0;
+/** Tokens mounted when `max-tokens-visible` is omitted or non-finite. Explicit zero stays unlimited. */
+const IMPLICIT_TOKEN_LIMIT = 200;
 
 export interface LyraTokenInputEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -364,8 +363,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   delimiter: string | null = ',';
   private authoredTokenLimit: number | null = null;
   /** Maximum mounted tokens. Counts truncate at zero or greater. Explicit zero mounts every token.
-   * The deprecated implicit unlimited default will change to 200.
-   * @default 0
+   * An omitted or non-finite limit uses the default window of 200.
+   * @default 200
    */
   @property({ type: Number, attribute: 'max-tokens-visible' })
   get maxTokensVisible(): number { return this.authoredTokenLimit ?? IMPLICIT_TOKEN_LIMIT; }
@@ -392,10 +391,6 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
         occurrences.set(token, count + 1);
         return { token, index, key: `${token.length}:${token}:${count}` };
       });
-    }
-    if (this.value.length > 200 && this.authoredTokenLimit === null) {
-      devWarnOnce(`lyra-deprecated:${this.localName}:default:maxTokensVisible`,
-        `<${this.localName}>: the implicit unlimited token window is deprecated. Set max-tokens-visible="200" for paging or "0" for unlimited rendering.`);
     }
     const limit = finiteCount(this.maxTokensVisible);
     if (!limit || this.tokenEntries.length <= limit) return this.tokenEntries;

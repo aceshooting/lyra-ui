@@ -486,7 +486,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   private readonly loadingSurfaces = new Map<ToolSurface, 'loading' | 'ready' | 'failed'>();
   private loadSurface(kind: ToolSurface): Promise<unknown> {
-    return kind === 'result' ? import('../tool-result-view/tool-result-view.js') : import('../tool-approval-dialog/tool-approval-dialog.js');
+    return kind === 'result' ? import('../../lr-tool-result-view.js') : import('../../lr-tool-approval-dialog.js');
   }
 
   private ensureSurface(kind: ToolSurface, retry = false): void {

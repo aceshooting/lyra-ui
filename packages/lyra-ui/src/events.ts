@@ -791,11 +791,10 @@ export type LyraClearEvent =
   | LyraTimeInputEventMap['lr-clear'];
 
 /**
- * `lr-close` — dispatched by 14 components: `<lr-alert>`, `<lr-callout>`, `<lr-command-palette>`,
- * `<lr-dialog>`, `<lr-document-viewer>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-map-anchor>`,
- * `<lr-responsive-panel>`, `<lr-tab>`, `<lr-toast-item>`, `<lr-tool-approval-dialog>`,
- * `<lr-tool-result-dialog>`, `<lr-tool-select-dialog>`; detail union of 13, e.g.
- * `LyraAlertEventMap['lr-close']`.
+ * `lr-close` — dispatched by 13 components: `<lr-alert>`, `<lr-callout>`, `<lr-command-palette>`,
+ * `<lr-dialog>`, `<lr-document-viewer>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-responsive-panel>`,
+ * `<lr-tab>`, `<lr-toast-item>`, `<lr-tool-approval-dialog>`, `<lr-tool-result-dialog>`,
+ * `<lr-tool-select-dialog>`; detail union of 12, e.g. `LyraAlertEventMap['lr-close']`.
  */
 export type LyraCloseEvent =
   | LyraAlertEventMap['lr-close']
@@ -804,7 +803,6 @@ export type LyraCloseEvent =
   | LyraDialogEventMap['lr-close']
   | LyraDocumentViewerEventMap['lr-close']
   | LyraLightboxEventMap['lr-close']
-  | LyraMapAnchorEventMap['lr-close']
   | LyraResponsivePanelEventMap['lr-close']
   | LyraTabEventMap['lr-close']
   | LyraToastItemEventMap['lr-close']
@@ -813,10 +811,9 @@ export type LyraCloseEvent =
   | LyraToolSelectDialogEventMap['lr-close'];
 
 /**
- * `lr-close-request` — dispatched by 9 components: `<lr-alert>`, `<lr-callout>`,
- * `<lr-command-palette>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-map-anchor>`,
- * `<lr-responsive-panel>`, `<lr-toast-item>`; detail union of 8, e.g.
- * `LyraAlertEventMap['lr-close-request']`.
+ * `lr-close-request` — dispatched by 8 components: `<lr-alert>`, `<lr-callout>`,
+ * `<lr-command-palette>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-responsive-panel>`,
+ * `<lr-toast-item>`; detail union of 7, e.g. `LyraAlertEventMap['lr-close-request']`.
  */
 export type LyraCloseRequestEvent =
   | LyraAlertEventMap['lr-close-request']
@@ -824,7 +821,6 @@ export type LyraCloseRequestEvent =
   | LyraCommandPaletteEventMap['lr-close-request']
   | LyraDialogEventMap['lr-close-request']
   | LyraLightboxEventMap['lr-close-request']
-  | LyraMapAnchorEventMap['lr-close-request']
   | LyraResponsivePanelEventMap['lr-close-request']
   | LyraToastItemEventMap['lr-close-request'];
 
@@ -2890,12 +2886,11 @@ export type LyraRetrievalSelectEvent = LyraAgentWorkspaceEventMap['lr-retrieval-
 
 /**
  * `lr-retry` — dispatched by 4 components: `<lr-attachment-chip>`, `<lr-ingestion-queue>`,
- * `<lr-message-parts>`, `<lr-rag-answer>`; detail union of 4, e.g.
+ * `<lr-message-parts>`, `<lr-rag-answer>`; detail union of 3, e.g.
  * `LyraAttachmentChipEventMap['lr-retry']`.
  */
 export type LyraRetryEvent =
   | LyraAttachmentChipEventMap['lr-retry']
-  | LyraDataGridEventMap['lr-retry']
   | LyraIngestionQueueEventMap['lr-retry']
   | LyraRagAnswerEventMap['lr-retry'];
 
@@ -3523,14 +3518,13 @@ export type LyraTimeChangeEvent = LyraAvPlayerEventMap['lr-time-change'];
 export type LyraToastOverflowEvent = LyraToastEventMap['lr-toast-overflow'];
 
 /**
- * `lr-toggle` — dispatched by 26 components: `<lr-activity-feed>`, `<lr-app-rail-group>`,
+ * `lr-toggle` — dispatched by 22 components: `<lr-activity-feed>`, `<lr-app-rail-group>`,
  * `<lr-app-rail-item>`, `<lr-app-rail>`, `<lr-chat-message>`, `<lr-chunk-inspector>`,
  * `<lr-code-block-core>`, `<lr-code-block>`, `<lr-commit-card>`, `<lr-details>`,
- * `<lr-dock-panel>`, `<lr-entity-dossier>`, `<lr-memory-panel>`, `<lr-message-parts>`,
- * `<lr-multi-split>`, `<lr-navigation-menu-item>`, `<lr-navigation-menu>`,
- * `<lr-provenance-panel>`, `<lr-retrieval-trace>`, `<lr-source-card>`, `<lr-source-list>`,
- * `<lr-task-list>`, `<lr-test-results>`, `<lr-thinking-panel>`, `<lr-tool-call-block>`,
- * `<lr-widget>`; detail union of 25, e.g. `LyraActivityFeedEventMap['lr-toggle']`.
+ * `<lr-dock-panel>`, `<lr-message-parts>`, `<lr-multi-split>`, `<lr-navigation-menu-item>`,
+ * `<lr-navigation-menu>`, `<lr-source-card>`, `<lr-source-list>`, `<lr-task-list>`,
+ * `<lr-test-results>`, `<lr-thinking-panel>`, `<lr-tool-call-block>`, `<lr-widget>`; detail union
+ * of 21, e.g. `LyraActivityFeedEventMap['lr-toggle']`.
  */
 export type LyraToggleEvent =
   | LyraActivityFeedEventMap['lr-toggle']
@@ -3543,14 +3537,10 @@ export type LyraToggleEvent =
   | LyraCommitCardEventMap['lr-toggle']
   | LyraDetailsEventMap['lr-toggle']
   | LyraDockPanelEventMap['lr-toggle']
-  | LyraEntityDossierEventMap['lr-toggle']
-  | LyraMemoryPanelEventMap['lr-toggle']
   | LyraMessagePartsEventMap['lr-toggle']
   | LyraMultiSplitEventMap['lr-toggle']
   | LyraNavigationMenuEventMap['lr-toggle']
   | LyraNavigationMenuItemEventMap['lr-toggle']
-  | LyraProvenancePanelEventMap['lr-toggle']
-  | LyraRetrievalTraceEventMap['lr-toggle']
   | LyraSourceCardEventMap['lr-toggle']
   | LyraSourceListEventMap['lr-toggle']
   | LyraTaskListEventMap['lr-toggle']
@@ -3742,12 +3732,10 @@ export type LyraVersionSelectEvent = LyraPromptStudioEventMap['lr-version-select
 export type LyraVideoChangeEvent = LyraVideoPlaylistEventMap['lr-video-change'];
 
 /**
- * `lr-view-change` — dispatched by 2 components: `<lr-calendar>`, `<lr-date-picker>`; detail union
- * of 2, e.g. `LyraCalendarEventMap['lr-view-change']`.
+ * `lr-view-change` — dispatched by `<lr-date-picker>`; detail
+ * `LyraDatePickerEventMap['lr-view-change']`.
  */
-export type LyraViewChangeEvent =
-  | LyraCalendarEventMap['lr-view-change']
-  | LyraDatePickerEventMap['lr-view-change'];
+export type LyraViewChangeEvent = LyraDatePickerEventMap['lr-view-change'];
 
 /**
  * `lr-viewer-diagnostic` — dispatched by 7 components: `<lr-csv-viewer>`, `<lr-dataset-viewer>`,

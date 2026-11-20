@@ -9,12 +9,12 @@ import { parseSync } from 'oxc-parser';
 import { applyReviewedExceptions, diffPublicApi, normalizePublicApi } from './public-api-diff.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const entry = 'components/conversation/message-parts/message-parts.ts';
+const entry = 'components/lr-message-parts.ts';
 const children = [
-  ['../../forms/button/button.js', 'lr-button', 'LyraButton'],
-  ['../../layout/details/details.js', 'lr-details', 'LyraDetails'],
-  ['../../forms/icon-button/icon-button.js', 'lr-icon-button', 'LyraIconButton'],
-  ['../../overlays/overlay/tooltip.class.js', 'lr-tooltip', 'LyraTooltip'],
+  ['./lr-button.js', 'lr-button', 'LyraButton'],
+  ['./lr-details.js', 'lr-details', 'LyraDetails'],
+  ['./lr-icon-button.js', 'lr-icon-button', 'LyraIconButton'],
+  ['./overlays/overlay/tooltip.class.js', 'lr-tooltip', 'LyraTooltip'],
 ];
 
 test('message-parts preserves child tag declarations without emitting child registration imports', () => {

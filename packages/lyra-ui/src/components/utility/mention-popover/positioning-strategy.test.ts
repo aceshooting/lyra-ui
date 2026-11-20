@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mention-popover.js';
-import type { LyraMentionItem, LyraMentionPopover } from './mention-popover.js';
+import '../../lr-mention-popover.js';
+import type { LyraMentionItem, LyraMentionPopover } from '../../lr-mention-popover.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

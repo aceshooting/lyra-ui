@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './connector-manager.js';
+import '../../lr-connector-manager.js';
 import type { AgentConnector } from './connector-manager.class.js';
 
 const meta: Meta = {

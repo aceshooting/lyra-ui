@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import '../dock-panel/dock-panel.js';
-import '../multi-split/multi-split.js';
-import './split-panel.js';
-import type { LyraDockPanel } from '../dock-panel/dock-panel.js';
+import '../../lr-dock-panel.js';
+import '../../lr-multi-split.js';
+import '../../lr-split-panel.js';
+import type { LyraDockPanel } from '../../lr-dock-panel.js';
 import type { LyraMultiSplit } from '../multi-split/multi-split.class.js';
 import type { LyraSplitPanel } from './split-panel.class.js';
 

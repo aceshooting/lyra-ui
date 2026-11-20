@@ -2,8 +2,8 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
-import './tool-result-view.js';
-import type { LyraToolResultView } from './tool-result-view.js';
+import '../../lr-tool-result-view.js';
+import type { LyraToolResultView } from '../../lr-tool-result-view.js';
 import {
   registerToolRenderer,
   clearToolRenderers,
@@ -592,7 +592,7 @@ describe('status / context.reportStatus', () => {
 });
 
 it('registers and upgrades the copy button it renders, through its own entry point alone', async () => {
-  // This file imports `./tool-result-view.js` and nothing else, so the granular entry point is the
+  // This file imports `../../lr-tool-result-view.js` and nothing else, so the granular entry point is the
   // whole module graph -- exactly what a consumer importing one component gets. `<lr-copy-button>`
   // was rendered but never registered there (only its side-effect-free `.class.js` was imported),
   // so it reached the page as an inert, never-upgrading element that swallowed every click.

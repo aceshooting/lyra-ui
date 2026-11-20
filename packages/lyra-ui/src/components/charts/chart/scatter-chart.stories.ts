@@ -1,7 +1,7 @@
 import type { LyraSpatialChartSource, LyraSpatialChartPoint } from '../../../utilities/data-spatial.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraChartSeries } from './chart.js';
+import type { LyraChartSeries } from '../../lr-chart.js';
 import { narrowChartStory } from '../../../../../../.storybook/narrow-chart-story.js';
 
 const meta: Meta = {

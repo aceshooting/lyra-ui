@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './agent-workspace.js';
+import '../../lr-agent-workspace.js';
 
 it('lets the enclosing layout theme its base surface', async () => {
   const el = await fixture(html`<lr-agent-workspace

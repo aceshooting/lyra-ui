@@ -1,8 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './components/forms/color-picker/color-picker.js';
-import './components/forms/swatch-picker/swatch-picker.js';
-import type { LyraColorPicker } from './components/forms/color-picker/color-picker.js';
-import type { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker.js';
+import './components/lr-color-picker.js';
+import './components/lr-swatch-picker.js';
+import type { LyraColorPicker } from './components/lr-color-picker.js';
+import type { LyraSwatchPicker } from './components/lr-swatch-picker.js';
 
 // Never hand a missing part on to `getComputedStyle`: a blind cast turns "the component rendered
 // nothing" into an opaque "parameter 1 is not of type 'Element'" TypeError that names neither the

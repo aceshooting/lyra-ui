@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 const calendar = {
   kind: 'calendar' as const,

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraNavigationMenu } from './navigation-menu.class.js';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 for (const direction of ['ltr', 'rtl']) {
   it(`measures content allocation when ResizeObserver is unavailable in ${direction}`, async () => {

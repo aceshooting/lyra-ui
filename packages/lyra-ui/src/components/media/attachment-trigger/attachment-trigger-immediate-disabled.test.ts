@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
-import './attachment-trigger.js';
+import '../../lr-attachment-trigger.js';
 
 for (const capability of ['camera', 'audio'] as const) {
   it(`suppresses a ${capability} request when disabled during click capture and resumes after enabling`, async () => {

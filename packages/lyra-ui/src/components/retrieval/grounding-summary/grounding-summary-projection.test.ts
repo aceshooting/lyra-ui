@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './grounding-summary.js';
-import type { LyraGroundingSummary } from './grounding-summary.js';
+import '../../lr-grounding-summary.js';
+import type { LyraGroundingSummary } from '../../lr-grounding-summary.js';
 import type { Citation, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 
 function revoked<T extends object>(target: T): T {

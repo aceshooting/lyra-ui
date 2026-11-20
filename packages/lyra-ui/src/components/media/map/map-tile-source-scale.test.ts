@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { addProtocol, removeProtocol, getWorkerUrl, setWorkerUrl, type Map as ModularMap } from '@aceshooting/lyra-map';
 import { catalogPoint, catalogVectorTile, VECTOR_CATALOG_COUNT } from '../../../../test/map-vector-tile.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
-import './map.js';
+import '../../lr-map.js';
 import type { LyraMap } from './map.class.js';
 import type { Feature, Point } from 'geojson';
 

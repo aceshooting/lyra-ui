@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './code-editor.js';
-import type { LyraCodeEditor } from './code-editor.js';
+import '../../lr-code-editor.js';
+import type { LyraCodeEditor } from '../../lr-code-editor.js';
 
 function descriptions(owner: HTMLElement): string[] {
   return Reflect.has(owner, 'ariaDescribedByElements')

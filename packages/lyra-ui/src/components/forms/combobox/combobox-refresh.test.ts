@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './combobox.js';
-import './option.js';
-import type { LyraCombobox } from './combobox.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 async function settle(el: LyraCombobox) { await el.updateComplete; await nextFrame(); await el.updateComplete; }
 it('refreshes a stable filter callback after an explicit coalesced update', async () => {
   let accepted = 'a';

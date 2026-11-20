@@ -2,7 +2,7 @@ import { expect, fixtureCleanup } from '@open-wc/testing';
 import { mapCameraSessionAttachment, type MapCameraSessionCallbacks } from '../../../internal/map-camera-session.js';
 import { admitMapViewpoint } from '../../../internal/map-camera-session-data.js';
 import { installCameraPeerEnvironment, mountCameraPeerMap, type CameraPeer } from '../../../../test/map-camera-peer.js';
-import './map.js';
+import '../../lr-map.js';
 
 const target = admitMapViewpoint({ center: [12, 5], zoom: 6, bearing: 30, pitch: 40 });
 const commands = (peer: CameraPeer) => peer.calls.filter(name => ['jumpTo', 'easeTo', 'flyTo'].includes(name));

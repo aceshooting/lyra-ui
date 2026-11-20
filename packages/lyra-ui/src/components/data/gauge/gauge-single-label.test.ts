@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './gauge.js';
-import type { LyraGauge } from './gauge.js';
+import '../../lr-gauge.js';
+import type { LyraGauge } from '../../lr-gauge.js';
 
 it('preserves the complete tooltip when only the value or label is present', async () => {
   const full = 'A deliberately long descriptive measurement';

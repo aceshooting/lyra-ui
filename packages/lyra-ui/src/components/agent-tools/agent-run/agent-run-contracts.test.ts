@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './agent-run.js';
-import type { LyraAgentRun } from './agent-run.js';
+import '../../lr-agent-run.js';
+import type { LyraAgentRun } from '../../lr-agent-run.js';
 
 it('keeps focus on the counterpart action when Cancel is replaced by Retry', async () => {
   const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${{ id: 'r', status: { kind: 'running' }, startedAt: Date.now(), steps: [] }}></lr-agent-run>`);

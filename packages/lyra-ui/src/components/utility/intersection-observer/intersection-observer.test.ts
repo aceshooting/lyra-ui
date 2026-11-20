@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './intersection-observer.js';
+import '../../lr-intersection-observer.js';
 import type { LyraIntersectionObserver } from './intersection-observer.class.js';
 
 function intersectionEntry(target: Element, isIntersecting: boolean): IntersectionObserverEntry {

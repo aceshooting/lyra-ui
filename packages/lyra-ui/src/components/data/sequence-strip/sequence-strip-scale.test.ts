@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './sequence-strip.js';
+import '../../lr-sequence-strip.js';
 import type { LyraSequenceStrip } from './sequence-strip.class.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

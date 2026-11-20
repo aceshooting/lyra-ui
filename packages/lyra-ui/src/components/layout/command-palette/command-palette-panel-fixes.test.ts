@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './command-palette.js';
-import type { LyraCommandPalette } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommandPalette } from '../../lr-command-palette.js';
 
 const commands = [{ commandId: 'save', label: 'Save' }, { commandId: 'open', label: 'Open' }];
 

@@ -1,17 +1,17 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
 import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js';
-import '../archive-viewer/archive-viewer.js';
-import '../calendar-viewer/calendar-viewer.js';
-import '../contact-viewer/contact-viewer.js';
-import '../csv-viewer/csv-viewer.js';
-import '../dataset-viewer/dataset-viewer.js';
-import '../email-viewer/email-viewer.js';
-import '../html-viewer/html-viewer.js';
-import '../spreadsheet-viewer/spreadsheet-viewer.js';
-import '../svg-viewer/svg-viewer.js';
-import '../xml-viewer/xml-viewer.js';
-import '../geojson-view/geojson-viewer.js';
+import '../../lr-archive-viewer.js';
+import '../../lr-calendar-viewer.js';
+import '../../lr-contact-viewer.js';
+import '../../lr-csv-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-email-viewer.js';
+import '../../lr-html-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
+import '../../lr-svg-viewer.js';
+import '../../lr-xml-viewer.js';
+import '../../lr-geojson-viewer.js';
 
 const cases: readonly [string, TemplateResult, string, () => BodyInit | Promise<BodyInit>][] = [
   ['calendar', html`<lr-calendar-viewer src="/file.ics"></lr-calendar-viewer>`, '[part="event-summary"]', () => 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:1\r\nDTSTART:20260714T140000Z\r\nSUMMARY:Meeting\r\nEND:VEVENT\r\nEND:VCALENDAR'],

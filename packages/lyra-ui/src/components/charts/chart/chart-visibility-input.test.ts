@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 
 describe('lr-chart controlled category visibility input', () => {

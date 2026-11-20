@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './select.js';
-import '../combobox/combobox.js';
-import '../combobox/option.js';
-import type { LyraSelect } from './select.js';
-import type { LyraCombobox } from '../combobox/combobox.js';
+import '../../lr-select.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import type { LyraSelect } from '../../lr-select.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 
 for (const kind of ['select', 'combobox'] as const) {
   for (const phase of ['initial', 'closed after resize'] as const) {

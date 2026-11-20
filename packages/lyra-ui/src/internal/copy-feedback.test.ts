@@ -1,12 +1,12 @@
 import { expect, fixture, html, nextFrame, oneEvent } from '@open-wc/testing';
-import '../components/agent-tools/commit-card/commit-card.js';
-import '../components/agent-tools/stack-trace/stack-trace.js';
-import '../components/agent-tools/terminal/terminal.js';
+import '../components/lr-commit-card.js';
+import '../components/lr-stack-trace.js';
+import '../components/lr-terminal.js';
 import { COPY_FEEDBACK_MS } from './copy-feedback.js';
-import '../components/utility/copy-button/copy-button.js';
-import '../components/utility/diff-view/diff-view.js';
-import '../components/utility/json-viewer/json-viewer.js';
-import type { LyraCopyButton } from '../components/utility/copy-button/copy-button.js';
+import '../components/lr-copy-button.js';
+import '../components/lr-diff-view.js';
+import '../components/lr-json-viewer.js';
+import type { LyraCopyButton } from '../components/lr-copy-button.js';
 
 /** Delays of every window timer scheduled while `action` runs. */
 async function timerDelaysDuring(action: () => Promise<void>): Promise<number[]> {

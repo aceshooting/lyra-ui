@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './multi-split.js';
-import type { LyraMultiSplit } from './multi-split.js';
+import '../../lr-multi-split.js';
+import type { LyraMultiSplit } from '../../lr-multi-split.js';
 
 describe('floating multi-split drawer native carrier dismissal', () => {
   it('restores a floating drawer carrier when an external native close hides its overlay surface', async () => {

@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 describe('lr-tree in a windowless document', () => {
   it('keeps authored items usable after adoption into a document without a window', async () => {

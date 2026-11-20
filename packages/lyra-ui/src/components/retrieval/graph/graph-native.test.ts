@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { requireWebgl2 } from '../../../../test/native-3d-ui.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphCamera, LyraGraphNode } from './graph-model.js';
 void LyraGraph;
 

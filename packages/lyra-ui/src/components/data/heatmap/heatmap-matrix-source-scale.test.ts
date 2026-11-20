@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import type { LyraHeatmap, LyraHeatmapMatrixSource, LyraHeatmapTile } from './heatmap.class.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 

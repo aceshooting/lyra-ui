@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './budget-meter.js';
+import '../../lr-budget-meter.js';
 import type { LyraBudgetMeter } from './budget-meter.class.js';
 
 describe('lr-budget-meter', () => {

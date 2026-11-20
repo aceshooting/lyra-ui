@@ -2,8 +2,8 @@ import { expect, fixtureCleanup, waitUntil } from '@open-wc/testing';
 import { sceneMarker, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { RenderBridgeHost } from '../../../../test/map-scene-render-component-fixtures.js';
-import type { LyraMap } from './map.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
+import type { LyraMap } from '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 
 interface SceneStatus { readonly state: string; readonly code?: string }

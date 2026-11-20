@@ -5,7 +5,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { createMapCameraSessionController } from '../../../internal/map-camera-session-controller.js';
 import { createSimulationClock, type ClockScheduler } from '../../../simulation-clock.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 void LyraMap;
 

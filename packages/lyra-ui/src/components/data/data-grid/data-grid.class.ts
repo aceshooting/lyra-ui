@@ -1229,7 +1229,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (this.withColumnsMenu) this.menuRegistration ??= Promise.all([
-      import('../../overlays/overlay/dropdown.js'), import('../../layout/menu/dropdown-item.js'), import('../../forms/button/button.js'),
+      import('../../lr-dropdown.js'), import('../../lr-dropdown-item.js'), import('../../lr-button.js'),
     ]);
     this.renderedDisplayItems = this.displayItems;
     this.renderedColumns = this.visibleColumns;

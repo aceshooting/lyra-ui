@@ -2,8 +2,8 @@ import { resolvedColorIn } from '../../../../test/shadow-style.js';
 import { measureListboxRow } from '../../../../test/row-style.js';
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import "./model-select.js";
-import type { LyraModelSelect } from "./model-select.js";
+import "../../lr-model-select.js";
+import type { LyraModelSelect } from "../../lr-model-select.js";
 
 const CATALOG = ["llama3.1", "mistral", "qwen2.5-coder"];
 const OBJECT_CATALOG = [

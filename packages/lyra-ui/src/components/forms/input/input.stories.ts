@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { LyraInput } from './input.js';
-import './input.js';
-import '../button/button.js';
+import { LyraInput } from '../../lr-input.js';
+import '../../lr-input.js';
+import '../../lr-button.js';
 
 const meta: Meta = {
   title: 'Input',

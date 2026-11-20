@@ -1,6 +1,6 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraMap, LyraMapInstance } from './map.class.js';
-import './map.js';
+import '../../lr-map.js';
 
 const style = { version: 8 as const, sources: {}, layers: [] };
 type StylePeer = LyraMapInstance & { setStyle(style: unknown): unknown };

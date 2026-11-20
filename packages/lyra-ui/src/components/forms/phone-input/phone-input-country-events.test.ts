@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './phone-input.js';
+import '../../lr-phone-input.js';
 import { loadFlagUrlResolver, setFlagUrlResolver } from '../../media/flag/flag-url-resolver.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { OptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
-import { LyraPhoneInput, type LyraPhoneNumberAdapter } from './phone-input.js';
+import { LyraPhoneInput, type LyraPhoneNumberAdapter } from '../../lr-phone-input.js';
 
 const adapter: LyraPhoneNumberAdapter = {
   countries: [
@@ -38,7 +38,7 @@ it('retries a failed flag registration on update and shares its successful impor
   expectDevWarning('phone-input-flag-registration');
   flagRegistration.override(async () => {
     if (++attempts === 1) throw new Error('Chunk unavailable');
-    return (await import('../../media/flag/flag.js')).LyraFlag;
+    return (await import('../../lr-flag.js')).LyraFlag;
   });
   try {
     const el = document.createElement('lr-phone-input');

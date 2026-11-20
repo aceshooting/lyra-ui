@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './drawer.js';
+import '../../lr-drawer.js';
 import type { LyraDrawer } from './drawer.class.js';
 
 function panelName(el: LyraDrawer): string {

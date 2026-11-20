@@ -2,9 +2,9 @@ import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./chat-message.js";
-import "../markdown/markdown-core.js";
-import type { LyraChatMessage } from "./chat-message.js";
+import "../../lr-chat-message.js";
+import "../../lr-markdown-core.js";
+import type { LyraChatMessage } from "../../lr-chat-message.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 

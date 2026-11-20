@@ -1,19 +1,19 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
-import './tree.js';
-import '../file-tree/file-tree.js';
-import '../env-list/env-list.js';
-import '../flow-canvas/flow-canvas.js';
-import '../flow-minimap/flow-minimap.js';
-import '../flow-run-status/flow-run-status.js';
-import '../graph-query-builder/graph-query-builder.js';
-import type { LyraTree } from './tree.js';
-import type { LyraFileTree } from '../file-tree/file-tree.js';
-import type { LyraEnvList } from '../env-list/env-list.js';
-import type { LyraFlowCanvas } from '../flow-canvas/flow-canvas.js';
-import type { LyraFlowMinimap } from '../flow-minimap/flow-minimap.js';
-import type { LyraFlowRunStatus } from '../flow-run-status/flow-run-status.js';
-import type { LyraGraphQueryBuilder } from '../graph-query-builder/graph-query-builder.js';
+import '../../lr-tree.js';
+import '../../lr-file-tree.js';
+import '../../lr-env-list.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-minimap.js';
+import '../../lr-flow-run-status.js';
+import '../../lr-graph-query-builder.js';
+import type { LyraTree } from '../../lr-tree.js';
+import type { LyraFileTree } from '../../lr-file-tree.js';
+import type { LyraEnvList } from '../../lr-env-list.js';
+import type { LyraFlowCanvas } from '../../lr-flow-canvas.js';
+import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
+import type { LyraFlowRunStatus } from '../../lr-flow-run-status.js';
+import type { LyraGraphQueryBuilder } from '../../lr-graph-query-builder.js';
 
 describe('whitespace-only names fall back to the localized default', () => {
   it('lr-tree names the tree from its label only when it has text, and badges only when labelled', async () => {

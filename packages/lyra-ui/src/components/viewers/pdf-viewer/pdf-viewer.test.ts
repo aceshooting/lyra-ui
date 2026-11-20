@@ -7,16 +7,16 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import "./pdf-viewer.js";
-import "../../layout/virtual-list/virtual-list.js";
-import "../page-rail/page-rail.js";
+import "../../lr-pdf-viewer.js";
+import "../../lr-virtual-list.js";
+import "../../lr-page-rail.js";
 import {
   findDocumentRenderer,
   loadDocumentRenderer,
 } from "../document-viewer/registry.js";
-import type { LyraPageRail } from "../page-rail/page-rail.js";
+import type { LyraPageRail } from "../../lr-page-rail.js";
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
-import type { LyraPdfViewer } from "./pdf-viewer.js";
+import type { LyraPdfViewer } from "../../lr-pdf-viewer.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

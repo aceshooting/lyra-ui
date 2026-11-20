@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './browser-frame.js';
+import '../../lr-browser-frame.js';
 import type { BrowserPing } from './browser-frame.class.js';
 
 const meta: Meta = {

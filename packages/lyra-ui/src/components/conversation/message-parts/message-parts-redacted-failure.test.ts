@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { MessagePart } from '../../../ai/types.js';
 import type { LyraToolResultView } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
-import '../../agent-tools/tool-result-view/tool-result-view.js';
+import '../../lr-tool-result-view.js';
 import type { LyraMessageParts } from './message-parts.class.js';
-import './message-parts.js';
+import '../../lr-message-parts.js';
 
 it('masks a nameless partial failure using the invocation outside the rendered window', async () => {
   const partial = { token: 'private-token', retained: 2 };

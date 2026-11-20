@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraMap, LyraMapEngine, LyraMapFeatureRequirements } from './map.class.js';
-import './map.js';
+import '../../lr-map.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
 const blankStyle = { version: 8 as const, sources: {}, layers: [] };

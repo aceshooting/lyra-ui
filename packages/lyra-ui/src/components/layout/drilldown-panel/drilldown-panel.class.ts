@@ -174,9 +174,9 @@ const ACTIVE_PAGE_SIZE = 8;
 
 /** Each data-gated child registers the first time its category renders. */
 const CHILD_REGISTRATIONS = {
-  evidence: () => import('../../retrieval/source-card/source-card.js'),
-  documents: () => import('../../viewers/document-preview/document-preview.js'),
-  entities: () => import('../../retrieval/entity-card/entity-card.js'),
+  evidence: () => import('../../lr-source-card.js'),
+  documents: () => import('../../lr-document-preview.js'),
+  entities: () => import('../../lr-entity-card.js'),
 } as const;
 const registeredChildren = new Set<string>();
 

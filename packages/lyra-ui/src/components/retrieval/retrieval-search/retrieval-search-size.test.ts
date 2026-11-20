@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './retrieval-search.js';
-import type { LyraRetrievalSearch } from './retrieval-search.js';
+import '../../lr-retrieval-search.js';
+import type { LyraRetrievalSearch } from '../../lr-retrieval-search.js';
 
 
 /**

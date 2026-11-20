@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './conversation-item.js';
-import '../../overlays/overlay/dropdown.js';
-import '../../layout/menu/menu.js';
-import '../../layout/menu/menu-item.js';
+import '../../lr-conversation-item.js';
+import '../../lr-dropdown.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const storyLocale = (): string => document.documentElement.lang || navigator.language;

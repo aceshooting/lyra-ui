@@ -1,14 +1,14 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import '../approval-queue/approval-queue.js';
-import '../permission-rules/permission-rules.js';
-import '../permission-grant/permission-grant.js';
-import '../connector-manager/connector-manager.js';
-import '../confirm-bar/confirm-bar.js';
-import '../tool-call-chip/tool-call-chip.js';
-import '../tool-select-dialog/tool-select-dialog.js';
-import '../tool-timeline/tool-timeline.js';
-import '../tool-param-form/tool-param-form.js';
-import './tool-approval-dialog.js';
+import '../../lr-approval-queue.js';
+import '../../lr-permission-rules.js';
+import '../../lr-permission-grant.js';
+import '../../lr-connector-manager.js';
+import '../../lr-confirm-bar.js';
+import '../../lr-tool-call-chip.js';
+import '../../lr-tool-select-dialog.js';
+import '../../lr-tool-timeline.js';
+import '../../lr-tool-param-form.js';
+import '../../lr-tool-approval-dialog.js';
 
 const part = (el: HTMLElement, name: string) => el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
 const call = { id: 'a', name: 'Search', toolName: 'Search', args: {}, status: 'pending', needsApproval: true };

@@ -1,11 +1,11 @@
 import { expect, fixture } from '@open-wc/testing';
-import './checkbox.js';
-import '../checkbox-group/checkbox-group.js';
-import '../radio/radio.js';
-import '../radio/radio-button.js';
-import '../radio/radio-group.js';
-import '../color-picker/color-picker.js';
-import '../slider/slider.js';
+import '../../lr-checkbox.js';
+import '../../lr-checkbox-group.js';
+import '../../lr-radio.js';
+import '../../lr-radio-button.js';
+import '../../lr-radio-group.js';
+import '../../lr-color-picker.js';
+import '../../lr-slider.js';
 
 type Host = HTMLElement & { updateComplete: Promise<unknown> };
 

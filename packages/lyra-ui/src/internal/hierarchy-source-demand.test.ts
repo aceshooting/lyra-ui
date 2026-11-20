@@ -5,7 +5,7 @@ import { HierarchySourceController } from './hierarchy-source-controller.js';
 import { hierarchySourceView } from './hierarchy-source-view.js';
 import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
-import '../components/layout/virtual-list/virtual-list.js';
+import '../components/lr-virtual-list.js';
 
 class DemandHost extends LitElement {
   paints = 0;

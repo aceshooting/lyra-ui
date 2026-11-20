@@ -1,15 +1,15 @@
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
 import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
-import "./combobox.js";
-import "./option.js";
-import "../input/input.js";
-import "../select/select.js";
-import "../button/button.js";
-import "../token-input/token-input.js";
-import "../color-picker/color-picker.js";
-import "../../layout/segmented/segmented.js";
-import type { ComboboxFilterDetail, LyraCombobox } from "./combobox.js";
+import "../../lr-combobox.js";
+import "../../lr-option.js";
+import "../../lr-input.js";
+import "../../lr-select.js";
+import "../../lr-button.js";
+import "../../lr-token-input.js";
+import "../../lr-color-picker.js";
+import "../../lr-segmented.js";
+import type { ComboboxFilterDetail, LyraCombobox } from "../../lr-combobox.js";
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
 import { settleComboboxSource } from '../../../../test/wtr-combobox.js';

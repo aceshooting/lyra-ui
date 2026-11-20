@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/svg-viewer/svg-viewer.js';
+export * from './viewers/svg-viewer/svg-viewer.class.js';
+import { LyraSvgViewer } from './viewers/svg-viewer/svg-viewer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-pan-zoom.js';
+import './viewers/svg-viewer/svg-viewer-register.js';
+
+defineElement('svg-viewer', LyraSvgViewer);

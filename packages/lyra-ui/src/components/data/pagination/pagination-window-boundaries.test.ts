@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './pagination.js';
-import type { LyraPagination } from './pagination.js';
+import '../../lr-pagination.js';
+import type { LyraPagination } from '../../lr-pagination.js';
 
 function pageLabels(el: LyraPagination): string[] {
   return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="page"]')].map((node) => node.textContent!.trim());

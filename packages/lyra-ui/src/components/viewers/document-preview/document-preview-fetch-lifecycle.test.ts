@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './document-preview.js';
-import type { LyraDocumentPreview } from './document-preview.js';
+import '../../lr-document-preview.js';
+import type { LyraDocumentPreview } from '../../lr-document-preview.js';
 
 const originalFetch = window.fetch;
 afterEach(() => { window.fetch = originalFetch; });

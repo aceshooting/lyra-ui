@@ -33,7 +33,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 **Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
-legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
+legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import type { TraceTreeSource } from

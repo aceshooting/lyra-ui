@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/browser-frame/browser-frame.js';
+export * from './agent-tools/browser-frame/browser-frame.class.js';
+import { LyraBrowserFrame } from './agent-tools/browser-frame/browser-frame.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('browser-frame', LyraBrowserFrame);

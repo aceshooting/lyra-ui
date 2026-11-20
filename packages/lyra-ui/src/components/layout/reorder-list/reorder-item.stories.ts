@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './reorder-item.js';
-import './reorder-list.js';
+import '../../lr-reorder-item.js';
+import '../../lr-reorder-list.js';
 
 const meta: Meta = { title: 'Primitives/Reorder Item', component: 'lr-reorder-item', tags: ['autodocs'] };
 export default meta;

@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 import type { LyraChart3d, LyraChart3dColumns } from './chart-3d.class.js';
 import { capture, changedPixels, clickCenter, loseContext, matches, nativeCanvas, requireWebgl2 } from '../../../../test/native-3d-ui.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';

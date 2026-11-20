@@ -10,7 +10,7 @@ import type {
   LyraDocumentLibrary,
 } from './document-library.class.js';
 import type { LyraTable } from '../table/table.class.js';
-import './document-library.js';
+import '../../lr-document-library.js';
 import '../../../translations/fr.js';
 
 interface CursorRequest extends LyraSourceContext {

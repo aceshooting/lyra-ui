@@ -10,10 +10,10 @@ import { contrastRatio, resolvedColorToken, toRgba } from '../../test/color-cont
 import { setForcedColors, setReducedMotion } from '../../test/wtr-media.js';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../test/wtr-mouse.js';
-import '../components/forms/button/button.js';
-import '../components/forms/input/input.js';
-import '../components/layout/card/card.js';
-import '../components/overlays/dialog/dialog.js';
+import '../components/lr-button.js';
+import '../components/lr-input.js';
+import '../components/lr-card.js';
+import '../components/lr-dialog.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 import type { LyraInput } from '../components/forms/input/input.class.js';
 import type { LyraDialog } from '../components/overlays/dialog/dialog.class.js';

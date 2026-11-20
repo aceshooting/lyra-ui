@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './entity-card.js';
-import type { LyraEntityCard, LyraEntity } from './entity-card.js';
+import '../../lr-entity-card.js';
+import type { LyraEntityCard, LyraEntity } from '../../lr-entity-card.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import {

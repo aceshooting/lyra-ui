@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 
 it('preserves the order of distinct finite values across narrow and wide scientific domains', async () => {
   const element = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line" without-zero-baseline

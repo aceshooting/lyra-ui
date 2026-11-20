@@ -5,7 +5,7 @@ import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
 import type { LyraCountryPicker } from './country-picker.class.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';
-import './country-picker.js';
+import '../../lr-country-picker.js';
 
 function control(el: LyraCountryPicker): LyraCombobox<false> | LyraSelect<false> {
   return el.shadowRoot!.querySelector<LyraCombobox<false> | LyraSelect<false>>('lr-combobox,lr-select')!;

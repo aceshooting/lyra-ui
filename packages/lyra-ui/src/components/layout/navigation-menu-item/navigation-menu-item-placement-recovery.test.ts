@@ -2,9 +2,9 @@ import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import '../navigation-menu/navigation-menu.js';
-import type { LyraNavigationMenu } from '../navigation-menu/navigation-menu.js';
-import type { LyraNavigationMenuItem } from './navigation-menu-item.js';
+import '../../lr-navigation-menu.js';
+import type { LyraNavigationMenu } from '../../lr-navigation-menu.js';
+import type { LyraNavigationMenuItem } from '../../lr-navigation-menu-item.js';
 
 for (const failure of ['import', 'setup'] as const) {
   for (const opening of ['initial', 'property', 'keyboard', 'reconnect'] as const) {

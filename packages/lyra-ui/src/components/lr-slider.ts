@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/slider/slider.js';
+export * from './forms/slider/slider.class.js';
+import { LyraSlider } from './forms/slider/slider.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('slider', LyraSlider);

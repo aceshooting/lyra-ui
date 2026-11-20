@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
-import "./breadcrumb.js";
-import "./breadcrumb-item.js";
-import type { LyraBreadcrumb } from "./breadcrumb.js";
+import "../../lr-breadcrumb.js";
+import "../../lr-breadcrumb-item.js";
+import type { LyraBreadcrumb } from "../../lr-breadcrumb.js";
 
 class BreadcrumbSeparatorTestControl extends HTMLElement {
   static connectedCount = 0;

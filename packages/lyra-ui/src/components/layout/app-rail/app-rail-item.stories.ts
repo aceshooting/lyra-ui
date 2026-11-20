@@ -1,7 +1,7 @@
-import './app-rail.js';
+import '../../lr-app-rail.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './app-rail-item.js';
+import '../../lr-app-rail-item.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'Navigation/App rail item', component: 'lr-app-rail-item', tags: ['autodocs'] };

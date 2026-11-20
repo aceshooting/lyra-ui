@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './utility/intersection-observer/intersection-observer.js';
+export * from './utility/intersection-observer/intersection-observer.class.js';
+import { LyraIntersectionObserver } from './utility/intersection-observer/intersection-observer.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('intersection-observer', LyraIntersectionObserver);

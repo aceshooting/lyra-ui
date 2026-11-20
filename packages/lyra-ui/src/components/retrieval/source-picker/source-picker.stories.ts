@@ -1,6 +1,6 @@
 import { html, nothing } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './source-picker.js';
+import '../../lr-source-picker.js';
 import type { LyraSourceEntry, LyraSourcePicker } from './source-picker.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

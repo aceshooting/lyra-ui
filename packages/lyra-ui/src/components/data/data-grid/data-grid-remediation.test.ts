@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './data-grid.js';
-import '../../forms/button/button.js';
-import type { LyraDataGrid, DataGridColumn } from './data-grid.js';
-import type { LyraButton } from '../../forms/button/button.js';
+import '../../lr-data-grid.js';
+import '../../lr-button.js';
+import type { LyraDataGrid, DataGridColumn } from '../../lr-data-grid.js';
+import type { LyraButton } from '../../lr-button.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 expectDevWarning('lyra-data-grid-missing-accessible-name');

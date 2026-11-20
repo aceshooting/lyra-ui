@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './mind-map.js';
-import type { LyraMindMap, LyraTopic } from './mind-map.js';
+import '../../lr-mind-map.js';
+import type { LyraMindMap, LyraTopic } from '../../lr-mind-map.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './split-panel.js';
+import '../../lr-split-panel.js';
 import type { LyraSplitPanel } from './split-panel.class.js';
 
 for (const primary of ['start', 'end'] as const) {

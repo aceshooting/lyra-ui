@@ -1,7 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
-import './animated-image.js';
-import type { LyraAnimatedImage } from './animated-image.js';
+import '../../lr-animated-image.js';
+import type { LyraAnimatedImage } from '../../lr-animated-image.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './spreadsheet-viewer.js';
-import type { SpreadsheetViewerSource } from './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
+import type { SpreadsheetViewerSource } from '../../lr-spreadsheet-viewer.js';
 import { MINIMAL_XLSX_BASE64 } from './fixtures/minimal-xlsx-fixture.js';
 
 const meta: Meta = {

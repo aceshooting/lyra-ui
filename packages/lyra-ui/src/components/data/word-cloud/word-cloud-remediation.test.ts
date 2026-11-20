@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './word-cloud.js';
-import type { LyraWordCloud } from './word-cloud.js';
+import '../../lr-word-cloud.js';
+import type { LyraWordCloud } from '../../lr-word-cloud.js';
 import { layoutWordCloud } from './word-cloud-layout.js';
 
 for (const scale of ['linear', 'sqrt'] as const) {

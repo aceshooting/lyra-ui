@@ -8,17 +8,17 @@ import type {
   LyraMapMarker,
   LyraMapMarkerActivationDetail,
   LyraMapMarkerActivationSource,
-} from '../src/components/media/map/map.js';
+} from '../src/components/lr-map.js';
 import type {
   LyraFrame,
   LyraMediaCardKind,
   LyraMediaCardOpenDetail,
-} from '../src/components/media/media-card/media-card.js';
-import type { LyraZoomableFrameLoading } from '../src/components/media/zoomable-frame/zoomable-frame.js';
-import type { VideoState } from '../src/components/media/video/video.js';
-import type { LyraImageFit as ImageViewerFit } from '../src/components/media/image-viewer/image-viewer.js';
-import type { LyraImageFit as LightboxFit } from '../src/components/media/lightbox/lightbox.js';
-import type { LyraImageFit as PanZoomFit } from '../src/components/media/pan-zoom/pan-zoom.js';
+} from '../src/components/lr-media-card.js';
+import type { LyraZoomableFrameLoading } from '../src/components/lr-zoomable-frame.js';
+import type { VideoState } from '../src/components/lr-video.js';
+import type { LyraImageFit as ImageViewerFit } from '../src/components/lr-image-viewer.js';
+import type { LyraImageFit as LightboxFit } from '../src/components/lr-lightbox.js';
+import type { LyraImageFit as PanZoomFit } from '../src/components/lr-pan-zoom.js';
 
 declare const canonicalMediaTypes: [
   LyraMapChoroplethLayer,
@@ -63,27 +63,27 @@ void granularMapHeatmapZoomValue;
 void granularMapActivationDetail;
 
 // @ts-expect-error LegendEntry was removed in favor of LyraMapLegendEntry.
-import type { LegendEntry } from '../src/components/media/map/map.js';
+import type { LegendEntry } from '../src/components/lr-map.js';
 // @ts-expect-error ChoroplethLayer was removed in favor of LyraMapChoroplethLayer.
-import type { ChoroplethLayer } from '../src/components/media/map/map.js';
+import type { ChoroplethLayer } from '../src/components/lr-map.js';
 // @ts-expect-error GeoJsonDataLayer was removed in favor of LyraMapGeoJsonDataLayer.
-import type { GeoJsonDataLayer } from '../src/components/media/map/map.js';
+import type { GeoJsonDataLayer } from '../src/components/lr-map.js';
 // @ts-expect-error MapMarker was removed in favor of LyraMapMarker.
-import type { MapMarker } from '../src/components/media/map/map.js';
+import type { MapMarker } from '../src/components/lr-map.js';
 // @ts-expect-error MediaCardKind was removed in favor of LyraMediaCardKind.
-import type { MediaCardKind } from '../src/components/media/media-card/media-card.js';
+import type { MediaCardKind } from '../src/components/lr-media-card.js';
 // @ts-expect-error MediaCardFrame was removed in favor of the shared LyraFrame.
-import type { MediaCardFrame } from '../src/components/media/media-card/media-card.js';
+import type { MediaCardFrame } from '../src/components/lr-media-card.js';
 // @ts-expect-error MediaCardOpenDetail was removed in favor of LyraMediaCardOpenDetail.
-import type { MediaCardOpenDetail } from '../src/components/media/media-card/media-card.js';
+import type { MediaCardOpenDetail } from '../src/components/lr-media-card.js';
 // @ts-expect-error ZoomableFrameLoading was removed in favor of LyraZoomableFrameLoading.
-import type { ZoomableFrameLoading } from '../src/components/media/zoomable-frame/zoomable-frame.js';
+import type { ZoomableFrameLoading } from '../src/components/lr-zoomable-frame.js';
 // @ts-expect-error LyraVideoState was removed in favor of the mirrored VideoState.
-import type { LyraVideoState } from '../src/components/media/video/video.js';
+import type { LyraVideoState } from '../src/components/lr-video.js';
 // @ts-expect-error safeMediaSrc is an internal implementation detail of lr-media-card.
-import { safeMediaSrc as removedSafeMediaSrc } from '../src/components/media/media-card/media-card.js';
+import { safeMediaSrc as removedSafeMediaSrc } from '../src/components/lr-media-card.js';
 // @ts-expect-error safeLinkHref is an internal implementation detail of lr-media-card.
-import { safeLinkHref as removedSafeLinkHref } from '../src/components/media/media-card/media-card.js';
+import { safeLinkHref as removedSafeLinkHref } from '../src/components/lr-media-card.js';
 // @ts-expect-error Zoom-level defaults are private implementation details.
 import { DEFAULT_ZOOM_LEVELS } from '../src/components/media/zoomable-frame/zoomable-frame.class.js';
 // @ts-expect-error Sandbox defaults are private implementation details.

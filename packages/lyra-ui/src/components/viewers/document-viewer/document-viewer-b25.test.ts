@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './document-viewer.js';
+import '../../lr-document-viewer.js';
 import { createDocumentRendererRegistry, type LyraDocumentRendererDefinition } from './registry.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
 
 describe('lr-document-viewer remediation', () => {
   it('forwards activeHighlightId to the fallback preview', async () => {

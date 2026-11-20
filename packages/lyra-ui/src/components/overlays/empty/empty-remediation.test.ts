@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './empty.js';
-import type { LyraEmpty } from './empty.js';
+import '../../lr-empty.js';
+import type { LyraEmpty } from '../../lr-empty.js';
 
 for (const property of ['heading', 'description'] as const) {
   it(`safely removes ${property} and recovers later text`, async () => {

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import './calendar.js';
+import '../../lr-calendar.js';
 import type { CalendarEvent, LyraCalendar } from './calendar.class.js';
 
 function agendaTitles(el: LyraCalendar): string[] {

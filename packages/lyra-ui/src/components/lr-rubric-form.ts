@@ -1,3 +1,8 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/rubric-form/rubric-form.js';
+export * from './forms/rubric-form/rubric-form.class.js';
+import { LyraRubricForm } from './forms/rubric-form/rubric-form.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-segmented.js';
+import './lr-slider.js';
+import './lr-textarea.js';
+
+defineElement('rubric-form', LyraRubricForm);

@@ -1,17 +1,17 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './entity-dossier.js';
-import type { LyraEntityDossier, LyraEntityDossierConfidence } from './entity-dossier.js';
-import type { LyraEntity } from '../entity-card/entity-card.js';
-import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.js';
-import type { LyraChunk } from '../chunk-inspector/chunk-inspector.js';
-import type { LyraProvenance } from '../provenance-panel/provenance-panel.js';
-import type { LyraTabGroup } from '../../layout/tab-group/tab-group.js';
-import type { LyraNeighborList } from '../neighbor-list/neighbor-list.js';
-import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.js';
-import type { LyraProvenancePanel } from '../provenance-panel/provenance-panel.js';
-import type { LyraStat } from '../../data/stat/stat.js';
-import type { LyraEntityCard } from '../entity-card/entity-card.js';
+import '../../lr-entity-dossier.js';
+import type { LyraEntityDossier, LyraEntityDossierConfidence } from '../../lr-entity-dossier.js';
+import type { LyraEntity } from '../../lr-entity-card.js';
+import type { LyraNeighborRow } from '../../lr-neighbor-list.js';
+import type { LyraChunk } from '../../lr-chunk-inspector.js';
+import type { LyraProvenance } from '../../lr-provenance-panel.js';
+import type { LyraTabGroup } from '../../lr-tab-group.js';
+import type { LyraNeighborList } from '../../lr-neighbor-list.js';
+import type { LyraChunkInspector } from '../../lr-chunk-inspector.js';
+import type { LyraProvenancePanel } from '../../lr-provenance-panel.js';
+import type { LyraStat } from '../../lr-stat.js';
+import type { LyraEntityCard } from '../../lr-entity-card.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -159,17 +159,17 @@ it('forwards chunks/thresholds to lr-chunk-inspector, and the same thresholds to
   expect(panel.thresholds).to.deep.equal({ high: 0.9, medium: 0.6 });
 });
 
-it('surfaces the chunk inspector lr-toggle, without the removed lr-chunk-toggle or lr-expand aliases', async () => {
+it('surfaces the chunk inspector disclosure, without the removed lr-toggle, lr-chunk-toggle or lr-expand events', async () => {
   const el = await populated();
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   const seen: string[] = [];
-  el.addEventListener('lr-toggle', (event) =>
-    seen.push(`toggle:${JSON.stringify((event as CustomEvent).detail)}`)
+  el.addEventListener('lr-retrieval-disclosure-change', (event) =>
+    seen.push(`disclosure:${JSON.stringify((event as CustomEvent).detail)}`)
   );
-  for (const type of ['lr-chunk-toggle', 'lr-expand'])
+  for (const type of ['lr-toggle', 'lr-chunk-toggle', 'lr-expand'])
     el.addEventListener(type, () => seen.push(type));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen).to.deep.equal(['toggle:{"section":"chunks","expanded":true,"itemId":"ch1"}']);
+  expect(seen).to.deep.equal(['disclosure:{"origin":"supporting","kind":"chunk","section":"chunks","chunkId":"ch1","expanded":true}']);
 });
 
 it('forwards provenance and types to lr-provenance-panel', async () => {
@@ -439,10 +439,10 @@ it('qualifies the supporting inspector toggle once, without the removed lr-chunk
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   const toggles: unknown[] = [];
   const legacy: unknown[] = [];
-  el.addEventListener('lr-toggle', (event) => toggles.push(event.detail));
+  el.addEventListener('lr-retrieval-disclosure-change', (event) => toggles.push(event.detail));
   el.addEventListener('lr-chunk-toggle', (event) => legacy.push((event as CustomEvent).detail));
   inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-  expect(toggles).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(toggles).to.deep.equal([{ origin: 'supporting', kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true }]);
   expect(legacy).to.deep.equal([]);
 });
 
@@ -477,7 +477,7 @@ it("lets the inner tab group's lr-tab-hide reach host listeners when the user sw
   }
 });
 
-it('delegates supporting and provenance disclosures once and keeps legacy targets', async () => {
+it('delegates supporting and provenance disclosures once and dispatches no generic toggle', async () => {
   const el = await populated();
   const panel = el.shadowRoot!.querySelector('lr-provenance-panel')!;
   const supporting = el.shadowRoot!.querySelector<LyraChunkInspector>('[part="chunk-inspector"]')!;
@@ -513,11 +513,7 @@ it('delegates supporting and provenance disclosures once and keeps legacy target
     { fromDossier: true, detail: { kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true, origin: 'provenance' } },
     { fromDossier: false, detail: { kind: 'section', section: 'chunks', expanded: true } },
   ]);
-  expect(legacy).to.deep.equal([
-    { fromPanel: false, detail: { section: 'chunks', expanded: true, itemId: 'ch1' } },
-    { fromPanel: true, detail: { section: 'entities', expanded: false } },
-    { fromPanel: true, detail: { section: 'chunks', expanded: true, itemId: 'ch1' } },
-  ]);
+  expect(legacy).to.deep.equal([]);
 });
 
 it('forwards heading-level to the nested entity card title', async () => {

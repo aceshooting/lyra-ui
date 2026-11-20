@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraSize } from '../../../internal/variants.js';
-import './menubar.js';
-import '../menu/menu-label.js';
-import '../../overlays/kbd/kbd.js';
+import '../../lr-menubar.js';
+import '../../lr-menu-label.js';
+import '../../lr-kbd.js';
 
 const meta: Meta = {
   title: 'Layout/Menubar',

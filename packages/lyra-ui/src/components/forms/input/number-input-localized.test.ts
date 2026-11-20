@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './number-input.js';
+import '../../lr-number-input.js';
 import '../../../translations/de/forms.js';
 import type { LyraNumberInput } from './number-input.class.js';
 

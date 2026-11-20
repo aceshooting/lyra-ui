@@ -3,8 +3,8 @@ import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/t
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './citation-badge.js';
-import type { LyraCitationBadge } from './citation-badge.js';
+import '../../lr-citation-badge.js';
+import type { LyraCitationBadge } from '../../lr-citation-badge.js';
 
 // Locale/numbering fixtures intentionally use English fallback text.
 expectLocaleFallback('ar-EG', [

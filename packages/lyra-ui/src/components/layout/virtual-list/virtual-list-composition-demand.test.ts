@@ -3,7 +3,7 @@ import { ref } from 'lit/directives/ref.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setVirtualListCompositionProfile } from '../../../internal/virtual-list-composition.js';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 type Demand = Readonly<{ start: number; endExclusive: number; pinnedIndex: number | null }>;
 async function settle(el: LyraVirtualList) {

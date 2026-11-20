@@ -3,8 +3,8 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import {
   addAnchor, base, captureCloses, closeButton, isPlaced, mountMap, placed, restoreMapEnvironment, stubMapEnvironment,
 } from '../../../../test/map-anchors.js';
-import type { LyraMap } from './map.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import type { LyraMap } from '../../lr-map.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 
 function guardUpdates(elements: readonly HTMLElement[]): { value: number; restore(): void } {
   const counter = { value: 0, restore: (): void => undefined };

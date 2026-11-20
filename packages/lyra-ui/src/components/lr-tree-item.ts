@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './data/tree/tree-item.js';
+export * from './data/tree/tree-item.class.js';
+import { LyraTreeItem } from './data/tree/tree-item.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('tree-item', LyraTreeItem);

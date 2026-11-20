@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './attachment-trigger.js';
-import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from './attachment-trigger.js';
+import '../../lr-attachment-trigger.js';
+import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from '../../lr-attachment-trigger.js';
 
 it('restores the declared accept default when the attribute is removed', async () => {
   const el = await fixture<LyraAttachmentTrigger>(html`<lr-attachment-trigger accept="image/png"></lr-attachment-trigger>`);

@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree, LyraTreeNodeData, TreeBadge } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
+import '../../lr-tree.js';
+import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../../lr-tree.js';
+import type { LyraTreeItem } from '../../lr-tree-item.js';
 
 /** The normalized node object the tree currently holds for its first top-level row. */
 function rowNode(tree: LyraTree): LyraTreeNodeData | undefined {

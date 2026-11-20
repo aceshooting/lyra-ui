@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './time-zone-picker.js';
-import '../button/button.js';
+import '../../lr-time-zone-picker.js';
+import '../../lr-button.js';
 
 const meta: Meta = {
   title: 'Forms & Inputs/Time Zone Picker',

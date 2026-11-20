@@ -1,5 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './color-picker.js';
+import '../../lr-color-picker.js';
 import type { LyraColorPicker } from './color-picker.class.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/selection-toolbar/selection-toolbar.js';
+export * from './conversation/selection-toolbar/selection-toolbar.class.js';
+import './lr-button.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraSelectionToolbar } from './conversation/selection-toolbar/selection-toolbar.class.js';
+
+defineElement('selection-toolbar', LyraSelectionToolbar);

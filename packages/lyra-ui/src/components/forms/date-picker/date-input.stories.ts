@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './date-input.js';
-import '../input/input.js';
+import '../../lr-date-input.js';
+import '../../lr-input.js';
 import type { LyraDateInputValidator } from './date-input.class.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './popup.js';
+import '../../lr-popup.js';
 import type { LyraPopup } from './popup.class.js';
 
 const meta: Meta = { title: 'Overlays/Popup', component: 'lr-popup', tags: ['autodocs'] };

@@ -1,7 +1,7 @@
 import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './voice-picker.js';
-import type { LyraVoicePicker } from './voice-picker.js';
+import '../../lr-voice-picker.js';
+import type { LyraVoicePicker } from '../../lr-voice-picker.js';
 
 const CATALOG = ['aria', 'nova'];
 

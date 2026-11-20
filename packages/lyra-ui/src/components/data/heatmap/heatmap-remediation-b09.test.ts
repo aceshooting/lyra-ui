@@ -1,6 +1,6 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import { resolveRgb, type LyraHeatmap } from './heatmap.class.js';
 import type { LyraHeatmapMatrixSource } from './heatmap-matrix-source.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';

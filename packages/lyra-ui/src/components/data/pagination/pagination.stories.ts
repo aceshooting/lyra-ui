@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, type TemplateResult } from 'lit';
-import type { LyraPagination } from './pagination.js';
+import type { LyraPagination } from '../../lr-pagination.js';
 
 const meta: Meta = {
   title: 'Pagination',

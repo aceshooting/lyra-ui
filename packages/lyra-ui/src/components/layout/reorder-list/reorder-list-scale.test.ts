@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './reorder-list.js';
-import './reorder-item.js';
-import type { LyraReorderList } from './reorder-list.js';
-import type { LyraReorderItem } from './reorder-item.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
+import type { LyraReorderList } from '../../lr-reorder-list.js';
+import type { LyraReorderItem } from '../../lr-reorder-item.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

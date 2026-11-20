@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';
-import './background-runs.js';
+import '../../lr-background-runs.js';
 import type { BackgroundRun, LyraBackgroundRuns } from './background-runs.class.js';
 
 const runs: BackgroundRun[] = [

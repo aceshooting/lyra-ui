@@ -6,9 +6,9 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import "./message-actions.js";
-import "../branch-picker/branch-picker.js";
-import type { LyraMessageActions } from "./message-actions.js";
+import "../../lr-message-actions.js";
+import "../../lr-branch-picker.js";
+import type { LyraMessageActions } from "../../lr-message-actions.js";
 import type { LyraToolbarAction } from "./toolbar-actions.js";
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
@@ -1455,10 +1455,10 @@ describe("reveal-on-interaction with a slotted menu", () => {
 
   it("stays revealed while a menu opened from the toolbar is open, even after the pointer leaves the message", async () => {
     const { hoverUntilMatched, sendMouse } = await import("../../../../test/wtr-mouse.js");
-    await import("../../layout/virtual-list/virtual-list.js");
-    await import("../../overlays/overlay/dropdown.js");
-    await import("../../layout/menu/menu.js");
-    await import("../../layout/menu/menu-item.js");
+    await import("../../lr-virtual-list.js");
+    await import("../../lr-dropdown.js");
+    await import("../../lr-menu.js");
+    await import("../../lr-menu-item.js");
     const list = (await fixture(html`
       <lr-virtual-list style="--lr-virtual-list-height:300px; inline-size:420px"></lr-virtual-list>
     `)) as HTMLElement & {

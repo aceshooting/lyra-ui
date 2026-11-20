@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './grounding-summary.js';
+import '../../lr-grounding-summary.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 
 const meta: Meta = {

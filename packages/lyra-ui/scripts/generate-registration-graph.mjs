@@ -2,11 +2,10 @@
 import { isMainModule } from './is-main-module.mjs';
 
 // Generates the published registration-graph artifact (`registrations.json`): for every stable
-// per-tag entry (`src/components/lr-*.ts`, derived the same way `generate-tag-aliases.mjs` derives
-// it), the complete set of `<lr-*>` tags that importing it defines as a side effect -- its own tag
+// per-tag entry (`src/components/lr-*.ts`, verified by `generate-tag-aliases.mjs`), the complete set of `<lr-*>` tags that importing it defines as a side effect -- its own tag
 // plus every composed-child registration its registration entry pulls in transitively. Importing
 // `@aceshooting/lyra-ui/components/lr-table.js` also registers `<lr-empty>`, `<lr-pagination>`,
-// `<lr-skeleton>` and `<lr-spinner>`, because `table.ts` imports those siblings' own registration
+// `<lr-skeleton>` and `<lr-spinner>`, because `lr-table.ts` imports those siblings' own registration
 // entries (not their side-effect-free `*.class.js`) before calling `defineElement('table', ...)`.
 //
 // The transitive-import walk is NOT reimplemented here: it reuses
@@ -14,17 +13,16 @@ import { isMainModule } from './is-main-module.mjs';
 // each registration entry's full import closure (static imports, re-exports, and lazy `import()`
 // alike) and already separates the tags found there into directly-imported vs. reached-only-
 // transitively. This generator's only new work is translating that per-`registrationModule` graph
-// onto the stable per-tag entry specifiers `generate-tag-aliases.mjs` already derives, so a
+// onto the stable per-tag entry specifiers, so a
 // consumer wanting to statically verify "does importing this specifier register that tag" reads
 // one small generated JSON file instead of parsing shipped minified JavaScript for import
 // specifiers and `defineElement(...)` call literals.
 //
 // Two entry shapes:
 //  - Per-tag entries (one per `scripts/fixtures/component-inventory.json` component): `tag`,
-//    the stable alias `entry` (`./components/lr-<tag>.js`), `registrationModule` (the `src/` path),
-//    `distModule` (the same module's own published deep specifier, e.g.
-//    `./components/data/table/table.js` -- useful when a caller already has that path rather than
-//    the alias), `registers`, `localeKeys`.
+//    the stable `entry` (`./components/lr-<tag>.js`), `registrationModule` (the `src/` path),
+//    `distModule` (the published specifier of that same module, equal to `entry` because the
+//    tag-shaped entry is the tag's only registration module), `registers`, `localeKeys`.
 //  - Published integration-bridge entries, for a registration specifier that installs an
 //    integration (an optional-peer resolver, a lazy document-format registrar) without being any
 //    single component's own per-tag alias -- `flag-peer.js`, `archive-viewer-register.js`,
@@ -76,9 +74,8 @@ const PUBLISHED_INTEGRATION_MODULES = [
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
 ].sort();
 
-/** `src/components/<rest>.ts` -> `./components/<rest>.js`, the published deep specifier a
- *  `registrationModule` ships under in `package.json#exports` (distinct from a per-tag entry's
- *  stable alias, e.g. `./components/lr-table.js`, which re-exports it). */
+/** `src/components/<rest>.ts` -> `./components/<rest>.js`, the published specifier an
+ *  integration-bridge module ships under in `package.json#exports`. */
 function publishedSpecifierFor(registrationModule) {
   const prefix = 'src/components/';
   invariant(registrationModule.startsWith(prefix), `${registrationModule}: expected a src/components/ path`);
@@ -224,11 +221,7 @@ export async function deriveRegistrationGraph(inventory, { packageDir = defaultP
         ...new Set([alias.tag, ...component.directComponents, ...component.transitiveComponents]),
       ].sort((left, right) => left.localeCompare(right));
       assertPublished(alias.exportPath);
-      const legacySpecifier = publishedSpecifierFor(alias.registrationModule);
-      const distModule = packageJson.exports?.[legacySpecifier] !== undefined
-        ? legacySpecifier
-        : alias.exportPath;
-      assertPublished(distModule);
+      const distModule = alias.exportPath;
       const localeKeys = await localeKeysForRegisters(registers);
       return {
         tag: alias.tag,

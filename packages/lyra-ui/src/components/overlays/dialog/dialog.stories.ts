@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './dialog.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 import { confirm } from './confirm.js';
-import '../overlay/popover.js';
+import '../../lr-popover.js';
 
 export const GlassAndSolid = {
   render: () => html`<div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-l);padding:var(--lr-space-l);min-block-size:16rem;background:linear-gradient(125deg,var(--lr-color-brand-quiet),var(--lr-color-surface),var(--lr-color-brand-quiet))">

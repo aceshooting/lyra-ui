@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'DocumentViewer/NotebookViewer', component: 'lr-notebook-viewer', tags: ['autodocs'] };

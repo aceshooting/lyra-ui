@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './handoff-divider.js';
-import '../../media/avatar/avatar.js';
+import '../../lr-handoff-divider.js';
+import '../../lr-avatar.js';
 
 const meta: Meta = {
   title: 'HandoffDivider',

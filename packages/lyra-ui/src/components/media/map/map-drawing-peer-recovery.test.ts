@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import { MapDrawing, type LyraMapDrawingSnapshot } from './map-drawing.js';
 import { loadMapDrawingRuntime } from './map-feature-loader.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class DrawingPeer extends ControlMapEngine {
   canvasUnavailable = false;

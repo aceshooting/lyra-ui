@@ -28,7 +28,7 @@ through visible tasks and subtasks. Ctrl/Cmd with Up or Down requests a sibling 
 
 **Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
-falling back to the array. Only `undefined` restores current legacy items.
+falling back to the array. Only `undefined` restores current legacy items. The provider controller, its view and `<lr-virtual-list>` load the first time a source is assigned; `updateComplete` waits for them, and array-mode hosts never load them.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-task-list.js";

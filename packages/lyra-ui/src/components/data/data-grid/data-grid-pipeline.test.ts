@@ -1,8 +1,8 @@
 import { expect, html, nextFrame } from '@open-wc/testing';
 import { render } from 'lit';
-import './data-grid.js';
+import '../../lr-data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
-import type { LyraDataGrid } from './data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import { dataGrid } from '../../../../test/data-grid.js';
 
 interface Item {

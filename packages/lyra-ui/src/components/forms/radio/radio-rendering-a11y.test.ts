@@ -2,11 +2,11 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./radio.js";
-import "./radio-button.js";
-import "./radio-group.js";
-import type { LyraRadio } from "./radio.js";
-import type { LyraRadioGroup } from "./radio-group.js";
+import "../../lr-radio.js";
+import "../../lr-radio-button.js";
+import "../../lr-radio-group.js";
+import type { LyraRadio } from "../../lr-radio.js";
+import type { LyraRadioGroup } from "../../lr-radio-group.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("contains a standalone unbroken label at 320px in LTR and RTL", async () => {

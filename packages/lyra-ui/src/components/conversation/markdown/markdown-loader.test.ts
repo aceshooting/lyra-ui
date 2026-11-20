@@ -1,7 +1,7 @@
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { expect } from '@open-wc/testing';
 import { loadMarkdownDeps, loadMarkdownAndSanitizer, getMarkdownDepsIfLoaded } from './markdown-loader.js';
-import { preloadMarkdown } from './markdown.js';
+import { preloadMarkdown } from '../../lr-markdown.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 // These tests exercise optional-peer fallbacks; the diagnostic contract has a separate capture test.

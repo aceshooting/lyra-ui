@@ -2,11 +2,11 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './provenance-panel.js';
+import '../../lr-provenance-panel.js';
 import type {
   LyraProvenancePanel,
   LyraProvenance,
-} from './provenance-panel.js';
+} from '../../lr-provenance-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
@@ -176,13 +176,16 @@ it('re-emits one contextual toggle for an embedded chunk', async () => {
   inspector.size = 'm';
   await inspector.updateComplete;
   const seen: CustomEvent[] = [];
-  el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
+  let generic = 0;
+  el.addEventListener('lr-retrieval-disclosure-change', (event) => seen.push(event as CustomEvent));
+  el.addEventListener('lr-toggle', () => { generic += 1; });
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen.map((event) => event.detail)).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(seen.map((event) => event.detail)).to.deep.equal([{ kind: 'chunk', section: 'chunks', chunkId: 'ch1', expanded: true }]);
+  expect(generic).to.equal(0);
   expect(seen[0]!.target === el).to.equal(true);
 });
 
-it('all four sections start expanded, and toggling one emits lr-toggle without collapsing the others', async () => {
+it('all four sections start expanded, and toggling one emits lr-retrieval-disclosure-change without collapsing the others', async () => {
   const el = (await fixture(
     html`<lr-provenance-panel></lr-provenance-panel>`
   )) as LyraProvenancePanel;
@@ -192,10 +195,10 @@ it('all four sections start expanded, and toggling one emits lr-toggle without c
   expect([...headers].every((h) => h.getAttribute('aria-expanded') === 'true'))
     .to.be.true;
 
-  const listener = oneEvent(el, 'lr-toggle');
+  const listener = oneEvent(el, 'lr-retrieval-disclosure-change');
   (headers[0] as HTMLButtonElement).click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ section: 'entities', expanded: false });
+  expect(event.detail).to.deep.equal({ kind: 'section', section: 'entities', expanded: false });
   await el.updateComplete;
   expect(headers[0]!.getAttribute('aria-expanded')).to.equal('false');
   expect(headers[1]!.getAttribute('aria-expanded')).to.equal('true');

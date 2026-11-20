@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './av-player.js';
+import '../../lr-av-player.js';
 import type { LyraAvPlayer } from './av-player.class.js';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../../../test/color-contrast.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';

@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import './typing-indicator.js';
-import type { LyraTypingIndicator } from './typing-indicator.js';
+import '../../lr-typing-indicator.js';
+import type { LyraTypingIndicator } from '../../lr-typing-indicator.js';
 
 it('defaults to the dots shape, m size, an empty localized-label override, and label-placement none', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;

@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './approval-queue/approval-queue.js';
-import './permission-rules/permission-rules.js';
-import './policy-summary/policy-summary.js';
+import '../lr-approval-queue.js';
+import '../lr-permission-rules.js';
+import '../lr-policy-summary.js';
 
 type Normalized = Record<string, unknown[]>;
 

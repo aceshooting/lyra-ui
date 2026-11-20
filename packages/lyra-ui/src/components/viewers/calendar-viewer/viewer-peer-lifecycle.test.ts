@@ -3,14 +3,14 @@ import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { clearIcalCache, loadIcal } from './calendar-loader.js';
 import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
-import './calendar-viewer.js';
-import '../svg-viewer/svg-viewer.js';
-import '../html-viewer/html-viewer.js';
-import '../csv-viewer/csv-viewer.js';
-import '../dataset-viewer/dataset-viewer.js';
-import '../spreadsheet-viewer/spreadsheet-viewer.js';
-import '../email-viewer/email-viewer.js';
-import '../geojson-view/geojson-viewer.js';
+import '../../lr-calendar-viewer.js';
+import '../../lr-svg-viewer.js';
+import '../../lr-html-viewer.js';
+import '../../lr-csv-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
+import '../../lr-email-viewer.js';
+import '../../lr-geojson-viewer.js';
 
 type RemoteViewer = HTMLElement & { src: string; updateComplete: Promise<boolean> };
 

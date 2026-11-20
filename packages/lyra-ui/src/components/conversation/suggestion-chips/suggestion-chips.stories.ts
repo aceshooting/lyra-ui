@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './suggestion-chips.js';
+import '../../lr-suggestion-chips.js';
 
 const meta: Meta = {
   title: 'SuggestionChips',

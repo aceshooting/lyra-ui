@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraSwitch } from './switch.js';
-import './switch.js';
+import type { LyraSwitch } from '../../lr-switch.js';
+import '../../lr-switch.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 for (const attribute of ['hint', 'help-text', 'error-text']) {

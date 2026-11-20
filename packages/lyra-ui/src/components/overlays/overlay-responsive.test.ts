@@ -1,15 +1,15 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './badge/badge.js';
-import './badge/tag.js';
-import './alert/alert.js';
-import './callout/callout.js';
-import './chip/chip.js';
-import './empty/empty.js';
-import './kbd/kbd.js';
-import './spinner/spinner.js';
-import './progress/progress-ring.js';
-import './rating/rating.js';
-import './toast/toast-item.js';
+import '../lr-badge.js';
+import '../lr-tag.js';
+import '../lr-alert.js';
+import '../lr-callout.js';
+import '../lr-chip.js';
+import '../lr-empty.js';
+import '../lr-kbd.js';
+import '../lr-spinner.js';
+import '../lr-progress-ring.js';
+import '../lr-rating.js';
+import '../lr-toast-item.js';
 
 const LONG_LABEL = 'unbroken'.repeat(256);
 

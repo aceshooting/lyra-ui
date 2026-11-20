@@ -1,10 +1,10 @@
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import { normalizeLyraSpans, type LyraSpan, type LyraTraceTree } from './trace-tree.js';
-import '../span-waterfall/span-waterfall.js';
-import '../agent-trace/agent-trace.js';
-import type { LyraSpanWaterfall } from '../span-waterfall/span-waterfall.js';
-import type { LyraAgentTrace } from '../agent-trace/agent-trace.js';
+import { normalizeLyraSpans, type LyraSpan, type LyraTraceTree } from '../../lr-trace-tree.js';
+import '../../lr-span-waterfall.js';
+import '../../lr-agent-trace.js';
+import type { LyraSpanWaterfall } from '../../lr-span-waterfall.js';
+import type { LyraAgentTrace } from '../../lr-agent-trace.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

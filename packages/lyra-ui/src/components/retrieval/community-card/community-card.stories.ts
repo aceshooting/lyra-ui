@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './community-card.js';
+import '../../lr-community-card.js';
 import type { LyraCommunity } from './community-card.class.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 

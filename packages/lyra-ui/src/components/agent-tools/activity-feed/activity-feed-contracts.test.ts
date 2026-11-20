@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './activity-feed.js';
-import type { LyraActivityFeed } from './activity-feed.js';
+import '../../lr-activity-feed.js';
+import type { LyraActivityFeed } from '../../lr-activity-feed.js';
 
 it('does not expand when a toggle-request listener removes the feed', async () => {
   const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed></lr-activity-feed>`);

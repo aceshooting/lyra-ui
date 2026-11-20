@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './image-viewer.js';
-import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer.js';
+import '../../lr-image-viewer.js';
+import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from '../../lr-image-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

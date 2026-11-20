@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import { loadMapFeatureStateRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 const points = { type: 'FeatureCollection', features: [
   { type: 'Feature', id: 0, properties: {}, geometry: { type: 'Point', coordinates: [1, 2] } },

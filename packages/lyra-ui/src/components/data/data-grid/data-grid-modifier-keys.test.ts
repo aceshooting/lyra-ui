@@ -1,8 +1,8 @@
 import { expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { readCanvasRgba } from '../../../internal/canvas-color.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import { type Person, columns, dataGrid, header, rows } from '../../../../test/data-grid.js';
 
 function cell(element: LyraDataGrid<Person>, row: number, column: number): HTMLElement {

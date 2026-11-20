@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { accessibleName } from '../../../../test/accessible-name.js';
 import type { LyraHierarchyAction, LyraHierarchyQuery, LyraHierarchySource } from '../../../data-sources.js';
 import type { LyraTree, LyraTreeNodeData, TreeSelection } from './tree.class.js';
-import './tree.js';
+import '../../lr-tree.js';
 
 function provider(value: LyraTreeNodeData, childCount = 0) {
   const actions: LyraHierarchyAction[] = [];

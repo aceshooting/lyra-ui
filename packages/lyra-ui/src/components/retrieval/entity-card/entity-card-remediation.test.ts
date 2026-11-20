@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './entity-card.js';
-import type { LyraEntityCard } from './entity-card.js';
+import '../../lr-entity-card.js';
+import type { LyraEntityCard } from '../../lr-entity-card.js';
 
 it('updates the existing heading level override on attribute changes alone', async () => {
   const el = await fixture<LyraEntityCard>(html`<lr-entity-card

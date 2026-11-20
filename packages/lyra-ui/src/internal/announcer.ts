@@ -55,7 +55,7 @@ const ambientTimerHost: AnnouncerTimerHost = {
  * The class itself is pure timing/state logic with no DOM dependency — it
  * knows nothing about ARIA, elements, or Lit; `acquireAnnouncementSink()`
  * below is the DOM half that a flush writes into. `<lr-live-region>`
- * (`../components/utility/live-region/live-region.js`) is the element that
+ * (`../components/lr-live-region.js`) is the element that
  * composes the two. Other components that need throttled announcements (a
  * stream-status indicator, a tool-call chip's status transitions, a chat
  * message's streaming state) should reuse that wrapper rather than

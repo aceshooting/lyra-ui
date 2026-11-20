@@ -1,18 +1,18 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import '../components/forms/combobox/combobox.js';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/forms/switch/switch.js';
-import '../components/forms/radio/radio.js';
-import '../components/forms/radio/radio-group.js';
-import '../components/forms/button/button.js';
-import '../components/forms/date-picker/date-input.js';
-import type { LyraCombobox } from '../components/forms/combobox/combobox.js';
-import type { LyraCheckbox } from '../components/forms/checkbox/checkbox.js';
-import type { LyraSwitch } from '../components/forms/switch/switch.js';
-import type { LyraRadio } from '../components/forms/radio/radio.js';
-import type { LyraRadioGroup } from '../components/forms/radio/radio-group.js';
-import type { LyraButton } from '../components/forms/button/button.js';
-import type { LyraDateInput } from '../components/forms/date-picker/date-input.js';
+import '../components/lr-combobox.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-switch.js';
+import '../components/lr-radio.js';
+import '../components/lr-radio-group.js';
+import '../components/lr-button.js';
+import '../components/lr-date-input.js';
+import type { LyraCombobox } from '../components/lr-combobox.js';
+import type { LyraCheckbox } from '../components/lr-checkbox.js';
+import type { LyraSwitch } from '../components/lr-switch.js';
+import type { LyraRadio } from '../components/lr-radio.js';
+import type { LyraRadioGroup } from '../components/lr-radio-group.js';
+import type { LyraButton } from '../components/lr-button.js';
+import type { LyraDateInput } from '../components/lr-date-input.js';
 
 /**
  * Regression coverage for {@link LyraElement}'s centralized `autofocus` handling

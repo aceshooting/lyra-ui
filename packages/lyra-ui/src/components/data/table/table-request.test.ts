@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './table.js';
-import type { LyraTable } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable } from '../../lr-table.js';
 
 it('requests a keyboard column resize before changing the accepted width', async () => {
   const el = await fixture<LyraTable<{ name: string }>>(html`<lr-table aria-label="Rows"></lr-table>`);

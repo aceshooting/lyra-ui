@@ -2,10 +2,10 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture as renderFixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
-import './stream-status.js';
-import '../../utility/live-region/live-region.js';
-import type { LyraStreamStatus } from './stream-status.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.js';
+import '../../lr-stream-status.js';
+import '../../lr-live-region.js';
+import type { LyraStreamStatus } from '../../lr-stream-status.js';
+import type { LyraLiveRegion } from '../../lr-live-region.js';
 
 /** Keeps populated stalled fixtures readable while exercising the public transition method. */
 async function fixture(...args: Parameters<typeof renderFixture>): Promise<Element> {

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './flow-canvas.js';
-import type { LyraFlowCanvas, FlowNode } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { registerLyraLocale } from '../../../internal/localization-runtime.js';
 

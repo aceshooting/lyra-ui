@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './emoji-picker.js';
-import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
+import '../../lr-emoji-picker.js';
+import type { LyraEmojiPicker, EmojiPickerGroup } from '../../lr-emoji-picker.js';
 
 const mounted: Element[] = [];
 const samples: EmojiPickerGroup[] = [{

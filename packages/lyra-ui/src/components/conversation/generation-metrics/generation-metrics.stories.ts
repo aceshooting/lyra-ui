@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './generation-metrics.js';
-import type { LyraGenerationMetrics } from './generation-metrics.js';
+import '../../lr-generation-metrics.js';
+import type { LyraGenerationMetrics } from '../../lr-generation-metrics.js';
 
 const meta: Meta = {
   title: 'GenerationMetrics',

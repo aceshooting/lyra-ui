@@ -2,7 +2,7 @@ import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 import type { LyraHeatmap } from './heatmap.class.js';
 
 type Rectangle = { rowStart: number; rowEnd: number; columnStart: number; columnEnd: number };

@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './push-to-talk.js';
-import type { LyraPushToTalk } from './push-to-talk.js';
+import '../../lr-push-to-talk.js';
+import type { LyraPushToTalk } from '../../lr-push-to-talk.js';
 
 class CaptureTrack {
   stopCalls = 0;

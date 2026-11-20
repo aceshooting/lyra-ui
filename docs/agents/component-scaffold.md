@@ -33,7 +33,7 @@ metadata result, generator failure, or browser-test failure restores every share
 and removes only the newly created component directory.
 
 For a secondary tag sharing an existing catalogued component directory, author its matching
-`<name>.class.ts` and `<name>.ts` pair and add its maturity assignment to that family's metadata
+`<name>.class.ts` plus its `src/components/lr-<tag>.ts` registration entry and add its maturity assignment to that family's metadata
 source. Before the first inventory generation, ownership is derived only when the class's
 `@customElement` tag, exported class, registration import and `defineElement()` call agree.
 Canonical regeneration validates the family and materializes the inventory; existing inventory

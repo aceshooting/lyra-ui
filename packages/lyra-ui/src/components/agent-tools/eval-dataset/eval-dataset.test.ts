@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './eval-dataset.js';
-import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
+import '../../lr-eval-dataset.js';
+import type { LyraEvalDataset, EvalExample } from '../../lr-eval-dataset.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';

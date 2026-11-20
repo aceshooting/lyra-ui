@@ -14,7 +14,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { tag } from '../../../internal/prefix.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
-import type { LyraVideo, LyraVideoControls } from '../video/video.js';
+import type { LyraVideo, LyraVideoControls } from '../../lr-video.js';
 import { styles } from './video-playlist.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

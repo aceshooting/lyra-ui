@@ -2,8 +2,8 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import type { LyraVirtualList } from './virtual-list.js';
-import './virtual-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
+import '../../lr-virtual-list.js';
 
 type Owner = 'internal' | 'element' | 'window' | 'quirks-window';
 beforeEach(async () => { await setReducedMotion('no-preference'); });

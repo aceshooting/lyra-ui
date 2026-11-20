@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './knowledge-base-admin.js';
+import '../../lr-knowledge-base-admin.js';
 import type { KnowledgeBaseSource, KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueSource, IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 

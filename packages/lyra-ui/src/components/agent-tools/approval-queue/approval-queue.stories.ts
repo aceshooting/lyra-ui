@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './approval-queue.js';
+import '../../lr-approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 
 const meta: Meta = { title: 'ApprovalQueue', component: 'lr-approval-queue', tags: ['autodocs'] };

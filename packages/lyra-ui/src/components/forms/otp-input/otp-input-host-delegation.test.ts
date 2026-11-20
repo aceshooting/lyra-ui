@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './otp-input.js';
+import '../../lr-otp-input.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 const controlOf = (el: LyraOtpInput): HTMLInputElement =>

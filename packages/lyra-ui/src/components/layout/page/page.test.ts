@@ -6,8 +6,8 @@ import {
   html,
   waitUntil,
 } from '@open-wc/testing';
-import './page.js';
-import type { LyraPage } from './page.js';
+import '../../lr-page.js';
+import type { LyraPage } from '../../lr-page.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   hoverUntilMatched,

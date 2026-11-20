@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, render } from 'lit';
-import './reorder-list.js';
-import './reorder-item.js';
-import type { LyraReorderList } from './reorder-list.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
+import type { LyraReorderList } from '../../lr-reorder-list.js';
 
 const meta: Meta = {
   title: 'Primitives/Reorder List',

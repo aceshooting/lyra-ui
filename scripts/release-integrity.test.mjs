@@ -3627,7 +3627,7 @@ test('policy-summary registration and authored docs match its actual composition
   const registration = readFileSync(
     path.join(
       repoRoot,
-      'packages/lyra-ui/src/components/agent-tools/policy-summary/policy-summary.ts'
+      'packages/lyra-ui/src/components/lr-policy-summary.ts'
     ),
     'utf8'
   );

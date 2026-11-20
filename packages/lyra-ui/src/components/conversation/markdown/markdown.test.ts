@@ -8,8 +8,8 @@ import {
   oneEvent,
   aTimeout,
 } from "@open-wc/testing";
-import "./markdown.js";
-import type { LyraMarkdown, MarkdownHeadingItem } from "./markdown.js";
+import "../../lr-markdown.js";
+import type { LyraMarkdown, MarkdownHeadingItem } from "../../lr-markdown.js";
 import { LyraMarkdown as LyraMarkdownClass } from "./markdown.class.js";
 import { loadMarkdownDeps } from "./markdown-loader.js";
 import { assertMarkdownTemplateWhitespace } from '../../../../test/contracts/markdown-template-whitespace.js';
@@ -3381,7 +3381,7 @@ describe('escape-mode raw-block text', () => {
     );
 
   before(async () => {
-    await import('./markdown-core.js');
+    await import('../../lr-markdown-core.js');
   });
 
   for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
@@ -3412,7 +3412,7 @@ describe('escape-mode raw-block text', () => {
 
 describe('top-layer escape in trusted content', () => {
   it('lets a Lyra overlay escape the unsanitized containment while plain positioned HTML stays clipped', async () => {
-    await import('../../overlays/overlay/popover.js');
+    await import('../../lr-popover.js');
     const el = (await fixture(
       html`<lr-markdown html-mode="trusted" style="display:block; inline-size:300px"></lr-markdown>`
     )) as LyraMarkdown;

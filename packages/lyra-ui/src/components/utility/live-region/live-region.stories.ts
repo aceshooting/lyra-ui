@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './live-region.js';
-import type { LyraLiveRegion } from './live-region.js';
+import '../../lr-live-region.js';
+import type { LyraLiveRegion } from '../../lr-live-region.js';
 
 const meta: Meta = {
   title: 'LiveRegion',

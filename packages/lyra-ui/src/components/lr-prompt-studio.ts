@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/prompt-studio/prompt-studio.js';
+export * from './agent-tools/prompt-studio/prompt-studio.class.js';
+import { LyraPromptStudio } from './agent-tools/prompt-studio/prompt-studio.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('prompt-studio', LyraPromptStudio);
+

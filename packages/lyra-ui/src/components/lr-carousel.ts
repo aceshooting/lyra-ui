@@ -1,3 +1,9 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/carousel/carousel.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraCarousel } from './layout/carousel/carousel.class.js';
+
+defineElement('carousel', LyraCarousel);
+export { LyraCarousel } from './layout/carousel/carousel.class.js';
+export type {
+  LyraCarouselEventMap,
+  LyraCarouselOrientation,
+} from './layout/carousel/carousel.class.js';

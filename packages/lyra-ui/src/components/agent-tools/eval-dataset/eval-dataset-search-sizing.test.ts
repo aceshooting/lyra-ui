@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './eval-dataset.js';
-import type { LyraEvalDataset } from './eval-dataset.js';
+import '../../lr-eval-dataset.js';
+import type { LyraEvalDataset } from '../../lr-eval-dataset.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 
 describe('lr-eval-dataset search field', () => {

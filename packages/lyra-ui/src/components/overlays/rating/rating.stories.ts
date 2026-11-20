@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { LyraRating } from './rating.js';
+import { LyraRating } from '../../lr-rating.js';
 const meta: Meta = {
   title: 'Form/Rating',
   component: 'lr-rating',

@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './widget.js';
-import type { LyraWidget } from './widget.js';
+import '../../lr-widget.js';
+import type { LyraWidget } from '../../lr-widget.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 
 describe('lr-widget interactions', () => {

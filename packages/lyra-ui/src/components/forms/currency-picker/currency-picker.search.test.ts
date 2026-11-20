@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './currency-picker.js';
+import '../../lr-currency-picker.js';
 import '../../../translations/fr/forms.js';
 import '../../../translations/fr/shared.js';
-import type { LyraCurrencyPicker } from './currency-picker.js';
+import type { LyraCurrencyPicker } from '../../lr-currency-picker.js';
 import type { LyraCombobox } from '../combobox/combobox.class.js';
 import type { LyraSelect } from '../select/select.class.js';
 import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';

@@ -2,10 +2,10 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { settlePointer } from '../../../../test/wtr-mouse.js';
-import './carousel.js';
-import './carousel-item.js';
-import '../../forms/input/input.js';
-import type { LyraCarousel } from './carousel.js';
+import '../../lr-carousel.js';
+import '../../lr-carousel-item.js';
+import '../../lr-input.js';
+import type { LyraCarousel } from '../../lr-carousel.js';
 
 it('leaves modified viewport navigation keys to the browser or app', async () => {
   const el = await fixture<LyraCarousel>(html`

@@ -2,7 +2,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './retrieval-results.js';
+import '../../lr-retrieval-results.js';
 import type { LyraRetrievalResults, RetrievalResultsSource } from './retrieval-results.class.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraPagination } from '../../data/pagination/pagination.class.js';

@@ -1,6 +1,6 @@
 import { fixture, expect, aTimeout, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraChatMessage } from './chat-message.js';
+import type { LyraChatMessage } from '../../lr-chat-message.js';
 import { WithAvatarBadgesAndActions } from './chat-message.stories.js';
 
 const text = 'Migrating the table component to the new pagination API touches four files; want me to open a PR?';

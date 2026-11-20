@@ -2,8 +2,8 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './image-viewer.js';
-import type { LyraImageViewer, LyraImageRotation } from './image-viewer.js';
+import '../../lr-image-viewer.js';
+import type { LyraImageViewer, LyraImageRotation } from '../../lr-image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
 type Rect = { x: number; y: number; width: number; height: number };

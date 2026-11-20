@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './command-palette.js';
-import type { LyraCommand, LyraCommandPalette } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommand, LyraCommandPalette } from '../../lr-command-palette.js';
 
 const COMMANDS: LyraCommand[] = [
   { commandId: 'open', label: 'Open file' },

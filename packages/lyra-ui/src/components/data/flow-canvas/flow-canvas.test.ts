@@ -1,12 +1,12 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './flow-canvas.js';
-import '../../overlays/empty/empty.js';
-import '../flow-controls/flow-controls.js';
-import '../flow-minimap/flow-minimap.js';
-import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
-import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-empty.js';
+import '../../lr-flow-controls.js';
+import '../../lr-flow-minimap.js';
+import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from '../../lr-flow-canvas.js';
+import { FLOW_PALETTE_MIME_TYPE } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { fitTransform } from '../../../internal/fit-transform.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
@@ -115,14 +115,12 @@ it('keeps the first unique nonempty node and edge ids before render, focus, coun
   expect(el.shadowRoot!.querySelectorAll('[part="node-control"][tabindex="0"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelectorAll('[part="edge"]').length).to.equal(1);
 
-  let detail: { edgeId: string; source: string; target: string } | undefined;
+  let detail: { edgeId: string; sourceNodeId: string; targetNodeId: string } | undefined;
   el.addEventListener('lr-edge-activate', (event) => {
     detail = event.detail;
   });
   (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(detail).to.deep.equal({
-    edgeId: 'connection', sourceNodeId: 'source', targetNodeId: 'target', source: 'source', target: 'target',
-  });
+  expect(detail).to.deep.equal({ edgeId: 'connection', sourceNodeId: 'source', targetNodeId: 'target' });
 });
 
 it('clears stale controlled selection when non-array ids are assigned', async () => {
@@ -1798,10 +1796,10 @@ describe('selection & roving focus', () => {
     el.edges = edges;
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
-    let detail: { edgeId: string; source: string; target: string } | undefined;
+    let detail: { edgeId: string; sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener('lr-edge-activate', (e) => (detail = (e as CustomEvent).detail));
     (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ edgeId: 'a-b', sourceNodeId: 'a', targetNodeId: 'b', source: 'a', target: 'b' });
+    expect(detail).to.deep.equal({ edgeId: 'a-b', sourceNodeId: 'a', targetNodeId: 'b' });
     expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
     expect(el.selectedNodeIds).to.deep.equal([]);
   });
@@ -4577,8 +4575,8 @@ describe('drop-active must not erase the viewport focus indicator', () => {
 
 describe('node overlays escape the canvas', () => {
   async function canvasWithNodeMenu(options: { style?: string; items?: number } = {}) {
-    await import('../../overlays/overlay/dropdown.js');
-    await import('../../layout/menu/dropdown-item.js');
+    await import('../../lr-dropdown.js');
+    await import('../../lr-dropdown-item.js');
     const count = options.items ?? 2;
     const el = (await fixture(html`
       <lr-flow-canvas nodes-draggable style="width:320px;height:120px;${options.style ?? ''}">

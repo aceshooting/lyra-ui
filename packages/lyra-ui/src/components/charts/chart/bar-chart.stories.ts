@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import '../../forms/slider/slider.js';
-import type { LyraChartSeries } from './chart.js';
+import '../../lr-slider.js';
+import type { LyraChartSeries } from '../../lr-chart.js';
 import { narrowChartStory } from '../../../../../../.storybook/narrow-chart-story.js';
 
 const meta: Meta = {

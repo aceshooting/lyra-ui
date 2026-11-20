@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class Control {
   readonly listeners = new Map<string, Set<(event: unknown) => void>>();

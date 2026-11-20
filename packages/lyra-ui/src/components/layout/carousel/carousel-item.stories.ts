@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './carousel-item.js';
+import '../../lr-carousel-item.js';
 
 const meta: Meta = { title: 'Components/Carousel Item', component: 'lr-carousel-item' };
 export default meta;

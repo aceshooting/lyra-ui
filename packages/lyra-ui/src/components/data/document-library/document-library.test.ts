@@ -3,11 +3,11 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import "./document-library.js";
+import "../../lr-document-library.js";
 import type {
   LyraDocumentLibrary,
   LibraryDocument,
-} from "./document-library.js";
+} from "../../lr-document-library.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 const docs: LibraryDocument[] = [

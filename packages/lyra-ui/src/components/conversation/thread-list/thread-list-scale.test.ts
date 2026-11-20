@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './thread-list.js';
-import type { LyraThreadList } from './thread-list.js';
-import type { LyraVirtualList, LyraVirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-thread-list.js';
+import type { LyraThreadList } from '../../lr-thread-list.js';
+import type { LyraVirtualList, LyraVirtualListIndexedSource } from '../../lr-virtual-list.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('keeps all 10000 admitted threads addressable after structural group rows are added', async () => {

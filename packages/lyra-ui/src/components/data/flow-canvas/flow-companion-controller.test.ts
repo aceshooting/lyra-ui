@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './flow-canvas.js';
-import type { LyraFlowCanvas } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas } from '../../lr-flow-canvas.js';
 import { FlowCanvasCompanionController } from './flow-companion-controller.js';
 
 interface CapableCanvas extends HTMLElement {

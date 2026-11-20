@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 28 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -115,7 +115,8 @@ resting longhands plus `--lr-graph-query-builder-run-hover-bg` and
 shared `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default
 `var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))`), and
-`--lr-icon-button-radius` (default `var(--lr-radius-xs)`). Unset hooks preserve the current shared
+`--lr-icon-button-radius` (default `var(--lr-radius-xs)`), and the hover and pressed overrides
+`--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`. Unset hooks preserve the current shared
 surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
 longhand that consumes them, so an override on a parent themes every descendant builder without
 being shadowed by a declaration on the component host.

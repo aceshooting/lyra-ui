@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree } from './tree.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
 
 it('uses accessibleLabel as the treeitem host name without changing its visible label', async () => {
   const el = (await fixture(html`<lr-tree label="Cases"></lr-tree>`)) as LyraTree;

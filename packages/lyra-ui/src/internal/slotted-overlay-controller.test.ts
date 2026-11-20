@@ -3,10 +3,10 @@ import { html as litHtml } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { defineElement } from './prefix.js';
 import { SlottedOverlayController } from './slotted-overlay-controller.js';
-import '../components/forms/color-picker/color-picker.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/select/select.js';
-import '../components/forms/combobox/option.js';
+import '../components/lr-color-picker.js';
+import '../components/lr-date-input.js';
+import '../components/lr-select.js';
+import '../components/lr-option.js';
 
 class SlottedOverlayProbe extends LyraElement {
   readonly overlay = new SlottedOverlayController(this, () => this.renderRoot.querySelector('slot'));

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './date-input.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-input.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

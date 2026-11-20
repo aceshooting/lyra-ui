@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './neighbor-list.js';
+import '../../lr-neighbor-list.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraNeighborList } from './neighbor-list.js';
+import type { LyraNeighborList } from '../../lr-neighbor-list.js';
 import type { GraphSource } from '../graph/graph.class.js';
 import type { LyraGraphSourceQuery } from '../../../data-sources.js';
 

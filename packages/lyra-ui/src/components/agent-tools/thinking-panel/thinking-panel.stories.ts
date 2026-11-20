@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './thinking-panel.js';
-import '../../conversation/streaming-text/streaming-text.js';
-import type { LyraThinkingPanel } from './thinking-panel.js';
-import type { LyraStreamingText } from '../../conversation/streaming-text/streaming-text.js';
+import '../../lr-thinking-panel.js';
+import '../../lr-streaming-text.js';
+import type { LyraThinkingPanel } from '../../lr-thinking-panel.js';
+import type { LyraStreamingText } from '../../lr-streaming-text.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

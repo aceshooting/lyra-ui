@@ -2,8 +2,8 @@
 
 # `lr-docx-editor`
 
-- **Import** `import '@aceshooting/lyra-ui/components/lr-docx-editor.js';` (stable tag alias; registers the tag)
-- **Class** `LyraDocxEditor`, also available unregistered from `@aceshooting/lyra-docs/docx/editor`
+- **Import** `import '@aceshooting/lyra-docs/docx/editor';` (registers the tag; ships in `@aceshooting/lyra-docs`)
+- **Class** `LyraDocxEditor`, also available unregistered from `@aceshooting/lyra-docs/docx/editor.class`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `0.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)

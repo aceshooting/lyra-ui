@@ -1,6 +1,6 @@
 import { aTimeout, fixture, expect, html } from '@open-wc/testing';
-import './tree.js';
-import type { LyraTree } from './tree.js';
+import '../../lr-tree.js';
+import type { LyraTree } from '../../lr-tree.js';
 
 /** Walks into shadow roots to find the actually-focused element (a focused
  *  element inside a shadow tree only surfaces as its shadow host via the

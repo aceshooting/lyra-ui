@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './copy-button.js';
+import '../../lr-copy-button.js';
 import type { LyraCopyButton } from './copy-button.class.js';
 
 const ANCESTOR_TOKENS =

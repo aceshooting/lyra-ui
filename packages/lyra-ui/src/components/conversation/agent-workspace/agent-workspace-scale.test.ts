@@ -2,7 +2,7 @@ import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './agent-workspace.js';
+import '../../lr-agent-workspace.js';
 import type { LyraAgentWorkspace } from './agent-workspace.class.js';
 
 it('retains newest tools and maps unread source positions through the retained message tail', async function () {

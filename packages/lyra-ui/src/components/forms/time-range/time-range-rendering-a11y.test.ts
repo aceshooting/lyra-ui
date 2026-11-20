@@ -1,8 +1,8 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
-import "./time-range.js";
-import type { LyraTimeRange } from "./time-range.js";
+import "../../lr-time-range.js";
+import type { LyraTimeRange } from "../../lr-time-range.js";
 import { styles } from "./time-range.styles.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";

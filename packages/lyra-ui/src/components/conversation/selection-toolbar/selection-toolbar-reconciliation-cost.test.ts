@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './selection-toolbar.js';
-import type { LyraSelectionToolbar } from './selection-toolbar.js';
+import '../../lr-selection-toolbar.js';
+import type { LyraSelectionToolbar } from '../../lr-selection-toolbar.js';
 
 interface ToolbarAccess {
   actionButtons(): HTMLElement[];

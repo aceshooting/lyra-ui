@@ -4,8 +4,8 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { createWidgetDocument } from './resolve.js';
 import type { LyraWidgetRenderer } from './widget-renderer.class.js';
-import '../../forms/button/button.js';
-import './widget-renderer.js';
+import '../../lr-button.js';
+import '../../lr-widget-renderer.js';
 import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 function documentFor(phase: number) {

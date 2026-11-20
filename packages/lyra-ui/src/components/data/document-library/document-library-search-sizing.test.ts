@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-library.js';
+import '../../lr-document-library.js';
 import type {
   LibraryDocument,
   LyraDocumentLibrary,
-} from './document-library.js';
+} from '../../lr-document-library.js';
 
 const DOCUMENTS: LibraryDocument[] = [
   { id: 'd1', name: 'Handbook', tags: ['hr'] },

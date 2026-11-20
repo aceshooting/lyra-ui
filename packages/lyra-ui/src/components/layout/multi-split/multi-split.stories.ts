@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import type { LyraMultiSplit, LyraMultiSplitToggleDetail } from './multi-split.class.js';
-import '../../forms/button/button.js';
+import '../../lr-button.js';
 
 const meta: Meta = {
   title: 'Multi Split',

@@ -21,7 +21,8 @@ own `start` slot, which this drops straight into, though it has no code dependen
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
 anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each
-capability as a row.
+capability as a row. The default entry registers `lr-dropdown` and `lr-menu-item` the first time a
+trigger offers more than one capability; `updateComplete` waits for that registration and the child's first render.
 
 **Properties:**
 

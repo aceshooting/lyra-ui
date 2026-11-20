@@ -1,9 +1,9 @@
 import { expect, fixture, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './code-block.js';
-import './code-block-core.js';
-import type { LyraCodeBlock } from './code-block.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
+import type { LyraCodeBlock } from '../../lr-code-block.js';
 
 for (const name of ['lr-code-block', 'lr-code-block-core']) {
   it(`${name} keeps code rows aligned when line numbers become activatable`, async () => {

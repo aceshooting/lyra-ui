@@ -4,7 +4,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { publicCollectionTruncation, collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { LyraModelSettingsPanel } from './model-settings-panel.class.js';
-import './model-settings-panel.js';
+import '../../lr-model-settings-panel.js';
 
 expectDevWarning(collectionTruncationWarningKey('lr-model-settings-panel', 'catalog'));
 const source = (): LyraModelSettingsPanel['catalog'] => Array.from({ length: 1000 }, (_, index) => ({ id: `m${index}`, label: `Model ${index}`, extra: Array.from({ length: 100 }, () => 'x') }));

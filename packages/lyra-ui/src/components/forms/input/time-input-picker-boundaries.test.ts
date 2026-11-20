@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './time-input.js';
+import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
 function values(el: LyraTimeInput, segment: string): string[] {

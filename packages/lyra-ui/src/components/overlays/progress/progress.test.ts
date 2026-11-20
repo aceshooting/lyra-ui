@@ -1,10 +1,10 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
-import './progress-bar.js';
-import './progress-ring.js';
-import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
-import type { LyraProgressRing } from './progress-ring.js';
+import '../../lr-progress-bar.js';
+import '../../lr-progress-ring.js';
+import type { LyraProgressBar, LyraProgressVariant } from '../../lr-progress-bar.js';
+import type { LyraProgressRing } from '../../lr-progress-ring.js';
 import { formatProgressPercent } from './progress-shared.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 

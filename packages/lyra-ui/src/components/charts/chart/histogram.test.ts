@@ -1,14 +1,14 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import type { CSSResult, CSSResultOrNative } from 'lit';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './histogram.js';
+import '../../lr-histogram.js';
 // Registers the real shipped `de` catalog's `shared` and `charts` slices (a side effect, like every
 // translation module) so the "invalidates localized bucket labels" test below can switch to `de-DE`
 // without tripping the dev-mode locale-fallback warning that strict-console platform lanes treat as
 // fatal -- the chart base reads `chart` from the shared slice and `histogramFrequency` from charts.
 import '../../../translations/de/shared.js';
 import '../../../translations/de/charts.js';
-import { binnedBuckets, type LyraHistogram } from './histogram.js';
+import { binnedBuckets, type LyraHistogram } from '../../lr-histogram.js';
 
 expectLocaleFallback('de-DE', ['chartLegend']);
 

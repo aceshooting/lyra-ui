@@ -1,9 +1,9 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './dialog.js';
-import '../../forms/input/input.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import '../../lr-input.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 import { toRgba } from '../../../../test/color-contrast.js';

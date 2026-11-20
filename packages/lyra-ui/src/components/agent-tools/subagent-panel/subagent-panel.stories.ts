@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import type { SubagentRun } from './subagent-panel.js';
-import './subagent-panel.js';
+import type { SubagentRun } from '../../lr-subagent-panel.js';
+import '../../lr-subagent-panel.js';
 
 const meta: Meta = { title: 'Agent Tools/Subagent Panel', component: 'lr-subagent-panel' };
 export default meta;

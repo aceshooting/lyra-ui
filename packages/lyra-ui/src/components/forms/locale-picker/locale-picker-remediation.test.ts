@@ -2,12 +2,12 @@ import { aTimeout, expect, fixture, fixtureCleanup, oneEvent, waitUntil } from '
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import { setLyraLocale } from '../../../internal/localization.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import type { LyraLocalePicker } from './locale-picker.js';
-import type { LyraOtpInput } from '../otp-input/otp-input.js';
-import type { LyraPhoneInput } from '../phone-input/phone-input.js';
-import './locale-picker.js';
-import '../otp-input/otp-input.js';
-import '../phone-input/phone-input.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
+import type { LyraOtpInput } from '../../lr-otp-input.js';
+import type { LyraPhoneInput } from '../../lr-phone-input.js';
+import '../../lr-locale-picker.js';
+import '../../lr-otp-input.js';
+import '../../lr-phone-input.js';
 
 before(() => expectLocaleFallback('fr', ['localePickerLabel', 'loading']));
 

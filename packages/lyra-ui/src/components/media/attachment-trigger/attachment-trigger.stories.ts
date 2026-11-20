@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './attachment-trigger.js';
-import type { LyraAttachmentFilesDetail } from './attachment-trigger.js';
-import '../../conversation/chat-composer/chat-composer.js';
-import '../attachment-chip/attachment-chip.js';
+import '../../lr-attachment-trigger.js';
+import type { LyraAttachmentFilesDetail } from '../../lr-attachment-trigger.js';
+import '../../lr-chat-composer.js';
+import '../../lr-attachment-chip.js';
 
 const meta: Meta = {
   title: 'AttachmentTrigger',

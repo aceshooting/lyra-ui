@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/alert/alert.js';
+export * from './overlays/alert/alert.class.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraAlert } from './overlays/alert/alert.class.js';
+
+defineElement('alert', LyraAlert);

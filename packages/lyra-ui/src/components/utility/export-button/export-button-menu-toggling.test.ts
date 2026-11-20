@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './export-button.js';
-import type { LyraExportButton } from './export-button.js';
+import '../../lr-export-button.js';
+import type { LyraExportButton } from '../../lr-export-button.js';
 
 async function renderMenuButton(): Promise<LyraExportButton> {
   const el = await fixture<LyraExportButton>(html`<lr-export-button></lr-export-button>`);

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './file-tree.js';
-import type { LyraFileTree } from './file-tree.js';
+import '../../lr-file-tree.js';
+import type { LyraFileTree } from '../../lr-file-tree.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('reuses file projection when selecting among 1000 files', async () => {

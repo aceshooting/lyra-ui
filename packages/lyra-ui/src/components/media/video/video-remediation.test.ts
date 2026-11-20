@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './video.js';
+import '../../lr-video.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('keeps the unavailable progress owner and its rendered track at rest under a native pointer', async () => {

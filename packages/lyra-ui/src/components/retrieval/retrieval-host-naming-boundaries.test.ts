@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './ingestion-queue/ingestion-queue.js';
-import './memory-panel/memory-panel.js';
-import './provenance-panel/provenance-panel.js';
-import './retrieval-compare/retrieval-compare.js';
-import './retrieval-results/retrieval-results.js';
+import '../lr-ingestion-queue.js';
+import '../lr-memory-panel.js';
+import '../lr-provenance-panel.js';
+import '../lr-retrieval-compare.js';
+import '../lr-retrieval-results.js';
 import type { IngestionQueueItem, IngestionQueueSource } from './ingestion-queue/ingestion-queue.class.js';
 import type { RetrievalResultsSource } from './retrieval-results/retrieval-results.class.js';
 import type { LyraSourceRecord } from '../../data-sources.js';

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './chat-viewport.js';
-import type { LyraChatViewport } from './chat-viewport.js';
+import '../../lr-chat-viewport.js';
+import type { LyraChatViewport } from '../../lr-chat-viewport.js';
 import { twoFrames } from '../../../../test/frames.js';
 
 function parts(viewport: LyraChatViewport): { scroll: HTMLElement; content: HTMLElement } {

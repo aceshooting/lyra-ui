@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './control-group.js';
-import '../../forms/button/button.js';
-import '../../forms/select/select.js';
+import '../../lr-control-group.js';
+import '../../lr-button.js';
+import '../../lr-select.js';
 import type { LyraControlGroup } from './control-group.class.js';
 
 describe('<lr-control-group>', () => {

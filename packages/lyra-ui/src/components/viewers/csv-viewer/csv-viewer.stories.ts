@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './csv-viewer.js';
-import type { CsvViewerSource } from './csv-viewer.js';
+import '../../lr-csv-viewer.js';
+import type { CsvViewerSource } from '../../lr-csv-viewer.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/CsvViewer',

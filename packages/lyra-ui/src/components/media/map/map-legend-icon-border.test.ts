@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './map.js';
-import type { LyraMap } from './map.js';
+import '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 
 const STROKE_PATH = 'M12 3 L21 20 L3 20 Z';
 

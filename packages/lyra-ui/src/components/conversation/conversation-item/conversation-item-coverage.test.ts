@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './conversation-item.js';
-import type { LyraConversationItem } from './conversation-item.js';
+import '../../lr-conversation-item.js';
+import type { LyraConversationItem } from '../../lr-conversation-item.js';
 
 type DescribedOwner = HTMLElement & { ariaDescribedByElements?: readonly Element[] | null };
 function descriptionIds(host: LyraConversationItem): string[] {

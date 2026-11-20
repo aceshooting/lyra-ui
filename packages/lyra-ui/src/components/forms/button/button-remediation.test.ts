@@ -1,11 +1,11 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import '../color-picker/color-picker.js';
+import '../../lr-color-picker.js';
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './button.js';
-import '../icon-button/icon-button.js';
-import type { LyraButton } from './button.js';
-import type { LyraIconButton } from '../icon-button/icon-button.js';
+import '../../lr-button.js';
+import '../../lr-icon-button.js';
+import type { LyraButton } from '../../lr-button.js';
+import type { LyraIconButton } from '../../lr-icon-button.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

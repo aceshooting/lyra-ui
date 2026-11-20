@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './tour.js';
-import type { LyraTour } from './tour.js';
+import '../../lr-tour.js';
+import type { LyraTour } from '../../lr-tour.js';
 
 /** Rasterize the rendered backdrop, retaining its actual namespaces, geometry and resolved paint. */
 async function backdropPixels(backdrop: SVGSVGElement): Promise<CanvasRenderingContext2D> {

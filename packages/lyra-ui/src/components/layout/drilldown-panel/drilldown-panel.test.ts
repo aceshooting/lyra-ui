@@ -1,19 +1,19 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
-import "./drilldown-panel.js";
-import "../../viewers/document-preview/document-preview.js";
-import "../../retrieval/entity-card/entity-card.js";
-import "../../retrieval/source-card/source-card.js";
+import "../../lr-drilldown-panel.js";
+import "../../lr-document-preview.js";
+import "../../lr-entity-card.js";
+import "../../lr-source-card.js";
 import type {
   LyraDrilldownEntity,
   LyraDrilldownNode,
   LyraDrilldownPanel,
-} from "./drilldown-panel.js";
-import type { LyraTabGroup } from "../tab-group/tab-group.js";
-import type { LyraSourceCard } from "../../retrieval/source-card/source-card.js";
-import type { LyraDocumentPreview } from "../../viewers/document-preview/document-preview.js";
-import type { LyraEntityCard } from "../../retrieval/entity-card/entity-card.js";
+} from "../../lr-drilldown-panel.js";
+import type { LyraTabGroup } from "../../lr-tab-group.js";
+import type { LyraSourceCard } from "../../lr-source-card.js";
+import type { LyraDocumentPreview } from "../../lr-document-preview.js";
+import type { LyraEntityCard } from "../../lr-entity-card.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import {

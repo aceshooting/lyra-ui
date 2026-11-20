@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import './box-plot.js';
+import '../../lr-box-plot.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraChartFormatterContext } from './chart.class.js';
 

@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './select.js';
-import '../combobox/option.js';
-import type { LyraSelect } from './select.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
+import type { LyraSelect } from '../../lr-select.js';
 async function settle(el: LyraSelect) { for (let i = 0; i < 3; i++) { await el.updateComplete; await nextFrame(); } }
 async function mount() {
   const el = await fixture<LyraSelect>(html`<lr-select label="Choices" multiple></lr-select>`);

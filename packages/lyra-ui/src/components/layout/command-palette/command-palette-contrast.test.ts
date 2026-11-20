@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { contrastRatio, effectiveBackground, toRgba } from '../../../../test/color-contrast.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './command-palette.js';
-import type { LyraCommandPalette } from './command-palette.js';
+import '../../lr-command-palette.js';
+import type { LyraCommandPalette } from '../../lr-command-palette.js';
 
 for (const mode of ['light', 'dark']) {
   it(`keeps highlighted command descriptions and shortcuts readable in ${mode} mode`, async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './code-block.js';
-import './code-block-core.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
 import type { LyraCodeBlockBase } from './code-block-base.class.js';
 import type { TextSelectRect } from '../../viewers/document-viewer/anchors.js';
 

@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/image-comparer/image-comparer.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraImageComparer } from './media/image-comparer/image-comparer.class.js';
+
+defineElement('image-comparer', LyraImageComparer);
+export { LyraImageComparer } from './media/image-comparer/image-comparer.class.js';
+export type { LyraImageComparerEventMap, LyraImageComparerOrientation } from './media/image-comparer/image-comparer.class.js';

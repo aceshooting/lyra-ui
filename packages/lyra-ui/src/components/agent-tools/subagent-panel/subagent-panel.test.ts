@@ -2,8 +2,8 @@ import { accessibleName } from '../../../../test/accessible-name.js';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './subagent-panel.js';
-import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
+import '../../lr-subagent-panel.js';
+import type { LyraSubagentPanel, SubagentRun } from '../../lr-subagent-panel.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 

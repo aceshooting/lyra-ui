@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
-import "./generation-metrics.js";
-import type { LyraGenerationMetrics } from "./generation-metrics.js";
+import "../../lr-generation-metrics.js";
+import type { LyraGenerationMetrics } from "../../lr-generation-metrics.js";
 
 // The browser runner has no compatible fake-timer harness, so timer-driven behavior here uses
 // real `setInterval` ticks with generous margins. Most assertions below sidestep

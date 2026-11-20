@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraAppRail } from './app-rail.class.js';
-import './app-rail.js';
+import '../../lr-app-rail.js';
 
 for (const direction of ['ltr', 'rtl']) {
   it(`uses native Home and End to reach resize bounds and honors a veto in ${direction}`, async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { measureElementArrayLookups } from '../../../../test/element-array-lookup-cost.js';
-import './menubar.js';
+import '../../lr-menubar.js';
 import type { LyraMenubar } from './menubar.class.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
 

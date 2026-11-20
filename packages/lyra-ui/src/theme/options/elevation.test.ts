@@ -4,11 +4,11 @@ import { contrastRatio, resolvedColorToken, toRgba } from '../../../test/color-c
 import { applyLyraStyleScope } from '../theme.js';
 import { LYRA_ELEVATION_PRESETS } from './elevation.js';
 import { LYRA_MATERIAL_LOOK } from '../looks/material.js';
-import '../../components/layout/card/card.js';
-import '../../components/layout/menu/menu.js';
-import '../../components/overlays/dialog/dialog.js';
-import type { LyraCard } from '../../components/layout/card/card.js';
-import type { LyraDialog } from '../../components/overlays/dialog/dialog.js';
+import '../../components/lr-card.js';
+import '../../components/lr-menu.js';
+import '../../components/lr-dialog.js';
+import type { LyraCard } from '../../components/lr-card.js';
+import type { LyraDialog } from '../../components/lr-dialog.js';
 
 // Normalize the specified fill through the same color space as the painted Glass material.
 function glassColor(fill: string, mode: 'light' | 'dark' = 'light', surface = 'black') {

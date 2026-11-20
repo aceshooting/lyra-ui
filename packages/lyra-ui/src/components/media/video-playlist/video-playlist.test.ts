@@ -1,12 +1,12 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './video-playlist.js';
+import '../../lr-video-playlist.js';
 import type {
   LyraVideoPlaylist,
   LyraVideoPlaylistChangeDetail,
   LyraVideoPlaylistItem,
-} from './video-playlist.js';
-import type { LyraVideo } from '../video/video.js';
+} from '../../lr-video-playlist.js';
+import type { LyraVideo } from '../../lr-video.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

@@ -1,9 +1,9 @@
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
-import './icon-button.js';
-import '../../media/flag/flag.js';
+import '../../lr-icon-button.js';
+import '../../lr-flag.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import type { LyraIconButton } from './icon-button.js';
+import type { LyraIconButton } from '../../lr-icon-button.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 

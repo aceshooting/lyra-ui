@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './knowledge-base.js';
-import type { LyraKnowledgeBase } from './knowledge-base.js';
-import type { LyraTable } from '../../data/table/table.js';
+import '../../lr-knowledge-base.js';
+import type { LyraKnowledgeBase } from '../../lr-knowledge-base.js';
+import type { LyraTable } from '../../lr-table.js';
 
 it('updates custom failed-load content when a direct child changes its error slot after mount', async () => {
   const element = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base error><div>Recovery controls</div></lr-knowledge-base>`);

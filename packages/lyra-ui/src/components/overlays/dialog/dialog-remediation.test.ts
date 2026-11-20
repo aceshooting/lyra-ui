@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './dialog.js';
-import '../drawer/drawer.js';
-import type { LyraDialog } from './dialog.js';
+import '../../lr-dialog.js';
+import '../../lr-drawer.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 function panelName(dialog: LyraDialog): string {
   const panel = dialog.shadowRoot!.querySelector('[part~="panel"]')!;

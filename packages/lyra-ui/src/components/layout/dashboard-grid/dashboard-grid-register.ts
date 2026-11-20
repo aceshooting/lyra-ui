@@ -4,6 +4,6 @@ export * from './dashboard-grid.class.js';
 export * from './layout.js';
 import { LyraDashboardGrid } from './dashboard-grid.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../overlays/empty/empty.js';
+import '../../lr-empty.js';
 
 defineElement('dashboard-grid', LyraDashboardGrid);

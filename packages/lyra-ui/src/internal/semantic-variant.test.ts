@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../components/overlays/alert/alert.js';
-import '../components/overlays/badge/badge.js';
-import '../components/overlays/badge/tag.js';
-import '../components/overlays/callout/callout.js';
-import '../components/overlays/chip/chip.js';
+import '../components/lr-alert.js';
+import '../components/lr-badge.js';
+import '../components/lr-tag.js';
+import '../components/lr-callout.js';
+import '../components/lr-chip.js';
 import { effectiveSemanticVariant, semanticVariantConverter } from './semantic-variant.js';
 
 describe('semantic variant vocabulary', () => {

@@ -1,3 +1,29 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/geojson-view/geojson-viewer.js';
+export * from './viewers/geojson-view/geojson-viewer.class.js';
+import { LyraGeoJsonViewer } from './viewers/geojson-view/geojson-viewer.class.js';
+import { defineElement } from '../internal/prefix.js';
+import {
+  registerDocumentRenderer,
+  type LyraDocumentFile,
+} from './viewers/document-viewer/registry.js';
+import './lr-map.js';
+export type {} from './lr-json-viewer.js';
+import './lr-skeleton.js';
+
+defineElement('geojson-viewer', LyraGeoJsonViewer);
+
+registerDocumentRenderer('application/geo+json', {
+  matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.geojson'),
+  render: (file: LyraDocumentFile) => {
+    const el = document.createElement('lr-geojson-viewer');
+    el.src = file.src;
+    el.name = file.name;
+    el.anchor = file.anchor ?? null;
+    el.highlights = file.highlights ?? [];
+    return el;
+  },
+  capabilities: {
+    anchors: ['text-quote', 'fragment'],
+    search: true,
+    textSelect: true,
+  },
+});

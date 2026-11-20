@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
-import './menu.js';
-import './menu-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 
 it('closes empty-list submenu popups when Tab leaves the footer or Shift+Tab leaves the header', async () => {
   for (const slot of ['header', 'footer'] as const) {

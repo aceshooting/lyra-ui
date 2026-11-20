@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './toast.js';
-import type { LyraToast } from './toast.js';
+import '../../lr-toast.js';
+import type { LyraToast } from '../../lr-toast.js';
 
 describe('lr-toast in a document without a browsing context', () => {
   it('releases its items once it leaves a viewless document', async () => {

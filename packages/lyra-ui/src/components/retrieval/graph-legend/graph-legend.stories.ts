@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './graph-legend.js';
+import '../../lr-graph-legend.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

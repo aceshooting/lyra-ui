@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './locale-picker.js';
-import type { LyraLocalePicker } from './locale-picker.js';
+import '../../lr-locale-picker.js';
+import type { LyraLocalePicker } from '../../lr-locale-picker.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';

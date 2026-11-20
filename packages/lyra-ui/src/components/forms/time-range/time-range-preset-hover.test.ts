@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './time-range.js';
+import '../../lr-time-range.js';
 import type { LyraTimeRange } from './time-range.class.js';
 
 it('tints a hovered unselected preset away from its resting fill by default', async () => {

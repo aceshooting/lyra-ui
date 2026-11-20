@@ -1,8 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './commit-card.js';
-import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
+import '../../lr-commit-card.js';
+import type { CommitFileChange, LyraCommitCard } from '../../lr-commit-card.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';

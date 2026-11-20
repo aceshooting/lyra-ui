@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './drilldown-panel.js';
-import type { LyraDrilldownPanel } from './drilldown-panel.js';
+import '../../lr-drilldown-panel.js';
+import type { LyraDrilldownPanel } from '../../lr-drilldown-panel.js';
 
 const children = ['lr-source-card', 'lr-document-preview', 'lr-entity-card'];
 

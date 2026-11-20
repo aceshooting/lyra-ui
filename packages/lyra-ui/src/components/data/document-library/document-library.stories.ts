@@ -1,6 +1,6 @@
 import { html, nothing } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./document-library.js";
+import "../../lr-document-library.js";
 import type { LibraryDocument } from "./document-library.class.js";
 
 const meta: Meta = {

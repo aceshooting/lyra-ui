@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import type { LyraDatasetViewer } from './dataset-viewer.js';
-import './dataset-viewer.js';
+import type { LyraDatasetViewer } from '../../lr-dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
 
 describe('dataset public table admission', () => {
   for (const [description, table] of [

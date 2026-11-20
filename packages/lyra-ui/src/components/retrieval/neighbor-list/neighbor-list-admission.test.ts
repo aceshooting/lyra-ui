@@ -1,7 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
-import { LyraNeighborList } from './neighbor-list.js';
+import { LyraNeighborList } from '../../lr-neighbor-list.js';
 
 it('discloses outer neighbor input loss and clears the notice after replacement', async () => {
   const warning = '<lr-neighbor-list>: \'rows\' kept 8333 of 10001 entries, the oldest; an assignment keeps at most 10000 per array and 50000 values, and drops values it cannot copy.';

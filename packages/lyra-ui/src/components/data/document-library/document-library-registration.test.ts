@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-library.js';
+import '../../lr-document-library.js';
 import type { LyraDocumentLibrary } from './document-library.class.js';
 
 it('registers the tag facet combobox only when the first tagged document appears', async () => {

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './file-input.js';
-import type { LyraFileInput } from './file-input.js';
+import '../../lr-file-input.js';
+import type { LyraFileInput } from '../../lr-file-input.js';
 import { measureArrayProbeReads } from '../../../../test/array-probe-reads.js';
 
 it('keeps thumbnail reconciliation linear while retaining, replacing and retiring File identities', async () => {

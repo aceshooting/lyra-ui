@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './toast-item.js';
+import '../../lr-toast-item.js';
 
 const meta: Meta = {
   title: 'Feedback/Toast item',

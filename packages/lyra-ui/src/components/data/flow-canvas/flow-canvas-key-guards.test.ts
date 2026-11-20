@@ -1,9 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import './flow-canvas.js';
-import '../flow-minimap/flow-minimap.js';
-import type { LyraFlowCanvas, FlowNode, FlowEdge } from './flow-canvas.js';
-import type { LyraFlowMinimap } from '../flow-minimap/flow-minimap.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-minimap.js';
+import type { LyraFlowCanvas, FlowNode, FlowEdge } from '../../lr-flow-canvas.js';
+import type { LyraFlowMinimap } from '../../lr-flow-minimap.js';
 
 const nodes: FlowNode[] = [
   { id: 'a', position: { x: 0, y: 0 }, data: { label: 'Fetch' } },

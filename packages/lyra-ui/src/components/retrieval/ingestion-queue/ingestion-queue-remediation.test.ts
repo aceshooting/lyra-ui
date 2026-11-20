@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './ingestion-queue.js';
-import type { IngestionQueueItem, LyraIngestionQueue } from './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
+import type { IngestionQueueItem, LyraIngestionQueue } from '../../lr-ingestion-queue.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 // Locale/numbering fixtures intentionally use English fallback text.

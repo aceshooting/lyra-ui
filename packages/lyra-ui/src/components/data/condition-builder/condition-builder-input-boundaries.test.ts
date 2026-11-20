@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './condition-builder.js';
-import type { ConditionBuilderField, ConditionBuilderValue, LyraConditionBuilder } from './condition-builder.js';
+import '../../lr-condition-builder.js';
+import type { ConditionBuilderField, ConditionBuilderValue, LyraConditionBuilder } from '../../lr-condition-builder.js';
 
 function conditionRow(el: LyraConditionBuilder, index: number): HTMLElement {
   return el.shadowRoot!.querySelectorAll('[part="condition"]')[index] as HTMLElement;

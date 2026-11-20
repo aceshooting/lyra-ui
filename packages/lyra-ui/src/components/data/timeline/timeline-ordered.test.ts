@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
-import './timeline.js';
-import './timeline-item.js';
-import type { LyraTimeline } from './timeline.js';
-import type { LyraTimelineItem } from './timeline-item.js';
+import '../../lr-timeline.js';
+import '../../lr-timeline-item.js';
+import type { LyraTimeline } from '../../lr-timeline.js';
+import type { LyraTimelineItem } from '../../lr-timeline-item.js';
 
 expectLocaleFallback('ar-u-nu-arab', ['timeline']);
 

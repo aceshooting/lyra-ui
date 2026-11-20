@@ -1,5 +1,5 @@
 import { fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraMap, LyraMapStyleSpecification } from '../src/components/media/map/map.js';
+import type { LyraMap, LyraMapStyleSpecification } from '../src/components/lr-map.js';
 
 // A scripted MapLibre-compatible engine installed at lr-map's library seam, so overlay and data
 // contracts run in every browser without the WebGL2 context a real engine needs.

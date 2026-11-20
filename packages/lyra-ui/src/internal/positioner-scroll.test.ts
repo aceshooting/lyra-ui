@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { platform } from '@floating-ui/dom';
 import { place } from './positioner.js';
-import '../components/overlays/overlay/tooltip.js';
+import '../components/lr-tooltip.js';
 import type { LyraTooltip } from '../components/overlays/overlay/tooltip.class.js';
 
 const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));

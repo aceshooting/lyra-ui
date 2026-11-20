@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './dashboard-grid.js';
-import type { LyraDashboardGrid } from './dashboard-grid.js';
+import '../../lr-dashboard-grid.js';
+import type { LyraDashboardGrid } from '../../lr-dashboard-grid.js';
 import type { LyraDashboardCell } from './layout.js';
 
 describe('rendered grid pitch', () => {

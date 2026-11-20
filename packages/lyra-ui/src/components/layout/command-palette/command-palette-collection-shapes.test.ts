@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraCommand, LyraCommandPalette } from './command-palette.class.js';
-import './command-palette.js';
+import '../../lr-command-palette.js';
 
 it('omits sparse, accessor, array and invalid optional-field commands while preserving the usable command identity', async () => {
   let reads = 0;

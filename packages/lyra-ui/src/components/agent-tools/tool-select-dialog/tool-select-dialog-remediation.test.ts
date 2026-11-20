@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-select-dialog.js';
-import type { LyraToolSelectDialog } from './tool-select-dialog.js';
-import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
-import type { LyraSwitch } from '../../forms/switch/switch.js';
+import '../../lr-tool-select-dialog.js';
+import type { LyraToolSelectDialog } from '../../lr-tool-select-dialog.js';
+import type { LyraCheckbox } from '../../lr-checkbox.js';
+import type { LyraSwitch } from '../../lr-switch.js';
 
 it('synchronizes a checked child after a user edit and parent selection replacement', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open .tools=${[{ id: 'tool', name: 'Tool' }]}></lr-tool-select-dialog>`);

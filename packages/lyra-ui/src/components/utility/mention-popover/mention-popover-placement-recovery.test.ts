@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import './mention-popover.js';
-import type { LyraMentionPopover } from './mention-popover.js';
+import '../../lr-mention-popover.js';
+import type { LyraMentionPopover } from '../../lr-mention-popover.js';
 
 for (const failure of ['import', 'setup'] as const) {
   it(`declines a focus transfer after positioning ${failure} failure and permits a fresh opening`, async () => {

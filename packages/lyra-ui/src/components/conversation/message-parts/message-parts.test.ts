@@ -7,16 +7,16 @@ import type {
   MessagePart,
 } from "../../../ai/types.js";
 // This integration suite exercises fully registered child APIs. Loading boundaries have their own isolated suite.
-import '../../agent-tools/thinking-panel/thinking-panel.js';
-import '../../agent-tools/tool-call-block/tool-call-block.js';
-import '../../agent-tools/tool-call-chip/tool-call-chip.js';
-import '../../agent-tools/tool-result-view/tool-result-view.js';
-import '../../forms/button/button.js';
-import '../../media/attachment-chip/attachment-chip.js';
-import '../../retrieval/citation-badge/citation-badge.js';
-import '../../utility/json-viewer/json-viewer.js';
-import '../widget-renderer/widget-renderer.js';
-import "./message-parts.js";
+import '../../lr-thinking-panel.js';
+import '../../lr-tool-call-block.js';
+import '../../lr-tool-call-chip.js';
+import '../../lr-tool-result-view.js';
+import '../../lr-button.js';
+import '../../lr-attachment-chip.js';
+import '../../lr-citation-badge.js';
+import '../../lr-json-viewer.js';
+import '../../lr-widget-renderer.js';
+import "../../lr-message-parts.js";
 import { renderedTemplateWhitespace, inMarkdownCodeBlock } from "../../../../test/rendered-whitespace.js";
 import type {
   LyraMessageParts,

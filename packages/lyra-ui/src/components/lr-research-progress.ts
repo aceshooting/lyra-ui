@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/research-progress/research-progress.js';
+export * from './retrieval/research-progress/research-progress.class.js';
+import './lr-empty.js';
+import { defineElement } from '../internal/prefix.js';
+import { LyraResearchProgress } from './retrieval/research-progress/research-progress.class.js';
+
+defineElement('research-progress', LyraResearchProgress);

@@ -3,8 +3,8 @@ import { stubTimeRangePointerGeometry } from '../../../../test/contracts/time-ra
 import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
-import "./time-range.js";
-import type { LyraTimeRange, TimeRangePreset } from "./time-range.js";
+import "../../lr-time-range.js";
+import type { LyraTimeRange, TimeRangePreset } from "../../lr-time-range.js";
 import { styles } from "./time-range.styles.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {

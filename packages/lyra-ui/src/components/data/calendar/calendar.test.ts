@@ -1,8 +1,8 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './calendar.js';
-import type { LyraCalendar } from './calendar.js';
+import '../../lr-calendar.js';
+import type { LyraCalendar } from '../../lr-calendar.js';
 import { formatISO } from '../../../internal/calendar-core.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
@@ -1120,7 +1120,7 @@ for (const { month, endpoint, edge, arrow, page, inward, nextMonth } of [
     const inwardButton = root.querySelector<HTMLButtonElement>(`[part~="${inward}-button"]`)!;
     const viewChanges: string[] = [];
     const dates: string[] = [];
-    el.addEventListener('lr-view-change', (event) => viewChanges.push(event.detail.viewDate));
+    el.addEventListener('lr-month-change', (event) => viewChanges.push(event.detail.viewDate));
     el.addEventListener('lr-date-select', (event) => dates.push(event.detail.date));
 
     expect(edgeButton.disabled).to.equal(true);

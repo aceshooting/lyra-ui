@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/unit-picker/unit-picker.js';
+export * from './forms/unit-picker/unit-picker.class.js';
+import { LyraUnitPicker } from './forms/unit-picker/unit-picker.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-select.js';
+import './lr-option.js';
+defineElement('unit-picker', LyraUnitPicker);

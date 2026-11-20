@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './knowledge-base-admin.js';
+import '../../lr-knowledge-base-admin.js';
 import type { LyraKnowledgeBaseAdmin } from './knowledge-base-admin.class.js';
 import type { KnowledgeBaseSource, LyraKnowledgeBase } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueSource, LyraIngestionQueue } from '../ingestion-queue/ingestion-queue.class.js';

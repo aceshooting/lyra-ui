@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './swatch-picker.js';
-import type { LyraSwatchPicker } from './swatch-picker.js';
+import '../../lr-swatch-picker.js';
+import type { LyraSwatchPicker } from '../../lr-swatch-picker.js';
 
 const checked = (el: LyraSwatchPicker): string[] =>
   [...el.shadowRoot!.querySelectorAll<HTMLElement>('[role="radio"]')].map((radio) => radio.getAttribute('aria-checked')!);

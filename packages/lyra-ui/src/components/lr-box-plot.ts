@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './charts/chart/box-plot.js';
+export * from './charts/chart/box-plot.class.js';
+import { LyraBoxPlot } from './charts/chart/box-plot.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-skeleton.js';
+defineElement('box-plot', LyraBoxPlot);

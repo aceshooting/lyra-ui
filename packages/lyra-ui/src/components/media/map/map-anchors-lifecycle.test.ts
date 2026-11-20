@@ -11,8 +11,8 @@ import {
 import * as anchorRuntime from './map-anchor-controller.js';
 import { loadMapAnchorRuntime } from './map-feature-loader.js';
 import { setMapFeatureImporter } from '../../../../test/map-feature-loader-fixtures.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 
 /** Caller-owned live content: a Lit element with internal state and a counted listener. */
 class AnchorProbeCard extends LitElement {

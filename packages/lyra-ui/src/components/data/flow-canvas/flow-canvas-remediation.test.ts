@@ -1,11 +1,11 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { nothing, render } from 'lit';
-import './flow-canvas.js';
-import '../flow-node/flow-node.js';
-import '../flow-run-status/flow-run-status.js';
-import '../flow-minimap/flow-minimap.js';
-import '../flow-controls/flow-controls.js';
-import type { LyraFlowCanvas } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-node.js';
+import '../../lr-flow-run-status.js';
+import '../../lr-flow-minimap.js';
+import '../../lr-flow-controls.js';
+import type { LyraFlowCanvas } from '../../lr-flow-canvas.js';
 import type {
   FlowEdge,
   FlowHandle,
@@ -14,8 +14,8 @@ import type {
   FlowRunDecorations,
   FlowStructureSnapshot,
 } from './flow-types.js';
-import type { LyraFlowNode } from '../flow-node/flow-node.js';
-import type { LyraFlowRunStatus } from '../flow-run-status/flow-run-status.js';
+import type { LyraFlowNode } from '../../lr-flow-node.js';
+import type { LyraFlowRunStatus } from '../../lr-flow-run-status.js';
 
 for (const group of ['inputs', 'outputs'] as const) {
   for (const owner of ['canvas', 'node']) {

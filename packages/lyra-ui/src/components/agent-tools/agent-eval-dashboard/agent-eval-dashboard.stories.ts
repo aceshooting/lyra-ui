@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './agent-eval-dashboard.js';
+import '../../lr-agent-eval-dashboard.js';
 
 const metrics = [
   { id: 'pass', label: 'Pass rate', value: 0.92, format: 'percent' as const },

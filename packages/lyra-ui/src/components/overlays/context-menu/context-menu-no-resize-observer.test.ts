@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './context-menu.js';
-import '../../layout/menu/menu-item.js';
+import '../../lr-context-menu.js';
+import '../../lr-menu-item.js';
 import type { LyraContextMenu } from './context-menu.class.js';
 
 it('tracks real anchor motion and preserves native dismissal without ResizeObserver', async () => {

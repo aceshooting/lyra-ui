@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import './markdown.js';
-import './markdown-core.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
 import type { MarkdownStreamingRenderMode } from './markdown-base.class.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import {

@@ -2,11 +2,11 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { nothing, render } from 'lit';
-import '../flow-canvas/flow-canvas.js';
-import '../flow-minimap/flow-minimap.js';
-import './flow-run-status.js';
-import type { LyraFlowRunStatus } from './flow-run-status.js';
-import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../flow-canvas/flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-minimap.js';
+import '../../lr-flow-run-status.js';
+import type { LyraFlowRunStatus } from '../../lr-flow-run-status.js';
+import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../../lr-flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 

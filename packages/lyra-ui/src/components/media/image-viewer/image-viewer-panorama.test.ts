@@ -3,7 +3,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './image-viewer.js';
+import '../../lr-image-viewer.js';
 import type { LyraImageViewer } from './image-viewer.class.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { PanoramaController, normalizePanoramaCamera, PANORAMA_DEFAULT_CAMERA, panoramaLoader, panoramaEnvironment } from './image-viewer-panorama.js';

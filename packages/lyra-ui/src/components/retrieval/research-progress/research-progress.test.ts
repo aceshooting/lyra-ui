@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './research-progress.js';
+import '../../lr-research-progress.js';
 import type { LyraResearchProgress, ResearchStep } from './research-progress.class.js';
 
 const steps: ResearchStep[] = [

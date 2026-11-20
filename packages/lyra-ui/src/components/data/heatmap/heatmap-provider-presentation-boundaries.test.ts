@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraHeatmap } from './heatmap.class.js';
 import type { LyraHeatmapMatrixSource, LyraHeatmapMatrixViewport } from './heatmap-matrix-source.js';
-import './heatmap.js';
+import '../../lr-heatmap.js';
 
 function provider() {
   const queries: LyraHeatmapMatrixViewport[] = [];

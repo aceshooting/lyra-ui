@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './drawer.js';
-import type { LyraDrawer } from './drawer.js';
+import '../../lr-drawer.js';
+import type { LyraDrawer } from '../../lr-drawer.js';
 
 const meta: Meta = {
   title: 'Drawer',

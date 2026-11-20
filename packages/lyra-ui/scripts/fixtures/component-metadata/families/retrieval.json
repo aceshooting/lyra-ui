@@ -42,58 +42,5 @@
     "compatibility-stable": [],
     "introduced-stable": []
   },
-  "deprecations": [
-    {
-      "tag": "lr-entity-dossier",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-memory-panel",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-provenance-panel",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    },
-    {
-      "tag": "lr-retrieval-trace",
-      "kind": "event",
-      "name": "lr-toggle",
-      "since": "unreleased",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retrieval-disclosure-change",
-        "usage": "@lr-retrieval-disclosure-change"
-      },
-      "removalNotBefore": "33.0.0",
-      "rationale": "The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration."
-    }
-  ]
+  "deprecations": []
 }

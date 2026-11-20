@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraDashboardGrid } from './dashboard-grid.class.js';
-import './dashboard-grid.js';
+import '../../lr-dashboard-grid.js';
 
 it('keeps projected cells and accessible labels after direct connected adoption', async () => {
   const grid = (await fixture(html`<lr-dashboard-grid></lr-dashboard-grid>`)) as LyraDashboardGrid;

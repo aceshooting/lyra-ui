@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './locale-picker.js';
+import '../../lr-locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
 
 const trigger = (el: LyraLocalePicker) => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;

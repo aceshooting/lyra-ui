@@ -2,18 +2,18 @@ import type {
   LyraMarkedParser as FullMarkedParser,
   MarkdownHeadingItem as FullHeadingItem,
   ShikiLanguageInput as FullLanguageInput,
-  } from '../src/components/conversation/markdown/markdown.js';
+  } from '../src/components/lr-markdown.js';
 import type {
   LyraMarkedParser as CoreMarkedParser,
   MarkdownHeadingItem as CoreHeadingItem,
   ShikiLanguageInput as CoreLanguageInput,
-  } from '../src/components/conversation/markdown/markdown-core.js';
+  } from '../src/components/lr-markdown-core.js';
 import type {
   ShikiLanguageInput as FullCodeBlockLanguageInput,
-  } from '../src/components/conversation/code-block/code-block.js';
+  } from '../src/components/lr-code-block.js';
 import type {
   ShikiLanguageInput as CoreCodeBlockLanguageInput,
-  } from '../src/components/conversation/code-block/code-block-core.js';
+  } from '../src/components/lr-code-block-core.js';
 import type {
   ShikiLanguageInput as ConversationLanguageInput,
   } from '../src/components/conversation/index.js';
@@ -22,18 +22,18 @@ import type { ShikiLanguageInput as RootLanguageInput,
 import type {
   MessageFeedbackRating,
   MessageFeedbackValue,
-  } from '../src/components/conversation/message-feedback/message-feedback.js';
-import type { LyraChatSuggestion as GranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
+  } from '../src/components/lr-message-feedback.js';
+import type { LyraChatSuggestion as GranularChatSuggestion } from '../src/components/lr-suggestion-chips.js';
 import type { LyraChatSuggestion as RootChatSuggestion,
 } from '../src/lyra.js';
 // @ts-expect-error LyraModelSelectSize was removed in favor of the shared LyraSize.
-import type { LyraModelSelectSize as RemovedGranularModelSelectSize } from '../src/components/conversation/model-select/model-select.js';
+import type { LyraModelSelectSize as RemovedGranularModelSelectSize } from '../src/components/lr-model-select.js';
 
 // @ts-expect-error LyraVoicePickerSize was removed in favor of the shared LyraSize.
-import type { LyraVoicePickerSize as RemovedGranularVoicePickerSize } from '../src/components/conversation/voice-picker/voice-picker.js';
+import type { LyraVoicePickerSize as RemovedGranularVoicePickerSize } from '../src/components/lr-voice-picker.js';
 
 // @ts-expect-error ChatSuggestion was replaced by LyraChatSuggestion.
-import type { ChatSuggestion as RemovedGranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
+import type { ChatSuggestion as RemovedGranularChatSuggestion } from '../src/components/lr-suggestion-chips.js';
 
 // @ts-expect-error ChatSuggestion was replaced by LyraChatSuggestion at the curated root.
 import type { ChatSuggestion as RemovedRootChatSuggestion } from '../src/lyra.js';

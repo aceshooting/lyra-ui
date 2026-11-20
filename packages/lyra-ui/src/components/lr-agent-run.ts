@@ -1,3 +1,10 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './agent-tools/agent-run/agent-run.js';
+export * from './agent-tools/agent-run/agent-run.class.js';
+import './lr-generation-metrics.js';
+import './lr-usage-badge.js';
+import './lr-task-list.js';
+import './lr-badge.js';
+import './lr-empty.js';
+import './lr-live-region.js';
+import { LyraAgentRun } from './agent-tools/agent-run/agent-run.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('agent-run', LyraAgentRun);

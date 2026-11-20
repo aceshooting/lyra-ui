@@ -4,11 +4,11 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
-import './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
 import type {
   LyraIngestionQueue,
   IngestionQueueItem,
-} from './ingestion-queue.js';
+} from '../../lr-ingestion-queue.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';

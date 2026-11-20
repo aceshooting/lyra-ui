@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './card.js';
-import type { LyraCard } from './card.js';
+import '../../lr-card.js';
+import type { LyraCard } from '../../lr-card.js';
 
 describe('lr-card interactions', () => {
   afterEach(async () => {

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tool-param-form.js';
-import type { LyraToolParamForm, FlatToolParamSchema } from './tool-param-form.js';
+import '../../lr-tool-param-form.js';
+import type { LyraToolParamForm, FlatToolParamSchema } from '../../lr-tool-param-form.js';
 
 const meta: Meta = {
   title: 'ToolParamForm',

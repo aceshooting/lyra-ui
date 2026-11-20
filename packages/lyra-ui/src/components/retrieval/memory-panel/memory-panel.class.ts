@@ -168,10 +168,10 @@ export interface LyraMemoryExpandDetail {
   expanded: boolean;
 }
 
-/** The embedded provenance panel's non-toggle events cross this host unchanged; the owning
+/** The embedded provenance panel's non-disclosure events cross this host unchanged; the owning
  *  `[part="item"]` (`data-id`, `data-scope`) is on the event's `composedPath()`. */
 export interface LyraMemoryPanelEventMap
-  extends Omit<LyraProvenancePanelEventMap, 'lr-chunk-open' | 'lr-toggle' | 'lr-retrieval-disclosure-change'> {
+  extends Omit<LyraProvenancePanelEventMap, 'lr-chunk-open' | 'lr-retrieval-disclosure-change'> {
   'lr-chunk-open': CustomEvent<
     LyraEventDetailSnapshot<{
       memoryId: string;
@@ -184,14 +184,6 @@ export interface LyraMemoryPanelEventMap
   'lr-add': CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
   'lr-forget': CustomEvent<null>;
-  /** @deprecated Use `lr-retrieval-disclosure-change` and read `memoryId`, `scope`, and `kind`. */
-  'lr-toggle': CustomEvent<{
-    expanded: boolean;
-    itemId?: string;
-    memoryId?: string;
-    scope?: MemoryScope;
-    section?: LyraProvenancePanelDisclosureDetail['section'];
-  }>;
   'lr-retrieval-disclosure-change': CustomEvent<LyraMemoryPanelDisclosureDetail>;
 }
 
@@ -274,8 +266,6 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * the short-term item as-is; the host decides how/whether to persist it.
  * @event lr-remove - A pending "remove" action was approved. `detail: { memoryId, scope }`.
  * @event lr-forget - The pending "forget all long-term memories" action was approved. No detail.
- * @event lr-toggle - Deprecated. Use `lr-retrieval-disclosure-change`.
- *   Legacy detail is `{ expanded, itemId?, memoryId?, scope?, section? }`.
  * @event lr-retrieval-disclosure-change - A memory, section or chunk disclosure changed.
  *   Each variant includes `kind`, `expanded`, `memoryId`, and `scope`.
  * @event lr-entity-select - Surfaced unchanged from an expanded item's provenance panel.
@@ -639,7 +629,6 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (expanded) next.add(key);
     else next.delete(key);
     this.expandedIds = next;
-    this.emit('lr-toggle', { itemId: item.id, memoryId: item.id, scope, expanded });
     this.emit('lr-retrieval-disclosure-change', { kind: 'memory', memoryId: item.id, scope, expanded });
   }
 
@@ -877,11 +866,6 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                       @lr-chunk-open=${(event: CustomEvent<{ chunkId: string; sourceId: string; anchor?: NonNullable<LyraChunk['anchor']> }>) => {
                         event.stopPropagation();
                         this.emit('lr-chunk-open', { memoryId: item.id, scope, ...event.detail });
-                      }}
-                      @lr-toggle=${(event: LyraProvenancePanelEventMap['lr-toggle']) => {
-                        if (event.composedPath()[0] !== event.currentTarget) return;
-                        event.stopPropagation();
-                        this.emit('lr-toggle', { ...event.detail, memoryId: item.id, scope });
                       }}
                       @lr-retrieval-disclosure-change=${(event: LyraProvenancePanelEventMap['lr-retrieval-disclosure-change']) => {
                         if (event.composedPath()[0] !== event.currentTarget) return;

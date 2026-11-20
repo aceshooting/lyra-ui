@@ -2,9 +2,9 @@ import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../..
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import type { PropertyValues } from "lit";
-import "./token-input.js";
-import "../button/button.js";
-import type { LyraTokenInput } from "./token-input.js";
+import "../../lr-token-input.js";
+import "../../lr-button.js";
+import type { LyraTokenInput } from "../../lr-token-input.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {

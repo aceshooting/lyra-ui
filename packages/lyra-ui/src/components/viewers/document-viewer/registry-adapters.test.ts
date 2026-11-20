@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './document-viewer.js';
+import '../../lr-document-viewer.js';
 import {
   adaptDocumentRenderer,
   createDocumentRendererAdapter,
@@ -11,7 +11,7 @@ import {
   type LyraDocumentRendererPayload,
   type LyraResolvedDocumentRendererDefinition,
 } from './registry.js';
-import type { LyraDocumentViewer } from './document-viewer.js';
+import type { LyraDocumentViewer } from '../../lr-document-viewer.js';
 
 const FILE: LyraDocumentFile = { name: 'Supported file', mimeType: 'application/x-adapter', src: '' };
 

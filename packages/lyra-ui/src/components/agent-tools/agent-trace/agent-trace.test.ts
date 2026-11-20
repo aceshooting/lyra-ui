@@ -2,9 +2,9 @@ import { expectLabelInName, reviewComponentLabels } from '../../../../test/revie
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './agent-trace.js';
+import '../../lr-agent-trace.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import type { LyraAgentTrace } from './agent-trace.js';
+import type { LyraAgentTrace } from '../../lr-agent-trace.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraTraceTree } from '../trace-tree/trace-tree.class.js';
 import type { LyraGraphLegend } from '../../retrieval/graph-legend/graph-legend.class.js';

@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './result-card.js';
-import './result-field.js';
-import '../../overlays/chip/chip.js';
-import '../tool-result-view/tool-result-view.js';
+import '../../lr-result-card.js';
+import '../../lr-result-field.js';
+import '../../lr-chip.js';
+import '../../lr-tool-result-view.js';
 import { registerToolRenderer } from '../tool-result-view/registry.js';
 
 const meta: Meta = {

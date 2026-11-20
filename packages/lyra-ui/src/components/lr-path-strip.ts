@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/path-strip/path-strip.js';
+export * from './retrieval/path-strip/path-strip.class.js';
+import { LyraPathStrip } from './retrieval/path-strip/path-strip.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-scroller.js';
+defineElement('path-strip', LyraPathStrip);

@@ -1,6 +1,6 @@
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './voice-picker.js';
+import '../../lr-voice-picker.js';
 
 it('keeps the current catalog selection silent when it is picked again', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-voice-picker']>(html`<lr-voice-picker value="a"

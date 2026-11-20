@@ -1,7 +1,7 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './sequence-strip.js';
-import type { LyraSequenceStrip } from './sequence-strip.js';
+import '../../lr-sequence-strip.js';
+import type { LyraSequenceStrip } from '../../lr-sequence-strip.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 

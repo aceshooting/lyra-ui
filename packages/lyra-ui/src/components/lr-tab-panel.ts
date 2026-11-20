@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/tab-group/tab-panel.js';
+export * from './layout/tab-group/tab-panel.class.js';
+import { LyraTabPanel } from './layout/tab-group/tab-panel.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('tab-panel', LyraTabPanel);

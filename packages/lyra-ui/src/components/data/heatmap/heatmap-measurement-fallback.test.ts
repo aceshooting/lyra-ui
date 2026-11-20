@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import type { LyraHeatmap } from './heatmap.js';
-import './heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
+import '../../lr-heatmap.js';
 
 expectDevWarning('heatmap-no-canvas-context');
 

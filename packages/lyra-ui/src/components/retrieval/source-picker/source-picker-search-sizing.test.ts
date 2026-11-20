@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './source-picker.js';
-import type { LyraSourceEntry, LyraSourcePicker } from './source-picker.js';
+import '../../lr-source-picker.js';
+import type { LyraSourceEntry, LyraSourcePicker } from '../../lr-source-picker.js';
 
 const SOURCES: LyraSourceEntry[] = [
   { id: 's1', label: 'Handbook' },

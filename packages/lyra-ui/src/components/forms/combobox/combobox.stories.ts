@@ -7,9 +7,9 @@ import type {
   LyraCombobox,
   LyraComboboxValidator,
   OptionFilter,
-} from "./combobox.js";
+} from "../../lr-combobox.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
-import "../color-picker/color-picker.js";
+import "../../lr-color-picker.js";
 
 const meta: Meta = {
   title: "Combobox",

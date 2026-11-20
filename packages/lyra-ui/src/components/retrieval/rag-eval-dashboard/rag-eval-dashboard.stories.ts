@@ -4,7 +4,7 @@ import type {
   LyraRagEvaluationMetric,
   LyraRagEvaluationRun,
 } from './rag-eval-dashboard.class.js';
-import './rag-eval-dashboard.js';
+import '../../lr-rag-eval-dashboard.js';
 
 const meta: Meta = {
   title: 'RAG Evaluation Dashboard',

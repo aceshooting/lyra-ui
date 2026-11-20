@@ -1,11 +1,11 @@
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
-import './menu.js';
-import './menu-item.js';
-import './dropdown-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown-item.js';
 
 function press(target: Element, key: string): KeyboardEvent {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });

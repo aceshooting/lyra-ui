@@ -286,12 +286,15 @@
   genuinely blocked (that is how `lr-filter-bar`'s and `lr-tree`'s forwarding got added), and a part
   name added on a guess is permanent public API nobody asked for.
 - **Granular, tree-shakeable exports.** Each component's `.class.ts` file is a side-effect-free class
-  export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the pure package
+  export; its tag-shaped entry `src/components/lr-<tag>.ts` is the one side-effectful module that
+  registers the tag (it re-exports the class module and calls `defineElement()`). `src/lyra.ts` is the pure package
   root, containing only curated named re-exports of classes/types/helpers. `src/all.ts` is the
   explicit compatibility registration entry; its inventory-generated import block registers every
   root-included tag. Never put a hand-authored export inside that generated block or generate the
-  `lyra.ts` export surface: the latter is reviewed and semver-covered by hand. Stable generated
-  `src/components/lr-*.ts` aliases provide family-independent per-tag registration paths.
+  `lyra.ts` export surface: the latter is reviewed and semver-covered by hand. The authored
+  `src/components/lr-*.ts` entries provide family-independent per-tag registration paths; there is
+  no second, per-directory registration module, and a composed child is registered by importing
+  its `lr-<child>.js` entry.
   `package.json#exports` maps `.`, explicit inventory-derived component/AI routes, and explicit
   curated utility/helper routes — never broad `./components/*`, `./ai/*`, or `./utilities/*`
   wildcards, and never `./internal/*`. Internal paths were removed on purpose: only the curated
@@ -300,12 +303,13 @@
   own check fixtures alike. A helper that needs to be reachable gets a `src/utilities/` re-export,
   not just its `src/internal/` home.
   `sideEffects` is an explicit enumerated array, not globs — every registration module is listed
-  individually in both compiled (`./dist/components/<family>/<name>/<name>.js`) and source
-  (`./src/components/<family>/<name>/<name>.ts`) forms, alongside the tag aliases, `all.js`, and
+  individually in both compiled (`./dist/components/lr-<tag>.js`) and source
+  (`./src/components/lr-<tag>.ts`) forms, alongside `all.js`, and
   CSS/locale/companion registration side effects. The pure `lyra.js` root is not a side effect.
   Do not edit that array or the root-registration allowlist by hand. After adding, moving, or
   removing a component, refresh the inventory and run `pnpm registrations`; this regenerates the
-  `all.ts` import block, aliases, allowlist, side-effect forms, and explicit package-export map
+  `all.ts` import block, allowlist, side-effect forms, and explicit package-export map (after
+  verifying every inventory tag has its registering `lr-<tag>.ts` entry)
   together. `check:registrations`, `check:package-exports`,
   `check-side-effects`, their
   deterministic self-tests, and CI's regenerate-and-diff step fail on stale, duplicate, or missing

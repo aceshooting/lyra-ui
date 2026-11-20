@@ -1,7 +1,7 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { formatBytes } from '../../../utilities/format.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import './budget-meter.js';
+import '../../lr-budget-meter.js';
 import type { LyraBudgetMeter } from './budget-meter.class.js';
 
 type Formatter = (value: number, context: Readonly<{ locale: string }>) => string;

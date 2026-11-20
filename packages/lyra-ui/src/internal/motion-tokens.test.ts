@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import '../components/data/flow-node/flow-node.js';
-import '../components/data/flow-canvas/flow-canvas.js';
-import '../components/agent-tools/span-waterfall/span-waterfall.js';
+import '../components/lr-flow-node.js';
+import '../components/lr-flow-canvas.js';
+import '../components/lr-span-waterfall.js';
 
 /**
  * The motion tokens used to fuse a duration and an easing into one value

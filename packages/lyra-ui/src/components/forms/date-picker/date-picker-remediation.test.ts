@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './date-picker.js';
-import './date-input.js';
-import '../../data/calendar/calendar.js';
-import type { LyraDatePicker, LyraDateRangePreset } from './date-picker.js';
-import type { LyraDateInput } from './date-input.js';
+import '../../lr-date-picker.js';
+import '../../lr-date-input.js';
+import '../../lr-calendar.js';
+import type { LyraDatePicker, LyraDateRangePreset } from '../../lr-date-picker.js';
+import type { LyraDateInput } from '../../lr-date-input.js';
 import { parseISO, formatISO } from './calendar-core.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 

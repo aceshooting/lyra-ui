@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './toggle-group.js';
-import '../toggle/toggle.js';
-import '../../overlays/overlay/tooltip.js';
+import '../../lr-toggle-group.js';
+import '../../lr-toggle.js';
+import '../../lr-tooltip.js';
 
 const meta: Meta = {
   title: 'Forms & Inputs/Toggle Group',

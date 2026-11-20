@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import type { LyraChatThread, LyraThreadList, ThreadListSource } from './thread-list.class.js';
-import './thread-list.js';
+import '../../lr-thread-list.js';
 
 const TOTAL = 5;
 const entry = (order: number): LyraSourceRecord<LyraChatThread> => ({ key: `t${order}`, order, value: { id: `t${order}`, title: `Thread ${order}` } });

@@ -244,7 +244,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     super.updated(changed);
     const previous = this.lastRenderedPhase;
     const current = this.phase;
-    if (current === 'interrupted' && this.resumable) this.resumeRegistration ??= import('../../forms/button/button.js');
+    if (current === 'interrupted' && this.resumable) this.resumeRegistration ??= import('../../lr-button.js');
     this.lastRenderedPhase = current;
     this.toggleAttribute('data-stalled', current === 'stalled');
 

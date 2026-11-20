@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './model-viewer.js';
+import '../../lr-model-viewer.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
 import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader.js';
 import { MODEL_SOURCE_MAX_BYTES, resolveModelFormat } from './model-viewer-source.js';

@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './handoff-divider.js';
-import type { LyraHandoffDivider } from './handoff-divider.js';
+import '../../lr-handoff-divider.js';
+import type { LyraHandoffDivider } from '../../lr-handoff-divider.js';
 
 it('defaults to toAgent="", fromAgent="", label=""', async () => {
   const el = (await fixture(html`<lr-handoff-divider></lr-handoff-divider>`)) as LyraHandoffDivider;

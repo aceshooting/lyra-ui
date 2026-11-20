@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './page.js';
-import '../responsive-panel/responsive-panel.js';
+import '../../lr-page.js';
+import '../../lr-responsive-panel.js';
 
 function observeWidthReads(element: HTMLElement, onRead: (width: number) => void): void {
   const nativeWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')!.get!;

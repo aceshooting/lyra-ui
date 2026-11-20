@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import './input.js';
+import '../../lr-input.js';
 import '../../../translations/de/forms.js';
 import type { LyraInput } from './input.class.js';
 

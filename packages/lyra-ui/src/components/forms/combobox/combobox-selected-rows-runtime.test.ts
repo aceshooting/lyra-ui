@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './combobox.js';
-import './option.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
 import type { ComboboxSourceRow, LyraCombobox } from './combobox.class.js';
 
 it('isolates a throwing selected-row value without losing later valid selection', async () => {

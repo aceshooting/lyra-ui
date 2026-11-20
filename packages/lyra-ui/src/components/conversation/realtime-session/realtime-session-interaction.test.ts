@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './realtime-session.js';
+import '../../lr-realtime-session.js';
 
 it('projects the host description onto the region and follows text edits', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div><p id="help">Description</p>

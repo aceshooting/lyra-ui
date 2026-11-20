@@ -3,7 +3,7 @@ import '../../../translations/fr/retrieval.js';
 import '../../../translations/fr/layout.js';
 import { registerLyraLocale, resolveLyraString } from '../../../localization.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraNeighborList } from './neighbor-list.js';
+import { LyraNeighborList } from '../../lr-neighbor-list.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('retains the sorted projection on presentation changes across 1,000 neighbors', async () => {

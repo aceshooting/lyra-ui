@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.class.js';
-import './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
 
 const people = [
   { id: 'marie', label: 'Marie Curie' },

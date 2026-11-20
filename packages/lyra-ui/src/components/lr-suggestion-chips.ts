@@ -1,3 +1,6 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/suggestion-chips/suggestion-chips.js';
+export * from './conversation/suggestion-chips/suggestion-chips.class.js';
+import { LyraSuggestionChips } from './conversation/suggestion-chips/suggestion-chips.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-scroller.js';
+import './lr-icon.js';
+defineElement('suggestion-chips', LyraSuggestionChips);

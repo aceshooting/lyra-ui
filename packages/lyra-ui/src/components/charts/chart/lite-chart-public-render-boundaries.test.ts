@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';
 import { twoFrames } from '../../../../test/frames.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 
 async function marks(element: LyraLiteChart, count: number, measurableCount = count): Promise<SVGGraphicsElement[]> {
   await element.updateComplete;

@@ -149,6 +149,12 @@ export function analyzeRetiredEventHistory(renameLedger, history) {
   }
   for (const candidate of profiles) {
     for (const entry of candidate.retiredEvents ?? []) {
+      // A direct retirement ships in a major without a published deprecation, so it has no
+      // released policy record; a published record must not be bypassed that way.
+      if (entry.direct === true) {
+        if (records.has(`${entry.tag} ${entry.event}`)) errors.push(`${candidate.origin}: retired event ${entry.tag} ${entry.event} has published policy evidence; it is not direct`);
+        continue;
+      }
       if (candidate !== profile || !records.has(`${entry.tag} ${entry.event}`)) {
         errors.push(`${candidate.origin}: retired event ${entry.tag} ${entry.event} has no published policy evidence`);
       }

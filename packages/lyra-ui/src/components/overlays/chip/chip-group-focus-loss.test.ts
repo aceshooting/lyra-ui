@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chip-group.js';
-import './chip.js';
-import type { LyraChipGroup } from './chip-group.js';
+import '../../lr-chip-group.js';
+import '../../lr-chip.js';
+import type { LyraChipGroup } from '../../lr-chip-group.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function focusedPart(chip: HTMLElement): string | null {

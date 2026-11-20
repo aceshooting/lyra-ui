@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './highlight-layer.js';
+import '../../lr-highlight-layer.js';
 import type { HighlightLayerItem } from './highlight-layer.class.js';
 
 const meta: Meta = {

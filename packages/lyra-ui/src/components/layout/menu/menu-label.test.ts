@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './menu-label.js';
-import './menu.js';
-import './menu-item.js';
+import '../../lr-menu-label.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 
 it('renders a presentational heading that is not a focus stop', async () => {
   const el = await fixture(html`<lr-menu-label>Recently used</lr-menu-label>`);

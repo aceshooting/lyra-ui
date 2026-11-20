@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './tool-timeline.js';
-import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
+import '../../lr-tool-timeline.js';
+import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../lr-tool-timeline.js';
 
 const meta: Meta = {
   title: 'ToolTimeline',

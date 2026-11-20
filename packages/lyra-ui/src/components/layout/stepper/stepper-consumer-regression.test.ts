@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraStepper } from './stepper.js';
-import './stepper.js';
+import type { LyraStepper } from '../../lr-stepper.js';
+import '../../lr-stepper.js';
 
 function expectUnclippedOutline(step: HTMLButtonElement, track: HTMLElement): void {
   const style = getComputedStyle(step);

@@ -3,13 +3,13 @@ import { sendKeys } from '@web/test-runner-commands';
 import { accessibleName } from '../../../../test/accessible-name.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './segmented.js';
-import type { LyraSegmented, LyraSegmentedItem } from './segmented.js';
-import '../../forms/input/input.js';
-import type { LyraInput } from '../../forms/input/input.js';
-import '../../forms/select/select.js';
-import type { LyraSelect } from '../../forms/select/select.js';
-import '../../forms/combobox/option.js';
+import '../../lr-segmented.js';
+import type { LyraSegmented, LyraSegmentedItem } from '../../lr-segmented.js';
+import '../../lr-input.js';
+import type { LyraInput } from '../../lr-input.js';
+import '../../lr-select.js';
+import type { LyraSelect } from '../../lr-select.js';
+import '../../lr-option.js';
 
 type FieldSegmented = LyraSegmented & { labelDisplay: 'visible' | 'hidden'; hint: string };
 const choices: LyraSegmentedItem[] = [

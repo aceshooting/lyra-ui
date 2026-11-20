@@ -2,8 +2,8 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import "./tag.js";
-import type { LyraTag } from "./tag.js";
+import "../../lr-tag.js";
+import type { LyraTag } from "../../lr-tag.js";
 
 class TagLabelForwardWrapper extends HTMLElement {
   constructor() {

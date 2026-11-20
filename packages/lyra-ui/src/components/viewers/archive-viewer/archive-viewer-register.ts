@@ -13,7 +13,7 @@ const renderArchiveViewer = (file: LyraDocumentFile) => html`<lr-archive-viewer
   .anchor=${file.anchor ?? null}
   .highlights=${file.highlights ?? []}
 ></lr-archive-viewer>`;
-const load = () => import('./archive-viewer.js').then(() => ({ render: renderArchiveViewer }));
+const load = () => import('../../lr-archive-viewer.js').then(() => ({ render: renderArchiveViewer }));
 
 registerDocumentRenderer('application/zip', {
   matches: isZipFile,

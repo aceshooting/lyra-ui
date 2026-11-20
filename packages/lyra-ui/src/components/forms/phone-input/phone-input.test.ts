@@ -5,9 +5,9 @@ import {
   type LyraPhoneInput,
   type LyraPhoneNumberAdapter,
   loadLibphonenumberAdapter,
-} from './phone-input.js';
-import './phone-input.js';
-import '../button/button.js';
+} from '../../lr-phone-input.js';
+import '../../lr-phone-input.js';
+import '../../lr-button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { styles } from './phone-input.styles.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';

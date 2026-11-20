@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './email-viewer.js';
-import type { LyraEmailViewer } from './email-viewer.js';
+import '../../lr-email-viewer.js';
+import type { LyraEmailViewer } from '../../lr-email-viewer.js';
 
 const meta: Meta = {
   title: 'EmailViewer',

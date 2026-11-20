@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ConditionBuilderField, ConditionBuilderValue } from './condition-builder.js';
+import type { ConditionBuilderField, ConditionBuilderValue } from '../../lr-condition-builder.js';
 
 const fields: ConditionBuilderField[] = [
   { name: 'name', label: 'Name', type: 'string', placeholder: 'e.g. Acme Corp' },

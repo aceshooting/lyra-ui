@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import type { LyraMapInstance } from './map.class.js';
 
 interface SceneMapElement extends LyraMap {

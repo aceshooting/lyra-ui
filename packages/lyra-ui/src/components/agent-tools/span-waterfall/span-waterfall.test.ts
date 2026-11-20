@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './span-waterfall.js';
-import type { LyraSpanWaterfall } from './span-waterfall.js';
+import '../../lr-span-waterfall.js';
+import type { LyraSpanWaterfall } from '../../lr-span-waterfall.js';
 import { MAX_RENDERED_LYRA_SPANS, type LyraSpan } from '../trace-tree/span.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';

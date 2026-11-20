@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
-import "./stepper.js";
-import type { LyraStepItem } from "./stepper.js";
+import "../../lr-stepper.js";
+import type { LyraStepItem } from "../../lr-stepper.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const wizardSteps: LyraStepItem[] = [

@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './color-picker.js';
-import type { LyraColorPicker } from './color-picker.js';
+import '../../lr-color-picker.js';
+import type { LyraColorPicker } from '../../lr-color-picker.js';
 
 function part<T extends HTMLElement = HTMLElement>(picker: LyraColorPicker, name: string): T {
   return picker.shadowRoot!.querySelector<T>(`[part~="${name}"]`)!;

@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraToolSelectDialog } from './tool-select-dialog.js';
-import './tool-select-dialog.js';
+import type { LyraToolSelectDialog } from '../../lr-tool-select-dialog.js';
+import '../../lr-tool-select-dialog.js';
 
 for (const retirement of ['close', 'disconnect'] as const) {
   it(`retires pending Load more focus on ${retirement} and restores fresh keyboard loading`, async () => {

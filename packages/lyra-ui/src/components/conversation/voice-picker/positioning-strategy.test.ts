@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './voice-picker.js';
-import type { LyraVoicePicker } from './voice-picker.js';
+import '../../lr-voice-picker.js';
+import type { LyraVoicePicker } from '../../lr-voice-picker.js';
 
 const CATALOG = ['alloy', 'verse'];
 

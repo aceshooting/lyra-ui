@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './rag-answer.js';
+import '../../lr-rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 
 it('registers the grounding summary only when an answer first carries an assessment', async () => {

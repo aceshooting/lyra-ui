@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
-import './policy-summary.js';
-import type { LyraPolicySummary, PolicyDecision } from './policy-summary.js';
+import '../../lr-policy-summary.js';
+import type { LyraPolicySummary, PolicyDecision } from '../../lr-policy-summary.js';
 
 const decisions: PolicyDecision[] = [
   {

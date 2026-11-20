@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './carousel.js';
-import type { LyraCarousel } from './carousel.js';
+import '../../lr-carousel.js';
+import type { LyraCarousel } from '../../lr-carousel.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const part = (el: LyraCarousel, name: string): HTMLButtonElement =>

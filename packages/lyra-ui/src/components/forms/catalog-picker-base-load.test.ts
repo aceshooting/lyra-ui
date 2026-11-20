@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../internal/announcer.js';
-import './country-picker/country-picker.js';
+import '../lr-country-picker.js';
 
 describe('catalog picker filter loading', () => {
   for (const cancel of ['disable search', 'disconnect']) {

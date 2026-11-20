@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './details.js';
-import './accordion.js';
-import './accordion-item.js';
+import '../../lr-details.js';
+import '../../lr-accordion.js';
+import '../../lr-accordion-item.js';
 import type { LyraDetails } from './details.class.js';
 import type { LyraAccordionItem } from './accordion-item.class.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';

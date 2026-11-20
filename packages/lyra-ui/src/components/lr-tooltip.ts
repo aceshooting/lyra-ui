@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/overlay/tooltip.js';
+export * from './overlays/overlay/tooltip.class.js';
+import { LyraTooltip } from './overlays/overlay/tooltip.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('tooltip', LyraTooltip);

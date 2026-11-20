@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './agent-question.js';
+import '../../lr-agent-question.js';
 import type { LyraAgentQuestion } from './agent-question.class.js';
 
 const schema = { type: 'object' as const, properties: { name: { type: 'string' as const, title: 'Name' } } };

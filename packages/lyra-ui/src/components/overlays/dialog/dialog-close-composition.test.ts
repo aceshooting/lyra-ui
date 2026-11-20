@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './dialog.js';
+import '../../lr-dialog.js';
 import type { LyraDialog } from './dialog.class.js';
 
 const ANCESTOR_TOKENS =

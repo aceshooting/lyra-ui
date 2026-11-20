@@ -1,10 +1,10 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './markdown.js';
-import './markdown-core.js';
-import '../code-block/code-block.js';
-import '../code-block/code-block-core.js';
-import type { LyraMarkdown } from './markdown.js';
-import type { LyraMarkdownCore } from './markdown-core.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import '../../lr-code-block.js';
+import '../../lr-code-block-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
+import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 
 const markdownTags = ['lr-markdown', 'lr-markdown-core'] as const;

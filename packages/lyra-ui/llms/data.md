@@ -3943,7 +3943,7 @@ sorted even when public inputs are invalid or reversed. Source snapshots additio
 accepted `source` descriptor above; their scene arrays do not imply full-source coverage.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
-sourceNodeId, targetNodeId, source, target }`, both endpoint-name pairs are supplied),
+sourceNodeId, targetNodeId }`),
 `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
@@ -4703,8 +4703,6 @@ the day), Home/End to the month's first/last day; stepping past the rendered gri
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
 `lr-month-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
-`lr-view-change` is deprecated and still fires with the same detail. Use `lr-month-change` for
-calendar-specific listeners.
 
 **Slots:** none.
 

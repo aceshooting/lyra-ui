@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { createRef, ref } from 'lit/directives/ref.js';
-import './virtual-list.js';
-import type { LyraVirtualList } from './virtual-list.js';
-import type { LyraVirtualListIndexedSource } from './virtual-list.js';
+import '../../lr-virtual-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
+import type { LyraVirtualListIndexedSource } from '../../lr-virtual-list.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 interface DemoMessage {

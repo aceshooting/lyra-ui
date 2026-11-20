@@ -1,8 +1,8 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './message-actions.js';
-import '../branch-picker/branch-picker.js';
-import '../chat-message/chat-message.js';
+import '../../lr-message-actions.js';
+import '../../lr-branch-picker.js';
+import '../../lr-chat-message.js';
 
 const meta: Meta = {
   title: 'MessageActions',

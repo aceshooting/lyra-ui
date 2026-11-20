@@ -2,10 +2,10 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, fixtureSync, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
-import './source-list.js';
-import '../source-card/source-card.js';
-import '../../utility/copy-button/copy-button.js';
-import { LyraSourceList } from './source-list.js';
+import '../../lr-source-list.js';
+import '../../lr-source-card.js';
+import '../../lr-copy-button.js';
+import { LyraSourceList } from '../../lr-source-list.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,

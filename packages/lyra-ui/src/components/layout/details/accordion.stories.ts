@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './accordion.js';
-import './accordion-item.js';
+import '../../lr-accordion.js';
+import '../../lr-accordion-item.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

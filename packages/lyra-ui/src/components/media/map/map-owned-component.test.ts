@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { MapBasemapOrder, type MapBasemapOrderDraft } from './map-basemap-order.js';
 import type { MapLayerOrderGroup } from './map-layer-order.js';

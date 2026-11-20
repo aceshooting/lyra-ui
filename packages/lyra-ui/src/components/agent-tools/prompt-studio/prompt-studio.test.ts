@@ -1,12 +1,12 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './prompt-studio.js';
+import '../../lr-prompt-studio.js';
 import type {
   LyraPromptStudio,
   PromptStudioMessage,
   PromptStudioMessageReorderDetail,
   PromptStudioVersion,
-} from './prompt-studio.js';
+} from '../../lr-prompt-studio.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { sinkTexts } from '../../../../test/announcements.js';

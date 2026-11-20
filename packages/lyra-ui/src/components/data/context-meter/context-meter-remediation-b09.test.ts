@@ -2,8 +2,8 @@ import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './context-meter.js';
-import type { LyraContextMeter } from './context-meter.js';
+import '../../lr-context-meter.js';
+import type { LyraContextMeter } from '../../lr-context-meter.js';
 
 const segments = [{ label: 'Docs', value: 40 }, { label: 'Chat', value: 0.01 }];
 

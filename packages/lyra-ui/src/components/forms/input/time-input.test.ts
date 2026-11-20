@@ -10,7 +10,7 @@ import {
 } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './time-input.js';
+import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
 interface WindowWithEventConstructors extends Window {

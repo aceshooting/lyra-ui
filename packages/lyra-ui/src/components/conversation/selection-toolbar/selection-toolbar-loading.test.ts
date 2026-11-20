@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './selection-toolbar.js';
+import '../../lr-selection-toolbar.js';
 
 it('positions a standalone selection on first open without fetching the floating engine', async () => {
   const el = await fixture(html`<lr-selection-toolbar open text="Select"

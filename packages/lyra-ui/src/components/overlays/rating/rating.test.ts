@@ -1,8 +1,8 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
-import "./rating.js";
-import { LyraRating } from "./rating.js";
+import "../../lr-rating.js";
+import { LyraRating } from "../../lr-rating.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 // Registers the real 'ar' catalog so the lang="ar" digit-formatting test below -- which exercises
 // aria-valuetext number formatting, not string-catalog completeness -- resolves the "rating" key

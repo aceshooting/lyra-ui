@@ -18,8 +18,8 @@ import { loadMaplibreModule, type MapLibreMapCapability } from './map-loader.js'
 import * as mapLoader from './map-loader.js';
 import { MapGlobeControl } from './map-scene-controls.js';
 import type { LyraMapDrawingSnapshot } from './map-drawing.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
-import './map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
+import '../../lr-map.js';
 
 describe('map loaders after a transient failure', () => {
   it('retries a rejected import but keeps an unusable module', async () => {

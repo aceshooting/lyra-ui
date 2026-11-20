@@ -2,11 +2,11 @@ import { expect, fixture } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched } from '../../../../test/wtr-mouse.js';
-import './select.js';
-import '../combobox/combobox.js';
-import '../combobox/option.js';
-import '../switch/switch.js';
-import '../radio/radio-button.js';
+import '../../lr-select.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import '../../lr-switch.js';
+import '../../lr-radio-button.js';
 
 for (const name of ['select', 'combobox'] as const) {
   it(`${name} outlines the keyboard-current row in forced colors`, async () => {

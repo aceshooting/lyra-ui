@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './flow-canvas.js';
-import type { LyraFlowCanvas, FlowNode } from './flow-canvas.js';
-import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
+import '../../lr-flow-canvas.js';
+import type { LyraFlowCanvas, FlowNode } from '../../lr-flow-canvas.js';
+import { FLOW_PALETTE_MIME_TYPE } from '../../lr-flow-canvas.js';
 
 const pair: FlowNode[] = [
   { id: 'a', position: { x: 0, y: 0 }, data: { label: 'Fetch' } },

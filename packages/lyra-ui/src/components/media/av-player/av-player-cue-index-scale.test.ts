@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './av-player.js';
+import '../../lr-av-player.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.class.js';
 

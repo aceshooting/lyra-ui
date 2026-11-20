@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './rubric-form.js';
+import '../../lr-rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.class.js';
 
 const notes: RubricKey = { key: 'notes', type: 'comment', label: 'Notes' };

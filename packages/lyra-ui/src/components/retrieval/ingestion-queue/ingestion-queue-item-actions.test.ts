@@ -3,7 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedContains } from '../../../internal/overlay-stack.js';
-import './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
 import type { LyraIngestionQueue, IngestionQueueItem, IngestionQueueSourceQuery } from './ingestion-queue.class.js';
 import type { LyraPageSource, LyraSourceRecord } from '../../../data-sources.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';

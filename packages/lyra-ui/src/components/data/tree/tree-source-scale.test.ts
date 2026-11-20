@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraHierarchyRow, LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.class.js';
-import './tree.js';
+import '../../lr-tree.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 

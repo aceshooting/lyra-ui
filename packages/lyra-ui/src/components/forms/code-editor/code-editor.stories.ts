@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './code-editor.js';
+import '../../lr-code-editor.js';
 const meta: Meta = {
   title: 'Code Editor',
   component: 'lr-code-editor',

@@ -2,14 +2,14 @@ import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './test-results.js';
+import '../../lr-test-results.js';
 // Registers the shipped `ar` catalog slices the `lang="ar-EG"` locale-formatting test resolves
 // against, so it renders real catalog text instead of tripping the dev-mode locale-fallback
 // warning that strict-console browser lanes treat as fatal.
 import '../../../translations/ar/agent-tools.js';
 import '../../../translations/ar/shared.js';
-import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
-import type { LyraEmpty } from '../../overlays/empty/empty.js';
+import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from '../../lr-test-results.js';
+import type { LyraEmpty } from '../../lr-empty.js';
 
 const suites: TestSuiteResult[] = [
   {

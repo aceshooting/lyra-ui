@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraHierarchyRow, LyraSourceRangeRequest } from '../../../data-sources.js';
 import type { LyraTraceTree, TraceTreeSource } from './trace-tree.class.js';
 import type { LyraSpan } from './span.js';
-import './trace-tree.js';
+import '../../lr-trace-tree.js';
 
 interface Deferred { readonly request: LyraSourceRangeRequest; release(): void }
 

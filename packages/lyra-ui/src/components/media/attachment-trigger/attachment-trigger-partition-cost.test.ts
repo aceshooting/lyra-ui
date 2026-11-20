@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './attachment-trigger.js';
-import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from './attachment-trigger.js';
+import '../../lr-attachment-trigger.js';
+import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from '../../lr-attachment-trigger.js';
 import { measureArrayProbeReads } from '../../../../test/array-probe-reads.js';
 
 function picker(control: LyraAttachmentTrigger, files: readonly File[]): HTMLInputElement {

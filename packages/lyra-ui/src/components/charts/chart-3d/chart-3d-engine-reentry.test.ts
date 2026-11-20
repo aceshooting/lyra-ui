@@ -2,7 +2,7 @@ import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { chart3dEngineEnvironment, chart3dPointsLoader } from './chart-3d-engine.js';
 import type { LyraChart3d, LyraChart3dColumns } from './chart-3d.class.js';
-import './chart-3d.js';
+import '../../lr-chart-3d.js';
 
 function columns(): LyraChart3dColumns {
   return {

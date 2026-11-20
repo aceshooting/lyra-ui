@@ -1,7 +1,7 @@
 import { fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from './wtr-mouse.js';
-import '../src/components/data/data-grid/data-grid.js';
-import type { LyraDataGrid } from '../src/components/data/data-grid/data-grid.js';
+import '../src/components/lr-data-grid.js';
+import type { LyraDataGrid } from '../src/components/lr-data-grid.js';
 import type { DataGridColumn } from '../src/components/data/data-grid/data-grid-types.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../src/internal/announcer.js';
 

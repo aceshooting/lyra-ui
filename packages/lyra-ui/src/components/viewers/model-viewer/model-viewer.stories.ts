@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './model-viewer.js';
-import '../document-viewer/document-viewer.js';
+import '../../lr-model-viewer.js';
+import '../../lr-document-viewer.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/ModelViewer',

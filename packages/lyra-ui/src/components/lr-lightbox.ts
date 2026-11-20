@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/lightbox/lightbox.js';
+export * from './media/lightbox/lightbox.class.js';
+import { LyraLightbox } from './media/lightbox/lightbox.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-pan-zoom.js';
+defineElement('lightbox', LyraLightbox);

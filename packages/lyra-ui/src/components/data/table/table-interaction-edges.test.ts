@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './table.js';
-import type { LyraTable, TableColumn } from './table.js';
+import '../../lr-table.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { forcedWidthHeaderCell, installTableTestHooks, type Row, columns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 

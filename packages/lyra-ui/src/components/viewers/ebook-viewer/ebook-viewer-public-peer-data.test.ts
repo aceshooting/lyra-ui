@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { __setEpubJsForTesting, type EpubBook } from './ebook-loader.js';
 import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
 import type { LyraEbookViewer } from './ebook-viewer.class.js';
-import './ebook-viewer.js';
+import '../../lr-ebook-viewer.js';
 
 type SpineItem = NonNullable<NonNullable<EpubBook['spine']>['spineItems']>[number];
 const originalFetch = window.fetch;

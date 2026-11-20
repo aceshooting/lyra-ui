@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { nextFrame, twoFrames } from '../../../../test/frames.js';
-import './activity-feed.js';
-import type { ActivityEntry, LyraActivityFeed } from './activity-feed.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-activity-feed.js';
+import type { ActivityEntry, LyraActivityFeed } from '../../lr-activity-feed.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 
 function makeEntries(count: number): ActivityEntry[] {
   return Array.from({ length: count }, (_, index) => ({ id: `e${index}`, text: `Entry ${index}` }));

@@ -5,11 +5,11 @@
 import type {
   LyraEntityDossier,
   LyraEntityDossierEventMap,
-} from '../src/components/retrieval/entity-dossier/entity-dossier.js';
+} from '../src/components/lr-entity-dossier.js';
 import type {
   LyraProvenancePanel,
   LyraProvenancePanelEventMap,
-} from '../src/components/retrieval/provenance-panel/provenance-panel.js';
+} from '../src/components/lr-provenance-panel.js';
 
 declare const dossier: LyraEntityDossier;
 declare const panel: LyraProvenancePanel;

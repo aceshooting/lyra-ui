@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
-import './chip-group.js';
-import './chip.js';
-import type { LyraChipGroup } from './chip-group.js';
+import '../../lr-chip-group.js';
+import '../../lr-chip.js';
+import type { LyraChipGroup } from '../../lr-chip-group.js';
 
 // A minimal host that re-projects its own light-DOM children into a
 // `<lr-chip-group>` living in its shadow DOM via a forwarding `<slot>` --

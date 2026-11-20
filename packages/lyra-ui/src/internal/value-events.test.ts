@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/time-range/time-range.js';
-import '../components/forms/checkbox-group/checkbox-group.js';
-import '../components/forms/checkbox/checkbox.js';
-import '../components/agent-tools/tool-param-form/tool-param-form.js';
-import '../components/data/data-grid/data-grid.js';
+import '../components/lr-date-input.js';
+import '../components/lr-time-range.js';
+import '../components/lr-checkbox-group.js';
+import '../components/lr-checkbox.js';
+import '../components/lr-tool-param-form.js';
+import '../components/lr-data-grid.js';
 import type { LyraDateInput } from '../components/forms/date-picker/date-input.class.js';
 import type { LyraToolParamForm } from '../components/agent-tools/tool-param-form/tool-param-form.class.js';
 import type { LyraDataGrid } from '../components/data/data-grid/data-grid.class.js';

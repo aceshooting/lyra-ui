@@ -1,18 +1,18 @@
 import { expect } from '@open-wc/testing';
 import { composedContains, deepActiveElement } from './overlay-manager.js';
-import '../components/overlays/dialog/dialog.js';
-import '../components/overlays/drawer/drawer.js';
-import '../components/layout/responsive-panel/responsive-panel.js';
-import '../components/agent-tools/tool-select-dialog/tool-select-dialog.js';
-import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
-import '../components/agent-tools/tool-result-dialog/tool-result-dialog.js';
-import '../components/layout/app-rail/app-rail.js';
-import '../components/layout/command-palette/command-palette.js';
-import '../components/layout/multi-split/multi-split.js';
-import '../components/layout/widget/widget.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/media/lightbox/lightbox.js';
-import '../components/utility/tour/tour.js';
+import '../components/lr-dialog.js';
+import '../components/lr-drawer.js';
+import '../components/lr-responsive-panel.js';
+import '../components/lr-tool-select-dialog.js';
+import '../components/lr-tool-approval-dialog.js';
+import '../components/lr-tool-result-dialog.js';
+import '../components/lr-app-rail.js';
+import '../components/lr-command-palette.js';
+import '../components/lr-multi-split.js';
+import '../components/lr-widget.js';
+import '../components/lr-date-input.js';
+import '../components/lr-lightbox.js';
+import '../components/lr-tour.js';
 import type { LyraLightboxImage } from '../components/media/lightbox/lightbox.class.js';
 
 interface ReactiveOverlay extends HTMLElement {

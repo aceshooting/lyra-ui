@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './swatch-picker.js';
+import '../../lr-swatch-picker.js';
 import type { LyraSwatchPicker, SwatchPickerItem } from './swatch-picker.class.js';
 
 const green = { value: 'green', color: 'rgb(0, 128, 0)', label: 'Green' };

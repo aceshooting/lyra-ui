@@ -5,7 +5,7 @@ import type {
   PromptQueueChangeDetail,
   PromptQueueItem,
 } from './prompt-queue.class.js';
-import './prompt-queue.js';
+import '../../lr-prompt-queue.js';
 
 const meta: Meta = {
   title: 'Prompt Queue',

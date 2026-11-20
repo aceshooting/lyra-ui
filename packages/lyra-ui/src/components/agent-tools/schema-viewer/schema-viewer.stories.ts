@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './schema-viewer.js';
+import '../../lr-json-schema-viewer.js';
 
 const meta: Meta = {
   title: 'Agent Tools/Schema Viewer',

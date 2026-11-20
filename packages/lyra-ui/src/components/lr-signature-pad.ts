@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/signature-pad/signature-pad.js';
+export * from './forms/signature-pad/signature-pad.class.js';
+import { LyraSignaturePad } from './forms/signature-pad/signature-pad.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('signature-pad', LyraSignaturePad);

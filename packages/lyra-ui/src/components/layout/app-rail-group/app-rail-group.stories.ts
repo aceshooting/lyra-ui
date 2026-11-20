@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './app-rail-group.js';
-import '../app-rail/app-rail-item.js';
-import '../app-rail/app-rail.js';
+import '../../lr-app-rail-group.js';
+import '../../lr-app-rail-item.js';
+import '../../lr-app-rail.js';
 
 const meta: Meta = {
   title: 'Layout/App Rail Group',

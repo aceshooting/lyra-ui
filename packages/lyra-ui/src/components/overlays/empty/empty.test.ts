@@ -1,8 +1,8 @@
 import { LitElement } from 'lit';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './empty.js';
-import type { LyraEmpty } from './empty.js';
+import '../../lr-empty.js';
+import type { LyraEmpty } from '../../lr-empty.js';
 import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 // A stand-in for a component that forwards its own light-DOM content into

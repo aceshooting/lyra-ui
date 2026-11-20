@@ -1,10 +1,10 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render, type PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './lightbox.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-lightbox.js';
+import '../../lr-dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
-import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
+import type { LyraLightbox, LyraLightboxImage } from '../../lr-lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {

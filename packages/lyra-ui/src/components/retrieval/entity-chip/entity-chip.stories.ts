@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './entity-chip.js';
-import '../entity-card/entity-card.js';
+import '../../lr-entity-chip.js';
+import '../../lr-entity-card.js';
 
 const meta: Meta = {
   title: 'Entity Chip',

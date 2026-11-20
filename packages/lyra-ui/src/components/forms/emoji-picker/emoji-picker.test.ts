@@ -1,8 +1,8 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
-import './emoji-picker.js';
-import type { LyraEmojiPicker, EmojiPickerGroup, EmojiPickerItem } from './emoji-picker.js';
+import '../../lr-emoji-picker.js';
+import type { LyraEmojiPicker, EmojiPickerGroup, EmojiPickerItem } from '../../lr-emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

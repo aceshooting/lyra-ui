@@ -4,11 +4,11 @@ import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraTooltip } from './tooltip.class.js';
-import '../../forms/button/button.js';
-import '../../forms/icon-button/icon-button.js';
-import '../dialog/dialog.js';
-import '../drawer/drawer.js';
-import './tooltip.js';
+import '../../lr-button.js';
+import '../../lr-icon-button.js';
+import '../../lr-dialog.js';
+import '../../lr-drawer.js';
+import '../../lr-tooltip.js';
 
 const FORWARDER_TAG = 'test-tooltip-content-forwarder';
 

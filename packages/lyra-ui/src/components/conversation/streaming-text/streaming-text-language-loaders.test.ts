@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import './streaming-text.js';
-import './streaming-text-core.js';
+import '../../lr-streaming-text.js';
+import '../../lr-streaming-text-core.js';
 import type { ShikiLanguageLoader, ShikiLanguageSource } from '../code-block/shiki-types.js';
 
 for (const tag of ['lr-streaming-text', 'lr-streaming-text-core'] as const) {

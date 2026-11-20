@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import type { LyraNotebookViewer } from './notebook-viewer.js';
+import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
 
 const notebook = {
   nbformat: 4,

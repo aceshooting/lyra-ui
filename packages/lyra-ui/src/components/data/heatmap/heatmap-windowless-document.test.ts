@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraHeatmap } from './heatmap.js';
+import { LyraHeatmap } from '../../lr-heatmap.js';
 
 for (const initiallyWindowless of [false, true]) {
   it(`retains heatmap data when ${initiallyWindowless ? 'first connected' : 'adopted'} into a windowless document and paints on return`, async () => {

@@ -5,8 +5,8 @@ import {
   hitId,
   pointOverSibling,
 } from '../../../../test/top-layer-header.js';
-import './combobox.js';
-import type { LyraCombobox } from './combobox.js';
+import '../../lr-combobox.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
 
 const NO_MOTION = '--lr-transition-fast: 0ms';
 

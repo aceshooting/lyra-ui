@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './entity-card.js';
+import '../../lr-entity-card.js';
 import type { LyraEntity } from './entity-card.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 

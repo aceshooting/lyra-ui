@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './otp-input.js';
+import '../../lr-otp-input.js';
 import type { LyraOtpInput } from './otp-input.class.js';
 
 const meta: Meta = { title: 'Forms/OTP input', component: 'lr-otp-input', tags: ['autodocs'] };

@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraXmlViewer } from './xml-viewer.js';
-import './xml-viewer.js';
+import type { LyraXmlViewer } from '../../lr-xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 describe('lr-xml-viewer request cancellation ownership', () => {
   it('reports an active fetch AbortError through localized error chrome and clears loading', async () => {

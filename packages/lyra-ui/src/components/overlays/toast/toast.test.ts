@@ -1,14 +1,14 @@
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
-import './toast.js';
+import '../../lr-toast.js';
 import type {
   LyraToast,
   LyraToastCreateOptions,
   LyraToastOverflowDetail,
   LyraToastPlacement,
-} from './toast.js';
-import type { LyraToastItem } from './toast-item.js';
+} from '../../lr-toast.js';
+import type { LyraToastItem } from '../../lr-toast-item.js';
 import { getToastRegion } from './toast-region.js';
 import {
   TOAST_REGION_ENQUEUE,

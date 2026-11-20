@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import './thread-list.js';
-import type { LyraThreadList } from './thread-list.js';
+import '../../lr-thread-list.js';
+import type { LyraThreadList } from '../../lr-thread-list.js';
 
 expectLocaleFallback('de-DE', [
   'threadGroupPrevious7Days',

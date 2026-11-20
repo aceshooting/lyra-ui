@@ -2,10 +2,10 @@ import { aTimeout, expect, fixture, nextFrame, oneEvent, waitUntil } from '@open
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './popover.js';
-import './dropdown.js';
-import type { LyraPopover } from './popover.js';
-import type { LyraDropdown } from './dropdown.js';
+import '../../lr-popover.js';
+import '../../lr-dropdown.js';
+import type { LyraPopover } from '../../lr-popover.js';
+import type { LyraDropdown } from '../../lr-dropdown.js';
 
 const build = (attrs: string, body = '<span>Body</span>') =>
   fixture<LyraPopover>(`<lr-popover ${attrs} style="--lr-duration-base: 0ms">

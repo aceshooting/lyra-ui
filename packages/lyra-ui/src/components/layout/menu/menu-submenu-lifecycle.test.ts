@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './menu.js';
-import './dropdown-item.js';
-import type { LyraDropdownItem } from './dropdown-item.js';
+import '../../lr-menu.js';
+import '../../lr-dropdown-item.js';
+import type { LyraDropdownItem } from '../../lr-dropdown-item.js';
 
 describe('submenu content and focus lifecycle', () => {
   it('uses submenuOpen property assignments as idempotent open and close requests', async () => {

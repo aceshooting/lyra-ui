@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 
 describe('flow canvas viewport API', () => {
   const mutations: [string, (canvas: LyraFlowCanvas) => void][] = [

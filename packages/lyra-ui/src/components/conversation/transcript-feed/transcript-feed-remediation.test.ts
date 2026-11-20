@@ -1,8 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './transcript-feed.js';
+import '../../lr-transcript-feed.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
-import type { LyraTranscriptFeed } from './transcript-feed.js';
+import type { LyraTranscriptFeed } from '../../lr-transcript-feed.js';
 
 describe('jump action focus destination', () => {
   for (const moveOutside of [false, true]) {

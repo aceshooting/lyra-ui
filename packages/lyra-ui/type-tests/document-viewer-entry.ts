@@ -7,7 +7,7 @@ import type {
   LyraHighlight,
   LyraHighlightTone,
   TextSelectDetail,
-  } from '../src/components/viewers/document-viewer/document-viewer.js';
+  } from '../src/components/lr-document-viewer.js';
 import type { LyraDocumentPreview } from '../src/components/viewers/document-preview/document-preview.class.js';
 // @ts-expect-error The retired constructor is available through its granular class route, not the curated root.
 import type { LyraDocumentPreview as RemovedRootDocumentPreview } from '../src/lyra.js';

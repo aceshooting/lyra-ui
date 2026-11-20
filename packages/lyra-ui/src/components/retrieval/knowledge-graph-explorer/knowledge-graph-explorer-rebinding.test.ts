@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './knowledge-graph-explorer.js';
-import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
+import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 import type { LyraGraph, LyraGraphEdge, LyraGraphNode } from '../graph/graph.class.js';
 import type { LyraEntityCard } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborList } from '../neighbor-list/neighbor-list.class.js';

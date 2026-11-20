@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { GEMSTONES } from '../../../theme/gemstones-data.js';
-import type { LyraColorPickerFormat } from './color-picker.js';
-import './color-picker.js';
+import type { LyraColorPickerFormat } from '../../lr-color-picker.js';
+import '../../lr-color-picker.js';
 
 // A color picker's `value` is a color *literal* by definition -- `var(--lr-color-brand)` is not a
 // parseable color and the control would reject it -- so these demos take their colors from the

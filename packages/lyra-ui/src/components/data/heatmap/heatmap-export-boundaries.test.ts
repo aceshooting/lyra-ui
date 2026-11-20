@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 for (const dimension of ['width', 'height'] as const) {
   it(`rejects an externally cleared canvas ${dimension} and repaints after a theme refresh`, async () => {

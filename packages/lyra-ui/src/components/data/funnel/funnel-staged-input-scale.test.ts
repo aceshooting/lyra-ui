@@ -1,8 +1,8 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import './funnel.js';
-import type { LyraFunnel } from './funnel.js';
+import '../../lr-funnel.js';
+import type { LyraFunnel } from '../../lr-funnel.js';
 
 function countingStages(length: number, entry: (index: number) => unknown): { input: unknown[]; reads: () => number } {
   let reads = 0;

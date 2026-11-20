@@ -3,10 +3,10 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import "./carousel.js";
-import "./carousel-item.js";
-import type { LyraCarousel } from "./carousel.js";
-import type { LyraCarouselItem } from "./carousel-item.js";
+import "../../lr-carousel.js";
+import "../../lr-carousel-item.js";
+import type { LyraCarousel } from "../../lr-carousel.js";
+import type { LyraCarouselItem } from "../../lr-carousel-item.js";
 import { styles } from "./carousel.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import {
@@ -704,9 +704,9 @@ describe("Web Awesome carousel surface", () => {
   });
 
   it("keeps autoplay paused while a slotted dropdown menu is open, even after :focus-within is lost", async () => {
-    await import("../../overlays/overlay/dropdown.js");
-    await import("../menu/menu.js");
-    await import("../menu/menu-item.js");
+    await import("../../lr-dropdown.js");
+    await import("../../lr-menu.js");
+    await import("../../lr-menu-item.js");
     const el = await carousel(html`
       <lr-carousel autoplay loop>
         <lr-carousel-item>

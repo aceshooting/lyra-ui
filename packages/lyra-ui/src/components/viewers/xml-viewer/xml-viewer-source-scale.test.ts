@@ -7,7 +7,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import './xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 type Source = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 const strings = { xmlViewerLabel: 'XML document', loading: 'Loading', treeSourceError: 'Unable to load tree data.', treeSourceSummary: '{visible} visible of {total} nodes.',

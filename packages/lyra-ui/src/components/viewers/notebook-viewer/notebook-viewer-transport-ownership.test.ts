@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import type { LyraNotebookViewer } from './notebook-viewer.js';
-import './notebook-viewer.js';
+import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

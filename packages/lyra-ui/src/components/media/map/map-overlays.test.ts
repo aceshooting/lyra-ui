@@ -1,7 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
-import type { LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 import {
   ScriptedOverlayMap,

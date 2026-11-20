@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { RubricKey, RubricValue } from './rubric-form.js';
+import type { RubricKey, RubricValue } from '../../lr-rubric-form.js';
 
 const keys: RubricKey[] = [
   {

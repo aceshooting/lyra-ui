@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './heatmap.js';
-import type { HeatmapLegendStop, LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { HeatmapLegendStop, LyraHeatmap } from '../../lr-heatmap.js';
 
 async function mount(): Promise<LyraHeatmap> {
   const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './chat-composer.js';
-import type { LyraChatComposer } from './chat-composer.js';
+import '../../lr-chat-composer.js';
+import type { LyraChatComposer } from '../../lr-chat-composer.js';
 
 const meta: Meta = {
   title: 'ChatComposer',

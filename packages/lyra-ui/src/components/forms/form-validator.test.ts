@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { LyraButton } from './button/button.class.js';
 import { LyraCheckbox } from './checkbox/checkbox.class.js';
 import { LyraColorPicker } from './color-picker/color-picker.class.js';
-import { LyraInput } from './input/input.js';
+import { LyraInput } from '../lr-input.js';
 import { LyraNumberInput } from './input/number-input.class.js';
 import { LyraTimeInput } from './input/time-input.class.js';
 import { LyraOtpInput } from './otp-input/otp-input.class.js';

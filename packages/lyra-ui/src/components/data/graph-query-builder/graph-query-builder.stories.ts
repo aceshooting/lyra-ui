@@ -9,7 +9,7 @@ import type {
   GraphQuerySavedItem,
   GraphQueryTypeOption,
   LyraGraphQueryBuilder,
-} from './graph-query-builder.js';
+} from '../../lr-graph-query-builder.js';
 
 const relationshipTypeOptions: GraphQueryTypeOption[] = [
   { value: 'works_for', label: 'Works for' },

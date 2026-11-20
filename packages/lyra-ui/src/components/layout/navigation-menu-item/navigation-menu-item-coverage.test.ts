@@ -3,8 +3,8 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraNavigationMenuItem, LyraNavigationMenuToggleDetail } from './navigation-menu-item.class.js';
-import './navigation-menu-item.js';
-import '../navigation-menu/navigation-menu.js';
+import '../../lr-navigation-menu-item.js';
+import '../../lr-navigation-menu.js';
 
 function base(item: LyraNavigationMenuItem): HTMLElement {
   return item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;

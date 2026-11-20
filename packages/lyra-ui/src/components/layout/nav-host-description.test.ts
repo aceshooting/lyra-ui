@@ -1,12 +1,12 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './app-rail/app-rail.js';
-import './breadcrumb/breadcrumb.js';
-import './button-group/button-group.js';
-import './control-group/control-group.js';
-import './menubar/menubar.js';
-import './navigation-menu/navigation-menu.js';
-import './segmented/segmented.js';
-import './tab-group/tab-group.js';
+import '../lr-app-rail.js';
+import '../lr-breadcrumb.js';
+import '../lr-button-group.js';
+import '../lr-control-group.js';
+import '../lr-menubar.js';
+import '../lr-navigation-menu.js';
+import '../lr-segmented.js';
+import '../lr-tab-group.js';
 
 const cases: ReadonlyArray<{ tag: string; owner: string; markup: (attrs: string) => string }> = [
   { tag: 'lr-tab-group', owner: '[role="tablist"]', markup: (a) => `<lr-tab-group ${a}><lr-tab panel="a">A</lr-tab><lr-tab-panel name="a">a</lr-tab-panel></lr-tab-group>` },

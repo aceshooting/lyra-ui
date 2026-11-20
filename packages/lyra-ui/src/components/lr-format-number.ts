@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './utility/format/format-number.js';
+export * from './utility/format/format-number.class.js';
+import { LyraFormatNumber } from './utility/format/format-number.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('format-number', LyraFormatNumber);

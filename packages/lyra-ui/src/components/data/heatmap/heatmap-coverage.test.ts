@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 async function settleFrames(frames = 4): Promise<void> {
   for (let frame = 0; frame < frames; frame++) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

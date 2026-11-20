@@ -2,8 +2,8 @@ import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/t
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard as focusBaseByKeyboard } from '../../../../test/wtr-focus.js';
-import './entity-chip.js';
-import type { LyraEntityChip } from './entity-chip.js';
+import '../../lr-entity-chip.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
 
 it('defaults to empty entityId/text/type and no typeLabel', async () => {
   const el = (await fixture(

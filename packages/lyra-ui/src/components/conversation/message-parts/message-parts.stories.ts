@@ -3,8 +3,8 @@ import { html } from 'lit';
 import type { MessagePart } from '../../../ai/types.js';
 import { createWidgetTypeRegistry } from '../widget-renderer/registry.js';
 import type { LyraMessageParts } from './message-parts.class.js';
-import '../../forms/input/input.js';
-import './message-parts.js';
+import '../../lr-input.js';
+import '../../lr-message-parts.js';
 
 const nameFieldRegistry = createWidgetTypeRegistry([['field', {
   tag: 'lr-input', interaction: 'control', props: { label: 'string', value: 'string' },

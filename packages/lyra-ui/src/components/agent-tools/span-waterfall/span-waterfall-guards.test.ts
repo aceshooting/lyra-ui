@@ -1,8 +1,8 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './span-waterfall.js';
-import type { LyraSpanWaterfall } from './span-waterfall.js';
+import '../../lr-span-waterfall.js';
+import type { LyraSpanWaterfall } from '../../lr-span-waterfall.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 
 const SPANS: LyraSpan[] = [

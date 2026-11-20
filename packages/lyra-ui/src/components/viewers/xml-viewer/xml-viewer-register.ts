@@ -15,7 +15,7 @@ const XML_EXTENSIONS = ['.xml', '.xsd', '.xsl', '.xslt', '.rss', '.atom'];
 const xmlRendererDef: LazyDocumentRendererDefinition = {
   matches: (file: LyraDocumentFile) => file.mimeType.split(';', 1)[0]!.trim().toLowerCase().endsWith('+xml') || XML_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
   capabilities: { anchors: ['node-path'], search: true },
-  load: () => import('./xml-viewer.js').then(() => ({
+  load: () => import('../../lr-xml-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-xml-viewer
       src=${file.src}
       name=${file.name}

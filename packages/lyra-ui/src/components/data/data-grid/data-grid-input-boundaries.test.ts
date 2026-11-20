@@ -1,5 +1,5 @@
 import { expect, html } from '@open-wc/testing';
-import './data-grid.js';
+import '../../lr-data-grid.js';
 import type { DataGridColumn, DataGridKey } from './data-grid-types.js';
 import { type Person, columns, dataGrid, rows } from '../../../../test/data-grid.js';
 

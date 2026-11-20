@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.class.js';
-import './spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 it('yields before workbook parsing and between sheet projections', async () => {
   const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);

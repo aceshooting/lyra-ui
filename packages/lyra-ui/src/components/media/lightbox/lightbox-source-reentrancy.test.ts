@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './lightbox.js';
+import '../../lr-lightbox.js';
 import '../../../translations/fr.js';
-import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from './lightbox.js';
+import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from '../../lr-lightbox.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 
 const src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';

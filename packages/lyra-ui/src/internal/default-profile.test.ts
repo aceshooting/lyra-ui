@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { resolvedColorToken, toRgba } from '../../test/color-contrast.js';
-import '../components/forms/button/button.js';
-import '../components/overlays/overlay/popover.js';
+import '../components/lr-button.js';
+import '../components/lr-popover.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
 import { applyLyraStyleScope } from '../theme/theme.js';

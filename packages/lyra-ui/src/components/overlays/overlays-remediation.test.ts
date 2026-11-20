@@ -2,19 +2,19 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { setForcedColors } from '../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../test/wtr-focus.js';
-import './callout/callout.js';
-import './chip/chip.js';
-import './kbd/kbd.js';
-import './progress/progress-bar.js';
-import './progress/progress-ring.js';
-import './drawer/drawer.js';
-import './popup/popup.js';
-import './rating/rating.js';
-import './toast/toast.js';
-import './toast/toast-item.js';
-import type { LyraCallout } from './callout/callout.js';
-import type { LyraPopup } from './popup/popup.js';
-import type { LyraRating } from './rating/rating.js';
+import '../lr-callout.js';
+import '../lr-chip.js';
+import '../lr-kbd.js';
+import '../lr-progress-bar.js';
+import '../lr-progress-ring.js';
+import '../lr-drawer.js';
+import '../lr-popup.js';
+import '../lr-rating.js';
+import '../lr-toast.js';
+import '../lr-toast-item.js';
+import type { LyraCallout } from '../lr-callout.js';
+import type { LyraPopup } from '../lr-popup.js';
+import type { LyraRating } from '../lr-rating.js';
 
 describe('overlays remediation', () => {
   it('returns null from public render-root getters before first connection', () => {

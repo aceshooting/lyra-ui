@@ -1,8 +1,8 @@
 import { expect, fixture } from '@open-wc/testing';
 import type { LyraInputShared } from './input-shared.js';
-import './input.js';
-import './number-input.js';
-import './native-time-input.js';
+import '../../lr-input.js';
+import '../../lr-number-input.js';
+import '../../lr-native-time-input.js';
 
 for (const tag of ['lr-input', 'lr-number-input', 'lr-native-time-input']) {
   describe(`${tag} required transitions`, () => {

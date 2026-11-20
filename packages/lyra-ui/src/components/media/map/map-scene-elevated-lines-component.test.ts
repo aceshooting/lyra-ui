@@ -3,7 +3,7 @@ import { sceneArc, scenePath } from '../../../../test/map-scene-admission-fixtur
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { RenderPeer } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { LyraMapCustomLayer } from '../../../internal/map-custom-layer-types.js';
-import type { LyraMap } from './map.js';
+import type { LyraMap } from '../../lr-map.js';
 
 interface StateDetail { readonly revision: number; readonly state: string; readonly code?: string }
 interface FakeSceneLayer {

@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import './terminal.js';
-import type { LyraTerminal } from './terminal.js';
+import '../../lr-terminal.js';
+import type { LyraTerminal } from '../../lr-terminal.js';
 
 expectLocaleFallback('de-DE', ['terminalHighlightLine', 'terminalLabel', 'copy']);
 

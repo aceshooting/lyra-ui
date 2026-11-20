@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraSelect } from './select.js';
-import './select.js';
-import '../combobox/option.js';
+import type { LyraSelect } from '../../lr-select.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
 
 async function setup(ariaLabel?: string) {
   const form = await fixture<HTMLFormElement>(html`<form>

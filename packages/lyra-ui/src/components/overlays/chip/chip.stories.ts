@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './chip.js';
-import './chip-group.js';
-import type { ChipSelectDetail } from './chip.js';
+import '../../lr-chip.js';
+import '../../lr-chip-group.js';
+import type { ChipSelectDetail } from '../../lr-chip.js';
 
 const meta: Meta = {
   title: 'Chip',

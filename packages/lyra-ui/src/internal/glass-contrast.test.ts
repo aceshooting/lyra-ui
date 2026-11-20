@@ -4,16 +4,16 @@ import { LyraElement } from './lyra-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 import { GEMSTONE_KEYS } from '../theme/gemstones-data.js';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
-import '../components/data/tree/tree.js';
-import '../components/data/tree/tree-item.js';
-import '../components/layout/stepper/stepper.js';
-import '../components/data/context-meter/context-meter.js';
+import '../components/lr-tree.js';
+import '../components/lr-tree-item.js';
+import '../components/lr-stepper.js';
+import '../components/lr-context-meter.js';
 import type { LyraStepper } from '../components/layout/stepper/stepper.class.js';
 import type { LyraContextMeter } from '../components/data/context-meter/context-meter.class.js';
 import type { LyraTreeItem } from '../components/data/tree/tree-item.class.js';
 import { glassSurface } from './glass-surface.styles.js';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../test/color-contrast.js';
-import '../components/forms/button/button.js';
+import '../components/lr-button.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 
 class GlassContrastFixture extends LyraElement {

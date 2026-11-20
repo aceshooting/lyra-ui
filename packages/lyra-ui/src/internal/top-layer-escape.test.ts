@@ -8,8 +8,8 @@ import {
   TOP_LAYER_ATTRIBUTE,
 } from './top-layer-escape.js';
 import { placeAnchoredSurface, virtualAnchorFromRect } from './positioner.js';
-import '../components/overlays/overlay/dropdown.js';
-import '../components/layout/menu/dropdown-item.js';
+import '../components/lr-dropdown.js';
+import '../components/lr-dropdown-item.js';
 import type { LyraDropdown } from '../components/overlays/overlay/dropdown.class.js';
 
 const isOpen = (element: Element): boolean => element.matches(':popover-open');

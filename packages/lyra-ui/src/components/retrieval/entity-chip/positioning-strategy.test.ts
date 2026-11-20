@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
-import './entity-chip.js';
-import type { LyraEntityChip } from './entity-chip.js';
+import '../../lr-entity-chip.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
  *  stylesheet text -- is what these assertions read. */

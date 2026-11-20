@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraContactViewer } from './contact-viewer.js';
-import './contact-viewer.js';
+import type { LyraContactViewer } from '../../lr-contact-viewer.js';
+import '../../lr-contact-viewer.js';
 
 describe('lr-contact-viewer request cancellation ownership', () => {
   it('reports an active fetch AbortError through localized error chrome and clears loading', async () => {

@@ -1,8 +1,8 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './chat-viewport.js';
-import '../chat-message/chat-message.js';
-import '../streaming-text/streaming-text.js';
-import type { LyraChatViewport } from './chat-viewport.js';
+import '../../lr-chat-viewport.js';
+import '../../lr-chat-message.js';
+import '../../lr-streaming-text.js';
+import type { LyraChatViewport } from '../../lr-chat-viewport.js';
 import type { LyraChatMessage } from '../chat-message/chat-message.class.js';
 import type { LyraStreamingText } from '../streaming-text/streaming-text.class.js';
 import { sinkTexts } from '../../../../test/announcements.js';

@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/toggle/toggle.js';
+export * from './forms/toggle/toggle.class.js';
+import { LyraToggle } from './forms/toggle/toggle.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('toggle', LyraToggle);

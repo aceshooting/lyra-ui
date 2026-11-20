@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './map.js';
-import type { LyraMap } from './map.js';
+import '../../lr-map.js';
+import type { LyraMap } from '../../lr-map.js';
 import { loadMapDataLayerRuntime } from './map-feature-loader.js';
 
 // The private paint seams below run synchronously, so the on-demand projection runtime loads first.

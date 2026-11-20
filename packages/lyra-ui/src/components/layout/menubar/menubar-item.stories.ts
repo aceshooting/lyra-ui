@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './menubar.js';
+import '../../lr-menubar.js';
 
 const meta: Meta = { title: 'Layout/Menubar item', component: 'lr-menubar-item', tags: ['autodocs'] };
 export default meta;

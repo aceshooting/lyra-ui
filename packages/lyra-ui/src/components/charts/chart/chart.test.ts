@@ -3,14 +3,14 @@ import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibi
 import { fixture, expect, html, waitUntil, aTimeout, nextFrame, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';
-import './chart.js';
-import './doughnut-chart.js';
+import '../../lr-chart.js';
+import '../../lr-doughnut-chart.js';
 import {
   seriesPalette,
   LyraChart,
   type LyraChartAnnotation,
   type LyraChartSeries,
-} from './chart.js';
+} from '../../lr-chart.js';
 import {
   loadChartAndZoom,
   loadChartJsWithDataLabelsResult,

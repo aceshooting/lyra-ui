@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './svg-viewer.js';
-import type { LyraSvgViewer } from './svg-viewer.js';
+import '../../lr-svg-viewer.js';
+import type { LyraSvgViewer } from '../../lr-svg-viewer.js';
 
 const originalFetch = window.fetch;
 afterEach(() => { window.fetch = originalFetch; });

@@ -1,8 +1,8 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './virtual-list.js';
-import type { LyraVirtualList } from './virtual-list.js';
+import '../../lr-virtual-list.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 async function settle(el: LyraVirtualList) {

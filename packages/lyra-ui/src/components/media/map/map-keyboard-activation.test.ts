@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { ControlMapEngine, FakeAttributionControl } from '../../../../test/map-control-engine.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { loadMapFeatureStateRuntime } from './map-feature-loader.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 /** A peer whose focusable canvas lives in the container, as the native canvas does. */

@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated event** `lr-view-change` since `unreleased`; use event `@lr-month-change`; removal not before `33.0.0` — The calendar-specific month event carries the same viewDate detail; the older name remains emitted during migration.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 20 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -87,8 +87,6 @@ the day), Home/End to the month's first/last day; stepping past the rendered gri
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
 `lr-month-change` (`detail: { viewDate }`, from the prev/next buttons and out-of-grid arrow moves).
-`lr-view-change` is deprecated and still fires with the same detail. Use `lr-month-change` for
-calendar-specific listeners.
 
 **Slots:** none.
 

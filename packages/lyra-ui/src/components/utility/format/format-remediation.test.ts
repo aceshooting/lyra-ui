@@ -1,8 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './format-number.js';
-import './format-date.js';
-import type { LyraFormatDate } from './format-date.js';
-import type { LyraFormatNumber } from './format-number.js';
+import '../../lr-format-number.js';
+import '../../lr-format-date.js';
+import type { LyraFormatDate } from '../../lr-format-date.js';
+import type { LyraFormatNumber } from '../../lr-format-number.js';
 
 it('uses the declared USD fallback after currency attribute removal without changing readback', async () => {
   const viewer = await fixture<LyraFormatNumber>(html`<lr-format-number lang="en-US" type="currency" value="12.5" currency="EUR"></lr-format-number>`);

@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/transcript-feed/transcript-feed.js';
+export * from './conversation/transcript-feed/transcript-feed.class.js';
+import { LyraTranscriptFeed } from './conversation/transcript-feed/transcript-feed.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('transcript-feed', LyraTranscriptFeed);

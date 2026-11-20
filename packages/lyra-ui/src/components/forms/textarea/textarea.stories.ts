@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraTextarea } from './textarea.js';
+import type { LyraTextarea } from '../../lr-textarea.js';
 
 const meta: Meta = {
   title: 'Textarea',

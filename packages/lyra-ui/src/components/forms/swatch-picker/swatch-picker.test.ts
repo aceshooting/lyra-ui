@@ -3,8 +3,8 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import "./swatch-picker.js";
-import type { LyraSwatchPicker } from "./swatch-picker.js";
+import "../../lr-swatch-picker.js";
+import type { LyraSwatchPicker } from "../../lr-swatch-picker.js";
 import { styles } from "./swatch-picker.styles.js";
 
 const normalizedStyles = () =>

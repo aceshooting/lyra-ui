@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
-import type { LyraVirtualList, LyraVirtualListGroup } from './virtual-list.js';
-import './virtual-list.js';
+import type { LyraVirtualList, LyraVirtualListGroup } from '../../lr-virtual-list.js';
+import '../../lr-virtual-list.js';
 
 const targetIndex = 100;
 const group = (): LyraVirtualListGroup => ({ key: 'section', label: '', startIndex: 0 });

@@ -44,7 +44,7 @@ if (
 ) {
   throw new TypeError('The granular bundle-budget authority must be a JSON object.');
 }
-const BUTTON_GRANULAR_ENTRY = 'dist/components/forms/button/button.js';
+const BUTTON_GRANULAR_ENTRY = 'dist/components/lr-button.js';
 const buttonGranularBudgetKilobytes = granularBundleBudgets[BUTTON_GRANULAR_ENTRY];
 const buttonGranularBudgetBytes = buttonGranularBudgetKilobytes * 1024;
 if (typeof buttonGranularBudgetKilobytes !== 'number' || !Number.isSafeInteger(buttonGranularBudgetBytes) || buttonGranularBudgetBytes <= 0) {

@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './message-feedback.js';
-import type { LyraMessageFeedback } from './message-feedback.js';
+import '../../lr-message-feedback.js';
+import type { LyraMessageFeedback } from '../../lr-message-feedback.js';
 
 describe('pending feedback settlement focus', () => {
   for (const settle of ['finalizePendingSubmit', 'revertPendingSubmit'] as const) {

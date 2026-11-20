@@ -2002,8 +2002,7 @@ export interface LyraComponentTypeMap {
     events: LyraCalendarEventMap;
     eventNames:       | 'lr-date-select'
       | 'lr-event-select'
-      | 'lr-month-change'
-      | 'lr-view-change';
+      | 'lr-month-change';
     cssNames:       | '--lr-calendar-agenda-event-active-bg'
       | '--lr-calendar-agenda-event-hover-bg'
       | '--lr-calendar-day-active-bg'
@@ -5535,8 +5534,7 @@ export interface LyraComponentTypeMap {
       | 'lr-relation-activate'
       | 'lr-retrieval-disclosure-change'
       | 'lr-tab-hide'
-      | 'lr-tab-show'
-      | 'lr-toggle';
+      | 'lr-tab-show';
     cssNames: never;
     attributeAliases: {
       'aria-label'?: LyraEntityDossier['accessibleLabel'];
@@ -8119,9 +8117,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraMapAnchorEventMap;
-    eventNames:       | 'lr-close'
-      | 'lr-close-request'
-      | 'lr-map-anchor-dismiss'
+    eventNames:       | 'lr-map-anchor-dismiss'
       | 'lr-map-anchor-dismiss-request';
     cssNames:       | '--lr-map-popup-close-button-active-bg'
       | '--lr-map-popup-close-button-active-color'
@@ -8403,8 +8399,7 @@ export interface LyraComponentTypeMap {
       | 'lr-forget'
       | 'lr-relation-activate'
       | 'lr-remove'
-      | 'lr-retrieval-disclosure-change'
-      | 'lr-toggle';
+      | 'lr-retrieval-disclosure-change';
     cssNames:       | '--lr-memory-panel-confidence-danger-color'
       | '--lr-memory-panel-confidence-success-color'
       | '--lr-memory-panel-confidence-warning-color';
@@ -10653,8 +10648,7 @@ export interface LyraComponentTypeMap {
       | 'lr-entity-open'
       | 'lr-entity-select'
       | 'lr-relation-activate'
-      | 'lr-retrieval-disclosure-change'
-      | 'lr-toggle';
+      | 'lr-retrieval-disclosure-change';
     cssNames:       | '--lr-provenance-panel-entity-justify';
     attributeAliases: {};
   };
@@ -11505,8 +11499,7 @@ export interface LyraComponentTypeMap {
     events: LyraRetrievalTraceEventMap;
     eventNames:       | 'lr-retrieval-disclosure-change'
       | 'lr-stage-chunk-action'
-      | 'lr-stage-select'
-      | 'lr-toggle';
+      | 'lr-stage-select';
     cssNames:       | '--lr-retrieval-trace-active-border';
     attributeAliases: {
       'active-stage-id'?: LyraRetrievalTrace['activeStageId'];

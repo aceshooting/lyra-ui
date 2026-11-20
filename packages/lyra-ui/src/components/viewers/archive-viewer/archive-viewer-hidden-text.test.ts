@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './archive-viewer.js';
-import type { LyraArchiveViewer } from './archive-viewer.js';
+import '../../lr-archive-viewer.js';
+import type { LyraArchiveViewer } from '../../lr-archive-viewer.js';
 import type JSZipType from 'jszip';
 
 async function zipBytes(): Promise<ArrayBuffer> {

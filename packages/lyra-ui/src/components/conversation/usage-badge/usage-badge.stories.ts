@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './usage-badge.js';
-import '../chat-message/chat-message.js';
-import '../markdown/markdown.js';
+import '../../lr-usage-badge.js';
+import '../../lr-chat-message.js';
+import '../../lr-markdown.js';
 
 const meta: Meta = {
   title: 'UsageBadge',

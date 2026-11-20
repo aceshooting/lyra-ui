@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import './branch-picker.js';
+import '../../lr-branch-picker.js';
 
 const meta: Meta = {
   title: 'BranchPicker',

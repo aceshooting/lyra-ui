@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/progress/progress-ring.js';
+export * from './overlays/progress/progress-ring.class.js';
+import { LyraProgressRing } from './overlays/progress/progress-ring.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('progress-ring', LyraProgressRing);

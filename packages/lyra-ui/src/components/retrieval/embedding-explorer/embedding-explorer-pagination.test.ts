@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './embedding-explorer.js';
+import '../../lr-embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
 import type { LyraPointColumns } from '../../../internal/typed-columns.js';
 

@@ -1,16 +1,16 @@
 import { expect, fixture } from '@open-wc/testing';
 import { unsafeStatic, html as staticHtml } from 'lit/static-html.js';
-import './agent-eval-dashboard/agent-eval-dashboard.js';
-import './change-review/change-review.js';
-import './agent-run/agent-run.js';
-import './evaluation-run/evaluation-run.js';
-import './artifact-panel/artifact-panel.js';
-import './activity-feed/activity-feed.js';
-import './permission-rules/permission-rules.js';
-import './browser-frame/browser-frame.js';
-import './eval-dataset/eval-dataset.js';
-import './eval-result/eval-result.js';
-import './subagent-panel/subagent-panel.js';
+import '../lr-agent-eval-dashboard.js';
+import '../lr-change-review.js';
+import '../lr-agent-run.js';
+import '../lr-eval-run.js';
+import '../lr-artifact-panel.js';
+import '../lr-activity-feed.js';
+import '../lr-permission-rules.js';
+import '../lr-browser-frame.js';
+import '../lr-eval-dataset.js';
+import '../lr-eval-result.js';
+import '../lr-subagent-panel.js';
 
 /** Element structure and text, ignoring per-instance generated ids. */
 function shape(root: ShadowRoot): string {

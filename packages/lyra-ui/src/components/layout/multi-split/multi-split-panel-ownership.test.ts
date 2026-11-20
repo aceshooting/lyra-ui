@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraMultiSplit } from './multi-split.class.js';
-import './multi-split.js';
+import '../../lr-multi-split.js';
 
 async function splitFixture(floating = false): Promise<LyraMultiSplit> {
   return fixture<LyraMultiSplit>(html`<lr-multi-split collapse=${floating ? 'start' : 'none'}

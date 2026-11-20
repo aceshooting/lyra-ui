@@ -2,8 +2,8 @@ import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-foc
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, fixture, expect, html, elementUpdated, oneEvent } from "@open-wc/testing";
-import "./slider.js";
-import type { LyraSlider } from "./slider.js";
+import "../../lr-slider.js";
+import type { LyraSlider } from "../../lr-slider.js";
 import { styles } from "./slider.styles.js";
 import { captureDeprecationWarnings, expectDeprecatedUsage, type DeprecatedUsage } from "../../../../test/expected-deprecations.js";
 import "../../../translations/ar/forms.js";

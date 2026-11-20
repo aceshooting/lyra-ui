@@ -1,7 +1,7 @@
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 
 it('preserves generated table rows across selection-only updates', async () => {

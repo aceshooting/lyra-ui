@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './tour.js';
-import type { LyraTour, LyraTourStep } from './tour.js';
+import '../../lr-tour.js';
+import type { LyraTour, LyraTourStep } from '../../lr-tour.js';
 
 const meta: Meta = {
   title: 'Tour',

@@ -1,25 +1,25 @@
 import { fixture, expect } from '@open-wc/testing';
 import type { LyraElement } from '../../../internal/lyra-element.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
-import '../../media/animated-image/animated-image.js';
-import '../../media/animation/animation.js';
-import '../../media/attachment-chip/attachment-chip.js';
-import '../../data/context-meter/context-meter.js';
-import '../../data/env-list/env-list.js';
-import '../../media/file-input/file-input.js';
-import '../../data/flow-canvas/flow-canvas.js';
-import '../../data/flow-controls/flow-controls.js';
-import '../../data/flow-node/flow-node.js';
-import '../../data/flow-run-status/flow-run-status.js';
-import '../../data/funnel/funnel.js';
-import '../../data/gauge/gauge.js';
-import '../../media/lightbox/lightbox.js';
-import '../../media/sequence-playback/sequence-playback.js';
-import '../../data/sequence-strip/sequence-strip.js';
-import '../../data/stat/stat.js';
-import '../../data/table/table.js';
-import '../../media/video-playlist/video-playlist.js';
-import '../../data/word-cloud/word-cloud.js';
+import '../../lr-animated-image.js';
+import '../../lr-animation.js';
+import '../../lr-attachment-chip.js';
+import '../../lr-context-meter.js';
+import '../../lr-env-list.js';
+import '../../lr-file-input.js';
+import '../../lr-flow-canvas.js';
+import '../../lr-flow-controls.js';
+import '../../lr-flow-node.js';
+import '../../lr-flow-run-status.js';
+import '../../lr-funnel.js';
+import '../../lr-gauge.js';
+import '../../lr-lightbox.js';
+import '../../lr-sequence-playback.js';
+import '../../lr-sequence-strip.js';
+import '../../lr-stat.js';
+import '../../lr-table.js';
+import '../../lr-video-playlist.js';
+import '../../lr-word-cloud.js';
 
 const cases = [
   { tag: 'lr-animated-image', old: 'respectReducedMotion', attribute: 'respect-reduced-motion', canonical: 'ignoreReducedMotion', value: false, retiredValue: false },

@@ -188,7 +188,7 @@ test('the asset allowance rejects missing, duplicate, corrupt, or resized binari
 });
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {
-  const budgetPath = 'dist/components/forms/button/button.js';
+  const budgetPath = 'dist/components/lr-button.js';
   const ceilingBytes = bundleBudgets[budgetPath] * 1024;
   assert.ok(Number.isSafeInteger(ceilingBytes) && ceilingBytes > 0,
     'the granular button entry must retain an exact positive byte ceiling');

@@ -7,7 +7,7 @@ export const CONTACT_VIEWER_TAG = tag('contact-viewer');
 registerDocumentRenderer('text/vcard', {
   matches: (file: LyraDocumentFile) => /\.vcf$/i.test(file.name),
   capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true },
-  load: () => import('./contact-viewer.js').then(() => ({
+  load: () => import('../../lr-contact-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`<lr-contact-viewer
       src=${file.src}
       name=${file.name}

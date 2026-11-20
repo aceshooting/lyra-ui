@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 import { prepareLyraSeriesData, prepareLyraCategoryData, type LyraPreparedSeriesData, type LyraPreparedCategoryData } from '../../../utilities/data-preparation.js';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 
 type PreparedChart = LyraChart & {
@@ -257,8 +257,8 @@ it('invalidates pending reads across owner-document adoption', async () => {
 it('retains typed-tag writable type compatibility for each prepared kind', async function () {
   this.timeout(15000);
   await Promise.all([
-    import('./line-chart.js'), import('./bar-chart.js'), import('./pie-chart.js'), import('./doughnut-chart.js'),
-    import('./radar-chart.js'), import('./polar-area-chart.js'), import('./scatter-chart.js'), import('./bubble-chart.js'),
+    import('../../lr-line-chart.js'), import('../../lr-bar-chart.js'), import('../../lr-pie-chart.js'), import('../../lr-doughnut-chart.js'),
+    import('../../lr-radar-chart.js'), import('../../lr-polar-area-chart.js'), import('../../lr-scatter-chart.js'), import('../../lr-bubble-chart.js'),
   ]);
   const { tag } = await import('../../../internal/prefix.js');
   const prepared = await smallPrepared();

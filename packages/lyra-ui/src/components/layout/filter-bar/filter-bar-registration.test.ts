@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './filter-bar.js';
+import '../../lr-filter-bar.js';
 import type { LyraFilterBar, LyraFilterBarFilterDefinition } from './filter-bar.class.js';
 
 const defined = (names: readonly string[]) => names.map(name => Boolean(customElements.get(name)));

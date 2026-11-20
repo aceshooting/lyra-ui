@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/combobox/combobox.js';
+export * from './forms/combobox/combobox.class.js';
+import { LyraCombobox } from './forms/combobox/combobox.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-option.js';
+// The shared loading/error/empty renderer composes <lr-empty> for the failed-source row.
+import './lr-empty.js';
+defineElement('combobox', LyraCombobox);

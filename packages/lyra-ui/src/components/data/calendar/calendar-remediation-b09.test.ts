@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import './calendar.js';
-import type { LyraCalendar } from './calendar.js';
+import '../../lr-calendar.js';
+import type { LyraCalendar } from '../../lr-calendar.js';
 
 describe('calendar remediation', () => {
   it('keeps selected-day hover distinct from the resting selected fill', async () => {
@@ -23,14 +23,15 @@ describe('calendar remediation', () => {
   });
 });
 
-it('emits a calendar-specific month change alongside its legacy event', async () => {
+it('emits only the calendar-specific month change, not the generic view event', async () => {
   const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-03-01"></lr-calendar>`);
   const details: unknown[] = [];
-  const collect = (event: Event) => details.push((event as CustomEvent).detail);
-  el.addEventListener('lr-month-change', collect);
-  el.addEventListener('lr-view-change', collect);
+  let generic = 0;
+  el.addEventListener('lr-month-change', (event) => details.push(event.detail));
+  el.addEventListener('lr-view-change', () => { generic += 1; });
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!.click();
-  expect(details).to.deep.equal([{ viewDate: '2026-04-01' }, { viewDate: '2026-04-01' }]);
+  expect(details).to.deep.equal([{ viewDate: '2026-04-01' }]);
+  expect(generic).to.equal(0);
 });
 
 it('applies a caller-supplied tint over the calendar event fill on hover', async () => {

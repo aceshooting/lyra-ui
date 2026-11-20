@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './conversation/branch-picker/branch-picker.js';
+export * from './conversation/branch-picker/branch-picker.class.js';
+import { LyraBranchPicker } from './conversation/branch-picker/branch-picker.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-live-region.js';
+defineElement('branch-picker', LyraBranchPicker);

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './agent-trace.js';
-import type { LyraAgentTrace } from './agent-trace.js';
+import '../../lr-agent-trace.js';
+import type { LyraAgentTrace } from '../../lr-agent-trace.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';

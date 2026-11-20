@@ -8,7 +8,7 @@ import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
-import '../../overlays/overlay/popover.js';
+import '../../lr-popover.js';
 import type {
   LyraNavigationMenuItem,
   LyraNavigationMenuToggleDetail,
@@ -17,7 +17,7 @@ import type {
   LyraNavigationMenu,
   LyraNavigationMenuExpandedChangeDetail,
 } from './navigation-menu.class.js';
-import './navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 ignoreResizeObserverLoopErrors('collapse toggles host block size');
 

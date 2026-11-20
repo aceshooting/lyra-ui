@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraFlowNode } from './flow-node.js';
-import './flow-node.js';
+import type { LyraFlowNode } from '../../lr-flow-node.js';
+import '../../lr-flow-node.js';
 
 for (const property of ['inputs', 'outputs'] as const) {
   for (const invalid of [null, 'invalid', {}]) {

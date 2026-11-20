@@ -1,12 +1,12 @@
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
-import './map.js';
-import './map-anchor.js';
+import '../../lr-map.js';
+import '../../lr-map-anchor.js';
 import { mapCameraSessionAttachment } from '../../../internal/map-camera-session.js';
 import { admitMapViewpoint } from '../../../internal/map-camera-session-data.js';
 import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature-loader.js';
-import { LYRA_MAP_EMPTY_STYLE, LyraMap } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE, LyraMap } from '../../lr-map.js';
 
 import { ControlMapEngine, FakeGeolocateControl as Geolocate, FakeAttributionControl as Attribution } from '../../../../test/map-control-engine.js';
 

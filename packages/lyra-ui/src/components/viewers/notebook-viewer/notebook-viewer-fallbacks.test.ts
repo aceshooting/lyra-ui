@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './notebook-viewer.js';
-import type { LyraNotebookViewer } from './notebook-viewer.js';
+import '../../lr-notebook-viewer.js';
+import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
 
 /** Cells render inside lr-virtual-list's shadow root. */
 function rowRoot(el: LyraNotebookViewer): ShadowRoot {

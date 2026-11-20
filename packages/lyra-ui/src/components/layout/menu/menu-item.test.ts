@@ -7,12 +7,12 @@ import {
   oneEvent,
   waitUntil,
 } from '@open-wc/testing';
-import './menu-item.js';
-import './dropdown-item.js';
-import type { LyraMenuItem } from './menu-item.js';
-import './menu.js';
-import type { MenuFocusTarget } from './menu.js';
-import type { LyraMenu } from './menu.js';
+import '../../lr-menu-item.js';
+import '../../lr-dropdown-item.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import '../../lr-menu.js';
+import type { MenuFocusTarget } from '../../lr-menu.js';
+import type { LyraMenu } from '../../lr-menu.js';
 import {
   hoverUntilMatched,
   resetMouse,
@@ -2548,7 +2548,7 @@ describe('collecting already-slotted icon/details/suffix content without relying
 });
 
 it('shows a shadow-rendered keyboard shortcut assigned to details', async () => {
-  await import('../../overlays/kbd/kbd.js');
+  await import('../../lr-kbd.js');
   const el = await fixtureInMenu(html`<lr-menu-item>New tab<lr-kbd slot="details" keys="mod+t"></lr-kbd></lr-menu-item>`);
   const details = el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!;
   await waitUntil(() => !details.hidden);

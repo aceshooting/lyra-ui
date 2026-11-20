@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './retrieval/graph/graph.js';
+export * from './retrieval/graph/graph.class.js';
+import { LyraGraph } from './retrieval/graph/graph.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-skeleton.js';
+defineElement('graph', LyraGraph);

@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './condition-builder.js';
-import type { LyraConditionBuilder, ConditionBuilderValue } from './condition-builder.js';
+import '../../lr-condition-builder.js';
+import type { LyraConditionBuilder, ConditionBuilderValue } from '../../lr-condition-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

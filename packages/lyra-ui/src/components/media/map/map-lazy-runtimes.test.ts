@@ -19,8 +19,8 @@ import * as ownedRuntime from './map-owned-features.js';
 import * as dataLayerRuntime from './map-data-layer-runtime.js';
 import * as overrideRuntime from './map-style-overrides.js';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class LazyMap extends ControlMapEngine {
   readonly paint = new Map<string, unknown>();

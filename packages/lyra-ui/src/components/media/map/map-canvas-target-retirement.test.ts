@@ -2,7 +2,7 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { ControlMapEngine } from '../../../../test/map-control-engine.js';
 import { installCameraPeerEnvironment } from '../../../../test/map-camera-peer.js';
 import { twoFrames } from '../../../../test/frames.js';
-import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 void LyraMap;
 
 class AllocationEngine extends ControlMapEngine {

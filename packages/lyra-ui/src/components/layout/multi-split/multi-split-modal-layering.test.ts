@@ -1,10 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { observeOverlayStack } from '../../../internal/overlay-stack.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
-import type { LyraMultiSplit } from './multi-split.js';
-import '../../overlays/dialog/dialog.js';
-import './multi-split.js';
+import type { LyraDialog } from '../../lr-dialog.js';
+import type { LyraMultiSplit } from '../../lr-multi-split.js';
+import '../../lr-dialog.js';
+import '../../lr-multi-split.js';
 
 function inlineStyles(element: HTMLElement): Record<string, readonly string[]> {
   return Object.fromEntries(Array.from(element.style)

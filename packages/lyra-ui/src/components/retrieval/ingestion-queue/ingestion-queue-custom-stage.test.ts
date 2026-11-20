@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './ingestion-queue.js';
+import '../../lr-ingestion-queue.js';
 import type { LyraIngestionQueue, IngestionQueueItem, IngestionQueueStagePresentation } from './ingestion-queue.class.js';
 import type { LyraProgressBar } from '../../overlays/progress/progress-bar.class.js';
 

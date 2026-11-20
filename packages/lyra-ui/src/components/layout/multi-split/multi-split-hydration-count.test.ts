@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraMultiSplit } from './multi-split.js';
-import './multi-split.js';
+import type { LyraMultiSplit } from '../../lr-multi-split.js';
+import '../../lr-multi-split.js';
 
 for (const seed of ['NaN', 'Infinity', '-Infinity', '-1', '1.5', '1e100']) {
   it(`preserves live panels after an invalid hydration count of ${seed}`, async () => {

@@ -2,8 +2,8 @@ import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './stat.js';
-import type { LyraStat } from './stat.js';
+import '../../lr-stat.js';
+import type { LyraStat } from '../../lr-stat.js';
 
 it('delivers exactly one click to a host listener for a click on linked content', async () => {
   const el = await fixture<LyraStat>(html`<lr-stat href="#stat-target" label="Revenue" value="12"></lr-stat>`);

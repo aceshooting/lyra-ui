@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 function canvas(el: LyraHeatmap): HTMLCanvasElement {
   return el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;

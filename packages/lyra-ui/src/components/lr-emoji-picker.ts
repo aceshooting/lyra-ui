@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/emoji-picker/emoji-picker.js';
+export * from './forms/emoji-picker/emoji-picker.class.js';
+import { LyraEmojiPicker } from './forms/emoji-picker/emoji-picker.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('emoji-picker', LyraEmojiPicker);

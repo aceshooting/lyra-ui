@@ -1,12 +1,12 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { registerLyraLocale } from "../../../internal/localization.js";
-import "./responsive-panel.js";
+import "../../lr-responsive-panel.js";
 import type {
   LyraResponsivePanel,
   LyraResponsivePanelModeChangeDetail,
-} from "./responsive-panel.js";
-import { resolveResponsivePanelEffectiveMode } from "./responsive-panel.js";
+} from "../../lr-responsive-panel.js";
+import { resolveResponsivePanelEffectiveMode } from "../../lr-responsive-panel.js";
 
 const loopErrors: string[] = [];
 window.addEventListener(

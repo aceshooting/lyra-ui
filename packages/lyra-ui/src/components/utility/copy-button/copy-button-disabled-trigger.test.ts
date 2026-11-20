@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './copy-button.js';
-import type { LyraCopyButton } from './copy-button.js';
+import '../../lr-copy-button.js';
+import type { LyraCopyButton } from '../../lr-copy-button.js';
 
 describe('lr-copy-button disabled custom trigger', () => {
   it('does not write to the clipboard when a disabled button has its custom trigger activated', async () => {

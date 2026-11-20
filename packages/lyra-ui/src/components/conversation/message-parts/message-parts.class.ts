@@ -86,15 +86,15 @@ const MESSAGE_PARTS_CONTENT_MODES = Object.freeze(['plain', 'markdown'] as const
 
 /** Registration is deferred until a built-in part actually uses its renderer. */
 const PART_RENDERER_LOADERS = {
-  'thinking-panel': () => import('../../agent-tools/thinking-panel/thinking-panel.js'),
-  'tool-call-block': () => import('../../agent-tools/tool-call-block/tool-call-block.js'),
-  'tool-call-chip': () => import('../../agent-tools/tool-call-chip/tool-call-chip.js'),
-  'tool-result-view': () => import('../../agent-tools/tool-result-view/tool-result-view.js'),
-  'citation-badge': () => import('../../retrieval/citation-badge/citation-badge.js'),
-  'attachment-chip': () => import('../../media/attachment-chip/attachment-chip.js'),
-  'json-viewer': () => import('../../utility/json-viewer/json-viewer.js'),
-  'widget-renderer': () => import('../widget-renderer/widget-renderer.js'),
-  button: () => import('../../forms/button/button.js'),
+  'thinking-panel': () => import('../../lr-thinking-panel.js'),
+  'tool-call-block': () => import('../../lr-tool-call-block.js'),
+  'tool-call-chip': () => import('../../lr-tool-call-chip.js'),
+  'tool-result-view': () => import('../../lr-tool-result-view.js'),
+  'citation-badge': () => import('../../lr-citation-badge.js'),
+  'attachment-chip': () => import('../../lr-attachment-chip.js'),
+  'json-viewer': () => import('../../lr-json-viewer.js'),
+  'widget-renderer': () => import('../../lr-widget-renderer.js'),
+  button: () => import('../../lr-button.js'),
 };
 type PartRenderer = keyof typeof PART_RENDERER_LOADERS;
 

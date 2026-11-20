@@ -3,7 +3,7 @@ import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import type { LyraGraph } from '../graph/graph.class.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.class.js';
-import './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
 
 const nodes = [
   { id: 'a', label: 'Alpha', position: { x: -40, y: 0, z: 60 } },

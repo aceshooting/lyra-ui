@@ -2,8 +2,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './contact-viewer.js';
-import type { LyraContactViewer } from './contact-viewer.js';
+import '../../lr-contact-viewer.js';
+import type { LyraContactViewer } from '../../lr-contact-viewer.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 

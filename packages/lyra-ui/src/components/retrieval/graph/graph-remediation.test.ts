@@ -7,7 +7,7 @@ import {
   sendWheel,
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
-import { LyraGraph, type LyraGraphEdge } from './graph.js';
+import { LyraGraph, type LyraGraphEdge } from '../../lr-graph.js';
 import { drawGraphScene } from './graph-canvas.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

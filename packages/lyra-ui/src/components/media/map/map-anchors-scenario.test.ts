@@ -5,7 +5,7 @@ import { composedContains } from '../../../internal/composed-tree.js';
 import {
   addAnchor, base, captureCloses, closeButton, deepActive, isPlaced, mountMap, placed, restoreMapEnvironment, stubMapEnvironment,
 } from '../../../../test/map-anchors.js';
-import type { LyraMapAnchor } from './map-anchor.js';
+import type { LyraMapAnchor } from '../../lr-map-anchor.js';
 
 // Two independently owned feature-detail panels, each a header over 45 scrolling detail rows, the
 // shape a map application builds from two modules that each own their own panel.
@@ -87,7 +87,7 @@ describe('lr-map-anchor independent detail panels', () => {
     const owned: LyraMapAnchor = addAnchor(map, { closable: true, content: card('Owned') });
     await placed(owned);
     expect(owned.focusContent()).to.equal(true);
-    owned.addEventListener('lr-close', () => { owned.remove(); }, { once: true });
+    owned.addEventListener('lr-map-anchor-dismiss', () => { owned.remove(); }, { once: true });
     expect(owned.close()).to.equal(true);
     expect(owned.isConnected).to.equal(false); expect(base(owned).hidden).to.equal(true);
     expect(deepActive() === outside).to.equal(true);

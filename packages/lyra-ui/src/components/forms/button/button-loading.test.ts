@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './button.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-button.js';
+import '../../lr-dialog.js';
 import type { LyraButton } from './button.class.js';
 import type { LyraDialog } from '../../overlays/dialog/dialog.class.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';

@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './commit-card.js';
-import type { LyraCommitCard } from './commit-card.js';
+import '../../lr-commit-card.js';
+import type { LyraCommitCard } from '../../lr-commit-card.js';
 
 describe('lr-commit-card removed message', () => {
   it('clears both message sections, preserves null readback, and accepts later text', async () => {

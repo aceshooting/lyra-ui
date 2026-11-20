@@ -5,8 +5,8 @@ import type {
 import type { LyraSearchChangeDetail } from '../../internal/text-viewer-target.js';
 import type { LyraDatasetViewer } from './dataset-viewer/dataset-viewer.class.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.class.js';
-import './dataset-viewer/dataset-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
+import '../lr-dataset-viewer.js';
+import '../lr-spreadsheet-viewer.js';
 
 type Viewer = LyraDatasetViewer | LyraSpreadsheetViewer;
 type Reply = LyraSourceSearchResult<LyraTabularHit>;

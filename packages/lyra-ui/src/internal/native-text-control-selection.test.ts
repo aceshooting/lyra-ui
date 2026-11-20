@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraInput } from '../components/forms/input/input.js';
-import type { LyraTextarea } from '../components/forms/textarea/textarea.js';
-import type { LyraCodeEditor } from '../components/forms/code-editor/code-editor.js';
-import '../components/forms/input/input.js';
-import '../components/forms/textarea/textarea.js';
-import '../components/forms/code-editor/code-editor.js';
+import type { LyraInput } from '../components/lr-input.js';
+import type { LyraTextarea } from '../components/lr-textarea.js';
+import type { LyraCodeEditor } from '../components/lr-code-editor.js';
+import '../components/lr-input.js';
+import '../components/lr-textarea.js';
+import '../components/lr-code-editor.js';
 
 type TextControl = LyraInput | LyraTextarea | LyraCodeEditor;
 

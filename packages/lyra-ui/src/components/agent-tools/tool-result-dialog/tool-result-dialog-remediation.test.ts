@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './tool-result-dialog.js';
-import type { LyraToolResultDialog } from './tool-result-dialog.js';
+import '../../lr-tool-result-dialog.js';
+import type { LyraToolResultDialog } from '../../lr-tool-result-dialog.js';
 
 it('updates the inner dialog name from a direct accessibleLabel and prioritizes an authored host label', async () => {
   const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open tool-name="Task"></lr-tool-result-dialog>`);

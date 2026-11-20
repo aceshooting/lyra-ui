@@ -1,9 +1,9 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { Citation, GroundedClaim } from '../../../ai/types.js';
-import './claim-evidence.js';
+import '../../lr-claim-evidence.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import type { LyraClaimEvidence } from './claim-evidence.js';
+import type { LyraClaimEvidence } from '../../lr-claim-evidence.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,

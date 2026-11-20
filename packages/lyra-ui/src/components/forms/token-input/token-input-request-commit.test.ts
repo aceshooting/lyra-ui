@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './token-input.js';
-import type { LyraTokenInput } from './token-input.js';
+import '../../lr-token-input.js';
+import type { LyraTokenInput } from '../../lr-token-input.js';
 
 const draftOf = (el: LyraTokenInput): HTMLInputElement =>
   el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;

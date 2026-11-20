@@ -7,7 +7,7 @@ import '../../../translations/fr/media.js';
 import '../../../translations/tr/forms.js';
 import '../../../translations/tr/shared.js';
 import '../../../translations/tr/media.js';
-import './locale-picker.js';
+import '../../lr-locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
 
 beforeEach(() => setFlagUrlResolver(async () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E'));

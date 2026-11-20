@@ -3,8 +3,8 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './retrieval-search.js';
-import type { LyraRetrievalSearch } from './retrieval-search.js';
+import '../../lr-retrieval-search.js';
+import type { LyraRetrievalSearch } from '../../lr-retrieval-search.js';
 import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import type { RetrievalFiltersChangeDetail } from './retrieval-search.class.js';
 import {

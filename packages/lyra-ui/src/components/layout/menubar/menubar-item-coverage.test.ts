@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
-import './menubar.js';
+import '../../lr-menubar.js';
 
 it('coordinates direct panel openings with sibling ownership and keyboard dismissal', async () => {
   const bar = await fixture<HTMLElement>(html`<lr-menubar label="Application">

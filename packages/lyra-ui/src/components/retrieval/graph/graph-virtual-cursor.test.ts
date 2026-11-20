@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { NODE_COUNT_TIMEOUT } from '../../../../test/graph-test-support.js';
 import type { CanvasScene } from './graph-canvas.js';
 import type { LyraGraph } from './graph.class.js';
-import './graph.js';
+import '../../lr-graph.js';
 
 async function readyGraph(): Promise<LyraGraph> {
   const graph = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" layout="layered"

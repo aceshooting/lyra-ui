@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraPreparedSeriesData, LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import './lite-chart.js';
+import '../../lr-lite-chart.js';
 
 function indexed(revision = 'original'): LyraPreparedSeriesData {
   return {

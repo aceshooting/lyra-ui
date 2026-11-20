@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './date-picker.js';
-import './date-input.js';
+import '../../lr-date-picker.js';
+import '../../lr-date-input.js';
 import { parseDisabledWeekdays, type LyraDatePicker } from './date-picker.class.js';
 import type { LyraDateInput } from './date-input.class.js';
 

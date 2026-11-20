@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './select.js';
-import '../combobox/option.js';
-import type { LyraSelect } from './select.js';
+import '../../lr-select.js';
+import '../../lr-option.js';
+import type { LyraSelect } from '../../lr-select.js';
 
 describe('select input-method composition', () => {
   for (const [name, marker] of [

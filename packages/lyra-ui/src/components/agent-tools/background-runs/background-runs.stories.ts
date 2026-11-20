@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './background-runs.js';
+import '../../lr-background-runs.js';
 import type { BackgroundRun } from './background-runs.class.js';
 
 const meta: Meta = {

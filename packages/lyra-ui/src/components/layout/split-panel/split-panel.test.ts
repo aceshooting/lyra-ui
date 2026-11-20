@@ -1,6 +1,6 @@
 import { nextFrame, elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './split-panel.js';
-import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
+import '../../lr-split-panel.js';
+import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from '../../lr-split-panel.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 // Registers the real shipped `ar` catalog's `layout` slice so the `lang="ar-EG"` tests below
 // can render without tripping the dev-mode locale-fallback warning that strict-console platform

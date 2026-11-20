@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
 import { composeMapModules, createMapModuleDemo, createMapModulePublisher, MAP_MODULE_ORDER } from '../../../../test/map-module-composition.js';
-import type { LyraMapOverlays } from './map.js';
+import type { LyraMapOverlays } from '../../lr-map.js';
 
 describe('application map composition invariants', () => {
   it('module insertion order cannot change the explicit aggregate order or data identity', () => {

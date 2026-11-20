@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraFunnel, LyraFunnelStage } from './funnel.class.js';
-import './funnel.js';
+import '../../lr-funnel.js';
 
 function parts(el: LyraFunnel, name: string): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll<HTMLElement>(`[part~="${name}"]`)];

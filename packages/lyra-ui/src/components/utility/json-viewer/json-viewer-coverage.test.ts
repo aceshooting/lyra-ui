@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './json-viewer.js';
-import type { LyraJsonViewer } from './json-viewer.js';
+import '../../lr-json-viewer.js';
+import type { LyraJsonViewer } from '../../lr-json-viewer.js';
 
 it('bounds traversal of shared acyclic branches independently from snapshot admission', async () => {
   const shared = Object.fromEntries(Array.from({ length: 100 }, (_, index) => [`leaf-${index}`, 'needle']));

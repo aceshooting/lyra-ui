@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './drop-zone.js';
-import type { LyraDropZoneFilesDetail } from './drop-zone.js';
+import '../../lr-drop-zone.js';
+import type { LyraDropZoneFilesDetail } from '../../lr-drop-zone.js';
 
 const meta: Meta = {
   title: 'DropZone',

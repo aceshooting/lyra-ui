@@ -1,7 +1,7 @@
 import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './thread-list.js';
-import type { LyraChatThread, LyraThreadList } from './thread-list.js';
+import '../../lr-thread-list.js';
+import type { LyraChatThread, LyraThreadList } from '../../lr-thread-list.js';
 
 const THREADS: LyraChatThread[] = [
   { id: 't1', title: 'Quarterly review' },

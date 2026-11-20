@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './color-picker.js';
-import type { LyraColorPicker } from './color-picker.js';
+import '../../lr-color-picker.js';
+import type { LyraColorPicker } from '../../lr-color-picker.js';
 
 it('omits a revoked palette and renders a later valid swatch list', async () => {
   const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline></lr-color-picker>`);

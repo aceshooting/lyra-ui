@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './line-chart.js';
-import './histogram.js';
-import './box-plot.js';
+import '../../lr-line-chart.js';
+import '../../lr-histogram.js';
+import '../../lr-box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraHistogram } from './histogram.class.js';

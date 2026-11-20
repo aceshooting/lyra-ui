@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraMentionPopover } from './mention-popover.js';
+import { LyraMentionPopover } from '../../lr-mention-popover.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 const items = (n:number) => Array.from({length:n},(_,i)=>({suggestionId:`${i}`,label:`Person ${i}`,description:'Candidate'}));
 it('admits a bounded prefix and discloses omitted candidates', async () => {

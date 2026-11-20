@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
-import './map.js';
-import './map-anchor.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
-import type { LyraMapAnchor, LyraMapAnchorEventMap } from './map-anchor.js';
+import '../../lr-map.js';
+import '../../lr-map-anchor.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
+import type { LyraMapAnchor, LyraMapAnchorEventMap } from '../../lr-map-anchor.js';
 
 const meta: Meta = {
   title: 'Map/Map anchor',

@@ -1,3 +1,7 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './viewers/page-rail/page-rail.js';
+export * from './viewers/page-rail/page-rail.class.js';
+import { LyraPageRail } from './viewers/page-rail/page-rail.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-virtual-list.js';
+import './lr-file-icon.js';
+import './lr-skeleton.js';
+defineElement('page-rail', LyraPageRail);

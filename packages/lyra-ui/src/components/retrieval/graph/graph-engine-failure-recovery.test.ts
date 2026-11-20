@@ -6,7 +6,7 @@ import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
 import type { GraphComponentEngine } from './graph-engine-adapter.js';
 import type { LyraGraphCamera } from './graph-model.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 void LyraGraph;
 
 type EngineFault = 'position' | 'fit' | 'camera';

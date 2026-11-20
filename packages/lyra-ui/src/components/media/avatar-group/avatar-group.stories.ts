@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './avatar-group.js';
-import '../avatar/avatar.js';
+import '../../lr-avatar-group.js';
+import '../../lr-avatar.js';
 
 const meta: Meta = {
   title: 'Data display/Avatar group',

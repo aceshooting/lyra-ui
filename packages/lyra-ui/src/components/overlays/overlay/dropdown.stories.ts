@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './dropdown.js';
-import '../../layout/menu/dropdown-item.js';
-import '../../layout/menu/menu.js';
+import '../../lr-dropdown.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-menu.js';
 
 const meta: Meta = {
   title: 'Overlay/Dropdown',

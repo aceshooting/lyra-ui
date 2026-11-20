@@ -23,7 +23,9 @@ A configurable annotation rubric (LangSmith annotation-queue style): score, cate
 freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
 `RubricKey.type` routes to an existing sibling control: `score` renders `<lr-segmented>` or
 `<lr-slider>`; `category` renders `<lr-select>` or `<lr-checkbox-group>` (`multiple`); `comment`
-renders `<lr-textarea>`. The `base` part is an accessible `role="group"`: aggregate label, hint,
+renders `<lr-textarea>`. Importing the element registers the score and comment controls; the
+select and checkbox controls register when a category key first renders, and `updateComplete`
+waits for them, so a score-and-comment rubric never downloads them. The `base` part is an accessible `role="group"`: aggregate label, hint,
 and error chrome is linked to that same-shadow role. A host `aria-label` wins by attribute presence
 (including an explicitly empty value), while each key retains its field-level name.
 Both score branches format visible numeric labels with the effective locale (including non-Latin

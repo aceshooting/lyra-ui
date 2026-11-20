@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './include.js';
-import type { LyraInclude } from './include.js';
+import '../../lr-include.js';
+import type { LyraInclude } from '../../lr-include.js';
 
 const meta: Meta = { title: 'Utilities/Include', component: 'lr-include' };
 export default meta;

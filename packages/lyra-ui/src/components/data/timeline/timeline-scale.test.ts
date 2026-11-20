@@ -1,7 +1,7 @@
 import { expect, fixture, html, aTimeout, waitUntil } from '@open-wc/testing';
-import './timeline.js';
-import type { LyraTimeline } from './timeline.js';
-import type { LyraTimelineItem } from './timeline-item.js';
+import '../../lr-timeline.js';
+import type { LyraTimeline } from '../../lr-timeline.js';
+import type { LyraTimelineItem } from '../../lr-timeline-item.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 

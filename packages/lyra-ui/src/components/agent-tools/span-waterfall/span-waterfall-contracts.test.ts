@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import './span-waterfall.js';
-import type { LyraSpanWaterfall } from './span-waterfall.js';
+import '../../lr-span-waterfall.js';
+import type { LyraSpanWaterfall } from '../../lr-span-waterfall.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const SPANS = [

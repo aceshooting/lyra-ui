@@ -1,12 +1,12 @@
 import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys, setViewport } from '@web/test-runner-commands';
-import './context-menu.js';
-import '../../layout/menu/dropdown-item.js';
-import '../../layout/menu/menu-label.js';
-import '../overlay/dropdown.js';
-import '../dialog/dialog.js';
-import '../../forms/button/button.js';
+import '../../lr-context-menu.js';
+import '../../lr-dropdown-item.js';
+import '../../lr-menu-label.js';
+import '../../lr-dropdown.js';
+import '../../lr-dialog.js';
+import '../../lr-button.js';
 import type {
   LyraContextMenu,
   LyraContextMenuShowDetail,

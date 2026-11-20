@@ -10,11 +10,11 @@ import {
 } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
 import type {
   LyraKnowledgeGraphExplorer,
   LyraKnowledgeGraphExplorerEventMap,
-} from './knowledge-graph-explorer.js';
+} from '../../lr-knowledge-graph-explorer.js';
 import type {
   LyraGraphCommunity,
   LyraGraph,

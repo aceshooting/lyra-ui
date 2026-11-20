@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { PromptQueueItem, LyraPromptQueue } from './prompt-queue.class.js';
-import './prompt-queue.js';
+import '../../lr-prompt-queue.js';
 
 it('omits malformed attachments while retaining localized names and immutable send-now data', async () => {
   const revoked = Proxy.revocable({}, {});

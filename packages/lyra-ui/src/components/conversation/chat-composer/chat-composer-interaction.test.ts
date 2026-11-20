@@ -1,6 +1,6 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html } from '@open-wc/testing';
-import './chat-composer.js';
+import '../../lr-chat-composer.js';
 
 it('yields modified Enter and submits only once for held Enter', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-chat-composer']>(document.createElement('lr-chat-composer'));

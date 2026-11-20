@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../test/wtr-focus.js';
 import { isKeyboardFocusEvent, lastInputModality, trackInputModality } from './focus-modality.js';
-import '../components/overlays/overlay/tooltip.js';
+import '../components/lr-tooltip.js';
 
 before(() => trackInputModality(document));
 

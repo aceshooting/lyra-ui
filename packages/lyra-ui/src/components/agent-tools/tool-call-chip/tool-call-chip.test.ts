@@ -1,7 +1,7 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './tool-call-chip.js';
-import type { LyraToolCallChip } from './tool-call-chip.js';
+import '../../lr-tool-call-chip.js';
+import type { LyraToolCallChip } from '../../lr-tool-call-chip.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';

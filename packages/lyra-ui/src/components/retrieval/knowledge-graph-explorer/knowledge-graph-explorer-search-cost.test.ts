@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import './knowledge-graph-explorer.js';
-import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import '../../lr-knowledge-graph-explorer.js';
+import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
 import type { LyraGraphNode } from '../graph/graph.class.js';
 import { measureArrayMembership } from '../../../../test/array-membership-cost.js';
 

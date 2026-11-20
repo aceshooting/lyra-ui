@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './rag-eval-dashboard.js';
-import type { LyraRagEvalDashboard, LyraRagEvaluationMetric, LyraRagEvaluationRun } from './rag-eval-dashboard.js';
+import '../../lr-rag-eval-dashboard.js';
+import type { LyraRagEvalDashboard, LyraRagEvaluationMetric, LyraRagEvaluationRun } from '../../lr-rag-eval-dashboard.js';
 
 const metrics: LyraRagEvaluationMetric[] = [{ id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' }];
 const run = (id: string): LyraRagEvaluationRun => ({ id, label: `${id} run`, slice: 'all', metrics: { mrr: 0.5 } });

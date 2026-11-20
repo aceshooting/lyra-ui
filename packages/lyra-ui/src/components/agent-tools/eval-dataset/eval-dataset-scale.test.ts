@@ -1,9 +1,9 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './eval-dataset.js';
-import type { LyraEvalDataset } from './eval-dataset.js';
+import '../../lr-eval-dataset.js';
+import type { LyraEvalDataset } from '../../lr-eval-dataset.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { registerLyraLocale } from '../../../internal/localization-runtime.js';
-import type { LyraTable } from '../../data/table/table.js';
+import type { LyraTable } from '../../lr-table.js';
 
 it('reuses filtering and bounds tag facets across unrelated updates at n=10000', async () => {
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset

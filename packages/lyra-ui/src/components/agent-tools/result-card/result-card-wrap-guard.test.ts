@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
-import './result-card.js';
-import './result-field.js';
-import '../evaluation-run/evaluation-run.js';
-import '../test-results/test-results.js';
-import '../eval-result/eval-result.js';
+import '../../lr-result-card.js';
+import '../../lr-result-field.js';
+import '../../lr-eval-run.js';
+import '../../lr-test-results.js';
+import '../../lr-eval-result.js';
 
 const LONG = 'x'.repeat(400);
 

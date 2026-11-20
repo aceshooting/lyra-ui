@@ -1,7 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './tool-select-dialog.js';
-import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-dialog.js';
+import '../../lr-tool-select-dialog.js';
+import type { LyraToolSelectDialog, ToolSelectDialogTool } from '../../lr-tool-select-dialog.js';
 
 const TOOLS: ToolSelectDialogTool[] = [
   { id: 'search', name: 'Search' },

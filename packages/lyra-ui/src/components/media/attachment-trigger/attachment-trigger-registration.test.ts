@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './attachment-trigger.js';
+import '../../lr-attachment-trigger.js';
 import type { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 
 it('registers the capability menu only when a trigger first offers several capabilities', async () => {

@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './utility/known-date/known-date.js';
+export * from './utility/known-date/known-date.class.js';
+import { LyraKnownDate } from './utility/known-date/known-date.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('known-date', LyraKnownDate);

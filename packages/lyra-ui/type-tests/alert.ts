@@ -1,5 +1,5 @@
 import { LyraAlert } from '../src/components/overlays/alert/alert.class.js';
-import { LyraAlert as GranularLyraAlert } from '../src/components/overlays/alert/alert.js';
+import { LyraAlert as GranularLyraAlert } from '../src/components/lr-alert.js';
 import { LyraAlert as FamilyLyraAlert } from '../src/components/overlays/index.js';
 import type {
   AlertCountdown } from '../src/components/overlays/alert/alert.class.js';

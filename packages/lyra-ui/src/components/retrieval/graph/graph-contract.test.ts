@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './graph.js';
+import '../../lr-graph.js';
 import type { LyraGraph } from './graph.class.js';
 import { loadD3 } from './graph-loader.js';
 

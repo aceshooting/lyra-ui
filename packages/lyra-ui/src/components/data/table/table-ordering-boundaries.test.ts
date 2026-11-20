@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { priorityColumns, rows, type Row } from '../../../../test/table.js';
-import type { LyraTable, TableColumn } from './table.js';
-import './table.js';
+import type { LyraTable, TableColumn } from '../../lr-table.js';
+import '../../lr-table.js';
 
 interface ScoreRow {
   readonly id: string;

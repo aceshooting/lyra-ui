@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './mention-popover.js';
+import '../../lr-mention-popover.js';
 import type { LyraMentionPopover } from './mention-popover.class.js';
 
 const listboxOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;

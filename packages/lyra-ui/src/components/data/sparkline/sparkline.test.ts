@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './sparkline.js';
-import type { LyraSparkline } from './sparkline.js';
+import '../../lr-sparkline.js';
+import type { LyraSparkline } from '../../lr-sparkline.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 

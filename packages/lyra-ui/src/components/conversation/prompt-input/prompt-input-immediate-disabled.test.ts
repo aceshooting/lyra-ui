@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { LyraPromptInput } from './prompt-input.class.js';
-import './prompt-input.js';
+import '../../lr-prompt-input.js';
 
 for (const eventName of ['lr-input', 'lr-change', 'lr-submit', 'lr-stop'] as const) {
   it(`suppresses ${eventName} when disabled during composer event capture and recovers`, async () => {

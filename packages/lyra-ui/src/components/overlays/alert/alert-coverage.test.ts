@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './alert.js';
-import type { LyraAlert } from './alert.js';
+import '../../lr-alert.js';
+import type { LyraAlert } from '../../lr-alert.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   TOAST_REGION_ENQUEUE,
@@ -45,7 +45,7 @@ it('removes and settles a toast whose vetoed show is owned by a region without a
 });
 
 it('settles a toast whose show listener vetoes it and detaches the alert', async () => {
-  await import('../toast/toast.js');
+  await import('../../lr-toast.js');
   const el = await fixture<LyraAlert>(html`<lr-alert style=${motionless}>Detached by listener</lr-alert>`);
   el.addEventListener('lr-show', (event) => {
     event.preventDefault();
@@ -59,7 +59,7 @@ it('settles a toast whose show listener vetoes it and detaches the alert', async
 });
 
 it('returns focus to the previously focused control when a focused alert is queued behind a full region', async () => {
-  await import('../toast/toast.js');
+  await import('../../lr-toast.js');
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       <button id="outside">Outside</button>
@@ -90,7 +90,7 @@ it('returns focus to the previously focused control when a focused alert is queu
 });
 
 it('restores focus inside a toast alert that is re-parented out of its region', async () => {
-  await import('../toast/toast.js');
+  await import('../../lr-toast.js');
   const destination = await fixture<HTMLDivElement>(html`<div></div>`);
   const el = await fixture<LyraAlert>(html`<lr-alert closable style=${motionless}>Moved</lr-alert>`);
   const completion = el.toast();
@@ -107,7 +107,7 @@ it('restores focus inside a toast alert that is re-parented out of its region', 
 });
 
 it('settles a toast lifecycle when the alert is moved into a document with no browsing context', async () => {
-  await import('../toast/toast.js');
+  await import('../../lr-toast.js');
   const el = await fixture<LyraAlert>(html`<lr-alert style=${motionless}>Elsewhere</lr-alert>`);
   const completion = el.toast();
   await waitUntil(() => el.open && el.parentElement?.localName === 'lr-toast', 'toast shown in its region');

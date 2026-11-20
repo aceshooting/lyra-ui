@@ -1,9 +1,9 @@
-import '../spreadsheet-viewer/spreadsheet-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import '../dataset-viewer/dataset-viewer.js';
-import './csv-viewer.js';
-import type { LyraCsvViewer } from './csv-viewer.js';
-import type { LyraDatasetViewer } from '../dataset-viewer/dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-csv-viewer.js';
+import type { LyraCsvViewer } from '../../lr-csv-viewer.js';
+import type { LyraDatasetViewer } from '../../lr-dataset-viewer.js';
 
 /** First request rejects when its signal aborts; later requests resolve with `body`. */
 function abortAwareFetch(body: string): { restore: () => void; calls: () => number } {

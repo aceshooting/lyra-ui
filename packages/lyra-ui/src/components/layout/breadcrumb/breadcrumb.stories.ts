@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './breadcrumb.js';
-import './breadcrumb-item.js';
+import '../../lr-breadcrumb.js';
+import '../../lr-breadcrumb-item.js';
 const meta: Meta = {
   title: 'Navigation/Breadcrumb',
   component: 'lr-breadcrumb',

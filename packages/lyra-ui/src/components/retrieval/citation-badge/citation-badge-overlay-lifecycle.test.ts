@@ -1,9 +1,9 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './citation-badge.js';
-import '../../overlays/dialog/dialog.js';
-import type { LyraCitationBadge } from './citation-badge.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../lr-citation-badge.js';
+import '../../lr-dialog.js';
+import type { LyraCitationBadge } from '../../lr-citation-badge.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 it('registers the open popover with the shared overlay stack', async () => {
   const el = (await fixture(

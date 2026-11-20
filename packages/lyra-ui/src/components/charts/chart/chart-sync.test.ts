@@ -1,8 +1,8 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import './chart.js';
-import './lite-chart.js';
-import './histogram.js';
+import '../../lr-chart.js';
+import '../../lr-lite-chart.js';
+import '../../lr-histogram.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';

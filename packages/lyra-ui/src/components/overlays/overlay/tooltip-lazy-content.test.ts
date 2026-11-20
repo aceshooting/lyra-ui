@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import type { LyraTooltip } from './tooltip.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 
 /** Counts the style reads the tooltip's content inspection performs while `run` executes. */
 async function styleReadsDuring(run: () => Promise<void>): Promise<number> {

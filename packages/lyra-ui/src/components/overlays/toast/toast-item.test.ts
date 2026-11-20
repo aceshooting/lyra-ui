@@ -1,8 +1,8 @@
 import { fixture, expect, nextFrame, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import './toast-item.js';
-import './toast.js';
-import type { LyraToastItem, LyraToastSize, LyraToastVariant } from './toast-item.js';
+import '../../lr-toast-item.js';
+import '../../lr-toast.js';
+import type { LyraToastItem, LyraToastSize, LyraToastVariant } from '../../lr-toast-item.js';
 import { styles } from './toast-item.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';

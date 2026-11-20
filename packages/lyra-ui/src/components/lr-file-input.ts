@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './media/file-input/file-input.js';
+export * from './media/file-input/file-input.class.js';
+import { LyraFileInput } from './media/file-input/file-input.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('file-input', LyraFileInput);

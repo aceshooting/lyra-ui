@@ -3,7 +3,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import type { DocumentRef } from "../../../ai/types.js";
-import "./prompt-queue.js";
+import "../../lr-prompt-queue.js";
 import type {
   LyraPromptQueue,
   PromptQueueChangeDetail,

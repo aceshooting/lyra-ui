@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './multi-split.js';
+import '../../lr-multi-split.js';
 import type { LyraMultiSplit } from './multi-split.class.js';
 
 describe('lr-multi-split panel ownership', () => {

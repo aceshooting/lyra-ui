@@ -1,3 +1,4 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './overlays/rating/rating.js';
+export * from './overlays/rating/rating.class.js';
+import { LyraRating } from './overlays/rating/rating.class.js';
+import { defineElement } from '../internal/prefix.js';
+defineElement('rating', LyraRating);

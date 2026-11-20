@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraChart, LyraChartInstance } from './chart.class.js';
 import type { LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 const bounds = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
 function source(revision = 'initial'): LyraSpatialChartSource {

@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './artifact-panel.js';
-import type { LyraArtifactPanel } from './artifact-panel.js';
+import '../../lr-artifact-panel.js';
+import type { LyraArtifactPanel } from '../../lr-artifact-panel.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

@@ -1,6 +1,6 @@
 import { expect, fixture } from '@open-wc/testing';
-import type { LyraTextarea } from './textarea.js';
-import './textarea.js';
+import type { LyraTextarea } from '../../lr-textarea.js';
+import '../../lr-textarea.js';
 
 for (const attribute of ['label', 'hint', 'help-text', 'error-text']) {
   it(`lr-textarea safely removes ${attribute} with null readback and later recovery`, async () => {

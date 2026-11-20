@@ -111,13 +111,13 @@ function manifestTags(manifest) {
   );
 }
 
-function addIndexExport(source, name) {
-  const exportLine = `export * from './${name}/${name}.js';`;
+function addIndexExport(source, tag) {
+  const exportLine = `export * from '../${tag}.js';`;
   const lines = source.replace(/\n$/, '').split('\n');
   const exports = lines
-    .map((line, index) => ({ line, index, directory: /^export .* from '\.\/([^/]+)\//.exec(line)?.[1] }))
-    .filter((entry) => entry.directory);
-  const next = exports.find((entry) => entry.directory.localeCompare(name) > 0);
+    .map((line, index) => ({ line, index, entry: /^export .* from '\.\.\/(lr-[a-z0-9-]+)\.js'/.exec(line)?.[1] }))
+    .filter((entry) => entry.entry);
+  const next = exports.find((entry) => entry.entry.localeCompare(tag) > 0);
   const insertion = next?.index ?? ((exports.at(-1)?.index ?? lines.length - 1) + 1);
   lines.splice(insertion, 0, exportLine);
   return `${lines.join('\n')}\n`;
@@ -156,10 +156,10 @@ declare global {
 `;
 }
 
-function registrationTemplate({ name, className }) {
-  return `export * from './${name}.class.js';
-import { ${className} } from './${name}.class.js';
-import { defineElement } from '../../../internal/prefix.js';
+function registrationTemplate({ family, name, className }) {
+  return `export * from './${family}/${name}/${name}.class.js';
+import { ${className} } from './${family}/${name}/${name}.class.js';
+import { defineElement } from '../internal/prefix.js';
 
 defineElement('${name}', ${className});
 `;
@@ -183,7 +183,7 @@ export const styles = css\`
 function testTemplate({ tag, name, className, displayName }) {
   return `import { expect, fixture, html } from '@open-wc/testing';
 import type { ${className} } from './${name}.class.js';
-import './${name}.js';
+import '../../${tag}.js';
 
 describe('<${tag}>', () => {
   it('renders populated content through the public base part and remains accessible', async () => {
@@ -203,10 +203,10 @@ describe('<${tag}>', () => {
 `;
 }
 
-function storyTemplate({ tag, name, displayName, familyLabel }) {
+function storyTemplate({ tag, displayName, familyLabel }) {
   return `import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './${name}.js';
+import '../../${tag}.js';
 
 const meta: Meta = {
   title: '${familyLabel}/${displayName}',
@@ -225,7 +225,6 @@ export const Default: StoryObj = {
 function componentFiles(details) {
   return new Map([
     [`${details.name}.class.ts`, classTemplate(details)],
-    [`${details.name}.ts`, registrationTemplate(details)],
     [`${details.name}.styles.ts`, stylesTemplate()],
     [`${details.name}.test.ts`, testTemplate(details)],
     [`${details.name}.stories.ts`, storyTemplate(details)],
@@ -322,7 +321,8 @@ function validateRequest({ packageDir, family, name }) {
   if (Object.hasOwn(familyCatalog.directories ?? {}, name)) collisions.push('family catalog');
   if ((inventory.components ?? []).some((entry) => entry.tag === tag)) collisions.push('component inventory');
   if (manifestTags(manifest).includes(tag)) collisions.push('custom-elements manifest');
-  if (indexSource.includes(`'./${name}/${name}.js'`)) collisions.push('family barrel');
+  if (indexSource.includes(`'../${tag}.js'`)) collisions.push('family barrel');
+  if (existsSync(join(packageDir, 'src/components', `${tag}.ts`))) collisions.push('tag-shaped registration entry');
   if (docsSource.includes(`\`${tag}\``) || docsSource.includes(`<${tag}`)) collisions.push('authored docs');
   if (
     Object.values(metadata.assignments ?? {}).some(
@@ -353,7 +353,7 @@ function inventoryEntry({ tag, family, name, surface }) {
     tag,
     family,
     classModule: `src/components/${family}/${name}/${name}.class.ts`,
-    registrationModule: `src/components/${family}/${name}/${name}.ts`,
+    registrationModule: `src/components/${tag}.ts`,
     rootIncluded: true,
     rootExclusion: null,
     optionalPeers: [],
@@ -433,8 +433,8 @@ export async function scaffoldComponent({
     state.paths.ssrAllBarrel,
     state.paths.allowlist,
     state.paths.packageJson,
-    // `pnpm registrations` generates the new tag's stable alias module outside the component
-    // directory, so removing that directory alone would leave the alias behind.
+    // The tag-shaped registration entry lives outside the component directory, so removing that
+    // directory alone would leave the entry behind.
     join(packageDir, 'src/components', `${tag}.ts`),
   ];
   // A missing file snapshots as `null` and is DELETED on rollback rather than restored, so a
@@ -466,6 +466,7 @@ export async function scaffoldComponent({
     for (const [file, source] of componentFiles(details)) {
       writeFileSync(join(state.paths.componentDirectory, file), source, { flag: 'wx' });
     }
+    writeFileSync(join(packageDir, 'src/components', `${tag}.ts`), registrationTemplate(details), { flag: 'wx' });
 
     state.metadata.assignments[PROFILE] = [...state.metadata.assignments[PROFILE], tag].sort((a, b) =>
       a.localeCompare(b),
@@ -478,7 +479,7 @@ export async function scaffoldComponent({
     recordMetadataWrites(metadataPlan.entries);
     state.familyCatalog.directories[name] = family;
     atomicWrite(state.paths.familyCatalog, jsonSource(state.familyCatalog));
-    atomicWrite(state.paths.familyIndex, addIndexExport(state.indexSource, name));
+    atomicWrite(state.paths.familyIndex, addIndexExport(state.indexSource, tag));
     atomicWrite(state.paths.docs, appendDocs(state.docsSource, details));
 
     const steps = verificationSteps(`src/components/${family}/${name}/${name}.test.ts`);

@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { LyraXmlViewer } from './xml-viewer.class.js';
-import './xml-viewer.js';
+import '../../lr-xml-viewer.js';
 
 for (const xml of ['<root>unfinished text', '<root><!--unfinished', '<root><![CDATA[unfinished', '<root><child attr="unfinished']) {
   it(`rejects truncated XML ${JSON.stringify(xml)} and recovers without a stale tree`, async () => {

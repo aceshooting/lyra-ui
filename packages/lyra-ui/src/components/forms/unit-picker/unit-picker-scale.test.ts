@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { LyraUnitPicker } from './unit-picker.js';
+import { LyraUnitPicker } from '../../lr-unit-picker.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 it('does not mount every cold catalog option', async () => {
   const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker .units=${Array.from({length:1000},(_,i)=>`custom-${i}`)}></lr-unit-picker>`);

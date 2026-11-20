@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import './reorder-list.js';
-import './reorder-item.js';
+import '../../lr-reorder-list.js';
+import '../../lr-reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 
 const labelText = (el: LyraReorderItem): string =>

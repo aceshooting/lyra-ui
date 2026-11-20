@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './lightbox.js';
-import type { LyraLightbox } from './lightbox.js';
+import '../../lr-lightbox.js';
+import type { LyraLightbox } from '../../lr-lightbox.js';
 
 const meta: Meta = {
   title: 'Lightbox',
@@ -186,7 +186,7 @@ export const AboveNativeModal: Story = {
 export const MillionImageSource: Story = {
   parameters: { docs: { description: { story: 'Browse one million logical images through a host-owned indexed source. The counter and index cover the complete collection while the lightbox retains at most three descriptors. Replace imageSource, reassign it, or call requestUpdate() after changing the host source; unset it to restore legacy images.' } } },
   render: () => {
-    const source: import('./lightbox.js').LyraLightboxSource = {
+    const source: import('../../lr-lightbox.js').LyraLightboxSource = {
       revision: 1,
       images: {
         count: 1_000_000,

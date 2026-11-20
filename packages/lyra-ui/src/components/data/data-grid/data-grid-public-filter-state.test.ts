@@ -1,7 +1,7 @@
 import { expect, html } from '@open-wc/testing';
 import { columns, dataGrid, rows, type Person } from '../../../../test/data-grid.js';
 import type { DataGridColumn, DataGridFilter } from './data-grid-types.js';
-import './data-grid.js';
+import '../../lr-data-grid.js';
 
 it('exports nested filter values as detached frozen JSON-safe state and restores normal rendering', async () => {
   const element = await dataGrid(html`<lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>`);

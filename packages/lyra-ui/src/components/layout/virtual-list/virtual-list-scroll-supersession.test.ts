@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 for (const rowHeight of ['40', 'auto']) {
   it(`keeps a newer programmatic jump when an earlier native scroll frame runs (${rowHeight} rows)`, async () => {

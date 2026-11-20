@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './virtual-list.js';
-import type { LyraVirtualList, LyraVirtualListIndexedSource } from './virtual-list.js';
+import '../../lr-virtual-list.js';
+import type { LyraVirtualList, LyraVirtualListIndexedSource } from '../../lr-virtual-list.js';
 
 const source: LyraVirtualListIndexedSource<number> = {
   count: 1_000,

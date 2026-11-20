@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
-import './markdown.js';
-import './markdown-core.js';
-import type { LyraMarkdown } from './markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import { renderedTemplateWhitespace, inMarkdownCodeBlock } from '../../../../test/rendered-whitespace.js';
 import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';

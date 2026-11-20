@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './toggle.js';
-import '../toggle-group/toggle-group.js';
+import '../../lr-toggle.js';
+import '../../lr-toggle-group.js';
 import type { LyraToggle } from './toggle.class.js';
 import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from '../../../theme/gemstones.js';
 

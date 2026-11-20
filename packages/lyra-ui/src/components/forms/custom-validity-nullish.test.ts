@@ -1,14 +1,14 @@
 import { expect, fixture } from '@open-wc/testing';
-import './button/button.js';
-import './checkbox-group/checkbox-group.js';
-import './combobox/combobox.js';
-import './combobox/option.js';
-import './locale-picker/locale-picker.js';
-import './rubric-form/rubric-form.js';
-import './select/select.js';
-import './slider/slider.js';
-import './time-range/time-range.js';
-import './token-input/token-input.js';
+import '../lr-button.js';
+import '../lr-checkbox-group.js';
+import '../lr-combobox.js';
+import '../lr-option.js';
+import '../lr-locale-picker.js';
+import '../lr-rubric-form.js';
+import '../lr-select.js';
+import '../lr-slider.js';
+import '../lr-time-range.js';
+import '../lr-token-input.js';
 
 type Host = HTMLElement & {
   updateComplete: Promise<unknown>;

@@ -3,13 +3,13 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { toRgba } from '../../../../test/color-contrast.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import "./app-rail.js";
+import "../../lr-app-rail.js";
 import {
   computeAppRailMode,
   type LyraAppRail,
   type LyraAppRailModeChangeDetail,
   type LyraAppRailToggleDetail,
-} from "./app-rail.js";
+} from "../../lr-app-rail.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import {
   captureDeprecationWarnings,

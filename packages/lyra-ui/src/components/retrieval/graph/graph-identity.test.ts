@@ -1,27 +1,27 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './graph.js';
-import '../knowledge-graph-explorer/knowledge-graph-explorer.js';
-import '../neighbor-list/neighbor-list.js';
-import '../community-card/community-card.js';
-import '../entity-card/entity-card.js';
-import '../entity-chip/entity-chip.js';
-import '../path-strip/path-strip.js';
-import '../mind-map/mind-map.js';
-import '../graph-legend/graph-legend.js';
-import type { LyraGraph } from './graph.js';
+import '../../lr-graph.js';
+import '../../lr-knowledge-graph-explorer.js';
+import '../../lr-neighbor-list.js';
+import '../../lr-community-card.js';
+import '../../lr-entity-card.js';
+import '../../lr-entity-chip.js';
+import '../../lr-path-strip.js';
+import '../../lr-mind-map.js';
+import '../../lr-graph-legend.js';
+import type { LyraGraph } from '../../lr-graph.js';
 import { graphLinkIdentity, normalizeGraphModel } from './graph-model.js';
 import type {
   LyraGraphCommunity,
   LyraGraphEdge,
 } from './graph-model.js';
-import type { LyraKnowledgeGraphExplorer } from '../knowledge-graph-explorer/knowledge-graph-explorer.js';
-import type { LyraNeighborList } from '../neighbor-list/neighbor-list.js';
-import type { LyraCommunityCard } from '../community-card/community-card.js';
-import type { LyraEntityCard } from '../entity-card/entity-card.js';
-import type { LyraEntityChip } from '../entity-chip/entity-chip.js';
-import type { LyraPathStrip } from '../path-strip/path-strip.js';
-import type { LyraMindMap } from '../mind-map/mind-map.js';
-import type { LyraGraphLegend } from '../graph-legend/graph-legend.js';
+import type { LyraKnowledgeGraphExplorer } from '../../lr-knowledge-graph-explorer.js';
+import type { LyraNeighborList } from '../../lr-neighbor-list.js';
+import type { LyraCommunityCard } from '../../lr-community-card.js';
+import type { LyraEntityCard } from '../../lr-entity-card.js';
+import type { LyraEntityChip } from '../../lr-entity-chip.js';
+import type { LyraPathStrip } from '../../lr-path-strip.js';
+import type { LyraMindMap } from '../../lr-mind-map.js';
+import type { LyraGraphLegend } from '../../lr-graph-legend.js';
 
 it('normalizes every keyed graph collection with nonblank first-wins identities', () => {
   const firstNode = { id: 'node-a', label: 'First' };

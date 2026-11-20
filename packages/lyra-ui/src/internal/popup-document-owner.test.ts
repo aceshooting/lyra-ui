@@ -1,10 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../components/conversation/model-select/model-select.js';
-import '../components/conversation/voice-picker/voice-picker.js';
-import '../components/forms/combobox/combobox.js';
-import '../components/forms/date-picker/date-input.js';
-import '../components/forms/locale-picker/locale-picker.js';
-import '../components/forms/select/select.js';
+import '../components/lr-model-select.js';
+import '../components/lr-voice-picker.js';
+import '../components/lr-combobox.js';
+import '../components/lr-date-input.js';
+import '../components/lr-locale-picker.js';
+import '../components/lr-select.js';
 
 interface PointerListenerTracker {
   added: Array<(event: PointerEvent) => void>;

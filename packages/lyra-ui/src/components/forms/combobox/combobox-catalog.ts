@@ -2,6 +2,6 @@
 // Keep their deferred filter control independent of the ordinary option registration bundle.
 import { LyraCombobox } from './combobox.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../overlays/empty/empty.js';
+import '../../lr-empty.js';
 
 defineElement('combobox', LyraCombobox);

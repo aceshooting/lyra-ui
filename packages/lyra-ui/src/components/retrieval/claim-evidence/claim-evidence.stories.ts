@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { Citation, GroundedClaim } from '../../../ai/types.js';
-import './claim-evidence.js';
+import '../../lr-claim-evidence.js';
 
 const meta: Meta = {
   title: 'Claim Evidence',

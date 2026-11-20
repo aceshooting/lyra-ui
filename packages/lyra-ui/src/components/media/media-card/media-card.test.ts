@@ -1,9 +1,9 @@
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './media-card.js';
-import '../../conversation/chat-message/chat-message.js';
-import type { LyraMediaCard } from './media-card.js';
-import * as mediaCardExports from './media-card.js';
+import '../../lr-media-card.js';
+import '../../lr-chat-message.js';
+import type { LyraMediaCard } from '../../lr-media-card.js';
+import * as mediaCardExports from '../../lr-media-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 

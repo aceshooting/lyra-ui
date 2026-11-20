@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './av-player.js';
-import type { LyraAvCue } from './av-player.js';
+import '../../lr-av-player.js';
+import type { LyraAvCue } from '../../lr-av-player.js';
 import {
   hoverUntilMatched,
   resetMouse,

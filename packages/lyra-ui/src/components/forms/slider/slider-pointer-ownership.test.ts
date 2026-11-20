@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './slider.js';
-import type { LyraSlider } from './slider.js';
+import '../../lr-slider.js';
+import type { LyraSlider } from '../../lr-slider.js';
 
 function thumb(slider: LyraSlider): HTMLElement {
   return slider.shadowRoot!.querySelector<HTMLElement>('[role="slider"]')!;

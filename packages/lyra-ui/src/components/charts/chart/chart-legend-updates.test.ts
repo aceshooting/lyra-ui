@@ -1,9 +1,9 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart, CartesianScaleOptions, Plugin } from 'chart.js';
-import './chart.js';
-import './histogram.js';
-import './box-plot.js';
+import '../../lr-chart.js';
+import '../../lr-histogram.js';
+import '../../lr-box-plot.js';
 import '../../../translations/de/shared.js';
 import '../../../translations/de/charts.js';
 import type { LyraChart } from './chart.class.js';

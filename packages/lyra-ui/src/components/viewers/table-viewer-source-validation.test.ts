@@ -1,12 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { shrinkAnchorRetry } from '../../../test/viewer-scroll-test-support.js';
 import type { LyraTabularSource, LyraWorkbookSource } from '../../data-sources.js';
-import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
-import type { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.js';
+import type { LyraCsvViewer } from '../lr-csv-viewer.js';
+import type { LyraSpreadsheetViewer } from '../lr-spreadsheet-viewer.js';
 import type { LyraAnchor } from './document-viewer/anchors.js';
 import { tableHighlightsForColumn, tableHighlightsForRow } from './table-viewer-shared.js';
-import './csv-viewer/csv-viewer.js';
-import './spreadsheet-viewer/spreadsheet-viewer.js';
+import '../lr-csv-viewer.js';
+import '../lr-spreadsheet-viewer.js';
 
 const strings = { documentPreviewFailedToLoad: 'Source rejected', documentPreviewResourceTooLarge: 'Source exceeds limits' };
 function source(): LyraTabularSource {

@@ -1,5 +1,5 @@
 import { expect, nextFrame, waitUntil } from '@open-wc/testing';
-import { preloadMarkdown } from './markdown.js';
+import { preloadMarkdown } from '../../lr-markdown.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import { markdownHighlightKey, type PendingHighlight } from './markdown-shared.js';

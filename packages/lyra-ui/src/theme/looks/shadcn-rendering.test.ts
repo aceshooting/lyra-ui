@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import '../../components/forms/button/button.js';
-import '../../components/forms/input/input.js';
-import '../../components/layout/card/card.js';
+import '../../components/lr-button.js';
+import '../../components/lr-input.js';
+import '../../components/lr-card.js';
 import type { LyraButton } from '../../components/forms/button/button.class.js';
 import type { LyraInput } from '../../components/forms/input/input.class.js';
 import type { LyraCard } from '../../components/layout/card/card.class.js';

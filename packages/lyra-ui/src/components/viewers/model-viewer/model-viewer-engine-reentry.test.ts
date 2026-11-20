@@ -3,7 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
 import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader.js';
-import './model-viewer.js';
+import '../../lr-model-viewer.js';
 
 describe('model renderer callback ownership', () => {
   const available = modelEngineEnvironment.available;

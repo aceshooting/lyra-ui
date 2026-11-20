@@ -16,17 +16,17 @@ document.querySelector('lr-source-card')!.addEventListener('lr-toggle', event =>
   const formerDetail = { sourceId: event.detail.itemId, expanded: event.detail.expanded };
   void formerDetail;
 });
-document.querySelector('lr-retrieval-trace')!.addEventListener('lr-toggle', event => {
-  if (event.detail.stageId !== undefined) return;
-  const formerDetail = { stageId: event.detail.itemId, expanded: event.detail.expanded };
+document.querySelector('lr-retrieval-trace')!.addEventListener('lr-retrieval-disclosure-change', event => {
+  if (event.detail.kind !== 'stage') return;
+  const formerDetail = { stageId: event.detail.stageId, expanded: event.detail.expanded };
   void formerDetail;
 });
 document.querySelector('lr-retrieval-results')!.addEventListener('lr-selection-change', event => {
   const formerDetail = { chunkIds: event.detail.selectedChunkIds, chunks: event.detail.chunks };
   void formerDetail;
 });
-document.querySelector('lr-memory-panel')!.addEventListener('lr-toggle', event => {
-  if (event.detail.section !== undefined || event.detail.memoryId === undefined || event.detail.scope === undefined) return;
+document.querySelector('lr-memory-panel')!.addEventListener('lr-retrieval-disclosure-change', event => {
+  if (event.detail.kind !== 'memory') return;
   const formerDetail = { memoryId: event.detail.memoryId, scope: event.detail.scope, expanded: event.detail.expanded };
   void formerDetail;
 });

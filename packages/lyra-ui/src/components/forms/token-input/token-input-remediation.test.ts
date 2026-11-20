@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './token-input.js';
-import type { LyraTokenInput } from './token-input.js';
+import '../../lr-token-input.js';
+import type { LyraTokenInput } from '../../lr-token-input.js';
 
 function draft(field: LyraTokenInput): HTMLInputElement {
   return field.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;

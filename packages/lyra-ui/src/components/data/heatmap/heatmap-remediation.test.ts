@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './heatmap.js';
-import { resolveRgb, type CalendarCellPos, type LyraHeatmap, type MatrixCellPos } from './heatmap.js';
+import '../../lr-heatmap.js';
+import { resolveRgb, type CalendarCellPos, type LyraHeatmap, type MatrixCellPos } from '../../lr-heatmap.js';
 
 type MatrixData = Extract<LyraHeatmap['data'], { kind: 'matrix' }>;
 function pixel(canvas: HTMLCanvasElement, x: number, y: number): number[] {

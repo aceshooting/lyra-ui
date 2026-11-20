@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap } from '../../lr-heatmap.js';
 
 it('redraws rectangular focus cells when a scratch canvas cannot allocate a context', async () => {
   const heatmap = await fixture<LyraHeatmap>(html`<lr-heatmap cell-size="12" row-height="40"

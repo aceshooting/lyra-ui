@@ -1,10 +1,10 @@
 import { expect, fixture, html, nextFrame, oneEvent } from '@open-wc/testing';
 import { setViewport } from '@web/test-runner-commands';
-import './file-input.js';
-import '../../overlays/dialog/dialog.js';
+import '../../lr-file-input.js';
+import '../../lr-dialog.js';
 import '../../../translations/fr.js';
-import type { LyraFileInput } from './file-input.js';
-import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import type { LyraFileInput } from '../../lr-file-input.js';
+import type { LyraDialog } from '../../lr-dialog.js';
 
 function expectContained(control: LyraFileInput, state: string): void {
   const host = control.getBoundingClientRect();

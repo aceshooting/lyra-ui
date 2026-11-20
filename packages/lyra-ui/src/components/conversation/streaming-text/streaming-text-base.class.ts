@@ -6,7 +6,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import type { ShikiLanguageInput, ShikiLanguageLoader, ShikiLanguageSource } from '../code-block/code-block.js';
+import type { ShikiLanguageInput, ShikiLanguageLoader, ShikiLanguageSource } from '../../lr-code-block.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { streamingTailText } from '../markdown/markdown-streaming-tail.js';
 import { styles } from './streaming-text.styles.js';

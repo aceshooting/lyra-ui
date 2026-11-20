@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './alert.js';
-import '../toast/toast.js';
+import '../../lr-alert.js';
+import '../../lr-toast.js';
 import type { LyraAlert } from './alert.class.js';
 
 it('settles a toast removed before activation without announcing a stale show', async () => {

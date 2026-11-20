@@ -4,16 +4,16 @@ import { captureDeprecationWarnings } from '../../../../test/expected-deprecatio
 import type { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import type { LyraPopover } from './popover.class.js';
-import '../dialog/dialog.js';
-import '../drawer/drawer.js';
-import '../callout/callout.js';
-import '../../layout/carousel/carousel.js';
-import '../../layout/reorder-list/reorder-item.js';
-import '../progress/progress-bar.js';
-import '../progress/progress-ring.js';
-import './popover.js';
-import './tooltip.js';
-import './dropdown.js';
+import '../../lr-dialog.js';
+import '../../lr-drawer.js';
+import '../../lr-callout.js';
+import '../../lr-carousel.js';
+import '../../lr-reorder-item.js';
+import '../../lr-progress-bar.js';
+import '../../lr-progress-ring.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-dropdown.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-callout', 'accessible-label');

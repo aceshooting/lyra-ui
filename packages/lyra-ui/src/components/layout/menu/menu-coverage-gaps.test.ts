@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraMenu } from './menu.js';
-import type { LyraMenuItem } from './menu-item.js';
-import './menu.js';
-import './menu-item.js';
+import type { LyraMenu } from '../../lr-menu.js';
+import type { LyraMenuItem } from '../../lr-menu-item.js';
+import '../../lr-menu.js';
+import '../../lr-menu-item.js';
 
 // The application registers the menu's width-scale property BEFORE the first menu connects, so
 // the library's own registration is the rejected second attempt. Runs at module load, ahead of

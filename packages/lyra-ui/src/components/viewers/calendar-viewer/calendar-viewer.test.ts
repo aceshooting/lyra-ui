@@ -1,8 +1,8 @@
 import { twoFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './calendar-viewer.js';
-import type { LyraCalendarViewer } from './calendar-viewer.js';
+import '../../lr-calendar-viewer.js';
+import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { loadIcal } from './calendar-loader.js';

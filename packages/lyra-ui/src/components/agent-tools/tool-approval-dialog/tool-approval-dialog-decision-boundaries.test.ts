@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, nextFrame } from '@open-wc/testing';
-import './tool-approval-dialog.js';
-import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
+import '../../lr-tool-approval-dialog.js';
+import type { LyraToolApprovalDialog } from '../../lr-tool-approval-dialog.js';
 
 const control = (element: LyraToolApprovalDialog, action: string): HTMLElement =>
   element.shadowRoot!.querySelector<HTMLElement>(`[part="${action}-button"]`)!;

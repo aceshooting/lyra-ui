@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { contrastRatio } from '../../../../test/color-contrast.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './lightbox.js';
-import type { LyraLightbox, LyraLightboxSource } from './lightbox.js';
+import '../../lr-lightbox.js';
+import type { LyraLightbox, LyraLightboxSource } from '../../lr-lightbox.js';
 
 const pixel = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
 

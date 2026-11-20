@@ -5,8 +5,8 @@ import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/w
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import type { LyraAppRail } from './app-rail.class.js';
 import type { LyraAppRailItem } from './app-rail-item.class.js';
-import './app-rail.js';
-import './app-rail-item.js';
+import '../../lr-app-rail.js';
+import '../../lr-app-rail-item.js';
 
 describe('lr-app-rail-item current row', () => {
   it('shows hover feedback on the current row', async () => {

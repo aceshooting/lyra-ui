@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './flow-canvas.js';
+import '../../lr-flow-canvas.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
 import type { FlowNode, FlowEdge } from './flow-types.js';
 import type { LyraGraphSource } from '../../../data-sources.js';

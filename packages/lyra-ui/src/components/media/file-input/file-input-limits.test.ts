@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './file-input.js';
-import type { LyraFileInput, LyraFileInputFilesDetail, LyraFileInputFilesEvent } from './file-input.js';
+import '../../lr-file-input.js';
+import type { LyraFileInput, LyraFileInputFilesDetail, LyraFileInputFilesEvent } from '../../lr-file-input.js';
 
 function makeFile(name: string, type = 'text/plain'): File {
   return new File(['x'], name, { type });

@@ -45,8 +45,6 @@ export interface CalendarEvent {
 export interface LyraCalendarEventMap {
   'lr-date-select': CustomEvent<{ date: string }>;
   'lr-event-select': CustomEvent<{ event: CalendarEvent }>;
-  /** @deprecated Use `lr-month-change`. */
-  'lr-view-change': CustomEvent<{ viewDate: string }>;
   'lr-month-change': CustomEvent<{ viewDate: string }>;
 }
 const monthStart = (date: Date): Date => localDate(date.getFullYear(), date.getMonth(), 1);
@@ -180,7 +178,6 @@ export type LyraCalendarFirstDayOfWeek = LyraDatePickerFirstDayOfWeek;
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
  * @event lr-event-select - An event was selected.
- * @event lr-view-change - Deprecated alias for lr-month-change. The visible month changed; same `{ viewDate }` detail.
  * @event lr-month-change - The visible month changed. Detail: `{ viewDate: string }`.
  * @csspart limit - Input admission limit notice.
  * @csspart header - Calendar header.
@@ -277,7 +274,6 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   private commitMonth(viewDate: string): void {
     this.viewDate = viewDate;
     this.emit('lr-month-change', { viewDate });
-    this.emit('lr-view-change', { viewDate });
     this.announcements.announcePolite(dateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(this.viewStart));
   }
   private selectDate(date: string): void { if (!date) return; this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }

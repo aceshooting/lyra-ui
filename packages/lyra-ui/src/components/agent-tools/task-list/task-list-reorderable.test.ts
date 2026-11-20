@@ -1,7 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './task-list.js';
-import type { LyraTaskList, TaskItem } from './task-list.js';
+import '../../lr-task-list.js';
+import type { LyraTaskList, TaskItem } from '../../lr-task-list.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

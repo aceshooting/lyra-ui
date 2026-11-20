@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './knowledge-base-admin.js';
+import '../../lr-knowledge-base-admin.js';
 import type { LyraKnowledgeBaseAdmin } from './knowledge-base-admin.class.js';
 import type { KnowledgeBaseSource, LyraKnowledgeBase } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueSource, LyraIngestionQueue } from '../ingestion-queue/ingestion-queue.class.js';

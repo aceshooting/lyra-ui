@@ -17,8 +17,8 @@ import type {
   LyraMapSceneActivateDetail,
   LyraMapSceneStateDetail,
   LyraMapViewChangeDetail,
-} from './map.js';
-import { LYRA_MAP_EMPTY_STYLE } from './map.js';
+} from '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE } from '../../lr-map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 import { createSimulationClock, type ClockSnapshot, type SimulationClock } from '../../../simulation-clock.js';
 import { createTimeIndex } from '../../../time-index.js';
@@ -922,7 +922,7 @@ export const NavigationAndScale: Story = {
   render: () => html`<lr-map label="Map with navigation controls" .mapStyle=${OFFLINE_RASTER_STYLE}
     .legendGradient=${[[0, storyColor('brand')], [100, storyColor('danger')]]}
     @lr-map-load=${async (event: Event) => {
-      const el = event.currentTarget as import('./map.js').LyraMap;
+      const el = event.currentTarget as import('../../lr-map.js').LyraMap;
       const map = el.map as import('@aceshooting/lyra-map').Map | undefined;
       if (!map) return;
       const [{ NavigationControl }, { ScaleControl }] = await Promise.all([
@@ -1629,7 +1629,7 @@ export const PickingAndFeatureState: Story = {
 export const DrawingAndExplicitEditing: Story = {
   render: () => {
     let map: LyraMap | undefined;
-    let completed: import('./map.js').LyraMapDrawingSnapshot | undefined;
+    let completed: import('../../lr-map.js').LyraMapDrawingSnapshot | undefined;
     let status: HTMLElement | undefined;
     return html`
       <lr-button @click=${() => { if (map) map.drawMode = 'line'; }}>Draw line</lr-button>
@@ -1640,7 +1640,7 @@ export const DrawingAndExplicitEditing: Story = {
       <lr-button @click=${() => { if (completed) map?.editDrawing(completed); }}>Edit completed shape</lr-button>
       <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
         label="Line and polygon drawing" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
-        @lr-map-draw-complete=${(event: CustomEvent<import('./map.js').LyraMapDrawingSnapshot>) => {
+        @lr-map-draw-complete=${(event: CustomEvent<import('../../lr-map.js').LyraMapDrawingSnapshot>) => {
           completed = event.detail; if (status) status.textContent = JSON.stringify(event.detail);
         }}
         @lr-map-draw-cancel=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
@@ -1791,11 +1791,11 @@ export const BasemapSelectorsAndPointer: Story = {
         .styleOverrides=${[{ source: 'places', layerType: 'fill', paint: { 'fill-color': 'var(--lr-color-brand)' } }]}
         .interactiveBasemapLayers=${[{ source: 'places', layerType: 'fill' }]}
         @lr-map-style-load=${() => { if (catalog && map) catalog.textContent = map.styleLayers.map(layer => `${layer.id} (${layer.type})`).join(', '); }}
-        @lr-map-pointer-move=${(event: CustomEvent<import('./map.js').LyraMapPointerDetail>) => {
+        @lr-map-pointer-move=${(event: CustomEvent<import('../../lr-map.js').LyraMapPointerDetail>) => {
           if (pointer) pointer.textContent = event.detail.lngLat.map(value => value.toFixed(3)).join(', ');
         }}
         @lr-map-pointer-leave=${() => { if (pointer) pointer.textContent = 'Outside the map'; }}
-        @lr-map-feature-enter=${(event: CustomEvent<import('./map.js').LyraMapInteractionDetail>) => {
+        @lr-map-feature-enter=${(event: CustomEvent<import('../../lr-map.js').LyraMapInteractionDetail>) => {
           if (hover) hover.textContent = `${String(event.detail.feature?.properties?.['name'])}: ${event.detail.feature?.geometry?.type ?? 'no geometry'}`;
         }}
         @lr-map-feature-leave=${() => { if (hover) hover.textContent = 'No feature'; }}
@@ -1819,10 +1819,10 @@ export const DrawingMeasurementsAndShortcuts: Story = {
         Swap the style while drawing</lr-button>
       <lr-map ${ref(node => { map = node as LyraMap | undefined; })} label="Measured drawing" style="block-size: 22rem; --lr-map-drawing-color: var(--lr-color-danger)"
         zoom="3" drawing-measurements .mapStyle=${OFFLINE_RASTER_STYLE}
-        @lr-map-draw-vertex-end=${(event: CustomEvent<import('./map.js').LyraMapDrawingVertexEndDetail>) => {
+        @lr-map-draw-vertex-end=${(event: CustomEvent<import('../../lr-map.js').LyraMapDrawingVertexEndDetail>) => {
           if (status) status.textContent = `Vertex ${event.detail.index + 1} moved`;
         }}
-        @lr-map-draw-complete=${(event: CustomEvent<import('./map.js').LyraMapDrawingSnapshot>) => {
+        @lr-map-draw-complete=${(event: CustomEvent<import('../../lr-map.js').LyraMapDrawingSnapshot>) => {
           if (status) status.textContent = `Completed: ${JSON.stringify(event.detail.metrics)}`;
         }}
       ></lr-map>
@@ -1837,7 +1837,7 @@ export const GeolocationSuccess: Story = {
     let status: HTMLElement | undefined;
     return html`
       <lr-map label="Geolocation" style="block-size: 18rem" .mapStyle=${OFFLINE_RASTER_STYLE} .controls=${{ geolocate: true }}
-        @lr-map-geolocate=${(event: CustomEvent<import('./map.js').LyraMapGeolocateDetail>) => {
+        @lr-map-geolocate=${(event: CustomEvent<import('../../lr-map.js').LyraMapGeolocateDetail>) => {
           if (status) status.textContent = `Located ${event.detail.lngLat.map(value => value.toFixed(4)).join(', ')} within ${Math.round(event.detail.accuracy)} m`;
         }}
         @lr-map-geolocate-error=${(event: CustomEvent) => { if (status) status.textContent = `Location failed: ${String(event.detail.code)}`; }}

@@ -1,5 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import './chart.js';
+import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 
 /** The part of the live Chart.js instance these assertions read; Chart.js documents it. */

@@ -5,8 +5,8 @@ import {
   MapControlsLifecycle, type MapManagedControl, type MapManagedControlConstructor,
   type MapControlLifecyclePeer, type MapControlLifecycleEvent,
 } from './map-controls-lifecycle.js';
-import './map.js';
-import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import '../../lr-map.js';
+import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from '../../lr-map.js';
 
 class NativeControl implements MapManagedControl {
   readonly root = document.createElement('div');

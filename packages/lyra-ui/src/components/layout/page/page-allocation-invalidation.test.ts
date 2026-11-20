@@ -1,5 +1,5 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import './page.js';
+import '../../lr-page.js';
 import type { LyraPage } from './page.class.js';
 
 async function settleAllocation(): Promise<void> {

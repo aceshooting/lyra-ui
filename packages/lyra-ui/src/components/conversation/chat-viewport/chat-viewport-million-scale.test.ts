@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
-import './chat-viewport.js';
-import '../../layout/virtual-list/virtual-list.js';
-import type { LyraChatViewport } from './chat-viewport.js';
-import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
+import '../../lr-chat-viewport.js';
+import '../../lr-virtual-list.js';
+import type { LyraChatViewport } from '../../lr-chat-viewport.js';
+import type { LyraVirtualList } from '../../lr-virtual-list.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');

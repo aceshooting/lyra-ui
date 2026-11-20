@@ -1,8 +1,8 @@
 import { expect, waitUntil } from '@open-wc/testing';
 
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import './data-grid.js';
-import type { LyraDataGrid } from './data-grid.js';
+import '../../lr-data-grid.js';
+import type { LyraDataGrid } from '../../lr-data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
 
 const nativeScrollbarVerification = (

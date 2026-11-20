@@ -2,8 +2,8 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { nextFrame } from '../../../../test/frames.js';
-import './terminal.js';
-import type { LyraTerminal } from './terminal.js';
+import '../../lr-terminal.js';
+import type { LyraTerminal } from '../../lr-terminal.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 
 async function settleClipboard(el: LyraTerminal): Promise<void> {

@@ -5,7 +5,7 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 import type { LyraNavigationMenuItem, LyraNavigationMenuToggleDetail } from './navigation-menu-item.class.js';
-import '../navigation-menu/navigation-menu.js';
+import '../../lr-navigation-menu.js';
 
 function base(item: LyraNavigationMenuItem): HTMLElement {
   return item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;

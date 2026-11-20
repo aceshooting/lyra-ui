@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './dropdown.js';
-import '../../layout/menu/dropdown-item.js';
+import '../../lr-dropdown.js';
+import '../../lr-dropdown-item.js';
 import type { LyraDropdown } from './dropdown.class.js';
 
 describe('lr-dropdown live sync changes', () => {

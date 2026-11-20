@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './icon.js';
+import '../../lr-icon.js';
 import { registerIconLibrary } from './icon-library.js';
 
 const meta: Meta = { title: 'Icon', component: 'lr-icon', tags: ['autodocs'] };

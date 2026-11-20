@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
-import './menubar.js';
-import type { LyraMenubar } from './menubar.js';
-import type { LyraMenubarItem } from './menubar-item.js';
+import '../../lr-menubar.js';
+import type { LyraMenubar } from '../../lr-menubar.js';
+import type { LyraMenubarItem } from '../../lr-menubar-item.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 it('folds a 1000-item typeahead corpus once across distinct queries', () => {

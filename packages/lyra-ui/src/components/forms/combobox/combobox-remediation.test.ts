@@ -1,10 +1,10 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraCombobox } from './combobox.js';
-import { LyraOption as LyraOptionClass, type LyraOption } from './option.js';
-import type { LyraSelect } from '../select/select.js';
-import './combobox.js';
-import './option.js';
-import '../select/select.js';
+import type { LyraCombobox } from '../../lr-combobox.js';
+import { LyraOption as LyraOptionClass, type LyraOption } from '../../lr-option.js';
+import type { LyraSelect } from '../../lr-select.js';
+import '../../lr-combobox.js';
+import '../../lr-option.js';
+import '../../lr-select.js';
 
 const settle = async (el: LyraCombobox | LyraSelect): Promise<void> => {
   await el.updateComplete;

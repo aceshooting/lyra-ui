@@ -40,7 +40,7 @@ Host `aria-labelledby` IDREFs are resolved onto the internal control through
 shadow root — an idref cannot cross that boundary, the reflected element reference can. Per ARIA it
 wins over `aria-label`/`label` and the localized fallback name.
 
-**Lean registration entry.** `components/forms/icon-button/icon-button.js` eagerly imports
+**Lean registration entry.** `components/lr-icon-button.js` eagerly imports
 `<lr-icon>` so an `icon`/`src` attribute paints synchronously. A consumer who only ever slots their
 own SVG can import `components/forms/icon-button/icon-button-register.js` instead, which registers
 `<lr-icon-button>` and nothing else — no `<lr-icon>` implementation in the entry chunk and no

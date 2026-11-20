@@ -1,5 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 void LyraGraph;
 import { stubIntersectionObserver } from '../../../../test/graph-test-support.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';

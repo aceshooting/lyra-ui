@@ -1,6 +1,6 @@
 import { defineCE, expect, fixture, html, waitUntil } from '@open-wc/testing';
-import type { LyraIconButton } from './icon-button.js';
-import './icon-button.js';
+import type { LyraIconButton } from '../../lr-icon-button.js';
+import '../../lr-icon-button.js';
 
 const svgNamespace = 'http://www.w3.org/2000/svg';
 

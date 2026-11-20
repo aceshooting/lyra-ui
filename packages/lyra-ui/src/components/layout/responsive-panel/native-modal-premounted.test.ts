@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraResponsivePanel } from './responsive-panel.class.js';
-import './responsive-panel.js';
+import '../../lr-responsive-panel.js';
 
 it('opens a pre-mounted sibling above a modal without inheriting the lower overlay inert lease', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div data-lr-theme-scope>

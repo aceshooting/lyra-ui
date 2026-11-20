@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './country-picker.js';
+import '../../lr-country-picker.js';
 import type { LyraCountryPicker } from './country-picker.class.js';
 
 describe('lr-country-picker value normalization', () => {

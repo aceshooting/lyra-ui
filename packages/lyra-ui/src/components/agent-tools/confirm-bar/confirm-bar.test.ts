@@ -1,9 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
-import './confirm-bar.js';
+import '../../lr-confirm-bar.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import type { LyraConfirmBar } from './confirm-bar.js';
+import type { LyraConfirmBar } from '../../lr-confirm-bar.js';
 
 // One test intentionally exercises a late waitUntil() call and its documented no-op diagnostic.
 expectDevWarning('lyra-confirm-bar-wait-until-after-dispatch');

@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { holdOpen } from '../../../../test/tooltip-consult.js';
 import type { LyraTooltip } from './tooltip.class.js';
-import './tooltip.js';
+import '../../lr-tooltip.js';
 
 interface ContentInspection {
   actionable: boolean;

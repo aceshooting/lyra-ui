@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './sparkline.js';
-import type { LyraSparkline } from './sparkline.js';
+import '../../lr-sparkline.js';
+import type { LyraSparkline } from '../../lr-sparkline.js';
 
 for (const values of [[], [3, 1, 2]]) {
   it(`treats removed data as absence with ${values.length ? 'fallback values' : 'no fallback samples'}`, async () => {

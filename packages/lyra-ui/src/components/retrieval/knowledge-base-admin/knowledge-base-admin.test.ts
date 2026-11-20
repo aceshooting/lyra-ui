@@ -1,6 +1,6 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html } from "@open-wc/testing";
-import "./knowledge-base-admin.js";
+import "../../lr-knowledge-base-admin.js";
 import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
 import {
   captureDeprecationWarnings,

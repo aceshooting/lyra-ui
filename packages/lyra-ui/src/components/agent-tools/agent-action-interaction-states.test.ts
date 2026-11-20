@@ -1,10 +1,10 @@
 import { fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../test/wtr-mouse.js';
-import '../agent-tools/permission-grant/permission-grant.js';
-import '../agent-tools/connector-manager/connector-manager.js';
-import '../agent-tools/background-runs/background-runs.js';
-import '../conversation/message-parts/message-parts.js';
-import '../conversation/stream-status/stream-status.js';
+import '../lr-permission-grant.js';
+import '../lr-connector-manager.js';
+import '../lr-background-runs.js';
+import '../lr-message-parts.js';
+import '../lr-stream-status.js';
 import type { MessagePart } from '../../ai/types.js';
 
 async function assertHoverAndPress(

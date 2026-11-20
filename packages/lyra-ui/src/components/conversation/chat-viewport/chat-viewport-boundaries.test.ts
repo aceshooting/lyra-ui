@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
-import './chat-viewport.js';
-import type { LyraChatViewport } from './chat-viewport.js';
+import '../../lr-chat-viewport.js';
+import type { LyraChatViewport } from '../../lr-chat-viewport.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 describe('chat viewport composed and directional boundaries', () => {

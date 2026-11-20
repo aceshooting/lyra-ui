@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
-import './chat-viewport.js';
-import type { LyraChatViewport } from './chat-viewport.js';
+import '../../lr-chat-viewport.js';
+import type { LyraChatViewport } from '../../lr-chat-viewport.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 class DeferredMessage extends HTMLElement {

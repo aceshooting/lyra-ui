@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './voice-picker.js';
+import '../../lr-voice-picker.js';
 import type { LyraCatalog, LyraVoiceCatalogEntry, LyraVoicePicker, LyraVoicePickerEventMap } from './voice-picker.class.js';
 
 const meta: Meta = {

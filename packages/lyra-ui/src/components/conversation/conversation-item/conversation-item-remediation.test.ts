@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './conversation-item.js';
-import '../thread-list/thread-list.js';
-import type { LyraConversationItem } from './conversation-item.js';
+import '../../lr-conversation-item.js';
+import '../../lr-thread-list.js';
+import type { LyraConversationItem } from '../../lr-conversation-item.js';
 
 for (const legacy of [false, true]) {
   for (const key of ['Enter', 'Escape']) {

@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
-import './intersection-observer.js';
+import '../../lr-intersection-observer.js';
 
 const meta: Meta = { title: 'Utilities/Intersection Observer', component: 'lr-intersection-observer' };
 export default meta;

@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import type { LyraVirtualList } from './virtual-list.class.js';
-import './virtual-list.js';
+import '../../lr-virtual-list.js';
 
 it('retires load demand when a range listener disconnects the list and recovers after reconnect', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>

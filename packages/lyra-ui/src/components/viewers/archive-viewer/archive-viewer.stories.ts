@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './archive-viewer.js';
+import '../../lr-archive-viewer.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 const meta: Meta = {

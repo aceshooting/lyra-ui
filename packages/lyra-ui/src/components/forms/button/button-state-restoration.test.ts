@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraButton } from './button.js';
-import './button.js';
+import type { LyraButton } from '../../lr-button.js';
+import '../../lr-button.js';
 
 const states = [
   ['null', () => null],

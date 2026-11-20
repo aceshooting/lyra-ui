@@ -1,7 +1,7 @@
 import { expect, fixture, nextFrame, waitUntil } from '@open-wc/testing';
 import type { Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import type { LyraGraphNodeMesh } from './graph-node-renderer.js';
 void LyraGraph;
 

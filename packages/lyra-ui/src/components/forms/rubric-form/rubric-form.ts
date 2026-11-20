@@ -1,9 +1,0 @@
-/** @deprecated Import @aceshooting/lyra-ui/components/lr-rubric-form.js to register this component. */
-export * from './rubric-form.class.js';
-import { LyraRubricForm } from './rubric-form.class.js';
-import { defineElement } from '../../../internal/prefix.js';
-import '../../layout/segmented/segmented.js';
-import '../slider/slider.js';
-import '../textarea/textarea.js';
-
-defineElement('rubric-form', LyraRubricForm);

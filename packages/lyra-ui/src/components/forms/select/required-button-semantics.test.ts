@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
-import './select.js';
-import '../color-picker/color-picker.js';
-import type { LyraSelect } from './select.js';
-import type { LyraColorPicker } from '../color-picker/color-picker.js';
+import '../../lr-select.js';
+import '../../lr-color-picker.js';
+import type { LyraSelect } from '../../lr-select.js';
+import type { LyraColorPicker } from '../../lr-color-picker.js';
 
 function descriptions(control: HTMLElement): string {
   const elements = control.ariaDescribedByElements ??

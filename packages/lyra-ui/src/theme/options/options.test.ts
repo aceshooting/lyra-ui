@@ -3,16 +3,16 @@ import { applyLyraStyleScope } from '../theme.js';
 import { LYRA_SHAPE_PRESETS } from './shape.js';
 import { LYRA_TYPOGRAPHY_PRESETS } from './typography.js';
 import { LYRA_ELEVATION_PRESETS } from './elevation.js';
-import '../../components/layout/card/card.js';
-import '../../components/forms/button/button.js';
-import '../../components/forms/textarea/textarea.js';
-import '../../components/overlays/dialog/dialog.js';
+import '../../components/lr-card.js';
+import '../../components/lr-button.js';
+import '../../components/lr-textarea.js';
+import '../../components/lr-dialog.js';
 import '../../translations/ar/overlays.js';
 import '../../translations/ar/shared.js';
-import type { LyraCard } from '../../components/layout/card/card.js';
-import type { LyraButton } from '../../components/forms/button/button.js';
-import type { LyraTextarea } from '../../components/forms/textarea/textarea.js';
-import type { LyraDialog } from '../../components/overlays/dialog/dialog.js';
+import type { LyraCard } from '../../components/lr-card.js';
+import type { LyraButton } from '../../components/lr-button.js';
+import type { LyraTextarea } from '../../components/lr-textarea.js';
+import type { LyraDialog } from '../../components/lr-dialog.js';
 
 describe('optional shape, typography and elevation presets', () => {
   let themeSheet: CSSStyleSheet;

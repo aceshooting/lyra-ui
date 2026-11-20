@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
-import './highlight-layer.js';
-import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
+import '../../lr-highlight-layer.js';
+import type { LyraHighlightLayer, HighlightLayerItem } from '../../lr-highlight-layer.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 

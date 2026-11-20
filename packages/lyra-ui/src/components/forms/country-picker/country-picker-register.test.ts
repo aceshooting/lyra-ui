@@ -20,8 +20,8 @@ describe('lean catalog registration', function () {
   });
 
   it('loads the specialized filter control with explicit option/select imports and commits a searched selection', async () => {
-    await import('../combobox/option.js');
-    await import('../select/select.js');
+    await import('../../lr-option.js');
+    await import('../../lr-select.js');
     expect(customElements.get('lr-combobox') === undefined, 'combobox remains undefined before searchable').to.equal(true);
     const form = await fixture<HTMLFormElement>(html`<form><lr-country-picker name="country" label="Country" value="FR" .countries=${['FR', 'GB']}></lr-country-picker></form>`);
     const picker = form.querySelector<LyraCountryPicker>('lr-country-picker')!;

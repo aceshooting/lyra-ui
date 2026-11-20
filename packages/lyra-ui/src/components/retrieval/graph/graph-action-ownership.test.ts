@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import type { LyraGraph } from './graph.class.js';
-import './graph.js';
+import '../../lr-graph.js';
 
 async function listGraph(columns: boolean): Promise<LyraGraph> {
   const graph = await fixture<LyraGraph>(html`<lr-graph view="list" selection-mode="multiple"

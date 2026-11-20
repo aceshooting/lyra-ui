@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './message-actions.js';
-import type { LyraMessageActions } from './message-actions.js';
+import '../../lr-message-actions.js';
+import type { LyraMessageActions } from '../../lr-message-actions.js';
 
 async function mount(): Promise<{
   wrapper: HTMLElement;

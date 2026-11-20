@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './eval-result.js';
-import type { LyraEvalResult, EvalRunResult } from './eval-result.js';
+import '../../lr-eval-result.js';
+import type { LyraEvalResult, EvalRunResult } from '../../lr-eval-result.js';
 import type { LyraTable, TableColumn } from '../../data/table/table.class.js';
 import type { LyraRubricForm, RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 

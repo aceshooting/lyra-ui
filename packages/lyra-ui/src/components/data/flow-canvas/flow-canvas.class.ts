@@ -137,10 +137,6 @@ export interface LyraFlowCanvasEventMap {
     edgeId: string;
     sourceNodeId: string;
     targetNodeId: string;
-    /** @deprecated Use `sourceNodeId`; it carries the same node id. */
-    source: string;
-    /** @deprecated Use `targetNodeId`; it carries the same node id. */
-    target: string;
   }>>;
   'lr-selection-change': CustomEvent<
     Readonly<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }>
@@ -242,7 +238,7 @@ interface OwnedAnimationFrame {
  * @slot bottom-start - Floating start-side content in the wrapping bottom overlay rail (e.g. `lr-flow-controls`).
  * @slot bottom-end - Floating end-side content in the wrapping bottom overlay rail (e.g. `lr-flow-minimap`).
  * @event lr-node-activate - `detail: { nodeId }`.
- * @event lr-edge-activate - `detail: { edgeId, sourceNodeId, targetNodeId, source, target }`.
+ * @event lr-edge-activate - `detail: { edgeId, sourceNodeId, targetNodeId }`.
  *   `sourceNodeId` and `targetNodeId` are canonical; `source` and `target` remain deprecated aliases.
  * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`.
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
@@ -2481,8 +2477,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         edgeId: edge.id,
         sourceNodeId: edge.source,
         targetNodeId: edge.target,
-        source: edge.source,
-        target: edge.target,
       }),
     );
     if (current()) this.applySelection('edge', edge.id, additive);

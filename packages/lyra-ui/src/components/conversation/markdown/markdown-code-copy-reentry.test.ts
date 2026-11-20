@@ -1,8 +1,8 @@
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
-import type { LyraMarkdown } from './markdown.js';
-import './markdown.js';
-import './markdown-core.js';
+import type { LyraMarkdown } from '../../lr-markdown.js';
+import '../../lr-markdown.js';
+import '../../lr-markdown-core.js';
 
 for (const name of ['lr-markdown', 'lr-markdown-core'] as const) {
   for (const outcome of ['success', 'failure'] as const) {

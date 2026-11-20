@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './popover.js';
-import './tooltip.js';
-import './dropdown.js';
+import '../../lr-popover.js';
+import '../../lr-tooltip.js';
+import '../../lr-dropdown.js';
 const meta: Meta = { title: 'Overlay/Positioned surface guides', tags: ['autodocs'] };
 export default meta;
 export const Popover: StoryObj = { render: () => html`<lr-popover><button slot="trigger">Open details</button><p>Floating content.</p></lr-popover>` };

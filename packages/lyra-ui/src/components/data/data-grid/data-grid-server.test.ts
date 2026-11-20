@@ -1,5 +1,5 @@
 import { expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './data-grid.js';
+import '../../lr-data-grid.js';
 import { type Person, columns, rows, dataGrid, delay, header } from '../../../../test/data-grid.js';
 
 

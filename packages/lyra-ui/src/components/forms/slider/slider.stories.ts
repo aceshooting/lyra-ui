@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './slider.js';
-import type { LyraSlider, SliderValueFormatter } from './slider.js';
+import '../../lr-slider.js';
+import type { LyraSlider, SliderValueFormatter } from '../../lr-slider.js';
 
 const LEVELS = ['Cold', 'Warm', 'Hot'];
 const formatLevel: SliderValueFormatter = (value) => LEVELS[value];

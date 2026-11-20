@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './knowledge-base.js';
+import '../../lr-knowledge-base.js';
 import type { KnowledgeBaseSource, KnowledgeSource, LyraKnowledgeBase } from './knowledge-base.class.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';

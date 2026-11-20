@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './layout/menubar/menubar-item.js';
+export * from './layout/menubar/menubar-item.class.js';
+import { LyraMenubarItem } from './layout/menubar/menubar-item.class.js';
+import { defineElement } from '../internal/prefix.js';
+import './lr-menu.js';
+defineElement('menubar-item', LyraMenubarItem);

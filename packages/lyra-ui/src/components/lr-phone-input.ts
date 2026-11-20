@@ -1,3 +1,5 @@
-// GENERATED FILE — stable tag-shaped component entry point.
-// Run `node scripts/generate-tag-aliases.mjs` to refresh.
-export * from './forms/phone-input/phone-input.js';
+export * from './forms/phone-input/phone-input.class.js';
+import { LyraPhoneInput } from './forms/phone-input/phone-input.class.js';
+import { defineElement } from '../internal/prefix.js';
+
+defineElement('phone-input', LyraPhoneInput);

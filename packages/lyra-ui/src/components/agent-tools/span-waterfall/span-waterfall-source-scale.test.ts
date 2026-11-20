@@ -7,7 +7,7 @@ import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraHierarchyRow } from '../../../data-sources.js';
 import type { LyraSpanWaterfall } from './span-waterfall.class.js';
 import type { LyraSpan } from '../trace-tree/span.js';
-import './span-waterfall.js';
+import '../../lr-span-waterfall.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 expectDevWarning('virtual-list-scroll-scaling');
 

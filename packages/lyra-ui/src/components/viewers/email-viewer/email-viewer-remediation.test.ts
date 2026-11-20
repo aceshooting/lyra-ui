@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './email-viewer.js';
-import type { LyraEmailViewer } from './email-viewer.js';
+import '../../lr-email-viewer.js';
+import type { LyraEmailViewer } from '../../lr-email-viewer.js';
 import { TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 
 const originalFetch = window.fetch;

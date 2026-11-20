@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './tour.js';
-import type { LyraTour, LyraTourStep } from './tour.js';
+import '../../lr-tour.js';
+import type { LyraTour, LyraTourStep } from '../../lr-tour.js';
 
 function makeSteps(count: number, overrides: Partial<LyraTourStep> = {}): LyraTourStep[] {
   return Array.from({ length: count }, (_, index) => ({

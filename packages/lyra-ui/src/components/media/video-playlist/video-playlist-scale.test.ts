@@ -1,6 +1,6 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
-import './video-playlist.js';
+import '../../lr-video-playlist.js';
 import type { LyraVideoPlaylist } from './video-playlist.class.js';
 it('does not inspect obsolete seed metadata after direct children take ownership', async () => {
   let reads = 0;

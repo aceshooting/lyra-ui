@@ -2,7 +2,7 @@ import { setViewport } from '@web/test-runner-commands';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { LyraDatasetViewer } from './dataset-viewer.class.js';
-import './dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
 
 type ViewerSeam = {
   fetchState: unknown;

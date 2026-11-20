@@ -3,7 +3,7 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { sendMouse, sendWheel, resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
-import { LyraGraph } from './graph.js';
+import { LyraGraph } from '../../lr-graph.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const nodes = [

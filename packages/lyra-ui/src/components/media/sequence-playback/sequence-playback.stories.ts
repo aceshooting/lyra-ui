@@ -6,9 +6,9 @@ import { createTimeIndex } from '../../../time-index.js';
 import { bindSequencePlayback } from '../../../sequence-time-binding.js';
 import type { LyraMap } from '../map/map.class.js';
 import type { LyraChart } from '../../charts/chart/chart.class.js';
-import '../map/map.js';
-import '../../charts/chart/chart.js';
-import type { LyraSequencePlayback } from './sequence-playback.js';
+import '../../lr-map.js';
+import '../../lr-chart.js';
+import type { LyraSequencePlayback } from '../../lr-sequence-playback.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

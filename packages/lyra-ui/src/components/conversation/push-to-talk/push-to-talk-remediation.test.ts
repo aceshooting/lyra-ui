@@ -1,6 +1,6 @@
 import { fixture, expect } from '@open-wc/testing';
 import { MicrophoneIconAliases, HitFloorWithCustomIcon } from './push-to-talk.stories.js';
-import type { LyraPushToTalk } from './push-to-talk.js';
+import type { LyraPushToTalk } from '../../lr-push-to-talk.js';
 
 describe('push-to-talk purpose icon examples', () => {
   for (const [name, story] of Object.entries({ MicrophoneIconAliases, HitFloorWithCustomIcon })) {

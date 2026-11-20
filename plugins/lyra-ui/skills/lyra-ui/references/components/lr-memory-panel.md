@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-toggle` since `unreleased`; use event `@lr-retrieval-disclosure-change`; removal not before `33.0.0` — The namespaced event identifies the disclosure origin and kind. The existing event remains available during migration.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -70,8 +70,8 @@ description. Scope exact-name queries to the memory row or match the full action
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-retrieval-disclosure-change` bubbles from the memory panel with readonly `kind`, `expanded`,
   `memoryId` and `scope`. A nested provenance disclosure includes `section`, plus `chunkId` when
-  `kind` is `'chunk'`. Migrate from `lr-toggle` by narrowing on `detail.kind` and reading
-  `memoryId` and `scope` for the owning row.
+  `kind` is `'chunk'`. The panel no longer dispatches `lr-toggle`; a
+  former listener narrows on `detail.kind` and reads `memoryId` and `scope` for the owning row.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
   typed event map: `lr-entity-select`,
   `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details

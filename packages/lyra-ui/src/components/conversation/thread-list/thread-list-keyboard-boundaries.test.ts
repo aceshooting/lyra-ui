@@ -2,8 +2,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
-import type { LyraThreadList } from './thread-list.js';
-import './thread-list.js';
+import type { LyraThreadList } from '../../lr-thread-list.js';
+import '../../lr-thread-list.js';
 
 it('moves native Home and End across slotted threads while skipping hidden and inert endpoints', async () => {
   const element = await fixture<LyraThreadList>(html`<lr-thread-list>

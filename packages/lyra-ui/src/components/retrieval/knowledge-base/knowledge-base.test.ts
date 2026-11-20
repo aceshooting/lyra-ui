@@ -6,8 +6,8 @@ import {
   resetMouse,
   sendMouse,
 } from '../../../../test/wtr-mouse.js';
-import './knowledge-base.js';
-import type { LyraKnowledgeBase, KnowledgeSource } from './knowledge-base.js';
+import '../../lr-knowledge-base.js';
+import type { LyraKnowledgeBase, KnowledgeSource } from '../../lr-knowledge-base.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.class.js';

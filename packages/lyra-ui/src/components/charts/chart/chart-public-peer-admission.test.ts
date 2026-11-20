@@ -3,7 +3,7 @@ import { loadChartJs } from './chart-core-loader.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraPreparedSeriesData, LyraSeriesSample } from '../../../utilities/data-preparation.js';
 import type { LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
-import './chart.js';
+import '../../lr-chart.js';
 
 async function ready(element: LyraChart): Promise<void> {
   await element.updateComplete;

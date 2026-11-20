@@ -1,9 +1,9 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
-import type { LyraDatasetViewer } from './dataset-viewer.js';
-import './dataset-viewer.js';
-import '../csv-viewer/csv-viewer.js';
+import type { LyraDatasetViewer } from '../../lr-dataset-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-csv-viewer.js';
 
 it('localizes a missing dataset parser and releases the unread response', async () => {
   const peer = (await import('papaparse')).default;

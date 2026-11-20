@@ -1,7 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './gauge.js';
-import type { LyraGauge, LyraGaugeThreshold } from './gauge.js';
-import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.js';
+import '../../lr-gauge.js';
+import type { LyraGauge, LyraGaugeThreshold } from '../../lr-gauge.js';
+import type { LyraProgressVariant } from '../../lr-progress-bar.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 

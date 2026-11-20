@@ -9,11 +9,11 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import "./multi-split.js";
+import "../../lr-multi-split.js";
 import type {
   LyraMultiSplit,
   LyraMultiSplitToggleDetail,
-} from './multi-split.js';
+} from '../../lr-multi-split.js';
 import { styles } from "./multi-split.styles.js";
 
 expectLocaleFallback('ar-EG', ['resizeDivider', 'resizeValuePercent']);

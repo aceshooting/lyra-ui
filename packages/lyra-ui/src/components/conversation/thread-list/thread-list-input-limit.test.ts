@@ -3,7 +3,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { publicCollectionTruncation, collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { LyraThreadList } from './thread-list.class.js';
-import './thread-list.js';
+import '../../lr-thread-list.js';
 
 expectDevWarning(collectionTruncationWarningKey('lr-thread-list', 'threads'));
 const source = (): LyraThreadList['threads'] => Array.from({ length: 10001 }, (_, index) => ({ id: `t${index}`, title: `Thread ${index}` }));

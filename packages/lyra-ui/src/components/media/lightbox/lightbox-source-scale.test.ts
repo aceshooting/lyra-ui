@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './lightbox.js';
+import '../../lr-lightbox.js';
 import '../../../translations/fr.js';
-import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from './lightbox.js';
+import type { LyraLightbox, LyraLightboxImage, LyraLightboxSource } from '../../lr-lightbox.js';
 import type { LyraSourceRecord, LyraSourceRangeRequest } from '../../../data-sources.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';

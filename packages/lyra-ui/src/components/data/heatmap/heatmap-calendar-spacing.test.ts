@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import './heatmap.js';
-import type { LyraHeatmap, LyraHeatmapCalendarGeometry } from './heatmap.js';
+import '../../lr-heatmap.js';
+import type { LyraHeatmap, LyraHeatmapCalendarGeometry } from '../../lr-heatmap.js';
 
 type Calendar = Extract<LyraHeatmap['data'], { kind: 'calendar' }>;
 // 2026-01-04 is a Sunday, so the default Sunday-first grid spans exactly three weeks.

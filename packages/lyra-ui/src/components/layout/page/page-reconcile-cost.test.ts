@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { measureElementArrayLookups } from '../../../../test/element-array-lookup-cost.js';
-import './page.js';
+import '../../lr-page.js';
 import type { LyraPage } from './page.class.js';
 
 interface Reconciliation { syncCustomToggle(): void; customToggle: HTMLElement | undefined }

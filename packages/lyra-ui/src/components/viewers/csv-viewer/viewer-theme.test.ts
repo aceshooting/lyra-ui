@@ -1,13 +1,13 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { TemplateResult } from 'lit';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import '../email-viewer/email-viewer.js';
-import '../model-viewer/model-viewer.js';
-import '../svg-viewer/svg-viewer.js';
-import '../xml-viewer/xml-viewer.js';
-import './csv-viewer.js';
-import '../dataset-viewer/dataset-viewer.js';
-import '../spreadsheet-viewer/spreadsheet-viewer.js';
+import '../../lr-email-viewer.js';
+import '../../lr-model-viewer.js';
+import '../../lr-svg-viewer.js';
+import '../../lr-xml-viewer.js';
+import '../../lr-csv-viewer.js';
+import '../../lr-dataset-viewer.js';
+import '../../lr-spreadsheet-viewer.js';
 
 const regions = [0, 1].map(x => ({ id: String(x), anchor: { kind: 'region', rect: { x, y: 0, width: 1, height: 1 } } }));
 const actions: readonly [string, TemplateResult, string, string][] = [

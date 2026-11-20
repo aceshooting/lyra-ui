@@ -1,9 +1,9 @@
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
-import "./date-input.js";
-import "../button/button.js";
-import type { LyraDateInput } from "./date-input.js";
-import type { LyraDatePicker } from "./date-picker.js";
+import "../../lr-date-input.js";
+import "../../lr-button.js";
+import type { LyraDateInput } from "../../lr-date-input.js";
+import type { LyraDatePicker } from "../../lr-date-picker.js";
 import { styles } from "./date-input.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";

@@ -1,8 +1,8 @@
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
-import './random-content.js';
-import type { LyraRandomContent } from './random-content.js';
+import '../../lr-random-content.js';
+import type { LyraRandomContent } from '../../lr-random-content.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 // A stand-in for a wrapper component that re-projects its own light-DOM

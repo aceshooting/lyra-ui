@@ -1,17 +1,17 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { focusByKeyboard } from '../test/wtr-focus.js';
-import './components/agent-tools/agent-trace/agent-trace.js';
-import './components/agent-tools/span-waterfall/span-waterfall.js';
-import './components/agent-tools/task-list/task-list.js';
-import './components/agent-tools/trace-tree/trace-tree.js';
-import './components/agent-tools/eval-dataset/eval-dataset.js';
-import './components/conversation/thread-list/thread-list.js';
-import './components/data/document-library/document-library.js';
-import './components/data/file-tree/file-tree.js';
-import './components/retrieval/mind-map/mind-map.js';
-import './components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js';
-import './components/utility/json-viewer/json-viewer.js';
-import './components/viewers/xml-viewer/xml-viewer.js';
+import './components/lr-agent-trace.js';
+import './components/lr-span-waterfall.js';
+import './components/lr-task-list.js';
+import './components/lr-trace-tree.js';
+import './components/lr-eval-dataset.js';
+import './components/lr-thread-list.js';
+import './components/lr-document-library.js';
+import './components/lr-file-tree.js';
+import './components/lr-mind-map.js';
+import './components/lr-knowledge-graph-explorer.js';
+import './components/lr-json-viewer.js';
+import './components/lr-xml-viewer.js';
 
 for (const tagName of [
   'lr-agent-trace', 'lr-span-waterfall', 'lr-task-list', 'lr-trace-tree',

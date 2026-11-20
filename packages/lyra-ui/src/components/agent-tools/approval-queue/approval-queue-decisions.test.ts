@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './approval-queue.js';
+import '../../lr-approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 

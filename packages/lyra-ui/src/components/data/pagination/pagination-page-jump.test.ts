@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import './pagination.js';
-import type { LyraPagination } from './pagination.js';
+import '../../lr-pagination.js';
+import type { LyraPagination } from '../../lr-pagination.js';
 
 function pageInput(el: LyraPagination): HTMLInputElement {
   return el.shadowRoot!.querySelector<HTMLInputElement>('[part~="page-input"]')!;
