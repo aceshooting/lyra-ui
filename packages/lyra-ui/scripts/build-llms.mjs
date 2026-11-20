@@ -513,14 +513,26 @@ export function buildPeers(tagFacts) {
   for (const facts of tagFacts.values()) {
     for (const peer of peersForTag(facts)) byPeer.get(peer).push(facts.tag);
   }
-  // Peers reached only from a non-component module (e.g. a shared loader) still get a row.
+  // Peers reached only from a non-component module (e.g. a shared loader) still get a row. A
+  // module that imports both the peer and a registration entry is an opt-in integration entry
+  // for that tag (lr-flag's `flag-peer.js` resolvers): name the entries and the tag they serve.
   const walkAll = new Set();
+  const optInEntries = new Map(peers.map((p) => [p, { entries: new Set(), tags: new Set() }]));
   for (const full of walk(srcRoot)) {
     if (!full.endsWith('.ts') || /\.(test|stories)\.ts$/.test(full)) continue;
     const text = readFileSync(full, 'utf8');
-    for (const specifier of runtimeModuleSpecifiers(text, full)) {
+    const specifiers = runtimeModuleSpecifiers(text, full);
+    const servedTags = specifiers
+      .map((specifier) => /(?:^|\/)(lr-[a-z0-9-]+)\.js$/u.exec(specifier)?.[1])
+      .filter(Boolean);
+    for (const specifier of specifiers) {
       for (const peer of componentPeers) {
-        if (specifier === peer || specifier.startsWith(`${peer}/`)) walkAll.add(peer);
+        if (specifier !== peer && !specifier.startsWith(`${peer}/`)) continue;
+        walkAll.add(peer);
+        if (servedTags.length === 0 || /(?:^|\/)lr-[a-z0-9-]+\.ts$/u.test(full)) continue;
+        const relative = path.relative(srcRoot, full).split(path.sep).join('/').replace(/\.ts$/u, '.js');
+        optInEntries.get(peer).entries.add(`./components/${relative}`);
+        for (const tag of servedTags) optInEntries.get(peer).tags.add(tag);
       }
     }
   }
@@ -531,6 +543,7 @@ export function buildPeers(tagFacts) {
     optional: meta[peer]?.optional !== false,
     tags: [...new Set(byPeer.get(peer))].sort(),
     seenAnywhere: walkAll.has(peer),
+    optIn: optInEntries.get(peer),
     declarationEntry: TYPE_ONLY_DECLARATION_PEERS[peer],
   }));
 
@@ -583,6 +596,8 @@ export function buildPeers(tagFacts) {
             ? r.tags.map((t) => `\`${t}\``).join(', ')
             : r.declarationEntry
               ? `type-only \`${r.declarationEntry}\` entry (no runtime import)`
+            : r.optIn.entries.size
+              ? `opt-in ${[...r.optIn.tags].sort().map((t) => `\`${t}\``).join(', ')} entries ${[...r.optIn.entries].sort().map((e) => `\`${e}\``).join(', ')}`
             : r.seenAnywhere
               ? '_(loaded by a shared internal module)_'
               : '_(not referenced by any component)_'

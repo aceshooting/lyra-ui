@@ -19413,7 +19413,7 @@
             "name": "--lr-callout-close-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
             "name": "--lr-callout-color",
@@ -58243,10 +58243,34 @@
             "default": "var(--lr-space-2xs)"
           },
           {
+            "name": "--lr-empty-compact-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-m)"
+          },
+          {
             "name": "--lr-empty-compact-padding",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-empty-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-empty-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-3xl)"
+          },
+          {
+            "name": "--lr-empty-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-l)"
           }
         ],
         "cssStates": [],

@@ -93,11 +93,13 @@ so same-task `click()` uses the plain host behavior instead of firing `lr-remove
 available during that same-task window so it can release the stale focused button; after render
 there is no owner to blur.
 
-**Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
-(content after it). Each wrapper collapses entirely (`display: none`, so no
-stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
-render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
-content `aria-hidden`.
+**Slots:** default (the label), `start` (decorative content before the label, typically an icon)
+and `end` (content after it, such as a count). The `start` subtree stays visible but is inert and
+`aria-hidden`, like the leading icon of `<lr-chip>`, `<lr-alert>` and `<lr-callout>`, so meaningful
+text belongs in the default slot. `end` stays in the accessibility tree; mark purely decorative
+`end` content `aria-hidden`. Each wrapper collapses entirely (`display: none`, so no stray gap)
+while its slot is empty, and is seeded from the light-DOM children before the first render so
+declarative content never flashes hidden for a frame.
 
 **CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
 while empty), `content` (the wrapper around the default slot — this is the part that truncates with

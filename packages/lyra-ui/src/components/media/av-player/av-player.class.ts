@@ -383,6 +383,7 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   `[part="cue"]` the playhead is currently inside.
  * @cssprop [--lr-av-player-rate-select-hover-bg=var(--lr-color-brand-quiet)] - Background of the
  *   hovered `[part="rate-select"]`; the pressed state mixes from it unless its own token is set.
+ *   Under `controls-surface="clear"` the unset default is a hover step of the clear toolbar fill.
  * @cssprop [--lr-av-player-rate-select-active-bg=color-mix(in oklab, var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of the pressed `[part="rate-select"]`.
  * @cssprop [--lr-av-player-cue-match-color=var(--lr-color-warning)] - Dashed outline color of every

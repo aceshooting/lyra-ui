@@ -45,6 +45,14 @@ import { styles } from './empty.styles.js';
  * @csspart heading - The heading paragraph (`role="heading"` at the configured level unless opted out).
  * @csspart description - The description paragraph.
  * @csspart actions - The wrapper around the `actions`-slotted content.
+ * @cssprop [--lr-empty-padding=var(--lr-space-l)] - Padding used at the default density; accepts any
+ * padding shorthand.
+ * @cssprop [--lr-empty-gap=var(--lr-space-s)] - Gap between the icon, heading, and description at the
+ * default density.
+ * @cssprop [--lr-empty-icon-size=var(--lr-font-size-3xl)] - Font size of the icon/illustration
+ * wrapper at the default density.
+ * @cssprop [--lr-empty-compact-icon-size=var(--lr-font-size-m)] - Font size of the
+ * icon/illustration wrapper at the compact density (`size="s"` and below).
  * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used at the compact density
  * (`size="s"` and below); set to `center` for dense but centered empty states.
  * @cssprop [--lr-empty-compact-padding=var(--lr-space-xs)] - Padding used at the compact density;

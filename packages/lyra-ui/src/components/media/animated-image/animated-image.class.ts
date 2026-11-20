@@ -293,7 +293,14 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   };
 
   private onToggleClick = (): void => {
-    this.userPlay = this.play = !this.play;
+    // Toggle the effective state: a `play` held frozen by reduced motion must start on the first press.
+    if (this.playing) {
+      this.play = false;
+      return;
+    }
+    this.userPlay = true;
+    this.play = true;
+    this.requestUpdate();
   };
 
   /** Focus the play/pause control. */

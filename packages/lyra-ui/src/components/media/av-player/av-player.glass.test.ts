@@ -1,8 +1,9 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-av-player.js';
 import type { LyraAvPlayer } from './av-player.class.js';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../../../test/color-contrast.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const over = (foreground: string, background: string): string => {
   const a = toRgba(foreground);
@@ -70,6 +71,27 @@ describe('av-player owned clear controls', () => {
       expect(contrastRatio(resolvedColorToken(toolbar, '--lr-focus-ring-color'), background)).to.be.at.least(3);
     }
     expect(player.shadowRoot!.querySelector('[part="media"]')!.hasAttribute('controls')).to.equal(true);
+  });
+
+  it('steps the clear rate select hover and press fills away from the toolbar fill', async () => {
+    const player = await fixture<LyraAvPlayer>(html`<lr-av-player data-lr-theme-scope controls-surface="clear" style="--lr-transition-fast: 0ms linear"></lr-av-player>`);
+    const select = player.shadowRoot!.querySelector('[part="rate-select"]')!;
+    const toolbarFill = getComputedStyle(player.shadowRoot!.querySelector('[part="toolbar"]')!).backgroundColor;
+    const fill = () => getComputedStyle(select).backgroundColor;
+    const painted = (color: string) => toRgba(color)[3] > 0 && color !== toolbarFill;
+    try {
+      await hoverUntilMatched(select, 'the rate select never registered :hover');
+      await waitUntil(() => painted(fill()), 'the clear hover fill never stepped from the toolbar fill');
+      const hover = fill();
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => painted(fill()) && fill() !== hover, 'the clear press fill never stepped from the hover fill');
+      await sendMouse({ type: 'up' });
+      player.style.setProperty('--lr-av-player-rate-select-hover-bg', 'rgb(1, 2, 3)');
+      await hoverUntilMatched(select, 'the rate select never registered :hover again');
+      await waitUntil(() => fill() === 'rgb(1, 2, 3)', 'the hover token never reached the clear rate select');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('makes the owned scrim opaque for explicit increased contrast and restores clear on reset', async () => {

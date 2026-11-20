@@ -20,7 +20,6 @@ import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fi
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
 import { LightboxSourceController } from './lightbox-source.js';
-import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';

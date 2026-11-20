@@ -433,7 +433,7 @@ describe('lr-map drawing integration', () => {
     pointer(peer, 'pointerdown', 100, 100); element.remove();
     expect(peer.panEnabled).to.equal(true); expect(peer.zoomGesture).to.equal(true); expect(peer.removed).to.equal(true); expect(element.editDrawing(completed())).to.equal(false);
   });
-  it('supports localized keyboard handles, roving selection and logical RTL movement', async () => {
+  it('supports localized keyboard handles, roving selection and screen-axis movement under RTL', async () => {
     const { element, peer } = await mount(el => { el.setAttribute('dir', 'rtl'); el.strings = { mapDrawingVertex: 'Corner {index}', mapDrawingEditInstructions: 'Use these keys to edit the selected corner' }; });
     await editSurface(element, peer); element.editDrawing(completed()); await settle(element, peer);
     await waitUntil(() => element.shadowRoot!.querySelectorAll('[part="drawing-vertex"]').length === 2);
@@ -441,7 +441,7 @@ describe('lr-map drawing integration', () => {
     expect(handles[0]!.getAttribute('aria-label')).to.equal('Corner 1'); expect(element.shadowRoot!.textContent).to.include('Use these keys');
     expect(handles[0]!.tabIndex).to.equal(0); expect(handles[1]!.tabIndex).to.equal(-1);
     await focusByKeyboard(handles[0]!); const changes = capture(element, 'lr-map-draw-change'); await sendKeys({ press: 'ArrowRight' });
-    expect((changes.at(-1) as LyraMapDrawingSnapshot).vertices[0]![0]).to.be.closeTo(-0.8, 0.001);
+    expect((changes.at(-1) as LyraMapDrawingSnapshot).vertices[0]![0]).to.be.closeTo(0.8, 0.001);
     await sendKeys({ press: 'PageDown' }); expect(element.shadowRoot!.activeElement === handles[1]).to.equal(true);
     await sendKeys({ press: 'Home' }); expect(element.shadowRoot!.activeElement === handles[0]).to.equal(true);
     expect(handles[0]!.getBoundingClientRect().width).to.be.at.least(24); expect(getComputedStyle(handles[0]!).touchAction).to.equal('none');

@@ -14,6 +14,7 @@ import {
 import { effectiveSemanticVariant, type SemanticVariant } from '../../../internal/semantic-variant.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { styles } from './badge.styles.js';
 
 /** The library's semantic-tone vocabulary plus Shoelace's spelling for the brand tone. */
@@ -44,13 +45,16 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  *
  * @customElement lr-badge
  * @slot - Badge content.
- * @slot start - Content placed before the label, typically an icon. The wrapper collapses
- * entirely (no stray gap) while empty. Mark purely decorative content `aria-hidden`.
- * @slot end - Content placed after the label, typically an icon. The wrapper collapses entirely
- * (no stray gap) while empty. Mark purely decorative content `aria-hidden`.
+ * @slot start - Decorative content placed before the label, typically an icon. Its flattened
+ * subtree stays visible but is inert and aria-hidden, like the leading icon of lr-chip, lr-alert and
+ * lr-callout; put meaningful text in the default slot. The wrapper collapses entirely (no stray gap)
+ * while empty.
+ * @slot end - Content placed after the label, such as a count or an icon. It stays in the
+ * accessibility tree because it often carries meaning; mark purely decorative content
+ * `aria-hidden`. The wrapper collapses entirely (no stray gap) while empty.
  * @csspart base - Compatibility name for the badge surface; use `badge`.
  * @csspart badge - The badge surface. It is the same node as `base`.
- * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
+ * @csspart start - Inert, aria-hidden wrapper around the `start` slot. Hidden entirely while empty.
  * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
  * @cssprop [--lr-badge-background=var(--lr-badge-fill)] - Explicit override for the badge's
@@ -166,9 +170,10 @@ export class LyraBadge<
 
   override render(): TemplateResult {
     return html`<span part="base badge">
-      <span part="start" ?hidden=${!this.slotPresence.has('start')}>
-        <slot name="start"></slot>
-      </span>
+      ${renderInertPresentation(html`<slot name="start"></slot>`, {
+        part: 'start',
+        hidden: !this.slotPresence.has('start'),
+      })}
       <span part="content"><slot></slot></span>
       <span part="end" ?hidden=${!this.slotPresence.has('end')}>
         <slot name="end"></slot>

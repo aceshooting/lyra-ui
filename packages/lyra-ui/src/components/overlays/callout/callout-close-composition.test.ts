@@ -114,14 +114,15 @@ describe('lr-callout: composed close lr-icon-button', () => {
   });
 });
 
-it('uses the brand quiet token for the default close-button hover across variants', async () => {
+it('keeps a danger callout close hover independent of the brand fill', async () => {
   const el = await fixture<LyraCallout>(html`<lr-callout data-lr-theme-scope closable variant="danger" appearance="accent"
     style="--lr-color-brand-quiet:rgb(1, 222, 3);--lr-transition-fast:0ms">Message</lr-callout>`);
   const control = nativeControl(el);
   try {
     await hoverUntilMatched(control, 'danger callout close hovered');
     const paint = getComputedStyle(control).backgroundColor;
-    expect(paint).to.equal('rgb(1, 222, 3)');
+    expect(paint).to.not.equal('rgb(1, 222, 3)');
+    expect(paint).to.not.equal('rgba(0, 0, 0, 0)');
   } finally {
     await resetMouse();
   }

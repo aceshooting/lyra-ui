@@ -38,7 +38,7 @@ for the page.
 | Peer | Range | Needed by |
 |---|---|---|
 | `@aceshooting/lyra-3d` | `^1.2.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-model-viewer`, `lr-video` |
-| `@aceshooting/lyra-flags` | `^2.3.1` | _(loaded by a shared internal module)_ |
+| `@aceshooting/lyra-flags` | `^2.3.1` | opt-in `lr-flag` entries `./components/media/flag/flag-peer-bulk-standard.js`, `./components/media/flag/flag-peer-bulk.js`, `./components/media/flag/flag-peer.js` |
 | `@aceshooting/lyra-map` | `^1.5.2 \|\| ^2.0.0` | `lr-geojson-viewer`, `lr-map` |
 | `@aceshooting/lyra-translations` | `^31.2.1` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.4.0` | `lr-pptx-viewer` |

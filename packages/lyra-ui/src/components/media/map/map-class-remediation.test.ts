@@ -131,7 +131,7 @@ describe('map controls, overlays and locale updates', () => {
     expect(hit === button || button.contains(hit)).to.equal(true);
   });
 
-  for (const mode of ['pick', 'drawing'] as const) {
+  for (const mode of ['scene', 'pick', 'drawing'] as const) {
     it(`keeps the legend, scene and bottom corner reachable with ${mode} controls`, async () => {
       const { element } = await mount(el => {
         el.style.cssText = 'inline-size:320px;block-size:420px';
@@ -139,7 +139,7 @@ describe('map controls, overlays and locale updates', () => {
         el.legendInteractive = true;
         el.legend = [{ label: 'Roads', value: 'roads', color: 'red', pattern: 'solid' }];
         if (mode === 'pick') el.pickMode = true;
-        else el.drawMode = 'line';
+        else if (mode === 'drawing') el.drawMode = 'line';
       });
       const root = element.shadowRoot!;
       const controls = document.createElement('div');
@@ -154,12 +154,18 @@ describe('map controls, overlays and locale updates', () => {
       root.querySelector('[part="container"]')!.append(controls);
       await waitUntil(() => corner.part.contains('controls-bottom-left') &&
         parseFloat(getComputedStyle(corner).getPropertyValue('--_lr-map-controls-bottom')) >= native.offsetHeight);
-      for (const control of [native, ...['legend-toggle', 'scene-toggle', mode === 'pick' ? 'pick-cancel' : 'drawing-cancel']
-        .map(part => root.querySelector<HTMLButtonElement>(`[part~="${part}"]`)!)]) {
+      const parts = ['legend-toggle', 'scene-toggle', ...mode === 'scene' ? [] : [mode === 'pick' ? 'pick-cancel' : 'drawing-cancel']];
+      for (const control of [native, ...parts.map(part => root.querySelector<HTMLButtonElement>(`[part~="${part}"]`)!)]) {
         const rect = control.getBoundingClientRect();
         const hit = root.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
         expect(control.contains(hit), control.textContent).to.equal(true);
       }
+      // The collapsed scene panel hugs its toggle instead of spanning the map as a full-width bar.
+      const panel = root.querySelector<HTMLElement>('[part="scene-panel"]')!;
+      const toggle = root.querySelector<HTMLElement>('[part="scene-toggle"]')!.getBoundingClientRect().width;
+      const style = getComputedStyle(panel);
+      const chrome = ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, key) => sum + parseFloat(style[key as 'paddingLeft']), 0);
+      expect(Math.round(panel.getBoundingClientRect().width - chrome - toggle), 'scene panel hugs its toggle').to.equal(0);
     });
   }
 

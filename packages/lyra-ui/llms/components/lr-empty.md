@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,12 +47,16 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** `--lr-empty-compact-align` (compact density only; defaults preserve
+**Themeable custom properties:** `--lr-empty-padding` (default `--lr-space-l` — padding at the
+default density), `--lr-empty-gap` (default `--lr-space-s` — gap between the icon, heading, and
+description at the default density), `--lr-empty-icon-size` (default `--lr-font-size-3xl` — icon
+size at the default density), `--lr-empty-compact-icon-size` (default `--lr-font-size-m` — icon
+size at the compact density, so a dense empty state no longer keeps the full-size glyph),
+`--lr-empty-compact-align` (compact density only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
 `--lr-empty-compact-padding` (default `--lr-space-xs` — padding used at the compact density),
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
-at the compact density; the default layout's gap stays the plain shared `--lr-space-s` token, not
-independently themeable), `--lr-empty-compact-font-size` (compact density only; unset by default with
+at the compact density), `--lr-empty-compact-font-size` (compact density only; unset by default with
 **no fallback value** — the compact heading keeps its ordinary inherited font size until a
 consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).

@@ -40,6 +40,27 @@ export const Compact: Story = {
   `,
 };
 
+export const RetunedGeometry: Story = {
+  name: 'Retuned spacing and icon size',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-empty-padding`, `--lr-empty-gap` and `--lr-empty-icon-size` retune the default density; the compact density reads `--lr-empty-compact-icon-size`, which defaults to the m font size.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-empty
+      heading="No results"
+      description="Try a different search."
+      style="--lr-empty-padding: var(--lr-space-s); --lr-empty-gap: var(--lr-space-xs); --lr-empty-icon-size: var(--lr-font-size-xl);"
+    >
+      <span aria-hidden="true">&#128269;</span>
+    </lr-empty>
+  `,
+};
+
 export const CompactCentered: Story = {
   name: 'Compact with centered content',
   parameters: {

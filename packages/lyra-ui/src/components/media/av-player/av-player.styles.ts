@@ -318,13 +318,18 @@ export const styles = css`
     --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
   }
   :host([controls-surface='clear']) [part='rate-select'] {
+    /* The select rests transparent over the toolbar's clear fill, so its states step from that fill. */
+    --_lr-av-rate-clear-hover: var(--lr-av-player-rate-select-hover-bg, ${hoverFill('var(--_lr-media-clear-fill, transparent)')});
     color: inherit;
     background: transparent;
     border-color: var(--_lr-media-clear-text, var(--lr-color-border));
   }
   :host([controls-surface='clear']) .rate-select-chevron { color: inherit; }
-  :host([controls-surface='clear']) [part='rate-select']:where(:hover, :active) {
-    background: var(--_lr-media-clear-fill, var(--lr-color-brand-quiet));
+  :host([controls-surface='clear']) [part='rate-select']:where(:hover) {
+    background: var(--_lr-av-rate-clear-hover);
+  }
+  :host([controls-surface='clear']) [part='rate-select']:where(:active) {
+    background: var(--lr-av-player-rate-select-active-bg, ${activeFill('var(--_lr-av-rate-clear-hover)')});
   }
   :host([controls-surface='clear']) [part='rate-select'] option {
     color: var(--lr-color-text);

@@ -477,6 +477,63 @@ export class LyraDynamicKeySample extends LyraElement {
 }
 
 
+// A key read from a decorated state field whose module-local type closes the property to string
+// literals (lr-qr-code's `this.localize(this.loadState.key)`) resolves to exactly those literals,
+// instead of opening the graph and admitting a helper's incidental 'collapse'/'details' literals.
+const typedFieldCatalog = `
+type Key = 'collapse' | 'details' | 'sampleMissing' | 'sampleFailed' | 'sampleStatus';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  collapse: 'Collapse',
+  details: 'Details',
+  sampleMissing: 'Missing',
+  sampleFailed: 'Failed',
+  sampleStatus: 'Status',
+};
+`;
+const typedFieldFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-typed-field-'));
+try {
+  const internal = path.join(typedFieldFixture, 'src', 'internal');
+  const component = path.join(typedFieldFixture, 'src', 'components', 'utility', 'typed-field-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(component, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), typedFieldCatalog);
+  await writeFile(
+    path.join(internal, 'visibility-helper.ts'),
+    `export const isCollapsed = (value: string): boolean => value === 'collapse' || value === 'details';
+`,
+  );
+  await writeFile(
+    path.join(component, 'typed-field-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { isCollapsed } from '../../../internal/visibility-helper.js';
+
+type FailureKey = 'sampleMissing' | 'sampleFailed';
+type SampleState = { kind: 'idle' } | { kind: 'error'; key: FailureKey };
+interface Status { label: 'sampleStatus' }
+
+export class LyraTypedFieldSample extends LyraElement {
+  @state() private sampleState: SampleState = { kind: 'idle' };
+  @state() status: Status = { label: 'sampleStatus' };
+  render() {
+    void isCollapsed('open');
+    return this.sampleState.kind === 'error' ? this.localize(this.sampleState.key) : this.localize(this.status.label);
+  }
+}
+`,
+  );
+  await generateDefaultStringSlices({ packageDir: typedFieldFixture, write: true, exclusions: {} });
+  const slice = await readFile(path.join(component, 'typed-field-sample.class.ts'), 'utf8');
+  for (const key of ['sampleMissing', 'sampleFailed', 'sampleStatus']) {
+    assert.match(slice, new RegExp(`LYRA_DEFAULT_${key}\\b`), `the typed field key '${key}' is reachable`);
+  }
+  for (const phantom of ['collapse', 'details']) {
+    assert.doesNotMatch(slice, new RegExp(`LYRA_DEFAULT_${phantom}\\b`), `a closed typed key keeps '${phantom}' out`);
+  }
+} finally {
+  await rm(typedFieldFixture, { recursive: true, force: true });
+}
+
+
 // A key map feeding a dynamic localize() call very often lives in the CLASS FILE itself rather
 // than a helper module (lr-citation-badge's STATUS_MESSAGE_KEY -> this.localize(key)). Restricting
 // the broad literal walk to helper modules silently dropped every one of those messages, which

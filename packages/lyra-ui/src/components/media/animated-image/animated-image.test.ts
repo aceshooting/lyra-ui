@@ -2,6 +2,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import '../../lr-animated-image.js';
 import type { LyraAnimatedImage } from '../../lr-animated-image.js';
+import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
@@ -354,6 +355,24 @@ describe('play / playing / reduced-motion arbitration', () => {
       await pauseEvent;
       expect(el.play).to.be.false;
       expect(el.playing).to.be.false;
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it('plays on the first press when play is already set but held frozen by reduced motion', async () => {
+    const stub = stubReducedMotion(true);
+    try {
+      const el = (await fixture(html`<lr-animated-image alt="Pixel" play></lr-animated-image>`)) as LyraAnimatedImage;
+      await loaded(el);
+      expect(el.playing).to.be.false;
+      const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+      const played = oneEvent(el, 'lr-play');
+      button.click();
+      await played;
+      await el.updateComplete;
+      const pauseLabel = LYRA_DEFAULT_STRINGS.pauseWithContext.replace('{name}', 'Pixel');
+      expect([el.play, el.playing, button.getAttribute('aria-label')]).to.deep.equal([true, true, pauseLabel]);
     } finally {
       stub.restore();
     }

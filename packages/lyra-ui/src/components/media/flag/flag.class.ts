@@ -8,7 +8,6 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './flag.styles.js';
 import { ALPHA2_RE, alpha3ToAlpha2, languageToCountry } from './language-map.js';
-import '../../overlays/skeleton/skeleton.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getFlagResolverGeneration, subscribeFlagResolver, loadFlagUrlResolver, warnMissingFlagResolver } from './flag-url-resolver.js';

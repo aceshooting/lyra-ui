@@ -489,10 +489,16 @@ assert.ok(
   flagsPeerRow?.includes(`| \`${flagsPublishedRange}\` |`),
   'generated install guidance must publish the npm-resolvable flags range',
 );
+const flagsNeededBy = flagsPeerRow?.split('|')[3]?.trim() ?? '';
+assert.match(
+  flagsNeededBy,
+  /^opt-in `lr-flag` entries `\.\/components\/media\/flag\/flag-peer-bulk-standard\.js`, `\.\/components\/media\/flag\/flag-peer-bulk\.js`, `\.\/components\/media\/flag\/flag-peer\.js`$/u,
+  'the flags row names the opt-in resolver entries and the tag they serve, never a base flag prerequisite',
+);
 assert.doesNotMatch(
-  flagsPeerRow ?? '',
-  /`lr-flag`|`lr-locale-picker`/u,
-  'flag peer registration helpers must not become prerequisites of the base flag registrations',
+  flagsNeededBy,
+  /`lr-locale-picker`/u,
+  'flag peer registration helpers must not become prerequisites of composing registrations',
 );
 assert.doesNotMatch(
   focusedPeersReference,

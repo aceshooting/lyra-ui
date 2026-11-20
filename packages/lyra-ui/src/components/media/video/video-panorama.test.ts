@@ -76,6 +76,19 @@ describe('lr-video panorama', function () {
     expect(track.mode).to.equal('hidden'); expect(video.volume).to.equal(nativeVolume); expect(Math.abs(video.currentTime - 0.7) < 0.01).to.equal(true); expect(disposed).to.equal(1);
   });
 
+  it('keeps the panorama in the media row when narrow controls drop below the picture', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video style="inline-size:320px" controls="full" engine="webgl" projection="equirectangular"></lr-video>`);
+    const video = await ready(el);
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    const viewport = root.querySelector<HTMLElement>('[part="panorama"]')!.getBoundingClientRect();
+    const picture = video.getBoundingClientRect();
+    const controls = root.querySelector<HTMLElement>('[part="controls-overlay"]')!.getBoundingClientRect();
+    expect(picture.bottom).to.be.at.most(controls.top + 1);
+    const box = (rect: DOMRect) => [rect.top, rect.height, rect.width].map(Math.round);
+    expect(box(viewport)).to.deep.equal(box(picture));
+  });
+
   it('restores context without replacing native video, and invalidates old media callbacks', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video style="inline-size:480px;block-size:320px" engine="webgl" projection="equirectangular" .hotspots=${[{ id: 'exit', yaw: 0, pitch: 0 }]}></lr-video>`);
     const video = await ready(el);

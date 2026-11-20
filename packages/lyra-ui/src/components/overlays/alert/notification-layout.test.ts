@@ -119,6 +119,25 @@ it('themes each alert panel edge and ink independently of its appearance', async
   expect(panel.boxShadow).to.equal('rgb(0, 0, 0) 0px 0px 3px 0px');
 });
 
+it('paints the alert status icon and countdown in each appearance ink, never the accent fill', async () => {
+  const tokens = '--lr-color-fill-loud:rgb(200, 10, 20);--lr-color-on-loud:rgb(250, 251, 252)';
+  for (const [appearance, ink] of [
+    ['accent', 'rgb(250, 251, 252)'], ['outlined', 'rgb(200, 10, 20)'],
+    ['plain', 'rgb(200, 10, 20)'], ['filled-outlined', 'rgb(200, 10, 20)'],
+  ] as const) {
+    const el = await fixture<HTMLElement>(html`<lr-alert open appearance=${appearance} duration="60000"
+      countdown="ltr" style=${tokens}><span slot="icon">!</span>Saved</lr-alert>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('.countdown'), 'countdown rendered');
+    const root = el.shadowRoot!;
+    const panel = getComputedStyle(root.querySelector('[part="base"]')!).backgroundColor;
+    const icon = getComputedStyle(root.querySelector('[part="icon"]')!).color;
+    const bar = getComputedStyle(root.querySelector('.countdown')!).backgroundColor;
+    expect(icon, appearance).to.equal(ink);
+    expect(bar, appearance).to.equal(ink);
+    expect(icon, appearance).to.not.equal(panel);
+  }
+});
+
 it('themes key cap and overflow-indicator edges and text', async () => {
   const host = await fixture<HTMLElement>(html`<div style="--lr-kbd-key-border-color:rgb(12, 13, 14);
     --lr-kbd-key-color:rgb(25, 26, 27);--lr-chip-group-overflow-border-color:rgb(12, 13, 14);

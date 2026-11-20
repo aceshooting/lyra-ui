@@ -521,7 +521,8 @@ completed snapshot in application state: temporary drawing resources are not a d
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
 implicitly reopen it. Before the drawing runtime has loaded it returns `false` without reading the
 snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
-pointer edits update the same session.
+pointer edits update the same session. Arrow keys move a focused vertex in screen direction in both
+LTR and RTL, because the map canvas is never mirrored.
 Use `whenIdle()` to await temporary rendering work.
 
 While drawing, a dashed rubber band runs from the last vertex to the pointer (and, for a polygon,

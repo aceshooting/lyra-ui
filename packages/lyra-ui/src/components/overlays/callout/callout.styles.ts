@@ -1,13 +1,15 @@
 import { css } from 'lit';
-import { activeFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     box-sizing: border-box;
     max-inline-size: 100%;
-    /* The close hover is independently themeable so retinting it never changes the host surface. */
-    --_lr-callout-close-hover-bg: var(--lr-color-brand-quiet);
+    /* The close hover is independently themeable so retinting it never changes the host surface.
+       The default is a translucent shift toward the mix partner, like lr-alert's close control, so
+       the panel's own variant and appearance show through and the glyph keeps its contrast. */
+    --_lr-callout-close-hover-bg: ${hoverFill('transparent')};
     /* This callout's own default paint for the close control, set on the HOST for organization
        only -- nothing here reads an --lr-icon-button-* token to compute it. The close-button rule
        below writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never

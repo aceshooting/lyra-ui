@@ -648,3 +648,18 @@ describe('a slotted [hidden] adornment', () => {
     }
   });
 });
+
+it('hides decorative start content from assistive technology while end stays exposed', async () => {
+  for (const tag of ['lr-badge', 'lr-tag'] as const) {
+    const host = await fixture<HTMLElement>(tag === 'lr-badge'
+      ? html`<lr-badge><svg slot="start" role="img" aria-label="Star"></svg>Label<span slot="end">3</span></lr-badge>`
+      : html`<lr-tag><svg slot="start" role="img" aria-label="Star"></svg>Label<span slot="end">3</span></lr-tag>`);
+    const start = host.shadowRoot!.querySelector<HTMLElement>('[part="start"]')!;
+    const end = host.shadowRoot!.querySelector<HTMLElement>('[part="end"]')!;
+    expect(start.getAttribute('aria-hidden'), tag).to.equal('true');
+    expect(start.inert, tag).to.equal(true);
+    expect(getComputedStyle(start).display, tag).to.not.equal('none');
+    expect(end.hasAttribute('aria-hidden'), tag).to.equal(false);
+    expect(end.inert, tag).to.equal(false);
+  }
+});

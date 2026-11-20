@@ -105,7 +105,10 @@ export const styles = css`
     display: inline-flex;
     grid-column: 1;
     margin-inline-end: var(--lr-space-s);
-    color: var(--lr-color-fill-loud);
+    /* The status ink follows the appearance's own text slot: on-loud over the accent fill, the loud
+       fill everywhere else. The literal loud token painted the glyph in the accent panel's own
+       background colour. */
+    color: var(--_lr-alert-text, var(--lr-color-fill-loud));
     font-size: var(--lr-font-size-lg);
     line-height: var(--lr-line-height-none);
     min-inline-size: 0;
@@ -173,7 +176,7 @@ export const styles = css`
     inset-inline: 0;
     inset-block-end: 0;
     block-size: var(--lr-size-4px);
-    background: var(--lr-color-fill-loud);
+    background: var(--_lr-alert-text, var(--lr-color-fill-loud));
     transform: scaleX(1);
   }
 

@@ -19,7 +19,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DEFAULT_SIZE = 128;
@@ -172,12 +172,8 @@ export class LyraQrCode extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     qrCodeGenerationFailed: LYRA_DEFAULT_qrCodeGenerationFailed,
     qrCodeMissingLibrary: LYRA_DEFAULT_qrCodeMissingLibrary,
   };

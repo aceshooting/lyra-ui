@@ -942,7 +942,8 @@ completed snapshot in application state: temporary drawing resources are not a d
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
 implicitly reopen it. Before the drawing runtime has loaded it returns `false` without reading the
 snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
-pointer edits update the same session.
+pointer edits update the same session. Arrow keys move a focused vertex in screen direction in both
+LTR and RTL, because the map canvas is never mirrored.
 Use `whenIdle()` to await temporary rendering work.
 
 While drawing, a dashed rubber band runs from the last vertex to the pointer (and, for a polygon,
@@ -5373,7 +5374,8 @@ of the `cue-current` row the playhead is inside, and `--lr-av-player-cue-active-
 matches' dashed outline on `--lr-av-player-cue-match-color` (default `var(--lr-color-warning)`).
 `--lr-av-player-rate-select-hover-bg` (default `var(--lr-color-brand-quiet)`) paints the hovered
 `rate-select`, and `--lr-av-player-rate-select-active-bg` its pressed state (default: a mix from the
-hover value). All are inline `var()` fallbacks at the
+hover value). Under `controls-surface="clear"` the unset hover default is a hover step of the clear
+toolbar fill, so both states stay visible over the scrim. All are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so any of them can be set on the element or on any
 ancestor.
 

@@ -369,7 +369,7 @@ export const styles = css`
       aspect-ratio: 16 / 9;
     }
 
-    :host(:not([controls='none'])) [part='poster-overlay'] {
+    :host(:not([controls='none'])) :is([part='poster-overlay'], [part='panorama']) {
       position: relative;
       inset: auto;
       grid-area: media;

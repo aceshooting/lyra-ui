@@ -288,6 +288,8 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
   const parents = new WeakMap();
   const declarations = new Map();
   const fields = new Map();
+  const fieldTypes = new Map();
+  const typeDeclarations = new Map();
   const calls = new Map();
   const index = (node, parent) => {
     if (!node || typeof node !== 'object') return;
@@ -296,6 +298,13 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
       return;
     }
     if (parent) parents.set(node, parent);
+    if ((node.type === 'TSTypeAliasDeclaration' || node.type === 'TSInterfaceDeclaration') && node.id?.type === 'Identifier') {
+      typeDeclarations.set(node.id.name, node);
+    }
+    if (node.type === 'PropertyDefinition' && node.typeAnnotation) {
+      const name = propertyName(node) ?? (node.key?.type === 'PrivateIdentifier' ? node.key.name : undefined);
+      if (name !== undefined) fieldTypes.set(name, node.typeAnnotation);
+    }
     if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
       const values = declarations.get(node.id.name) ?? [];
       values.push(node.init);
@@ -382,6 +391,61 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
     return undefined;
   };
 
+  // A module-local type annotation is a compile-time guarantee, so a key read as
+  // `this.<field>.<property>` whose declared property type is a closed union of string literals
+  // (qr-code's `{ kind: 'error'; key: 'qrCodeMissingLibrary' | 'qrCodeGenerationFailed' }`)
+  // resolves to exactly those literals, whoever writes the field.
+  const typeNode = (type) => (type?.type === 'TSTypeAnnotation' ? type.typeAnnotation : type);
+  const declaredType = (type, depth) => {
+    const node = typeNode(type);
+    if (node?.type !== 'TSTypeReference' || node.typeName?.type !== 'Identifier' || node.typeArguments) return node;
+    const declaration = typeDeclarations.get(node.typeName.name);
+    if (!declaration || depth > 8) return undefined;
+    return declaration.type === 'TSInterfaceDeclaration' && !declaration.extends?.length
+      ? { type: 'TSTypeLiteral', members: declaration.body?.body ?? [] }
+      : declaration.type === 'TSTypeAliasDeclaration' && !declaration.typeParameters ? declaredType(declaration.typeAnnotation, depth + 1) : undefined;
+  };
+  const stringLiteralTypes = (type, depth = 0) => {
+    const node = declaredType(type, depth);
+    if (node?.type === 'TSLiteralType' && typeof node.literal?.value === 'string') return [node.literal.value];
+    if (node?.type !== 'TSUnionType' || depth > 8) return undefined;
+    const values = [];
+    for (const member of node.types ?? []) {
+      const literals = stringLiteralTypes(member, depth + 1);
+      if (!literals) return undefined;
+      values.push(...literals);
+    }
+    return values;
+  };
+  const propertyLiteralTypes = (type, property, depth = 0) => {
+    const node = declaredType(type, depth);
+    if (!node || depth > 8) return undefined;
+    if (node.type === 'TSUnionType') {
+      const values = [];
+      let matched = false;
+      for (const member of node.types ?? []) {
+        const literals = propertyLiteralTypes(member, property, depth + 1);
+        if (literals === undefined) return undefined;
+        if (literals !== null) { matched = true; values.push(...literals); }
+      }
+      return matched ? values : null;
+    }
+    if (node.type !== 'TSTypeLiteral') return undefined;
+    const signature = (node.members ?? []).find((member) => member.type === 'TSPropertySignature' && propertyName(member) === property);
+    // A union branch without the property is unreachable at a type-checked read of it.
+    if (!signature) return null;
+    return stringLiteralTypes(signature.typeAnnotation, depth + 1);
+  };
+  const typedMemberKeys = (member) => {
+    const property = memberName(member);
+    const owner = unwrapExpression(member.object);
+    if (property === undefined || owner?.type !== 'MemberExpression' || unwrapExpression(owner.object)?.type !== 'ThisExpression') return undefined;
+    const field = memberName(owner) ?? (unwrapExpression(owner.property)?.type === 'PrivateIdentifier' ? unwrapExpression(owner.property).name : undefined);
+    const type = field === undefined ? undefined : fieldTypes.get(field);
+    const literals = type ? propertyLiteralTypes(type, property) : undefined;
+    return literals?.length ? literals : undefined;
+  };
+
   const found = new Set();
   const resolvingValues = new Set();
   const resolvingObjects = new Set();
@@ -455,7 +519,12 @@ function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
         closed = false;
       }
     } else if (node.type === 'MemberExpression') {
-      for (const value of memberValueNodes(node)) resolveExpression(value);
+      const typed = typedMemberKeys(node);
+      if (typed) {
+        for (const key of typed) if (catalogKeys.has(key)) found.add(key);
+      } else {
+        for (const value of memberValueNodes(node)) resolveExpression(value);
+      }
     } else if (node.type === 'ConditionalExpression') {
       resolveExpression(node.consequent);
       resolveExpression(node.alternate);

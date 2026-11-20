@@ -15,9 +15,10 @@ export const styles = css`
     ${mapOverlayPanel}
     position: absolute;
     grid-row: 2;
-    inline-size: auto;
-    max-inline-size: none;
-    inset-inline: var(--lr-space-s);
+    justify-self: start;
+    inline-size: fit-content;
+    max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    inset-inline-start: var(--lr-space-s);
     inset-block-end: var(--lr-space-s);
     z-index: var(--lr-layer-content);
     max-block-size: 60%;
@@ -150,7 +151,9 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
-  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'])) {
+  /* Pick and drawing bars and the scene panel all join one grid that reserves the native corner
+     control rows, so none of them paints over attribution, scale, zoom or the legend. */
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel'])) {
     box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -159,7 +162,7 @@ export const styles = css`
     padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px))
       calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px));
   }
-  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls']))
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel']))
     > :is([part='legend'], [part='scene-panel']) {
     position: relative;
     inset: auto;

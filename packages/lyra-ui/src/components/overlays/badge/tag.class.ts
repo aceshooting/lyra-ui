@@ -69,15 +69,17 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @customElement lr-tag
  * @slot - Tag content. A removable tag keeps its action name synchronized with visible accessible
  * label text through forwarding slots.
- * @slot start - Content placed before the label, typically an icon.
- * @slot end - Content placed after the label, typically an icon.
+ * @slot start - Decorative content placed before the label, typically an icon. Its subtree stays
+ * visible but is inert and aria-hidden.
+ * @slot end - Content placed after the label, such as a count or an icon. It stays in the
+ * accessibility tree; mark purely decorative content `aria-hidden`.
  * @event lr-remove - Noncancelable notification that the remove button was activated (click, or
  * Enter/Space while focused — native `<button>` behavior). The consumer owns the state update and
  * DOM removal. Only rendered, and therefore only fired, while `withRemove` or its
  * Shoelace-compatible `removable` alias is set. The event's `target` is the tag.
  * `detail: { value }` echoes the tag's `value` (`undefined` when never set), like `<lr-chip>`.
  * @csspart base - The tag surface.
- * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
+ * @csspart start - Inert, aria-hidden wrapper around the `start` slot. Hidden entirely while empty.
  * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
  * @csspart remove-button - The remove affordance, only rendered while `withRemove`.

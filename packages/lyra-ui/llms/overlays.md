@@ -444,12 +444,16 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** `--lr-empty-compact-align` (compact density only; defaults preserve
+**Themeable custom properties:** `--lr-empty-padding` (default `--lr-space-l` — padding at the
+default density), `--lr-empty-gap` (default `--lr-space-s` — gap between the icon, heading, and
+description at the default density), `--lr-empty-icon-size` (default `--lr-font-size-3xl` — icon
+size at the default density), `--lr-empty-compact-icon-size` (default `--lr-font-size-m` — icon
+size at the compact density, so a dense empty state no longer keeps the full-size glyph),
+`--lr-empty-compact-align` (compact density only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
 `--lr-empty-compact-padding` (default `--lr-space-xs` — padding used at the compact density),
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
-at the compact density; the default layout's gap stays the plain shared `--lr-space-s` token, not
-independently themeable), `--lr-empty-compact-font-size` (compact density only; unset by default with
+at the compact density), `--lr-empty-compact-font-size` (compact density only; unset by default with
 **no fallback value** — the compact heading keeps its ordinary inherited font size until a
 consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
@@ -2736,11 +2740,13 @@ so same-task `click()` uses the plain host behavior instead of firing `lr-remove
 available during that same-task window so it can release the stale focused button; after render
 there is no owner to blur.
 
-**Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
-(content after it). Each wrapper collapses entirely (`display: none`, so no
-stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
-render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
-content `aria-hidden`.
+**Slots:** default (the label), `start` (decorative content before the label, typically an icon)
+and `end` (content after it, such as a count). The `start` subtree stays visible but is inert and
+`aria-hidden`, like the leading icon of `<lr-chip>`, `<lr-alert>` and `<lr-callout>`, so meaningful
+text belongs in the default slot. `end` stays in the accessibility tree; mark purely decorative
+`end` content `aria-hidden`. Each wrapper collapses entirely (`display: none`, so no stray gap)
+while its slot is empty, and is seeded from the light-DOM children before the first render so
+declarative content never flashes hidden for a frame.
 
 **CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
 while empty), `content` (the wrapper around the default slot — this is the part that truncates with
@@ -3038,8 +3044,10 @@ as their standalone fallback. An explicit `variant` maps all generic slots local
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
-as one set directly on the callout. The close button uses `--lr-color-brand-quiet` for its hover fill.
-Set `--lr-callout-close-hover-bg` to override that fill independently of the panel.
+as one set directly on the callout. The close button's hover fill defaults to a translucent
+`color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, so the
+panel's variant and appearance show through it. Set `--lr-callout-close-hover-bg` to override that
+fill independently of the panel.
 
 Three more: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit

@@ -5443,7 +5443,11 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-empty-compact-align'
       | '--lr-empty-compact-font-size'
       | '--lr-empty-compact-gap'
-      | '--lr-empty-compact-padding';
+      | '--lr-empty-compact-icon-size'
+      | '--lr-empty-compact-padding'
+      | '--lr-empty-gap'
+      | '--lr-empty-icon-size'
+      | '--lr-empty-padding';
     attributeAliases: {
       'heading-level'?: LyraEmpty['headingLevel'];
     };

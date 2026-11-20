@@ -126,7 +126,9 @@ export const Appearances: StoryObj = {
   render: () => html`
     <div style="display:grid;gap:var(--lr-space-s)">
       ${(['accent', 'filled', 'outlined', 'filled-outlined', 'plain'] as const).map(appearance => html`
-        <lr-alert open closable variant="success" appearance=${appearance}>Saved changes (${appearance})</lr-alert>
+        <lr-alert open closable variant="success" appearance=${appearance} duration="60000" countdown="ltr">
+          <span slot="icon" aria-hidden="true">&#10003;</span>Saved changes (${appearance})
+        </lr-alert>
       `)}
     </div>
   `,

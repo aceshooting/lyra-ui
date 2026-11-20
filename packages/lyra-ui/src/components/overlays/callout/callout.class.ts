@@ -143,8 +143,8 @@ const calloutAppearanceConverter = {
  *   host surface's border color.
  * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's text color.
- * @cssprop [--lr-callout-close-hover-bg=var(--lr-color-brand-quiet)] -
- *   Close-button hover fill.
+ * @cssprop [--lr-callout-close-hover-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Close-button hover fill. The default translucent fill lets the panel's variant show through.
  * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size,var(--lr-font-size-m))] - The callout's text size.
  *   Its private default follows the library's shared size ladder; an inherited or direct public
  *   value remains authoritative.

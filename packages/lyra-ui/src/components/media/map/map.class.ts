@@ -211,7 +211,6 @@ import {
   stepExpression,
 } from './map-data-layers.js';
 export { buildGeoJsonPropertyDiff } from './map-geojson-diff.js';
-import '../../overlays/skeleton/skeleton.class.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, type ComposedFocusRepairSnapshot } from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -6834,7 +6833,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       invalidate: () => { this.readiness.invalidate(); },
       check: () => { this.readiness.check(); },
       fail: () => { this.readiness.fail(); },
-      direction: () => this.effectiveDirection,
       accentColor: () => resolvedLayerColor(this, `var(${DRAWING_COLOR_TOKEN})`, 'accent'),
       resolve: (value, property) => this.drawingPaint[property] ?? this.resolveStyleOverride(value, property),
     };

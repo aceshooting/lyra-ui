@@ -56,7 +56,6 @@ export interface MapDrawingHost {
   invalidate(): void;
   check(): void;
   fail(): void;
-  direction(): 'ltr' | 'rtl';
   accentColor(): string;
   resolve(value: LyraMapStyleValue, property: string): LyraMapStyleValue;
 }
@@ -462,8 +461,9 @@ export class MapDrawingController {
     }
     const vertex = state.vertices[index]; if (!vertex) return;
     const point = host.element.project(vertex); if (!point || !current()) return;
-    const step = event.shiftKey ? 32 : 8, rtl = host.direction() === 'rtl' ? -1 : 1;
-    const dx = event.key === 'ArrowLeft' ? -step * rtl : event.key === 'ArrowRight' ? step * rtl : 0;
+    // The geographic canvas is never mirrored, so arrows follow the physical screen axis in RTL too.
+    const step = event.shiftKey ? 32 : 8;
+    const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
     const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
     const coordinate = host.element.unproject([point[0] + dx, point[1] + dy]);
     if (coordinate && current() && this.replaceVertex(session, index, coordinate)) this.emitVertexEnd(session, index);

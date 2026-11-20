@@ -955,3 +955,22 @@ describe('lazy custom-element announcement content', () => {
     }
   });
 });
+
+it('shrinks the icon at the compact density and exposes default-density geometry tokens', async () => {
+  const icon = (el: LyraEmpty): CSSStyleDeclaration =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]')!);
+  const normal = await fixture<LyraEmpty>(html`<lr-empty heading="None"><span>*</span></lr-empty>`);
+  const compact = await fixture<LyraEmpty>(html`<lr-empty size="s" heading="None"><span>*</span></lr-empty>`);
+  expect(parseFloat(icon(compact).fontSize)).to.be.lessThan(parseFloat(icon(normal).fontSize));
+
+  const tuned = await fixture<LyraEmpty>(html`<lr-empty heading="None" style="--lr-empty-padding: 7px;
+    --lr-empty-gap: 5px; --lr-empty-icon-size: 21px"><span>*</span></lr-empty>`);
+  const base = getComputedStyle(tuned.shadowRoot!.querySelector('[part="base"]')!);
+  expect(base.paddingBlockStart).to.equal('7px');
+  expect(base.rowGap).to.equal('5px');
+  expect(icon(tuned).fontSize).to.equal('21px');
+
+  const tunedCompact = await fixture<LyraEmpty>(html`<lr-empty size="xs" heading="None"
+    style="--lr-empty-compact-icon-size: 11px"><span>*</span></lr-empty>`);
+  expect(icon(tunedCompact).fontSize).to.equal('11px');
+});
