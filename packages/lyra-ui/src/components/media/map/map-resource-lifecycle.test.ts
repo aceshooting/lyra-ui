@@ -145,6 +145,7 @@ it('ignores a removed peer load after reconnect and publishes only the current m
     const removedPeer = DelayedLoadMap.instances[0]!;
 
     element.remove();
+    await Promise.resolve();
     expect(removedPeer.removals).to.equal(1);
     document.body.append(element);
     await waitUntil(() => element.map !== undefined && DelayedLoadMap.instances.length === 2);

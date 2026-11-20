@@ -357,7 +357,7 @@ describe('camera sessions with native map engines', function () {
 
     it(`permanently disposes the ${engine} session on disconnect without ghost reconnect tracking`, async () => {
       const { wrapper, element, controller } = await mount(engine);
-      const time = clock(); controller.tour(time, tour); element.remove();
+      const time = clock(); controller.tour(time, tour); element.remove(); await Promise.resolve();
       expect(controller.snapshot).to.include({ active: false, reason: 'disconnect' });
       let disposed = false; try { controller.capture(); } catch (error) { disposed = (error as { code?: string }).code === 'disposed'; }
       expect(disposed).to.equal(true); time.seek(100);

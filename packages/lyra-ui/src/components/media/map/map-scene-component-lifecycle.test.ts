@@ -44,6 +44,7 @@ describe('lr-map geographic scene lifecycle and interaction', () => {
     element.addEventListener('lr-map-scene-state', event => states.push(event.detail));
     element.scene = { objects: [sceneMarker('latest', 8)] };
     element.remove();
+    await Promise.resolve();
     wrapper.append(element);
     await element.updateComplete;
     expect(states).to.deep.equal([{ revision: 1, state: 'loading' }]);

@@ -207,6 +207,8 @@ async function useDeterministicMapStyle(el: LyraGeoJsonViewer): Promise<void> {
     // Reconnect only after installing the instance loader. This exercises lr-map's real
     // owner-realm WebGL probe and generation guards without mutating private lifecycle state.
     map.remove();
+    // The disconnect releases the map a microtask later; re-inserting sooner would be a move.
+    await Promise.resolve();
     map.loadLibrary = () => Promise.resolve({ Map: DeferredStyleMap });
     map.mapStyle = EMPTY_MAP_STYLE;
     el.shadowRoot!.append(map);
@@ -248,6 +250,8 @@ async function constructMapBeforeStyleLoad(el: LyraGeoJsonViewer): Promise<{
   } as typeof Canvas.prototype.getContext;
   try {
     map.remove();
+    // The disconnect releases the map a microtask later; re-inserting sooner would be a move.
+    await Promise.resolve();
     map.loadLibrary = () => Promise.resolve({ Map: DeferredStyleMap });
     map.mapStyle = EMPTY_MAP_STYLE;
     el.shadowRoot!.append(map);

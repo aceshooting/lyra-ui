@@ -89,6 +89,8 @@ export async function mountCameraPeerMap(motion: 'system' | 'reduce' = 'system')
 }
 /** Reconnects a mounted map and readies its replacement peer. */
 export async function reconnectCameraPeerMap(wrapper: HTMLElement, element: LyraMap): Promise<CameraPeer> {
+  // A disconnect releases the map a microtask later; re-inserting before that is a move that keeps it.
+  await Promise.resolve();
   wrapper.append(element); await waitUntil(() => element.map !== undefined);
   const peer = element.map as unknown as CameraPeer; peer.ready = true; peer.fire('load');
   await element.whenStyleReady(); await element.updateComplete;

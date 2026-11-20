@@ -81,7 +81,7 @@ describe('lr-map-anchor lifecycle and content identity', () => {
     map.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; await map.updateComplete; await nextFrame();
     expect(base(anchor).hidden).to.equal(false); expect(deepActive() === card.shadowRoot!.querySelector('button')).to.equal(true);
     engine.ready = true; engine.fire('style.load'); await map.whenStyleReady(); await placed(anchor);
-    wrapper.removeChild(map); wrapper.append(map);
+    wrapper.removeChild(map); await Promise.resolve(); wrapper.append(map);
     await waitUntil(() => map.map !== undefined && map.map !== engine as unknown, 'a new engine after reconnect');
     (map.map as unknown as AnchorMapEngine).fire('load'); await map.whenStyleReady(); await placed(anchor);
     card.shadowRoot!.querySelector('button')!.click(); await card.updateComplete;

@@ -69,7 +69,7 @@ describe('lr-map scene renderer connection', () => {
     const gate = env.holdImport();
     const { element, peer, wrapper } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
     await waitUntil(() => env.imports === 1, 'held import', { timeout: 1000 });
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined && element.map !== (peer as unknown), 'replacement map', { timeout: 2000 });
     const replacement = env.peers.at(-1)!; replacement.ready = true; replacement.fire('load');
     gate.resolve(env.module()); await env.bridge(replacement);

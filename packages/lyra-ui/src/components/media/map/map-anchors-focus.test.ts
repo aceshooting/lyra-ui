@@ -63,7 +63,7 @@ describe('lr-map-anchor focus and keyboard', () => {
     expect(deepActive() === outside).to.equal(true);
     map.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; await map.updateComplete; await map.whenStyleReady(); await placed(anchor); await nextFrame();
     expect(deepActive() === outside).to.equal(true);
-    map.remove(); wrapper.append(map);
+    map.remove(); await Promise.resolve(); wrapper.append(map);
     await waitUntil(() => map.map !== undefined && map.map !== engine as unknown, 'engine rebuilt after reconnect');
     (map.map as unknown as AnchorMapEngine).fire('load'); await map.whenStyleReady(); await placed(anchor); await nextFrame();
     expect(deepActive() === outside).to.equal(true);

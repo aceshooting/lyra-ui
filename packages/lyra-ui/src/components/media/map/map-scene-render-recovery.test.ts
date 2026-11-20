@@ -118,7 +118,7 @@ describe('lr-map scene renderer recovery', () => {
     expect(disposed).to.equal(1);
     expect([...peer.layers.keys()].some(id => id.startsWith('lr-scene-lines-'))).to.equal(true);
     expect(peer.removed).to.equal(false);
-    element.remove();
+    element.remove(); await Promise.resolve();
     expect(peer.removed).to.equal(true);
     expect(disposed).to.equal(1);
   });
@@ -182,7 +182,7 @@ describe('lr-map scene renderer recovery', () => {
       expect(bridge.host.captureRenderInput().markers.length).to.equal(1);
       expect(bridge.visibility).to.deep.equal([false]);
       expect(peer.removed).to.equal(false);
-      element.remove(); expect(peer.removed).to.equal(true); expect(bridge.disposed).to.equal(true);
+      element.remove(); await Promise.resolve(); expect(peer.removed).to.equal(true); expect(bridge.disposed).to.equal(true);
     } finally { document.addEventListener = original; }
   });
 
@@ -252,7 +252,7 @@ describe('lr-map scene renderer recovery', () => {
     expect(reads).to.be.greaterThan(0);
     expect([...peer.layers.keys()].some(id => id.startsWith('lr-scene-lines-'))).to.equal(true);
     expect(peer.removed).to.equal(false);
-    element.remove(); expect(peer.removed).to.equal(true);
+    element.remove(); await Promise.resolve(); expect(peer.removed).to.equal(true);
   });
 
   for (const kind of ['marker', 'path'] as const) {

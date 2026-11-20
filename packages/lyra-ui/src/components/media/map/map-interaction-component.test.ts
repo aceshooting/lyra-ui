@@ -403,7 +403,7 @@ describe('lr-map interaction and retained state integration', () => {
   });
   it('does not publish a hit/background after a query synchronously disconnects its owner', async () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row()]; }); const clicks = capture(element, 'lr-map-click');
-    peer.hits = [hit(peer)]; peer.beforeQuery = () => element.remove(); fire(peer); expect(clicks.length).to.equal(0); expect(peer.removed).to.equal(true);
+    peer.hits = [hit(peer)]; peer.beforeQuery = () => element.remove(); fire(peer); expect(clicks.length).to.equal(0); await Promise.resolve(); expect(peer.removed).to.equal(true);
   });
   it('bounds a recursively reentered native query and publishes neither the nested nor stale outer click', async () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row()]; }); const clicks = capture(element, 'lr-map-click');
@@ -524,7 +524,7 @@ describe('lr-map interaction and retained state integration', () => {
       const { element, peer } = await mount(el => { el.dataLayers = [row()]; });
       peer.beforeGetSource = () => { peer.beforeGetSource = undefined; if (disconnect) element.remove(); else element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; };
       element.setFeatureState(address(), { selected: true }); expect(peer.stateCalls.length).to.equal(0);
-      if (disconnect) expect(peer.removed).to.equal(true); else { await restore(element); element.remove(); }
+      if (disconnect) { await Promise.resolve(); expect(peer.removed).to.equal(true); } else { await restore(element); element.remove(); }
     }
   });
   it('rejects a state target whose descriptor reflection schedules a source mutation', async () => {

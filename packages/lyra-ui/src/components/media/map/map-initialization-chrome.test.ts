@@ -239,7 +239,7 @@ describe('lr-map deferred initialization chrome', () => {
       await focusByKeyboard(part(h.root, 'initialization-activate'));
       await sendKeys({ press: 'Enter' });
       await waitUntil(() => requests.length === 1 && h.constructions() === 1);
-      h.element.remove();
+      h.element.remove(); await Promise.resolve();
       h.wrapper.append(h.element); await h.element.updateComplete;
       await waitUntil(() => h.root.querySelector('[part="initialization-activate"]') !== null);
       expect(outlines(h.root)).to.deep.equal(['navigation']);

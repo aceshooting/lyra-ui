@@ -283,7 +283,7 @@ describe('lr-map resource transition ownership', () => {
           await waitUntil(() => peer.removed, `${boundary} did not retire the failed map`);
           expect(element.map === undefined, boundary).to.equal(true);
           expect(element.shadowRoot!.textContent, boundary).not.to.include('Native write unavailable');
-          element.remove(); wrapper.append(element);
+          element.remove(); await Promise.resolve(); wrapper.append(element);
           await waitUntil(() => element.map !== undefined, `${boundary} did not reconnect`);
           const replacement = element.map as unknown as TransitionMap;
           replacement.fire('load'); await element.whenStyleReady(); await settle(element, replacement);
@@ -356,7 +356,7 @@ describe('lr-map resource transition ownership', () => {
     expect(writes.at(-1)).to.include({ kind: 'layout', key: 'text-size', value: 12 });
     await waitUntil(() => element.shadowRoot!.textContent?.includes('Map update unavailable') === true);
     expect(element.shadowRoot!.textContent).not.to.include('Native label paint failed');
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined);
     const recovered = element.map as unknown as TransitionMap;
     recovered.fire('load'); await element.whenStyleReady(); await settle(element, recovered);
@@ -466,7 +466,7 @@ describe('lr-map resource transition ownership', () => {
     expect(element.map === undefined).to.equal(true);
     await waitUntil(() => element.shadowRoot!.textContent?.includes('Map update unavailable') === true);
     expect(element.shadowRoot!.textContent).not.to.include('Native bounds unavailable');
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined);
     const recovered = element.map as unknown as TransitionMap;
     recovered.fire('load'); await element.whenStyleReady(); await settle(element, recovered);
@@ -496,7 +496,7 @@ describe('lr-map resource transition ownership', () => {
     expect(element.map === undefined).to.equal(true);
     await waitUntil(() => element.shadowRoot!.textContent?.includes('Map update unavailable') === true);
     expect(element.shadowRoot!.textContent).not.to.include('Native label unavailable');
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined);
     const recovered = element.map as unknown as TransitionMap;
     recovered.fire('load'); await element.whenStyleReady(); await settle(element, recovered);

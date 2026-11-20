@@ -147,7 +147,7 @@ describe('lr-map scene native allocation', () => {
     const old = await env.bridge(peer);
     const observers = env.observers.filter(observer => observer.kind === 'resize' && observer.targets.has(peer.container));
     const callbacks = [...peer.events.get('resize') ?? []];
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined && element.map !== (peer as unknown), 'replacement native map', { timeout: 2000 });
     const replacement = env.peers.at(-1)!; replacement.ready = true; replacement.fire('load');
     const current = await env.bridge(replacement), before = current.host.captureRenderInput();

@@ -324,7 +324,7 @@ describe('lr-map public readiness', () => {
     Object.defineProperty(peer, 'prepareFeatures', { value: undefined });
     peer.ready = true; peer.fire('load'); expect(loads).to.equal(1);
     peer.fire('load'); expect(loads).to.equal(1);
-    element.remove(); wrapper.append(element); await waitUntil(() => element.map !== undefined);
+    element.remove(); await Promise.resolve(); wrapper.append(element); await waitUntil(() => element.map !== undefined);
     const replacement = element.map as unknown as ReadinessMap;
     Object.defineProperty(replacement, 'prepareFeatures', { value: undefined });
     replacement.ready = true; replacement.fire('load'); expect(loads).to.equal(2);

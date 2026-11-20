@@ -116,7 +116,7 @@ describe('lr-map scene runtime startup recovery', () => {
     expect(bridge.host.captureRenderInput().markers.map(marker => marker.id)).to.deep.equal(['initial']);
     expect(factories).to.equal(2);
     expect(disposals).to.equal(1);
-    element.remove();
+    element.remove(); await Promise.resolve();
     expect(disposals).to.equal(2);
     expect(bridge.disposed).to.equal(true);
   });

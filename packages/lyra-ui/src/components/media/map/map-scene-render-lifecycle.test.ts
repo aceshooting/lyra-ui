@@ -77,7 +77,7 @@ describe('lr-map scene renderer lifetime', () => {
   it('ignores old bridge errors and status after native reconnect without disturbing replacement intent', async () => {
     const { element, peer, wrapper } = await env.mount(element => { element.scene = { objects: [sceneMarker('old')] }; });
     const old = await env.bridge(peer), oldInput = old.host.captureRenderInput();
-    element.remove(); element.scene = { objects: [sceneMarker('new')] }; wrapper.append(element);
+    element.remove(); element.scene = { objects: [sceneMarker('new')] }; await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined && element.map !== (peer as unknown), 'new native map', { timeout: 2000 });
     const nextPeer = env.peers.at(-1)!; nextPeer.ready = true; nextPeer.fire('load');
     const next = await env.bridge(nextPeer), states: string[] = [];

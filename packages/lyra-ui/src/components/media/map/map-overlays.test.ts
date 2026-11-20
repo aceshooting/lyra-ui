@@ -543,6 +543,7 @@ describe('map overlays and data', () => {
       await waitUntil(() => engine.controls.length === 1);
       const wrapper = el.parentElement!;
       el.remove();
+      await Promise.resolve();
       wrapper.append(el);
       await waitUntil(() => el.map != null && el.map !== (engine as unknown), 'map never rebuilt');
       const rebuilt = el.map as unknown as ScriptedOverlayMap;
@@ -666,6 +667,7 @@ describe('map overlays and data', () => {
       await waitUntil(() => !anchorOf(el).hidden);
       const wrapper = el.parentElement!;
       el.remove();
+      await Promise.resolve();
       expect(anchorOf(el).hidden).to.equal(true);
       wrapper.append(el);
     });

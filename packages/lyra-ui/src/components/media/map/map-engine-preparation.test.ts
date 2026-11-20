@@ -213,7 +213,7 @@ it('aborts superseded generated requirements and ignores their late failure', as
 it('cancels preparation on disconnect and prepares a fresh map after reconnect', async () => {
   const { element, peer, restore } = await setup();
   try {
-    peer.fire('load');element.remove();
+    peer.fire('load'); element.remove(); await Promise.resolve();
     expect(peer.preparations[0]!.signal?.aborted).to.be.true;
     document.body.append(element);
     await waitUntil(() => element.map !== undefined);

@@ -248,9 +248,10 @@ describe('lr-map public renderer and input boundaries', () => {
         window.dispatchEvent(new HashChangeEvent('hashchange'));
         expect(reads).to.equal(1);
         expect(peer.commands).to.equal(commands);
-        expect(peer.removed).to.equal(true);
         expect(location.hash).to.equal('#section&camera=6/4/3/20/25');
         expect(history.state).to.deep.equal({ retained: true });
+        await Promise.resolve();
+        expect(peer.removed).to.equal(true);
         parent.append(element);
         await waitUntil(() => element?.map !== undefined);
         const current = element.map as unknown as BoundaryMap;

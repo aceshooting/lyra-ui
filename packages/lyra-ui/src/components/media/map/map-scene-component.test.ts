@@ -190,7 +190,7 @@ describe('lr-map accepted geographic scene', () => {
   it('closes the old facade on disconnect and creates a fresh accepted connection on reconnect', async () => {
     const { element, wrapper } = await mount({ objects: [sceneMarker()] }); const old = attachment(element);
     let callbacks = 0; old.subscribeTargets(() => callbacks++); const release = old.watchTarget('target');
-    element.remove(); expect(mapSceneSessionAttachment(element)).to.equal(undefined);
+    element.remove(); await Promise.resolve(); expect(mapSceneSessionAttachment(element) === undefined).to.equal(true);
     expect(old.target('target')).to.deep.equal({ status: 'absent' });
     wrapper.append(element); const next = attachment(element);
     expect(next === old).to.equal(false); expect(next.target('target').status).to.equal('accepted');
@@ -207,8 +207,8 @@ describe('lr-map accepted geographic scene', () => {
     const next = attachment(element);
     expect(next === old).to.equal(false); expect(old.target('adopted')).to.deep.equal({ status: 'absent' });
     expect(next.target('adopted').status).to.equal('accepted');
-    await element.updateComplete; element.remove();
-    expect(mapSceneSessionAttachment(element)).to.equal(undefined);
+    await element.updateComplete; element.remove(); await Promise.resolve();
+    expect(mapSceneSessionAttachment(element) === undefined).to.equal(true);
   });
 
   it('does not deliver an obsolete status after a target listener accepts a newer scene', async () => {
@@ -226,7 +226,7 @@ describe('lr-map accepted geographic scene', () => {
     const { element } = await mount(); const states = stateEvents(element); const a = attachment(element);
     a.subscribeTargets(() => element.remove()); element.scene = { objects: [sceneMarker()] };
     await element.updateComplete;
-    expect(states).to.deep.equal([]); expect(mapSceneSessionAttachment(element)).to.equal(undefined);
+    expect(states).to.deep.equal([]); expect(mapSceneSessionAttachment(element) === undefined).to.equal(true);
   });
 
   it('renders safe caller text, all approved parts and a bounded page of the accepted inventory', async () => {
@@ -325,7 +325,8 @@ describe('lr-map accepted geographic scene', () => {
         else {
           element.remove();
           element.strings = { mapSceneUnavailable: current };
-          wrapper.append(element);
+          // After the deferred release, so this reconnects rather than moves.
+          queueMicrotask(() => queueMicrotask(() => wrapper.append(element)));
         }
       });
       failNative();

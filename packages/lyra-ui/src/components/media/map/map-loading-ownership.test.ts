@@ -60,6 +60,7 @@ describe('lr-map loading-state ownership', () => {
     expect(baseBusy()).to.equal('false');
 
     element.remove();
+    await Promise.resolve();
     wrapper.append(element);
     await element.updateComplete;
     expect(hostBusy()).to.equal('false');

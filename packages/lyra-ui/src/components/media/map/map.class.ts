@@ -17,6 +17,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LYRA_CONTEXT_UPDATE } from '../../../internal/context-update.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
@@ -2035,6 +2036,10 @@ export interface LyraMapEventMap {
  *
  * The base exposes map loading with aria-busy. The host mirrors it until an author sets aria-busy.
  * Removing the host attribute resumes the mirror.
+ *
+ * A same-task DOM move (`moveBefore()`, or remove and re-insert in one task) keeps the native map,
+ * camera, markers, controls, custom layers, camera session and scene renderer; a genuine
+ * disconnect releases them one microtask later.
  * @attr {'true' | 'false'} aria-busy - Author-controlled busy indicator on the map host.
  *
  * Marker inspection is limited to 2,000 entries (markersTruncated reports an omitted suffix),
@@ -4731,7 +4736,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * engine cannot project, or the input is not a finite pair.
    */
   project(lngLat: readonly [number, number]): LyraMapPoint | undefined {
-    const map = this._map;
+    const map = this.isConnected ? this._map : undefined;
     if (!map || typeof map.project !== 'function') return undefined;
     if (!Array.isArray(lngLat) || !isFiniteCoordinate(lngLat[0]) || !isFiniteCoordinate(lngLat[1])) {
       return undefined;
@@ -4750,7 +4755,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * map does not exist yet, the engine cannot unproject, or the input is not a finite pair.
    */
   unproject(point: LyraMapPoint): readonly [number, number] | undefined {
-    const map = this._map;
+    const map = this.isConnected ? this._map : undefined;
     if (!map || typeof map.unproject !== 'function') return undefined;
     if (!Array.isArray(point) || !isFiniteCoordinate(point[0]) || !isFiniteCoordinate(point[1])) {
       return undefined;
@@ -5420,6 +5425,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the native map, its camera, markers and custom layers.
+    if (this.detached.cancel()) { this.resumeAfterMove(); return; }
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) for (const announcer of this.drawingProgressAnnouncers) announcer.setTimerHost(ownerWindow);
     const generation = ++this._connectGeneration;
@@ -5428,6 +5435,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
     this.unregisterCustomLayers?.();
     this.unregisterCustomLayers = registerMapCustomLayers(this, { acquire: callbacks => this.acquireCustomLayer(callbacks) });
+    // A reconnect is a new, owner-realm initialization transaction: the scene it connects next
+    // must not report the previous connection's failure.
+    this.failure = undefined;
+    this.loading = true;
+    this._webglReady = false;
     this.connectGeographicScene();
     this.readiness.reset();
     this.controlsReadiness.reset();
@@ -5451,10 +5463,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.constructionMode = this.initializationMode;
     this.constructionDelay = this.safeInitializationDelay;
     scheduler.connect(this.constructionMode, this.constructionDelay);
-    // A reconnect is a new, owner-realm initialization transaction.
-    this.failure = undefined;
-    this.loading = true;
-    this._webglReady = false;
     void (async () => {
       let mod: Awaited<ReturnType<typeof loadMaplibre>>;
       try {
@@ -5510,8 +5518,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     })();
   }
 
+  private readonly detached = new DeferredTeardown(() => this.releaseConnection());
+
+  /** A same-task move keeps the connection; only state derived from the new ancestry is re-read. */
+  private resumeAfterMove(): void {
+    const blocked = this.interactionBlocked;
+    this.observeMapInteractionState();
+    const observer = this.interactionObserver;
+    if (this.interactionBlocked !== blocked) this.applyMapInteractionState(() => this.isConnected && this.interactionObserver === observer);
+    if (this.canvasAllocationController) { this.releaseCanvasAllocation(); this.syncCanvasAllocation(); }
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  /** A genuine disconnect's teardown; a same-task DOM move cancels it. */
+  private releaseConnection(): void {
     for (const announcer of this.drawingProgressAnnouncers) announcer.cancel();
     this.drawingProgressState = [undefined, undefined];
     this.releaseCanvasAllocation();
@@ -5652,6 +5676,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.releaseCanvasAllocation();
     if (this.isConnected) this.syncCanvasAllocation();
@@ -6700,28 +6725,31 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     observer?.disconnect();
   }
 
+  /** Applies a changed `inert`/`disabled` ancestry: blocking retires drawing, hover and anchors. */
+  private applyMapInteractionState(current: () => boolean): void {
+    const blocked = this.mapInteractionBlocked(), map = this._map;
+    this.interactionBlocked = blocked;
+    const unchanged = (): boolean => current() && this._map === map && this.mapInteractionBlocked() === blocked;
+    if (blocked) {
+      this.cancelMapDrawing('disabled');
+      if (!unchanged()) return;
+      this.clearMapHover();
+      if (!unchanged()) return;
+      this.anchorController?.hide();
+      if (!unchanged()) return;
+      this.childAnchors?.hide();
+    } else {
+      this.syncMapCursor();
+      if (unchanged()) this.scheduleAnchorSync();
+    }
+  }
+
   private observeMapInteractionState(): void {
     this.stopObservingMapInteractionState();
     if (!this.isConnected) return;
     this.interactionBlocked = this.mapInteractionBlocked();
     const current = (): boolean => this.isConnected && this.interactionObserver === observer;
-    const observer = new OwnedMutationObserver(this, () => {
-      const blocked = this.mapInteractionBlocked(), map = this._map;
-      this.interactionBlocked = blocked;
-      const unchanged = (): boolean => current() && this._map === map && this.mapInteractionBlocked() === blocked;
-      if (blocked) {
-        this.cancelMapDrawing('disabled');
-        if (!unchanged()) return;
-        this.clearMapHover();
-        if (!unchanged()) return;
-        this.anchorController?.hide();
-        if (!unchanged()) return;
-        this.childAnchors?.hide();
-      } else {
-        this.syncMapCursor();
-        if (unchanged()) this.scheduleAnchorSync();
-      }
-    });
+    const observer = new OwnedMutationObserver(this, () => this.applyMapInteractionState(current));
     this.interactionObserver = observer;
     for (let node: Element | null = this; node; node = flattenedParentElement(node)) {
       observer.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
@@ -6795,6 +6823,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * without reading the snapshot or changing state, and whenIdle() resolves only after the load,
    * so await it and call again. Once loaded, admission is synchronous for every element. */
   editDrawing(snapshot: LyraMapDrawingSnapshot): boolean {
+    if (!this.isConnected) return false;
     if (this.drawingLoad === 'failed') this.drawingLoad = undefined;
     return this.drawingRuntime()?.edit(snapshot) ?? false;
   }

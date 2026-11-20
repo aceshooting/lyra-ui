@@ -49,13 +49,16 @@ describe('canvas allocation geometry boundaries', () => {
     for (const operation of ['fit', 'bounds'] as const) {
       it(`refuses a ${operation} on an engine retired by allocation ${callback}`, async () => {
         const { stage, element, engine } = await mount();
-        engine[callback] = () => { engine[callback] = undefined; element.remove(); stage.append(element); };
+        engine[callback] = () => { engine[callback] = undefined; element.remove(); };
         element.style.left = '100px';
         const reads = engine.reads, fits = engine.fits;
         if (operation === 'fit') expect(element.fitBounds([[0, 0], [1, 1]], { animate: false })).to.equal(false);
         else expect(element.getVisibleBounds()).to.equal(null);
-        expect(engine.removed).to.equal(true);
         expect(engine.fits).to.equal(fits); expect(engine.reads).to.equal(reads);
+        // The disconnect releases the engine a microtask later; a same-task re-insertion would keep it.
+        await Promise.resolve();
+        expect(engine.removed).to.equal(true);
+        stage.append(element);
         await waitUntil(() => element.map !== undefined && element.map !== (engine as unknown));
         await twoFrames(); expect(closeRect(container(element), stage)).to.equal(true);
       });

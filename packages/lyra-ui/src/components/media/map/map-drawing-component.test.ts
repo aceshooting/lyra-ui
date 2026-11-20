@@ -247,7 +247,7 @@ describe('lr-map drawing integration', () => {
     expect(element.undoDrawing()).to.equal(true); await settle(element, peer); expect(order).to.deep.equal(['change', 'cancel']); expect(peer.sources.size).to.equal(0);
   });
   it('cancels and restores native zoom before disconnect removes the map', async () => {
-    const { element, peer } = await drawing(); await vertex(element, peer, 0, 0); const cancels = capture(element, 'lr-map-draw-cancel'); element.remove();
+    const { element, peer } = await drawing(); await vertex(element, peer, 0, 0); const cancels = capture(element, 'lr-map-draw-cancel'); element.remove(); await Promise.resolve();
     expect(cancels.length).to.equal(1); expect((cancels[0] as { reason: string }).reason).to.equal('disconnect'); expect(peer.zoomGesture).to.equal(true); expect(peer.removed).to.equal(true);
   });
   it('cancels active drawing for pointercancel and ancestor inertness without automatic resume', async () => {
@@ -444,6 +444,7 @@ describe('lr-map drawing integration', () => {
   it('retires a captured edit on disconnect and rejects disconnected admission', async () => {
     const { element, peer } = await mount(); await editSurface(element, peer); element.editDrawing(completed()); await settle(element, peer);
     pointer(peer, 'pointerdown', 100, 100); element.remove();
+    expect(element.editDrawing(completed())).to.equal(false); await Promise.resolve();
     expect(peer.panEnabled).to.equal(true); expect(peer.zoomGesture).to.equal(true); expect(peer.removed).to.equal(true); expect(element.editDrawing(completed())).to.equal(false);
   });
   it('supports localized keyboard handles, roving selection and screen-axis movement under RTL', async () => {

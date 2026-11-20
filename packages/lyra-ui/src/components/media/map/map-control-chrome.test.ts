@@ -395,7 +395,7 @@ describe('lr-map public native control chrome', () => {
     await mutations();
     expect(stale.part.contains('geolocate-active')).to.equal(false);
     const oldMap = element.map;
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined && element.map !== oldMap);
     await element.updateComplete;
     const fresh = query(element.shadowRoot!, '.maplibregl-ctrl-geolocate');

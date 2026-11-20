@@ -208,7 +208,7 @@ describe('createMapCameraSession', () => {
     const { wrapper, element, peer } = await mountCameraPeerMap();
     const camera = session(element), shared = clock(), events = interrupts(element);
     camera.tour(shared, tour);
-    element.remove();
+    element.remove(); await Promise.resolve();
     expect(camera.snapshot).to.deep.equal({ mode: 'idle', active: false, reason: 'disconnect' });
     expect(errorCode(() => camera.capture())).to.equal('disposed');
     const writes = jumps(peer); shared.seek(60);

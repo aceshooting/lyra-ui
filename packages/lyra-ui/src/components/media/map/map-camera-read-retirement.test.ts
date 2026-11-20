@@ -102,10 +102,11 @@ describe('lr-map camera reporting after native read retirement', () => {
     };
     settleUserCamera(peer);
     expect(retired, 'the settled camera read actually retired its peer').to.equal(true);
-    expect(peer.removed).to.equal(true);
     expect(element.center, 'retired native coordinates cannot replace a newer authored camera').to.deep.equal([70, 20]);
     expect(element.zoom).to.equal(9);
     expect(views.length).to.equal(0);
+    await Promise.resolve();
+    expect(peer.removed).to.equal(true);
 
     wrapper.append(element);
     const replacement = await ready(element);
@@ -133,8 +134,9 @@ describe('lr-map camera reporting after native read retirement', () => {
     };
     settleUserCamera(peer);
     expect(retired, 'the settled bounds read actually retired its peer').to.equal(true);
-    expect(peer.removed).to.equal(true);
     expect(views.length, 'camera data collected before retirement cannot publish afterward').to.equal(0);
+    await Promise.resolve();
+    expect(peer.removed).to.equal(true);
 
     wrapper.append(element);
     const replacement = await ready(element);

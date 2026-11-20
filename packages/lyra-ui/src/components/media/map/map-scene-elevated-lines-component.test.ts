@@ -118,7 +118,7 @@ describe('lr-map elevated scene paths and arcs', () => {
     element.scene = { objects: [sceneArc('raised')] };
     await waitUntil(() => runtime.live().length === 1, 'elevated layer again', { timeout: 2000 });
     const third = runtime.live()[0]!;
-    element.remove();
+    element.remove(); await Promise.resolve();
     expect(third.disposed).to.equal(true); expect(third.host.signal.aborted).to.equal(true);
   });
 
@@ -262,7 +262,7 @@ describe('lr-map elevated scene paths and arcs', () => {
     await waitUntil(() => flatIds(peer).join() === 'remaining', 'flat-only intent installed');
     expect(disposals).to.equal(1);
     expect(peer.removed).to.equal(false);
-    element.remove(); expect(peer.removed).to.equal(true); expect(disposals).to.equal(1);
+    element.remove(); await Promise.resolve(); expect(peer.removed).to.equal(true); expect(disposals).to.equal(1);
   });
 
   for (const failure of ['throw', 'null handle'] as const) {

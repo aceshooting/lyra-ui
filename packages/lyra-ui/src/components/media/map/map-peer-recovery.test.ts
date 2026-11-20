@@ -160,6 +160,7 @@ it('contains teardown failure from a candidate that never finishes setup on reco
   }
   try {
     el.remove();
+    await Promise.resolve();
     (el as unknown as { loadLibrary(): Promise<unknown> }).loadLibrary = async () => ({ Map: PartialMap });
     document.body.append(el);
     await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);

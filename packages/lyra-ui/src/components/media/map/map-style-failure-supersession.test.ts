@@ -66,9 +66,10 @@ for (const reconnect of [false, true]) {
           element.remove();
         }
         element.mapStyle = restored;
-        if (reconnect) document.body.append(element);
         resolve();
       }));
+      // Re-inserting after the deferred release reconnects; in the same task it would be a move.
+      if (reconnect) document.body.append(element);
       if (reconnected) await reconnected;
       await element.updateComplete;
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));

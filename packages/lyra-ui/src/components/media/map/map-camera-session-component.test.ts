@@ -104,7 +104,7 @@ describe('map camera session component attachment', () => {
     Object.defineProperty(peer.canvas, 'addEventListener', { configurable: true, value: () => { registrations++; } });
     peer.getCanvas = () => { element.remove(); return peer.canvas; };
     expect(() => acquire(element)).to.throw(); expect(registrations).to.equal(0);
-    wrapper.append(element); await waitUntil(() => element.map !== undefined);
+    await Promise.resolve(); wrapper.append(element); await waitUntil(() => element.map !== undefined);
     const next = element.map as unknown as CameraPeer; next.ready = true; next.fire('load'); await element.whenStyleReady(); await element.updateComplete;
     expect(acquire(element).lease.current()).to.equal(true);
   });
@@ -217,7 +217,10 @@ describe('map camera session component attachment', () => {
   it('releases disconnected identity permanently and never revives it on reconnect', async () => {
     const { wrapper, element } = await mount(); const { lease, interrupted } = acquire(element);
     const pending = lease.prepare({}, view(), { kind: 'jump' }); element.remove();
-    expect(interrupted).to.deep.equal(['disconnect']); expect(lease.current()).to.equal(false); expect(lease.commit(pending)).to.equal(false);
+    expect(lease.current()).to.equal(false); expect(lease.commit(pending)).to.equal(false);
+    // The release follows a microtask later, unless a same-task re-insertion keeps the map.
+    await Promise.resolve();
+    expect(interrupted).to.deep.equal(['disconnect']); expect(lease.current()).to.equal(false);
     wrapper.append(element); await waitUntil(() => element.map !== undefined);
     const peer = element.map as unknown as CameraPeer; peer.ready = true; peer.fire('load'); await element.whenStyleReady();
     expect(acquire(element).lease.current()).to.equal(true); expect(lease.current()).to.equal(false);
@@ -348,7 +351,7 @@ describe('map camera session component attachment', () => {
     element.scene = { objects: [sceneMarker('target', 5)] };
     controller.follow({ objectId: 'target', mode: 'ground' });
     const oldAttachment = mapSceneSessionAttachment(element);
-    element.remove(); expect(controller.snapshot.reason).to.equal('disconnect');
+    element.remove(); await Promise.resolve(); expect(controller.snapshot.reason).to.equal('disconnect');
     const writes = peer.calls.filter(name => name === 'jumpTo').length;
     element.scene = { objects: [sceneMarker('target', 25)] };
     wrapper.append(element); await waitUntil(() => element.map !== undefined);

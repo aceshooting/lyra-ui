@@ -244,7 +244,7 @@ describe('lr-map actual modular companion integration', function () {
           await waitUntil(() => requested, 'The obsolete style was requested');
           if (reconnect) el.remove();
           el.mapStyle = { ...localStyle(), layers: [{ id: 'plain-background', type: 'background', paint: { 'background-color': '#ff0000' } }] };
-          if (reconnect) wrapper.append(el);
+          if (reconnect) { await Promise.resolve(); wrapper.append(el); }
           await el.updateComplete;
           if (supersession === 'successive replacements') {
             const intermediate = el.whenStyleReady().then(() => 'ready', (error: unknown) => (error as DOMException).name);
@@ -516,7 +516,7 @@ describe('lr-map actual modular companion integration', function () {
       const fragment = new URLSearchParams(location.hash.slice(1));
       expect(fragment.get('unrelated')).to.equal('preserved'); expect(fragment.has('nativeMap')).to.equal(true);
       expect(Number(fragment.get('nativeMap')!.split('/')[0])).to.be.closeTo(el.zoom, 0.001);
-      el.remove(); expect(oldCanvas.isConnected).to.equal(false); expect(el.map).to.equal(undefined);
+      el.remove(); await Promise.resolve(); expect(oldCanvas.isConnected).to.equal(false); expect(el.map).to.equal(undefined);
       history.replaceState(originalState, '', `${location.pathname}${location.search}#unrelated=preserved&nativeMap=4/0/0`);
       const loaded = oneEvent(el, 'lr-map-load'); mounted.wrapper.append(el); await loaded; await el.whenIdle();
       expect(el.map === oldMap).to.equal(false); expect(el.zoom).to.be.closeTo(4, 0.001);
@@ -654,7 +654,7 @@ describe('lr-map actual modular companion integration', function () {
       }); observer.observe(el);
     });
     expect(el.map).to.equal(undefined); expect(loads).to.equal(0);
-    el.remove(); el.initialization = 'idle'; wrapper.append(el); el.remove();
+    el.remove(); el.initialization = 'idle'; await Promise.resolve(); wrapper.append(el); el.remove();
     await el.updateComplete;
     await new Promise<void>(resolve => {
       if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(() => resolve(), { timeout: 1500 });
@@ -663,7 +663,7 @@ describe('lr-map actual modular companion integration', function () {
     expect(el.map).to.equal(undefined); expect(loads).to.equal(0);
     el.initialization = 'eager'; const eager = oneEvent(el, 'lr-map-load'); wrapper.append(el); await eager; await el.whenIdle();
     const first = el.map!, canvas = first.getCanvas(); expect(loads).to.equal(1);
-    el.remove(); expect(canvas.isConnected).to.equal(false); expect(el.map).to.equal(undefined);
+    el.remove(); await Promise.resolve(); expect(canvas.isConnected).to.equal(false); expect(el.map).to.equal(undefined);
     el.initialization = 'idle'; const idle = oneEvent(el, 'lr-map-load'); wrapper.append(el); await idle; await el.whenIdle();
     expect(el.map === first).to.equal(false); expect(loads).to.equal(2);
     expect(el.shadowRoot!.querySelectorAll('canvas.maplibregl-canvas').length).to.equal(1);
@@ -1016,7 +1016,7 @@ describe('lr-map actual modular companion integration', function () {
           link.getBoundingClientRect().height > 0, 'keyboard opens a visible attribution link');
         await sendKeys({ press: 'Tab' });
         expect(el.shadowRoot!.activeElement === link, 'Tab reaches the visible attribution link').to.equal(true);
-        el.remove(); const loaded = oneEvent(el, 'lr-map-load'); wrapper.append(el); await loaded;
+        el.remove(); const loaded = oneEvent(el, 'lr-map-load'); await Promise.resolve(); wrapper.append(el); await loaded;
         await waitUntil(() => roots().every(root => root?.isConnected));
         for (const part of ['navigation', 'scale', 'geolocate', 'attribution']) expect(el.shadowRoot!.querySelectorAll(`[part~="${part}"]`).length).to.equal(1);
         assertOrder();

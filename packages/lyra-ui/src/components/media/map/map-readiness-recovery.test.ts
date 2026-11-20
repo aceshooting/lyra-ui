@@ -109,7 +109,7 @@ describe('lr-map readiness capability recovery', () => {
       expect([...peer.listeners.values()].every(listeners => listeners.size === 0)).to.equal(true);
       expect(element.shadowRoot!.querySelector('[part="error"]')!.textContent).to.include('Map could not start');
       expect(element.shadowRoot!.textContent).not.to.include('Private renderer failure');
-      element.remove(); ReadinessMap.configure = undefined; wrapper.append(element);
+      element.remove(); ReadinessMap.configure = undefined; await Promise.resolve(); wrapper.append(element);
       await waitUntil(() => ReadinessMap.instances.length === 2 && element.map !== undefined);
       const replacement = ReadinessMap.instances[1]!;
       replacement.ready = true; replacement.fire('load'); await element.whenStyleReady();

@@ -393,6 +393,7 @@ it('resizes only the current connected map when its allocated container changes'
     el.remove();
     callbacks[0]!([], {} as ResizeObserver);
     expect(firstResizes, 'a stale callback cannot resize a disconnected map').to.equal(1);
+    await Promise.resolve();
     expect(disconnects).to.equal(1);
 
     document.body.append(el);
@@ -464,6 +465,7 @@ it('keeps a constructed map usable when allocation observation throws and ignore
     expect(resizes).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
     el.remove();
+    await Promise.resolve();
     expect(removals).to.equal(1);
   } finally {
     el.remove();
@@ -566,6 +568,7 @@ it('coalesces peer-control size deliveries and cancels stale work across disconn
     corner.style.height = '100px'; deliver(0);
     const stale = [...frames.values()][0]!;
     el.remove();
+    await Promise.resolve();
     expect(canceled).to.equal(1); expect(frames.size).to.equal(0);
     stale(0); deliver(0);
     expect(frames.size).to.equal(0);
@@ -804,6 +807,7 @@ it('uses the adopted owner realm for intersection observation, token reads, and 
     }
   } finally {
     el.remove();
+    await Promise.resolve();
     if (originalIntersectionObserver) {
       Object.defineProperty(frameWindow, 'IntersectionObserver', originalIntersectionObserver);
     } else {
@@ -1086,6 +1090,7 @@ for (const failureStage of ['constructor', 'setup'] as const) {
       expect(attempts).to.equal(2);
 
       el.remove();
+      await Promise.resolve();
       expect(removals).to.equal(failureStage === 'setup' ? 2 : 1);
       document.body.append(el);
       await waitUntil(() => el.map != null, `${failureStage} reconnect never initialized`, {
@@ -4286,6 +4291,7 @@ it('removes all marker DOM on disconnect', async function () {
   expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(1);
 
   el.remove();
+  await Promise.resolve();
 
   expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(0);
 });

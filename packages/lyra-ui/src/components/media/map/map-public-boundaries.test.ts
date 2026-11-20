@@ -77,9 +77,10 @@ it('contains a public peer fit failure and recovers after the required style is 
     await new Promise<void>((resolve) => queueMicrotask(() => {
       element.remove();
       element.mapStyle = blankStyle;
-      document.body.append(element);
       resolve();
     }));
+    // Re-inserting after the deferred release reconnects; in the same task it would be a move.
+    document.body.append(element);
     await reconnected;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     expect(element.map !== undefined).to.equal(true);

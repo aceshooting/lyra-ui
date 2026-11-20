@@ -482,7 +482,7 @@ describe('lr-map external data layers and labels', () => {
     await waitUntil(() => element.shadowRoot?.textContent?.includes('Map could not update') === true);
     expect(element.shadowRoot?.textContent?.includes('Renderer range update failed')).to.equal(false);
 
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined, 'reconnected map did not initialize');
     const recovered = element.map;
     if (!(recovered instanceof OwnedMap)) throw new Error('Expected the injected renderer');

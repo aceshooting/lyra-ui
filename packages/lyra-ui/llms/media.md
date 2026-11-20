@@ -442,6 +442,14 @@ plus a peer-neutral `map` getter for common imperative operations. Its runtime v
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
 
+A same-task DOM move (`moveBefore()`, or removing and re-inserting the element in one task) keeps
+the native map, its camera, markers, controls, custom layers, camera session and scene renderer;
+only state that depends on the new ancestors (`inert`/`disabled` blocking and `canvasTarget`
+allocation) is re-read. A genuine disconnect releases all of it one microtask later. While the
+element is detached, public reads and commands such as `project()`, `unproject()`,
+`getVisibleBounds()`, `fitBounds()`, `editDrawing()` and `updateSourceData()` return their
+unavailable result, and legend requests answered after the removal are not committed.
+
 The base reports the engine's loading state through `aria-busy`. An application can set
 `aria-busy` on the host independently. Removing that attribute resumes the loading-state mirror.
 Read the settled `center` and `zoom` after an initial URL restoration or a limit clamp. Those

@@ -331,23 +331,29 @@ describe('map controls, overlays and locale updates', () => {
   });
 
   for (const target of ['legend-toggle', 'legend-disclosure'] as const) {
-    it(`discards a pending ${target} request when its listener reconnects the map`, async () => {
+    it(`discards a pending ${target} request when its listener disconnects the map, and honours it across a same-task move`, async () => {
       const { element, wrapper } = await mount(el => {
         el.legendInteractive = true;
         el.legendCollapsible = true;
         el.legend = [{ label: 'Roads', value: 'roads', color: 'red', pattern: 'solid' }];
       });
       const request = target === 'legend-toggle' ? 'lr-map-legend-toggle-request' : 'lr-map-legend-panel-toggle-request';
-      let reconnected = false;
-      element.addEventListener(request, () => {
-        element.remove();
-        wrapper.append(element);
-        reconnected = true;
-      }, { once: true });
+      let removed = false;
+      element.addEventListener(request, () => { element.remove(); removed = true; }, { once: true });
       element.shadowRoot!.querySelector<HTMLButtonElement>(`[part~="${target}"]`)!.click();
-      expect(reconnected).to.equal(true);
+      expect(removed).to.equal(true);
       expect(element.legendOpen).to.equal(true);
       expect(element.hiddenCategories).to.deep.equal([]);
+      await Promise.resolve();
+      wrapper.append(element);
+      await element.updateComplete;
+      let moved = false;
+      element.addEventListener(request, () => { element.remove(); wrapper.append(element); moved = true; }, { once: true });
+      element.shadowRoot!.querySelector<HTMLButtonElement>(`[part~="${target}"]`)!.click();
+      expect(moved).to.equal(true);
+      // A same-task move keeps the connection, so the request it answered still commits.
+      if (target === 'legend-toggle') expect(element.hiddenCategories).to.deep.equal(['roads']);
+      else expect(element.legendOpen).to.equal(false);
     });
   }
 

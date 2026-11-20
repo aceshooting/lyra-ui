@@ -177,7 +177,7 @@ describe('lr-map initialization and current-frame export', () => {
   it('cancels stale idle admission on disconnect and creates a new reconnect transaction', async () => {
     const { element, wrapper } = await setup(el => { el.initialization = 'idle'; });
     const stale = [...idleCallbacks.values()][0]!;
-    element.remove(); expect(idleCallbacks.size).to.equal(0);
+    element.remove(); await Promise.resolve(); expect(idleCallbacks.size).to.equal(0);
     stale({ didTimeout: false, timeRemaining: () => 10 }); expect(ControlMap.constructions).to.equal(0);
     wrapper.append(element); await element.updateComplete;
     [...idleCallbacks.values()][0]!({ didTimeout: false, timeRemaining: () => 10 });
@@ -318,7 +318,7 @@ describe('lr-map initialization and current-frame export', () => {
     const { element, wrapper } = await mount();
     await rejects(element.exportImage({ type: 'invalid' } as unknown as Parameters<LyraMap['exportImage']>[0]), 'invalid-options');
     await element.updateComplete; expect(element.shadowRoot!.textContent).to.include('Map image could not be exported');
-    element.remove(); wrapper.append(element);
+    element.remove(); await Promise.resolve(); wrapper.append(element);
     await waitUntil(() => element.map !== undefined); await element.updateComplete;
     expect(element.shadowRoot!.textContent).not.to.include('Map image could not be exported');
   });

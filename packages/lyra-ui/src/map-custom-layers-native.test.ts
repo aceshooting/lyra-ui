@@ -138,7 +138,7 @@ for (const engine of ['modular', 'maplibre'] as const) describe(`addMapCustomLay
       expect(unexpected.map(args => String(args[0]))).to.deep.equal([]);
     }
     const disposals = probe.disposals.length;
-    element.remove();
+    element.remove(); await Promise.resolve();
     expect(handle.status.state).to.equal('removed');
     expect(probe.disposals.length).to.equal(disposals + 1);
     expect(statuses.at(-1)).to.deep.equal({ state: 'removed' });
