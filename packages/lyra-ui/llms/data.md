@@ -542,7 +542,7 @@ when the menu is already open (rows changed while open are repaired by the menu)
 **Slots:** `empty`, `loading`, `no-results`, `error` (replaces the built-in failed-load state,
 including its retry button, while `error` is set).
 
-Grid search and column-filter inputs forward `spellcheck`, `autocapitalize`, and `autocorrect`. The default text search matches without case or accents and announces the filtered count. Selection and expansion inputs inspect at most 100,000 key entries per assignment.
+Grid search and column-filter inputs forward `spellcheck`, `autocapitalize`, and `autocorrect` (`autoCorrect`, WebKit). The default text search matches without case or accents and announces the filtered count. Selection and expansion inputs inspect at most 100,000 key entries per assignment.
 The composed pager inherits the `--lr-pagination-*` tokens, including `--lr-pagination-current-bg`, `--lr-pagination-hover-bg` and `--lr-pagination-active-bg`. The grid exports its page field as `page-input`.
 
 **CSS parts:** `body`, `cell`, `column-menu`, `column-menu-button`, `columns-menu`, `data-grid`,
@@ -555,7 +555,8 @@ built-in error `<lr-empty>`'s own parts), `retry-button` (the built-in retry con
 glyph the component resets; rendered only while it has a value), `first-button`,
 `first-icon`, `footer`, `footer-cell`, `footer-row`, `group-count`, `group-row`, `group-value`,
 `header`, `header-cell`, `last-button`, `last-icon`, `live-region`, `loading-overlay`,
-`next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
+`next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-input`, `page-size`,
+`page-summary`, `pager`,
 `pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
 `resize-handle`, `row`, `row-detail`, `search`, `search-wrapper` (the row wrapper around `search`
 and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
@@ -589,7 +590,7 @@ for styling and inspection. Check delivery on the shared light-DOM region in `<b
 
 Declarative `loading` is silent on mount. Each later `false` → `true` transition appends the
 localized loading text to that shared polite sink, including repeated loading cycles. The visible
-`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`. Also `page-summary` (the localized range for the current page) and `page-input` (the compact pager's page-jump input).
+`loading-overlay` is ordinary non-live content, and the grid exposes the state with `aria-busy`.
 
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
@@ -650,8 +651,6 @@ string; templates and Nodes fall back to the raw value. Server export/copy inclu
 rows because the browser does not possess unloaded pages.
 
 ---
-
-**Additional members:** `autoCorrect` (attribute `autocorrect`, default empty) forwards the native `autocorrect` attribute to the toolbar search and column-filter inputs (Safari/WebKit).
 
 ## `lr-table`
 

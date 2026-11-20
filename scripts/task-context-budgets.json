@@ -20,8 +20,8 @@
       "published23Utf8Bytes": 106727,
       "reviewedCheckpointUtf8Bytes": 98043,
       "reviewedCheckpointProxyTokens": 24161,
-      "ceilingUtf8Bytes": 101304,
-      "$comment": "The 31.0.0 discovery route, carrying the new chat, attachment, drop-zone, markdown, table, timeline and json-viewer guidance, measures 101,304 UTF-8 bytes; its ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 102070,
+      "$comment": "The 32.0.0 discovery route, carrying the new data-grid pagination, request-event and pager-focus guidance, measures 102,070 UTF-8 bytes; its ceiling advances to that exact measurement."
     },
     "imports-ssr": {
       "published23Utf8Bytes": 43687,

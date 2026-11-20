@@ -1161,9 +1161,9 @@ applyLyraStyleScope(tableRegion, null); // restores authored values
 inherit), without persistence or global events; clearing preserves later author changes. `getLyraStyle()`
 reports requested axes and resolved mode.
 
-Set `data-lr-look`, `data-lr-surface`, `data-lr-density`, `data-lr-mode` and `data-lr-accent`
-directly if needed. Shadcn and Lyra are included in `theme.css`; other stylesheet look ids need
-their optional sheet. Arbitrary ids neither load nor register.
+Or set `data-lr-look`, `data-lr-surface`, `data-lr-density`, `data-lr-mode` and `data-lr-accent`
+directly. `theme.css` includes Shadcn and Lyra; other looks need their sheet. Arbitrary ids neither
+load nor register.
 `defineLyraLook({ id, tokens })` defines a validated immutable runtime look;
 `lyraLookCss()` from `theme/look-css.js` creates CSS without DOM access. In app-owned shadow roots
 with local boundaries, install `theme.css` and selected sheets; selectors stop at roots, inheritance

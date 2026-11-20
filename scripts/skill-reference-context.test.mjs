@@ -25,14 +25,17 @@ import {
   validateSharedTopicLinks,
 } from './skill-reference-context.mjs';
 import { SHARED_TOPICS } from '../packages/lyra-ui/scripts/shared-topics.mjs';
+import { mergeManifests, readCompanionManifests } from '../packages/lyra-ui/scripts/companion-manifests.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const packageRoot = path.join(root, 'packages', 'lyra-ui');
 const skillRoot = path.join(root, 'plugins', 'lyra-ui', 'skills', 'lyra-ui');
 const referencesRoot = path.join(skillRoot, 'references');
 const archivePath = path.join(root, 'skills', 'lyra-ui.skill');
-const manifest = JSON.parse(
-  readFileSync(path.join(packageRoot, 'custom-elements.json'), 'utf8'),
+// The references document every companion element next to lyra-ui's own, so count both.
+const manifest = mergeManifests(
+  JSON.parse(readFileSync(path.join(packageRoot, 'custom-elements.json'), 'utf8')),
+  readCompanionManifests(),
 );
 const expectedComponentCount = new Set(
   (manifest.modules ?? [])
