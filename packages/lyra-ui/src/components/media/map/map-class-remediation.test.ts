@@ -160,12 +160,18 @@ describe('map controls, overlays and locale updates', () => {
         const hit = root.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
         expect(control.contains(hit), control.textContent).to.equal(true);
       }
-      // The collapsed scene panel hugs its toggle instead of spanning the map as a full-width bar.
+      // The collapsed scene panel shrink-wraps its toggle and the empty-scene status line instead
+      // of spanning the map as a full-width bar.
       const panel = root.querySelector<HTMLElement>('[part="scene-panel"]')!;
       const toggle = root.querySelector<HTMLElement>('[part="scene-toggle"]')!.getBoundingClientRect().width;
+      const status = root.querySelector<HTMLElement>('[part="scene-status"]');
+      const statusText = document.createRange();
+      if (status) statusText.selectNodeContents(status);
+      const content = Math.max(toggle, status ? statusText.getBoundingClientRect().width : 0);
       const style = getComputedStyle(panel);
       const chrome = ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, key) => sum + parseFloat(style[key as 'paddingLeft']), 0);
-      expect(Math.round(panel.getBoundingClientRect().width - chrome - toggle), 'scene panel hugs its toggle').to.equal(0);
+      expect(Math.round(panel.getBoundingClientRect().width - chrome - content), 'scene panel hugs its content').to.equal(0);
+      expect(panel.getBoundingClientRect().width, 'scene panel is not a full-width bar').to.be.below(element.getBoundingClientRect().width / 2);
     });
   }
 

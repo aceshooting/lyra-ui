@@ -170,7 +170,10 @@ export const styles = css`
 
   [part='start'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    /* Shrinkable, not redundant: max-inline-size caps each adornment at 100% alone, so two
+       oversized adornments only fit the allocation when they can shrink. The label's zero flex
+       basis keeps them at their natural size until the label itself has no room left. */
+    flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;
@@ -194,7 +197,7 @@ export const styles = css`
   }
 
   [part='label'] {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -212,7 +215,10 @@ export const styles = css`
 
   [part='end'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    /* Shrinkable, not redundant: max-inline-size caps each adornment at 100% alone, so two
+       oversized adornments only fit the allocation when they can shrink. The label's zero flex
+       basis keeps them at their natural size until the label itself has no room left. */
+    flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;

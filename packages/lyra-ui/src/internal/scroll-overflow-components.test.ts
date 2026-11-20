@@ -125,7 +125,7 @@ it('reads reduced-motion preference from each adopted component owner window', a
       if (typeof options === 'object') segmentedBehavior = options.behavior;
     };
     segmented.scrollToValue('one');
-    expect(segmentedBehavior).to.equal('auto');
+    expect(segmentedBehavior).to.equal('instant');
 
     const tabGroup = document.createElement('lr-tab-group') as HTMLElement & {
       updateComplete: Promise<unknown>;
@@ -161,7 +161,7 @@ it('reads reduced-motion preference from each adopted component owner window', a
       if (typeof options === 'object') listBehavior = options.behavior;
     };
     virtualList.scrollToIndex(0, { align: 'start', behavior: 'smooth' });
-    expect(listBehavior).to.equal('auto');
+    expect(listBehavior).to.equal('instant');
   } finally {
     for (const element of elements) element.remove();
     destination.restore();
