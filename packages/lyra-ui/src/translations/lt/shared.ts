@@ -46,7 +46,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Atšaukti',
   confirm: 'Patvirtinti',
   search: 'Ieškoti',
-  circularReference: 'Ciklinė nuoroda',
   items: {
     few: 'elementai',
     many: 'elemento',
@@ -92,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Nepavyko įkelti grafo rodinio.',
   graphSourceRecordMissing: 'Šis grafo įrašas nepasiekiamas.',
   notInCatalog: 'nėra kataloge',
+  chartTotal: 'Iš viso',
   chartLegend: 'Diagramos legenda',
   resetZoom: 'Atkurti mastelį',
   showMoreCollapsed: '+{count}',
@@ -139,11 +139,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Nepavyko nukopijuoti',
   paginationFirstPage: 'Pirmas puslapis',
   paginationLastPage: 'Paskutinis puslapis',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Meniu',
-  emailViewerFrom: 'Nuo',
-  emailViewerTo: 'Kam',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Pereita prie paryškintos ištraukos.',
   anchorJumpedToPage: 'Pereita į {page} puslapį.',
@@ -160,7 +159,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Konfliktas',
   gitStatusIgnored: 'Ignoruojama',
   envListValueHidden: 'Reikšmė paslėpta',
-  geojsonViewLabel: 'Žemėlapis',
   provenanceEntities: 'Esybės',
   flowItemAnnouncement: '{item} ({index} iš {total})',
   neighborDirectionIn: 'Įeinančios',
@@ -204,7 +202,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Vietoj to rodomas sąrašas.',
   largeDataInvalid: 'Duomenų negalima parodyti, nes {column} netinkamas.',
   largeDataLimit: 'Duomenų negalima parodyti, nes viršyta {limit} riba.',
-  chart3dName: 'Etiketė',
 };
 
 registerLyraLocale('lt', strings);

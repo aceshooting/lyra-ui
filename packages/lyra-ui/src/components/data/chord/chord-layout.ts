@@ -29,6 +29,8 @@ export interface ChordRibbon {
 export interface ChordLayoutResult {
   status: 'ready' | 'empty' | 'invalid' | 'limit';
   truncated: boolean;
+  /** Every validated entity in matrix order with its total weight, including zero totals. */
+  totals: { id: string; label: string; value: number }[];
   arcs: ChordArc[];
   ribbons: ChordRibbon[];
 }
@@ -36,6 +38,8 @@ export interface ChordLayoutResult {
 const MAX_ENTITIES = 32;
 const FULL_TURN = 2 * Math.PI;
 const ARC_GAP = 0.04;
+/** Largest relative difference accepted between `matrix[i][j]` and `matrix[j][i]`. */
+const SYMMETRY_TOLERANCE = 1e-9;
 
 interface AngularSpan {
   start: number;
@@ -67,9 +71,12 @@ function readRows(entities: readonly LyraChordEntity[], matrix: readonly (readon
     for (let j = 0; j < count; j++) {
       const weight = readOwnDataValue(cells, j);
       if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) return;
-      if (j < i && weight !== rows[j]!.values[i]) return;
-      values.push(weight);
-      total = Math.min(Number.MAX_VALUE, total + weight);
+      // Mirrored cells match within a relative tolerance so floating-point rounding in computed
+      // weights is accepted; the cell above the diagonal supplies the value used for both ends.
+      const mirror = j < i ? rows[j]!.values[i]! : weight;
+      if (Math.abs(weight - mirror) > SYMMETRY_TOLERANCE * Math.max(weight, mirror)) return;
+      values.push(mirror);
+      total = Math.min(Number.MAX_VALUE, total + mirror);
     }
     rows.push({ id, label, values, total, ends: new Map() });
   }
@@ -81,7 +88,7 @@ export function layoutChord(
   entities: readonly LyraChordEntity[],
   matrix: readonly (readonly number[])[],
 ): ChordLayoutResult {
-  const result: ChordLayoutResult = { status: 'invalid', truncated: false, arcs: [], ribbons: [] };
+  const result: ChordLayoutResult = { status: 'invalid', truncated: false, totals: [], arcs: [], ribbons: [] };
   if (!isRuntimeArray(entities)) return result;
   const count = readOwnArrayLength(entities);
   if (count === undefined) return result;
@@ -93,6 +100,7 @@ export function layoutChord(
   if (!isRuntimeArray(matrix) || readOwnArrayLength(matrix) !== count) return result;
   const rows = readRows(entities, matrix, count);
   if (!rows) return result;
+  result.totals = rows.map(({ id, label, total }) => ({ id, label, value: total }));
   const active = rows.filter(row => row.total > 0);
   if (!active.length) {
     result.status = 'empty';

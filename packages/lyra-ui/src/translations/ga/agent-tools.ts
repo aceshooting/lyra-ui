@@ -141,7 +141,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Caithfidh an scéimre cur síos a dhéanamh ar réad.',
   schemaPropertiesMustBeFlat: 'Caithfidh airíonna an scéimre a bheith ina réad cothrom.',
   valueMustBeSerializable: 'Caithfidh an luach a bheith in-sraitheáilte mar JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Roghnaigh uirlisí',
   searchToolsPlaceholder: 'Cuardaigh uirlisí…',
   useDefaultTools: 'Úsáid na huirlisí réamhshocraithe',

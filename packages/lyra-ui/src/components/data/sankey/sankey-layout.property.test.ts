@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import { layoutSankey } from './sankey-layout.js';
+import { countSankeyCrossings, layoutSankey } from './sankey-layout.js';
 
 const nodes = ['a', 'b', 'c', 'd'].map(id => ({ id, label: id }));
 const flow = (source: string, target: string, value = 1) => ({ source, target, value });
@@ -37,12 +37,51 @@ describe('Sankey layout', () => {
     expect((a!.y1 - b!.y1) * (a!.y2 - b!.y2)).to.be.greaterThan(0);
   });
 
+  it('never ends with more crossings than the input order', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    const pair = fc.tuple(fc.nat(6), fc.nat(6), fc.integer({ min: 1, max: 50 }));
+    fc.assert(fc.property(
+      fc.shuffledSubarray(ids, { minLength: ids.length, maxLength: ids.length }),
+      fc.array(pair, { minLength: 1, maxLength: 20 }),
+      (order, pairs) => {
+        const links = pairs.filter(([i, j]) => i !== j)
+          .map(([i, j, value]) => flow(ids[Math.min(i, j)]!, ids[Math.max(i, j)]!, value));
+        const result = layoutSankey(order.map(id => ({ id, label: id })), links, 600, 400);
+        const initial = new Map(result.nodes.map(node => [node.id, { stage: node.stage, order: order.indexOf(node.id) }]));
+        const final = new Map(result.nodes.map(node => [node.id, { stage: node.stage, order: node.y }]));
+        expect(countSankeyCrossings(result.links, final)).to.be.at.most(countSankeyCrossings(result.links, initial));
+      },
+    ), propertyRuns());
+  });
+
+  it('counts crossings between flows that share source and target stages', () => {
+    const at = (stage: number, order: number) => ({ stage, order });
+    const rank = new Map([['a', at(0, 0)], ['b', at(0, 1)], ['c', at(1, 0)], ['d', at(1, 1)]]);
+    expect(countSankeyCrossings([flow('a', 'd'), flow('b', 'c')], rank)).to.equal(1);
+    expect(countSankeyCrossings([flow('a', 'c'), flow('b', 'd'), flow('a', 'd')], rank)).to.equal(0);
+  });
+
+  it('reports duplicate ids and links to nodes beyond the cap as truncated', () => {
+    expect(layoutSankey(nodes, [flow('a', 'b')]).truncated).to.equal(false);
+    expect(layoutSankey([...nodes, { id: 'a', label: 'again' }], [flow('a', 'b')]).truncated).to.equal(true);
+    const twice = layoutSankey(nodes, [{ ...flow('a', 'b'), id: 'x' }, { ...flow('b', 'c'), id: 'x' }]);
+    expect(twice.truncated).to.equal(true);
+    expect(twice.links.length).to.equal(1);
+    const many = Array.from({ length: 1001 }, (_, i) => ({ id: String(i), label: '' }));
+    const beyond = layoutSankey(many, [flow('0', '1000')]);
+    expect(beyond.truncated).to.equal(true);
+    expect(beyond.links.length).to.equal(0);
+  });
+
   it('rejects cycles including self-loops, ignores dangling flows and invalid bounds', () => {
     for (const links of [[flow('a', 'a')], [flow('a', 'b'), flow('b', 'a')]]) {
       const cycle = layoutSankey(nodes, links);
       expect(cycle.status).to.equal('cycle');
       expect(cycle.links.length).to.equal(0);
     }
+    expect(layoutSankey(nodes, [flow('a', 'a')]).cycle.map(node => node.id)).to.deep.equal(['a']);
+    const loop = layoutSankey(nodes, [flow('d', 'a'), flow('a', 'b'), flow('b', 'c'), flow('c', 'a')]);
+    expect(loop.cycle).to.deep.equal([{ id: 'a', label: 'a' }, { id: 'b', label: 'b' }, { id: 'c', label: 'c' }]);
     expect(layoutSankey(nodes, [flow('missing', 'a')]).links.length).to.equal(0);
     expect(layoutSankey(nodes, [], Infinity, 1).status).to.equal('empty');
   });

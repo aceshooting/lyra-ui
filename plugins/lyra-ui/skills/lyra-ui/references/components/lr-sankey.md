@@ -36,15 +36,20 @@ its formatted value.
 Give each node a unique string ID and each link a positive, finite value. Parallel links are
 supported. Supply unique link IDs when you need stable link identity across updates. Links
 without IDs receive generated IDs. The chart skips dangling links and links with invalid values.
-Isolated nodes have a value of zero. Circular flows, including self-links, show an error. The
-chart reads the first 1,000 node entries and 4,000 link entries and shows a notice if input exceeds
-a limit or a ribbon is too small to represent.
+Isolated nodes have a value of zero. Circular flows, including self-links, show an error that
+names up to five nodes of one cycle as a locale-formatted list. The chart reads the first 1,000
+node entries and 4,000 link entries and shows a notice if input exceeds a limit, repeats a node or
+link ID (the later entry is skipped), or a ribbon is too small to represent.
+Node order within each stage is a heuristic: relaxation passes pull nodes toward their weighted
+neighbors, and the chart keeps whichever ordering, starting from the input order, crosses the
+fewest flows. It is not guaranteed to be the minimum possible.
 Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
 
 Tab enters the plot at its first node. The arrow keys move through nodes and then links.
 Left and Right follow the reading direction. Home and End move to the first and last mark.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted
-flows and isolated nodes and remains available to assistive technology while visually collapsed.
+flows (Source, Target, Name, Value), and a second table lists every node's total, including
+isolated nodes. Both remain available to assistive technology while visually collapsed.
 
 **Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
 carries `LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is

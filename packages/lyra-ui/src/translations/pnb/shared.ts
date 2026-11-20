@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'منسوخ کرو',
   confirm: 'تصدیق کرو',
   search: 'تلاش کرو',
-  circularReference: 'چکری حوالہ',
   items: {
     one: 'آئٹم',
     other: 'آئٹمز',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'گراف دا منظر لوڈ نئیں ہو سکیا۔',
   graphSourceRecordMissing: 'ایہ گراف ریکارڈ دستیاب نئیں۔',
   notInCatalog: 'فہرست وچ موجود نئیں',
+  chartTotal: 'کل',
   chartLegend: 'چارٹ دیاں نشانیاں دی وضاحت',
   resetZoom: 'زوم مڑ بحال کرو',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'کاپی نئیں ہوئی',
   paginationFirstPage: 'پہلا صفحہ',
   paginationLastPage: 'آخری صفحہ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'مینو',
-  emailViewerFrom: 'ولوں',
-  emailViewerTo: 'نوں',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'نمایاں کیتے گئے حصے تے پہنچ گئے۔',
   anchorJumpedToPage: 'صفحہ {page} تے پہنچ گئے۔',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'تضاد',
   gitStatusIgnored: 'نظر انداز کیتا',
   envListValueHidden: 'قدر لکائی گئی',
-  geojsonViewLabel: 'نقشہ',
   provenanceEntities: 'اکائیاں',
   flowItemAnnouncement: '{item} ({total} وچوں {index})',
   neighborDirectionIn: 'آؤندا',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'اس دی تھاں اک فہرست وکھائی جا رہی اے۔',
   largeDataInvalid: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے {column} غلط اے۔',
   largeDataLimit: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے ایہ {limit} دی حد توں ودھ اے۔',
-  chart3dName: 'لیبل',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

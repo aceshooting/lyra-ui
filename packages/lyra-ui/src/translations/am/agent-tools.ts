@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'ስኪማው ነገርን መግለጽ አለበት።',
   schemaPropertiesMustBeFlat: 'የስኪማ ባህሪያት ጠፍጣፋ ነገር መሆን አለባቸው።',
   valueMustBeSerializable: 'ዋጋው ወደ JSON ሊተረጎም የሚችል መሆን አለበት።',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'መሣሪያዎችን ይምረጡ',
   searchToolsPlaceholder: 'መሣሪያዎችን ፈልግ…',
   useDefaultTools: 'ነባሪ መሣሪያዎችን ተጠቀም',

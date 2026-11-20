@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kagbuo',
   confirm: 'Kwenye',
   search: 'Chọọ',
-  circularReference: 'Ntụaka na-agba okirikiri',
   items: {
     one: 'ihe',
     other: 'ihe',
@@ -76,6 +75,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Enweghị ike ibunye nlele graf.',
   graphSourceRecordMissing: 'Ndekọ graf a adịghị.',
   notInCatalog: 'adịghị na katalọgụ',
+  chartTotal: 'Ngụkọta',
   chartLegend: 'Nkọwa akara eserese',
   resetZoom: 'Tọgharịa nlele',
   showMoreCollapsed: '+{count}',
@@ -123,11 +123,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Detuo ya agaghị nke ọma',
   paginationFirstPage: 'Peeji mbụ',
   paginationLastPage: 'Peeji ikpeazụ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Ndepụta nhọrọ',
-  emailViewerFrom: 'Site na',
-  emailViewerTo: 'Nye',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Gagaraala na ebe e mere ka ọ pụta ìhè.',
   anchorJumpedToPage: 'Gagaraala na peeji {page}.',
@@ -144,7 +143,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Enwere esemokwu',
   gitStatusIgnored: 'Elegharaala ya anya',
   envListValueHidden: 'Ezoro uru',
-  geojsonViewLabel: 'Maapụ',
   provenanceEntities: 'Ihe dị adị',
   flowItemAnnouncement: '{item} ({index} n’ime {total})',
   neighborDirectionIn: 'Na-abata',
@@ -182,7 +180,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'A na-egosi ndepụta kama nke ahụ.',
   largeDataInvalid: 'Enweghị ike igosi data n’ihi na {column} adịghị mma.',
   largeDataLimit: 'Enweghị ike igosi data n’ihi na ọ gafere oke nke {limit}.',
-  chart3dName: 'Akara',
 };
 
 registerLyraLocale('ig', strings);

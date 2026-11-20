@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Şema bir nesne tanımlamalıdır.',
   schemaPropertiesMustBeFlat: 'Şema özellikleri düz bir nesne olmalıdır.',
   valueMustBeSerializable: 'Değer JSON olarak serileştirilebilir olmalıdır.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Araçları seç',
   searchToolsPlaceholder: 'Araçlarda ara…',
   useDefaultTools: 'Varsayılan araçları kullan',

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'ஸ்கீமா ஒரு பொருளை விவரிக்க வேண்டும்.',
   schemaPropertiesMustBeFlat: 'ஸ்கீமா பண்புகள் தட்டையான பொருளாக இருக்க வேண்டும்.',
   valueMustBeSerializable: 'மதிப்பை JSON ஆக மாற்றக்கூடியதாக இருக்க வேண்டும்.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'கருவிகளைத் தேர்ந்தெடு',
   searchToolsPlaceholder: 'கருவிகளைத் தேடு…',
   useDefaultTools: 'இயல்புநிலைக் கருவிகளைப் பயன்படுத்து',

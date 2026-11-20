@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Откажи',
   confirm: 'Потврди',
   search: 'Претрага',
-  circularReference: 'Кружна референца',
   items: {
     few: 'ставке',
     one: 'ставка',
@@ -86,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Приказ графа није могао да се учита.',
   graphSourceRecordMissing: 'Овај запис графа није доступан.',
   notInCatalog: 'није у каталогу',
+  chartTotal: 'Укупно',
   chartLegend: 'Легенда графикона',
   resetZoom: 'Ресетуј зум',
   showMoreCollapsed: '+{count}',
@@ -133,11 +133,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Копирање није успело',
   paginationFirstPage: 'Прва страница',
   paginationLastPage: 'Последња страница',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Мени',
-  emailViewerFrom: 'Од',
-  emailViewerTo: 'За',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Прешли сте на истакнути одломак.',
   anchorJumpedToPage: 'Прешли сте на страницу {page}.',
@@ -154,7 +153,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'У конфликту',
   gitStatusIgnored: 'Занемарено',
   envListValueHidden: 'Вредност је скривена',
-  geojsonViewLabel: 'Мапа',
   provenanceEntities: 'Ентитети',
   flowItemAnnouncement: '{item} ({index} од {total})',
   neighborDirectionIn: 'Долазне',
@@ -196,7 +194,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Уместо тога приказује се листа.',
   largeDataInvalid: 'Подаци не могу да се прикажу јер {column} није исправно.',
   largeDataLimit: 'Подаци не могу да се прикажу јер премашују ограничење од {limit}.',
-  chart3dName: 'Ознака',
 };
 
 registerLyraLocale('sr', strings);

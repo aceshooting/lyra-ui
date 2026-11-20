@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Копирай JSON в клипборда',
+  circularReference: 'Циклична препратка',
   copyDiff: 'Копирай разликите',
   diffViewOldLabel: 'Оригинал',
   diffViewNewLabel: 'Променен',

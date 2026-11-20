@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Отказ',
   confirm: 'Потвърди',
   search: 'Търсене',
-  circularReference: 'Циклична препратка',
   items: {
     one: 'елемент',
     other: 'елемента',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Изгледът на графа не можа да се зареди.',
   graphSourceRecordMissing: 'Този запис на графа не е наличен.',
   notInCatalog: 'не е в каталога',
+  chartTotal: 'Общо',
   chartLegend: 'Легенда на диаграмата',
   resetZoom: 'Нулирай мащаба',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Копирането не бе успешно',
   paginationFirstPage: 'Първа страница',
   paginationLastPage: 'Последна страница',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Меню',
-  emailViewerFrom: 'От',
-  emailViewerTo: 'До',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Преминато към маркирания откъс.',
   anchorJumpedToPage: 'Преминато към страница {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'В конфликт',
   gitStatusIgnored: 'Игнориран',
   envListValueHidden: 'Стойността е скрита',
-  geojsonViewLabel: 'Карта',
   provenanceEntities: 'Обекти',
   flowItemAnnouncement: '{item} ({index} от {total})',
   neighborDirectionIn: 'Входящи',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Вместо това се показва списък.',
   largeDataInvalid: 'Данните не могат да се покажат, защото колоната {column} е невалидна.',
   largeDataLimit: 'Данните не могат да се покажат, защото надхвърлят лимита от {limit}.',
-  chart3dName: 'Етикет',
 };
 
 registerLyraLocale('bg', strings);

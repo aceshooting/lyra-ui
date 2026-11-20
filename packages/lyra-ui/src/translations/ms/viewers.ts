@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kenalan',
   emailViewerLabel: 'Papar e-mel',
   emailViewerMissingParser: 'Papar ini memerlukan pakej pilihan "postal-mime" dipasang untuk menghuraikan mesej ini.',
+  emailViewerFrom: 'Daripada',
+  emailViewerTo: 'Kepada',
   emailViewerSubject: 'Subjek',
   emailViewerDate: 'Tarikh',
   emailViewerAttachments: 'Lampiran',
@@ -122,6 +124,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Salin XML ke papan klip',
   xmlViewerCopyNode: 'Salin {name}',
   xmlViewerToggleNode: 'Togol {name}',
+  geojsonViewLabel: 'Peta',
   geojsonViewInvalid: 'Fail ini bukan GeoJSON yang sah.',
   geojsonViewFeatureCount: {
     other: '{count} ciri'

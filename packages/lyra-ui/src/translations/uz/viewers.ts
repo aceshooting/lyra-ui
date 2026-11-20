@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'aloqa',
   emailViewerLabel: 'Elektron xat koʻruvchisi',
   emailViewerMissingParser: 'Bu xabarni tahlil qilish uchun koʻruvchiga ixtiyoriy "postal-mime" paketini oʻrnatish kerak.',
+  emailViewerFrom: 'Kimdan',
+  emailViewerTo: 'Kimga',
   emailViewerSubject: 'Mavzu',
   emailViewerDate: 'Sana',
   emailViewerAttachments: 'Ilovalar',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XMLʼni clipboardʼga nusxalash',
   xmlViewerCopyNode: '{name}ni nusxalash',
   xmlViewerToggleNode: '{name}ni almashtirish',
+  geojsonViewLabel: 'Xarita',
   geojsonViewInvalid: 'Bu fayl yaroqli GeoJSON emas.',
   geojsonViewFeatureCount: {
     one: '{count} ta obyekt',

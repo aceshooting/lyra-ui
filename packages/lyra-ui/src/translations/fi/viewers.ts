@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'yhteystieto',
   emailViewerLabel: 'Sähköpostikatselin',
   emailViewerMissingParser: 'Tämä katselin tarvitsee valinnaisen ”postal-mime”-paketin tämän viestin jäsentämiseen.',
+  emailViewerFrom: 'Lähettäjä',
+  emailViewerTo: 'Vastaanottaja',
   emailViewerSubject: 'Aihe',
   emailViewerDate: 'Päivämäärä',
   emailViewerAttachments: 'Liitteet',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopioi XML leikepöydälle',
   xmlViewerCopyNode: 'Kopioi {name}',
   xmlViewerToggleNode: 'Näytä tai piilota {name}',
+  geojsonViewLabel: 'Kartta',
   geojsonViewInvalid: 'Tämä tiedosto ei ole kelvollista GeoJSONia.',
   geojsonViewFeatureCount: {
     one: '{count} kohde',

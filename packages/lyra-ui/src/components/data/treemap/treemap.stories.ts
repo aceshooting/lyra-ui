@@ -63,6 +63,16 @@ export const Narrow320: StoryObj = {
   `,
 };
 
+export const CustomHeight: StoryObj = {
+  render: () => html`
+    <lr-treemap
+      style="--lr-treemap-height: var(--lr-size-16rem)"
+      label="Monthly infrastructure usage"
+      .nodes=${USAGE}
+    ></lr-treemap>
+  `,
+};
+
 export const DataTable: StoryObj = {
   render: () => html`
     <lr-treemap

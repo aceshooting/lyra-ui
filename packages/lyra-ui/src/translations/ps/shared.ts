@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'لغوه کول',
   confirm: 'تاییدول',
   search: 'لټون',
-  circularReference: 'دوراني حواله',
   items: {
     one: 'توکی',
     other: 'توکي',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'د ګراف لید پورته نه شو.',
   graphSourceRecordMissing: 'د ګراف دا ریکارډ شتون نه لري.',
   notInCatalog: 'په کتلاګ کې نشته',
+  chartTotal: 'ټولټال',
   chartLegend: 'د چارټ د نښو تشریح',
   resetZoom: 'لویوالی بېرته سمول',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'کاپي ناکامه شوه',
   paginationFirstPage: 'لومړۍ پاڼه',
   paginationLastPage: 'وروستۍ پاڼه',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'غورنۍ',
-  emailViewerFrom: 'له',
-  emailViewerTo: 'ته',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'روښانه شوې برخې ته ورټوپ شو.',
   anchorJumpedToPage: '{page} پاڼې ته ورټوپ شو.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ټکر شوی',
   gitStatusIgnored: 'له پامه غورځول شوی',
   envListValueHidden: 'ارزښت پټ دی',
-  geojsonViewLabel: 'نقشه',
   provenanceEntities: 'موجودات',
   flowItemAnnouncement: '{item} (له {total} څخه {index})',
   neighborDirectionIn: 'راتلونکی',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'پر ځای یې یو لیست ښودل کېږي.',
   largeDataInvalid: 'معلومات نه شي ښودل کېدای ځکه {column} ناسم دی.',
   largeDataLimit: 'معلومات نه شي ښودل کېدای ځکه د {limit} له حد څخه ډېر دي.',
-  chart3dName: 'نوم',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

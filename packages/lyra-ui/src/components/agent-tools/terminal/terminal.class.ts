@@ -44,8 +44,8 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel, LYRA_DEFAULT_terminalOutputTruncated } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel, LYRA_DEFAULT_terminalOutputTruncated } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 interface TerminalRun { start: number; end: number; styles: AnsiStyles }

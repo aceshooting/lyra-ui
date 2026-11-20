@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kata',
   confirm: 'Confirmer',
   search: 'Luka',
-  circularReference: 'Référence ya cercle',
   items: {
     one: 'eloko',
     other: 'biloko',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ekokaki te kozwa vue ya graphe.',
   graphSourceRecordMissing: 'Enregistrement oyo ya graphe ezali te.',
   notInCatalog: 'ezali na molɔngɔ te',
+  chartTotal: 'Motango mobimba',
   chartLegend: 'Légende ya graphique',
   resetZoom: 'Zongisa bonene na ndenge ya liboso',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopi elongi te',
   paginationFirstPage: 'Lokasa ya liboso',
   paginationLastPage: 'Lokasa ya suka',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} milliseconde',
   durationSeconds: '{value} seconde',
   menuLabel: 'Menyu',
-  emailViewerFrom: 'Longwa na',
-  emailViewerTo: 'Epai ya',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Akendaki na eteni oyo emonisami.',
   anchorJumpedToPage: 'Akendaki na lokasa {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ezali na matata',
   gitStatusIgnored: 'Etalelami te',
   envListValueHidden: 'Valeur ebombami',
-  geojsonViewLabel: 'Carte',
   provenanceEntities: 'Biloko',
   flowItemAnnouncement: '{item} ({index} kati na {total})',
   neighborDirectionIn: 'Ezali kokota',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Liste emonisami na esika na yango.',
   largeDataInvalid: 'Ekoki te komonisa ba données mpo {column} ezali malamu te.',
   largeDataLimit: 'Ekoki te komonisa ba données mpo eleki limite ya {limit}.',
-  chart3dName: 'Nkombo',
 };
 
 registerLyraLocale('ln', strings);

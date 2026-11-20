@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'বাতিল করুন',
   confirm: 'নিশ্চিত করুন',
   search: 'খুঁজুন',
-  circularReference: 'চক্রাকার রেফারেন্স',
   items: {
     one: 'টি আইটেম',
     other: 'টি আইটেম',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'গ্রাফের দৃশ্য লোড করা যায়নি।',
   graphSourceRecordMissing: 'গ্রাফের এই রেকর্ড উপলব্ধ নেই।',
   notInCatalog: 'ক্যাটালগে নেই',
+  chartTotal: 'মোট',
   chartLegend: 'চার্টের লেজেন্ড',
   resetZoom: 'জুম আগের অবস্থায় ফেরান',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'কপি করা যায়নি',
   paginationFirstPage: 'প্রথম পাতা',
   paginationLastPage: 'শেষ পাতা',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'মেনু',
-  emailViewerFrom: 'প্রেরক',
-  emailViewerTo: 'প্রাপক',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'হাইলাইট করা অংশে নিয়ে যাওয়া হয়েছে।',
   anchorJumpedToPage: '{page} নম্বর পাতায় নিয়ে যাওয়া হয়েছে।',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'সংঘাত রয়েছে',
   gitStatusIgnored: 'উপেক্ষা করা হয়েছে',
   envListValueHidden: 'মান লুকানো হয়েছে',
-  geojsonViewLabel: 'মানচিত্র',
   provenanceEntities: 'সত্তা',
   flowItemAnnouncement: '{item} (মোট {total}টির মধ্যে {index})',
   neighborDirectionIn: 'আগমনী',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'এর পরিবর্তে একটি তালিকা দেখানো হচ্ছে।',
   largeDataInvalid: '{column} অবৈধ হওয়ায় ডেটা দেখানো যাচ্ছে না।',
   largeDataLimit: 'ডেটা {limit} সীমা ছাড়িয়ে যাওয়ায় দেখানো যাচ্ছে না।',
-  chart3dName: 'লেবেল',
 };
 
 registerLyraLocale('bn', strings);

@@ -22461,7 +22461,15 @@ Each `LyraTreemapNode` has an `id`, a `label`, and optional `value` and `childre
 Use unique string IDs throughout the tree and positive finite weights for leaves. Branch
 weights are derived from their children. The table identifies descendants by their full path
 and remains available to assistive technology while visually collapsed. The chart displays up to
-1,000 tiles and table rows and shows a notice when it reaches a data or rendering limit.
+1,000 tiles and table rows, chosen level by level and largest first so every top-level category
+remains, and shows a notice when it reaches a data or rendering limit. A value too small to draw
+stays in the table, with its own notice. A node with an invalid value or no valid children does
+not reserve its ID, so a later valid node can use it. If `valueFormatter` throws, the value uses
+the default formatting.
+
+The plot fills the host's inline size and its coordinates follow the rendered size, so tile
+labels keep their token font size at any width. Set `--lr-treemap-height` to change the plot's
+block size; it defaults to `clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))`.
 
 Tab enters the tile group. Left and Right move among siblings, following the reading direction.
 Down enters the first child and Up returns to the parent. Home and End move to the ends of the
@@ -22471,6 +22479,8 @@ sibling list. Hover or keyboard focus reveals the tooltip. Escape dismisses it.
 carries `{ id, label, value }` with the numeric weight.
 
 The legend and tiles use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+A nested tile's accessible name and table row include its level and parent path.
+**CSS custom properties:** `--lr-treemap-height`.
 **CSS parts:** `base`, `plot`, `description`, `tile`, `tile-label`, `tooltip`, `legend`,
 `legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`, `empty`, `loading`,
 and `limit`.
@@ -22527,15 +22537,20 @@ its formatted value.
 Give each node a unique string ID and each link a positive, finite value. Parallel links are
 supported. Supply unique link IDs when you need stable link identity across updates. Links
 without IDs receive generated IDs. The chart skips dangling links and links with invalid values.
-Isolated nodes have a value of zero. Circular flows, including self-links, show an error. The
-chart reads the first 1,000 node entries and 4,000 link entries and shows a notice if input exceeds
-a limit or a ribbon is too small to represent.
+Isolated nodes have a value of zero. Circular flows, including self-links, show an error that
+names up to five nodes of one cycle as a locale-formatted list. The chart reads the first 1,000
+node entries and 4,000 link entries and shows a notice if input exceeds a limit, repeats a node or
+link ID (the later entry is skipped), or a ribbon is too small to represent.
+Node order within each stage is a heuristic: relaxation passes pull nodes toward their weighted
+neighbors, and the chart keeps whichever ordering, starting from the input order, crosses the
+fewest flows. It is not guaranteed to be the minimum possible.
 Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
 
 Tab enters the plot at its first node. The arrow keys move through nodes and then links.
 Left and Right follow the reading direction. Home and End move to the first and last mark.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted
-flows and isolated nodes and remains available to assistive technology while visually collapsed.
+flows (Source, Target, Name, Value), and a second table lists every node's total, including
+isolated nodes. Both remain available to assistive technology while visually collapsed.
 
 **Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
 carries `LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
@@ -22586,7 +22601,8 @@ Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-
 Compare weighted relationships between entities. The SVG places entity arcs around a circle in
 input order and joins them with ribbons. Arc length represents the entity's total weight.
 Ribbon width represents the relationship's weight. The legend lists entities with positive totals.
-Hover or keyboard focus on an entity highlights its ribbons and dims the others.
+Hover or keyboard focus on an entity highlights its ribbons and dims the others. Hover or keyboard
+focus on a ribbon highlights that ribbon and dims the others.
 
 | Property | Attribute | Purpose |
 | --- | --- | --- |
@@ -22600,8 +22616,9 @@ Hover or keyboard focus on an entity highlights its ribbons and dims the others.
 | `valueFormatter` | — | Optional `(value: number) => string` for displayed and accessible values. Formatting follows the effective locale by default. |
 
 Each row and column follows the order of `entities`. Give each entity a unique, nonempty string
-ID and a string label. Use finite nonnegative weights, with exactly equal values at `matrix[i][j]`
-and `matrix[j][i]`. A positive off-diagonal pair makes one ribbon. A positive diagonal entry
+ID and a string label. Use finite nonnegative weights, with equal values at `matrix[i][j]` and
+`matrix[j][i]`. Mirrored values may differ by a relative tolerance of 1e-9 to absorb
+floating-point rounding, and the value above the diagonal is used for both. A positive off-diagonal pair makes one ribbon. A positive diagonal entry
 makes a self-ribbon and counts once toward its entity's total. Rows containing only zeros
 produce no arcs. Invalid input or more than 32 entities shows an error. Totals that exceed the
 numeric range are reported as `Number.MAX_VALUE`. The chart shows a notice if geometry is too
@@ -22611,7 +22628,8 @@ Tab enters the first visible entity. Left, Right, Home, and End move within enti
 the current entity's ribbons. Left and Right follow the reading direction. Down enters an
 entity's ribbons and Up returns to that entity.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists each
-plotted pair once, including self-relationships, with From, To, and Value columns. It remains
+plotted pair once, including self-relationships, with Source, Target, and Value columns. A
+second table lists every entity's total, including entities whose total is zero. Both remain
 available to assistive technology while visually collapsed.
 
 **Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
@@ -22664,6 +22682,7 @@ geographic orientation in right-to-left layouts.
 | `geography` | — | GeoJSON or TopoJSON object. Assign a new object when the data changes. |
 | `field` | `field` | Property key for each region's numeric value. Defaults to `'value'`. |
 | `labelField` | `label-field` | Property key for each region's name. Defaults to `'name'`. |
+| `object` | `object` | Name of the one TopoJSON object to draw, such as `'countries'` when the topology also holds an overlapping `'land'` object. Defaults to `''`, which draws every object. An unknown name shows the empty state. GeoJSON ignores it. |
 | `projection` | `projection` | `LyraChoroplethProjection` is `'equirectangular'` (default) or `'mercator'`. |
 | `palette` | `palette` | `LyraChoroplethPalette` is `'sequential'` (default) or `'diverging'`. |
 | `noData` | — | Optional `LyraChoroplethNoData` overrides for the missing-value fill, outline, and label. |
@@ -22676,9 +22695,13 @@ geographic orientation in right-to-left layouts.
 
 Set `geography` to a GeoJSON Polygon, MultiPolygon, GeometryCollection, Feature, or
 FeatureCollection, or to a TopoJSON Topology with named polygon or collection objects.
-Use longitude in [−180°, 180°] and latitude in [−90°, 90°]. Each ring needs at least four
-positions, including its repeated first position. TopoJSON supports absolute arcs, transformed
-integer-delta arcs, and reversed arc references. Collections must contain polygonal geometry.
+Use longitude in [−180°, 180°] and latitude in [−90°, 90°]. Projected coordinates, such as a
+TopoJSON topology in meters, are rejected as invalid geometry; convert them to longitude and
+latitude first. Each ring needs at least four positions, including its repeated first position.
+A region that crosses the antimeridian stays contiguous. TopoJSON supports absolute arcs,
+transformed integer-delta arcs, and reversed arc references. Features and collection members with
+null, Point, MultiPoint, LineString, or MultiLineString geometry are skipped; other non-polygon
+types are invalid. Geometry with no drawable area, such as collinear rings, is invalid.
 A region uses its feature ID when present. Missing or repeated IDs receive generated IDs. An
 unnamed region uses its ID as its label. Only finite numeric properties count as data, so
 numeric strings and missing values use the no-data style.
@@ -22686,8 +22709,10 @@ numeric strings and missing values use the no-data style.
 The decoder accepts up to 1,000 regions, 1,000 entries per collection, 1,000 named TopoJSON
 objects, 50,000 raw positions, 50,000 expanded positions, 10,000 arcs, and 10,000 ring arc
 references. It limits each position to 16 ordinates, collection nesting to 32 levels, array
-traversal to a 100,000-entry budget, and IDs, labels, and supported property keys to 1,024 UTF-16
-code units each. Invalid geometry or an exceeded limit shows an error for the input.
+traversal to a 100,000-entry budget, and supported property keys and TopoJSON object names to
+1,024 UTF-16 code units each. Longer labels are truncated with an ellipsis. A feature whose ID is
+longer is skipped. Skipped features still count toward the region limit. Invalid geometry or an
+exceeded limit shows an error for the input.
 
 The sequential palette spans the observed minimum and maximum, with a midpoint color for a
 constant value. The diverging palette uses a symmetric domain around zero. The legend shows

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'اسڪيمه ۾ هڪ آبجيڪٽ بيان ٿيل هئڻ گهرجي.',
   schemaPropertiesMustBeFlat: 'اسڪيمه جون خاصيتون سادي آبجيڪٽ جي صورت ۾ هجن.',
   valueMustBeSerializable: 'قدر کي JSON ۾ سيريلائيز ڪري سگهڻ گهرجي.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'ٽول چونڊيو',
   searchToolsPlaceholder: 'ٽول ڳوليو…',
   useDefaultTools: 'ڊيفالٽ ٽول استعمال ڪريو',

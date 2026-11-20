@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schema lazima ieleze kitu.',
   schemaPropertiesMustBeFlat: 'Sifa za schema lazima ziwe kitu tambarare.',
   valueMustBeSerializable: 'Thamani lazima iweze kusawazishwa kuwa JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Chagua zana',
   searchToolsPlaceholder: 'Tafuta zana…',
   useDefaultTools: 'Tumia zana chaguomsingi',

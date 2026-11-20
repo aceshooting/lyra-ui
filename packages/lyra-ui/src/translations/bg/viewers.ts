@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'контакт',
   emailViewerLabel: 'Преглед на имейли',
   emailViewerMissingParser: 'За анализ на това съобщение прегледът изисква инсталиран незадължителен пакет „postal-mime“.',
+  emailViewerFrom: 'От',
+  emailViewerTo: 'До',
   emailViewerSubject: 'Тема',
   emailViewerDate: 'Дата',
   emailViewerAttachments: 'Прикачени файлове',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Копирай XML в клипборда',
   xmlViewerCopyNode: 'Копирай {name}',
   xmlViewerToggleNode: 'Превключи {name}',
+  geojsonViewLabel: 'Карта',
   geojsonViewInvalid: 'Този файл не е валиден GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} обект',

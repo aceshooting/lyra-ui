@@ -41,6 +41,28 @@ function collect(roots: readonly LyraTreemapNode[], onTruncate?: () => void): We
   let visited = 0;
   const ids = new Set<string>();
 
+  function accept(node: object, id: string, depth: number): WeightedNode | undefined {
+    const name = readOwnDataValue(node, 'label');
+    const label = typeof name === 'string' ? name : id;
+    const descendants = readOwnDataValue(node, 'children');
+    if (isRuntimeArray(descendants) && readOwnArrayLength(descendants)) {
+      if (depth >= MAX_DEPTH) {
+        truncated = true;
+        return undefined;
+      }
+      const children = read(descendants, depth + 1);
+      if (!children.length) return undefined;
+      const max = children[0]!.logWeight;
+      const scaled = children.reduce((sum, child) => sum + Math.exp(child.logWeight - max), 0);
+      const value = Math.min(Number.MAX_VALUE, children.reduce((sum, child) => sum + child.value, 0));
+      return { id, label, children, value, logWeight: max + Math.log(scaled) };
+    }
+    const value = readOwnDataValue(node, 'value');
+    return typeof value === 'number' && finiteNumber(value, 0) > 0
+      ? { id, label, value, children: [], logWeight: Math.log(value) }
+      : undefined;
+  }
+
   function read(nodes: readonly unknown[], depth: number): WeightedNode[] {
     const output: WeightedNode[] = [];
     const length = readOwnArrayLength(nodes) ?? 0;
@@ -53,25 +75,12 @@ function collect(roots: readonly LyraTreemapNode[], onTruncate?: () => void): We
       if (!isPlainDataRecord(node)) continue;
       const id = readOwnDataValue(node, 'id');
       if (typeof id !== 'string' || !id || ids.has(id)) continue;
+      // Hold the ID while descendants are read, so a descendant cannot reuse it, and release it
+      // when the node is rejected so a later valid node with the same ID is still accepted.
       ids.add(id);
-      const name = readOwnDataValue(node, 'label');
-      const label = typeof name === 'string' ? name : id;
-      const descendants = readOwnDataValue(node, 'children');
-      if (isRuntimeArray(descendants) && readOwnArrayLength(descendants)) {
-        if (depth >= MAX_DEPTH) {
-          truncated = true;
-          continue;
-        }
-        const children = read(descendants, depth + 1);
-        if (!children.length) continue;
-        const max = children[0]!.logWeight;
-        const scaled = children.reduce((sum, child) => sum + Math.exp(child.logWeight - max), 0);
-        const value = Math.min(Number.MAX_VALUE, children.reduce((sum, child) => sum + child.value, 0));
-        output.push({ id, label, children, value, logWeight: max + Math.log(scaled) });
-      } else {
-        const value = readOwnDataValue(node, 'value');
-        if (typeof value === 'number' && finiteNumber(value, 0) > 0) output.push({ id, label, value, children: [], logWeight: Math.log(value) });
-      }
+      const accepted = accept(node, id, depth);
+      if (accepted) output.push(accepted);
+      else ids.delete(id);
     }
     return output.sort((a, b) => b.logWeight - a.logWeight);
   }
@@ -81,16 +90,29 @@ function collect(roots: readonly LyraTreemapNode[], onTruncate?: () => void): We
   return result;
 }
 
-/** Squarifies each sibling group in the supplied bounds and returns parent-first rectangles. */
+/** Why a layout omitted nodes: an input limit, or tiles too small to occupy any area. */
+export type TreemapOmission = 'input' | 'size';
+
+/**
+ * Squarifies each sibling group in the supplied bounds and returns parent-first rectangles.
+ * Nodes too small to occupy any area are returned with zero width and height.
+ */
 export function layoutTreemap(
   nodes: readonly LyraTreemapNode[],
   width = 1,
   height = 1,
-  onTruncate?: () => void,
+  onTruncate?: (reason: TreemapOmission) => void,
 ): TreemapRect[] {
   if (!isRuntimeArray(nodes) || finiteNumber(width, 0) <= 0 || finiteNumber(height, 0) <= 0) return [];
   const result: TreemapRect[] = [];
   let truncated = false;
+
+  // A node too small to occupy any area keeps a zero-size entry, as do its descendants, so a
+  // data table can still list every value the plot cannot draw.
+  function omit(node: WeightedNode, x: number, y: number, parentId: string | null, depth: number): void {
+    result.push({ x, y, width: 0, height: 0, id: node.id, label: node.label, value: node.value, parentId, depth });
+    for (const child of node.children) omit(child, x, y, node.id, depth + 1);
+  }
 
   function tile(group: WeightedNode[], bounds: Bounds, parentId: string | null, depth: number): void {
     if (!group.length) return;
@@ -106,6 +128,7 @@ export function layoutTreemap(
       const remaining = suffix[start]!;
       if (!(short > 0 && remaining > 0)) {
         truncated = true;
+        for (let i = start; i < group.length; i++) omit(group[i]!, x, y, parentId, depth);
         break;
       }
       const first = weights[start]!;
@@ -138,6 +161,7 @@ export function layoutTreemap(
         offset += span;
         if (!(cell.x + cell.width > cell.x && cell.y + cell.height > cell.y)) {
           truncated = true;
+          omit(node, cell.x, cell.y, parentId, depth);
           continue;
         }
         result.push({ ...cell, id: node.id, label: node.label, value: node.value, parentId, depth });
@@ -154,7 +178,7 @@ export function layoutTreemap(
     }
   }
 
-  tile(collect(nodes, () => { truncated = true; }), { x: 0, y: 0, width, height }, null, 0);
-  if (truncated) onTruncate?.();
+  tile(collect(nodes, () => onTruncate?.('input')), { x: 0, y: 0, width, height }, null, 0);
+  if (truncated) onTruncate?.('size');
   return result;
 }

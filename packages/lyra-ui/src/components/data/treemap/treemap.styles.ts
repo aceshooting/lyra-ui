@@ -1,6 +1,11 @@
 import { css } from 'lit';
 
 export const styles = css`
+  /* The viewBox follows this rendered box, so one user unit is one CSS pixel. */
+  [part='plot'] {
+    block-size: var(--lr-treemap-height, clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem)));
+  }
+
   .tile-shape {
     fill: color-mix(in oklab, var(--_lr-treemap-tile-color) 28%, var(--lr-color-surface));
     stroke: var(--lr-color-surface);

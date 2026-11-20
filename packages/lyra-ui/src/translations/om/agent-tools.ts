@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Iskimaawwan wanta ibsuu qabu.',
   schemaPropertiesMustBeFlat: 'Amaloonni iskimaa wanta sadarkaa tokkoo ta\'uu qabu.',
   valueMustBeSerializable: 'Gatiin JSONtti jijjiiramuu danda\'uu qaba.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Meeshaalee filadhu',
   searchToolsPlaceholder: 'Meeshaalee barbaadi…',
   useDefaultTools: 'Meeshaalee durtii fayyadami',

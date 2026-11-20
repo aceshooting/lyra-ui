@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: '將 JSON 複製到剪貼簿',
+  circularReference: '迴圈引用',
   copyDiff: '複製差異',
   diffViewOldLabel: '原始',
   diffViewNewLabel: '修改後',

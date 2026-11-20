@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Dhiisi',
   confirm: 'Mirkaneessi',
   search: 'Barbaadi',
-  circularReference: 'Wabii marsaa',
   items: {
     one: 'wantoota',
     other: 'wantoota',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Mulʼata giraafii feʼuun hin dandaʼamne.',
   graphSourceRecordMissing: 'Galmeen giraafii kun hin jiru.',
   notInCatalog: 'galmee keessa hin jiru',
+  chartTotal: 'Waliigala',
   chartLegend: 'Ibsa mallattoolee chaartii',
   resetZoom: 'Guddisuu deebisi',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Garagalchuun hin milkoofne',
   paginationFirstPage: 'Fuula jalqabaa',
   paginationLastPage: 'Fuula dhumaa',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Baafata',
-  emailViewerFrom: 'Ergamaa',
-  emailViewerTo: 'Fudhataa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Kutaa calaqqisiifame bira ga\'e.',
   anchorJumpedToPage: 'Fuula {page} bira ga\'e.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Waldhabdeen jira',
   gitStatusIgnored: 'Tuffatame',
   envListValueHidden: 'Gatiin dhokfame',
-  geojsonViewLabel: 'Kaartaa',
   provenanceEntities: 'Qaamolee',
   flowItemAnnouncement: '{item} ({index} / {total})',
   neighborDirectionIn: 'Seenaa jira',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Tarreen bakka isaa buʼee agarsiifameera.',
   largeDataInvalid: 'Daataan agarsiifamuu hin dandaʼu sababni {column} sirrii miti.',
   largeDataLimit: 'Daataan agarsiifamuu hin dandaʼu sababni daangaa {limit} caalu.',
-  chart3dName: 'Maqaa',
 };
 
 registerLyraLocale('om', strings);

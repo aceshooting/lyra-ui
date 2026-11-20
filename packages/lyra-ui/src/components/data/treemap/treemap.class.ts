@@ -6,16 +6,16 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { SvgChartInteraction, svgChartColor } from '../../../internal/svg-chart.js';
 import { svgChartStyles } from '../../../internal/svg-chart.styles.js';
 import { layoutTreemap, type LyraTreemapNode, type TreemapRect } from './treemap-layout.js';
 import { styles } from './treemap.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_queryBuilderValueLabel } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_chartValuesTooSmall, LYRA_DEFAULT_treemapTileLabel } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type { LyraTreemapNode } from './treemap-layout.js';
 
@@ -23,8 +23,9 @@ export interface LyraTreemapEventMap {
   'lr-datum-activate': CustomEvent<{ id: string; label: string; value: number }>;
 }
 
-const PLOT_WIDTH = 320;
-const PLOT_HEIGHT = 200;
+/** Plot size in CSS pixels until the rendered plot is measured. */
+const FALLBACK_WIDTH = 320;
+const FALLBACK_HEIGHT = 200;
 const MAX_RENDERED_TILES = 1000;
 
 interface Tile extends TreemapRect {
@@ -32,15 +33,46 @@ interface Tile extends TreemapRect {
   readonly tileHeight: number;
   readonly contentHeight: number;
   readonly color: string;
-  readonly path: string;
+  /** Index of this tile's entry in the data table. */
+  readonly row: number;
+}
+
+interface TreemapRow {
+  readonly value: number;
+  /** Labels from the top-level ancestor to this node. */
+  readonly path: readonly string[];
 }
 
 interface TreemapView {
   readonly nodes: readonly LyraTreemapNode[];
+  readonly width: number;
+  readonly height: number;
   readonly tiles: readonly Tile[];
+  readonly rows: readonly TreemapRow[];
   readonly byId: ReadonlyMap<string, number>;
   readonly children: ReadonlyMap<string | null, readonly number[]>;
   readonly truncated: boolean;
+  readonly tooSmall: boolean;
+}
+
+/**
+ * Keeps at most `limit` rectangles, level by level and largest first within a level, so every
+ * top-level category survives a cap before any descendant is considered. A kept rectangle's
+ * parent is always kept, and the parent-first order of the input is preserved.
+ */
+function capFairly(rects: readonly TreemapRect[], limit: number): readonly TreemapRect[] {
+  if (rects.length <= limit) return rects;
+  const levels: TreemapRect[][] = [];
+  for (const rect of rects) (levels[rect.depth] ??= []).push(rect);
+  const kept = new Set<string>();
+  for (const level of levels) {
+    if (!level) continue;
+    for (const rect of [...level].sort((a, b) => b.value - a.value)) {
+      if (kept.size >= limit) break;
+      if (rect.parentId === null || kept.has(rect.parentId)) kept.add(rect.id);
+    }
+  }
+  return rects.filter(rect => kept.has(rect.id));
 }
 
 /**
@@ -49,7 +81,12 @@ interface TreemapView {
  * Each top-level tile and its descendants share a legend color.
  *
  * Nodes with invalid values or repeated IDs are omitted. At most 1,000 tiles and table rows
- * render, with a notice when the chart reaches an input or rendering limit.
+ * render, chosen level by level and largest first so every top-level category remains, with a
+ * notice when the chart reaches an input or rendering limit. Values too small to draw remain in
+ * the data table, with a separate notice.
+ *
+ * The plot fills the host's inline size, and its coordinate system follows the rendered size, so
+ * tile labels keep their token font size at any width.
  *
  * @customElement lr-treemap
  * @renderController SvgChartInteraction
@@ -70,6 +107,7 @@ interface TreemapView {
  * @csspart empty - Shown when no positive values are available.
  * @csspart loading - Shown while loading is set.
  * @csspart limit - Shown when a data or rendering limit is reached.
+ * @cssprop [--lr-treemap-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
  * @since unreleased
  */
@@ -78,15 +116,18 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     chart: LYRA_DEFAULT_chart,
-    chart3dName: LYRA_DEFAULT_chart3dName,
     chartData: LYRA_DEFAULT_chartData,
     chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLegend: LYRA_DEFAULT_chartLegend,
+    chartTableName: LYRA_DEFAULT_chartTableName,
+    chartTableValue: LYRA_DEFAULT_chartTableValue,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    chartValuesTooSmall: LYRA_DEFAULT_chartValuesTooSmall,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
-    queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
+    treemapTileLabel: LYRA_DEFAULT_treemapTileLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -119,19 +160,88 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
 
   private readonly chart = new SvgChartInteraction(this);
   private memo?: TreemapView;
+  private plotWidth = FALLBACK_WIDTH;
+  private plotHeight = FALLBACK_HEIGHT;
+  private observedPlot?: Element;
+  private readonly plotObserver = new OwnedResizeObserver(this, entries => {
+    for (const entry of entries) {
+      if (entry.target !== this.observedPlot) continue;
+      const { width, height } = entry.contentRect;
+      if (!(width > 0 && height > 0)) continue;
+      if (Math.abs(width - this.plotWidth) < 0.5 && Math.abs(height - this.plotHeight) < 0.5) continue;
+      this.plotWidth = width;
+      this.plotHeight = height;
+      this.requestUpdate();
+    }
+  });
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.observePlot();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.plotObserver.clear();
+    this.observedPlot = undefined;
+  }
+
+  protected override updated(changed: Map<PropertyKey, unknown>): void {
+    super.updated(changed);
+    this.observePlot();
+  }
+
+  /** Follows the rendered plot, which is replaced when a status message takes its place. */
+  private observePlot(): void {
+    const plot = this.shadowRoot?.querySelector('svg[part~="plot"]') ?? undefined;
+    if (plot === this.observedPlot) return;
+    this.plotObserver.clear();
+    this.observedPlot = plot;
+    if (plot) this.plotObserver.observe(plot);
+  }
+
+  private formatValue(value: number, locale: string): string {
+    const formatter = this.valueFormatter;
+    if (typeof formatter === 'function') {
+      try {
+        const text: unknown = formatter(value);
+        if (text !== undefined && text !== null) return String(text);
+      } catch {
+        // A failing formatter falls back to the locale-aware default.
+      }
+    }
+    return formatChartValue(value, locale);
+  }
 
   private resolveView(): TreemapView {
-    if (this.memo?.nodes === this.nodes) return this.memo;
+    const width = this.plotWidth;
+    const height = this.plotHeight;
+    const memo = this.memo;
+    if (memo?.nodes === this.nodes && memo.width === width && memo.height === height) return memo;
     let truncated = Boolean(publicCollectionTruncation(this, 'nodes'));
-    const rects = layoutTreemap(this.nodes, PLOT_WIDTH, PLOT_HEIGHT, () => { truncated = true; });
-    truncated ||= rects.length > MAX_RENDERED_TILES;
+    let tooSmall = false;
+    const rects = layoutTreemap(this.nodes, width, height, reason => {
+      if (reason === 'input') truncated = true;
+      else tooSmall = true;
+    });
+    const kept = capFairly(rects, MAX_RENDERED_TILES);
+    truncated ||= kept.length < rects.length;
 
     const tiles: Tile[] = [];
+    const rows: TreemapRow[] = [];
+    const paths = new Map<string, readonly string[]>();
     const byId = new Map<string, number>();
     const children = new Map<string | null, number[]>();
-    const rendered = rects.slice(0, MAX_RENDERED_TILES);
-    const branches = new Set(rendered.map(rect => rect.parentId));
-    for (const rect of rendered) {
+    const rendered: { rect: TreemapRect; row: number }[] = [];
+    for (const rect of kept) {
+      const parentPath = rect.parentId === null ? undefined : paths.get(rect.parentId);
+      const path = parentPath ? [...parentPath, rect.label] : [rect.label];
+      paths.set(rect.id, path);
+      if (rect.width > 0 && rect.height > 0) rendered.push({ rect, row: rows.length });
+      rows.push({ value: rect.value, path });
+    }
+    const branches = new Set(rendered.map(({ rect }) => rect.parentId));
+    for (const { rect, row } of rendered) {
       const parentIndex = rect.parentId === null ? undefined : byId.get(rect.parentId);
       const parent = parentIndex === undefined ? undefined : tiles[parentIndex];
       // Fit the exact partition into the content below its parent's header. Each sibling keeps
@@ -139,17 +249,16 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
       const top = parent
         ? parent.top + parent.tileHeight + (rect.y - parent.y) / parent.height * parent.contentHeight
         : rect.y;
-      const height = parent ? rect.height / parent.height * parent.contentHeight : rect.height;
-      const tileHeight = branches.has(rect.id) ? Math.min(22, height * 0.3) : height;
+      const tileBlock = parent ? rect.height / parent.height * parent.contentHeight : rect.height;
+      const tileHeight = branches.has(rect.id) ? Math.min(22, tileBlock * 0.3) : tileBlock;
       const siblings = children.get(rect.parentId) ?? [];
       const color = parent?.color ?? svgChartColor(siblings.length);
-      const path = parent ? `${parent.path} / ${rect.label}` : rect.label;
       byId.set(rect.id, tiles.length);
       siblings.push(tiles.length);
       children.set(rect.parentId, siblings);
-      tiles.push({ ...rect, top, tileHeight, contentHeight: height - tileHeight, color, path });
+      tiles.push({ ...rect, top, tileHeight, contentHeight: tileBlock - tileHeight, color, row });
     }
-    this.memo = { nodes: this.nodes, tiles, byId, children, truncated };
+    this.memo = { nodes: this.nodes, width, height, tiles, rows, byId, children, truncated, tooSmall };
     return this.memo;
   }
 
@@ -167,8 +276,8 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
     return siblings[next] ?? index;
   }
 
-  private renderTile(tile: Tile, rtl: boolean): TemplateResult {
-    const x = rtl ? PLOT_WIDTH - tile.x - tile.width : tile.x;
+  private renderTile(tile: Tile, plotWidth: number, rtl: boolean): TemplateResult {
+    const x = rtl ? plotWidth - tile.x - tile.width : tile.x;
     return svg`
       <rect
         class="tile-shape"
@@ -196,11 +305,16 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
   override render(): TemplateResult {
     const view = this.loading ? undefined : this.resolveView();
     const tiles = view?.tiles ?? [];
+    const rows = view?.rows ?? [];
     const rtl = this.effectiveDirection === 'rtl';
     const locale = this.effectiveLocale;
-    const values = tiles.map(tile =>
-      this.valueFormatter?.(tile.value) ?? formatChartValue(tile.value, locale)
-    );
+    const values = rows.map(row => this.formatValue(row.value, locale));
+    const separator = this.localize('accessibleLabelSeparator');
+    const names = rows.map(({ path }) => path.length > 1
+      ? this.localize('treemapTileLabel', undefined, {
+        label: path.at(-1)!, level: path.length, parent: path.slice(0, -1).join(separator),
+      })
+      : path[0]!);
     return this.chart.render({
       name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('chart'),
       description: normalizeLabel(this.description) ?? '',
@@ -209,13 +323,14 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
         : tiles.length === 0
         ? { part: 'empty', text: this.localize('noData') }
         : undefined,
-      notice: view?.truncated ? this.localize('chartInputLimit') : undefined,
-      viewBox: `0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`,
-      marks: tiles.map((tile, index) => ({
+      notice: view?.truncated ? this.localize('chartInputLimit')
+        : view?.tooSmall ? this.localize('chartValuesTooSmall') : undefined,
+      viewBox: `0 0 ${view?.width ?? FALLBACK_WIDTH} ${view?.height ?? FALLBACK_HEIGHT}`,
+      marks: tiles.map(tile => ({
         id: tile.id,
         part: 'tile',
-        label: this.localize('chartValueLabel', undefined, { label: tile.label, value: values[index]! }),
-        shape: this.renderTile(tile, rtl),
+        label: this.localize('chartValueLabel', undefined, { label: names[tile.row]!, value: values[tile.row]! }),
+        shape: this.renderTile(tile, view!.width, rtl),
       })),
       legend: view?.children.get(null)?.map(index => {
         const { label, color } = tiles[index]!;
@@ -223,8 +338,8 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
       }),
       legendLabel: this.localize('chartLegend'),
       tableLabel: this.localize('chartData'),
-      headers: [this.localize('chart3dName'), this.localize('queryBuilderValueLabel')],
-      rows: tiles.map((tile, index) => [tile.path, values[index]!]),
+      headers: [this.localize('chartTableName'), this.localize('chartTableValue')],
+      rows: rows.map((_, index) => [names[index]!, values[index]!]),
       withDataTable: this.withDataTable,
       dataTableToggle: this.dataTableToggle,
       rtl,

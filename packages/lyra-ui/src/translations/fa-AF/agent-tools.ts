@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'طرح باید یک شیء را توصیف کند.',
   schemaPropertiesMustBeFlat: 'ویژگی‌های طرح باید یک شیء ساده باشند.',
   valueMustBeSerializable: 'مقدار باید به JSON تبدیل‌پذیر باشد.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'انتخاب ابزارها',
   searchToolsPlaceholder: 'جست‌وجوی ابزارها…',
   useDefaultTools: 'استفاده از ابزارهای پیش‌فرض',

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'ಸ್ಕೀಮಾವು ಆಬ್ಜೆಕ್ಟ್ ಅನ್ನು ವಿವರಿಸಬೇಕು.',
   schemaPropertiesMustBeFlat: 'ಸ್ಕೀಮಾ ಗುಣಲಕ್ಷಣಗಳು ಫ್ಲಾಟ್ ಆಬ್ಜೆಕ್ಟ್ ಆಗಿರಬೇಕು.',
   valueMustBeSerializable: 'ಮೌಲ್ಯವನ್ನು JSON ರೂಪಕ್ಕೆ ಸರಣೀಕರಿಸಲು ಸಾಧ್ಯವಾಗಬೇಕು.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'ಟೂಲ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ',
   searchToolsPlaceholder: 'ಟೂಲ್‌ಗಳನ್ನು ಹುಡುಕಿ…',
   useDefaultTools: 'ಡೀಫಾಲ್ಟ್ ಟೂಲ್‌ಗಳನ್ನು ಬಳಸಿ',

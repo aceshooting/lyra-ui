@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON-ды алмасу буферіне көшіру',
+  circularReference: 'Циклдік сілтеме',
   copyDiff: 'Айырмашылықты көшіру',
   diffViewOldLabel: 'Бастапқы',
   diffViewNewLabel: 'Өзгертілген',

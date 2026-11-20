@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ακύρωση',
   confirm: 'Επιβεβαίωση',
   search: 'Αναζήτηση',
-  circularReference: 'Κυκλική αναφορά',
   items: {
     one: 'στοιχείο',
     other: 'στοιχεία',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Δεν ήταν δυνατή η φόρτωση της προβολής του γράφου.',
   graphSourceRecordMissing: 'Αυτή η εγγραφή του γράφου δεν είναι διαθέσιμη.',
   notInCatalog: 'δεν υπάρχει στον κατάλογο',
+  chartTotal: 'Σύνολο',
   chartLegend: 'Υπόμνημα γραφήματος',
   resetZoom: 'Επαναφορά μεγέθυνσης',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Η αντιγραφή απέτυχε',
   paginationFirstPage: 'Πρώτη σελίδα',
   paginationLastPage: 'Τελευταία σελίδα',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} χιλιοστά του δευτερολέπτου',
   durationSeconds: '{value} δευτ.',
   menuLabel: 'Μενού',
-  emailViewerFrom: 'Από',
-  emailViewerTo: 'Προς',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Μετάβαση στο επισημασμένο απόσπασμα.',
   anchorJumpedToPage: 'Μετάβαση στη σελίδα {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Σε διένεξη',
   gitStatusIgnored: 'Αγνοήθηκε',
   envListValueHidden: 'Η τιμή είναι κρυφή',
-  geojsonViewLabel: 'Χάρτης',
   provenanceEntities: 'Οντότητες',
   flowItemAnnouncement: '{item} ({index} από τα {total})',
   neighborDirectionIn: 'Εισερχόμενο',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Εμφανίζεται αντ’ αυτού μια λίστα.',
   largeDataInvalid: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή το {column} δεν είναι έγκυρο.',
   largeDataLimit: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή υπερβαίνουν το όριο των {limit}.',
-  chart3dName: 'Ετικέτα',
 };
 
 registerLyraLocale('el', strings);

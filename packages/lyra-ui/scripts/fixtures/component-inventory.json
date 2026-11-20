@@ -28175,6 +28175,16 @@
             "default": ""
           },
           {
+            "name": "object",
+            "property": "object",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "palette",
             "property": "palette",
             "type": "LyraChoroplethPalette",
@@ -28293,6 +28303,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "object",
+            "attribute": "object",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "palette",
@@ -165476,7 +165496,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-treemap-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],

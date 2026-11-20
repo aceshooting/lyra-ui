@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Fagilé',
   confirm: 'Jẹ́rìí',
   search: 'Wá kiri',
-  circularReference: 'Ìtọ́kasí aláyípo',
   items: {
     other: 'ohun',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'A kò lè ṣàkójọ ìwòye gráfù.',
   graphSourceRecordMissing: 'Àkọsílẹ̀ gráfù yìí kò sí.',
   notInCatalog: 'kò sí nínú kátálọ́ọ̀gù',
+  chartTotal: 'Àpapọ̀',
   chartLegend: 'Àlàyé àwọn àmì àwòrán ìṣirò',
   resetZoom: 'Tún ìfẹ̀ ṣe',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Dídàkọ kò ṣiṣẹ́',
   paginationFirstPage: 'Ojúewé àkọ́kọ́',
   paginationLastPage: 'Ojúewé tó kẹ́yìn',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Àtòjọ aṣàyàn',
-  emailViewerFrom: 'Láti ọ̀dọ̀',
-  emailViewerTo: 'Sí',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'A fo sí apá tí a ṣe àfihàn rẹ̀.',
   anchorJumpedToPage: 'A fo sí ojúewé {page}.',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ó ní ìtakora',
   gitStatusIgnored: 'A kọ̀ sílẹ̀',
   envListValueHidden: 'A fi iye náà pamọ́',
-  geojsonViewLabel: 'Màpù',
   provenanceEntities: 'Àwọn ohun ìṣẹ̀lẹ̀',
   flowItemAnnouncement: '{item} ({index} nínú {total})',
   neighborDirectionIn: 'Tó ń wọlé',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'A ń ṣàfihàn àtòjọ kan dípò rẹ̀.',
   largeDataInvalid: 'A kò lè ṣàfihàn data náà nítorí pé {column} kò tọ́.',
   largeDataLimit: 'A kò lè ṣàfihàn data náà nítorí pé ó kọjá ààlà {limit}.',
-  chart3dName: 'Àmì',
 };
 
 registerLyraLocale('yo', strings);

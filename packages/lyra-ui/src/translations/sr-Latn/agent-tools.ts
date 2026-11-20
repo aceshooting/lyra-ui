@@ -139,7 +139,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Šema mora opisivati objekat.',
   schemaPropertiesMustBeFlat: 'Svojstva šeme moraju biti ravan objekat.',
   valueMustBeSerializable: 'Vrednost mora moći da se serijalizuje u JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Izaberite alate',
   searchToolsPlaceholder: 'Pretražite alate…',
   useDefaultTools: 'Koristi podrazumevane alate',

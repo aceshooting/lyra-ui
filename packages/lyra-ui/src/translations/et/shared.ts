@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Tühista',
   confirm: 'Kinnita',
   search: 'Otsi',
-  circularReference: 'Ringviide',
   items: {
     one: 'üksus',
     other: 'üksust',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graafivaadet ei õnnestunud laadida.',
   graphSourceRecordMissing: 'See graafi kirje pole saadaval.',
   notInCatalog: 'kataloogis puudub',
+  chartTotal: 'Kokku',
   chartLegend: 'Diagrammi legend',
   resetZoom: 'Lähtesta suurendus',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopeerimine ebaõnnestus',
   paginationFirstPage: 'Esimene lehekülg',
   paginationLastPage: 'Viimane lehekülg',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Menüü',
-  emailViewerFrom: 'Saatja',
-  emailViewerTo: 'Saaja',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Liiguti esiletõstetud lõigule.',
   anchorJumpedToPage: 'Liiguti leheküljele {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Konfliktis',
   gitStatusIgnored: 'Eiratud',
   envListValueHidden: 'Väärtus peidetud',
-  geojsonViewLabel: 'Kaart',
   provenanceEntities: 'Olemid',
   flowItemAnnouncement: '{item} ({index}/{total})',
   neighborDirectionIn: 'Sissetulevad',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Selle asemel kuvatakse loend.',
   largeDataInvalid: 'Andmeid ei saa kuvada, sest {column} on kehtetu.',
   largeDataLimit: 'Andmeid ei saa kuvada, sest need ületavad piirangu {limit}.',
-  chart3dName: 'Silt',
 };
 
 registerLyraLocale('et', strings);

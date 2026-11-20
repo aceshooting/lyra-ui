@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'contact',
   emailViewerLabel: 'Viewer for email',
   emailViewerMissingParser: 'Dis viewer need make you install di optional "postal-mime" package to parse dis message.',
+  emailViewerFrom: 'Who send am',
+  emailViewerTo: 'Who e go reach',
   emailViewerSubject: 'Wetin di email talk about',
   emailViewerDate: 'Date e reach',
   emailViewerAttachments: 'Files wey dey inside',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Copy XML go clipboard',
   xmlViewerCopyNode: 'Copy am: {name}',
   xmlViewerToggleNode: 'Toggle {name}',
+  geojsonViewLabel: 'Map',
   geojsonViewInvalid: 'Dis file no be correct GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} feature',

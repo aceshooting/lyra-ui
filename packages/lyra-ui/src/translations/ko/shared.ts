@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: '취소',
   confirm: '확인',
   search: '검색',
-  circularReference: '순환 참조',
   items: {
     other: '항목',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: '그래프 보기를 불러올 수 없습니다.',
   graphSourceRecordMissing: '이 그래프 레코드를 사용할 수 없습니다.',
   notInCatalog: '카탈로그에 없음',
+  chartTotal: '합계',
   chartLegend: '차트 범례',
   resetZoom: '확대축소 초기화',
   showMoreCollapsed: '+ {count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: '복사 실패',
   paginationFirstPage: '첫 페이지',
   paginationLastPage: '마지막 페이지',
+  accessibleLabelSeparator: '—',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}초',
   menuLabel: '메뉴',
-  emailViewerFrom: '보낸 사람',
-  emailViewerTo: '받는 사람',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: '강조 표시된 구절로 이동했습니다.',
   anchorJumpedToPage: '{page} 페이지로 이동했습니다.',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: '충돌',
   gitStatusIgnored: '이미 무시됨',
   envListValueHidden: '값 숨김',
-  geojsonViewLabel: '지도',
   provenanceEntities: '개체',
   flowItemAnnouncement: '{item}({total}개 중 {index}번째)',
   neighborDirectionIn: '수신',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '대신 목록을 표시합니다.',
   largeDataInvalid: '{column}이(가) 올바르지 않아 데이터를 표시할 수 없습니다.',
   largeDataLimit: '데이터가 {limit} 한도를 초과하여 표시할 수 없습니다.',
-  chart3dName: '레이블',
 };
 
 registerLyraLocale('ko', strings);

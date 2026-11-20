@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Dole ne tsarin ya bayyana abu.',
   schemaPropertiesMustBeFlat: 'Dole ne siffofin tsarin su kasance abu marar zurfi.',
   valueMustBeSerializable: 'Dole ne a iya mayar da ƙimar zuwa tsarin JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Zaɓi kayan aiki',
   searchToolsPlaceholder: 'Nemo kayan aiki…',
   useDefaultTools: 'Yi amfani da kayan aikin asali',

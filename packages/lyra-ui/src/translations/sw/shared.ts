@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ghairi',
   confirm: 'Thibitisha',
   search: 'Tafuta',
-  circularReference: 'Rejeleo la duara',
   items: {
     one: 'kipengee',
     other: 'vipengee',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Mwonekano wa grafu haukuweza kupakiwa.',
   graphSourceRecordMissing: 'Rekodi hii ya grafu haipatikani.',
   notInCatalog: 'hakipo kwenye orodha',
+  chartTotal: 'Jumla',
   chartLegend: 'Ufafanuzi wa alama za chati',
   resetZoom: 'Weka ukuzaji upya',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Imeshindwa kunakili',
   paginationFirstPage: 'Ukurasa wa kwanza',
   paginationLastPage: 'Ukurasa wa mwisho',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menyu',
-  emailViewerFrom: 'Kutoka',
-  emailViewerTo: 'Kwa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Imeenda kwenye sehemu iliyoangaziwa.',
   anchorJumpedToPage: 'Imeenda kwenye ukurasa {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ina mgogoro',
   gitStatusIgnored: 'Imepuuzwa',
   envListValueHidden: 'Thamani imefichwa',
-  geojsonViewLabel: 'Ramani',
   provenanceEntities: 'Huluki',
   flowItemAnnouncement: '{item} ({index} kati ya {total})',
   neighborDirectionIn: 'Zinazoingia',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Orodha inaonyeshwa badala yake.',
   largeDataInvalid: 'Data haiwezi kuonyeshwa kwa sababu {column} si halali.',
   largeDataLimit: 'Data haiwezi kuonyeshwa kwa sababu inazidi kikomo cha {limit}.',
-  chart3dName: 'Lebo',
 };
 
 registerLyraLocale('sw', strings);

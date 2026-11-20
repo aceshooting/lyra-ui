@@ -140,7 +140,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Shema mora opisovati objekt.',
   schemaPropertiesMustBeFlat: 'Lastnosti sheme morajo biti ploski objekt.',
   valueMustBeSerializable: 'Vrednost mora biti mogoče serializirati v JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Izberi orodja',
   searchToolsPlaceholder: 'Iskanje orodij …',
   useDefaultTools: 'Uporabi privzeta orodja',

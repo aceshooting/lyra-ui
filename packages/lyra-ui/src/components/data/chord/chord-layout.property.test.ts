@@ -46,6 +46,17 @@ describe('chord layout', () => {
     expect(layoutChord(entities.slice(0, 1), [[0]]).status).to.equal('empty');
   });
 
+  it('accepts mirrored weights within a relative tolerance and uses the upper cell for both ends', () => {
+    fc.assert(fc.property(fc.double({ min: 1e-6, max: 1e6, noNaN: true }), fc.double({ min: -1e-12, max: 1e-12, noNaN: true }),
+      (weight, noise) => {
+        const result = layoutChord(entities.slice(0, 2), [[0, weight], [weight * (1 + noise), 0]]);
+        expect(result.status).to.equal('ready');
+        expect(result.totals.map(total => total.value)).to.deep.equal([weight, weight]);
+      }), propertyRuns());
+    expect(layoutChord(entities.slice(0, 2), [[0, 0.1 + 0.2], [0.3, 0]]).status).to.equal('ready');
+    expect(layoutChord(entities.slice(0, 2), [[0, 1], [1 + 1e-6, 0]]).status).to.equal('invalid');
+  });
+
   it('rejects malformed matrices, duplicate IDs, and getters without reading source accessors', () => {
     const pair = entities.slice(0, 2);
     for (const matrix of [[[0, 1], [2, 0]], [[0], [0]], [[0, -1], [-1, 0]], [[0, Infinity], [Infinity, 0]]]) {

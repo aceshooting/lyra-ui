@@ -42,8 +42,8 @@ import { styles } from './chart-3d.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart3dCategory, LYRA_DEFAULT_chart3dEmpty, LYRA_DEFAULT_chart3dFit, LYRA_DEFAULT_chart3dInstructions, LYRA_DEFAULT_chart3dLabel, LYRA_DEFAULT_chart3dRow, LYRA_DEFAULT_chart3dSize, LYRA_DEFAULT_chart3dXAxis, LYRA_DEFAULT_chart3dYAxis, LYRA_DEFAULT_chart3dZAxis } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chart3dCategory, LYRA_DEFAULT_chart3dEmpty, LYRA_DEFAULT_chart3dFit, LYRA_DEFAULT_chart3dInstructions, LYRA_DEFAULT_chart3dLabel, LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chart3dRow, LYRA_DEFAULT_chart3dSize, LYRA_DEFAULT_chart3dXAxis, LYRA_DEFAULT_chart3dYAxis, LYRA_DEFAULT_chart3dZAxis } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

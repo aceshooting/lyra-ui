@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Skeeman on kuvattava objekti.',
   schemaPropertiesMustBeFlat: 'Skeeman ominaisuuksien on oltava litteä objekti.',
   valueMustBeSerializable: 'Arvon on oltava sarjallistettavissa JSON-muotoon.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Valitse työkalut',
   searchToolsPlaceholder: 'Hae työkaluja…',
   useDefaultTools: 'Käytä oletustyökaluja',

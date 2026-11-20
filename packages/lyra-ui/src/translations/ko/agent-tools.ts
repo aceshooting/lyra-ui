@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: '스키마는 개체를 설명해야 합니다.',
   schemaPropertiesMustBeFlat: '스키마 속성은 플랫 객체여야 합니다.',
   valueMustBeSerializable: '값은 JSON으로 직렬화할 수 있어야 합니다.',
-  accessibleLabelSeparator: '—',
   selectTools: '도구 선택',
   searchToolsPlaceholder: '도구 검색…',
   useDefaultTools: '기본 도구 사용',

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'I-schema kufanele ichaze into.',
   schemaPropertiesMustBeFlat: 'Izakhiwo ze-schema kufanele zibe yinto eyisicaba.',
   valueMustBeSerializable: 'Inani kufanele liguqulelwe ku-JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Khetha amathuluzi',
   searchToolsPlaceholder: 'Sesha amathuluzi…',
   useDefaultTools: 'Sebenzisa amathuluzi amisiwe',

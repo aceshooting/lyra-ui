@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'בטל',
   confirm: 'אשר',
   search: 'חפש',
-  circularReference: 'הפניה מעגלית',
   items: {
     one: 'פריט',
     two: 'פריטים',
@@ -86,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'לא ניתן לטעון את תצוגת הגרף.',
   graphSourceRecordMissing: 'רשומת גרף זו אינה זמינה.',
   notInCatalog: 'לא בקטלוג',
+  chartTotal: 'סך הכל',
   chartLegend: 'מקרא התרשים',
   resetZoom: 'אפס זום',
   showMoreCollapsed: '+{count}',
@@ -133,11 +133,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ההעתקה נכשלה',
   paginationFirstPage: 'עמוד ראשון',
   paginationLastPage: 'עמוד אחרון',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} מילישניות',
   durationSeconds: '{value} שניות',
   menuLabel: 'תפריט',
-  emailViewerFrom: 'מן',
-  emailViewerTo: 'אל',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'בוצע מעבר לקטע המודגש.',
   anchorJumpedToPage: 'בוצע מעבר לעמוד {page}.',
@@ -154,7 +153,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'מסוכסך',
   gitStatusIgnored: 'התעלמות',
   envListValueHidden: 'ערך מוסתר',
-  geojsonViewLabel: 'מפה',
   provenanceEntities: 'ישויות',
   flowItemAnnouncement: '{item} ({index} מתוך {total})',
   neighborDirectionIn: 'נכנס',
@@ -196,7 +194,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'במקום זאת מוצגת רשימה.',
   largeDataInvalid: 'לא ניתן להציג את הנתונים מכיוון ש-{column} אינו תקין.',
   largeDataLimit: 'לא ניתן להציג את הנתונים מכיוון שהם חורגים מהמגבלה של {limit}.',
-  chart3dName: 'תווית',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

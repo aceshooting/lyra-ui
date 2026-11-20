@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'contacte',
   emailViewerLabel: 'Visualitzador de correu electrònic',
   emailViewerMissingParser: 'Aquest visualitzador necessita el paquet opcional «postal-mime» instal·lat per analitzar aquest missatge.',
+  emailViewerFrom: 'De',
+  emailViewerTo: 'Per a',
   emailViewerSubject: 'Assumpte',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Fitxers adjunts',
@@ -126,6 +128,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Copia l’XML al porta-retalls',
   xmlViewerCopyNode: 'Copia {name}',
   xmlViewerToggleNode: 'Commuta {name}',
+  geojsonViewLabel: 'Mapa',
   geojsonViewInvalid: 'Aquest fitxer no és un GeoJSON vàlid.',
   geojsonViewFeatureCount: {
     many: '{count} elements geogràfics',

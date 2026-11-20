@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'lamba',
   emailViewerLabel: 'Mai duba imel',
   emailViewerMissingParser: 'Wannan mai dubawa yana buƙatar a girka fakitin zaɓi na "postal-mime" don nazarin wannan saƙo.',
+  emailViewerFrom: 'Daga',
+  emailViewerTo: 'Zuwa',
   emailViewerSubject: 'Jigo',
   emailViewerDate: 'Kwanan wata',
   emailViewerAttachments: 'Abubuwan da aka haɗa',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kwafi XML zuwa allon riƙewa',
   xmlViewerCopyNode: 'Kwafi {name}',
   xmlViewerToggleNode: 'Buɗe/rufe {name}',
+  geojsonViewLabel: 'Taswira',
   geojsonViewInvalid: 'Wannan fayil ba ingantaccen GeoJSON ba ne.',
   geojsonViewFeatureCount: {
     one: 'Siffa {count}',

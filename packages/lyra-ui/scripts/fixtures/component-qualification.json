@@ -11028,7 +11028,19 @@
             },
             {
               "file": "src/components/data/chord/chord.test.ts",
+              "test": "emphasizes a focused ribbon and mutes the others",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/chord/chord.test.ts",
               "test": "highlights incident ribbons on keyboard focus and clears the highlight on Escape",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/chord/chord.test.ts",
+              "test": "lists every entity total, including zero totals, beside the Source, Target and Value table",
               "target": "el",
               "state": "populated"
             },

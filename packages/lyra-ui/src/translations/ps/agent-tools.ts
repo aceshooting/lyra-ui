@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'سکیمه باید یو څیز تشریح کړي.',
   schemaPropertiesMustBeFlat: 'د سکیمې ځانګړنې باید هوار څیز وي.',
   valueMustBeSerializable: 'ارزښت باید JSON ته اړول کېدای شي.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'وسیلې وټاکئ',
   searchToolsPlaceholder: 'وسیلې ولټوئ…',
   useDefaultTools: 'تلواله وسیلې کارول',

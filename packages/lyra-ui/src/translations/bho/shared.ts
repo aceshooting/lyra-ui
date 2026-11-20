@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'रद्द करीं',
   confirm: 'पक्का करीं',
   search: 'खोजीं',
-  circularReference: 'चक्रीय संदर्भ',
   items: {
     one: 'चीज',
     other: 'चीज',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ग्राफ के दृश्य लोड ना हो सकल।',
   graphSourceRecordMissing: 'ई ग्राफ रिकॉर्ड उपलब्ध नइखे।',
   notInCatalog: 'सूची में नइखे',
+  chartTotal: 'कुल',
   chartLegend: 'चार्ट के निशान के मतलब',
   resetZoom: 'जूम फेर से सेट करीं',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'नकल ना हो सकल',
   paginationFirstPage: 'पहिला पन्ना',
   paginationLastPage: 'आखिरी पन्ना',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'मेनू',
-  emailViewerFrom: 'से',
-  emailViewerTo: 'के',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'उभारल अंश पर पहुँच गइल।',
   anchorJumpedToPage: 'पन्ना {page} पर पहुँच गइल।',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'टकराव भइल',
   gitStatusIgnored: 'छोड़ल गइल',
   envListValueHidden: 'मान लुकावल गइल',
-  geojsonViewLabel: 'नक्शा',
   provenanceEntities: 'इकाई',
   flowItemAnnouncement: '{item} ({total} में {index})',
   neighborDirectionIn: 'आवत',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'एकरा बदला में एगो सूची देखावल जा रहल बा।',
   largeDataInvalid: 'डेटा ना देखावल जा सकेला काहेकि {column} अमान्य बा।',
   largeDataLimit: 'डेटा ना देखावल जा सकेला काहेकि ई {limit} के सीमा से ज्यादा बा।',
-  chart3dName: 'लेबल',
 };
 
 registerLyraLocale('bho', strings);

@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'névjegy',
   emailViewerLabel: 'E-mail-megjelenítő',
   emailViewerMissingParser: 'Az üzenet feldolgozásához ennek a megjelenítőnek szüksége van az opcionális „postal-mime” csomagra.',
+  emailViewerFrom: 'Feladó',
+  emailViewerTo: 'Címzett',
   emailViewerSubject: 'Tárgy',
   emailViewerDate: 'Dátum',
   emailViewerAttachments: 'Mellékletek',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML másolása a vágólapra',
   xmlViewerCopyNode: 'Másolás: {name}',
   xmlViewerToggleNode: 'Megjelenítés/elrejtés: {name}',
+  geojsonViewLabel: 'Térkép',
   geojsonViewInvalid: 'Ez a fájl nem érvényes GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objektum',

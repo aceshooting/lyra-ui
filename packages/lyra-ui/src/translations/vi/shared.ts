@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Hủy',
   confirm: 'Xác nhận',
   search: 'Tìm kiếm',
-  circularReference: 'Tham chiếu vòng',
   items: {
     other: 'mục',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Không thể tải chế độ xem đồ thị.',
   graphSourceRecordMissing: 'Bản ghi đồ thị này không khả dụng.',
   notInCatalog: 'không có trong danh mục',
+  chartTotal: 'Tổng',
   chartLegend: 'Chú giải biểu đồ',
   resetZoom: 'Đặt lại mức thu phóng',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Sao chép không thành công',
   paginationFirstPage: 'Trang đầu',
   paginationLastPage: 'Trang cuối',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} giây',
   menuLabel: 'Trình đơn',
-  emailViewerFrom: 'Người gửi',
-  emailViewerTo: 'Người nhận',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Đã chuyển đến đoạn được đánh dấu.',
   anchorJumpedToPage: 'Đã chuyển đến trang {page}.',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Bị xung đột',
   gitStatusIgnored: 'Đã bỏ qua',
   envListValueHidden: 'Giá trị đã ẩn',
-  geojsonViewLabel: 'Bản đồ',
   provenanceEntities: 'Thực thể',
   flowItemAnnouncement: '{item} ({index} trên {total})',
   neighborDirectionIn: 'Hướng vào',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Một danh sách được hiển thị thay thế.',
   largeDataInvalid: 'Không thể hiển thị dữ liệu vì {column} không hợp lệ.',
   largeDataLimit: 'Không thể hiển thị dữ liệu vì vượt quá giới hạn {limit}.',
-  chart3dName: 'Nhãn',
 };
 
 registerLyraLocale('vi', strings);

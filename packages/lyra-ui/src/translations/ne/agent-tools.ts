@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'स्किमाले अव्जेक्ट वर्णन गर्नुपर्छ।',
   schemaPropertiesMustBeFlat: 'स्किमा गुणहरू समतल अव्जेक्ट हुनुपर्छ।',
   valueMustBeSerializable: 'मान JSON मा क्रमबद्ध गर्न मिल्ने हुनुपर्छ।',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'उपकरणहरू छान्नुहोस्',
   searchToolsPlaceholder: 'उपकरणहरू खोज्नुहोस्…',
   useDefaultTools: 'पूर्वनिर्धारित उपकरणहरू प्रयोग गर्नुहोस्',

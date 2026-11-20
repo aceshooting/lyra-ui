@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Cancel am',
   confirm: 'Confirm am',
   search: 'Find',
-  circularReference: 'Reference wey dey go round',
   items: {
     one: 'thing',
     other: 'things',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Di graph view no fit load.',
   graphSourceRecordMissing: 'Dis graph record no dey available.',
   notInCatalog: 'e no dey for catalog',
+  chartTotal: 'All together',
   chartLegend: 'Key for di chart',
   resetZoom: 'Reset di zoom',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Copy no work',
   paginationFirstPage: 'Page wey dey first',
   paginationLastPage: 'Page wey dey last',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Who send am',
-  emailViewerTo: 'Who e go reach',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'E don jump reach di highlighted part.',
   anchorJumpedToPage: 'E don jump reach page {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'E get conflict',
   gitStatusIgnored: 'Dem ignore am',
   envListValueHidden: 'Dem hide di value',
-  geojsonViewLabel: 'Map',
   provenanceEntities: 'Things wey di sources talk about',
   flowItemAnnouncement: '{item} ({index} out of {total})',
   neighborDirectionIn: 'E dey come in',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'We dey show list instead.',
   largeDataInvalid: 'Di data no fit show because {column} no correct.',
   largeDataLimit: 'Di data no fit show because e pass di limit of {limit}.',
-  chart3dName: 'Label',
 };
 
 registerLyraLocale('pcm', strings);

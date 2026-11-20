@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ರದ್ದುಮಾಡಿ',
   confirm: 'ದೃಢೀಕರಿಸಿ',
   search: 'ಹುಡುಕಿ',
-  circularReference: 'ವೃತ್ತಾಕಾರದ ಉಲ್ಲೇಖ',
   items: {
     one: 'ಐಟಂ',
     other: 'ಐಟಂಗಳು',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ಗ್ರಾಫ್ ನೋಟವನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   graphSourceRecordMissing: 'ಈ ಗ್ರಾಫ್ ದಾಖಲೆ ಲಭ್ಯವಿಲ್ಲ.',
   notInCatalog: 'ಪಟ್ಟಿಯಲ್ಲಿ ಇಲ್ಲ',
+  chartTotal: 'ಒಟ್ಟು',
   chartLegend: 'ಚಾರ್ಟ್‌ನ ಲೆಜೆಂಡ್',
   resetZoom: 'ಜೂಮ್ ಮರುಹೊಂದಿಸಿ',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ನಕಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ',
   paginationFirstPage: 'ಮೊದಲ ಪುಟ',
   paginationLastPage: 'ಕೊನೆಯ ಪುಟ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ಮಿಲಿಸೆಕೆಂಡ್‌ಗಳು',
   durationSeconds: '{value} ಸೆಕೆಂಡ್‌ಗಳು',
   menuLabel: 'ಮೆನು',
-  emailViewerFrom: 'ಇಂದ',
-  emailViewerTo: 'ಗೆ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ಹೈಲೈಟ್ ಮಾಡಿದ ಭಾಗಕ್ಕೆ ತೆರಳಲಾಗಿದೆ.',
   anchorJumpedToPage: '{page}ನೇ ಪುಟಕ್ಕೆ ತೆರಳಲಾಗಿದೆ.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ವಿರೋಧವಿದೆ',
   gitStatusIgnored: 'ನಿರ್ಲಕ್ಷಿಸಲಾಗಿದೆ',
   envListValueHidden: 'ಮೌಲ್ಯ ಮರೆಮಾಡಲಾಗಿದೆ',
-  geojsonViewLabel: 'ನಕ್ಷೆ',
   provenanceEntities: 'ಘಟಕಗಳು',
   flowItemAnnouncement: '{item} ({total}ರಲ್ಲಿ {index})',
   neighborDirectionIn: 'ಒಳಬರುವ',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ಬದಲಿಗೆ ಪಟ್ಟಿಯನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
   largeDataInvalid: '{column} ಅಮಾನ್ಯವಾಗಿರುವುದರಿಂದ ಡೇಟಾವನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
   largeDataLimit: 'ಡೇಟಾ {limit} ಮಿತಿಯನ್ನು ಮೀರುವುದರಿಂದ ಅದನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
-  chart3dName: 'ಲೇಬಲ್',
 };
 
 registerLyraLocale('kn', strings);

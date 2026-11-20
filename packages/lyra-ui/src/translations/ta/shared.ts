@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ரத்து செய்',
   confirm: 'உறுதிப்படுத்து',
   search: 'தேடு',
-  circularReference: 'சுழல் குறிப்பு',
   items: {
     one: 'உருப்படி',
     other: 'உருப்படிகள்',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'வரைபடக் காட்சியை ஏற்ற முடியவில்லை.',
   graphSourceRecordMissing: 'இந்த வரைபடப் பதிவு கிடைக்கவில்லை.',
   notInCatalog: 'பட்டியலில் இல்லை',
+  chartTotal: 'மொத்தம்',
   chartLegend: 'விளக்கப்படக் குறியீட்டு விளக்கம்',
   resetZoom: 'பெரிதாக்கலை மீட்டமை',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'நகலெடுக்க முடியவில்லை',
   paginationFirstPage: 'முதல் பக்கம்',
   paginationLastPage: 'கடைசிப் பக்கம்',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'பட்டி',
-  emailViewerFrom: 'அனுப்புநர்',
-  emailViewerTo: 'பெறுநர்',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'தனிப்படுத்திய பகுதியை அடைந்தது.',
   anchorJumpedToPage: 'பக்கம் {page}-ஐ அடைந்தது.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'முரண்பாடுள்ளது',
   gitStatusIgnored: 'புறக்கணிக்கப்பட்டது',
   envListValueHidden: 'மதிப்பு மறைக்கப்பட்டது',
-  geojsonViewLabel: 'வரைபடம்',
   provenanceEntities: 'உருப்படிகள்',
   flowItemAnnouncement: '{item} ({total}-இல் {index})',
   neighborDirectionIn: 'உள்வரும்',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'அதற்குப் பதிலாக பட்டியல் காட்டப்படுகிறது.',
   largeDataInvalid: '{column} தவறானது என்பதால் தரவைக் காட்ட முடியாது.',
   largeDataLimit: 'தரவு {limit} வரம்பை மீறுவதால் அதைக் காட்ட முடியாது.',
-  chart3dName: 'பெயர்',
 };
 
 registerLyraLocale('ta', strings);

@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Annuleren',
   confirm: 'Bevestigen',
   search: 'Zoeken',
-  circularReference: 'Cirkelverwijzing',
   items: {
     one: 'onderdeel',
     other: 'onderdelen',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'De graafweergave kon niet worden geladen.',
   graphSourceRecordMissing: 'Dit graafrecord is niet beschikbaar.',
   notInCatalog: 'niet in de catalogus',
+  chartTotal: 'Totaal',
   chartLegend: 'Grafieklegenda',
   resetZoom: 'Zoom herstellen',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopiëren mislukt',
   paginationFirstPage: 'Eerste pagina',
   paginationLastPage: 'Laatste pagina',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Van',
-  emailViewerTo: 'Aan',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Naar de gemarkeerde passage gegaan.',
   anchorJumpedToPage: 'Naar pagina {page} gegaan.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Conflict',
   gitStatusIgnored: 'Genegeerd',
   envListValueHidden: 'Waarde verborgen',
-  geojsonViewLabel: 'Kaart',
   provenanceEntities: 'Entiteiten',
   flowItemAnnouncement: '{item} ({index} van {total})',
   neighborDirectionIn: 'Inkomend',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'In plaats daarvan wordt een lijst getoond.',
   largeDataInvalid: 'De gegevens kunnen niet worden weergegeven omdat {column} ongeldig is.',
   largeDataLimit: 'De gegevens kunnen niet worden weergegeven omdat ze de limiet van {limit} overschrijden.',
-  chart3dName: 'Label',
 };
 
 registerLyraLocale('nl', strings);

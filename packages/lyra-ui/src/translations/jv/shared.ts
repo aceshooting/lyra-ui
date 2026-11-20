@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Batal',
   confirm: 'Konfirmasi',
   search: 'Telusuri',
-  circularReference: 'Referensi muter',
   items: {
     other: 'barang',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Tampilan graf ora bisa dimuat.',
   graphSourceRecordMissing: 'Cathetan graf iki ora kasedhiya.',
   notInCatalog: 'ora ana ing katalog',
+  chartTotal: 'Gunggung',
   chartLegend: 'Legenda grafik',
   resetZoom: 'Balekake ukuran zoom',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Ora bisa nyalin',
   paginationFirstPage: 'Kaca kapisan',
   paginationLastPage: 'Kaca pungkasan',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} milidetik',
   durationSeconds: '{value} detik',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Saka',
-  emailViewerTo: 'Kanggo',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Wis pindhah menyang perangan sing disorot.',
   anchorJumpedToPage: 'Wis pindhah menyang kaca {page}.',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Bentrok',
   gitStatusIgnored: 'Diabaikan',
   envListValueHidden: 'Nilai didhelikake',
-  geojsonViewLabel: 'Peta',
   provenanceEntities: 'Entitas',
   flowItemAnnouncement: '{item} ({index} saka {total})',
   neighborDirectionIn: 'Mlebu',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Dhaptar ditampilake minangka gantiné.',
   largeDataInvalid: 'Data ora bisa ditampilake amarga {column} ora valid.',
   largeDataLimit: 'Data ora bisa ditampilake amarga ngluwihi wates {limit}.',
-  chart3dName: 'Label',
 };
 
 registerLyraLocale('jv', strings);

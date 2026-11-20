@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'teagmhálaí',
   emailViewerLabel: 'Amharcán ríomhphoist',
   emailViewerMissingParser: 'Teastaíonn an pacáiste roghnach "postal-mime" ón amharcán seo chun an teachtaireacht seo a pharsáil.',
+  emailViewerFrom: 'Ó',
+  emailViewerTo: 'Chuig',
   emailViewerSubject: 'Ábhar',
   emailViewerDate: 'Dáta',
   emailViewerAttachments: 'Ceangaltáin',
@@ -130,6 +132,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Cóipeáil an XML chuig an ngearrthaisce',
   xmlViewerCopyNode: 'Cóipeáil {name}',
   xmlViewerToggleNode: 'Scoránaigh {name}',
+  geojsonViewLabel: 'Léarscáil',
   geojsonViewInvalid: 'Ní GeoJSON bailí é an comhad seo.',
   geojsonViewFeatureCount: {
     few: '{count} ghné',

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'A sémának objektumot kell leírnia.',
   schemaPropertiesMustBeFlat: 'A sématulajdonságoknak lapos objektumnak kell lenniük.',
   valueMustBeSerializable: 'Az értéknek JSON-ként szerializálhatónak kell lennie.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Eszközök kiválasztása',
   searchToolsPlaceholder: 'Eszközök keresése…',
   useDefaultTools: 'Alapértelmezett eszközök használata',

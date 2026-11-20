@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ပယ်ဖျက်ရန်',
   confirm: 'အတည်ပြုရန်',
   search: 'ရှာဖွေရန်',
-  circularReference: 'စက်ဝိုင်းပုံ ကိုးကားမှု',
   items: {
     other: 'အရာများ',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ဂရပ်မြင်ကွင်းကို တင်၍မရပါ။',
   graphSourceRecordMissing: 'ဤဂရပ်မှတ်တမ်းကို မရရှိနိုင်ပါ။',
   notInCatalog: 'စာရင်းတွင် မရှိပါ',
+  chartTotal: 'စုစုပေါင်း',
   chartLegend: 'ဇယား သင်္ကေတညွှန်း',
   resetZoom: 'ချဲ့မှုကို ပြန်လည်သတ်မှတ်ရန်',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ကူးယူ၍ မရပါ',
   paginationFirstPage: 'ပထမစာမျက်နှာ',
   paginationLastPage: 'နောက်ဆုံးစာမျက်နှာ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} မီလီစက္ကန့်',
   durationSeconds: '{value} စက္ကန့်',
   menuLabel: 'မီနူး',
-  emailViewerFrom: 'ပေးပို့သူ',
-  emailViewerTo: 'လက်ခံသူ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'အသားပေးထားသော စာပိုဒ်သို့ ရောက်ရှိသွားပါပြီ။',
   anchorJumpedToPage: 'စာမျက်နှာ {page} သို့ ရောက်ရှိသွားပါပြီ။',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ပဋိပက္ခဖြစ်နေသည်',
   gitStatusIgnored: 'လျစ်လျူရှုထားသည်',
   envListValueHidden: 'တန်ဖိုးကို ဖျောက်ထားသည်',
-  geojsonViewLabel: 'မြေပုံ',
   provenanceEntities: 'အရာဝတ္ထုများ',
   flowItemAnnouncement: '{item} ({total} ခုအနက် {index} ခုမြောက်)',
   neighborDirectionIn: 'အဝင်',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '၎င်းအစား စာရင်းတစ်ခုကို ပြသနေသည်။',
   largeDataInvalid: '{column} သည် မမှန်ကန်သောကြောင့် ဒေတာကို ပြသ၍ မရပါ။',
   largeDataLimit: 'ဒေတာသည် {limit} ကန့်သတ်ချက်ကို ကျော်လွန်နေသောကြောင့် ပြသ၍ မရပါ။',
-  chart3dName: 'အညွှန်း',
 };
 
 registerLyraLocale('my', strings);

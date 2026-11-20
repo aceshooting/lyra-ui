@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Atụmatụ ga-akọwa ihe.',
   schemaPropertiesMustBeFlat: 'Akụrụngwa atụmatụ ga-abụ ihe dị larịị.',
   valueMustBeSerializable: 'A ga-enwe ike ịtụgharị uru ahụ ka ọ bụrụ JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Họrọ ngwa ọrụ',
   searchToolsPlaceholder: 'Chọọ ngwa ọrụ…',
   useDefaultTools: 'Jiri ngwa ọrụ ndabere',

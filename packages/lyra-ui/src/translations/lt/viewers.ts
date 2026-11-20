@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontaktas',
   emailViewerLabel: 'El. laiškų peržiūra',
   emailViewerMissingParser: 'Kad galėtų nagrinėti šį laišką, šiai peržiūros priemonei reikia įdiegti pasirenkamą paketą „postal-mime“.',
+  emailViewerFrom: 'Nuo',
+  emailViewerTo: 'Kam',
   emailViewerSubject: 'Tema',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Priedai',
@@ -128,6 +130,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopijuoti XML į iškarpinę',
   xmlViewerCopyNode: 'Kopijuoti {name}',
   xmlViewerToggleNode: 'Perjungti {name}',
+  geojsonViewLabel: 'Žemėlapis',
   geojsonViewInvalid: 'Šis failas nėra tinkamas GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} objektai',

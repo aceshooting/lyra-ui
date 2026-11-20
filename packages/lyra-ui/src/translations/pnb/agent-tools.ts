@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'سکیمے وچ آبجیکٹ دا بیان ہونا چاہیدا اے۔',
   schemaPropertiesMustBeFlat: 'سکیمے دیاں خاصیتاں فلیٹ آبجیکٹ ہونیاں چاہیدیاں نیں۔',
   valueMustBeSerializable: 'قدر JSON وچ سیریلائز ہو سکّن والی ہونی چاہیدی اے۔',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'ٹول چنو',
   searchToolsPlaceholder: 'ٹول لبھو…',
   useDefaultTools: 'طے شدہ ٹول ورتو',

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Skeem peab kirjeldama objekti.',
   schemaPropertiesMustBeFlat: 'Skeemi atribuudid peavad olema lame objekt.',
   valueMustBeSerializable: 'Väärtus peab olema JSON-serialiseeritav.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Vali tööriistad',
   searchToolsPlaceholder: 'Otsi tööriistu…',
   useDefaultTools: 'Kasuta vaiketööriistu',

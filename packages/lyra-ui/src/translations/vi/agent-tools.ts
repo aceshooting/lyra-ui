@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Lược đồ phải mô tả một đối tượng.',
   schemaPropertiesMustBeFlat: 'Các thuộc tính của lược đồ phải là một đối tượng phẳng.',
   valueMustBeSerializable: 'Giá trị phải có thể tuần tự hóa thành JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Chọn công cụ',
   searchToolsPlaceholder: 'Tìm công cụ…',
   useDefaultTools: 'Dùng công cụ mặc định',

@@ -140,7 +140,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schéma musí popisovat objekt.',
   schemaPropertiesMustBeFlat: 'Vlastnosti schématu musí tvořit plochý objekt.',
   valueMustBeSerializable: 'Hodnota musí být serializovatelná do formátu JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Vybrat nástroje',
   searchToolsPlaceholder: 'Hledat nástroje…',
   useDefaultTools: 'Použít výchozí nástroje',

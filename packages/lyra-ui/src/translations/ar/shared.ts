@@ -48,7 +48,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'إلغاء',
   confirm: 'تأكيد',
   search: 'بحث',
-  circularReference: 'مرجع دائري',
   items: {
     zero: 'عنصر',
     one: 'عنصر',
@@ -104,6 +103,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'تعذّر تحميل عرض الرسم البياني.',
   graphSourceRecordMissing: 'سجل الرسم البياني هذا غير متاح.',
   notInCatalog: 'غير موجود في الكتالوج',
+  chartTotal: 'الإجمالي',
   chartLegend: 'مفتاح المخطط',
   resetZoom: 'إعادة تعيين التكبير',
   showMoreCollapsed: '+{count}',
@@ -151,11 +151,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'فشل النسخ',
   paginationFirstPage: 'الصفحة الأولى',
   paginationLastPage: 'الصفحة الأخيرة',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} مللي ثانية',
   durationSeconds: '{value} ثانية',
   menuLabel: 'القائمة',
-  emailViewerFrom: 'من',
-  emailViewerTo: 'إلى',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'تم الانتقال إلى المقطع المميّز.',
   anchorJumpedToPage: 'تم الانتقال إلى الصفحة {page}.',
@@ -172,7 +171,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'متعارض',
   gitStatusIgnored: 'مُتجاهَل',
   envListValueHidden: 'القيمة مخفية',
-  geojsonViewLabel: 'خريطة',
   provenanceEntities: 'الكيانات',
   flowItemAnnouncement: '{item} ({index} من {total})',
   neighborDirectionIn: 'واردة',
@@ -220,7 +218,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'يتم عرض قائمة بدلًا من ذلك.',
   largeDataInvalid: 'لا يمكن عرض البيانات لأن {column} غير صالح.',
   largeDataLimit: 'لا يمكن عرض البيانات لأنها تتجاوز الحد البالغ {limit}.',
-  chart3dName: 'التسمية',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

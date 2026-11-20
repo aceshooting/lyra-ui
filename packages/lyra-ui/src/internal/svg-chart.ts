@@ -34,11 +34,28 @@ export interface SvgChartOptions {
   tableLabel: string;
   headers: readonly string[];
   rows: readonly (readonly string[])[];
+  /** Per-item totals (entities, nodes) so the tables together carry everything the plot shows. */
+  totals?: SvgChartTable;
   withDataTable: boolean;
   dataTableToggle: boolean;
   rtl: boolean;
   navigate?: (index: number, key: string) => number;
   activate: (index: number) => void;
+}
+
+export interface SvgChartTable {
+  readonly caption: string;
+  readonly headers: readonly string[];
+  readonly rows: readonly (readonly string[])[];
+}
+
+function dataTable(id: string, visible: boolean, table: SvgChartTable): TemplateResult {
+  return html`<table part="data-table" id=${id} class=${visible ? nothing : 'sr-only'}>
+    <caption>${bdi(table.caption)}</caption>
+    <thead><tr>${table.headers.map(header => html`<th scope="col">${bdi(header)}</th>`)}</tr></thead>
+    <tbody>${table.rows.map(row => html`<tr>${row.map((cell, i) => i === 0
+      ? html`<th scope="row">${bdi(cell)}</th>` : html`<td>${bdi(cell)}</td>`)}</tr>`)}</tbody>
+  </table>`;
 }
 
 type ChartHost = HTMLElement & ReactiveControllerHost;
@@ -175,16 +192,12 @@ export class SvgChartInteraction implements ReactiveController {
           ${options.legend.map(entry => html`<li part="legend-item"><span part="legend-swatch" aria-hidden="true"
             style=${styleMap({ backgroundColor: entry.color })}></span><span part="legend-label">${bdi(entry.label)}</span></li>`)}
         </ul>` : nothing}
-        ${options.dataTableToggle ? html`<button part="data-table-toggle" type="button" aria-controls="chart-data"
+        ${options.dataTableToggle ? html`<button part="data-table-toggle" type="button" aria-controls=${options.totals ? 'chart-data chart-data-totals' : 'chart-data'}
           aria-expanded=${visible ? 'true' : 'false'}
           @click=${() => { this.expanded = !visible; this.host.requestUpdate(); }}
         >${options.tableLabel}</button>` : nothing}
-        <table part="data-table" id="chart-data" class=${visible ? nothing : 'sr-only'}>
-          <caption>${bdi(options.name)}</caption>
-          <thead><tr>${options.headers.map(header => html`<th scope="col">${bdi(header)}</th>`)}</tr></thead>
-          <tbody>${options.rows.map(row => html`<tr>${row.map((cell, i) => i === 0
-            ? html`<th scope="row">${bdi(cell)}</th>` : html`<td>${bdi(cell)}</td>`)}</tr>`)}</tbody>
-        </table>`}
+        ${dataTable('chart-data', visible, { caption: options.name, headers: options.headers, rows: options.rows })}
+        ${options.totals ? dataTable('chart-data-totals', visible, options.totals) : nothing}`}
       ${options.notice ? html`<p part="limit" role="note">${options.notice}</p>` : nothing}
     </div>`;
   }

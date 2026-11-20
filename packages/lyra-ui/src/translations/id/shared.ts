@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Batal',
   confirm: 'Konfirmasi',
   search: 'Cari',
-  circularReference: 'Referensi melingkar',
   items: {
     other: 'item',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Tampilan graf tidak dapat dimuat.',
   graphSourceRecordMissing: 'Rekaman graf ini tidak tersedia.',
   notInCatalog: 'tidak ada di katalog',
+  chartTotal: 'Total',
   chartLegend: 'Legenda bagan',
   resetZoom: 'Atur ulang pembesaran',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Gagal menyalin',
   paginationFirstPage: 'Halaman pertama',
   paginationLastPage: 'Halaman terakhir',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} md',
   durationSeconds: '{value} dtk',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Dari',
-  emailViewerTo: 'Kepada',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Melompat ke bagian yang disorot.',
   anchorJumpedToPage: 'Melompat ke halaman {page}.',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Konflik',
   gitStatusIgnored: 'Diabaikan',
   envListValueHidden: 'Nilai disembunyikan',
-  geojsonViewLabel: 'Peta',
   provenanceEntities: 'Entitas',
   flowItemAnnouncement: '{item} ({index} dari {total})',
   neighborDirectionIn: 'Masuk',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Daftar ditampilkan sebagai gantinya.',
   largeDataInvalid: 'Data tidak dapat ditampilkan karena {column} tidak valid.',
   largeDataLimit: 'Data tidak dapat ditampilkan karena melebihi batas {limit}.',
-  chart3dName: 'Label',
 };
 
 registerLyraLocale('id', strings);

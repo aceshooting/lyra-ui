@@ -63,18 +63,30 @@ describe('treemap layout', () => {
     expect(tiles.map(tile => tile.id)).to.deep.equal(['other']);
   });
 
-  it('reports omitted extreme ratios and emits only representable rectangles', () => {
+  it('reports omitted extreme ratios and emits representable or zero-size rectangles', () => {
     fc.assert(fc.property(fc.integer({ min: 20, max: 300 }), power => {
       const nodes = [1, 10 ** -power, Number.MIN_VALUE].map((value, i) => ({ id: String(i), label: '', value }));
-      let calls = 0;
-      const tiles = layoutTreemap(nodes, 1, 1, () => { calls++; });
-      expect(calls).to.equal(1);
-      expect(tiles.length).to.be.greaterThan(0);
+      const reasons: string[] = [];
+      const tiles = layoutTreemap(nodes, 1, 1, reason => reasons.push(reason));
+      expect(reasons).to.deep.equal(['size']);
+      expect(tiles.map(t => t.id).sort()).to.deep.equal(['0', '1', '2']);
+      expect(tiles.some(t => t.width === 0 && t.height === 0)).to.equal(true);
       for (const t of tiles) {
+        if (t.width === 0 && t.height === 0) continue;
         expect(t.x + t.width).to.be.greaterThan(t.x);
         expect(t.y + t.height).to.be.greaterThan(t.y);
       }
     }), propertyRuns());
+  });
+
+  it('releases the ID of a rejected node for a later valid node', () => {
+    const nodes = [
+      { id: 'a', label: 'Bad', value: -1 },
+      { id: 'b', label: 'Empty', children: [{ id: 'a', label: 'Bad child', value: 0 }] },
+      { id: 'a', label: 'Good', value: 2 },
+      { id: 'b', label: 'Good leaf', value: 1 },
+    ];
+    expect(layoutTreemap(nodes).map(t => [t.id, t.label])).to.deep.equal([['a', 'Good'], ['b', 'Good leaf']]);
   });
 
   it('skips accessor-backed rows and fields without invoking their getters', () => {

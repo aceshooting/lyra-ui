@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'キャンセル',
   confirm: '確定',
   search: '検索',
-  circularReference: '循環参照',
   items: {
     other: '件',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'グラフの表示を読み込めませんでした。',
   graphSourceRecordMissing: 'このグラフのレコードは利用できません。',
   notInCatalog: 'カタログにありません',
+  chartTotal: '合計',
   chartLegend: 'チャートの凡例',
   resetZoom: 'ズームをリセット',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'コピーに失敗しました',
   paginationFirstPage: '最初のページ',
   paginationLastPage: '最後のページ',
+  accessibleLabelSeparator: '、',
   durationMilliseconds: '{value} ミリ秒',
   durationSeconds: '{value} 秒',
   menuLabel: 'メニュー',
-  emailViewerFrom: '差出人',
-  emailViewerTo: '宛先',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ハイライトされた箇所へ移動しました。',
   anchorJumpedToPage: '{page} ページへ移動しました。',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: '競合',
   gitStatusIgnored: '無視',
   envListValueHidden: '値は非表示です',
-  geojsonViewLabel: '地図',
   provenanceEntities: 'エンティティ',
   flowItemAnnouncement: '{item}（{total} 件中 {index} 件目）',
   neighborDirectionIn: '入方向',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '代わりに一覧を表示しています。',
   largeDataInvalid: '{column} が無効なため、データを表示できません。',
   largeDataLimit: 'データが上限の {limit} を超えているため、表示できません。',
-  chart3dName: 'ラベル',
 };
 
 registerLyraLocale('ja', strings);

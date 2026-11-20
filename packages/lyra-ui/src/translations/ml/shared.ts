@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'റദ്ദാക്കുക',
   confirm: 'സ്ഥിരീകരിക്കുക',
   search: 'തിരയുക',
-  circularReference: 'ചാക്രിക റഫറൻസ്',
   items: {
     one: 'ഇനം',
     other: 'ഇനങ്ങൾ',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ഗ്രാഫ് കാഴ്ച ലോഡ് ചെയ്യാനായില്ല.',
   graphSourceRecordMissing: 'ഈ ഗ്രാഫ് രേഖ ലഭ്യമല്ല.',
   notInCatalog: 'കാറ്റലോഗിലില്ല',
+  chartTotal: 'ആകെ',
   chartLegend: 'ചാർട്ടിന്റെ ലെജൻഡ്',
   resetZoom: 'സൂം പുനഃസജ്ജമാക്കുക',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'പകർത്താനായില്ല',
   paginationFirstPage: 'ആദ്യ പേജ്',
   paginationLastPage: 'അവസാന പേജ്',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'മെനു',
-  emailViewerFrom: 'അയച്ചത്',
-  emailViewerTo: 'സ്വീകർത്താവ്',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ഹൈലൈറ്റ് ചെയ്ത ഭാഗത്തേക്ക് പോയി.',
   anchorJumpedToPage: '{page}-ാം പേജിലേക്ക് പോയി.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'വൈരുധ്യമുണ്ട്',
   gitStatusIgnored: 'അവഗണിച്ചു',
   envListValueHidden: 'മൂല്യം മറച്ചിരിക്കുന്നു',
-  geojsonViewLabel: 'മാപ്പ്',
   provenanceEntities: 'എന്റിറ്റികൾ',
   flowItemAnnouncement: '{item} ({total}ൽ {index})',
   neighborDirectionIn: 'അകത്തേക്ക്',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'പകരം ഒരു ലിസ്റ്റ് കാണിക്കുന്നു.',
   largeDataInvalid: '{column} അസാധുവായതിനാൽ ഡാറ്റ പ്രദർശിപ്പിക്കാൻ കഴിയില്ല.',
   largeDataLimit: 'ഡാറ്റ {limit} പരിധി കവിയുന്നതിനാൽ പ്രദർശിപ്പിക്കാൻ കഴിയില്ല.',
-  chart3dName: 'ലേബൽ',
 };
 
 registerLyraLocale('ml', strings);

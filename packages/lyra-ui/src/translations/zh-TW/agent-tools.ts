@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schema 必須描述一個物件。',
   schemaPropertiesMustBeFlat: 'Schema 屬性必須是扁平物件。',
   valueMustBeSerializable: '值必須可序列化為 JSON。',
-  accessibleLabelSeparator: ' — ',
   selectTools: '選擇工具',
   searchToolsPlaceholder: '搜尋工具…',
   useDefaultTools: '使用預設工具',

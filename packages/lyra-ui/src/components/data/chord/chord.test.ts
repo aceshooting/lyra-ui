@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { svgChartColor } from '../../../internal/svg-chart.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraChord, LyraChordEntity } from './chord.class.js';
@@ -35,6 +36,16 @@ function partText(el: LyraChord, part: string): string {
   return el.shadowRoot!.querySelector(`[part~="${part}"]`)?.textContent?.trim() ?? '';
 }
 
+function tableRows(el: LyraChord, id: string): string[] {
+  return [...el.shadowRoot!.querySelectorAll(`#${id} tbody tr`)].map((row) =>
+    [...row.children].map((cell) => cell.textContent?.trim()).join('|'),
+  );
+}
+
+function tableHeaders(el: LyraChord, id: string): string[] {
+  return [...el.shadowRoot!.querySelectorAll(`#${id} thead th`)].map((cell) => cell.textContent?.trim() ?? '');
+}
+
 function focusLabel(el: LyraChord): string | null | undefined {
   return el.shadowRoot!.activeElement?.getAttribute('aria-label');
 }
@@ -58,9 +69,7 @@ describe('<lr-chord>', () => {
       .to.include('Sales');
     expect(el.shadowRoot!.querySelector('table caption')?.textContent?.trim()).to.equal('Team requests');
     expect(el.shadowRoot!.querySelector('[part~="data-table-toggle"]') === null).to.equal(true);
-    const rows = [...el.shadowRoot!.querySelectorAll('tbody tr')].map((row) =>
-      row.textContent?.replace(/\s+/g, ' ').trim(),
-    );
+    const rows = tableRows(el, 'chart-data');
     expect(rows.length).to.equal(4);
     expect(rows.join(' ')).to.include('5 requests').and.include('3 requests');
     await expect(el).to.be.accessible();
@@ -76,7 +85,8 @@ describe('<lr-chord>', () => {
     `);
     const table = el.shadowRoot!.querySelector('table')!;
     const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="data-table-toggle"]')!;
-    expect(toggle.getAttribute('aria-controls')).to.equal(table.id);
+    expect(toggle.getAttribute('aria-controls')).to.equal('chart-data chart-data-totals');
+    expect(table.id).to.equal('chart-data');
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
 
     await focusByKeyboard(toggle);
@@ -84,6 +94,7 @@ describe('<lr-chord>', () => {
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     expect(table.getBoundingClientRect().height).to.be.greaterThan(1);
+    expect(el.shadowRoot!.getElementById('chart-data-totals')!.getBoundingClientRect().height).to.be.greaterThan(1);
     await expect(el).to.be.accessible();
   });
 
@@ -94,15 +105,15 @@ describe('<lr-chord>', () => {
     expect(focusLabel(el)).to.include('Support');
     await sendKeys({ press: 'ArrowDown' });
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('ribbon');
-    expect(focusLabel(el)).to.include('Sales / Support');
+    expect(focusLabel(el)).to.include('Sales and Support');
     await sendKeys({ press: 'ArrowRight' });
-    expect(focusLabel(el)).to.include('Support / Product');
+    expect(focusLabel(el)).to.include('Support and Product');
     await sendKeys({ press: 'Home' });
-    expect(focusLabel(el)).to.include('Sales / Support');
+    expect(focusLabel(el)).to.include('Sales and Support');
     await sendKeys({ press: 'End' });
-    expect(focusLabel(el)).to.include('Support / Product');
+    expect(focusLabel(el)).to.include('Support and Product');
     await sendKeys({ press: 'ArrowLeft' });
-    expect(focusLabel(el)).to.include('Sales / Support');
+    expect(focusLabel(el)).to.include('Sales and Support');
     await sendKeys({ press: 'ArrowUp' });
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('entity');
     expect(focusLabel(el)).to.include('Support');
@@ -112,9 +123,9 @@ describe('<lr-chord>', () => {
     await sendKeys({ press: 'Home' });
     expect(focusLabel(el)).to.include('Sales');
     await sendKeys({ press: 'ArrowDown' });
-    expect(focusLabel(el)).to.include('Sales / Sales');
+    expect(focusLabel(el)).to.include('Sales and Sales');
     await sendKeys({ press: 'End' });
-    expect(focusLabel(el)).to.include('Sales / Support');
+    expect(focusLabel(el)).to.include('Sales and Support');
     await sendKeys({ press: 'ArrowUp' });
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('entity');
     expect(focusLabel(el)).to.include('Sales');
@@ -241,17 +252,19 @@ describe('<lr-chord>', () => {
 
   it('keeps representable ribbons and shows a notice when a weight falls below angular precision', async () => {
     const el = await fixture<LyraChord>(html`
-      <lr-chord .entities=${ENTITIES.slice(0, 2)} .matrix=${[[0, 1], [1, Number.MIN_VALUE]]}
-        .strings=${{ chartInputLimit: 'A pair is too small to draw' }}
-      ></lr-chord>
+      <lr-chord .entities=${ENTITIES.slice(0, 2)} .matrix=${[[0, 1], [1, Number.MIN_VALUE]]}></lr-chord>
     `);
     expect(marks(el, 'entity').length).to.equal(2);
     expect(marks(el, 'ribbon').map((mark) => mark.getAttribute('aria-label'))).to.deep.equal([
-      'Sales / Support: 1',
+      'Sales and Support: 1',
     ]);
-    expect(el.shadowRoot!.querySelectorAll('tbody tr').length).to.equal(1);
-    expect(partText(el, 'limit')).to.equal('A pair is too small to draw');
+    expect(tableRows(el, 'chart-data').length).to.equal(1);
+    expect(partText(el, 'limit')).to.equal('Some values are too small to draw. The data table lists every value.');
     expect(partText(el, 'error')).to.equal('');
+
+    el.strings = { chartValuesTooSmall: 'A pair is too small to draw', chartInputLimit: 'Too many entities' };
+    await el.updateComplete;
+    expect(partText(el, 'limit')).to.equal('A pair is too small to draw');
   });
 
   it('renders loading and localized empty states when no positive pairs remain', async () => {
@@ -266,5 +279,113 @@ describe('<lr-chord>', () => {
     await el.updateComplete;
     expect(partText(el, 'empty')).to.equal('No pairs yet');
     expect(marks(el, 'ribbon').length).to.equal(0);
+  });
+
+  it('is accessible in its default state without data', async () => {
+    const el = await fixture<LyraChord>(html`<lr-chord></lr-chord>`);
+    expect(partText(el, 'empty')).to.equal('No data');
+    await expect(el).to.be.accessible();
+  });
+
+  it('lists every entity total, including zero totals, beside the Source, Target and Value table', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord label="Team requests" with-data-table .entities=${ENTITIES.slice(0, 3)}
+        .matrix=${[[1, 0, 2], [0, 0, 0], [2, 0, 0]]}
+      ></lr-chord>
+    `);
+    expect(tableHeaders(el, 'chart-data')).to.deep.equal(['Source', 'Target', 'Value']);
+    expect(tableRows(el, 'chart-data')).to.deep.equal(['Sales|Sales|1', 'Sales|Product|2']);
+    expect(el.shadowRoot!.querySelector('#chart-data-totals caption')?.textContent?.trim())
+      .to.equal('Totals for Team requests');
+    expect(tableHeaders(el, 'chart-data-totals')).to.deep.equal(['Name', 'Total']);
+    expect(tableRows(el, 'chart-data-totals')).to.deep.equal(['Sales|3', 'Support|0', 'Product|2']);
+    await expect(el).to.be.accessible();
+  });
+
+  it('keeps the matrix index color for an entity after a zero-total entity', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES.slice(0, 3)} .matrix=${[[0, 0, 2], [0, 0, 0], [2, 0, 0]]}></lr-chord>
+    `);
+    const color = (label: string) =>
+      entity(el, label).querySelector<SVGPathElement>('path.arc-shape')!.style.getPropertyValue('--_lr-chord-mark-color');
+    expect(marks(el, 'entity').length).to.equal(2);
+    expect(color('Sales')).to.equal(svgChartColor(0));
+    expect(color('Product')).to.equal(svgChartColor(2));
+    const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="legend-swatch"]')];
+    expect(swatches.map((swatch) => getComputedStyle(swatch).backgroundColor)).to.deep.equal(
+      ['Sales', 'Product'].map((label) =>
+        getComputedStyle(entity(el, label).querySelector('path.arc-shape')!).fill),
+    );
+  });
+
+  it('draws a single entity with its self-ribbon', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES.slice(0, 1)} .matrix=${[[3]]}></lr-chord>
+    `);
+    expect(marks(el, 'entity').length).to.equal(1);
+    expect(marks(el, 'ribbon').map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Sales and Sales: 3']);
+    expect(tableRows(el, 'chart-data-totals')).to.deep.equal(['Sales|3']);
+  });
+
+  it('rejects a non-square matrix with the default invalid-value message', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES.slice(0, 2)} .matrix=${[[0, 1], [1]]}></lr-chord>
+    `);
+    expect(partText(el, 'error')).to.equal('The value is invalid.');
+    expect(marks(el, 'entity').length).to.equal(0);
+  });
+
+  it('accepts pair weights that differ only by floating-point rounding', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES.slice(0, 2)} .matrix=${[[0, 0.1 + 0.2], [0.3, 0]]}></lr-chord>
+    `);
+    expect(partText(el, 'error')).to.equal('');
+    expect(marks(el, 'ribbon').length).to.equal(1);
+    expect(tableRows(el, 'chart-data-totals')).to.deep.equal(['Sales|0.3', 'Support|0.3']);
+  });
+
+  it('names pairs through a localizable template', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES.slice(0, 2)} .matrix=${[[0, 4], [4, 0]]}
+        .strings=${{ chordPairLabel: '{target} with {source}' }}
+      ></lr-chord>
+    `);
+    expect(marks(el, 'ribbon')[0]!.getAttribute('aria-label')).to.equal('Support with Sales: 4');
+  });
+
+  it('emphasizes a focused ribbon and mutes the others', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES} .matrix=${MATRIX} .valueFormatter=${formatValue}></lr-chord>
+    `);
+    const pair = marks(el, 'ribbon').find((mark) => mark.getAttribute('aria-label')?.startsWith('Product and Design'))!;
+    await focusByKeyboard(pair);
+    const emphasized = () => marks(el, 'ribbon')
+      .filter((mark) => !mark.hasAttribute('data-muted'))
+      .map((mark) => mark.getAttribute('aria-label'));
+    await waitUntil(() => emphasized().length === 1);
+    expect(emphasized()).to.deep.equal(['Product and Design: 4 requests']);
+    const shape = (mark: SVGGElement) => mark.querySelector('path.ribbon-shape')!;
+    expect(shape(pair).hasAttribute('data-highlighted')).to.equal(true);
+    const other = marks(el, 'ribbon').find((mark) => mark.hasAttribute('data-muted'))!;
+    expect(Number(getComputedStyle(other).opacity)).to.be.lessThan(1);
+    expect(getComputedStyle(shape(pair)).fill).to.not.equal(getComputedStyle(shape(other)).fill);
+    expect(partText(el, 'tooltip')).to.equal('Product and Design: 4 requests');
+    await expect(el).to.be.accessible();
+  });
+
+  it('keeps entity labels at a legible size in a 320px allocation', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord style="inline-size: 320px" .entities=${ENTITIES} .matrix=${MATRIX}></lr-chord>
+    `);
+    const probe = document.createElement('span');
+    probe.style.fontSize = 'var(--lr-font-size-xs)';
+    el.shadowRoot!.append(probe);
+    const token = parseFloat(getComputedStyle(probe).fontSize);
+    probe.remove();
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="entity-label"]')!;
+    const box = label.closest('foreignObject')!;
+    const scale = box.getBoundingClientRect().height / box.height.baseVal.value;
+    expect(parseFloat(getComputedStyle(label).fontSize)).to.equal(token);
+    expect(parseFloat(getComputedStyle(label).fontSize) * scale).to.be.at.least(token * 0.95);
   });
 });

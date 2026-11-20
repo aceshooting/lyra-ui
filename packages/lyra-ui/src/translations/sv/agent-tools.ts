@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schemat måste beskriva ett objekt.',
   schemaPropertiesMustBeFlat: 'Schemats egenskaper måste vara ett platt objekt.',
   valueMustBeSerializable: 'Värdet måste kunna serialiseras till JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Välj verktyg',
   searchToolsPlaceholder: 'Sök verktyg…',
   useDefaultTools: 'Använd standardverktyg',

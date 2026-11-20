@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Схемата трябва да описва обект.',
   schemaPropertiesMustBeFlat: 'Свойствата на схемата трябва да са плосък обект.',
   valueMustBeSerializable: 'Стойността трябва да може да се сериализира в JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Изберете инструменти',
   searchToolsPlaceholder: 'Търсене на инструменти…',
   useDefaultTools: 'Използвай инструментите по подразбиране',

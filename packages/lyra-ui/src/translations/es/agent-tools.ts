@@ -139,7 +139,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'El esquema debe describir un objeto.',
   schemaPropertiesMustBeFlat: 'Las propiedades del esquema deben formar un objeto plano.',
   valueMustBeSerializable: 'El valor debe poder serializarse en JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Seleccionar herramientas',
   searchToolsPlaceholder: 'Buscar herramientas…',
   useDefaultTools: 'Usar las herramientas predeterminadas',

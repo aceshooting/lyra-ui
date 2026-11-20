@@ -103,6 +103,16 @@ export const CyclicFlow: StoryObj = {
   `,
 };
 
+export const RepeatedIds: StoryObj = {
+  render: () => html`
+    <lr-sankey
+      label="Trial conversions with a repeated node"
+      .nodes=${[...NODES, { id: 'paid', label: 'Paid again' }]}
+      .links=${LINKS}
+    ></lr-sankey>
+  `,
+};
+
 export const Loading: StoryObj = {
   render: () => html`<lr-sankey label="Trial conversions" loading></lr-sankey>`,
 };

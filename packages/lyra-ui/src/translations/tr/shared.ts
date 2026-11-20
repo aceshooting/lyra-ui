@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'İptal',
   confirm: 'Onayla',
   search: 'Ara',
-  circularReference: 'Döngüsel başvuru',
   items: {
     one: 'öğe',
     other: 'öğe',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Çizge görünümü yüklenemedi.',
   graphSourceRecordMissing: 'Bu çizge kaydı kullanılamıyor.',
   notInCatalog: 'katalogda yok',
+  chartTotal: 'Toplam',
   chartLegend: 'Grafik göstergesi',
   resetZoom: 'Yakınlaştırmayı sıfırla',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopyalama başarısız',
   paginationFirstPage: 'İlk sayfa',
   paginationLastPage: 'Son sayfa',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menü',
-  emailViewerFrom: 'Gönderen',
-  emailViewerTo: 'Alıcı',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Vurgulanan bölüme gidildi.',
   anchorJumpedToPage: '{page}. sayfaya gidildi.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Çakışmalı',
   gitStatusIgnored: 'Yoksayıldı',
   envListValueHidden: 'Değer gizli',
-  geojsonViewLabel: 'Harita',
   provenanceEntities: 'Varlıklar',
   flowItemAnnouncement: '{item} ({total} öğe içinden {index}.)',
   neighborDirectionIn: 'Gelen',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Bunun yerine bir liste gösteriliyor.',
   largeDataInvalid: '{column} geçersiz olduğu için veriler görüntülenemiyor.',
   largeDataLimit: 'Veriler {limit} sınırını aştığı için görüntülenemiyor.',
-  chart3dName: 'Etiket',
 };
 
 registerLyraLocale('tr', strings);

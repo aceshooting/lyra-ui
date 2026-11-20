@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'स्कीमा में ऑब्जेक्ट का वर्णन होना चाहिए।',
   schemaPropertiesMustBeFlat: 'स्कीमा प्रॉपर्टी एक सपाट ऑब्जेक्ट होनी चाहिए।',
   valueMustBeSerializable: 'मान JSON में क्रमबद्ध किया जा सकने वाला होना चाहिए।',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'टूल चुनें',
   searchToolsPlaceholder: 'टूल खोजें…',
   useDefaultTools: 'डिफ़ॉल्ट टूल इस्तेमाल करें',

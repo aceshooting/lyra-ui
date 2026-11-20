@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'रद्द गर्नुहोस्',
   confirm: 'पुष्टि गर्नुहोस्',
   search: 'खोज्नुहोस्',
-  circularReference: 'चक्रीय सन्दर्भ',
   items: {
     one: 'वस्तु',
     other: 'वस्तुहरू',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ग्राफ दृश्य लोड गर्न सकिएन।',
   graphSourceRecordMissing: 'यो ग्राफ अभिलेख उपलब्ध छैन।',
   notInCatalog: 'सूचीमा छैन',
+  chartTotal: 'कुल',
   chartLegend: 'चार्टको लेजेन्ड',
   resetZoom: 'जुम रिसेट गर्नुहोस्',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'प्रतिलिपि असफल भयो',
   paginationFirstPage: 'पहिलो पृष्ठ',
   paginationLastPage: 'अन्तिम पृष्ठ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'मेनु',
-  emailViewerFrom: 'प्रेषक',
-  emailViewerTo: 'प्राप्तकर्ता',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'हाइलाइट गरिएको अंशमा पुगियो.',
   anchorJumpedToPage: 'पृष्ठ {page} मा पुगियो.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'द्वन्द्व भएको',
   gitStatusIgnored: 'उपेक्षित',
   envListValueHidden: 'मान लुकाइएको',
-  geojsonViewLabel: 'नक्सा',
   provenanceEntities: 'एकाइहरू',
   flowItemAnnouncement: '{item} ({total} मध्ये {index})',
   neighborDirectionIn: 'आगमन',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'यसको सट्टा सूची देखाइँदैछ।',
   largeDataInvalid: '{column} अमान्य भएकाले डाटा देखाउन सकिएन।',
   largeDataLimit: 'डाटा {limit} को सीमाभन्दा बढी भएकाले देखाउन सकिएन।',
-  chart3dName: 'लेबल',
 };
 
 registerLyraLocale('ne', strings);

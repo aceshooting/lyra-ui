@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontakt',
   emailViewerLabel: 'Prohlížeč e-mailů',
   emailViewerMissingParser: 'Tento prohlížeč vyžaduje ke zpracování této zprávy nainstalovaný volitelný balíček „postal-mime“.',
+  emailViewerFrom: 'Od',
+  emailViewerTo: 'Komu',
   emailViewerSubject: 'Předmět',
   emailViewerDate: 'Datum',
   emailViewerAttachments: 'Přílohy',
@@ -128,6 +130,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopírovat XML do schránky',
   xmlViewerCopyNode: 'Kopírovat {name}',
   xmlViewerToggleNode: 'Přepnout {name}',
+  geojsonViewLabel: 'Mapa',
   geojsonViewInvalid: 'Tento soubor není platný GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} prvky',

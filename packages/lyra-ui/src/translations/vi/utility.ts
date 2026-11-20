@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Sao chép JSON vào bộ nhớ tạm',
+  circularReference: 'Tham chiếu vòng',
   copyDiff: 'Sao chép phần khác biệt',
   diffViewOldLabel: 'Bản gốc',
   diffViewNewLabel: 'Đã sửa đổi',

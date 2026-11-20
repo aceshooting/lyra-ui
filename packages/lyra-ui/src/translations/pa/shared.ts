@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ਰੱਦ ਕਰੋ',
   confirm: 'ਪੁਸ਼ਟੀ ਕਰੋ',
   search: 'ਖੋਜੋ',
-  circularReference: 'ਚੱਕਰੀ ਹਵਾਲਾ',
   items: {
     one: 'ਆਈਟਮ',
     other: 'ਆਈਟਮਾਂ',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ਗ੍ਰਾਫ਼ ਦ੍ਰਿਸ਼ ਲੋਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।',
   graphSourceRecordMissing: 'ਇਹ ਗ੍ਰਾਫ਼ ਰਿਕਾਰਡ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
   notInCatalog: 'ਕੈਟਾਲਾਗ ਵਿੱਚ ਨਹੀਂ',
+  chartTotal: 'ਕੁੱਲ',
   chartLegend: 'ਚਾਰਟ ਦਾ ਲੈਜੈਂਡ',
   resetZoom: 'ਜ਼ੂਮ ਮੁੜ ਸੈੱਟ ਕਰੋ',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ਕਾਪੀ ਨਹੀਂ ਹੋ ਸਕੀ',
   paginationFirstPage: 'ਪਹਿਲਾ ਪੰਨਾ',
   paginationLastPage: 'ਆਖ਼ਰੀ ਪੰਨਾ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ਮਿਲੀਸਕਿੰਟ',
   durationSeconds: '{value} ਸਕਿੰਟ',
   menuLabel: 'ਮੀਨੂ',
-  emailViewerFrom: 'ਵੱਲੋਂ',
-  emailViewerTo: 'ਨੂੰ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ਉਜਾਗਰ ਕੀਤੇ ਹਿੱਸੇ ਉੱਤੇ ਜਾਇਆ ਗਿਆ।',
   anchorJumpedToPage: 'ਪੰਨਾ {page} ਉੱਤੇ ਜਾਇਆ ਗਿਆ।',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ਟਕਰਾਅ ਵਾਲਾ',
   gitStatusIgnored: 'ਅਣਡਿੱਠਾ ਕੀਤਾ',
   envListValueHidden: 'ਮੁੱਲ ਲੁਕਾਇਆ ਗਿਆ',
-  geojsonViewLabel: 'ਨਕਸ਼ਾ',
   provenanceEntities: 'ਇਕਾਈਆਂ',
   flowItemAnnouncement: '{item} ({total} ਵਿੱਚੋਂ {index}ਵਾਂ)',
   neighborDirectionIn: 'ਆਉਣ ਵਾਲਾ',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ਇਸ ਦੀ ਬਜਾਏ ਸੂਚੀ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।',
   largeDataInvalid: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ {column} ਅਵੈਧ ਹੈ।',
   largeDataLimit: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ ਇਹ {limit} ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ।',
-  chart3dName: 'ਲੇਬਲ',
 };
 
 registerLyraLocale('pa', strings);

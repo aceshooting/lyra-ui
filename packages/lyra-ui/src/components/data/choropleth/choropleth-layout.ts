@@ -16,6 +16,8 @@ export interface ChoroplethMark {
 
 export interface ChoroplethLayoutResult {
   regions: ChoroplethMark[];
+  /** True when decoded regions exist but no polygon has area or the projected bounds are degenerate. */
+  invalid: boolean;
   domain: readonly [number, number] | null;
   stops: { offset: number; value: number }[];
 }
@@ -144,12 +146,15 @@ export function layoutChoropleth(
   projection: LyraChoroplethProjection = 'equirectangular',
   palette: LyraChoroplethPalette = 'sequential',
 ): ChoroplethLayoutResult {
-  const result: ChoroplethLayoutResult = { regions: [], domain: null, stops: [] };
+  const result: ChoroplethLayoutResult = { regions: [], invalid: false, domain: null, stops: [] };
   if (finiteNumber(width, 0) <= 0 || finiteNumber(height, 0) <= 0) return result;
   const entries = regions.map(region => ({
     region, polygons: region.polygons.map(p => project(p, projection === 'mercator')).filter((p): p is Polygon => !!p),
   })).filter(entry => entry.polygons.length);
-  if (!entries.length) return result;
+  if (!entries.length) {
+    result.invalid = regions.length > 0;
+    return result;
+  }
   const polygons = entries.flatMap(entry => entry.polygons);
   alignPolygons(polygons);
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -161,7 +166,10 @@ export function layoutChoropleth(
   }
   const dx = maxX - minX;
   const dy = maxY - minY;
-  if (!(dx > 0 && dy > 0)) return result;
+  if (!(dx > 0 && dy > 0)) {
+    result.invalid = true;
+    return result;
+  }
   const ratio = dx / dy;
   const w = Math.min(width, height * ratio);
   const h = Math.min(height, width / ratio);

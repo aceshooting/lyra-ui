@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Anulează',
   confirm: 'Confirmă',
   search: 'Căutare',
-  circularReference: 'Referință circulară',
   items: {
     one: 'element',
     few: 'elemente',
@@ -86,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Vizualizarea grafului nu a putut fi încărcată.',
   graphSourceRecordMissing: 'Această înregistrare a grafului nu este disponibilă.',
   notInCatalog: 'absent din catalog',
+  chartTotal: 'Total',
   chartLegend: 'Legenda graficului',
   resetZoom: 'Resetează zoom-ul',
   showMoreCollapsed: '+{count}',
@@ -133,11 +133,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Copierea a eșuat',
   paginationFirstPage: 'Prima pagină',
   paginationLastPage: 'Ultima pagină',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Meniu',
-  emailViewerFrom: 'De la',
-  emailViewerTo: 'Către',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'S-a efectuat saltul la pasajul evidențiat.',
   anchorJumpedToPage: 'S-a efectuat saltul la pagina {page}.',
@@ -154,7 +153,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'În conflict',
   gitStatusIgnored: 'Ignorat',
   envListValueHidden: 'Valoare ascunsă',
-  geojsonViewLabel: 'Hartă',
   provenanceEntities: 'Entități',
   flowItemAnnouncement: '{item} ({index} din {total})',
   neighborDirectionIn: 'Intrantă',
@@ -196,7 +194,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'În locul ei se afișează o listă.',
   largeDataInvalid: 'Datele nu pot fi afișate deoarece {column} nu este valid.',
   largeDataLimit: 'Datele nu pot fi afișate deoarece depășesc limita de {limit}.',
-  chart3dName: 'Etichetă',
 };
 
 registerLyraLocale('ro', strings);

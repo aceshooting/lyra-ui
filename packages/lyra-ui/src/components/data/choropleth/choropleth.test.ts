@@ -264,7 +264,7 @@ describe('<lr-choropleth>', () => {
       ],
     };
     const el = await fixture<LyraChoropleth>(html`
-      <lr-choropleth .geography=${broken} .strings=${{ valueInvalid: 'Invalid district shapes' }}></lr-choropleth>
+      <lr-choropleth .geography=${broken} .strings=${{ choroplethInvalidGeometry: 'Invalid district shapes' }}></lr-choropleth>
     `);
     expect(regions(el).length).to.equal(0);
     expect(partText(el, 'error')).to.equal('Invalid district shapes');
@@ -278,7 +278,7 @@ describe('<lr-choropleth>', () => {
     const broken = { type: 'FeatureCollection', features: [null] };
     const message = 'The district geometry could not be loaded';
     const el = await fixture<LyraChoropleth>(html`
-      <lr-choropleth .geography=${broken} .strings=${{ valueInvalid: message }}></lr-choropleth>
+      <lr-choropleth .geography=${broken} .strings=${{ choroplethInvalidGeometry: message }}></lr-choropleth>
     `);
     const errors = () => sinkTexts('assertive').filter((entry) => entry === message);
     expect(partText(el, 'error')).to.equal(message);
@@ -318,5 +318,147 @@ describe('<lr-choropleth>', () => {
     await el.updateComplete;
     expect(partText(el, 'empty')).to.equal('No districts yet');
     expect(regions(el).length).to.equal(0);
+  });
+
+  it('uses the default map name, table headers and invalid-geometry notice', async () => {
+    const el = await fixture<LyraChoropleth>(html`<lr-choropleth with-data-table .geography=${GEOGRAPHY}></lr-choropleth>`);
+    expect(el.shadowRoot!.querySelector('svg[role="group"]')?.getAttribute('aria-label')).to.equal('Map');
+    const headers = [...el.shadowRoot!.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim());
+    expect(headers).to.deep.equal(['Name', 'Value']);
+    el.geography = { type: 'Polygon', coordinates: [[[0, 0], [1, 1]]] };
+    await el.updateComplete;
+    expect(partText(el, 'error')).to.equal(
+      'The map cannot be drawn because its geometry is invalid. Provide polygon features with longitude and latitude coordinates.'
+    );
+  });
+
+  it('skips null and non-polygon geometry, which still counts toward the feature limit', async () => {
+    const skipped = [
+      { type: 'Feature', id: 'none', properties: { name: 'None' }, geometry: null },
+      { type: 'Feature', id: 'point', properties: { name: 'Point' }, geometry: { type: 'Point', coordinates: [1, 2] } },
+      { type: 'Feature', id: 'line', properties: { name: 'Line' }, geometry: { type: 'LineString', coordinates: [[1, 2], [3, 4]] } },
+    ];
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth .valueFormatter=${formatValue}
+        .geography=${{ type: 'FeatureCollection', features: [...skipped, GEOGRAPHY.features[0]] }}></lr-choropleth>
+    `);
+    expect(regions(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Central: -10 credits']);
+    expect(partText(el, 'error')).to.equal('');
+
+    el.geography = {
+      ...TOPOLOGY,
+      objects: { districts: { type: 'GeometryCollection', geometries: [
+        { type: null, id: 'empty' }, { type: 'Point', coordinates: [1, 2] }, TOPOLOGY.objects.districts.geometries[2],
+      ] } },
+    };
+    await el.updateComplete;
+    expect(regions(el).length).to.equal(1);
+
+    el.geography = {
+      type: 'FeatureCollection',
+      features: [...Array.from({ length: 1000 }, () => skipped[0]), GEOGRAPHY.features[0]],
+    };
+    await el.updateComplete;
+    expect(regions(el).length).to.equal(0);
+    expect(partText(el, 'error')).to.include('input limit');
+  });
+
+  it('reports collinear and degenerate geometry as invalid rather than empty', async () => {
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth .geography=${{ type: 'Polygon', coordinates: [[[0, 0], [1, 1], [2, 2], [0, 0]]] }}></lr-choropleth>
+    `);
+    expect(partText(el, 'empty')).to.equal('');
+    expect(partText(el, 'error')).to.include('geometry is invalid');
+  });
+
+  it('truncates over-long labels and skips features whose ID exceeds the limit', async () => {
+    const name = 'L'.repeat(1500);
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth .geography=${{
+        type: 'FeatureCollection',
+        features: [
+          { ...GEOGRAPHY.features[0], properties: { ...PROPERTIES[0], name } },
+          { ...GEOGRAPHY.features[2], id: 'w'.repeat(1025) },
+        ],
+      }}></lr-choropleth>
+    `);
+    expect(partText(el, 'error')).to.equal('');
+    const labels = regions(el).map((mark) => mark.getAttribute('aria-label') ?? '');
+    expect(labels.length).to.equal(1);
+    expect(labels[0]!.startsWith(`${'L'.repeat(1023)}…:`)).to.equal(true);
+  });
+
+  it('draws every TopoJSON object by default and one named object when object is set', async () => {
+    const geography = {
+      ...TOPOLOGY,
+      objects: {
+        ...TOPOLOGY.objects,
+        land: { type: 'Polygon', id: 'land', properties: { name: 'Land' }, arcs: [[4]] },
+      },
+    };
+    const el = await fixture<LyraChoropleth>(html`<lr-choropleth .geography=${geography}></lr-choropleth>`);
+    expect(el.object).to.equal('');
+    expect(regions(el).length).to.equal(4);
+    el.setAttribute('object', 'land');
+    await el.updateComplete;
+    expect(regions(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Land: No data']);
+    el.object = 'districts';
+    await el.updateComplete;
+    expect(regions(el).length).to.equal(3);
+    el.object = 'toString';
+    await el.updateComplete;
+    expect(regions(el).length).to.equal(0);
+    expect(partText(el, 'empty')).to.equal('No data');
+  });
+
+  it('reads __proto__ and constructor only as own feature properties and fields', async () => {
+    const own = JSON.parse('{"__proto__": 7, "constructor": "Own constructor"}') as object;
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth field="__proto__" label-field="constructor" .valueFormatter=${formatValue} .geography=${{
+        type: 'FeatureCollection',
+        features: [
+          { ...GEOGRAPHY.features[0], properties: own },
+          { ...GEOGRAPHY.features[2], properties: { name: 'West' } },
+        ],
+      }}></lr-choropleth>
+    `);
+    expect(regions(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Own constructor: 7 credits', 'west: No data']);
+    el.field = 'constructor';
+    el.labelField = '__proto__';
+    await el.updateComplete;
+    expect(regions(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['central: No data', 'west: No data']);
+    expect(Object.prototype).not.to.have.property('value');
+  });
+
+  it('keeps an antimeridian-crossing region contiguous with its neighbor', async () => {
+    const el = await fixture<LyraChoropleth>(html`<lr-choropleth .geography=${{
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'dateline', properties: { name: 'Dateline' },
+          geometry: { type: 'Polygon', coordinates: [[[170, 0], [-170, 0], [-170, 10], [170, 10], [170, 0]]] } },
+        { type: 'Feature', id: 'west', properties: { name: 'Western' },
+          geometry: { type: 'Polygon', coordinates: [[[160, 0], [170, 0], [170, 10], [160, 10], [160, 0]]] } },
+      ],
+    }}></lr-choropleth>`);
+    const dateline = path(el, 'Dateline').getBBox();
+    const west = path(el, 'Western').getBBox();
+    expect(dateline.width / west.width).to.be.closeTo(2, 0.01);
+    expect(dateline.x).to.be.closeTo(west.x + west.width, 0.01);
+  });
+
+  it('rejects projected TopoJSON whose coordinates are not longitude and latitude', async () => {
+    const meters = [[500000, 4000000], [600000, 4000000], [600000, 4100000], [500000, 4100000], [500000, 4000000]];
+    const projected = (extra: object) => ({
+      type: 'Topology', arcs: [meters], ...extra,
+      objects: { zones: { type: 'Polygon', id: 'zone', arcs: [[0]] } },
+    });
+    const el = await fixture<LyraChoropleth>(html`<lr-choropleth .geography=${projected({})}></lr-choropleth>`);
+    expect(regions(el).length).to.equal(0);
+    expect(partText(el, 'error')).to.include('longitude and latitude');
+    el.geography = { ...projected({}), arcs: [deltaArc([[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]])],
+      transform: { scale: [1000, 1000], translate: [400000, 4000000] } };
+    await el.updateComplete;
+    expect(regions(el).length).to.equal(0);
+    expect(partText(el, 'error')).to.include('longitude and latitude');
   });
 });

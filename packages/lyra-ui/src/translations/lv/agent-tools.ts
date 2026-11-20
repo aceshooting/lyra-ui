@@ -139,7 +139,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Shēmai jāapraksta objekts.',
   schemaPropertiesMustBeFlat: 'Shēmas rekvizītiem jābūt plakanam objektam.',
   valueMustBeSerializable: 'Vērtībai jābūt serializējamai JSON formātā.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Atlasīt rīkus',
   searchToolsPlaceholder: 'Meklēt rīkus…',
   useDefaultTools: 'Izmantot noklusējuma rīkus',

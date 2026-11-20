@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'સંપર્ક',
   emailViewerLabel: 'ઈમેઇલ દર્શક',
   emailViewerMissingParser: 'આ સંદેશનું વિશ્લેષણ કરવા માટે વૈકલ્પિક "postal-mime" પૅકેજ ઇન્સ્ટોલ કરવું જરૂરી છે.',
+  emailViewerFrom: 'મોકલનાર',
+  emailViewerTo: 'પ્રાપ્તકર્તા',
   emailViewerSubject: 'વિષય',
   emailViewerDate: 'તારીખ',
   emailViewerAttachments: 'જોડાણો',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML ક્લિપબોર્ડમાં કૉપી કરો',
   xmlViewerCopyNode: '{name} કૉપી કરો',
   xmlViewerToggleNode: '{name} ટૉગલ કરો',
+  geojsonViewLabel: 'નકશો',
   geojsonViewInvalid: 'આ ફાઇલ માન્ય GeoJSON નથી.',
   geojsonViewFeatureCount: {
     one: '{count} ફીચર',

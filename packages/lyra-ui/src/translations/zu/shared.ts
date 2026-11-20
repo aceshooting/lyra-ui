@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Khansela',
   confirm: 'Qinisekisa',
   search: 'Sesha',
-  circularReference: 'Ireferensi eyindilinga',
   items: {
     one: 'into',
     other: 'izinto',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ukubuka kwegrafu akukwazanga ukulayishwa.',
   graphSourceRecordMissing: 'Leli rekhodi legrafu alitholakali.',
   notInCatalog: 'ayikho kukhathalogi',
+  chartTotal: 'Isamba',
   chartLegend: 'Ukhiye weshadi',
   resetZoom: 'Setha kabusha ukusondeza',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Ukukopisha kwehlulekile',
   paginationFirstPage: 'Ikhasi lokuqala',
   paginationLastPage: 'Ikhasi lokugcina',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Imenyu',
-  emailViewerFrom: 'Kusuka',
-  emailViewerTo: 'Kuya',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Kuyeqiwe kwaya endimeni egqanyisiwe.',
   anchorJumpedToPage: 'Kuyeqiwe kwaya ekhasini {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Kunokungqubuzana',
   gitStatusIgnored: 'Kuzitshiwe',
   envListValueHidden: 'Inani lifihliwe',
-  geojsonViewLabel: 'Imephu',
   provenanceEntities: 'Izinto',
   flowItemAnnouncement: '{item} ({index} kokungu-{total})',
   neighborDirectionIn: 'Okungenayo',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Kubonisa uhlu esikhundleni.',
   largeDataInvalid: 'Idatha ayikwazi ukubonisa ngoba i-{column} ayivumelekile.',
   largeDataLimit: 'Idatha ayikwazi ukubonisa ngoba idlula umkhawulo we-{limit}.',
-  chart3dName: 'Ilebula',
 };
 
 registerLyraLocale('zu', strings);

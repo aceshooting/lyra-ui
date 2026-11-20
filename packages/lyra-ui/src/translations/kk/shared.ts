@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Бас тарту',
   confirm: 'Растау',
   search: 'Іздеу',
-  circularReference: 'Циклдік сілтеме',
   items: {
     one: 'элемент',
     other: 'элемент',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Граф көрінісін жүктеу мүмкін болмады.',
   graphSourceRecordMissing: 'Бұл граф жазбасы қолжетімсіз.',
   notInCatalog: 'каталогта жоқ',
+  chartTotal: 'Барлығы',
   chartLegend: 'Диаграмманың шартты белгілері',
   resetZoom: 'Масштабты қалпына келтіру',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Көшіру сәтсіз аяқталды',
   paginationFirstPage: 'Бірінші бет',
   paginationLastPage: 'Соңғы бет',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Мәзір',
-  emailViewerFrom: 'Кімнен',
-  emailViewerTo: 'Кімге',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Белгіленген үзіндіге өтті.',
   anchorJumpedToPage: 'Өтілген бет: {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Қайшылық бар',
   gitStatusIgnored: 'Еленбейді',
   envListValueHidden: 'Мәні жасырылған',
-  geojsonViewLabel: 'Карта',
   provenanceEntities: 'Нысандар',
   flowItemAnnouncement: '{item} ({index}, барлығы {total})',
   neighborDirectionIn: 'Кіріс',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Оның орнына тізім көрсетілуде.',
   largeDataInvalid: '{column} жарамсыз болғандықтан, деректерді көрсету мүмкін емес.',
   largeDataLimit: 'Деректер {limit} шегінен асатындықтан, оларды көрсету мүмкін емес.',
-  chart3dName: 'Белгі',
 };
 
 registerLyraLocale('kk', strings);

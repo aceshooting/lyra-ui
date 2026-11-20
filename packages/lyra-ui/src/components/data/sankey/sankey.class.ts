@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -20,8 +21,8 @@ import {
 import { styles } from './sankey.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_queryBuilderValueLabel } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_circularReference, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableSource, LYRA_DEFAULT_chartTableTarget, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_chartTotalsCaption, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_sankeyCycle } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -42,6 +43,7 @@ const LABEL_HEIGHT = 18;
 const LABEL_GAP = 3;
 const MIN_LABEL_WIDTH = 28;
 const MAX_LABEL_WIDTH = 96;
+const MAX_CYCLE_NAMES = 5;
 
 function plotX(x: number, width: number, rtl: boolean): number {
   return rtl ? PLOT_WIDTH - x - width : x;
@@ -50,7 +52,9 @@ function plotX(x: number, width: number, rtl: boolean): number {
 /**
  * A peer-free SVG Sankey chart for weighted flows across stages. Arrow keys move through the nodes
  * and then the links. A node's value is the larger of its incoming and outgoing totals.
- * Invalid or dangling links are omitted, and cycles render a localized notice.
+ * Invalid or dangling links are omitted, and cycles render a localized notice naming up to five
+ * nodes of one cycle. Node order within a stage reduces flow crossings heuristically: the layout
+ * keeps whichever relaxation pass, starting from the input order, crosses the fewest flows.
  *
  * @customElement lr-sankey
  * @renderController SvgChartInteraction
@@ -83,19 +87,21 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     chart: LYRA_DEFAULT_chart,
-    chart3dName: LYRA_DEFAULT_chart3dName,
     chartData: LYRA_DEFAULT_chartData,
     chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLegend: LYRA_DEFAULT_chartLegend,
+    chartTableName: LYRA_DEFAULT_chartTableName,
+    chartTableSource: LYRA_DEFAULT_chartTableSource,
+    chartTableTarget: LYRA_DEFAULT_chartTableTarget,
+    chartTableValue: LYRA_DEFAULT_chartTableValue,
+    chartTotal: LYRA_DEFAULT_chartTotal,
+    chartTotalsCaption: LYRA_DEFAULT_chartTotalsCaption,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
-    circularReference: LYRA_DEFAULT_circularReference,
-    emailViewerFrom: LYRA_DEFAULT_emailViewerFrom,
-    emailViewerTo: LYRA_DEFAULT_emailViewerTo,
     flowEdge: LYRA_DEFAULT_flowEdge,
     flowEdgeWithLabel: LYRA_DEFAULT_flowEdgeWithLabel,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
-    queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
+    sankeyCycle: LYRA_DEFAULT_sankeyCycle,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -149,6 +155,8 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
     const end = stageCount > 1 && node.stage === stageCount - 1;
     const labelWidth = Math.min(MAX_LABEL_WIDTH, (PLOT_WIDTH / stageCount - width) * 0.4);
     const labelX = end ? x - labelWidth - LABEL_GAP : x + width + LABEL_GAP;
+    // Labels sit on a physical side of their bar after mirroring, so they align toward it physically.
+    const align = end === rtl ? 'left' : 'right';
     const labelY = Math.max(0, Math.min(PLOT_HEIGHT - LABEL_HEIGHT, y + (height - LABEL_HEIGHT) / 2));
     return svg`<rect
       class="node-shape" x=${plotX(x, width, rtl)} y=${y} width=${width} height=${height}
@@ -157,7 +165,7 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
       ? svg`<foreignObject
           class="mark-label-box" x=${plotX(labelX, labelWidth, rtl)} y=${labelY}
           width=${labelWidth} height=${LABEL_HEIGHT} aria-hidden="true"
-        ><div part="node-label" ?data-end=${end}>${label}</div></foreignObject>`
+        ><div part="node-label" data-align=${align}>${label}</div></foreignObject>`
       : nothing}`;
   }
 
@@ -191,7 +199,6 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
     const labelValue = (label: string, value: string) => this.localize('chartValueLabel', undefined, { label, value });
     const byId = new Map(nodes.map((node, index) => [node.id, { ...node, color: svgChartColor(index) }] as const));
     const sourceIds = new Set(links.map(link => link.source));
-    const targetIds = new Set(links.map(link => link.target));
     const stageCount = nodes.reduce((count, node) => Math.max(count, node.stage + 1), 0);
     const flows = links.map(link => {
       const source = byId.get(link.source)!;
@@ -221,17 +228,17 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
     }));
     // Paint ribbons behind node targets while exposing keyboard order from the first node.
     const marks = [...flows.map(flow => flow.mark), ...nodeMarks];
-    const rows = flows.map(flow => flow.row);
-    for (const node of nodes) {
-      if (!sourceIds.has(node.id) && !targetIds.has(node.id)) rows.push([node.label, '', '', format(node.value)]);
-    }
+    const name = hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('chart');
     return this.chart.render({
-      name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('chart'),
+      name,
       description: normalizeLabel(this.description) ?? '',
       status: this.loading
         ? { part: 'loading', text: this.localize('loading') }
         : layout?.status === 'cycle'
-        ? { part: 'error', text: this.localize('circularReference') }
+        ? { part: 'error', text: this.localize('sankeyCycle', undefined, {
+          nodes: getListFormat(locale, { type: 'conjunction' })
+            .format(layout.cycle.slice(0, MAX_CYCLE_NAMES).map(node => node.label || node.id)),
+        }) }
         : nodes.length === 0
         ? { part: 'empty', text: this.localize('noData') }
         : undefined,
@@ -245,10 +252,15 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
       legendLabel: this.localize('chartLegend'),
       tableLabel: this.localize('chartData'),
       headers: [
-        this.localize('emailViewerFrom'), this.localize('emailViewerTo'),
-        this.localize('chart3dName'), this.localize('queryBuilderValueLabel'),
+        this.localize('chartTableSource'), this.localize('chartTableTarget'),
+        this.localize('chartTableName'), this.localize('chartTableValue'),
       ],
-      rows,
+      rows: flows.map(flow => flow.row),
+      totals: {
+        caption: this.localize('chartTotalsCaption', undefined, { name }),
+        headers: [this.localize('chartTableName'), this.localize('chartTotal')],
+        rows: nodes.map(node => [node.label, format(node.value)]),
+      },
       withDataTable: this.withDataTable,
       dataTableToggle: this.dataTableToggle,
       rtl,

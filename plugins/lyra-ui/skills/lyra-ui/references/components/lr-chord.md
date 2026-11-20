@@ -19,7 +19,8 @@
 Compare weighted relationships between entities. The SVG places entity arcs around a circle in
 input order and joins them with ribbons. Arc length represents the entity's total weight.
 Ribbon width represents the relationship's weight. The legend lists entities with positive totals.
-Hover or keyboard focus on an entity highlights its ribbons and dims the others.
+Hover or keyboard focus on an entity highlights its ribbons and dims the others. Hover or keyboard
+focus on a ribbon highlights that ribbon and dims the others.
 
 | Property | Attribute | Purpose |
 | --- | --- | --- |
@@ -33,8 +34,9 @@ Hover or keyboard focus on an entity highlights its ribbons and dims the others.
 | `valueFormatter` | — | Optional `(value: number) => string` for displayed and accessible values. Formatting follows the effective locale by default. |
 
 Each row and column follows the order of `entities`. Give each entity a unique, nonempty string
-ID and a string label. Use finite nonnegative weights, with exactly equal values at `matrix[i][j]`
-and `matrix[j][i]`. A positive off-diagonal pair makes one ribbon. A positive diagonal entry
+ID and a string label. Use finite nonnegative weights, with equal values at `matrix[i][j]` and
+`matrix[j][i]`. Mirrored values may differ by a relative tolerance of 1e-9 to absorb
+floating-point rounding, and the value above the diagonal is used for both. A positive off-diagonal pair makes one ribbon. A positive diagonal entry
 makes a self-ribbon and counts once toward its entity's total. Rows containing only zeros
 produce no arcs. Invalid input or more than 32 entities shows an error. Totals that exceed the
 numeric range are reported as `Number.MAX_VALUE`. The chart shows a notice if geometry is too
@@ -44,7 +46,8 @@ Tab enters the first visible entity. Left, Right, Home, and End move within enti
 the current entity's ribbons. Left and Right follow the reading direction. Down enters an
 entity's ribbons and Up returns to that entity.
 Hover or keyboard focus reveals the tooltip. Escape dismisses it. The data table lists each
-plotted pair once, including self-relationships, with From, To, and Value columns. It remains
+plotted pair once, including self-relationships, with Source, Target, and Value columns. A
+second table lists every entity's total, including entities whose total is zero. Both remain
 available to assistive technology while visually collapsed.
 
 **Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and

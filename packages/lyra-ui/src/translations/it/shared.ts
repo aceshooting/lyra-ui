@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Annulla',
   confirm: 'Conferma',
   search: 'Cerca',
-  circularReference: 'Riferimento circolare',
   items: {
     one: 'elemento',
     many: 'elementi',
@@ -86,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Impossibile caricare la vista del grafo.',
   graphSourceRecordMissing: 'Questo record del grafo non è disponibile.',
   notInCatalog: 'non nel catalogo',
+  chartTotal: 'Totale',
   chartLegend: 'Legenda del grafico',
   resetZoom: 'Ripristina zoom',
   showMoreCollapsed: '+{count}',
@@ -133,11 +133,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Copia non riuscita',
   paginationFirstPage: 'Prima pagina',
   paginationLastPage: 'Ultima pagina',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Da',
-  emailViewerTo: 'A',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Passato al passaggio evidenziato.',
   anchorJumpedToPage: 'Passato alla pagina {page}.',
@@ -154,7 +153,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'In conflitto',
   gitStatusIgnored: 'Ignorato',
   envListValueHidden: 'Valore nascosto',
-  geojsonViewLabel: 'Mappa',
   provenanceEntities: 'Entità',
   flowItemAnnouncement: '{item} ({index} di {total})',
   neighborDirectionIn: 'Entrante',
@@ -196,7 +194,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Viene mostrato invece un elenco.',
   largeDataInvalid: 'Impossibile visualizzare i dati perché {column} non è valido.',
   largeDataLimit: 'Impossibile visualizzare i dati perché superano il limite di {limit}.',
-  chart3dName: 'Etichetta',
 };
 
 registerLyraLocale('it', strings);

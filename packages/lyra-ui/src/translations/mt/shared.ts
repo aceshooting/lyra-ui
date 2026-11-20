@@ -47,7 +47,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ikkanċella',
   confirm: 'Ikkonferma',
   search: 'Fittex',
-  circularReference: 'Referenza ċirkolari',
   items: {
     few: 'elementi',
     many: 'element',
@@ -98,6 +97,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Il-veduta tal-graff ma setgħetx titgħabba.',
   graphSourceRecordMissing: 'Dan ir-rekord tal-graff mhuwiex disponibbli.',
   notInCatalog: 'mhux fil-katalgu',
+  chartTotal: 'Total',
   chartLegend: 'Ċavetta taċ-ċart',
   resetZoom: 'Irrisettja ż-żum',
   showMoreCollapsed: '+{count}',
@@ -145,11 +145,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'L-ikkupjar falla',
   paginationFirstPage: 'L-ewwel paġna',
   paginationLastPage: 'L-aħħar paġna',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Minn',
-  emailViewerTo: 'Lil',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Inqbeż għas-silta enfasizzata.',
   anchorJumpedToPage: 'Inqbeż għall-paġna {page}.',
@@ -166,7 +165,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'F’kunflitt',
   gitStatusIgnored: 'Injorat',
   envListValueHidden: 'Valur moħbi',
-  geojsonViewLabel: 'Mappa',
   provenanceEntities: 'Entitajiet',
   flowItemAnnouncement: '{item} ({index} minn {total})',
   neighborDirectionIn: 'Deħlin',
@@ -212,7 +210,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Minflok qed tintwera lista.',
   largeDataInvalid: 'Id-data ma tistax tintwera għax {column} mhuwiex validu.',
   largeDataLimit: 'Id-data ma tistax tintwera għax taqbeż il-limitu ta’ {limit}.',
-  chart3dName: 'Tikketta',
 };
 
 registerLyraLocale('mt', strings);

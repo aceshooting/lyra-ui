@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ବାତିଲ କରନ୍ତୁ',
   confirm: 'ନିଶ୍ଚିତ କରନ୍ତୁ',
   search: 'ଖୋଜନ୍ତୁ',
-  circularReference: 'ଚକ୍ରାକାର ସନ୍ଦର୍ଭ',
   items: {
     one: 'ବସ୍ତୁ',
     other: 'ବସ୍ତୁଗୁଡ଼ିକ',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ଗ୍ରାଫ୍ ଦୃଶ୍ୟ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
   graphSourceRecordMissing: 'ଏହି ଗ୍ରାଫ୍ ରେକର୍ଡ ଉପଲବ୍ଧ ନାହିଁ।',
   notInCatalog: 'ତାଲିକାରେ ନାହିଁ',
+  chartTotal: 'ମୋଟ',
   chartLegend: 'ଚାର୍ଟର ସୂଚକ',
   resetZoom: 'ଜୁମ୍ ପୁନଃସେଟ୍ କରନ୍ତୁ',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ନକଲ ବିଫଳ ହେଲା',
   paginationFirstPage: 'ପ୍ରଥମ ପୃଷ୍ଠା',
   paginationLastPage: 'ଶେଷ ପୃଷ୍ଠା',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ମିଲିସେକେଣ୍ଡ',
   durationSeconds: '{value} ସେକେଣ୍ଡ',
   menuLabel: 'ମେନୁ',
-  emailViewerFrom: 'ପ୍ରେରକ',
-  emailViewerTo: 'ଗ୍ରାହକ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ହାଇଲାଇଟ୍ ହୋଇଥିବା ଅଂଶକୁ ଯାଇଛି।',
   anchorJumpedToPage: '{page} ପୃଷ୍ଠାକୁ ଯାଇଛି।',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ବିବାଦୀୟ',
   gitStatusIgnored: 'ଅଣଦେଖା କରାଗଲା',
   envListValueHidden: 'ମୂଲ୍ୟ ଲୁଚାଯାଇଛି',
-  geojsonViewLabel: 'ମାନଚିତ୍ର',
   provenanceEntities: 'ଏକକଗୁଡ଼ିକ',
   flowItemAnnouncement: '{item} ({total} ମଧ୍ୟରୁ {index})',
   neighborDirectionIn: 'ଆସୁଥିବା',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ଏହା ବଦଳରେ ଏକ ତାଲିକା ଦେଖାଯାଉଛି।',
   largeDataInvalid: '{column} ଅବୈଧ ହୋଇଥିବାରୁ ତଥ୍ୟ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
   largeDataLimit: 'ତଥ୍ୟ {limit} ସୀମାଠାରୁ ଅଧିକ ହୋଇଥିବାରୁ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
-  chart3dName: 'ଲେବଲ୍',
 };
 
 registerLyraLocale('or', strings);

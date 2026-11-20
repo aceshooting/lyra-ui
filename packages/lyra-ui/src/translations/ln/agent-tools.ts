@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schéma esengeli kolimbola objet.',
   schemaPropertiesMustBeFlat: 'Ba propriété ya schéma esengeli kozala objet plat.',
   valueMustBeSerializable: 'Valeur esengeli kosérialiser na JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Pona ba outil',
   searchToolsPlaceholder: 'Luka ba outil…',
   useDefaultTools: 'Salelá ba outil ya défaut',

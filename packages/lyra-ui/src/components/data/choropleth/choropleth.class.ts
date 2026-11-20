@@ -20,8 +20,8 @@ import {
 import { styles } from './choropleth.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_queryBuilderValueLabel } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_chart3dName, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_choroplethInvalidGeometry } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -62,7 +62,11 @@ function regionColor(position: number, palette: LyraChoroplethPalette): string {
 /**
  * A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON. Regions take a sequential
  * or diverging color from their numeric properties. Keyboard navigation follows source order.
- * Malformed or over-limit geography displays a localized notice.
+ * Malformed or over-limit geography displays a localized notice. Coordinates must be longitude
+ * and latitude, so projected TopoJSON (for example, meters) is rejected as invalid geometry, as is
+ * geometry with no drawable area. Features with null, point, or line geometry, and features whose
+ * ID exceeds 1,024 UTF-16 code units, are skipped but still count toward the feature limit.
+ * Longer labels are truncated.
  *
  * @customElement lr-choropleth
  * @renderController SvgChartInteraction
@@ -91,16 +95,16 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    chart3dName: LYRA_DEFAULT_chart3dName,
     chartData: LYRA_DEFAULT_chartData,
     chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLegend: LYRA_DEFAULT_chartLegend,
+    chartTableName: LYRA_DEFAULT_chartTableName,
+    chartTableValue: LYRA_DEFAULT_chartTableValue,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
-    geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
+    choroplethInvalidGeometry: LYRA_DEFAULT_choroplethInvalidGeometry,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
-    queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
-    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -114,6 +118,13 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
 
   /** Feature property containing the region label. Changing it reads the current geography again. */
   @property({ attribute: 'label-field' }) labelField = 'name';
+
+  /**
+   * Name of the one TopoJSON object to draw, such as `'countries'` when a topology also holds an
+   * overlapping `'land'` object. The default empty string draws every object. An unknown name
+   * shows the empty state. GeoJSON input ignores it.
+   */
+  @property() object = '';
 
   /** Projection used to fit the geography into the plot. */
   @property() projection: LyraChoroplethProjection = 'equirectangular';
@@ -149,6 +160,7 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     input: unknown;
     field: string;
     labelField: string;
+    object: string;
     value: ReturnType<typeof decodeChoroplethGeometry>;
   };
   private projected?: {
@@ -160,11 +172,12 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
   private missing?: { input: unknown; value?: LyraChoroplethNoData };
 
   private decode(): ReturnType<typeof decodeChoroplethGeometry> {
-    const { geography, field, labelField } = this;
+    const { geography, field, labelField, object } = this;
     const memo = this.decoded;
-    if (memo && memo.input === geography && memo.field === field && memo.labelField === labelField) return memo.value;
-    const value = decodeChoroplethGeometry(geography, field, labelField);
-    this.decoded = { input: geography, field, labelField, value };
+    if (memo && memo.input === geography && memo.field === field && memo.labelField === labelField &&
+      memo.object === object) return memo.value;
+    const value = decodeChoroplethGeometry(geography, field, labelField, object);
+    this.decoded = { input: geography, field, labelField, object, value };
     return value;
   }
 
@@ -210,11 +223,14 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
       : nothing}`;
   }
 
-  private chartStatus(decoded: ReturnType<typeof decodeChoroplethGeometry>, count: number): SvgChartOptions['status'] {
+  private chartStatus(
+    decoded: ReturnType<typeof decodeChoroplethGeometry>,
+    layout: ChoroplethLayoutResult | undefined,
+  ): SvgChartOptions['status'] {
     if (this.loading) return { part: 'loading', text: this.localize('loading') };
-    if (decoded.status === 'invalid') return { part: 'error', text: this.localize('valueInvalid') };
+    if (decoded.status === 'invalid' || layout?.invalid) return { part: 'error', text: this.localize('choroplethInvalidGeometry') };
     if (decoded.status === 'limit') return { part: 'error', text: this.localize('chartInputLimit') };
-    if (count === 0) return { part: 'empty', text: this.localize('noData') };
+    if (!layout?.regions.length) return { part: 'empty', text: this.localize('noData') };
     return undefined;
   }
 
@@ -249,10 +265,10 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     });
     const legend = layout?.stops.map(({ offset, value }) => ({ label: format(value), color: regionColor(offset, palette) })) ?? [];
     if (regions.some(region => region.value === null)) legend.push({ label: missingText, color: missingColor });
-    const status = this.chartStatus(decoded, regions.length);
+    const status = this.chartStatus(decoded, layout);
     this.errorText = status?.part === 'error' ? status.text : '';
     return this.chart.render({
-      name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('geojsonViewLabel'),
+      name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('map'),
       description: normalizeLabel(this.description) ?? '',
       status,
       viewBox: `0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`,
@@ -260,7 +276,7 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
       legend,
       legendLabel: this.localize('chartLegend'),
       tableLabel: this.localize('chartData'),
-      headers: [this.localize('chart3dName'), this.localize('queryBuilderValueLabel')],
+      headers: [this.localize('chartTableName'), this.localize('chartTableValue')],
       rows: plotted.map(region => region.row),
       withDataTable: this.withDataTable,
       dataTableToggle: this.dataTableToggle,

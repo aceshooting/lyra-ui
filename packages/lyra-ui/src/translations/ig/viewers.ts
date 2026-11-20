@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kọntaktị',
   emailViewerLabel: 'Ihe nlere email',
   emailViewerMissingParser: 'Ihe nlere a chọrọ ka etinye ngwungwu nhọrọ "postal-mime" iji tụlee ozi a.',
+  emailViewerFrom: 'Site na',
+  emailViewerTo: 'Nye',
   emailViewerSubject: 'Isiokwu',
   emailViewerDate: 'Ụbọchị',
   emailViewerAttachments: 'Ihe agbakwunyere',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Detuo XML na klipbọọdụ',
   xmlViewerCopyNode: 'Detuo {name}',
   xmlViewerToggleNode: 'Gbanwee {name}',
+  geojsonViewLabel: 'Maapụ',
   geojsonViewInvalid: 'Faịlụ a abụghị GeoJSON ziri ezi.',
   geojsonViewFeatureCount: {
     one: 'Akụkụ {count}',

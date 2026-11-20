@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Peruuta',
   confirm: 'Vahvista',
   search: 'Hae',
-  circularReference: 'Kehäviittaus',
   items: {
     one: 'kohde',
     other: 'kohdetta',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graafinäkymää ei voitu ladata.',
   graphSourceRecordMissing: 'Tämä graafin tietue ei ole saatavilla.',
   notInCatalog: 'ei luettelossa',
+  chartTotal: 'Yhteensä',
   chartLegend: 'Kaavion selite',
   resetZoom: 'Palauta zoomaus',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopiointi epäonnistui',
   paginationFirstPage: 'Ensimmäinen sivu',
   paginationLastPage: 'Viimeinen sivu',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Valikko',
-  emailViewerFrom: 'Lähettäjä',
-  emailViewerTo: 'Vastaanottaja',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Siirrytty korostettuun kohtaan.',
   anchorJumpedToPage: 'Siirrytty sivulle {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ristiriidassa',
   gitStatusIgnored: 'Ohitettu',
   envListValueHidden: 'Arvo piilotettu',
-  geojsonViewLabel: 'Kartta',
   provenanceEntities: 'Entiteetit',
   flowItemAnnouncement: '{item} ({index}/{total})',
   neighborDirectionIn: 'Saapuvat',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Sen sijaan näytetään luettelo.',
   largeDataInvalid: 'Tietoja ei voi näyttää, koska {column} on virheellinen.',
   largeDataLimit: 'Tietoja ei voi näyttää, koska ne ylittävät rajan {limit}.',
-  chart3dName: 'Tunniste',
 };
 
 registerLyraLocale('fi', strings);

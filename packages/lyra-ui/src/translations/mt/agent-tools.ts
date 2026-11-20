@@ -141,7 +141,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'L-iskema trid tiddeskrivi oġġett.',
   schemaPropertiesMustBeFlat: 'Il-proprjetajiet tal-iskema jridu jkunu oġġett ċatt.',
   valueMustBeSerializable: 'Il-valur irid ikun serjalizzabbli f’JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Agħżel l-għodod',
   searchToolsPlaceholder: 'Fittex għodod…',
   useDefaultTools: 'Uża l-għodod awtomatiċi',

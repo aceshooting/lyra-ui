@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'คัดลอก JSON ไปยังคลิปบอร์ด',
+  circularReference: 'การอ้างอิงแบบวนซ้ำ',
   copyDiff: 'คัดลอกส่วนต่าง',
   diffViewOldLabel: 'ต้นฉบับ',
   diffViewNewLabel: 'แก้ไขแล้ว',

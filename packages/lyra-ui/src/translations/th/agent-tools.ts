@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'สคีมาต้องอธิบายออบเจ็กต์',
   schemaPropertiesMustBeFlat: 'พร็อพเพอร์ตีสคีมาต้องเป็นออบเจ็กต์แบบแบน',
   valueMustBeSerializable: 'ค่าต้องแปลงเป็น JSON ได้',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'เลือกเครื่องมือ',
   searchToolsPlaceholder: 'ค้นหาเครื่องมือ…',
   useDefaultTools: 'ใช้เครื่องมือเริ่มต้น',

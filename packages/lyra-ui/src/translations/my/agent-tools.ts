@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schema သည် အရာဝတ္ထုတစ်ခုကို ဖော်ပြရမည်။',
   schemaPropertiesMustBeFlat: 'Schema ပိုင်ဆိုင်မှုများသည် ပြားသောအရာဝတ္ထု ဖြစ်ရမည်။',
   valueMustBeSerializable: 'တန်ဖိုးကို JSON အဖြစ် ပြောင်းလဲနိုင်ရမည်။',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'ကိရိယာများ ရွေးရန်',
   searchToolsPlaceholder: 'ကိရိယာများ ရှာရန်…',
   useDefaultTools: 'မူလကိရိယာများ အသုံးပြုရန်',

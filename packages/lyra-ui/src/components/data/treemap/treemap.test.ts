@@ -1,9 +1,9 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraTreemap, LyraTreemapNode } from './treemap.class.js';
 import '../../lr-treemap.js';
 
@@ -41,16 +41,47 @@ function partText(el: LyraTreemap, name: string): string {
 }
 
 expectLocaleFallback('de-DE', [
+  'accessibleLabelSeparator',
   'chart',
   'chart3dName',
   'chartData',
   'chartLegend',
   'chartInputLimit',
+  'chartTableName',
+  'chartTableValue',
   'chartValueLabel',
   'loading',
   'noData',
   'queryBuilderValueLabel',
+  'treemapTileLabel',
 ]);
+
+function plot(el: LyraTreemap): SVGSVGElement {
+  return el.shadowRoot!.querySelector<SVGSVGElement>('svg[part~="plot"]')!;
+}
+
+/** Waits until the viewBox matches the plot's rendered box, so one user unit is one CSS pixel. */
+async function settledPlot(el: LyraTreemap): Promise<SVGSVGElement> {
+  const svg = plot(el);
+  await waitUntil(() => {
+    const box = svg.viewBox.baseVal;
+    return Math.abs(box.width - svg.clientWidth) < 1 && Math.abs(box.height - svg.clientHeight) < 1;
+  }, 'The viewBox did not follow the plot size');
+  return svg;
+}
+
+function shapeBox(el: LyraTreemap, name: string): DOMRect {
+  return tile(el, name).querySelector('.tile-shape')!.getBoundingClientRect();
+}
+
+function resolvedColor(el: LyraTreemap, color: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = color;
+  el.shadowRoot!.append(probe);
+  const value = getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+}
 
 describe('<lr-treemap>', () => {
   it('renders nested tiles and a top-level legend with an accessible name and description', async () => {
@@ -258,12 +289,12 @@ describe('<lr-treemap>', () => {
 
     expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal([
       'Group: 1.250',
-      'Valid: 1.250',
+      'Valid, level 2 in Group: 1.250',
     ]);
     const rows = [...el.shadowRoot!.querySelectorAll('tbody tr')];
     expect(rows.map((row) => row.querySelector('th')?.textContent)).to.deep.equal([
       'Group',
-      'Group / Valid',
+      'Valid, level 2 in Group',
     ]);
   });
 
@@ -298,5 +329,152 @@ describe('<lr-treemap>', () => {
     el.strings = { noData: 'Keine Daten' };
     await el.updateComplete;
     expect(partText(el, 'empty')).to.equal('Keine Daten');
+  });
+
+  for (const width of [960, 320]) {
+    it(`renders tile labels at the token font size in a ${width}px host`, async () => {
+      const el = await fixture<LyraTreemap>(html`
+        <lr-treemap style=${`inline-size: ${width}px`} .nodes=${NODES}></lr-treemap>
+      `);
+      const svg = await settledPlot(el);
+      expect(svg.clientWidth).to.equal(width);
+      expect(svg.clientHeight).to.be.within(150, width);
+      const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="tile-label"]')!;
+      const probe = document.createElement('span');
+      probe.style.fontSize = 'var(--lr-font-size-xs)';
+      el.shadowRoot!.append(probe);
+      const token = parseFloat(getComputedStyle(probe).fontSize);
+      probe.remove();
+      const scale = svg.getScreenCTM()!.a;
+      expect(parseFloat(getComputedStyle(label).fontSize) * scale).to.be.closeTo(token, 0.01);
+      expect(label.getBoundingClientRect().height).to.be.closeTo(label.offsetHeight, 0.5);
+    });
+  }
+
+  it('keeps every top-level category when more than 1,000 descendants are capped', async () => {
+    const leaves = (prefix: string, count: number, value: number) =>
+      Array.from({ length: count }, (_, index) => ({ id: `${prefix}-${index}`, label: `${prefix} ${index}`, value }));
+    const nodes = [
+      { id: 'alpha', label: 'Alpha', children: leaves('alpha', 1200, 1) },
+      { id: 'beta', label: 'Beta', children: leaves('beta', 50, 10) },
+      { id: 'gamma', label: 'Gamma', value: 1 },
+    ];
+    const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${nodes}></lr-treemap>`);
+    expect(tiles(el).length).to.equal(1000);
+    expect(el.shadowRoot!.querySelectorAll('tbody tr').length).to.equal(1000);
+    const legend = partText(el, 'legend');
+    expect(legend).to.include('Alpha').and.include('Beta').and.include('Gamma');
+    const names = tiles(el).map((mark) => mark.getAttribute('aria-label') ?? '');
+    expect(names.filter((name) => name.startsWith('beta ')).length).to.equal(50);
+    expect(names.filter((name) => name === 'Gamma: 1').length).to.equal(1);
+    expect(partText(el, 'limit')).to.equal(
+      'Some chart data was omitted because an input limit was reached. Provide a smaller or pre-aggregated dataset to represent the omitted values.',
+    );
+  });
+
+  it('distinguishes the too-small notice from the input-limit notice and lists the hidden value', async () => {
+    const nodes = [
+      { id: 'large', label: 'Large', value: 1 },
+      { id: 'tiny', label: 'Tiny', value: 1e-300 },
+    ];
+    const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${nodes}></lr-treemap>`);
+    expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Large: 1']);
+    const rows = [...el.shadowRoot!.querySelectorAll('tbody th')].map((cell) => cell.textContent);
+    expect(rows).to.deep.equal(['Large', 'Tiny']);
+    expect(partText(el, 'limit')).to.equal('Some values are too small to draw. The data table lists every value.');
+
+    el.nodes = [{ id: 'deep', label: 'Deep', children: Array.from({ length: 1000 }, (_, i) => ({ id: `n${i}`, label: '', value: 1 })) }];
+    await el.updateComplete;
+    expect(partText(el, 'limit')).to.include('an input limit was reached');
+  });
+
+  it('lets a later valid node use an ID an invalid node carried', async () => {
+    const nodes = [
+      { id: 'a', label: 'Negative', value: -1 },
+      { id: 'a', label: 'Kept A', value: 5 },
+      { id: 'b', label: 'Childless', children: [] },
+      { id: 'b', label: 'Kept B', value: 3 },
+      { id: 'c', label: 'Hollow', children: [{ id: 'x', label: 'Bad', value: Number.NaN }] },
+      { id: 'c', label: 'Kept C', value: 2 },
+      { id: 'x', label: 'Kept X', value: 1 },
+    ];
+    const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${nodes}></lr-treemap>`);
+    expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal([
+      'Kept A: 5', 'Kept B: 3', 'Kept C: 2', 'Kept X: 1',
+    ]);
+  });
+
+  it('falls back to locale formatting when the value formatter throws and coerces its result', async () => {
+    const formatter = (value: number) => {
+      if (value === 60) throw new Error('formatter failed');
+      return value as unknown as string;
+    };
+    const el = await fixture<LyraTreemap>(html`
+      <lr-treemap .nodes=${[{ id: 'big', label: 'Big', value: 6000 }, { id: 'odd', label: 'Odd', value: 60 }]}
+        .valueFormatter=${formatter}></lr-treemap>
+    `);
+    expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal(['Big: 6000', 'Odd: 60']);
+    const values = [...el.shadowRoot!.querySelectorAll('tbody td')].map((cell) => cell.textContent);
+    expect(values).to.deep.equal(['6000', '60']);
+  });
+
+  it('names nested tiles with their level and parent path and honors a strings override', async () => {
+    const nodes = [{ id: 'top', label: 'Top', children: [{ id: 'mid', label: 'Mid', children: [{ id: 'leaf', label: 'Leaf', value: 4 }] }] }];
+    const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${nodes}></lr-treemap>`);
+    expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal([
+      'Top: 4', 'Mid, level 2 in Top: 4', 'Leaf, level 3 in Top — Mid: 4',
+    ]);
+    el.strings = { treemapTileLabel: '{parent} > {label} ({level})' };
+    await el.updateComplete;
+    expect(tiles(el).map((mark) => mark.getAttribute('aria-label'))).to.deep.equal([
+      'Top: 4', 'Top > Mid (2): 4', 'Top — Mid > Leaf (3): 4',
+    ]);
+    expect(el.shadowRoot!.querySelectorAll('tbody th')[2]?.textContent).to.equal('Top — Mid > Leaf (3)');
+  });
+
+  it('mirrors tile placement under RTL', async () => {
+    const ltr = await fixture<LyraTreemap>(html`<lr-treemap style="inline-size: 320px" .nodes=${NODES}></lr-treemap>`);
+    const rtl = await fixture<LyraTreemap>(html`<lr-treemap dir="rtl" style="inline-size: 320px" .nodes=${NODES}></lr-treemap>`);
+    const ltrPlot = (await settledPlot(ltr)).getBoundingClientRect();
+    const rtlPlot = (await settledPlot(rtl)).getBoundingClientRect();
+    const ltrBox = shapeBox(ltr, 'Compute');
+    const rtlBox = shapeBox(rtl, 'Compute');
+    expect(ltrBox.left - ltrPlot.left).to.be.closeTo(0, 1);
+    expect(rtlPlot.right - rtlBox.right).to.be.closeTo(0, 1);
+    expect(rtlBox.width).to.be.closeTo(ltrBox.width, 0.5);
+    expect(rtlBox.width).to.be.lessThan(rtlPlot.width - 1);
+  });
+
+  it('emits an activation for a pointer click on a tile', async () => {
+    const el = await fixture<LyraTreemap>(html`<lr-treemap style="inline-size: 320px" .nodes=${NODES}></lr-treemap>`);
+    await settledPlot(el);
+    const box = shapeBox(el, 'Storage');
+    const activated = oneEvent(el, 'lr-datum-activate');
+    try {
+      await sendMouse({ type: 'click', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+      const { detail } = await activated;
+      expect(detail).to.deep.equal({ id: 'storage', label: 'Storage', value: 10 });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('outlines tiles with system colors under forced colors', async function () {
+    const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${NODES}></lr-treemap>`);
+    try {
+      await setForcedColors('active');
+    } catch {
+      this.skip();
+    }
+    try {
+      if (!matchMedia('(forced-colors: active)').matches) this.skip();
+      const shape = tile(el, 'Storage').querySelector('.tile-shape')!;
+      const style = getComputedStyle(shape);
+      expect(style.stroke).to.equal(resolvedColor(el, 'CanvasText'));
+      expect(style.fill).to.equal(resolvedColor(el, 'Canvas'));
+      expect(parseFloat(style.strokeWidth)).to.be.greaterThan(0);
+    } finally {
+      await setForcedColors('none');
+    }
   });
 });

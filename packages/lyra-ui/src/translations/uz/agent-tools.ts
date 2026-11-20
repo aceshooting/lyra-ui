@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Sxema obyektni ifodalashi kerak.',
   schemaPropertiesMustBeFlat: 'Sxema xususiyatlari tekis obyekt boʻlishi kerak.',
   valueMustBeSerializable: 'Qiymat JSONʼga seriyalash mumkin boʻlishi kerak.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Vositalarni tanlash',
   searchToolsPlaceholder: 'Vositalarni qidirish…',
   useDefaultTools: 'Standart vositalardan foydalanish',

@@ -26,6 +26,7 @@ geographic orientation in right-to-left layouts.
 | `geography` | — | GeoJSON or TopoJSON object. Assign a new object when the data changes. |
 | `field` | `field` | Property key for each region's numeric value. Defaults to `'value'`. |
 | `labelField` | `label-field` | Property key for each region's name. Defaults to `'name'`. |
+| `object` | `object` | Name of the one TopoJSON object to draw, such as `'countries'` when the topology also holds an overlapping `'land'` object. Defaults to `''`, which draws every object. An unknown name shows the empty state. GeoJSON ignores it. |
 | `projection` | `projection` | `LyraChoroplethProjection` is `'equirectangular'` (default) or `'mercator'`. |
 | `palette` | `palette` | `LyraChoroplethPalette` is `'sequential'` (default) or `'diverging'`. |
 | `noData` | — | Optional `LyraChoroplethNoData` overrides for the missing-value fill, outline, and label. |
@@ -38,9 +39,13 @@ geographic orientation in right-to-left layouts.
 
 Set `geography` to a GeoJSON Polygon, MultiPolygon, GeometryCollection, Feature, or
 FeatureCollection, or to a TopoJSON Topology with named polygon or collection objects.
-Use longitude in [−180°, 180°] and latitude in [−90°, 90°]. Each ring needs at least four
-positions, including its repeated first position. TopoJSON supports absolute arcs, transformed
-integer-delta arcs, and reversed arc references. Collections must contain polygonal geometry.
+Use longitude in [−180°, 180°] and latitude in [−90°, 90°]. Projected coordinates, such as a
+TopoJSON topology in meters, are rejected as invalid geometry; convert them to longitude and
+latitude first. Each ring needs at least four positions, including its repeated first position.
+A region that crosses the antimeridian stays contiguous. TopoJSON supports absolute arcs,
+transformed integer-delta arcs, and reversed arc references. Features and collection members with
+null, Point, MultiPoint, LineString, or MultiLineString geometry are skipped; other non-polygon
+types are invalid. Geometry with no drawable area, such as collinear rings, is invalid.
 A region uses its feature ID when present. Missing or repeated IDs receive generated IDs. An
 unnamed region uses its ID as its label. Only finite numeric properties count as data, so
 numeric strings and missing values use the no-data style.
@@ -48,8 +53,10 @@ numeric strings and missing values use the no-data style.
 The decoder accepts up to 1,000 regions, 1,000 entries per collection, 1,000 named TopoJSON
 objects, 50,000 raw positions, 50,000 expanded positions, 10,000 arcs, and 10,000 ring arc
 references. It limits each position to 16 ordinates, collection nesting to 32 levels, array
-traversal to a 100,000-entry budget, and IDs, labels, and supported property keys to 1,024 UTF-16
-code units each. Invalid geometry or an exceeded limit shows an error for the input.
+traversal to a 100,000-entry budget, and supported property keys and TopoJSON object names to
+1,024 UTF-16 code units each. Longer labels are truncated with an ellipsis. A feature whose ID is
+longer is skipped. Skipped features still count toward the region limit. Invalid geometry or an
+exceeded limit shows an error for the input.
 
 The sequential palette spans the observed minimum and maximum, with a midpoint color for a
 constant value. The diverging palette uses a symmetric domain around zero. The legend shows

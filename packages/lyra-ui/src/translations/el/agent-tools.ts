@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Το σχήμα πρέπει να περιγράφει ένα αντικείμενο.',
   schemaPropertiesMustBeFlat: 'Οι ιδιότητες του σχήματος πρέπει να είναι επίπεδο αντικείμενο.',
   valueMustBeSerializable: 'Η τιμή πρέπει να μπορεί να σειριοποιηθεί ως JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Επιλογή εργαλείων',
   searchToolsPlaceholder: 'Αναζήτηση εργαλείων…',
   useDefaultTools: 'Χρήση προεπιλεγμένων εργαλείων',

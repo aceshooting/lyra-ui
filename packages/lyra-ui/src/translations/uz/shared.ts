@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Bekor qilish',
   confirm: 'Tasdiqlash',
   search: 'Qidirish',
-  circularReference: 'Siklik havola',
   items: {
     one: 'element',
     other: 'element',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Graf koʻrinishini yuklab boʻlmadi.',
   graphSourceRecordMissing: 'Bu graf yozuvi mavjud emas.',
   notInCatalog: 'katalogda yoʻq',
+  chartTotal: 'Jami',
   chartLegend: 'Diagrammaning shartli belgilari',
   resetZoom: 'Masshtabni tiklash',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Nusxalab boʻlmadi',
   paginationFirstPage: 'Birinchi sahifa',
   paginationLastPage: 'Oxirgi sahifa',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menyu',
-  emailViewerFrom: 'Kimdan',
-  emailViewerTo: 'Kimga',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Ajratilgan parchaga oʻtildi.',
   anchorJumpedToPage: '{page}-sahifaga oʻtildi.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ziddiyatli',
   gitStatusIgnored: 'Eʼtiborsiz qoldirildi',
   envListValueHidden: 'Qiymat yashirildi',
-  geojsonViewLabel: 'Xarita',
   provenanceEntities: 'Obyektlar',
   flowItemAnnouncement: '{item} ({total} tadan {index})',
   neighborDirectionIn: 'Kiruvchi',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Buning o‘rniga ro‘yxat ko‘rsatilmoqda.',
   largeDataInvalid: '{column} yaroqsiz bo‘lgani uchun ma’lumotlarni ko‘rsatib bo‘lmaydi.',
   largeDataLimit: 'Ma’lumotlar {limit} chegarasidan oshgani uchun ularni ko‘rsatib bo‘lmaydi.',
-  chart3dName: 'Yorliq',
 };
 
 registerLyraLocale('uz', strings);

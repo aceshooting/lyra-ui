@@ -2854,6 +2854,7 @@ export interface LyraComponentTypeMap {
       | 'loading'
       | 'locale'
       | 'noData'
+      | 'object'
       | 'palette'
       | 'projection'
       | 'strings'
@@ -14976,7 +14977,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraTreemapEventMap;
     eventNames:       | 'lr-datum-activate';
-    cssNames: never;
+    cssNames:       | '--lr-treemap-height';
     attributeAliases: {
       'data-table-toggle'?: LyraTreemap['dataTableToggle'];
       'with-data-table'?: LyraTreemap['withDataTable'];

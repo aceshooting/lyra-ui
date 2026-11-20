@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Kopisha i-JSON ebhodini lokunamathisela',
+  circularReference: 'Ireferensi eyindilinga',
   copyDiff: 'Kopisha umehluko',
   diffViewOldLabel: 'Okwangempela',
   diffViewNewLabel: 'Kushintshiwe',

@@ -139,7 +139,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'הסכמה חייבת לתאר אובייקט.',
   schemaPropertiesMustBeFlat: 'מאפייני סכימה חייבים להיות אובייקט שטוח.',
   valueMustBeSerializable: 'הערך חייב להיות ניתן לייצוג כ-JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'בחר כלים',
   searchToolsPlaceholder: 'חפש כלים…',
   useDefaultTools: 'השתמש בכלי ברירת מחדל',

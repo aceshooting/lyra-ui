@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ሰርዝ',
   confirm: 'አረጋግጥ',
   search: 'ፈልግ',
-  circularReference: 'ዑደታዊ ማጣቀሻ',
   items: {
     one: 'ንጥል',
     other: 'ንጥሎች',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'የግራፍ እይታውን መጫን አልተቻለም።',
   graphSourceRecordMissing: 'ይህ የግራፍ መዝገብ አይገኝም።',
   notInCatalog: 'በካታሎጉ ውስጥ የለም',
+  chartTotal: 'ጠቅላላ',
   chartLegend: 'የገበታ ምልክቶች ማብራሪያ',
   resetZoom: 'ማጉላቱን ዳግም አስጀምር',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'መቅዳት አልተሳካም',
   paginationFirstPage: 'የመጀመሪያ ገጽ',
   paginationLastPage: 'የመጨረሻ ገጽ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ሚሊሰከንድ',
   durationSeconds: '{value} ሰከንድ',
   menuLabel: 'ምናሌ',
-  emailViewerFrom: 'ከ',
-  emailViewerTo: 'ለ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ወደ ደመቀው ክፍል ተዘልሏል።',
   anchorJumpedToPage: 'ወደ {page}ኛ ገጽ ተዘልሏል።',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ግጭት ያለበት',
   gitStatusIgnored: 'ተትቷል',
   envListValueHidden: 'ዋጋው ተደብቋል',
-  geojsonViewLabel: 'ካርታ',
   provenanceEntities: 'አካላት',
   flowItemAnnouncement: '{item} (ከ{total} ውስጥ {index}ኛ)',
   neighborDirectionIn: 'ገቢ',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'በምትኩ ዝርዝር እየታየ ነው።',
   largeDataInvalid: '{column} ልክ ስላልሆነ ውሂቡን ማሳየት አይቻልም።',
   largeDataLimit: 'ውሂቡ ከ{limit} ገደብ ስለሚበልጥ ማሳየት አይቻልም።',
-  chart3dName: 'መለያ',
 };
 
 registerLyraLocale('am', strings);

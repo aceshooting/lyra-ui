@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: '取消',
   confirm: '确认',
   search: '搜索',
-  circularReference: '循环引用',
   items: {
     other: '项',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: '无法加载图视图。',
   graphSourceRecordMissing: '此图记录不可用。',
   notInCatalog: '不在目录中',
+  chartTotal: '合计',
   chartLegend: '图表图例',
   resetZoom: '重置缩放',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: '复制失败',
   paginationFirstPage: '第一页',
   paginationLastPage: '最后一页',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}毫秒',
   durationSeconds: '{value}秒',
   menuLabel: '菜单',
-  emailViewerFrom: '发件人',
-  emailViewerTo: '收件人',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: '已跳转到高亮段落。',
   anchorJumpedToPage: '已跳转到第{page}页。',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: '有冲突',
   gitStatusIgnored: '已忽略',
   envListValueHidden: '值已隐藏',
-  geojsonViewLabel: '地图',
   provenanceEntities: '实体',
   flowItemAnnouncement: '{item}（第{index}项，共{total}项）',
   neighborDirectionIn: '入向',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: '已改为显示列表。',
   largeDataInvalid: '无法显示数据，因为 {column} 无效。',
   largeDataLimit: '无法显示数据，因为数据超过了 {limit} 的上限。',
-  chart3dName: '标签',
 };
 
 registerLyraLocale('zh-CN', strings);

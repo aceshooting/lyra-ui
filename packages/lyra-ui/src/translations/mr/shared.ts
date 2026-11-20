@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'रद्द करा',
   confirm: 'पुष्टी करा',
   search: 'शोधा',
-  circularReference: 'चक्रीय संदर्भ',
   items: {
     one: 'घटक',
     other: 'घटक',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'आलेखाचे दृश्य लोड करता आले नाही.',
   graphSourceRecordMissing: 'आलेखाची ही नोंद उपलब्ध नाही.',
   notInCatalog: 'सूचीमध्ये नाही',
+  chartTotal: 'एकूण',
   chartLegend: 'आलेखाची संकेतसूची',
   resetZoom: 'झूम पूर्ववत करा',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'कॉपी करता आली नाही',
   paginationFirstPage: 'पहिले पृष्ठ',
   paginationLastPage: 'शेवटचे पृष्ठ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'मेनू',
-  emailViewerFrom: 'प्रेषक',
-  emailViewerTo: 'प्रति',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'हायलाइट केलेल्या मजकुरावर नेले.',
   anchorJumpedToPage: '{page} व्या पृष्ठावर नेले.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'विसंगती आहे',
   gitStatusIgnored: 'दुर्लक्षित',
   envListValueHidden: 'मूल्य लपवले',
-  geojsonViewLabel: 'नकाशा',
   provenanceEntities: 'घटक',
   flowItemAnnouncement: '{item} (एकूण {total} पैकी {index})',
   neighborDirectionIn: 'आत येणारे',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'त्याऐवजी यादी दाखवली जात आहे.',
   largeDataInvalid: '{column} अवैध असल्यामुळे डेटा दाखवता येत नाही.',
   largeDataLimit: 'डेटा {limit} च्या मर्यादेपेक्षा जास्त असल्यामुळे दाखवता येत नाही.',
-  chart3dName: 'लेबल',
 };
 
 registerLyraLocale('mr', strings);

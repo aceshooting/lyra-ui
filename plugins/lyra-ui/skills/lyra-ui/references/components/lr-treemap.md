@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,7 +35,15 @@ Each `LyraTreemapNode` has an `id`, a `label`, and optional `value` and `childre
 Use unique string IDs throughout the tree and positive finite weights for leaves. Branch
 weights are derived from their children. The table identifies descendants by their full path
 and remains available to assistive technology while visually collapsed. The chart displays up to
-1,000 tiles and table rows and shows a notice when it reaches a data or rendering limit.
+1,000 tiles and table rows, chosen level by level and largest first so every top-level category
+remains, and shows a notice when it reaches a data or rendering limit. A value too small to draw
+stays in the table, with its own notice. A node with an invalid value or no valid children does
+not reserve its ID, so a later valid node can use it. If `valueFormatter` throws, the value uses
+the default formatting.
+
+The plot fills the host's inline size and its coordinates follow the rendered size, so tile
+labels keep their token font size at any width. Set `--lr-treemap-height` to change the plot's
+block size; it defaults to `clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))`.
 
 Tab enters the tile group. Left and Right move among siblings, following the reading direction.
 Down enters the first child and Up returns to the parent. Home and End move to the ends of the
@@ -45,6 +53,8 @@ sibling list. Hover or keyboard focus reveals the tooltip. Escape dismisses it.
 carries `{ id, label, value }` with the numeric weight.
 
 The legend and tiles use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+A nested tile's accessible name and table row include its level and parent path.
+**CSS custom properties:** `--lr-treemap-height`.
 **CSS parts:** `base`, `plot`, `description`, `tile`, `tile-label`, `tooltip`, `legend`,
 `legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`, `empty`, `loading`,
 and `limit`.

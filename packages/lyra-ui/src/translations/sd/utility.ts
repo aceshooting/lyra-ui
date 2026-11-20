@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON ڪلپ بورڊ تي ڪاپي ڪريو',
+  circularReference: 'چڪرائتو حوالو',
   copyDiff: 'فرق ڪاپي ڪريو',
   diffViewOldLabel: 'اصل',
   diffViewNewLabel: 'ترميم ٿيل',

@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Soke',
   confirm: 'Tabbatar',
   search: 'Nema',
-  circularReference: 'Nuni mai dawowa kansa',
   items: {
     one: 'abu',
     other: 'abubuwa',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Ba a iya loda kallon graf ba.',
   graphSourceRecordMissing: 'Ba a samun wannan rikodin graf.',
   notInCatalog: 'ba ya cikin kundin',
+  chartTotal: 'Jimla',
   chartLegend: 'Bayanin alamomin jadawali',
   resetZoom: 'Mayar da girman kallo yadda yake',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'An kasa kwafa',
   paginationFirstPage: 'Shafi na farko',
   paginationLastPage: 'Shafi na ƙarshe',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Jerin zaɓuɓɓuka',
-  emailViewerFrom: 'Daga',
-  emailViewerTo: 'Zuwa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'An je zuwa wurin da aka haskaka.',
   anchorJumpedToPage: 'An je zuwa shafi na {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Yana da saɓani',
   gitStatusIgnored: 'An yi watsi da shi',
   envListValueHidden: 'An ɓoye ƙima',
-  geojsonViewLabel: 'Taswira',
   provenanceEntities: 'Abubuwa',
   flowItemAnnouncement: '{item} ({index} cikin {total})',
   neighborDirectionIn: 'Mai shigowa',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Ana nuna jeri maimakon haka.',
   largeDataInvalid: 'Ba za a iya nuna bayanan ba saboda {column} ba shi da inganci.',
   largeDataLimit: 'Ba za a iya nuna bayanan ba saboda sun wuce iyakar {limit}.',
-  chart3dName: 'Alama',
 };
 
 registerLyraLocale('ha', strings);

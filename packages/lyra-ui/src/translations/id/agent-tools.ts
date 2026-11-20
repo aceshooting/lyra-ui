@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Skema harus mendeskripsikan sebuah objek.',
   schemaPropertiesMustBeFlat: 'Properti skema harus berupa objek datar.',
   valueMustBeSerializable: 'Nilai harus dapat diserialisasi sebagai JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Pilih alat',
   searchToolsPlaceholder: 'Cari alat…',
   useDefaultTools: 'Gunakan alat default',

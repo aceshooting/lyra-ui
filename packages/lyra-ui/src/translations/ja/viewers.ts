@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: '連絡先',
   emailViewerLabel: 'メールビューアー',
   emailViewerMissingParser: 'このビューアーでこのメッセージを解析するには、オプションの "postal-mime" パッケージをインストールしてください。',
+  emailViewerFrom: '差出人',
+  emailViewerTo: '宛先',
   emailViewerSubject: '件名',
   emailViewerDate: '日付',
   emailViewerAttachments: '添付ファイル',
@@ -122,6 +124,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML をクリップボードにコピー',
   xmlViewerCopyNode: '{name} をコピー',
   xmlViewerToggleNode: '{name} の表示を切り替える',
+  geojsonViewLabel: '地図',
   geojsonViewInvalid: 'このファイルは有効な GeoJSON ではありません。',
   geojsonViewFeatureCount: {
     other: 'フィーチャー {count} 件',

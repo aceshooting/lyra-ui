@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSONను క్లిప్‌బోర్డ్‌కు కాపీ చేయండి',
+  circularReference: 'చక్రీయ సూచన',
   copyDiff: 'మార్పుల తేడాను కాపీ చేయండి',
   diffViewOldLabel: 'మునుపటిది',
   diffViewNewLabel: 'మార్చినది',

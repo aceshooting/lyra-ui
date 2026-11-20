@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Mégse',
   confirm: 'Megerősítés',
   search: 'Keresés',
-  circularReference: 'Körkörös hivatkozás',
   items: {
     one: 'elem',
     other: 'elem',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'A gráfnézet betöltése nem sikerült.',
   graphSourceRecordMissing: 'Ez a gráfrekord nem érhető el.',
   notInCatalog: 'nincs a katalógusban',
+  chartTotal: 'Összesen',
   chartLegend: 'A diagram jelmagyarázata',
   resetZoom: 'Nagyítás visszaállítása',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'A másolás sikertelen',
   paginationFirstPage: 'Első oldal',
   paginationLastPage: 'Utolsó oldal',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} mp',
   menuLabel: 'Menü',
-  emailViewerFrom: 'Feladó',
-  emailViewerTo: 'Címzett',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Ugrás a kiemelt részre.',
   anchorJumpedToPage: 'Ugrás az oldalra: {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Ütköző',
   gitStatusIgnored: 'Figyelmen kívül hagyva',
   envListValueHidden: 'Rejtett érték',
-  geojsonViewLabel: 'Térkép',
   provenanceEntities: 'Entitások',
   flowItemAnnouncement: '{item} ({index}/{total})',
   neighborDirectionIn: 'Bejövő',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Helyette egy lista látható.',
   largeDataInvalid: 'Az adatok nem jeleníthetők meg, mert a(z) {column} érvénytelen.',
   largeDataLimit: 'Az adatok nem jeleníthetők meg, mert meghaladják a(z) {limit} korlátot.',
-  chart3dName: 'Címke',
 };
 
 registerLyraLocale('hu', strings);

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON másolása a vágólapra',
+  circularReference: 'Körkörös hivatkozás',
   copyDiff: 'Eltérések másolása',
   diffViewOldLabel: 'Eredeti',
   diffViewNewLabel: 'Módosított',

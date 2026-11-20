@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schema suppose describe one object.',
   schemaPropertiesMustBeFlat: 'Schema properties suppose dey for one flat object.',
   valueMustBeSerializable: 'You suppose fit turn di value into valid JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Choose tools',
   searchToolsPlaceholder: 'Search for tools…',
   useDefaultTools: 'Use di default tools',

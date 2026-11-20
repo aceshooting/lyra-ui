@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontakt',
   emailViewerLabel: 'E-kirjade vaatur',
   emailViewerMissingParser: 'Selle sõnumi parsimiseks vajab see vaatur valikulist paketti „postal-mime”.',
+  emailViewerFrom: 'Saatja',
+  emailViewerTo: 'Saaja',
   emailViewerSubject: 'Teema',
   emailViewerDate: 'Kuupäev',
   emailViewerAttachments: 'Manused',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopeeri XML lõikelauale',
   xmlViewerCopyNode: 'Kopeeri {name}',
   xmlViewerToggleNode: 'Lülita sisse/välja: {name}',
+  geojsonViewLabel: 'Kaart',
   geojsonViewInvalid: 'See fail pole kehtiv GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objekt',

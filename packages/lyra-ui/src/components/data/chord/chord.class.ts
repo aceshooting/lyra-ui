@@ -13,8 +13,8 @@ import { layoutChord, type ChordArc, type ChordLayoutResult, type ChordRibbon, t
 import { styles } from './chord.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_queryBuilderValueLabel } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableSource, LYRA_DEFAULT_chartTableTarget, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_chartTotalsCaption, LYRA_DEFAULT_chartValuesTooSmall, LYRA_DEFAULT_chordPairLabel } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -66,7 +66,9 @@ function ribbonMarkId(source: string, target: string): string {
 /**
  * A peer-free SVG chord chart for symmetric co-occurrence data. The arc of an entity represents
  * its total weight. Each positive unordered pair contributes one ribbon, including self-pairs.
- * Hovering or focusing an entity emphasizes its ribbons.
+ * Hovering or focusing an entity emphasizes its ribbons; hovering or focusing a ribbon emphasizes that
+ * ribbon. Either way, the other ribbons are muted. Mirrored weights may differ by a relative
+ * tolerance of 1e-9 to absorb floating-point rounding.
  *
  * @customElement lr-chord
  * @renderController SvgChartInteraction
@@ -102,12 +104,17 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
     chartData: LYRA_DEFAULT_chartData,
     chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLegend: LYRA_DEFAULT_chartLegend,
+    chartTableName: LYRA_DEFAULT_chartTableName,
+    chartTableSource: LYRA_DEFAULT_chartTableSource,
+    chartTableTarget: LYRA_DEFAULT_chartTableTarget,
+    chartTableValue: LYRA_DEFAULT_chartTableValue,
+    chartTotal: LYRA_DEFAULT_chartTotal,
+    chartTotalsCaption: LYRA_DEFAULT_chartTotalsCaption,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
-    emailViewerFrom: LYRA_DEFAULT_emailViewerFrom,
-    emailViewerTo: LYRA_DEFAULT_emailViewerTo,
+    chartValuesTooSmall: LYRA_DEFAULT_chartValuesTooSmall,
+    chordPairLabel: LYRA_DEFAULT_chordPairLabel,
     loading: LYRA_DEFAULT_loading,
     noData: LYRA_DEFAULT_noData,
-    queryBuilderValueLabel: LYRA_DEFAULT_queryBuilderValueLabel,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -121,7 +128,10 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
   /** Entities in matrix order, up to 32, with unique IDs. Assign a new array to update them. */
   @property({ attribute: false }) entities: readonly LyraChordEntity[] = [];
 
-  /** Square symmetric matrix of nonnegative finite weights. Assign a new array to update it. */
+  /**
+   * Square symmetric matrix of nonnegative finite weights. Mirrored cells may differ by a relative
+   * tolerance of 1e-9; the cell above the diagonal is used. Assign a new array to update it.
+   */
   @property({ attribute: false }) matrix: readonly (readonly number[])[] = [];
 
   /** Accessible chart name. A host `aria-label` takes precedence. */
@@ -232,20 +242,24 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
     const locale = this.effectiveLocale;
     const format = (value: number) => this.valueFormatter?.(value) ?? formatChartValue(value, locale);
     const labelValue = (label: string, value: string) => this.localize('chartValueLabel', undefined, { label, value });
-    const active = arcs.find(arc => arcMarkId(arc.id) === this.chart.detailId)?.id;
+    const detailId = this.chart.detailId;
+    const active = arcs.find(arc => arcMarkId(arc.id) === detailId)?.id;
+    const activeRibbon = ribbons.some(({ source, target }) => ribbonMarkId(source, target) === detailId)
+      ? detailId : undefined;
     const labelBoxes: LabelBox[] = [];
     const pairs = ribbons.map(ribbon => {
       const { source, target, value } = ribbon;
       const sourceLabel = arcs[view!.byId.get(source)!]!.label;
       const targetLabel = arcs[view!.byId.get(target)!]!.label;
       const valueText = format(value);
-      const highlighted = active === source || active === target;
+      const id = ribbonMarkId(source, target);
+      const highlighted = activeRibbon ? activeRibbon === id : active === source || active === target;
       return {
         mark: {
-          id: ribbonMarkId(source, target),
+          id,
           part: 'ribbon',
-          label: labelValue(`${sourceLabel} / ${targetLabel}`, valueText),
-          muted: active !== undefined && !highlighted,
+          label: labelValue(this.localize('chordPairLabel', undefined, { source: sourceLabel, target: targetLabel }), valueText),
+          muted: (active ?? activeRibbon) !== undefined && !highlighted,
           shape: this.ribbonShape(ribbon, rtl, highlighted),
         },
         row: [sourceLabel, targetLabel, valueText],
@@ -259,8 +273,9 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
     }));
     const status = view?.layout.status;
     const collectionTruncated = publicCollectionTruncation(this, 'entities') || publicCollectionTruncation(this, 'matrix');
+    const name = hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('chart');
     return this.chart.render({
-      name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('chart'),
+      name,
       description: normalizeLabel(this.description) ?? '',
       status: this.loading
         ? { part: 'loading', text: this.localize('loading') }
@@ -272,7 +287,7 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
         ? { part: 'empty', text: this.localize('noData') }
         : undefined,
       notice: view?.layout.truncated && status === 'ready' && !collectionTruncated
-        ? this.localize('chartInputLimit')
+        ? this.localize('chartValuesTooSmall')
         : undefined,
       viewBox: `-${BOX} -${BOX} ${BOX * 2} ${BOX * 2}`,
       initialId: entities[0]?.id,
@@ -280,8 +295,13 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
       legend: arcs.map(({ label, index }) => ({ label, color: svgChartColor(index) })),
       legendLabel: this.localize('chartLegend'),
       tableLabel: this.localize('chartData'),
-      headers: [this.localize('emailViewerFrom'), this.localize('emailViewerTo'), this.localize('queryBuilderValueLabel')],
+      headers: [this.localize('chartTableSource'), this.localize('chartTableTarget'), this.localize('chartTableValue')],
       rows: pairs.map(pair => pair.row),
+      totals: {
+        caption: this.localize('chartTotalsCaption', undefined, { name }),
+        headers: [this.localize('chartTableName'), this.localize('chartTotal')],
+        rows: (view?.layout.totals ?? []).map(entity => [entity.label, format(entity.value)]),
+      },
       withDataTable: this.withDataTable,
       dataTableToggle: this.dataTableToggle,
       rtl,

@@ -138,7 +138,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Dapat naglalarawan ng object ang schema.',
   schemaPropertiesMustBeFlat: 'Dapat flat na object ang mga property ng schema.',
   valueMustBeSerializable: 'Dapat JSON-serializable ang value.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Pumili ng mga tool',
   searchToolsPlaceholder: 'Maghanap ng mga tool…',
   useDefaultTools: 'Gamitin ang mga default na tool',

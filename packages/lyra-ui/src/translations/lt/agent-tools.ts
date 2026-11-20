@@ -140,7 +140,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Schema turi aprašyti objektą.',
   schemaPropertiesMustBeFlat: 'Schemos savybės turi būti plokščias objektas.',
   valueMustBeSerializable: 'Reikšmė turi būti serializuojama į JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Pasirinkti įrankius',
   searchToolsPlaceholder: 'Ieškoti įrankių…',
   useDefaultTools: 'Naudoti numatytuosius įrankius',

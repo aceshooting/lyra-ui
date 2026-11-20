@@ -43,7 +43,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'ยกเลิก',
   confirm: 'ยืนยัน',
   search: 'ค้นหา',
-  circularReference: 'การอ้างอิงแบบวนซ้ำ',
   items: {
     other: 'รายการ',
   },
@@ -74,6 +73,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'ไม่สามารถโหลดมุมมองกราฟได้',
   graphSourceRecordMissing: 'ระเบียนกราฟนี้ไม่พร้อมใช้งาน',
   notInCatalog: 'ไม่มีในแค็ตตาล็อก',
+  chartTotal: 'ทั้งหมด',
   chartLegend: 'คำอธิบายสัญลักษณ์แผนภูมิ',
   resetZoom: 'รีเซ็ตการซูม',
   showMoreCollapsed: '+{count}',
@@ -121,11 +121,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'คัดลอกไม่สำเร็จ',
   paginationFirstPage: 'หน้าแรก',
   paginationLastPage: 'หน้าสุดท้าย',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} มิลลิวินาที',
   durationSeconds: '{value} วินาที',
   menuLabel: 'เมนู',
-  emailViewerFrom: 'จาก',
-  emailViewerTo: 'ถึง',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ไปยังข้อความที่ไฮไลต์แล้ว',
   anchorJumpedToPage: 'ไปยังหน้า {page} แล้ว',
@@ -142,7 +141,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'ขัดแย้ง',
   gitStatusIgnored: 'ละเว้นแล้ว',
   envListValueHidden: 'ซ่อนค่าแล้ว',
-  geojsonViewLabel: 'แผนที่',
   provenanceEntities: 'เอนทิตี',
   flowItemAnnouncement: '{item} ({index} จาก {total})',
   neighborDirectionIn: 'ขาเข้า',
@@ -180,7 +178,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'กำลังแสดงรายการแทน',
   largeDataInvalid: 'ไม่สามารถแสดงข้อมูลได้เนื่องจาก {column} ไม่ถูกต้อง',
   largeDataLimit: 'ไม่สามารถแสดงข้อมูลได้เนื่องจากเกินขีดจำกัด {limit}',
-  chart3dName: 'ป้ายกำกับ',
 };
 
 registerLyraLocale('th', strings);

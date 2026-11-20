@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON ወደ ቅንጥብ ሰሌዳ ቅዳ',
+  circularReference: 'ዑደታዊ ማጣቀሻ',
   copyDiff: 'ልዩነቱን ቅዳ',
   diffViewOldLabel: 'ዋናው',
   diffViewNewLabel: 'ተቀይሯል',

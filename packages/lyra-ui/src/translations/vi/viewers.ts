@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'liên hệ',
   emailViewerLabel: 'Trình xem email',
   emailViewerMissingParser: 'Cần cài gói tùy chọn "postal-mime" để phân tích thư này trong trình xem.',
+  emailViewerFrom: 'Người gửi',
+  emailViewerTo: 'Người nhận',
   emailViewerSubject: 'Chủ đề',
   emailViewerDate: 'Ngày',
   emailViewerAttachments: 'Tệp đính kèm',
@@ -122,6 +124,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Sao chép XML vào bộ nhớ tạm',
   xmlViewerCopyNode: 'Sao chép {name}',
   xmlViewerToggleNode: 'Bật/tắt {name}',
+  geojsonViewLabel: 'Bản đồ',
   geojsonViewInvalid: 'Tệp này không phải GeoJSON hợp lệ.',
   geojsonViewFeatureCount: {
     other: '{count} đối tượng',

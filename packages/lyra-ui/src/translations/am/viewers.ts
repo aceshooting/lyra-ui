@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'እውቂያ',
   emailViewerLabel: 'የኢሜይል መመልከቻ',
   emailViewerMissingParser: 'ይህን መልዕክት ለመተንተን መመልከቻው አማራጭ "postal-mime" ጥቅል እንዲጫን ይፈልጋል።',
+  emailViewerFrom: 'ከ',
+  emailViewerTo: 'ለ',
   emailViewerSubject: 'ርዕስ',
   emailViewerDate: 'ቀን',
   emailViewerAttachments: 'አባሪዎች',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XMLን ወደ ቅንጥብ ሰሌዳ ቅዳ',
   xmlViewerCopyNode: '{name}ን ቅዳ',
   xmlViewerToggleNode: '{name}ን ቀያይር',
+  geojsonViewLabel: 'ካርታ',
   geojsonViewInvalid: 'ይህ ፋይል ትክክለኛ GeoJSON አይደለም።',
   geojsonViewFeatureCount: {
     one: '{count} ባህሪ',

@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'stik',
   emailViewerLabel: 'Pregledovalnik e-pošte',
   emailViewerMissingParser: 'Ta pregledovalnik za razčlenitev tega sporočila potrebuje nameščen izbirni paket »postal-mime«.',
+  emailViewerFrom: 'Od',
+  emailViewerTo: 'Za',
   emailViewerSubject: 'Zadeva',
   emailViewerDate: 'Datum',
   emailViewerAttachments: 'Priloge',
@@ -128,6 +130,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopiraj XML v odložišče',
   xmlViewerCopyNode: 'Kopiraj {name}',
   xmlViewerToggleNode: 'Preklopi {name}',
+  geojsonViewLabel: 'Zemljevid',
   geojsonViewInvalid: 'Ta datoteka ni veljaven GeoJSON.',
   geojsonViewFeatureCount: {
     few: '{count} geoobjekti',

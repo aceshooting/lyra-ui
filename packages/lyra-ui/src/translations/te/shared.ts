@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'రద్దు చేయండి',
   confirm: 'నిర్ధారించండి',
   search: 'వెతకండి',
-  circularReference: 'చక్రీయ సూచన',
   items: {
     one: 'అంశం',
     other: 'అంశాలు',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'గ్రాఫ్ వీక్షణను లోడ్ చేయలేకపోయాము.',
   graphSourceRecordMissing: 'ఈ గ్రాఫ్ రికార్డు అందుబాటులో లేదు.',
   notInCatalog: 'జాబితాలో లేదు',
+  chartTotal: 'మొత్తం',
   chartLegend: 'చార్ట్ సూచిక',
   resetZoom: 'జూమ్‌ను మునుపటి స్థితికి మార్చండి',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'కాపీ చేయలేకపోయాం',
   paginationFirstPage: 'మొదటి పేజీ',
   paginationLastPage: 'చివరి పేజీ',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'మెను',
-  emailViewerFrom: 'పంపినవారు',
-  emailViewerTo: 'గ్రహీత',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'హైలైట్ చేసిన భాగానికి వెళ్లింది.',
   anchorJumpedToPage: '{page}వ పేజీకి వెళ్లింది.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'విరుద్ధత ఉంది',
   gitStatusIgnored: 'విస్మరించారు',
   envListValueHidden: 'విలువ దాచబడింది',
-  geojsonViewLabel: 'మ్యాప్',
   provenanceEntities: 'ఎంటిటీలు',
   flowItemAnnouncement: '{item} ({total}లో {index})',
   neighborDirectionIn: 'లోపలికి వచ్చే',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'బదులుగా జాబితా చూపబడుతోంది.',
   largeDataInvalid: '{column} చెల్లనిది కావడంతో డేటాను ప్రదర్శించలేము.',
   largeDataLimit: 'డేటా {limit} పరిమితిని మించినందున దానిని ప్రదర్శించలేము.',
-  chart3dName: 'లేబుల్',
 };
 
 registerLyraLocale('te', strings);

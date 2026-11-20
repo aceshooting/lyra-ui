@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'منسوخ ڪريو',
   confirm: 'تصديق ڪريو',
   search: 'ڳوليو',
-  circularReference: 'چڪرائتو حوالو',
   items: {
     one: 'شيءِ',
     other: 'شيون',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'گراف جو ڏيک لوڊ نه ٿي سگهيو.',
   graphSourceRecordMissing: 'گراف جو هي رڪارڊ دستياب ناهي.',
   notInCatalog: 'فهرست ۾ موجود ناهي',
+  chartTotal: 'ڪل',
   chartLegend: 'چارٽ جي نشانين جي وضاحت',
   resetZoom: 'زوم بحال ڪريو',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'ڪاپي ناڪام ٿي',
   paginationFirstPage: 'پهريون صفحو',
   paginationLastPage: 'آخري صفحو',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'مينيو',
-  emailViewerFrom: 'کان',
-  emailViewerTo: 'ڏانهن',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'نمايان ڪيل عبارت ڏانهن پهچي ويا.',
   anchorJumpedToPage: 'صفحي {page} ڏانهن پهچي ويا.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'تڪراري',
   gitStatusIgnored: 'نظرانداز',
   envListValueHidden: 'قدر لڪايل',
-  geojsonViewLabel: 'نقشو',
   provenanceEntities: 'اکايون',
   flowItemAnnouncement: '{item} ({total} مان {index})',
   neighborDirectionIn: 'ايندڙ',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'ان جي بدران هڪ فهرست ڏيکاري پئي وڃي.',
   largeDataInvalid: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته {column} غلط آهي.',
   largeDataLimit: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته اها {limit} جي حد کان وڌيڪ آهي.',
-  chart3dName: 'ليبل',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

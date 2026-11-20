@@ -63,6 +63,7 @@ export const LYRA_DEFAULT_ebookViewerShowingChapter: LyraMessage = 'Showing {cha
 export const LYRA_DEFAULT_emailViewerAttachments: LyraMessage = 'Attachments';
 export const LYRA_DEFAULT_emailViewerDate: LyraMessage = 'Date';
 export const LYRA_DEFAULT_emailViewerEmptyBody: LyraMessage = 'This message has no displayable content.';
+export const LYRA_DEFAULT_emailViewerFrom: LyraMessage = 'From';
 export const LYRA_DEFAULT_emailViewerGroupAddress: LyraMessage = '{name}: {members}';
 export const LYRA_DEFAULT_emailViewerLabel: LyraMessage = 'Email viewer';
 export const LYRA_DEFAULT_emailViewerMissingParser: LyraMessage = 'This viewer needs the optional "postal-mime" package installed to parse this message.';
@@ -71,12 +72,14 @@ export const LYRA_DEFAULT_emailViewerOpenAttachment: LyraMessage = 'Open {filena
 export const LYRA_DEFAULT_emailViewerOpenAttachmentSize: LyraMessage = 'Open {filename} {size}';
 export const LYRA_DEFAULT_emailViewerQuotedText: LyraMessage = 'Quoted text';
 export const LYRA_DEFAULT_emailViewerSubject: LyraMessage = 'Subject';
+export const LYRA_DEFAULT_emailViewerTo: LyraMessage = 'To';
 export const LYRA_DEFAULT_emailViewerUnnamedAttachment: LyraMessage = 'Unnamed attachment';
 export const LYRA_DEFAULT_geojsonViewFeatureCount: LyraMessage = {
     one: '{count} feature',
     other: '{count} features',
   };
 export const LYRA_DEFAULT_geojsonViewInvalid: LyraMessage = 'This file is not valid GeoJSON.';
+export const LYRA_DEFAULT_geojsonViewLabel: LyraMessage = 'Map';
 export const LYRA_DEFAULT_geojsonViewMissingMapLibrary: LyraMessage = 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.';
 export const LYRA_DEFAULT_highlightLayerLabel: LyraMessage = 'Highlights';
 export const LYRA_DEFAULT_htmlViewerLabel: LyraMessage = 'HTML document';

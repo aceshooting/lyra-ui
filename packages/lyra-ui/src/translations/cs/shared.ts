@@ -46,7 +46,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Zrušit',
   confirm: 'Potvrdit',
   search: 'Hledat',
-  circularReference: 'Cyklický odkaz',
   items: {
     few: 'položky',
     many: 'položky',
@@ -92,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Zobrazení grafu se nepodařilo načíst.',
   graphSourceRecordMissing: 'Tento záznam grafu není k dispozici.',
   notInCatalog: 'není v katalogu',
+  chartTotal: 'Celkem',
   chartLegend: 'Legenda grafu',
   resetZoom: 'Obnovit přiblížení',
   showMoreCollapsed: '+{count}',
@@ -139,11 +139,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopírování se nezdařilo',
   paginationFirstPage: 'První stránka',
   paginationLastPage: 'Poslední stránka',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Nabídka',
-  emailViewerFrom: 'Od',
-  emailViewerTo: 'Komu',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Přechod na zvýrazněnou pasáž.',
   anchorJumpedToPage: 'Přechod na stránku {page}.',
@@ -160,7 +159,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'V konfliktu',
   gitStatusIgnored: 'Ignorováno',
   envListValueHidden: 'Hodnota skryta',
-  geojsonViewLabel: 'Mapa',
   provenanceEntities: 'Entity',
   flowItemAnnouncement: '{item} ({index} z {total})',
   neighborDirectionIn: 'Příchozí',
@@ -204,7 +202,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Místo toho se zobrazuje seznam.',
   largeDataInvalid: 'Data nelze zobrazit, protože {column} je neplatné.',
   largeDataLimit: 'Data nelze zobrazit, protože překračují limit {limit}.',
-  chart3dName: 'Popisek',
 };
 
 registerLyraLocale('cs', strings);

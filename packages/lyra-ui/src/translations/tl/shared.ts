@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kanselahin',
   confirm: 'Kumpirmahin',
   search: 'Maghanap',
-  circularReference: 'Pabilog na sanggunian',
   items: {
     one: 'bagay',
     other: 'mga bagay',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Hindi ma-load ang view ng graph.',
   graphSourceRecordMissing: 'Hindi available ang rekord ng graph na ito.',
   notInCatalog: 'wala sa katalogo',
+  chartTotal: 'Kabuuan',
   chartLegend: 'Legend ng tsart',
   resetZoom: 'I-reset ang laki',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Hindi nakopya',
   paginationFirstPage: 'Unang pahina',
   paginationLastPage: 'Huling pahina',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Mula kay',
-  emailViewerTo: 'Para kay',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Pumunta sa naka-highlight na bahagi.',
   anchorJumpedToPage: 'Pumunta sa pahina {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'May salungatan',
   gitStatusIgnored: 'Binalewala',
   envListValueHidden: 'Nakatago ang value',
-  geojsonViewLabel: 'Mapa',
   provenanceEntities: 'Mga entity',
   flowItemAnnouncement: '{item} ({index} sa {total})',
   neighborDirectionIn: 'Papasok',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Ipinapakita ang isang listahan bilang kapalit.',
   largeDataInvalid: 'Hindi maipapakita ang datos dahil di-wasto ang {column}.',
   largeDataLimit: 'Hindi maipapakita ang datos dahil lumalampas ito sa limitasyong {limit}.',
-  chart3dName: 'Label',
 };
 
 registerLyraLocale('tl', strings);

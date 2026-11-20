@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: '聯絡人',
   emailViewerLabel: '郵件檢視器',
   emailViewerMissingParser: '此檢視器需要安裝可選的 "postal-mime" 套件才能解析此郵件。',
+  emailViewerFrom: '發件人',
+  emailViewerTo: '收件人',
   emailViewerSubject: '主題',
   emailViewerDate: '日期',
   emailViewerAttachments: '附件',
@@ -122,6 +124,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: '將 XML 複製到剪貼簿',
   xmlViewerCopyNode: '複製{name}',
   xmlViewerToggleNode: '切換{name}',
+  geojsonViewLabel: '地圖',
   geojsonViewInvalid: '此檔案不是有效的 GeoJSON。',
   geojsonViewFeatureCount: {
     other: '{count}個要素',

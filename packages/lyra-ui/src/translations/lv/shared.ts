@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Atcelt',
   confirm: 'Apstiprināt',
   search: 'Meklēt',
-  circularReference: 'Cikliska atsauce',
   items: {
     one: 'vienums',
     other: 'vienumi',
@@ -86,6 +85,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Neizdevās ielādēt grafa skatu.',
   graphSourceRecordMissing: 'Šis grafa ieraksts nav pieejams.',
   notInCatalog: 'nav katalogā',
+  chartTotal: 'Kopā',
   chartLegend: 'Diagrammas apzīmējumi',
   resetZoom: 'Atiestatīt tālummaiņu',
   showMoreCollapsed: '+{count}',
@@ -133,11 +133,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Neizdevās nokopēt',
   paginationFirstPage: 'Pirmā lapa',
   paginationLastPage: 'Pēdējā lapa',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Izvēlne',
-  emailViewerFrom: 'No',
-  emailViewerTo: 'Kam',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Pāriets uz iezīmēto fragmentu.',
   anchorJumpedToPage: 'Pāriets uz {page}. lapu.',
@@ -154,7 +153,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Konfliktā',
   gitStatusIgnored: 'Ignorēts',
   envListValueHidden: 'Vērtība paslēpta',
-  geojsonViewLabel: 'Karte',
   provenanceEntities: 'Entītijas',
   flowItemAnnouncement: '{item} ({index} no {total})',
   neighborDirectionIn: 'Ienākošās',
@@ -196,7 +194,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Tā vietā tiek rādīts saraksts.',
   largeDataInvalid: 'Datus nevar attēlot, jo {column} nav derīgs.',
   largeDataLimit: 'Datus nevar attēlot, jo tie pārsniedz ierobežojumu {limit}.',
-  chart3dName: 'Etiķete',
 };
 
 registerLyraLocale('lv', strings);

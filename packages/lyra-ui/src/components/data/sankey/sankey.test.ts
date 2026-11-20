@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraSankey, LyraSankeyLink, LyraSankeyNode } from './sankey.class.js';
@@ -60,7 +61,7 @@ describe('<lr-sankey>', () => {
     expect(mark(el, 'node', 'Trial').getAttribute('aria-label')).to.include('100 people');
     expect(mark(el, 'link', 'Direct trials').getAttribute('aria-label')).to.include('60 people');
     expect(el.shadowRoot!.querySelector('[part~="data-table-toggle"]') === null).to.equal(true);
-    const rows = [...el.shadowRoot!.querySelectorAll('tbody tr')];
+    const rows = [...el.shadowRoot!.querySelectorAll('#chart-data tbody tr')];
     expect(rows.length).to.equal(3);
     expect(rows.map((row) => row.textContent?.replace(/\s+/g, ' ').trim()).join(' '))
       .to.include('Direct visits').and.include('Trial').and.include('60 people');
@@ -77,7 +78,7 @@ describe('<lr-sankey>', () => {
     `);
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="data-table-toggle"]')!;
     const table = el.shadowRoot!.querySelector('table')!;
-    expect(button.getAttribute('aria-controls')).to.equal(table.id);
+    expect(button.getAttribute('aria-controls')).to.equal('chart-data chart-data-totals');
     expect(button.getAttribute('aria-expanded')).to.equal('false');
 
     await focusByKeyboard(button);
@@ -177,7 +178,7 @@ describe('<lr-sankey>', () => {
     expect(el.shadowRoot!.activeElement === nodes[1]).to.equal(true);
   });
 
-  it('ignores invalid links and replaces a cyclic graph with a localized status', async () => {
+  it('ignores invalid links and replaces a cyclic graph with a status naming its nodes', async () => {
     const el = await fixture<LyraSankey>(html`
       <lr-sankey
         .nodes=${NODES}
@@ -187,7 +188,6 @@ describe('<lr-sankey>', () => {
           { source: 'direct', target: 'paid', value: Infinity },
           { source: 'referral', target: 'trial', value: 0 },
         ]}
-        .strings=${{ circularReference: 'Cycle found in this flow' }}
       ></lr-sankey>
     `);
 
@@ -195,12 +195,61 @@ describe('<lr-sankey>', () => {
     el.links = [...LINKS, { source: 'paid', target: 'direct', value: 1 }];
     await el.updateComplete;
     expect(marks(el, 'link').length).to.equal(0);
-    expect(partText(el, 'error')).to.equal('Cycle found in this flow');
+    expect(partText(el, 'error'))
+      .to.equal('The links form a cycle through Direct visits, Trial, and Paid, so the flows cannot be drawn.');
 
+    expectLocaleFallback('de', [
+      'chart', 'chartData', 'chartLegend', 'chartTableName', 'chartTableSource', 'chartTableTarget',
+      'chartTableValue', 'chartTotal', 'chartTotalsCaption', 'chartInputLimit',
+    ]);
+    el.lang = 'de';
+    el.strings = { sankeyCycle: 'Kreislauf: {nodes}' };
+    await el.updateComplete;
+    const list = new Intl.ListFormat('de', { type: 'conjunction' }).format(['Direct visits', 'Trial', 'Paid']);
+    expect(partText(el, 'error')).to.equal(`Kreislauf: ${list}`);
+
+    el.lang = '';
     el.links = LINKS;
     await el.updateComplete;
     expect(partText(el, 'error')).to.equal('');
     expect(marks(el, 'link').length).to.equal(3);
+  });
+
+  it('lists every node total, including isolated nodes, beside the flow table', async () => {
+    const el = await fixture<LyraSankey>(html`
+      <lr-sankey label="Trial conversions" .nodes=${[...NODES, { id: 'dormant', label: 'Dormant' }]} .links=${LINKS}
+        .valueFormatter=${formatValue}></lr-sankey>
+    `);
+    const texts = (cells: Iterable<Element>) => [...cells].map((cell) => cell.textContent?.trim() ?? '');
+    const flows = el.shadowRoot!.getElementById('chart-data')!;
+    expect(texts(flows.querySelectorAll('thead th'))).to.deep.equal(['Source', 'Target', 'Name', 'Value']);
+    const totals = el.shadowRoot!.getElementById('chart-data-totals')!;
+    expect(totals.querySelector('caption')?.textContent?.trim()).to.equal('Totals for Trial conversions');
+    expect(texts(totals.querySelectorAll('thead th'))).to.deep.equal(['Name', 'Total']);
+    expect([...totals.querySelectorAll('tbody tr')].map((row) => texts(row.children).join('|')).sort()).to.deep.equal([
+      'Direct visits|60 people', 'Dormant|0 people', 'Paid|100 people', 'Referrals|40 people', 'Trial|100 people',
+    ]);
+  });
+
+  it('keeps first- and last-stage labels against the bars they describe in RTL', async () => {
+    const el = await fixture<LyraSankey>(html`
+      <lr-sankey dir="rtl" style="inline-size: 480px"
+        .nodes=${[{ id: 'in', label: 'In' }, { id: 'mid', label: 'Mid' }, { id: 'out', label: 'Out' }]}
+        .links=${[{ source: 'in', target: 'mid', value: 5 }, { source: 'mid', target: 'out', value: 5 }]}
+      ></lr-sankey>
+    `);
+    const gaps = ['In', 'Out'].map((name) => {
+      const node = mark(el, 'node', name);
+      const bar = node.querySelector('rect')!.getBoundingClientRect();
+      const label = node.querySelector('[part="node-label"]')!;
+      const box = label.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      const gap = box.left >= bar.right ? text.left - bar.right : bar.left - text.right;
+      return { name, hugs: gap >= 0 && gap <= (box.width - text.width) / 2 };
+    });
+    expect(gaps).to.deep.equal([{ name: 'In', hugs: true }, { name: 'Out', hugs: true }]);
   });
 
   it('takes a detached snapshot of caller records and restores a tab stop when a link disappears', async () => {
@@ -234,6 +283,15 @@ describe('<lr-sankey>', () => {
       ></lr-sankey>
     `);
     expect(marks(el, 'node').length).to.equal(4);
+    expect(marks(el, 'link').length).to.equal(3);
+    expect(partText(el, 'limit')).to.equal('Only part of this graph is shown');
+
+    el.nodes = NODES;
+    el.links = LINKS;
+    await el.updateComplete;
+    expect(partText(el, 'limit')).to.equal('');
+    el.links = [...LINKS, { ...LINKS[0]!, value: 5 }];
+    await el.updateComplete;
     expect(marks(el, 'link').length).to.equal(3);
     expect(partText(el, 'limit')).to.equal('Only part of this graph is shown');
   });

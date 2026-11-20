@@ -142,7 +142,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'يجب أن يصف المخطط كائنًا.',
   schemaPropertiesMustBeFlat: 'يجب أن تكون خصائص المخطط كائنًا مسطّحًا.',
   valueMustBeSerializable: 'يجب أن تكون القيمة قابلة للتسلسل بصيغة JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'تحديد الأدوات',
   searchToolsPlaceholder: 'ابحث في الأدوات…',
   useDefaultTools: 'استخدام الأدوات الافتراضية',

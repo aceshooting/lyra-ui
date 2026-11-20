@@ -50,8 +50,15 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
 
-  [part='node-label']:where([data-end]) {
-    text-align: end;
+  /* Node label boxes are placed on a physical side of their bar in SVG coordinates. */
+  [part='node-label']:where([data-align='left']) {
+    /* policy-allow(physical-css): the label hugs the bar to its physical left */
+    text-align: left;
+  }
+
+  [part='node-label']:where([data-align='right']) {
+    /* policy-allow(physical-css): the label hugs the bar to its physical right */
+    text-align: right;
   }
 
   [part='link-label'] {

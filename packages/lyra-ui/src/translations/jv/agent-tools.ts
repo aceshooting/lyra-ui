@@ -137,7 +137,6 @@ const strings: LyraLocaleStrings = {
   schemaMustBeObject: 'Skema kudu njlentrehake sawijining objek.',
   schemaPropertiesMustBeFlat: 'Properti skema kudu awujud objek rata.',
   valueMustBeSerializable: 'Nilai kudu bisa diserialisasi dadi JSON.',
-  accessibleLabelSeparator: ' — ',
   selectTools: 'Pilih piranti',
   searchToolsPlaceholder: 'Telusuri piranti…',
   useDefaultTools: 'Gunakake piranti baku',

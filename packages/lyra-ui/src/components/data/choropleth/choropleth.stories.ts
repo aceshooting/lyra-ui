@@ -92,6 +92,22 @@ export const TopoJson: StoryObj = {
   `,
 };
 
+export const SelectedTopoJsonObject: StoryObj = {
+  render: () => html`
+    <lr-choropleth
+      label="Infrastructure spending by district"
+      object="regions"
+      .geography=${{
+        ...TOPOLOGY,
+        objects: {
+          ...TOPOLOGY.objects,
+          outline: { type: 'Polygon', id: 'outline', properties: { name: 'Coastline' }, arcs: [[0]] },
+        },
+      }}
+    ></lr-choropleth>
+  `,
+};
+
 export const Narrow320: StoryObj = {
   render: () => html`
     <lr-choropleth

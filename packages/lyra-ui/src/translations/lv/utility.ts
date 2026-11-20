@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Kopēt JSON starpliktuvē',
+  circularReference: 'Cikliska atsauce',
   copyDiff: 'Kopēt atšķirības',
   diffViewOldLabel: 'Sākotnējais',
   diffViewNewLabel: 'Modificētais',

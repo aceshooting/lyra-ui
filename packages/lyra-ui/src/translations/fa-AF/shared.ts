@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'لغو',
   confirm: 'تأیید',
   search: 'جست‌وجو',
-  circularReference: 'ارجاع دورانی',
   items: {
     one: 'مورد',
     other: 'مورد',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'نمای گراف بارگذاری نشد.',
   graphSourceRecordMissing: 'این ریکارد گراف در دسترس نیست.',
   notInCatalog: 'در فهرست نیست',
+  chartTotal: 'مجموع',
   chartLegend: 'کلید نمودار',
   resetZoom: 'بازنشانی بزرگ‌نمایی',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'کاپی‌کردن ناکام شد',
   paginationFirstPage: 'صفحهٔ نخست',
   paginationLastPage: 'صفحهٔ آخر',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'فهرست',
-  emailViewerFrom: 'از',
-  emailViewerTo: 'به',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'به بخش برجسته‌شده رفت.',
   anchorJumpedToPage: 'به صفحهٔ {page} رفت.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'دارای تعارض',
   gitStatusIgnored: 'نادیده‌گرفته‌شده',
   envListValueHidden: 'مقدار پنهان است',
-  geojsonViewLabel: 'نقشه',
   provenanceEntities: 'موجودیت‌ها',
   flowItemAnnouncement: '{item} ({index} از {total})',
   neighborDirectionIn: 'ورودی',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'به‌جای آن، یک فهرست نمایش داده می‌شود.',
   largeDataInvalid: 'داده‌ها نمایش داده نمی‌شوند زیرا {column} نامعتبر است.',
   largeDataLimit: 'داده‌ها نمایش داده نمی‌شوند زیرا از حد مجاز {limit} فراتر می‌روند.',
-  chart3dName: 'برچسب',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

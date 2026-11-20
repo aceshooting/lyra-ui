@@ -46,7 +46,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Скасувати',
   confirm: 'Підтвердити',
   search: 'Пошук',
-  circularReference: 'Циклічне посилання',
   items: {
     one: 'елемент',
     few: 'елементи',
@@ -92,6 +91,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Не вдалося завантажити подання графа.',
   graphSourceRecordMissing: 'Цей запис графа недоступний.',
   notInCatalog: 'немає в каталозі',
+  chartTotal: 'Усього',
   chartLegend: 'Легенда діаграми',
   resetZoom: 'Скинути масштаб',
   showMoreCollapsed: '+{count}',
@@ -139,11 +139,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Не вдалося скопіювати',
   paginationFirstPage: 'Перша сторінка',
   paginationLastPage: 'Остання сторінка',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Меню',
-  emailViewerFrom: 'Від',
-  emailViewerTo: 'Кому',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Перейдено до виділеного фрагмента.',
   anchorJumpedToPage: 'Перейдено до сторінки {page}.',
@@ -160,7 +159,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'Конфлікт',
   gitStatusIgnored: 'Ігнорується',
   envListValueHidden: 'Значення приховано',
-  geojsonViewLabel: 'Мапа',
   provenanceEntities: 'Сутності',
   flowItemAnnouncement: '{item} ({index} із {total})',
   neighborDirectionIn: 'Вхідний',
@@ -204,7 +202,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Натомість показано список.',
   largeDataInvalid: 'Неможливо показати дані, оскільки {column} недійсне.',
   largeDataLimit: 'Неможливо показати дані, оскільки вони перевищують ліміт {limit}.',
-  chart3dName: 'Підпис',
 };
 
 registerLyraLocale('uk', strings);

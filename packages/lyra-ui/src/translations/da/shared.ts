@@ -44,7 +44,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Annuller',
   confirm: 'Bekræft',
   search: 'Søg',
-  circularReference: 'Cirkulær reference',
   items: {
     one: 'element',
     other: 'elementer',
@@ -80,6 +79,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Grafvisningen kunne ikke indlæses.',
   graphSourceRecordMissing: 'Denne grafpost er ikke tilgængelig.',
   notInCatalog: 'ikke i kataloget',
+  chartTotal: 'I alt',
   chartLegend: 'Diagramforklaring',
   resetZoom: 'Nulstil zoom',
   showMoreCollapsed: '+{count}',
@@ -127,11 +127,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Kopiering mislykkedes',
   paginationFirstPage: 'Første side',
   paginationLastPage: 'Sidste side',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Menu',
-  emailViewerFrom: 'Fra',
-  emailViewerTo: 'Til',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Gik til den fremhævede passage.',
   anchorJumpedToPage: 'Gik til side {page}.',
@@ -148,7 +147,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'I konflikt',
   gitStatusIgnored: 'Ignoreret',
   envListValueHidden: 'Værdi skjult',
-  geojsonViewLabel: 'Kort',
   provenanceEntities: 'Entiteter',
   flowItemAnnouncement: '{item} ({index} af {total})',
   neighborDirectionIn: 'Indgående',
@@ -188,7 +186,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'I stedet vises en liste.',
   largeDataInvalid: 'Dataene kan ikke vises, fordi {column} er ugyldig.',
   largeDataLimit: 'Dataene kan ikke vises, fordi de overskrider grænsen på {limit}.',
-  chart3dName: 'Etiket',
 };
 
 registerLyraLocale('da', strings);

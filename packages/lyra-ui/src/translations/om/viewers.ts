@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'quunnamtii',
   emailViewerLabel: 'Ilaaltuu imeelii',
   emailViewerMissingParser: 'Ergaa kana xiinxaluuf ilaaltuun kun paakeejii filannoo "postal-mime" fe\'amee qabaachuu barbaada.',
+  emailViewerFrom: 'Ergamaa',
+  emailViewerTo: 'Fudhataa',
   emailViewerSubject: 'Mata-duree',
   emailViewerDate: 'Guyyaa',
   emailViewerAttachments: 'Faayilota maxxanfaman',
@@ -124,6 +126,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'XML gara kuusaa waraqaatti garagalchi',
   xmlViewerCopyNode: '{name} garagalchi',
   xmlViewerToggleNode: '{name} jijjiiri',
+  geojsonViewLabel: 'Kaartaa',
   geojsonViewInvalid: 'Faayilli kun GeoJSON sirrii miti.',
   geojsonViewFeatureCount: {
     one: 'amalummaa {count}',

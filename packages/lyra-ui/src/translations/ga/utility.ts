@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Cóipeáil an JSON chuig an ngearrthaisce',
+  circularReference: 'Tagairt chiorclach',
   copyDiff: 'Cóipeáil an difríocht',
   diffViewOldLabel: 'Bunaidh',
   diffViewNewLabel: 'Athraithe',

@@ -70,6 +70,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontaktpersona',
   emailViewerLabel: 'E-pasta skatītājs',
   emailViewerMissingParser: 'Lai parsētu šo ziņojumu, šim skatītājam ir jāinstalē neobligātā pakotne “postal-mime”.',
+  emailViewerFrom: 'No',
+  emailViewerTo: 'Kam',
   emailViewerSubject: 'Temats',
   emailViewerDate: 'Datums',
   emailViewerAttachments: 'Pielikumi',
@@ -126,6 +128,7 @@ const strings: LyraLocaleStrings = {
   xmlViewerCopyDocument: 'Kopēt XML starpliktuvē',
   xmlViewerCopyNode: 'Kopēt {name}',
   xmlViewerToggleNode: 'Pārslēgt {name}',
+  geojsonViewLabel: 'Karte',
   geojsonViewInvalid: 'Šis fails nav derīgs GeoJSON.',
   geojsonViewFeatureCount: {
     one: '{count} objekts',

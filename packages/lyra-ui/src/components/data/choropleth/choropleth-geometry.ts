@@ -1,4 +1,5 @@
 import { isPlainDataRecord, readOwnArrayLength, requireOwnDataValue } from '../../../internal/data-descriptors.js';
+import { boundedLegendText } from '../../../internal/choropleth-no-data.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 
 type ChoroplethPoint = readonly [number, number];
@@ -20,6 +21,8 @@ const MAX_ARCS = 10000;
 const MAX_NODES = 100000;
 const MAX_DEPTH = 32;
 const MAX_TEXT = 1024;
+/** Valid GeoJSON and TopoJSON geometry without area; a feature of this type is skipped. */
+const UNFILLED = new Set<unknown>([null, 'Point', 'MultiPoint', 'LineString', 'MultiLineString']);
 const INVALID = Symbol('invalid geometry');
 const LIMIT = Symbol('geometry limit');
 
@@ -63,19 +66,23 @@ function closed(points: ChoroplethPoint[]): readonly ChoroplethPoint[] {
   return points;
 }
 function text(value: unknown): string | undefined {
-  if (typeof value !== 'string' || !value.length) return undefined;
-  within(value.length, MAX_TEXT);
-  return value;
+  return typeof value === 'string' && value.length ? boundedLegendText(value, MAX_TEXT) : undefined;
 }
 type Pending = Omit<ChoroplethRegion, 'id' | 'label'> & { id?: string; label?: string };
 
-/** Projects caller-owned polygon data into bounded, detached region snapshots. */
-export function decodeChoroplethGeometry(input: unknown, field = 'value', labelField = 'name'): ChoroplethGeometry {
+/**
+ * Projects caller-owned polygon data into bounded, detached region snapshots. Features without
+ * area (null, point or line geometry) and features whose ID exceeds the text limit are skipped
+ * but still count toward the feature limit. A non-empty `object` selects one TopoJSON object.
+ */
+export function decodeChoroplethGeometry(
+  input: unknown, field = 'value', labelField = 'name', object = '',
+): ChoroplethGeometry {
   if (input == null) return { status: 'empty', regions: [] };
   try {
-    if (typeof field !== 'string' || typeof labelField !== 'string') throw INVALID;
+    if (typeof field !== 'string' || typeof labelField !== 'string' || typeof object !== 'string') throw INVALID;
     within(Math.max(field.length, labelField.length), MAX_TEXT);
-    let nodes = 0, positions = 0, expanded = 0, references = 0;
+    let nodes = 0, positions = 0, expanded = 0, references = 0, features = 0;
     const pending: Pending[] = [];
     const ids = new Set<string>();
     const decoded: ChoroplethPoint[][] = [];
@@ -138,6 +145,7 @@ export function decodeChoroplethGeometry(input: unknown, field = 'value', labelF
         each(read(source, 'geometries'), MAX_FEATURES, g => append(record(g), topology, depth + 1, polygons));
         return;
       }
+      if (UNFILLED.has(type)) return;
       if (type !== 'Polygon' && type !== 'MultiPolygon') throw INVALID;
       const data = read(source, topology ? 'arcs' : 'coordinates');
       function polygon(value: unknown): void {
@@ -148,14 +156,16 @@ export function decodeChoroplethGeometry(input: unknown, field = 'value', labelF
       if (type === 'Polygon') polygon(data);
       else each(data, MAX_POSITIONS, polygon);
     }
-    function region(owner: object, geometry: object, topology: boolean, depth: number): void {
-      within(pending.length + 1, MAX_FEATURES);
+    function region(owner: object, geometry: unknown, topology: boolean, depth: number): void {
+      within(++features, MAX_FEATURES);
+      if (geometry === null) return;
+      const rawId = read(owner, 'id');
+      if (typeof rawId === 'string' && rawId.length > MAX_TEXT) return;
       const polygons: ChoroplethPolygon[] = [];
-      append(geometry, topology, depth, polygons);
+      append(record(geometry), topology, depth, polygons);
       if (!polygons.length) return;
       const props = read(owner, 'properties');
       const properties = props == null ? undefined : record(props);
-      const rawId = read(owner, 'id');
       const id = typeof rawId === 'number' && Number.isFinite(rawId) ? String(rawId) : text(rawId);
       const label = properties ? text(read(properties, labelField)) : undefined;
       const value = properties ? read(properties, field) : undefined;
@@ -169,7 +179,7 @@ export function decodeChoroplethGeometry(input: unknown, field = 'value', labelF
       if (type === 'GeometryCollection') {
         each(read(object, 'geometries'), MAX_FEATURES, g => visit(g, topology, depth + 1));
       } else if (!topology && type === 'Feature') {
-        region(object, record(read(object, 'geometry')), false, depth);
+        region(object, read(object, 'geometry'), false, depth);
       } else {
         region(object, object, topology, depth);
       }
@@ -179,18 +189,22 @@ export function decodeChoroplethGeometry(input: unknown, field = 'value', labelF
     if (type === 'Topology') {
       loadArcs(root);
       const objects = record(read(root, 'objects'));
-      let count = 0;
-      for (const key in objects) {
-        if (!Object.hasOwn(objects, key)) continue;
-        within(++count, MAX_FEATURES);
-        within(key.length, MAX_TEXT);
-        visit(read(objects, key), true, 0);
+      if (object) {
+        if (Object.hasOwn(objects, object)) visit(read(objects, object), true, 0);
+      } else {
+        let count = 0;
+        for (const key in objects) {
+          if (!Object.hasOwn(objects, key)) continue;
+          within(++count, MAX_FEATURES);
+          within(key.length, MAX_TEXT);
+          visit(read(objects, key), true, 0);
+        }
       }
     } else if (type === 'FeatureCollection') {
       each(read(root, 'features'), MAX_FEATURES, feature => {
         const f = record(feature);
         if (read(f, 'type') !== 'Feature') throw INVALID;
-        region(f, record(read(f, 'geometry')), false, 0);
+        region(f, read(f, 'geometry'), false, 0);
       });
     } else visit(root, false, 0);
     const seen = new Set<string>();

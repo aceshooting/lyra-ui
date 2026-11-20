@@ -47,7 +47,6 @@ const strings: LyraLocaleStrings = {
   cancel: 'Cealaigh',
   confirm: 'Deimhnigh',
   search: 'Cuardaigh',
-  circularReference: 'Tagairt chiorclach',
   items: {
     few: 'mhír',
     many: 'mír',
@@ -98,6 +97,7 @@ const strings: LyraLocaleStrings = {
   graphSourceSceneError: 'Níorbh fhéidir amharc an ghraif a lódáil.',
   graphSourceRecordMissing: 'Níl an taifead graif seo ar fáil.',
   notInCatalog: 'níl sé sa chatalóg',
+  chartTotal: 'Iomlán',
   chartLegend: 'Eochair na cairte',
   resetZoom: 'Athshocraigh an zúmáil',
   showMoreCollapsed: '+{count}',
@@ -145,11 +145,10 @@ const strings: LyraLocaleStrings = {
   copyFailed: 'Theip ar an gcóipeáil',
   paginationFirstPage: 'An chéad leathanach',
   paginationLastPage: 'An leathanach deireanach',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Roghchlár',
-  emailViewerFrom: 'Ó',
-  emailViewerTo: 'Chuig',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Léimeadh go dtí an sliocht aibhsithe.',
   anchorJumpedToPage: 'Léimeadh go dtí leathanach {page}.',
@@ -166,7 +165,6 @@ const strings: LyraLocaleStrings = {
   gitStatusConflicted: 'I gcoimhlint',
   gitStatusIgnored: 'Neamhairdithe',
   envListValueHidden: 'Luach i bhfolach',
-  geojsonViewLabel: 'Léarscáil',
   provenanceEntities: 'Aonáin',
   flowItemAnnouncement: '{item} ({index} as {total})',
   neighborDirectionIn: 'Isteach',
@@ -212,7 +210,6 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'Liosta á thaispeáint ina ionad.',
   largeDataInvalid: 'Ní féidir na sonraí a thaispeáint mar go bhfuil {column} neamhbhailí.',
   largeDataLimit: 'Ní féidir na sonraí a thaispeáint mar go sáraíonn siad an teorainn ({limit}).',
-  chart3dName: 'Lipéad',
 };
 
 registerLyraLocale('ga', strings);
