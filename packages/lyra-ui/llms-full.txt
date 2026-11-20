@@ -44,9 +44,9 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
 - **Media, files & maps** — 23 tags in `components/media/`
 - **Charts** — 13 tags in `components/charts/`
-- **Document & file viewers** — 23 tags in `components/viewers/`
+- **Document & file viewers** — 24 tags in `components/viewers/`
 - **Conversation & chat UI** — 34 tags in `components/conversation/`
-- **Agent tooling, tool calls & evaluation** — 43 tags in `components/agent-tools/`
+- **Agent tooling, tool calls & evaluation** — 44 tags in `components/agent-tools/`
 - **Retrieval, knowledge graph & grounding** — 31 tags in `components/retrieval/`
 - **Reference tables** — design tokens (`llms/tokens.md`), optional peers (`llms/peers.md`), `wa-*`/`sl-*` migration (`llms/migration.md`)
 
@@ -47674,6 +47674,10 @@ These named interfaces and helper signatures are available to typed integrations
     readonly nodeId?: string;
   }`
 
+## `lr-docx-editor`
+
+Companion element from `@aceshooting/lyra-docs`: an in-browser `.docx` editor driven by a session from `createDocxSession()`. The package root registers nothing; import `@aceshooting/lyra-docs/docx/editor` and `@aceshooting/lyra-docs/docx/editor.css`. Its attributes, events, parts and custom properties are in `packages/lyra-docs/custom-elements.json` and the generated per-tag page; the foundation guide (`llms/shared.md`) covers command search, the review panels and toolbar placement.
+
 # Conversation & chat UI (`components/conversation/`)
 
 ## Migrating removed conversation aliases
@@ -58807,6 +58811,10 @@ The dataset search field and other small internal editors intentionally use nati
 keep granular imports lean. They share native field surface, focus, sizing, editing, and accessible
 relationship helpers while retaining their existing parts and geometry tokens. Composing a full
 form control is appropriate when its public validation, selection, or form behavior is needed.
+
+## `lr-gen-view`
+
+Companion element from `@aceshooting/lyra-gen`: renders a generated, catalog-validated view and reports validation, loading and action failures through `lr-gen-error`. The package root registers nothing; import `@aceshooting/lyra-gen/gen-view.js`. Its attributes, events, parts and custom properties are in `packages/lyra-gen/custom-elements.json` and the generated per-tag page.
 
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 

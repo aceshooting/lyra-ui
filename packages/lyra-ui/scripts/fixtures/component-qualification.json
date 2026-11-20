@@ -5286,6 +5286,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -5607,6 +5608,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -6663,6 +6665,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -9055,6 +9058,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -15234,7 +15238,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 539,
+              "line": 532,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16253,7 +16257,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 3015,
+              "line": 2433,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19202,6 +19206,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -20034,6 +20039,7 @@
           "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
+          "src/components/overlays/overlay/tooltip-lazy-content.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
@@ -22627,7 +22633,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.class.ts",
-              "line": 843,
+              "line": 836,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27205,8 +27211,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 785,
+              "file": "src/components/data/heatmap/heatmap-source-view.ts",
+              "line": 135,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27242,6 +27248,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/heatmap/calendar-grid.property.test.ts",
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
@@ -27251,6 +27258,7 @@
           "src/components/data/heatmap/heatmap-domain-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-export-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-focus-fallback.test.ts",
+          "src/components/data/heatmap/heatmap-grid-navigation.property.test.ts",
           "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-gutter-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
@@ -27735,6 +27743,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -29054,7 +29063,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
-              "line": 799,
+              "line": 788,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29844,7 +29853,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 702,
+              "line": 698,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30796,7 +30805,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 399,
+              "line": 394,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31305,6 +31314,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -31666,6 +31676,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -32082,7 +32093,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1001,
+              "line": 997,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41176,6 +41187,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -41471,6 +41483,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -42149,6 +42162,7 @@
           "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
+          "src/components/overlays/overlay/tooltip-lazy-content.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
@@ -44255,6 +44269,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -45013,7 +45028,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/rag-answer/rag-answer.class.ts",
-              "line": 182,
+              "line": 177,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47645,7 +47660,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 711,
+              "line": 701,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47847,7 +47862,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 285,
+              "line": 275,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48519,6 +48534,7 @@
           "src/components/charts/chart/histogram-append-storage-scale.test.ts",
           "src/components/charts/chart/histogram-bin.property.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
+          "src/components/charts/chart/histogram-buckets.property.test.ts",
           "src/components/charts/chart/histogram-buckets.test.ts",
           "src/components/charts/chart/histogram-derived-inputs.test.ts",
           "src/components/charts/chart/histogram-distribution-scale.test.ts",
@@ -50948,7 +50964,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 566,
+              "line": 559,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55742,7 +55758,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 923,
+              "line": 917,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56144,7 +56160,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 705,
+              "line": 699,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57423,6 +57439,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
+          "src/components/data/timeline/timeline-cluster.property.test.ts",
           "src/components/data/timeline/timeline-forced-colors.test.ts",
           "src/components/data/timeline/timeline-item-variant.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
@@ -57639,6 +57656,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
+          "src/components/data/timeline/timeline-cluster.property.test.ts",
           "src/components/data/timeline/timeline-forced-colors.test.ts",
           "src/components/data/timeline/timeline-item-variant.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
@@ -60354,6 +60372,7 @@
           "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
+          "src/components/overlays/overlay/tooltip-lazy-content.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",

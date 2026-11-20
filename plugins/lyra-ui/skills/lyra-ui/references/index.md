@@ -2,7 +2,7 @@
 
 # Component index
 
-311 custom elements, grouped by the source family they live in.
+313 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -232,7 +232,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
 - `lr-chart-3d` · lr-chart-3d.js · `experimental` since `30.0.0` — a bounded three-dimensional scatter, bubble or source-order line chart over immutable typed columns, with an always-available accessible...
 
-## Document & file viewers — `components/viewers/` (23)
+## Document & file viewers — `components/viewers/` (24)
 
 - `lr-document-preview` · lr-document-preview.js · `stable` since `4.0.0` — a format-dispatching viewer for one document/ attachment, plus the visual state machine for an async server-side conversion a host app...
 - `lr-document-viewer` · lr-document-viewer.js · `stable` since `4.0.0` — A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
@@ -257,6 +257,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-document-compare` · lr-document-compare.js · `stable` since `4.1.0` — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing...
 - `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
 - `lr-model-viewer` · lr-model-viewer.js · `experimental` since `30.0.0` — Bounded static 3D model and point-cloud viewer with a persistent text alternative.
+- `lr-docx-editor` · lr-docx-editor.js · `experimental` since `0.1.0` — Experimental DOCX editing surface.
 
 ## Conversation & chat UI — `components/conversation/` (34)
 
@@ -295,7 +296,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-selection-toolbar` · lr-selection-toolbar.js · `stable` since `7.0.0` — a nonmodal action toolbar positioned above selected text.
 - `lr-realtime-session` · lr-realtime-session.js · `stable` since `7.0.0` — a provider-neutral voice-session shell composing connection status, live activity, transcript, native capture, mute, interruption, and...
 
-## Agent tooling, tool calls & evaluation — `components/agent-tools/` (43)
+## Agent tooling, tool calls & evaluation — `components/agent-tools/` (44)
 
 - `lr-tool-call-chip` · lr-tool-call-chip.js · `stable` since `4.0.0` — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · lr-tool-result-view.js · `stable` since `4.0.0` — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in...
@@ -340,6 +341,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-connector-manager` · lr-connector-manager.js · `experimental` since `22.0.0` — a controlled, provider-neutral connector list.
 - `lr-background-runs` · lr-background-runs.js · `experimental` since `22.0.0` — a bounded, controlled list of background run states.
 - `lr-budget-meter` · lr-budget-meter.js · `experimental` since `22.0.0` — a presentation-only view of a host-supplied quantity and limit.
+- `lr-gen-view` · lr-gen-view.js · `experimental` since `0.1.0` — Render a validated, bounded generated view using a host-owned component catalog.
 
 ## Retrieval, knowledge graph & grounding — `components/retrieval/` (31)
 
